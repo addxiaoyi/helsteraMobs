@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>dev.helstera</groupId>
+        <artifactId>helstera-parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
+    <artifactId>helstera-plugin</artifactId>
+    <name>helstera-plugin</name>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.papermc.paper</groupId>
+            <artifactId>paper-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.joml</groupId>
+            <artifactId>joml</artifactId>
+            <version>1.10.5</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>helsteraMobs-${project.version}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>module-info.class</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!--
+        分阶段出包：每个 phase profile 只"声明"该阶段已完成的 helstera 模块依赖，
+        shade 插件把【实际声明的依赖】全部打进 uber jar，因而天然产出由少到多的递增能力 jar，
+        不依赖 shade 过滤器合并（之前的合并方式在 .m2 重装后不稳定）。
+        默认构建（不激活任何 -P）= full（activeByDefault）= 完整版 5.0。
+        注意：一旦用 -P 显式指定任一 profile，activeByDefault 的 full 会自动关闭。
+    -->
+    <profiles>
+        <!-- full / 5.0：完整版（默认激活） -->
+        <profile>
+            <id>full</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-render-paper</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-resourcepack</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-ai</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-integrations</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-web</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-migration</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-platform</artifactId></dependency>
+            </dependencies>
+        </profile>
+
+        <!-- 1.0：仅核心（api + core）：模型解析/校验/注册表/命令 -->
+        <profile>
+            <id>phase1</id>
+            <dependencies>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
+            </dependencies>
+        </profile>
+
+        <!-- 2.0：+ runtime + render-paper：实例渲染 + 动画 + 玩家可见性 -->
+        <profile>
+            <id>phase2</id>
+            <dependencies>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-render-paper</artifactId></dependency>
+            </dependencies>
+        </profile>
+
+        <!-- 3.0：+ resourcepack + ai：资源包构建 + AI 行为 -->
+        <profile>
+            <id>phase3</id>
+            <dependencies>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-render-paper</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-resourcepack</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-ai</artifactId></dependency>
+            </dependencies>
+        </profile>
+
+        <!-- 4.0：+ integrations + migration：外部插件适配 + 迁移中心 -->
+        <profile>
+            <id>phase4</id>
+            <dependencies>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-render-paper</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-resourcepack</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-ai</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-integrations</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-migration</artifactId></dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+</project>

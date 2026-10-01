@@ -1,0 +1,33 @@
+name: helsteraMobs
+version: 1.0.0
+main: dev.helstera.plugin.HelsteraPlugin
+api-version: '1.21'
+description: 轻量化模型与生物引擎（MythicMobs + ModelEngine 类效果），资源包 + Display 实体方案
+author: helstera
+website: https://helstera.dev
+softdepend:
+  - MythicMobs
+  - ItemAdder
+  - CraftEngine
+commands:
+  helstera:
+    description: helsteraMobs 主命令
+    aliases: [hmobs, sme]
+    usage: /helstera help
+permissions:
+  helstera.admin:
+    description: 全部管理权限
+    default: op
+    children:
+      helstera.reload: true
+      helstera.model: true
+      helstera.mob: true
+      helstera.animation: true
+      helstera.migrate: true
+      helstera.web: true
+      helstera.debug: true
+      helstera.stats: true
+      helstera.pack: true
+  helstera.view:
+    description: 可见模型（默认所有人）
+    default: true

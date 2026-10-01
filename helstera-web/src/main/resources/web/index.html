@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>helsteraMobs 开发器</title>
+<style>
+  :root{
+    --bg:#f2f5f9; --panel:#fff; --panel2:#fafbfd; --line:#e2e8f0; --line2:#eef2f7;
+    --txt:#0f172a; --txt2:#54607a; --txt3:#8b95a8;
+    --accent:#2f6fed; --accent2:#1e56d6; --soft:#eaf1ff;
+    --ok:#15a34a; --oksoft:#e6f7ec; --warn:#d97706; --warnsoft:#fdf3e3;
+    --err:#dc2626; --errsoft:#fdecec; --code:#f6f8fb;
+    --radius:12px; --shadow:0 1px 2px rgba(15,23,42,.05),0 10px 28px -18px rgba(15,23,42,.35);
+  }
+  html[data-theme=dark]{
+    --bg:#0f1420; --panel:#161c2a; --panel2:#1b2231; --line:#28303f; --line2:#202836;
+    --txt:#e8edf6; --txt2:#a3adc2; --txt3:#6f7b91;
+    --accent:#5b8cff; --accent2:#7ba2ff; --soft:#1d2740;
+    --ok:#4ade80; --oksoft:#132a1d; --warn:#fbbf24; --warnsoft:#2b2413;
+    --err:#f87171; --errsoft:#2c1717; --code:#111826;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -18px rgba(0,0,0,.8);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--txt);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  button{font:inherit;cursor:pointer;border:1px solid transparent;border-radius:9px;padding:7px 13px;
+         background:var(--accent);color:#fff;transition:.14s}
+  button:hover{background:var(--accent2)}
+  button.ghost{background:var(--panel);color:var(--txt);border-color:var(--line)}
+  button.ghost:hover{background:var(--panel2);border-color:var(--accent)}
+  button.danger{background:var(--panel);color:var(--err);border-color:var(--line)}
+  button.danger:hover{background:var(--errsoft);border-color:var(--err)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.sm{padding:4px 9px;font-size:12.5px;border-radius:8px}
+  input,select,textarea{font:inherit;color:var(--txt);background:var(--panel);border:1px solid var(--line);
+       border-radius:9px;padding:7px 10px;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--soft)}
+  a{color:var(--accent)}
+
+  /* ---- top bar ---- */
+  .top{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);
+       border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.2px}
+  .logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#2f6fed,#7ba2ff);
+        display:grid;place-items:center;color:#fff;font-size:14px}
+  .brand small{font-weight:500;color:var(--txt3);font-size:12px}
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);
+        border-radius:999px;padding:3px 10px;font-size:12.5px;color:var(--txt2)}
+  .chip b{color:var(--txt);font-weight:600}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+  .dot.err{background:var(--err)}
+  .spacer{flex:1}
+  .acts{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* ---- banner ---- */
+  .banner{display:none;align-items:flex-start;gap:10px;padding:10px 16px;background:var(--errsoft);
+          border-bottom:1px solid var(--line);color:var(--txt)}
+  .banner.on{display:flex}
+  .banner .btitle{font-weight:700;color:var(--err);white-space:nowrap}
+  .banner ul{list-style:none;font-size:12.5px;font-family:ui-monospace,Consolas,monospace;overflow:auto;max-height:92px}
+  .banner li{padding:1px 0;color:var(--txt2)}
+  .banner li b{color:var(--err)}
+
+  /* ---- layout ---- */
+  main{flex:1;display:grid;grid-template-columns:300px 1fr;min-height:0}
+  aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .side-pad{padding:10px 12px;border-bottom:1px solid var(--line2);display:flex;gap:8px}
+  .side-sec{padding:10px 12px 4px;font-size:11.5px;font-weight:700;color:var(--txt3);letter-spacing:.08em;
+            text-transform:uppercase;display:flex;align-items:center;justify-content:space-between}
+  .scroll{overflow:auto;flex:1;padding:0 8px 12px}
+  ul.list{list-style:none}
+  ul.list li{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:9px;cursor:pointer;font-size:13px}
+  ul.list li:hover{background:var(--panel2)}
+  ul.list li.sel{background:var(--soft);font-weight:600}
+  ul.list li .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  ul.list li .tag{font-size:11px;color:var(--txt3);font-weight:500}
+  .empty{color:var(--txt3);font-size:12.5px;padding:8px 10px}
+
+  /* ---- content ---- */
+  section.content{display:flex;flex-direction:column;min-height:0;min-width:0}
+  .tabs{display:flex;gap:4px;padding:9px 14px 0;background:var(--panel);border-bottom:1px solid var(--line)}
+  .tab{padding:8px 14px;border-radius:9px 9px 0 0;font-size:13px;color:var(--txt2);cursor:pointer;border:1px solid transparent;
+       border-bottom:none;margin-bottom:-1px}
+  .tab:hover{color:var(--txt)}
+  .tab.on{background:var(--bg);border-color:var(--line);color:var(--txt);font-weight:600}
+  .panes{flex:1;overflow:auto;padding:14px;min-height:0}
+  .pane{display:none}
+  .pane.on{display:block}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;
+        box-shadow:var(--shadow);margin-bottom:14px}
+  .card h3{font-size:13.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card h3 .hint{font-weight:400;color:var(--txt3);font-size:12px}
+  .grid2{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.25fr);gap:14px;align-items:start}
+  @media(max-width:1180px){.grid2{grid-template-columns:1fr}}
+  .meta{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13px}
+  .meta dt{color:var(--txt3)}
+  .meta dd{color:var(--txt);font-weight:500;word-break:break-all}
+  .chips2{display:flex;gap:6px;flex-wrap:wrap}
+  .pill{background:var(--soft);color:var(--accent2);border-radius:999px;padding:2px 9px;font-size:12px}
+  .pill.g{background:var(--oksoft);color:var(--ok)}
+  .pill.w{background:var(--warnsoft);color:var(--warn)}
+  .pill.r{background:var(--errsoft);color:var(--err)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line2)}
+  th{color:var(--txt3);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+  code,pre,textarea.mono{font-family:ui-monospace,Consolas,"Courier New",monospace}
+  pre.out{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12.5px;
+          white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;color:var(--txt2)}
+  textarea.mono{width:100%;min-height:340px;font-size:12.5px;line-height:1.55;resize:vertical;background:var(--code)}
+  textarea.mono.tall{min-height:460px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .row.tight{gap:6px}
+  .row>input{flex:1;min-width:140px}
+  .lbl{font-size:12px;color:var(--txt3);margin-bottom:4px;display:block}
+  .canvas-wrap{position:relative;background:linear-gradient(180deg,var(--panel2),var(--panel));
+               border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  canvas{display:block;width:100%;height:330px;cursor:grab;touch-action:none}
+  canvas:active{cursor:grabbing}
+  .cv-tools{position:absolute;right:8px;top:8px;display:flex;gap:6px}
+  .cv-tools button{background:rgba(255,255,255,.86);color:var(--txt);border:1px solid var(--line);backdrop-filter:blur(4px)}
+  html[data-theme=dark] .cv-tools button{background:rgba(22,28,42,.85)}
+  .cv-legend{position:absolute;left:9px;bottom:8px;font-size:11.5px;color:var(--txt3)}
+  .toast{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50}
+  .toast div{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+             border-radius:10px;padding:9px 13px;box-shadow:var(--shadow);max-width:380px;font-size:12.5px;
+             animation:in .18s ease-out}
+  .toast div.ok{border-left-color:var(--ok)} .toast div.err{border-left-color:var(--err)}
+  @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .tt{font-size:12px;color:var(--txt3);margin-top:6px}
+  details.fold{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden}
+  details.fold>summary{cursor:pointer;padding:7px 11px;font-size:13px;background:var(--panel2);font-weight:600}
+  details.fold[open]>summary{border-bottom:1px solid var(--line2)}
+  details.fold .body{padding:9px 11px}
+  .kv{font-size:12.5px;color:var(--txt2)}
+  .bone-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:7px;cursor:pointer}
+  .bone-row:hover{background:var(--panel2)}
+  .bone-row.hot{background:var(--soft)}
+  .swatch{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand"><span class="logo">◆</span><span>helsteraMobs 开发器<br><small>模型引擎 · 本地控制台 v__VERSION__</small></span></div>
+  <div class="chips">
+    <span class="chip"><span class="dot" id="dRun"></span><b id="cVer">-</b></span>
+    <span class="chip">模型 <b id="cModels">0</b></span>
+    <span class="chip">实例 <b id="cInst">0</b></span>
+    <span class="chip">玩家 <b id="cPlayers">0</b></span>
+    <span class="chip">TPS <b id="cTps">-</b></span>
+    <span class="chip" id="cErrWrap">错误 <b id="cErr">0</b></span>
+  </div>
+  <span class="spacer"></span>
+  <div class="acts">
+    <button class="ghost" id="bReload">重载模型</button>
+    <button class="ghost" id="bPack">构建资源包</button>
+    <a href="/pack.zip"><button class="ghost">下载资源包</button></a>
+    <button class="ghost" id="bTheme" title="切换主题">◐</button>
+  </div>
+</div>
+
+<div class="banner" id="banner">
+  <div class="btitle">⚠ 模型加载失败 / 校验错误</div>
+  <ul id="bannerList"></ul>
+</div>
+
+<main>
+  <aside>
+    <div class="side-pad"><input id="search" placeholder="搜索模型 / 生物…" style="flex:1"></div>
+    <div class="side-sec">模型 <span id="mCount" class="tag"></span></div>
+    <div class="scroll" style="max-height:46%"><ul class="list" id="modelList"></ul></div>
+    <div class="side-sec">生物配置 <button class="sm ghost" id="bNewMob">＋ 新建</button></div>
+    <div class="scroll"><ul class="list" id="mobList"></ul></div>
+  </aside>
+
+  <section class="content">
+    <div class="tabs">
+      <div class="tab on" data-tab="model">模型详情</div>
+      <div class="tab" data-tab="files">模型文件</div>
+      <div class="tab" data-tab="mobs">生物配置</div>
+      <div class="tab" data-tab="validate">校验</div>
+      <div class="tab" data-tab="log">日志</div>
+    </div>
+    <div class="panes">
+
+      <!-- ===== 模型详情 ===== -->
+      <div class="pane on" id="pane-model">
+        <div class="card">
+          <h3>模型详情 <span class="hint" id="mdHint">← 从左侧选择一个模型</span></h3>
+          <div id="mdEmpty" class="empty">尚未选择模型。</div>
+          <div id="mdBody" style="display:none">
+            <div class="grid2">
+              <div>
+                <div class="canvas-wrap">
+                  <canvas id="canvas"></canvas>
+                  <div class="cv-tools">
+                    <button class="sm" id="cvReset" title="重置视角">重置</button>
+                    <button class="sm" id="cvSpin" title="自动旋转">旋转</button>
+                  </div>
+                  <div class="cv-legend" id="cvLegend">拖拽旋转 · 滚轮缩放</div>
+                </div>
+                <div class="row tight" style="margin-top:8px">
+                  <label class="kv"><input type="checkbox" id="cvHitbox" checked> 显示碰撞盒</label>
+                  <label class="kv"><input type="checkbox" id="cvGrid" checked> 显示地面网格</label>
+                </div>
+              </div>
+              <div>
+                <dl class="meta" id="mdMeta"></dl>
+                <div style="margin-top:12px">
+                  <div class="lbl">动画 <span class="tag" id="animTime"></span></div>
+                  <div class="chips2" id="mdAnims"></div>
+                  <div class="row tight" style="margin-top:8px">
+                    <button class="sm ghost" id="animPlay">▶ 播放</button>
+                    <input id="animSeek" type="range" min="0" max="1000" value="0" style="flex:1">
+                    <span class="tag" id="animName">—</span>
+                  </div>
+                </div>
+                <div style="margin-top:12px">
+                  <div class="lbl">纹理</div>
+                  <div class="chips2" id="mdTex"></div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:14px">
+              <div class="lbl">骨骼（点击高亮，共 <span id="mdBoneN">0</span> 根）</div>
+              <div id="mdBones"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 模型文件 ===== -->
+      <div class="pane" id="pane-files">
+        <div class="card">
+          <h3>模型源文件 <span class="hint">直接编辑 manifest.yml / model.json / animations.json，保存需先通过语法校验</span></h3>
+          <div class="row">
+            <input id="mfDir" placeholder="模型目录（相对 models 根），如 example/crystal_golem">
+            <button class="ghost" id="mfLoad">载入</button>
+            <select id="mfWhich"></select>
+            <button id="mfSave">保存并重载</button>
+          </div>
+          <div class="tt" id="mfTex"></div>
+          <textarea class="mono tall" id="mfText" spellcheck="false" style="margin-top:10px"></textarea>
+          <pre class="out" id="mfOut" style="display:none"></pre>
+        </div>
+      </div>
+
+      <!-- ===== 生物配置 ===== -->
+      <div class="pane" id="pane-mobs">
+        <div class="grid2">
+          <div class="card">
+            <h3>生物 YAML <span class="hint" id="mobHint">← 从左侧选择，或新建</span></h3>
+            <div class="row tight" style="margin-bottom:8px">
+              <label class="lbl" style="margin:0">文件名</label>
+              <input id="mobName" placeholder="如 crystal_boss" style="flex:1">
+              <button class="sm" id="bSaveMob">保存</button>
+              <button class="sm danger" id="bDelMob">删除</button>
+            </div>
+            <textarea class="mono tall" id="mobText" spellcheck="false"
+              placeholder="从左侧选择生物，或用顶部“＋ 新建”按模板创建"></textarea>
+            <div class="row tight" style="margin-top:9px">
+              <select id="mobVers" style="flex:1"></select>
+              <button class="sm ghost" id="bRestore">回滚到该版本</button>
+              <button class="sm ghost" id="bSpawn">生成到游戏</button>
+            </div>
+            <select id="spawnPlayer" style="margin-top:8px;width:100%"></select>
+          </div>
+          <div class="card">
+            <h3>字段说明 &amp; 生成预览</h3>
+            <pre class="out" id="mobOut">选择生物后可在左侧编辑。</pre>
+            <div class="card" style="box-shadow:none;margin-top:10px;background:var(--panel2)">
+              <h3 style="margin-bottom:8px">实际生效的字段</h3>
+              <table>
+                <tr><th>字段</th><th>作用</th></tr>
+                <tr><td><code>model</code></td><td>使用的模型 ID（manifest.yml 里的 id）</td></tr>
+                <tr><td><code>display-name</code></td><td>头顶名称（支持 § 颜色码）</td></tr>
+                <tr><td><code>scale</code></td><td>模型缩放</td></tr>
+                <tr><td><code>glowing</code> / <code>show-name</code></td><td>发光轮廓 / 显示名称</td></tr>
+                <tr><td><code>spawn-hitbox</code></td><td>纯展示模型是否生成点击碰撞盒</td></tr>
+                <tr><td><code>entity.type</code></td><td>真实实体类型：有血量、可被打死（推荐 BOSS）</td></tr>
+                <tr><td><code>entity.health</code></td><td>最大血量</td></tr>
+                <tr><td><code>entity.invisible/silent/no-ai</code></td><td>隐形 / 静音 / 停用原版 AI</td></tr>
+                <tr><td><code>ai.profile</code></td><td>引用 config.yml 的 ai.profiles</td></tr>
+                <tr><td><code>ai.*</code></td><td>就地覆盖视野/攻击/追击等调参</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 校验 ===== -->
+      <div class="pane" id="pane-validate">
+        <div class="card">
+          <h3>模型校验 <span class="hint">解析 + 校验（纹理、骨骼、引用的纹理声明）</span></h3>
+          <div class="row">
+            <input id="valDir" placeholder="模型目录，如 example/crystal_golem">
+            <button class="ghost" id="bValidate">校验</button>
+          </div>
+          <pre class="out" id="valOut" style="display:none;margin-top:10px"></pre>
+        </div>
+        <div class="card">
+          <h3>批量重载</h3>
+          <p class="kv">修改模型文件后点击下面的按钮，让服务器重新扫描并加载 <code>models/</code> 下的全部模型。</p>
+          <button style="margin-top:9px" id="bReload2">立即重载模型</button>
+        </div>
+      </div>
+
+      <!-- ===== 日志 ===== -->
+      <div class="pane" id="pane-log">
+        <div class="card">
+          <h3>操作审计日志 <span class="hint">保存 / 回滚 / 生成等写操作</span></h3>
+          <div class="row" style="margin-bottom:9px"><button class="ghost sm" id="bLog">刷新</button></div>
+          <pre class="out" id="logOut" style="max-height:520px">—</pre>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const $ = id => document.getElementById(id);
+
+const S = {
+  models: [], errors: {}, dirs: [], mobs: [], players: [],
+  selId: null, selDir: null, detail: null,
+  mobFile: null, cubes: [], animCubes: [], hoverBone: null, selBone: null,
+  selAnim: null,
+  anim: { name: null, playing: false, time: 0, raf: 0 },
+  view: { yaw: -0.68, pitch: 0.40, dist: 60, min: 20, max: 400, auto: false, fit: true },
+  center: [0, 0, 0], radius: 20, raf: 0
+};
+
+/* ---------------- 基础 ---------------- */
+async function api(path, opts) {
+  opts = opts || {};
+  const h = Object.assign({ 'Authorization': 'Bearer ' + TOKEN }, opts.headers || {});
+  if (opts.body) h['Content-Type'] = 'application/json';
+  const r = await fetch(path, Object.assign({}, opts, { headers: h }));
+  const txt = await r.text();
+  let data;
+  try { data = JSON.parse(txt); } catch (e) { data = { error: txt }; }
+  if (!r.ok) throw new Error((data && data.error) || ('HTTP ' + r.status));
+  return data;
+}
+function toast(msg, kind) {
+  const d = document.createElement('div');
+  if (kind) d.className = kind;
+  d.textContent = msg;
+  $('toast').appendChild(d);
+  setTimeout(() => d.remove(), kind === 'err' ? 6000 : 3200);
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function setOut(el, obj) {
+  el.style.display = 'block';
+  el.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+}
+
+/* ---------------- 主题 ---------------- */
+(function () {
+  const saved = localStorage.getItem('helstera.theme');
+  if (saved) document.documentElement.dataset.theme = saved;
+  $('bTheme').onclick = () => {
+    const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+    localStorage.setItem('helstera.theme', t);
+    draw();
+  };
+})();
+
+/* ---------------- 标签页 ---------------- */
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => showTab(t.dataset.tab));
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.tab === name));
+  document.querySelectorAll('.pane').forEach(x => x.classList.toggle('on', x.id === 'pane-' + name));
+  if (name === 'model') draw();
+}
+
+/* ---------------- 状态 ---------------- */
+async function loadStatus() {
+  try {
+    const s = await api('/api/status');
+    $('cVer').textContent = 'v' + s.version;
+    $('cModels').textContent = s.models;
+    $('cInst').textContent = s.instances;
+    $('cPlayers').textContent = s.players;
+    $('cTps').textContent = (s.tps || 0).toFixed ? s.tps.toFixed(1) : s.tps;
+    $('cErr').textContent = s.errorCount;
+    $('dRun').className = 'dot' + (s.errorCount > 0 ? ' err' : '');
+    return s;
+  } catch (e) { $('dRun').className = 'dot err'; return null; }
+}
+
+/* ---------------- 模型列表 ---------------- */
+async function loadModels() {
+  const d = await api('/api/models');
+  S.models = d.models || [];
+  S.errors = d.errors || {};
+  S.dirs = d.dirs || [];
+  renderModels();
+  renderBanner();
+  await loadStatus();
+}
+function errorDirs() {
+  const out = {};
+  for (const k of Object.keys(S.errors || {})) {
+    const d = k.indexOf('dir:') === 0 ? k.slice(4) : k;
+    (out[d] = out[d] || []).push(S.errors[k]);
+  }
+  return out;
+}
+function modelItems() {
+  const errDirs = errorDirs();
+  const items = [];
+  const loadedDirs = {};
+  for (const m of S.models) {
+    loadedDirs[m.dir] = true;
+    items.push({ ok: true, id: m.id, dir: m.dir, name: m.name || m.id, bones: m.bones, anims: (m.animations || []).length, errs: errDirs[m.dir] || [] });
+  }
+  for (const d of S.dirs) if (!loadedDirs[d]) items.push({ ok: false, id: d, dir: d, name: d, errs: errDirs[d] || ['未加载（原因未知，可点“模型文件”查看）'] });
+  for (const d of Object.keys(errDirs)) if (!S.dirs.includes(d) && !loadedDirs[d]) items.push({ ok: false, id: d, dir: d, name: d, errs: errDirs[d] });
+  return items;
+}
+function renderModels() {
+  const q = ($('search').value || '').toLowerCase();
+  const ul = $('modelList'); ul.innerHTML = '';
+  let items = modelItems().filter(i => !q || (i.name + ' ' + i.dir + ' ' + i.id).toLowerCase().indexOf(q) >= 0);
+  $('mCount').textContent = items.length + ' 个';
+  if (!items.length) { ul.innerHTML = '<div class="empty">没有模型。把模型包放到 models/ 下再重载。</div>'; }
+  for (const it of items) {
+    const li = document.createElement('li');
+    li.className = (S.selDir === it.dir ? 'sel' : '');
+    const dot = document.createElement('span');
+    dot.className = 'dot' + (it.ok && !it.errs.length ? '' : ' err');
+    dot.style.flex = '0 0 auto';
+    li.appendChild(dot);
+    const nm = document.createElement('span');
+    nm.className = 'nm'; nm.textContent = it.name;
+    li.appendChild(nm);
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = it.ok ? (it.bones + ' 骨 / ' + it.anims + ' 动画') : '失败';
+    li.appendChild(tag);
+    li.onclick = () => it.ok ? selectModel(it.id) : showModelFiles(it.dir);
+    ul.appendChild(li);
+  }
+  return items;
+}
+function renderBanner() {
+  const dirs = errorDirs();
+  const keys = Object.keys(dirs);
+  if (!keys.length) { $('banner').classList.remove('on'); return; }
+  $('banner').classList.add('on');
+  const ul = $('bannerList'); ul.innerHTML = '';
+  for (const d of keys) for (const msg of dirs[d]) {
+    const li = document.createElement('li');
+    li.innerHTML = '<b>' + esc(d) + '</b> → ' + esc(msg);
+    ul.appendChild(li);
+  }
+}
+
+/* ---------------- 模型详情 ---------------- */
+async function selectModel(id) {
+  try {
+    const d = await api('/api/model?id=' + encodeURIComponent(id));
+    if (!d.ok) { toast(d.error || '模型未加载', 'err'); return; }
+    S.detail = d.model; S.selId = id; S.selDir = d.model.dir;
+    $('mdEmpty').style.display = 'none';
+    $('mdBody').style.display = 'block';
+    $('mdHint').textContent = '(' + id + ')';
+    const m = d.model;
+    $('mdMeta').innerHTML =
+      '<dt>ID</dt><dd>' + esc(m.id) + '</dd>' +
+      '<dt>名称</dt><dd>' + esc(m.name) + '</dd>' +
+      '<dt>版本 / 作者</dt><dd>' + esc(m.version) + ' · ' + esc(m.author) + '</dd>' +
+      '<dt>缩放</dt><dd>×' + m.scale + '</dd>' +
+      '<dt>碰撞盒</dt><dd>' + m.hitbox.width + ' × ' + m.hitbox.height + ' 格</dd>' +
+      '<dt>骨骼 / 立方体</dt><dd>' + m.bones.length + ' / ' + (m.cubeCount != null ? m.cubeCount : totalCubes(m)) + '</dd>' +
+      '<dt>目录</dt><dd>' + esc(m.dir) + '</dd>';
+    $('mdTex').innerHTML = (m.textures || []).map(a => '<span class="pill">' + esc(a) + '</span>').join('') || '<span class="pill w">未声明纹理</span>';
+    buildBones(m);
+    buildCubes(m);
+    setupAnims(m);
+    fitView();
+    $('valDir').value = m.dir;
+    $('mfDir').value = m.dir;
+    showTab('model');
+    draw();
+    const errs = (errorDirs()[m.dir] || []);
+    if (errs.length) toast('该模型存在警告/错误：' + errs.join('；'), 'err');
+  } catch (e) { toast('加载模型失败: ' + e.message, 'err'); }
+}
+function buildBones(m) {
+  const depth = {};
+  const byName = {};
+  (m.bones || []).forEach((b, i) => { byName[b.name] = Object.assign({ i: i, depth: (b.parent && depth[b.parent] != null ? depth[b.parent] + 1 : 0) }, b); });
+  (m.bones || []).forEach(b => { depth[b.name] = (b.parent && byName[b.parent]) ? byName[b.parent].depth + 1 : 0; });
+  const box = $('mdBones'); box.innerHTML = '';
+  $('mdBoneN').textContent = (m.bones || []).length;
+  (m.bones || []).forEach((b, i) => {
+    const row = document.createElement('div');
+    row.className = 'bone-row';
+    row.style.paddingLeft = (6 + depth[b.name] * 16) + 'px';
+    const sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = boneColor(i);
+    row.appendChild(sw);
+    const nm = document.createElement('span'); nm.style.flex = '1'; nm.textContent = b.name;
+    if (b.parent) { const p = document.createElement('span'); p.className = 'tag'; p.textContent = '← ' + b.parent; nm.appendChild(p); }
+    row.appendChild(nm);
+    const info = document.createElement('span'); info.className = 'tag';
+    const attachN = (b.attachPoints ? Object.keys(b.attachPoints).length : 0);
+    info.textContent = (b.cubes ? b.cubes.length : 0) + ' 方块' + (attachN ? ' · 挂接 ' + attachN : '');
+    row.appendChild(info);
+    row.onmouseenter = () => { S.hoverBone = b.name; if (!$('cvSpin').classList.contains('on')) draw(); };
+    row.onmouseleave = () => { S.hoverBone = null; draw(); };
+    row.onclick = () => { S.selBone = (S.selBone === b.name ? null : b.name); draw(); };
+    box.appendChild(row);
+  });
+}
+function buildCubes(m) {
+  S.cubes = [];
+  (m.bones || []).forEach((b, bi) => {
+    (b.cubes || []).forEach(c => {
+      S.cubes.push({
+        bone: b.name, bi: bi,
+        min: [c.origin[0], c.origin[1], c.origin[2]],
+        max: [c.origin[0] + c.size[0], c.origin[1] + c.size[1], c.origin[2] + c.size[2]]
+      });
+    });
+  });
+}
+function totalCubes(m) {
+  let n = 0; (m.bones || []).forEach(b => n += (b.cubes ? b.cubes.length : 0)); return n;
+}
+
+/* ---------------- 动画 ---------------- */
+function sampleChannel(frames, t) {
+  if (!frames || !frames.length) return [0, 0, 0];
+  if (t <= frames[0].time) return frames[0].value;
+  const last = frames[frames.length - 1];
+  if (t >= last.time) return last.value;
+  for (let i = 0; i < frames.length - 1; i++) {
+    const a = frames[i], b = frames[i + 1];
+    if (t >= a.time && t <= b.time) {
+      const k = (b.time - a.time) === 0 ? 0 : (t - a.time) / (b.time - a.time);
+      return [a.value[0] + (b.value[0] - a.value[0]) * k,
+              a.value[1] + (b.value[1] - a.value[1]) * k,
+              a.value[2] + (b.value[2] - a.value[2]) * k];
+    }
+  }
+  return last.value;
+}
+function rotX(p, a) { a = a * Math.PI / 180; const c = Math.cos(a), s = Math.sin(a); return [p[0], p[1] * c - p[2] * s, p[1] * s + p[2] * c]; }
+function rotY(p, a) { a = a * Math.PI / 180; const c = Math.cos(a), s = Math.sin(a); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; }
+function rotZ(p, a) { a = a * Math.PI / 180; const c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c, p[2]]; }
+function applyBone(q, pivot, rot, pos) {
+  let r = [q[0] - pivot[0], q[1] - pivot[1], q[2] - pivot[2]];
+  r = rotX(r, rot[0]); r = rotY(r, rot[1]); r = rotZ(r, rot[2]);
+  return [r[0] + pivot[0] + pos[0], r[1] + pivot[1] + pos[1], r[2] + pivot[2] + pos[2]];
+}
+function ancestorChain(name) {
+  const chain = [name]; let cur = S.boneByName[name]; let g = 0;
+  while (cur && cur.parent && S.boneByName[cur.parent] && g++ < 200) { chain.push(cur.parent); cur = S.boneByName[cur.parent]; }
+  return chain;
+}
+function boneAnimTransform(name, t) {
+  const data = S.detail && S.detail.animationsData ? S.detail.animationsData[S.anim.name] : null;
+  if (!data || !data.bones || !data.bones[name]) return { rot: [0, 0, 0], pos: [0, 0, 0] };
+  const bt = data.bones[name];
+  return { rot: sampleChannel(bt.rotation, t), pos: sampleChannel(bt.position, t) };
+}
+function transformCorner(p, boneName, t) {
+  let q = p;
+  for (const nm of ancestorChain(boneName)) {
+    const b = S.boneByName[nm]; if (!b) continue;
+    const tr = boneAnimTransform(nm, t);
+    q = applyBone(q, b.pivot || [0, 0, 0], tr.rot, tr.pos);
+  }
+  return q;
+}
+function computeAnimCubes() {
+  S.animCubes = [];
+  const t = S.anim.time;
+  let bi = 0;
+  (S.detail.bones || []).forEach(b => {
+    (b.cubes || []).forEach(c => {
+      const o = c.origin, s = c.size;
+      const corners = [[o[0], o[1], o[2]], [o[0] + s[0], o[1], o[2]], [o[0] + s[0], o[1] + s[1], o[2]], [o[0], o[1] + s[1], o[2]],
+        [o[0], o[1], o[2] + s[2]], [o[0] + s[0], o[1], o[2] + s[2]], [o[0] + s[0], o[1] + s[1], o[2] + s[2]], [o[0], o[1] + s[1], o[2] + s[2]]];
+      let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+      for (const cnr of corners) { const q = transformCorner(cnr, b.name, t); for (let i = 0; i < 3; i++) { mn[i] = Math.min(mn[i], q[i]); mx[i] = Math.max(mx[i], q[i]); } }
+      S.animCubes.push({ bone: b.name, bi: bi, min: mn, max: mx });
+    });
+    bi++;
+  });
+}
+function setupAnims(m) {
+  S.boneByName = {}; (m.bones || []).forEach(b => S.boneByName[b.name] = b);
+  const anims = m.animations || [];
+  const wrap = $('mdAnims'); wrap.innerHTML = '';
+  stopAnim();
+  if (!anims.length) { wrap.innerHTML = '<span class="kv">无动画</span>'; S.selAnim = null; $('animName').textContent = '—'; updateAnimTime(); return; }
+  S.selAnim = (m.defaultAnimation && anims.includes(m.defaultAnimation)) ? m.defaultAnimation : anims[0];
+  anims.forEach(a => {
+    const p = document.createElement('span'); p.className = 'pill g'; p.textContent = a; p.style.cursor = 'pointer'; p.dataset.anim = a;
+    p.onclick = () => { S.selAnim = a; markSelAnim(); seekTo(0); };
+    wrap.appendChild(p);
+  });
+  markSelAnim();
+  S.anim.name = S.selAnim; S.anim.time = 0;
+  computeAnimCubes();
+  updateAnimTime();
+  $('animName').textContent = S.selAnim;
+  draw();
+}
+function markSelAnim() {
+  document.querySelectorAll('#mdAnims .pill').forEach(p => p.style.outline = (p.dataset.anim === S.selAnim) ? '2px solid var(--accent)' : 'none');
+}
+function updateAnimTime() {
+  const data = S.detail && S.detail.animationsData ? S.detail.animationsData[S.anim.name] : null;
+  const len = data ? data.length : 0;
+  $('animTime').textContent = S.anim.time.toFixed(2) + 's / ' + len.toFixed(2) + 's';
+}
+function seekTo(t) {
+  S.anim.time = t;
+  const data = S.detail && S.detail.animationsData ? S.detail.animationsData[S.anim.name] : null;
+  const len = data ? data.length : 1;
+  $('animSeek').value = Math.round(t / len * 1000);
+  updateAnimTime(); computeAnimCubes(); draw();
+}
+let _animTs = 0;
+function animTick(ts) {
+  if (!S.anim.playing) return;
+  if (!_animTs) _animTs = ts || 0;
+  const dt = Math.min(0.1, ((ts || 0) - _animTs) / 1000); _animTs = ts || 0;
+  const data = S.detail && S.detail.animationsData ? S.detail.animationsData[S.anim.name] : null;
+  const len = data ? data.length : 1;
+  S.anim.time += dt;
+  if (S.anim.time > len) {
+    if (data && data.loop) S.anim.time = S.anim.time % len;
+    else { S.anim.time = len; stopAnim(); }
+  }
+  $('animSeek').value = Math.round(S.anim.time / len * 1000);
+  updateAnimTime(); computeAnimCubes(); draw();
+  if (S.anim.playing) S.anim.raf = requestAnimationFrame(animTick);
+}
+function playAnim() {
+  if (!S.selAnim) return;
+  S.anim.name = S.selAnim; S.anim.playing = true; _animTs = 0;
+  $('animPlay').textContent = '⏸ 暂停';
+  S.anim.raf = requestAnimationFrame(animTick);
+}
+function stopAnim() {
+  S.anim.playing = false;
+  if (S.anim.raf) cancelAnimationFrame(S.anim.raf);
+  S.anim.raf = 0; _animTs = 0;
+  const b = $('animPlay'); if (b) b.textContent = '▶ 播放';
+}
+$('animPlay').onclick = () => { if (S.anim.playing) stopAnim(); else playAnim(); };
+$('animSeek').oninput = () => {
+  const data = S.detail && S.detail.animationsData ? S.detail.animationsData[S.anim.name] : null;
+  const len = data ? data.length : 1;
+  S.anim.time = ($('animSeek').value / 1000) * len;
+  updateAnimTime(); computeAnimCubes(); draw();
+};
+
+/* ---------------- 3D 预览 ---------------- */
+function boneColor(i) {
+  const h = (i * 47) % 360;
+  return 'hsl(' + h + ',62%,56%)';
+}
+function fitView() {
+  if (!S.cubes.length) return;
+  const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+  for (const c of S.cubes) for (let i = 0; i < 3; i++) { mn[i] = Math.min(mn[i], c.min[i]); mx[i] = Math.max(mx[i], c.max[i]); }
+  // 把碰撞盒计入包围盒，方便观察体型
+  if (S.detail && S.detail.hitbox) {
+    const w = S.detail.hitbox.width * 8, h = S.detail.hitbox.height * 16;
+    mn[0] = Math.min(mn[0], -w); mx[0] = Math.max(mx[0], w);
+    mn[1] = Math.min(mn[1], 0); mx[1] = Math.max(mx[1], h);
+    mn[2] = Math.min(mn[2], -w); mx[2] = Math.max(mx[2], w);
+  }
+  S.center = [(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, (mn[2] + mx[2]) / 2];
+  S.radius = Math.max(8, Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) / 2);
+  S.bbox = { mn: mn, mx: mx };
+  S.view.dist = S.radius * 2.6;
+  S.view.min = S.radius * 1.1; S.view.max = S.radius * 10;
+  S.view.fit = false;
+}
+function rotv(v, yaw, pitch) {
+  const cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const x1 = v[0] * cy + v[2] * sy, z1 = -v[0] * sy + v[2] * cy;
+  const cp = Math.cos(pitch), sp = Math.sin(pitch);
+  return [x1, v[1] * cp - z1 * sp, v[1] * sp + z1 * cp];
+}
+function toCam(p, yaw, pitch, dist) {
+  const v = rotv([p[0] - S.center[0], p[1] - S.center[1], p[2] - S.center[2]], yaw, pitch);
+  return [v[0], v[1], v[2] + dist];
+}
+const FACES = [
+  { i: [0, 3, 2, 1], n: [0, 0, -1] },
+  { i: [4, 5, 6, 7], n: [0, 0, 1] },
+  { i: [0, 1, 5, 4], n: [0, -1, 0] },
+  { i: [3, 7, 6, 2], n: [0, 1, 0] },
+  { i: [0, 4, 7, 3], n: [-1, 0, 0] },
+  { i: [1, 2, 6, 5], n: [1, 0, 0] }
+];
+const LIGHT = (() => { const l = [0.35, 0.78, 0.52]; const n = Math.hypot(l[0], l[1], l[2]); return [l[0] / n, l[1] / n, l[2] / n]; })();
+
+function draw() {
+  const cv = $('canvas'); if (!cv) return;
+  const W = cv.clientWidth || 600, H = cv.clientHeight || 330;
+  const dpr = window.devicePixelRatio || 1;
+  if (cv.width !== W * dpr || cv.height !== H * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  const d = S.detail;
+  if (!d || !S.cubes.length) {
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--txt3');
+    ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('无立方体可预览', W / 2, H / 2);
+    return;
+  }
+  const yaw = S.view.yaw, pitch = S.view.pitch, dist = S.view.dist;
+  const f = Math.min(W, H) * 0.95, ox = W / 2, oy = H / 2;
+
+  // 地面网格
+  if ($('cvGrid').checked && S.bbox) {
+    const mn = S.bbox.mn, mx = S.bbox.mx;
+    const y = mn[1], step = gridStep(mx[0] - mn[0], mx[2] - mn[2]);
+    ctx.strokeStyle = color2('--line2', '#eef2f7'); ctx.lineWidth = 1;
+    for (let x = Math.floor(mn[0] / step) * step; x <= mx[0] + step; x += step) gridLine(ctx, [x, y, mn[2] - step], [x, y, mx[2] + step], yaw, pitch, dist, f, ox, oy);
+    for (let z = Math.floor(mn[2] / step) * step; z <= mx[2] + step; z += step) gridLine(ctx, [mn[0] - step, y, z], [mx[0] + step, y, z], yaw, pitch, dist, f, ox, oy);
+  }
+
+  // 立方体面
+  const faces = [];
+  const cubes = (S.anim.playing && S.animCubes.length) ? S.animCubes : S.cubes;
+  for (const cube of cubes) {
+    const mn = cube.min, mx = cube.max;
+    const C = [
+      [mn[0], mn[1], mn[2]], [mx[0], mn[1], mn[2]], [mx[0], mx[1], mn[2]], [mn[0], mx[1], mn[2]],
+      [mn[0], mn[1], mx[2]], [mx[0], mn[1], mx[2]], [mx[0], mx[1], mx[2]], [mn[0], mx[1], mx[2]]
+    ].map(p => toCam(p, yaw, pitch, dist));
+    const hi = (cube.bone === S.selBone) || (cube.bone === S.hoverBone);
+    for (const fa of FACES) {
+      const nr = rotv(fa.n, yaw, pitch);
+      const a = C[fa.i[0]], b = C[fa.i[1]], c = C[fa.i[2]], e2 = C[fa.i[3]];
+      const ctr = [(a[0] + b[0] + c[0] + e2[0]) / 4, (a[1] + b[1] + c[1] + e2[1]) / 4, (a[2] + b[2] + c[2] + e2[2]) / 4];
+      if (nr[0] * ctr[0] + nr[1] * ctr[1] + nr[2] * ctr[2] >= 0) continue; // 背面剔除
+      const pts = fa.i.map(i => [ox + f * C[i][0] / C[i][2], oy - f * C[i][1] / C[i][2]]);
+      const depth = (a[2] + b[2] + c[2] + e2[2]) / 4;
+      const lam = Math.max(0, nr[0] * LIGHT[0] + nr[1] * LIGHT[1] + nr[2] * LIGHT[2]);
+      faces.push({ pts: pts, depth: depth, shade: 0.42 + 0.58 * lam, hi: hi, bi: cube.bi });
+    }
+  }
+  faces.sort((p, q) => q.depth - p.depth);
+  for (const fc of faces) {
+    const base = fc.hi ? 'hsl(212,85%,56%)' : boneColor(fc.bi);
+    ctx.beginPath();
+    ctx.moveTo(fc.pts[0][0], fc.pts[0][1]);
+    for (let i = 1; i < 4; i++) ctx.lineTo(fc.pts[i][0], fc.pts[i][1]);
+    ctx.closePath();
+    ctx.fillStyle = shade(base, fc.shade);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.16)'; ctx.lineWidth = 0.6; ctx.stroke();
+  }
+
+  // 碰撞盒
+  if ($('cvHitbox').checked && d.hitbox) {
+    const w = d.hitbox.width * 8, h = d.hitbox.height * 16;
+    const box = [[-w, 0, -w], [w, 0, -w], [w, h, -w], [-w, h, -w], [-w, 0, w], [w, 0, w], [w, h, w], [-w, h, w]];
+    const P = box.map(p => toCam(p, yaw, pitch, dist));
+    const S2 = P.map(p => [ox + f * p[0] / p[2], oy - f * p[1] / p[2]]);
+    const E = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
+    ctx.strokeStyle = 'rgba(21,163,74,.75)'; ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
+    for (const e of E) { ctx.beginPath(); ctx.moveTo(S2[e[0]][0], S2[e[0]][1]); ctx.lineTo(S2[e[1]][0], S2[e[1]][1]); ctx.stroke(); }
+    ctx.setLineDash([]);
+  }
+
+  // 原点坐标轴
+  const O = toCam([0, 0, 0], yaw, pitch, dist);
+  const o2 = [ox + f * O[0] / O[2], oy - f * O[1] / O[2]];
+  const axes = [[[6, 0, 0], '#e5484d'], [[0, 6, 0], '#30a46c'], [[0, 0, 6], '#3b82f6']];
+  ctx.lineWidth = 1.6;
+  for (const ax of axes) {
+    const p = toCam(ax[0], yaw, pitch, dist);
+    ctx.strokeStyle = ax[1];
+    ctx.beginPath(); ctx.moveTo(o2[0], o2[1]); ctx.lineTo(ox + f * p[0] / p[2], oy - f * p[1] / p[2]); ctx.stroke();
+  }
+  $('cvLegend').textContent = '立方体 ' + S.cubes.length + ' · 拖拽旋转 · 滚轮缩放' + (S.selBone ? ' · 已选 ' + S.selBone : '');
+}
+function gridStep(sx, sz) {
+  const s = Math.max(sx, sz, 8);
+  return s <= 40 ? 4 : s <= 96 ? 8 : 16;
+}
+function gridLine(ctx, a, b, yaw, pitch, dist, f, ox, oy) {
+  const p = toCam(a, yaw, pitch, dist), q = toCam(b, yaw, pitch, dist);
+  if (p[2] <= 1 || q[2] <= 1) return;
+  ctx.beginPath();
+  ctx.moveTo(ox + f * p[0] / p[2], oy - f * p[1] / p[2]);
+  ctx.lineTo(ox + f * q[0] / q[2], oy - f * q[1] / q[2]);
+  ctx.stroke();
+}
+function color2(v, fb) {
+  const c = getComputedStyle(document.documentElement).getPropertyValue(v);
+  return (c && c.trim()) || fb;
+}
+function shade(hsl, k) {
+  const m = /hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/.exec(hsl);
+  if (!m) return hsl;
+  const l = Math.max(6, Math.min(92, Math.round(Number(m[3]) * k)));
+  return 'hsl(' + m[1] + ',' + m[2] + '%,' + l + '%)';
+}
+/* 交互 */
+(function () {
+  const cv = $('canvas');
+  let drag = null;
+  cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => {
+    if (!drag) return;
+    S.view.yaw += (e.clientX - drag.x) * 0.011;
+    S.view.pitch = Math.max(-1.45, Math.min(1.45, S.view.pitch + (e.clientY - drag.y) * 0.011));
+    drag = { x: e.clientX, y: e.clientY };
+    draw();
+  });
+  cv.addEventListener('pointerup', () => drag = null);
+  cv.addEventListener('pointercancel', () => drag = null);
+  cv.addEventListener('wheel', e => {
+    e.preventDefault();
+    const k = e.deltaY > 0 ? 1.09 : 0.92;
+    S.view.dist = Math.max(S.view.min, Math.min(S.view.max, S.view.dist * k));
+    draw();
+  }, { passive: false });
+  window.addEventListener('resize', () => draw());
+})();
+function spinLoop() {
+  cancelAnimationFrame(S.raf);
+  const step = () => {
+    if (!S.view.auto) return;
+    S.view.yaw += 0.012;
+    draw();
+    S.raf = requestAnimationFrame(step);
+  };
+  if (S.view.auto) S.raf = requestAnimationFrame(step);
+}
+$('cvReset').onclick = () => { S.view.yaw = -0.68; S.view.pitch = 0.40; fitView(); draw(); };
+$('cvSpin').onclick = e => {
+  S.view.auto = !S.view.auto;
+  e.currentTarget.style.background = S.view.auto ? 'var(--soft)' : '';
+  spinLoop();
+};
+$('cvHitbox').onchange = draw;
+$('cvGrid').onchange = draw;
+
+/* ---------------- 模型文件 ---------------- */
+async function showModelFiles(dir) {
+  $('mfDir').value = dir || '';
+  showTab('files');
+  await loadModelFiles(dir);
+}
+async function loadModelFiles(dir) {
+  if (!dir) { toast('请先填写模型目录', 'err'); return; }
+  try {
+    const d = await api('/api/model/files?dir=' + encodeURIComponent(dir));
+    if (!d.ok) { toast(d.error, 'err'); return; }
+    const sel = $('mfWhich'); const cur = sel.value;
+    sel.innerHTML = '';
+    for (const n of ['manifest.yml', 'model.json', 'animations.json']) {
+      const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o);
+    }
+    sel.value = ['manifest.yml', 'model.json', 'animations.json'].includes(cur) ? cur : 'manifest.yml';
+    S.files = d.files || {};
+    $('mfText').value = S.files[sel.value] == null ? '' : S.files[sel.value];
+    $('mfTex').textContent = '纹理: ' + ((d.textures || []).join(', ') || '（无）');
+    $('mfDir').value = d.dir;
+    S.selDir = d.dir;
+  } catch (e) { toast('载入失败: ' + e.message, 'err'); }
+}
+$('mfWhich').onchange = () => {
+  const n = $('mfWhich').value;
+  $('mfText').value = (S.files && S.files[n] != null) ? S.files[n] : '';
+};
+$('mfLoad').onclick = () => loadModelFiles($('mfDir').value.trim());
+$('mfSave').onclick = async () => {
+  const dir = $('mfDir').value.trim(), name = $('mfWhich').value;
+  try {
+    const d = await api('/api/model/save', { method: 'POST', body: JSON.stringify({ dir: dir, name: name, content: $('mfText').value }) });
+    if (d.ok) {
+      toast(d.message || '已保存', 'ok') ;
+      await api('/api/reload', { method: 'POST', body: '{}' });
+      setTimeout(refreshAll, 1400);
+    } else { setOut($('mfOut'), '✗ ' + d.error); toast(d.error, 'err'); }
+  } catch (e) { toast('保存失败: ' + e.message, 'err'); }
+};
+
+/* ---------------- 生物 ---------------- */
+async function loadMobs() {
+  const d = await api('/api/mobs');
+  S.mobs = d.mobs || [];
+  const ul = $('mobList'); ul.innerHTML = '';
+  const q = ($('search').value || '').toLowerCase();
+  const list = S.mobs.filter(m => !q || (m.file + ' ' + (m.model || '')).toLowerCase().indexOf(q) >= 0);
+  if (!list.length) ul.innerHTML = '<div class="empty">暂无生物配置，点“＋ 新建”。</div>';
+  for (const m of list) {
+    const li = document.createElement('li');
+    li.className = (S.mobFile === m.file ? 'sel' : '');
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = m.file;
+    li.appendChild(nm);
+    const tag = document.createElement('span'); tag.className = 'tag';
+    tag.textContent = m.entity ? m.entity : (m.model || '');
+    li.appendChild(tag);
+    li.onclick = () => openMob(m.file);
+    ul.appendChild(li);
+  }
+}
+async function openMob(file) {
+  try {
+    const d = await api('/api/mobs/file?name=' + encodeURIComponent(file));
+    if (!d.ok) { toast(d.error, 'err'); return; }
+    S.mobFile = file;
+    $('mobName').value = file.replace('.yml', '');
+    $('mobText').value = d.content;
+    $('mobHint').textContent = '(' + file + ')';
+    await loadMobVersions(file);
+    showTab('mobs');
+    renderMobs();
+  } catch (e) { toast('读取失败: ' + e.message, 'err'); }
+}
+async function loadMobVersions(file) {
+  const d = await api('/api/mobs/versions?name=' + encodeURIComponent(file));
+  const s = $('mobVers'); s.innerHTML = '';
+  const vs = d.versions || [];
+  if (!vs.length) { const o = document.createElement('option'); o.textContent = '（暂无历史版本）'; o.value = ''; s.appendChild(o); return; }
+  vs.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; s.appendChild(o); });
+}
+$('bSaveMob').onclick = async () => {
+  const name = $('mobName').value.trim();
+  if (!name) { toast('请填写文件名', 'err'); return; }
+  try {
+    const d = await api('/api/mobs/save', { method: 'POST', body: JSON.stringify({ name: name, content: $('mobText').value }) });
+    if (d.ok) { toast(d.message || '已保存', 'ok'); S.mobFile = name.replace(/\.yml$/, '') + '.yml'; await loadMobs(); await loadMobVersions(S.mobFile); }
+    else { toast(d.error, 'err'); setOut($('mobOut'), '✗ ' + d.error); }
+  } catch (e) { toast('保存失败: ' + e.message, 'err'); }
+};
+$('bDelMob').onclick = async () => {
+  const name = $('mobName').value.trim();
+  if (!name) { toast('请填写文件名', 'err'); return; }
+  if (!confirm('确认删除 ' + name + '.yml ？会保留一份版本备份。')) return;
+  try {
+    const d = await api('/api/mobs/delete', { method: 'POST', body: JSON.stringify({ name: name }) });
+    toast(d.message || d.error, d.ok ? 'ok' : 'err');
+    S.mobFile = null; $('mobText').value = ''; $('mobName').value = '';
+    await loadMobs();
+  } catch (e) { toast('删除失败: ' + e.message, 'err'); }
+};
+$('bRestore').onclick = async () => {
+  const v = $('mobVers').value, name = $('mobName').value.trim();
+  if (!v || !name) { toast('请选择版本', 'err'); return; }
+  try {
+    const d = await api('/api/mobs/restore', { method: 'POST', body: JSON.stringify({ name: name, version: v }) });
+    toast(d.message || d.error, d.ok ? 'ok' : 'err');
+    if (d.ok) await openMob(name.replace(/\.yml$/, '') + '.yml');
+  } catch (e) { toast('回滚失败: ' + e.message, 'err'); }
+};
+$('bSpawn').onclick = async () => {
+  const name = $('mobName').value.trim();
+  if (!name) { toast('请先填写/选择生物', 'err'); return; }
+  try {
+    const d = await api('/api/spawn', { method: 'POST', body: JSON.stringify({ mob: name, player: $('spawnPlayer').value }) });
+    toast(d.message || d.error, d.ok ? 'ok' : 'err');
+    setOut($('mobOut'), d.message || ('✗ ' + d.error));
+  } catch (e) { toast('生成失败: ' + e.message, 'err'); }
+};
+$('bNewMob').onclick = async () => {
+  let tpls = [];
+  try { tpls = (await api('/api/templates')).templates || []; } catch (e) { }
+  const names = tpls.map(t => t.id + ' — ' + t.description).join('\n');
+  const input = prompt('新建生物配置\n\n可选模板:\n' + names + '\n\n请输入文件名（不含 .yml）:', 'new_mob');
+  if (!input) return;
+  const kind = (prompt('模板 id（boss / elite / npc / blank）:', 'boss') || 'blank').trim();
+  try {
+    const d = await api('/api/mobs/create', { method: 'POST', body: JSON.stringify({ name: input.trim(), template: kind }) });
+    if (d.ok) { toast(d.message, 'ok'); await loadMobs(); await openMob(d.name); showTab('mobs'); }
+    else toast(d.error, 'err');
+  } catch (e) { toast('创建失败: ' + e.message, 'err'); }
+};
+
+/* ---------------- 校验 / 日志 / 动作 ---------------- */
+$('bValidate').onclick = async () => {
+  const v = $('valDir').value.trim();
+  const body = v.indexOf('/') >= 0 || v.indexOf('_') >= 0 ? { dir: v, id: v } : { id: v, dir: v };
+  try {
+    const d = await api('/api/validate', { method: 'POST', body: JSON.stringify(body) });
+    const errs = d.errors || [];
+    if (d.ok) {
+      setOut($('valOut'), '✓ 校验通过\n模型 ID: ' + d.id + '\n骨骼: ' + d.bones + '\n动画: ' + (d.animations || []).join(', ') +
+        (d.warnings && d.warnings.length ? '\n\n警告:\n- ' + d.warnings.join('\n- ') : ''));
+      toast('校验通过', 'ok');
+    } else {
+      setOut($('valOut'), '✗ 校验失败\n' + errs.map(e => '- ' + e).join('\n') + (d.error ? '\n' + d.error : ''));
+      toast('校验失败，详见下方', 'err');
+    }
+  } catch (e) { toast('校验请求失败: ' + e.message, 'err'); }
+};
+async function doReload() {
+  try {
+    const d = await api('/api/reload', { method: 'POST', body: '{}' });
+    toast(d.message || '已触发重载', d.ok ? 'ok' : 'err');
+    setTimeout(refreshAll, 1500);
+  } catch (e) { toast('重载失败: ' + e.message, 'err'); }
+}
+$('bReload').onclick = doReload;
+$('bReload2').onclick = doReload;
+$('bPack').onclick = async () => {
+  try { const d = await api('/api/pack/build', { method: 'POST', body: '{}' }); toast(d.message || d.error, d.ok ? 'ok' : 'err'); }
+  catch (e) { toast('构建失败: ' + e.message, 'err'); }
+};
+$('bLog').onclick = async () => {
+  try { const d = await api('/api/log'); setOut($('logOut'), (d.lines || []).join('\n') || '（暂无记录）'); }
+  catch (e) { toast('读取日志失败: ' + e.message, 'err'); }
+};
+$('search').oninput = () => { renderModels(); loadMobs(); };
+
+/* ---------------- 初始化 ---------------- */
+async function loadPlayers() {
+  try {
+    const d = await api('/api/players');
+    const sel = $('spawnPlayer'); const cur = sel.value;
+    sel.innerHTML = '';
+    const list = d.players || [];
+    if (!list.length) { const o = document.createElement('option'); o.textContent = '（无在线玩家，将生成到首位）'; o.value = ''; sel.appendChild(o); return; }
+    list.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
+    if (cur) sel.value = cur;
+  } catch (e) { }
+}
+async function refreshAll() {
+  try { await loadModels(); await loadMobs(); await loadStatus(); await loadPlayers(); }
+  catch (e) { toast('刷新失败: ' + e.message, 'err'); }
+}
+(async function init() {
+  const s = await loadStatus();
+  if (!s) { toast('无法连接插件（请确认 web.enabled 与服务端状态）', 'err'); return; }
+  await refreshAll();
+  try { const d = await api('/api/log'); setOut($('logOut'), (d.lines || []).join('\n') || '（暂无记录）'); } catch (e) { }
+  setInterval(loadStatus, 5000);
+  setInterval(loadPlayers, 15000);
+})();
+</script>
+</body>
+</html>

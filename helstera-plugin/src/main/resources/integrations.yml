@@ -1,0 +1,10 @@
+# MythicMobs 集成配置
+# 让神话生物显示 helstera 模型：
+# mythicmobs:
+#   mobs:
+#     SkeletalKnight:
+#       model: example/crystal_golem
+#       scale: 1.2
+#       default-animation: idle
+mythicmobs:
+  mobs: {}

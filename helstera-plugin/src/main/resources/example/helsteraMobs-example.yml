@@ -1,0 +1,88 @@
+schema-version: 1
+namespace: myserver
+
+models:
+  emberling:
+    source: "helstera:entity/emberling"
+    scale: 1.0
+    hitbox:
+      width: 0.7
+      height: 1.4
+    animations:
+      idle: "helstera:emberling_idle"
+      walk: "helstera:emberling_walk"
+      attack: "helstera:emberling_attack"
+
+mobs:
+  emberling:
+    display-name: "&6Emberling"
+    base-entity: ZOMBIE
+    model: "myserver:emberling"
+    health: 24
+    movement-speed: 0.28
+    ai:
+      initial-state: idle
+      states:
+        idle:
+          animation: idle
+          transitions:
+            - when: "target.exists"
+              to: chase
+        chase:
+          animation: walk
+          actions:
+            - type: follow-target
+              speed: 1.0
+          transitions:
+            - when: "target.distance <= 2.4"
+              to: attack
+            - when: "!target.exists"
+              to: idle
+        attack:
+          animation: attack
+          actions:
+            - type: damage-target
+              amount: 5
+              cooldown: 1.2s
+            - type: particle
+              name: FLAME
+              count: 12
+          transitions:
+            - when: "target.distance > 3.0"
+              to: chase
+    skills:
+      - id: ember_burst
+        trigger: on-damage
+        cooldown: 6s
+        conditions:
+          - "health.percent < 0.5"
+        actions:
+          - type: play-animation
+            animation: attack
+          - type: sound
+            name: minecraft:entity.blaze.shoot
+            volume: 0.8
+          - type: particle
+            name: FLAME
+            count: 40
+    integrations:
+      itemadder:
+        weapon: "myitems:ember_claw"
+      craftengine:
+        drop: "myserver:ember_shard"
+
+resource-pack:
+  roots:
+    - "plugins/helsteraMobs/example-pack"
+  auto-merge: true
+  namespace: helstera
+
+web-editor:
+  enabled: true
+  bind: 127.0.0.1
+  port: 8765
+  read-only: false
+
+migration:
+  backup-before-apply: true
+  strict: true

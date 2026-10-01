@@ -1,0 +1,85 @@
+# helsteraMobs 核心配置
+schema-version: 1
+
+models:
+  # 模型根目录（相对插件目录或绝对路径，可多个）
+  roots:
+    - "plugins/helsteraMobs/models"
+  auto-load: true
+  strict-validation: true
+
+render:
+  view-distance: 48
+  # 动画采样更新频率（每 N Tick 采样一次）
+  update-rate: 1
+  max-instances-per-player: 128
+  hide-when-out-of-range: true
+  # 显示实体插值 Tick 数（越小越跟手，越大越平滑）
+  interpolation-ticks: 2
+  # 可见性刷新间隔（Tick）
+  visibility-refresh-ticks: 10
+
+scheduler:
+  # 每 Tick 最大实例更新数（预算）
+  max-updates-per-tick: 200
+  # 距离 LOD：超过该距离隔 Tick 更新
+  lod-far-distance: 32.0
+  lod-farther-distance: 64.0
+
+cache:
+  enabled: true
+  directory: "plugins/helsteraMobs/cache"
+
+resourcepack:
+  # 留空时使用网页开发器内建下载（http://127.0.0.1:<web.port>/pack.zip）
+  url: ""
+  # 纹理限制
+  max-texture-size-bytes: 1048576
+  max-texture-pixels: 1024
+
+ai:
+  enabled: true
+  # AI 决策间隔（Tick）
+  decision-ticks: 10
+  profiles:
+    default:
+      sight-radius: 16.0
+      attack-radius: 2.2
+      attack-damage: 3.0
+      attack-cooldown: 1.2
+      flee-health-ratio: 0.3
+      patrol-radius: 8.0
+      patrol-interval: 4.0
+      move-speed: 0.28
+      can-chase: true
+      can-flee: false
+      can-patrol: true
+      can-attack: true
+    boss:
+      sight-radius: 24.0
+      attack-radius: 3.0
+      attack-damage: 8.0
+      attack-cooldown: 1.0
+      flee-health-ratio: 0.0
+      patrol-radius: 6.0
+      patrol-interval: 3.0
+      move-speed: 0.30
+      can-chase: true
+      can-flee: false
+      can-patrol: true
+      can-attack: true
+
+web:
+  enabled: true
+  # 监听地址：默认 0.0.0.0（监听所有网卡，远程/面板部署时浏览器也能直接打开）。
+  # 若只需本机访问、或出于安全考虑，可改为 127.0.0.1。
+  # 注意 0.0.0.0 时任何能连到该端口的人凭令牌都可访问，请确保防火墙已限制。
+  host: "0.0.0.0"
+  port: 8765
+  # 留空则每次启动自动生成
+  token: ""
+
+compatibility:
+  mythicmobs: true
+  itemadder: true
+  craftengine: true
