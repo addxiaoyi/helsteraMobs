@@ -29,13 +29,17 @@ public final class PackFormats {
      */
     private static final String[][] TABLE = {
             // 26.x 起改用年份编号，且格式号由单值变为 major.minor 一对。
-            // 取 resource_major 作为对外的 pack_format；26.3 实测为 97.1，主版本即 97。
-            // 数据来源：各版本 client.jar 内 version.json 的 pack_version 字段。
-            // 26.x 实测 = 97（client.jar version.json: pack_version.resource_major=97）。
+            // 取 resource_major 作为对外的 pack_format；26.3 实测为 97。
+            //
+            // 本表数值来源：逐版本从官方 client.jar 的 version.json 读取
+            // pack_version.resource（或 resource_major）实测得出，非凭记忆填写。
+            // 1.21.9 起字段名改为 resource_major，1.21.11 实测 75（此前误记为 69，
+            // 会让 1.21.11 客户端静默拒绝资源包）。改动此表前请先实测。
+            //
             // 注意：25.x 未收录——没有实测依据，猜测格式号会让客户端静默拒绝资源包，
             // 比回落到配置项更糟。未收录版本会告警并使用配置值。
             {"26.", "97"},
-            {"1.21.11", "69"},
+            {"1.21.11", "75"},
             {"1.21.10", "69"},
             {"1.21.9", "69"},
             {"1.21.8", "64"},
