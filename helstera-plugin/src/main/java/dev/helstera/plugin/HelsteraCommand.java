@@ -33,7 +33,8 @@ public final class HelsteraCommand implements TabExecutor {
     }
 
     private static final List<String> SUBS = List.of(
-            "reload", "model", "mob", "animation", "migrate", "web", "debug", "stats", "pack", "help");
+            "reload", "model", "mob", "animation", "migrate", "web", "debug", "stats", "pack",
+            "loot", "spawner", "help");
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -52,6 +53,8 @@ public final class HelsteraCommand implements TabExecutor {
             case "debug" -> debug(sender, args);
             case "stats" -> stats(sender);
             case "pack" -> pack(sender, args);
+            case "loot" -> loot(sender, args);
+            case "spawner" -> spawner(sender, args);
             default -> help(sender);
         }
         return true;
@@ -59,15 +62,17 @@ public final class HelsteraCommand implements TabExecutor {
 
     private void help(CommandSender s) {
         s.sendMessage("§b§lhelsteraMobs §r§7v" + plugin.getDescription().getVersion());
-        s.sendMessage("§b/helstera reload [models|config|packs|all] §7- 重载");
+        s.sendMessage("§b/helstera reload [models|config|packs|loot|all] §7- 重载");
         s.sendMessage("§b/helstera model list|info|validate|unload <id> §7- 模型管理");
         s.sendMessage("§b/helstera mob spawn|remove|info <id> [model] §7- 生物实例");
         s.sendMessage("§b/helstera animation play|stop|pause|resume <实例> <动画> §7- 动画");
         s.sendMessage("§b/helstera migrate scan|preview|apply|rollback|report <来源> §7- 迁移中心");
+        s.sendMessage("§b/helstera loot list|roll <表名> [luck] §7- 掉落表");
+        s.sendMessage("§b/helstera spawner list|force <id> [数量]|reload §7- 刷怪点");
         s.sendMessage("§b/helstera web start [0.0.0.0] §7- 启动网页(加0.0.0.0允许远程)");
         s.sendMessage("§b/helstera web doctor §7- 网页打不开时自检(地址/防火墙/端口映射)");
         s.sendMessage("§b/helstera web firewall §7- 一键放行 Windows 防火墙端口");
-        s.sendMessage("§b/helstera debug [render|animation|network|ai] §7- 调试");
+        s.sendMessage("§b/helstera debug [render|animation|network|ai|skills|integrations] §7- 调试");
         s.sendMessage("§b/helstera stats §7- 性能统计");
         s.sendMessage("§b/helstera pack build|apply §7- 资源包");
     }
@@ -80,13 +85,16 @@ public final class HelsteraCommand implements TabExecutor {
             case "models" -> plugin.reloadModels();
             case "config" -> plugin.reloadConfig();
             case "packs" -> plugin.buildResourcePack(true);
+            case "loot" -> plugin.reloadLootAndSpawners();
+            case "spawners" -> plugin.reloadLootAndSpawners();
             case "all" -> {
                 plugin.reloadConfig();
                 plugin.reloadModels();
+                plugin.reloadLootAndSpawners();
                 plugin.buildResourcePack(true);
             }
             default -> {
-                s.sendMessage("§c未知重载目标: " + what + "（models|config|packs|all）");
+                s.sendMessage("§c未知重载目标: " + what + "（models|config|packs|loot|spawners|all）");
                 return;
             }
         }
@@ -415,6 +423,21 @@ public final class HelsteraCommand implements TabExecutor {
                 ws.forEach(w -> s.sendMessage("§c- " + w));
             }
         }
+        if (area.equals("integrations") || area.equals("ai") || area.equals("all")) {
+            s.sendMessage("§7== 外部插件适配器 ==");
+            var reg = plugin.integrationRegistry();
+            if (reg == null || reg.all().isEmpty()) {
+                s.sendMessage("§7(未加载适配器或全部未连接)");
+            } else {
+                for (var a : reg.all()) {
+                    s.sendMessage("§8  §f" + a.pluginName() + " §7(" + a.supportedVersions() + ") "
+                            + (a.isConnected() ? "§a已连接" : "§c未连接")
+                            + " §7能力: " + a.capabilities());
+                    String r = a.statusReport();
+                    if (r != null && !r.isBlank()) s.sendMessage("§8    §7" + r);
+                }
+            }
+        }
     }
 
     private void stats(CommandSender s) {
@@ -454,6 +477,126 @@ public final class HelsteraCommand implements TabExecutor {
         }
     }
 
+    /** /helstera loot list|roll <表名> [luck] */
+    private void loot(CommandSender s, String[] args) {
+        if (!s.hasPermission("helstera.loot")) { deny(s); return; }
+        var service = plugin.loot();
+        if (service == null) {
+            s.sendMessage("§c掉落系统未启用（loot.yml 加载失败，查看启动日志）");
+            return;
+        }
+        String action = args.length > 1 ? args[1] : "list";
+        switch (action) {
+            case "list" -> {
+                s.sendMessage("§b掉落表（" + service.size() + " 张）:");
+                for (String name : service.tableNames()) {
+                    var t = service.table(name);
+                    s.sendMessage("§7- §f" + name + " §7(" + t.entries().size() + " 条, 幸运系数 "
+                            + t.luckFactor() + ")");
+                }
+                if (service.tableNames().isEmpty()) s.sendMessage("§7（loot.yml 的 tables 为空）");
+                if (!service.warnings().isEmpty()) {
+                    s.sendMessage("§c告警 " + service.warnings().size() + " 条:");
+                    service.warnings().forEach(w -> s.sendMessage("§c- " + w));
+                }
+            }
+            case "roll" -> {
+                if (args.length < 3) {
+                    s.sendMessage("§c用法: /helstera loot roll <表名> [luck]");
+                    return;
+                }
+                String table = args[2];
+                if (service.table(table) == null) {
+                    s.sendMessage("§c掉落表不存在: " + table);
+                    return;
+                }
+                double luck = args.length > 3 ? parseDouble(args[3], 0) : 0;
+                var hits = service.rollPlan(table, luck);
+                if (hits.isEmpty()) {
+                    s.sendMessage("§7本次未命中任何条目（概率判定）");
+                    return;
+                }
+                s.sendMessage("§a掷出 " + hits.size() + " 条:");
+                for (var h : hits) {
+                    s.sendMessage("§7- §f" + h.amount() + "x " + h.entry().itemId()
+                            + " §7(概率 " + String.format("%.2f", h.entry().chance())
+                            + (h.entry().luckScaling() ? ", 吃幸运" : ", 固定概率") + ")");
+                }
+                if (s instanceof Player p && service.materialize(hits) != null) {
+                    // 玩家执行时直接把结果发到背包，方便调试掉落表
+                    var items = service.materialize(hits);
+                    for (var it : items) p.getInventory().addItem(it);
+                    s.sendMessage("§a已放入背包（仅调试用，不计实际掉落）");
+                }
+            }
+            default -> s.sendMessage("§c用法: /helstera loot list|roll <表名> [luck]");
+        }
+    }
+
+    /** /helstera spawner list|force <id> [数量]|reload */
+    private void spawner(CommandSender s, String[] args) {
+        if (!s.hasPermission("helstera.spawner")) { deny(s); return; }
+        var service = plugin.spawners();
+        if (service == null) {
+            s.sendMessage("§c刷怪点系统未启用（spawners.yml 加载失败，查看启动日志）");
+            return;
+        }
+        String action = args.length > 1 ? args[1] : "list";
+        switch (action) {
+            case "list" -> {
+                s.sendMessage("§b刷怪点（" + service.size() + " 个）:");
+                for (String id : service.ids()) {
+                    var sp = service.get(id);
+                    s.sendMessage("§7- §f" + id + " §7→ 生物 " + sp.mobId()
+                            + " §7| 间隔 " + sp.intervalTicks() + "t"
+                            + " §7| 存活 " + service.aliveCount(id) + "/" + sp.maxAlive()
+                            + " §7| 累计 " + sp.totalSpawned()
+                            + (sp.enabled() ? "" : " §c[已禁用]"));
+                }
+                if (service.ids().isEmpty()) s.sendMessage("§7（spawners.yml 的 spawners 为空）");
+                if (!service.warnings().isEmpty()) {
+                    s.sendMessage("§c告警 " + service.warnings().size() + " 条:");
+                    service.warnings().forEach(w -> s.sendMessage("§c- " + w));
+                }
+            }
+            case "force" -> {
+                if (args.length < 3) {
+                    s.sendMessage("§c用法: /helstera spawner force <id> [数量]");
+                    return;
+                }
+                String id = args[2];
+                if (service.get(id) == null) {
+                    s.sendMessage("§c刷怪点不存在: " + id);
+                    return;
+                }
+                int count = args.length > 3 ? (int) parseDouble(args[3], 1) : 1;
+                if (count <= 0 || count > 64) {
+                    s.sendMessage("§c数量必须在 1..64 之间");
+                    return;
+                }
+                Location at = s instanceof Player p ? p.getLocation() : null;
+                int made = 0;
+                for (int i = 0; i < count; i++) {
+                    if (service.forceSpawn(id, at)) made++;
+                }
+                s.sendMessage("§a强制生成 " + made + " 只（" + id + "）");
+            }
+            case "reload" -> {
+                plugin.reloadLootAndSpawners();
+                s.sendMessage("§a已重载 spawners.yml，当前 " + service.size() + " 个刷怪点");
+            }
+            default -> s.sendMessage("§c用法: /helstera spawner list|force <id> [数量]|reload");
+        }
+    }
+
+    private static double parseDouble(String s, double def) {
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException e) {
+            return def;
+        }
+    }
+
     private void deny(CommandSender s) {
         s.sendMessage("§c没有权限");
     }
@@ -465,13 +608,15 @@ public final class HelsteraCommand implements TabExecutor {
             SUBS.stream().filter(x -> x.startsWith(args[0].toLowerCase())).forEach(out::add);
         } else if (args.length == 2) {
             switch (args[0]) {
-                case "reload" -> out.addAll(List.of("models", "config", "packs", "all"));
+                case "reload" -> out.addAll(List.of("models", "config", "packs", "loot", "spawners", "all"));
                 case "model" -> out.addAll(List.of("list", "info", "validate", "unload"));
                 case "mob" -> out.addAll(List.of("spawn", "remove", "info"));
                 case "animation" -> out.addAll(List.of("play", "stop", "pause", "resume"));
                 case "migrate" -> out.addAll(List.of("scan", "preview", "apply", "rollback", "report"));
+                case "loot" -> out.addAll(List.of("list", "roll"));
+                case "spawner" -> out.addAll(List.of("list", "force", "reload"));
                 case "web" -> out.addAll(List.of("start", "stop", "status", "doctor", "firewall"));
-                case "debug" -> out.addAll(List.of("render", "animation", "network", "ai"));
+                case "debug" -> out.addAll(List.of("render", "animation", "network", "ai", "skills", "integrations"));
                 case "pack" -> out.addAll(List.of("build", "apply", "apply-all"));
             }
         } else if (args.length == 3) {
@@ -486,6 +631,12 @@ public final class HelsteraCommand implements TabExecutor {
                 case "animation play" -> plugin.registry().all().forEach(m -> out.add(m.id()));
                 case "migrate rollback", "migrate preview", "migrate apply", "migrate scan" ->
                         out.addAll(List.of("mythicmobs", "modelengine", "itemadder", "craftengine"));
+                case "loot roll" -> {
+                    if (plugin.loot() != null) plugin.loot().tableNames().forEach(out::add);
+                }
+                case "spawner force" -> {
+                    if (plugin.spawners() != null) plugin.spawners().ids().forEach(out::add);
+                }
             }
         } else if (args.length == 4) {
             if (args[0].equals("animation") && args[1].equals("play")) {

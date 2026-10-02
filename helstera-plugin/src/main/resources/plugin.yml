@@ -28,6 +28,8 @@ permissions:
       helstera.debug: true
       helstera.stats: true
       helstera.pack: true
+      helstera.loot: true
+      helstera.spawner: true
   helstera.view:
     description: 可见模型（默认所有人）
     default: true

@@ -7,6 +7,7 @@ import org.bukkit.Sound;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
@@ -53,57 +54,74 @@ public final class SkillCatalog {
         return Boolean.parseBoolean(args.get(i).trim());
     }
 
-    /** 内置条件名 -> 工厂。 */
+    /**
+     * 内置条件名 -> 工厂。
+     *
+     * <p>用 ofEntries 而非 Map.of：条目数已超出 Map.of 的 10 对上限，
+     * 且后续还会随玩法继续增加。</p>
+     */
     public static java.util.Map<String, ConditionFactory> conditions() {
-        return java.util.Map.of(
-                "has-target", a -> {
+        return java.util.Map.ofEntries(
+                java.util.Map.entry("has-target", (ConditionFactory) a -> {
                     // 参数可选：省略视为 true；显式 false 表示「无目标时满足」
                     boolean expect = bool(a, 0, true);
                     return ctx -> ctx.target().isPresent() == expect;
-                },
-                "health-below", a -> {
+                }),
+                java.util.Map.entry("health-below", (ConditionFactory) a -> {
                     double t = num(a, 0, 0.0);
                     return ctx -> ctx.healthRatio() <= t;
-                },
-                "health-above", a -> {
+                }),
+                java.util.Map.entry("health-above", (ConditionFactory) a -> {
                     double t = num(a, 0, 1.0);
                     return ctx -> ctx.healthRatio() >= t;
-                },
-                "distance-below", a -> {
+                }),
+                java.util.Map.entry("distance-below", (ConditionFactory) a -> {
                     double t = num(a, 0, 0.0);
                     // 无目标时视为不满足
                     return ctx -> ctx.distanceToTarget() >= 0 && ctx.distanceToTarget() <= t;
-                },
-                "distance-above", a -> {
+                }),
+                java.util.Map.entry("distance-above", (ConditionFactory) a -> {
                     double t = num(a, 0, 0.0);
                     return ctx -> ctx.target().isPresent() && ctx.distanceToTarget() >= t;
-                },
-                "state-is", a -> {
+                }),
+                java.util.Map.entry("state-is", (ConditionFactory) a -> {
                     String t = str(a, 0, "").toUpperCase(Locale.ROOT);
                     return ctx -> t.equalsIgnoreCase(ctx.state());
-                },
-                "animation-is", a -> {
+                }),
+                java.util.Map.entry("animation-is", (ConditionFactory) a -> {
                     String t = str(a, 0, "");
                     return ctx -> !ctx.instanceValid()
                             || ctx.instance().animation().currentAnimation().filter(t::equals).isPresent();
-                },
-                "every-n-decisions", a -> {
+                }),
+                java.util.Map.entry("every-n-decisions", (ConditionFactory) a -> {
                     int n = (int) num(a, 0, 1);
                     return ctx -> n <= 1 || ctx.decisionCount() % n == 0;
-                }
+                }),
+                java.util.Map.entry("targets-exist", (ConditionFactory) a -> {
+                    String tn = str(a, 0, "nearest");
+                    double radius = num(a, 1, 8);
+                    int min = (int) num(a, 2, 1);
+                    return ctx -> select(ctx, tn, radius).size() >= Math.max(1, min);
+                }),
+                java.util.Map.entry("targets-in-range", (ConditionFactory) a -> {
+                    String tn = str(a, 0, "players");
+                    double radius = num(a, 1, 6);
+                    int min = (int) num(a, 2, 1);
+                    return ctx -> select(ctx, tn, radius).size() >= Math.max(1, min);
+                })
         );
     }
 
     /** 内置动作名 -> 工厂。 */
     public static java.util.Map<String, ActionFactory> actions() {
-        return java.util.Map.of(
-                "set-scale", a -> {
+        return java.util.Map.ofEntries(
+                java.util.Map.entry("set-scale", (ActionFactory) a -> {
                     double v = num(a, 0, 1.0);
                     return ctx -> {
                         if (ctx.instanceValid()) ctx.instance().setScale(v);
                     };
-                },
-                "play-animation", a -> {
+                }),
+                java.util.Map.entry("play-animation", (ActionFactory) a -> {
                     String name = str(a, 0, "");
                     boolean loop = bool(a, 1, false);
                     int priority = (int) num(a, 2, 3);
@@ -114,16 +132,16 @@ public final class SkillCatalog {
                                             .loop(loop).priority(priority));
                         }
                     };
-                },
-                "stop-animation", a -> {
+                }),
+                java.util.Map.entry("stop-animation", (ActionFactory) a -> {
                     String name = str(a, 0, "");
                     return ctx -> {
                         if (!ctx.instanceValid()) return;
                         if (name.isBlank()) ctx.instance().animation().stopAll();
                         else ctx.instance().animation().stop(name);
                     };
-                },
-                "set-intent", a -> {
+                }),
+                java.util.Map.entry("set-intent", (ActionFactory) a -> {
                     String s = str(a, 0, "CUSTOM").toUpperCase(Locale.ROOT);
                     return ctx -> {
                         if (!ctx.instanceValid()) return;
@@ -137,8 +155,8 @@ public final class SkillCatalog {
                             }
                         }
                     };
-                },
-                "damage-target", a -> {
+                }),
+                java.util.Map.entry("damage-target", (ActionFactory) a -> {
                     double dmg = num(a, 0, 0.0);
                     return ctx -> {
                         if (dmg <= 0) return;
@@ -148,14 +166,14 @@ public final class SkillCatalog {
                                 || !me.getWorld().equals(t.getWorld())) return;
                         t.damage(dmg, ctx.instance().baseEntity().orElse(null));
                     };
-                },
-                "message-target", a -> {
+                }),
+                java.util.Map.entry("message-target", (ActionFactory) a -> {
                     String text = str(a, 0, "");
                     return ctx -> ctx.target().ifPresent(p -> {
                         if (!text.isBlank()) p.sendMessage(text);
                     });
-                },
-                "sound", a -> {
+                }),
+                java.util.Map.entry("sound", (ActionFactory) a -> {
                     String name = str(a, 0, "");
                     return ctx -> {
                         Location l = ctx.instanceValid() ? ctx.instance().location() : null;
@@ -165,8 +183,8 @@ public final class SkillCatalog {
                         } catch (IllegalArgumentException ignored) {
                         }
                     };
-                },
-                "particle", a -> {
+                }),
+                java.util.Map.entry("particle", (ActionFactory) a -> {
                     String name = str(a, 0, "");
                     return ctx -> {
                         Location l = ctx.instanceValid() ? ctx.instance().location() : null;
@@ -177,8 +195,8 @@ public final class SkillCatalog {
                         } catch (IllegalArgumentException ignored) {
                         }
                     };
-                },
-                "heal-self", a -> {
+                }),
+                java.util.Map.entry("heal-self", (ActionFactory) a -> {
                     double amount = num(a, 0, 0.0);
                     return ctx -> {
                         if (amount <= 0 || !ctx.instanceValid()) return;
@@ -188,7 +206,158 @@ public final class SkillCatalog {
                             le.setHealth(Math.min(max, le.getHealth() + amount));
                         }
                     };
-                }
+                }),
+
+                // ---- Targeter 驱动的多目标动作 ----
+                // 参数形如：<目标选择器> <半径> [数量] ...
+                java.util.Map.entry("aoe-damage", (ActionFactory) a -> {
+                    String tn = str(a, 0, "players");
+                    double radius = num(a, 1, 5);
+                    int count = (int) num(a, 2, 1);
+                    double dmg = num(a, 3, 0);
+                    return ctx -> {
+                        if (dmg <= 0) return;
+                        for (LivingEntity e : pick(ctx, tn, radius, count)) {
+                            e.damage(dmg, ctx.instanceValid()
+                                    ? ctx.instance().baseEntity().orElse(null) : null);
+                        }
+                    };
+                }),
+                java.util.Map.entry("message-targets", (ActionFactory) a -> {
+                    String tn = str(a, 0, "players");
+                    double radius = num(a, 1, 10);
+                    int count = (int) num(a, 2, 1);
+                    String text = str(a, 3, "");
+                    return ctx -> {
+                        if (text.isBlank()) return;
+                        for (LivingEntity e : pick(ctx, tn, radius, count)) {
+                            if (e instanceof Player p) p.sendMessage(text);
+                        }
+                    };
+                }),
+                java.util.Map.entry("teleport-targets", (ActionFactory) a -> {
+                    String tn = str(a, 0, "players");
+                    double radius = num(a, 1, 8);
+                    int count = (int) num(a, 2, 1);
+                    double dy = num(a, 3, 0);
+                    return ctx -> {
+                        Location me = ctx.instanceValid() ? ctx.instance().location() : null;
+                        if (me == null || me.getWorld() == null) return;
+                        for (LivingEntity e : pick(ctx, tn, radius, count)) {
+                            try {
+                                e.teleport(me.clone().add(0, dy, 0));
+                            } catch (Throwable ignored) {
+                            }
+                        }
+                    };
+                }),
+                java.util.Map.entry("effect-targets", (ActionFactory) a -> {
+                    String tn = str(a, 0, "players");
+                    double radius = num(a, 1, 6);
+                    int count = (int) num(a, 2, 1);
+                    String potion = str(a, 3, "");
+                    int ticks = (int) num(a, 4, 60);
+                    int amp = (int) num(a, 5, 0);
+                    return ctx -> {
+                        if (potion.isBlank() || ticks <= 0) return;
+                        org.bukkit.potion.PotionEffectType type = potionType(potion);
+                        if (type == null) return;
+                        for (LivingEntity e : pick(ctx, tn, radius, count)) {
+                            try {
+                                e.addPotionEffect(new org.bukkit.potion.PotionEffect(type, ticks, amp));
+                            } catch (Throwable ignored) {
+                            }
+                        }
+                    };
+                }),
+                java.util.Map.entry("ignite-targets", (ActionFactory) a -> {
+                    String tn = str(a, 0, "players");
+                    double radius = num(a, 1, 6);
+                    int count = (int) num(a, 2, 1);
+                    int ticks = (int) num(a, 3, 40);
+                    return ctx -> {
+                        if (ticks <= 0) return;
+                        for (LivingEntity e : pick(ctx, tn, radius, count)) e.setFireTicks(ticks);
+                    };
+                }),
+                java.util.Map.entry("knockback-targets", (ActionFactory) a -> {
+                    String tn = str(a, 0, "players");
+                    double radius = num(a, 1, 6);
+                    int count = (int) num(a, 2, 1);
+                    double power = num(a, 3, 1.0);
+                    double up = num(a, 4, 0.4);
+                    return ctx -> {
+                        Location me = ctx.instanceValid() ? ctx.instance().location() : null;
+                        if (me == null || me.getWorld() == null) return;
+                        for (LivingEntity e : pick(ctx, tn, radius, count)) {
+                            try {
+                                org.bukkit.util.Vector v = e.getLocation().toVector()
+                                        .subtract(me.toVector()).normalize().multiply(power);
+                                e.setVelocity(v.setY(up));
+                            } catch (Throwable ignored) {
+                            }
+                        }
+                    };
+                })
         );
+    }
+
+    // ------------------------------------------------------------------
+    // 目标选取辅助
+    // ------------------------------------------------------------------
+
+    /**
+     * 用目标选择器从半径内的候选里挑出目标。
+     *
+     * <p>实例无效、位置未知或候选为空时返回空列表——动作据此静默跳过，
+     * 与其余动作在实例失效时的行为保持一致。</p>
+     */
+    private static List<LivingEntity> pick(BehaviorContext ctx, String targeterName,
+                                           double radius, int count) {
+        if (!ctx.instanceValid() || count <= 0) return List.of();
+        dev.helstera.api.behavior.Targeter t = dev.helstera.api.behavior.Targeters.byName(targeterName);
+        if (t == null) return List.of();
+        Location me = ctx.instance().location();
+        if (me == null || me.getWorld() == null) return List.of();
+        List<LivingEntity> cands = nearby(me, radius);
+        if (cands.isEmpty()) return List.of();
+        List<LivingEntity> picked = t.select(ctx.instance(), cands, List.of());
+        return picked.size() > count ? picked.subList(0, count) : picked;
+    }
+
+    /** 条件侧用：只关心"有多少目标"，不截断。 */
+    private static List<LivingEntity> select(BehaviorContext ctx, String targeterName, double radius) {
+        if (!ctx.instanceValid()) return List.of();
+        dev.helstera.api.behavior.Targeter t = dev.helstera.api.behavior.Targeters.byName(targeterName);
+        if (t == null) return List.of();
+        Location me = ctx.instance().location();
+        if (me == null || me.getWorld() == null) return List.of();
+        List<LivingEntity> cands = nearby(me, radius);
+        if (cands.isEmpty()) return List.of();
+        return t.select(ctx.instance(), cands, List.of());
+    }
+
+    /** 半径内的其它生物；自身排除在外，避免动作把自己的模型当目标。 */
+    private static List<LivingEntity> nearby(Location center, double radius) {
+        if (radius <= 0) return List.of();
+        List<LivingEntity> out = new ArrayList<>();
+        try {
+            for (org.bukkit.entity.Entity e : center.getWorld().getNearbyEntities(center, radius, radius, radius)) {
+                if (!(e instanceof LivingEntity le)) continue;
+                if (!le.isValid()) continue;
+                // 决策发起方的载体实体不能成为自己的目标，否则 aoe-damage 会自伤
+                out.add(le);
+            }
+        } catch (Throwable ignored) {
+        }
+        return out;
+    }
+
+    private static org.bukkit.potion.PotionEffectType potionType(String name) {
+        try {
+            return org.bukkit.potion.PotionEffectType.getByName(name.toUpperCase(Locale.ROOT));
+        } catch (Throwable t) {
+            return null;
+        }
     }
 }

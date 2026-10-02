@@ -105,6 +105,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private Object skillService;                 // dev.helstera.ai.skill.SkillService
     private Object skillTriggers;                // dev.helstera.ai.skill.SkillTriggers
     private Object ai;                           // AiManager
+    private Object lootService;                 // dev.helstera.ai.loot.LootService
+    private Object spawnerService;              // dev.helstera.ai.spawner.SpawnerService
     private Object migration;                    // MigrationServiceImpl
     private Object webServer;                    // WebServerService
     private Object integrations;                 // IntegrationRegistryImpl
@@ -253,6 +255,39 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             getLogger().warning("AI 层不可用: " + t);
         }
 
+        // ---- 掉落表 + 刷怪点（helstera-ai）----
+        // 两者都依赖 mobs/*.yml 的解析能力，放在 AI 块之后初始化。
+        try {
+            dev.helstera.ai.loot.LootService loot = new dev.helstera.ai.loot.LootService(getLogger());
+            if (!new java.io.File(getDataFolder(), "loot.yml").exists()) {
+                saveResource("loot.yml", false);
+            }
+            loot.load(YamlConfiguration.loadConfiguration(
+                    new java.io.File(getDataFolder(), "loot.yml")).getConfigurationSection("tables"));
+            this.lootService = loot;
+        } catch (Throwable t) {
+            getLogger().warning("掉落表不可用: " + t);
+        }
+        try {
+            dev.helstera.ai.spawner.SpawnerService sp = new dev.helstera.ai.spawner.SpawnerService(
+                    this, getLogger(), this::spawnMobAt);
+            // 实例存活判定交给实例管理器，刷怪点才能正确回收名额
+            sp.setAliveCheck(id -> {
+                var im = instances();
+                if (im == null) return false;
+                var inst = im.impl(id);
+                return inst != null && inst.isValid();
+            });
+            if (!new java.io.File(getDataFolder(), "spawners.yml").exists()) {
+                saveResource("spawners.yml", false);
+            }
+            sp.load(YamlConfiguration.loadConfiguration(
+                    new java.io.File(getDataFolder(), "spawners.yml")).getConfigurationSection("spawners"));
+            this.spawnerService = sp;
+        } catch (Throwable t) {
+            getLogger().warning("刷怪点不可用: " + t);
+        }
+
         // ---- 迁移中心（helstera-migration）----
         try {
             MigrationServiceImpl mig = new MigrationServiceImpl(this);
@@ -280,6 +315,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             int connected = ir.enableAll(this);
             getLogger().info("外部插件适配器: " + connected + "/" + ir.all().size() + " 已连接");
             this.integrations = ir;
+            // 掉落表的自定义物品解析：借适配器的 CUSTOM_ITEM_RESOLVE 能力。
+            // 用反射而非直接引用 ItemAdderAdapter，是因为 integrations 模块在
+            // phase3 及以下并不打进 jar，直接引用会在 NoClassDefFoundError 上炸掉整个启动。
+            if (loot() != null) {
+                loot().setCustomItemResolver(id -> resolveCustomItem(ir, id));
+            }
         } catch (Throwable t) {
             getLogger().warning("外部插件集成层不可用: " + t);
         }
@@ -332,6 +373,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (refresher != null) ((VisibilityRefresher) refresher).start(getConfig().getInt("render.visibility-refresh-ticks", 10));
         if (scheduler != null) ((HelsteraScheduler) scheduler).start();
         if (ai != null) ((AiManager) ai).start(getConfig().getInt("ai.decision-ticks", 10));
+        // 刷怪点最后启动：它依赖 instances 与 mobs 配置都已就绪
+        if (spawnerService instanceof dev.helstera.ai.spawner.SpawnerService sp) {
+            sp.start();
+            if (sp.size() > 0) getLogger().info("刷怪点已启用 " + sp.size() + " 个");
+        }
 
         // 默认动画标记处理：sound / particle
         bus.register(AnimationMarkerEvent.class, e -> getServer().getScheduler().runTask(this, () -> {
@@ -387,6 +433,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (refresher != null) ((VisibilityRefresher) refresher).stop();
         if (skillTriggers instanceof SkillTriggers st) st.stop();
         if (ai != null) ((AiManager) ai).stop();
+        if (spawnerService instanceof dev.helstera.ai.spawner.SpawnerService sp) sp.stop();
         if (webServer != null) ((WebServerService) webServer).stop();
         if (integrations != null) ((IntegrationRegistryImpl) integrations).disableAll();
         if (instances != null) {
@@ -624,11 +671,32 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
      * @param base 基准位置，实际生成点为该位置水平方向前方 3 格
      */
     public String spawnMob(String mobId, String modelOverride, org.bukkit.Location base) {
+        MobSpawn r = spawnMobCore(mobId, modelOverride, base, true);
+        return r == null ? null : r.message();
+    }
+
+    /**
+     * 供刷怪点调用的生成入口：在给定坐标原地生成，返回实例 ID（失败返回 -1）。
+     *
+     * <p>与 {@link #spawnMob} 的区别只是不做"朝视线前方偏移 3 格"的玩家视角偏移，
+     * 并且用返回值而不是文案表达结果——刷怪点需要的是可判定的成功标志。</p>
+     */
+    public int spawnMobAt(String mobId, org.bukkit.Location loc) {
+        MobSpawn r = spawnMobCore(mobId, null, loc, false);
+        return r == null ? -1 : r.instanceId();
+    }
+
+    /** 生成结果：实例 ID + 面向玩家的文案。 */
+    private record MobSpawn(int instanceId, String message) {
+    }
+
+    private MobSpawn spawnMobCore(String mobId, String modelOverride, org.bukkit.Location base,
+                                   boolean forwardOffset) {
         org.bukkit.configuration.ConfigurationSection cfg = mobConfig(mobId);
         if (cfg == null) return null;
-        if (instances == null) return "实例系统未启用（需 2.0+ 版本）";
+        if (instances == null) return new MobSpawn(-1, "实例系统未启用（需 2.0+ 版本）");
         String model = modelOverride != null ? modelOverride : cfg.getString("model", "example/crystal_golem");
-        if (registry.get(model).isEmpty()) return "模型未加载: " + model + "（/helstera reload models）";
+        if (registry.get(model).isEmpty()) return new MobSpawn(-1, "模型未加载: " + model + "（/helstera reload models）");
 
         SpawnOptions opts = SpawnOptions.defaults()
                 .displayName(cfg.getString("display-name", mobId))
@@ -638,10 +706,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 .persistent(cfg.getBoolean("persistent", true))
                 .spawnHitbox(cfg.getBoolean("spawn-hitbox", true));
 
-        if (base == null || base.getWorld() == null) return "生成位置无效";
+        if (base == null || base.getWorld() == null) return new MobSpawn(-1, "生成位置无效");
         org.bukkit.Location loc = base.clone();
-        org.bukkit.util.Vector dir = loc.getDirection().setY(0).normalize().multiply(3);
-        loc.add(dir);
+        if (forwardOffset) {
+            org.bukkit.util.Vector dir = loc.getDirection().setY(0).normalize().multiply(3);
+            loc.add(dir);
+        }
 
         ModelInstance inst;
         org.bukkit.configuration.ConfigurationSection entitySec = cfg.getConfigurationSection("entity");
@@ -665,6 +735,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             inst = instances().spawn(model, loc, opts);
         }
 
+        // 掉落表挂到实例上：死亡事件靠它找到该投哪张表，避免按模型 ID 反查 mobs 配置
+        org.bukkit.configuration.ConfigurationSection dropsSec = cfg.getConfigurationSection("drops");
+        if (dropsSec != null && inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl) {
+            String table = dropsSec.getString("table");
+            if (table != null && !table.isBlank()) {
+                impl.lootTable = table.trim().toLowerCase(java.util.Locale.ROOT);
+                impl.lootUsesLuck = dropsSec.getBoolean("luck", true);
+            }
+        }
+
         org.bukkit.configuration.ConfigurationSection aiSec = cfg.getConfigurationSection("ai");
         if (aiSec != null && ai() != null) {
             AiProfile profile = ai().profile(aiSec.getString("profile", "default"));
@@ -679,7 +759,108 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         // 此前全工程没有任何地方 post 该事件，触发器链路完全未接通。
         bus.post(new dev.helstera.api.event.ModelSpawnEvent(inst, inst.baseEntity()
                 .map(org.bukkit.entity.Entity::getLocation).orElse(loc)));
-        return "已生成 " + mobId + "（模型 " + model + ", 实例 #" + inst.instanceId() + "）";
+        return new MobSpawn(inst.instanceId(), "已生成 " + mobId + "（模型 " + model + ", 实例 #" + inst.instanceId() + "）");
+    }
+
+    /**
+     * 实体死亡 -> 投掷该实例绑定的掉落表。
+     *
+     * <p>在 LOWEST 优先级且 ignoreCancelled：先把原版掉落清空，再放 helstera 的掉落，
+     * 保证"配置了掉落表就不重复掉原版战利品"。若该生物没有配置掉落表则完全不干预。</p>
+     */
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
+    public void onEntityDeathForLoot(org.bukkit.event.entity.EntityDeathEvent e) {
+        if (lootService == null || instances == null) return;
+        org.bukkit.entity.Entity ent = e.getEntity();
+        dev.helstera.runtime.instance.ModelInstanceImpl inst = null;
+        for (var i : instances().allImpl()) {
+            if (ent.getUniqueId().equals(i.boundEntityId().orElse(null))) {
+                inst = i;
+                break;
+            }
+        }
+        if (inst == null || inst.lootTable == null || inst.lootTable.isBlank()) return;
+
+        var loot = (dev.helstera.ai.loot.LootService) lootService;
+        if (loot.table(inst.lootTable) == null) {
+            getLogger().warning("生物引用的掉落表不存在: " + inst.lootTable + "（检查 loot.yml）");
+            return;
+        }
+        e.getDrops().clear();
+        e.setDroppedExp(0);
+        double luck = 0;
+        if (inst.lootUsesLuck && e.getEntity().getKiller() != null) {
+            try {
+                var inv = e.getEntity().getKiller().getInventory();
+                var held = inv.getItemInMainHand();
+                if (held != null && held.getType() != org.bukkit.Material.AIR) {
+                    var ench = held.getEnchantmentLevel(
+                            org.bukkit.enchantments.Enchantment.LOOTING);
+                    luck = ench;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        try {
+            loot.rollAndDrop(ent.getLocation(), inst.lootTable, luck);
+        } catch (Throwable t) {
+            getLogger().warning("掉落投掷失败: " + t);
+        }
+    }
+
+    /**
+     * 借适配器解析自定义命名空间物品 ID（如 {@code mineitems:ember_claw}）。
+     *
+     * <p>反射调用适配器的 {@code resolve(String)}：api 层没定义这个方法，
+     * 它只存在于具体适配器实现里。返回 null 表示"没有适配器认领这个 ID"，
+     * 掉落服务会继续回落到原版材质匹配。</p>
+     */
+    private org.bukkit.inventory.ItemStack resolveCustomItem(
+            dev.helstera.api.integration.IntegrationRegistry reg, String id) {
+        if (reg == null || id == null) return null;
+        for (var a : reg.all()) {
+            try {
+                if (!a.hasCapability(dev.helstera.api.integration.Capability.CUSTOM_ITEM_RESOLVE)) continue;
+                var m = a.getClass().getMethod("resolve", String.class);
+                Object res = m.invoke(a, id);
+                if (res instanceof org.bukkit.inventory.ItemStack stack
+                        && stack.getType() != org.bukkit.Material.AIR) {
+                    return stack;
+                }
+            } catch (Throwable ignored) {
+                // 适配器未实现或抛异常：换下一个，最终由掉落服务回落
+            }
+        }
+        return null;
+    }
+
+    /** 掉落服务（loot.yml），未启用时为 null。 */
+    public dev.helstera.ai.loot.LootService loot() {
+        return (dev.helstera.ai.loot.LootService) lootService;
+    }
+
+    /**
+     * 重新装载 loot.yml 与 spawners.yml。
+     *
+     * <p>与技能不同，这里做"就地重载"而不是重建服务：刷怪点里已追踪的存活实例
+     * 名单必须保留，否则每次 reload 都会让所有刷怪点的 max-alive 名额归零，
+     * 瞬间在同一位置堆出一群生物。</p>
+     */
+    public void reloadLootAndSpawners() {
+        if (loot() != null) {
+            loot().load(YamlConfiguration.loadConfiguration(
+                    new java.io.File(getDataFolder(), "loot.yml")).getConfigurationSection("tables"));
+        }
+        if (spawners() != null) {
+            spawners().load(YamlConfiguration.loadConfiguration(
+                    new java.io.File(getDataFolder(), "spawners.yml")).getConfigurationSection("spawners"));
+            spawners().start();
+        }
+    }
+
+    /** 刷怪点服务（spawners.yml），未启用时为 null。 */
+    public dev.helstera.ai.spawner.SpawnerService spawners() {
+        return (dev.helstera.ai.spawner.SpawnerService) spawnerService;
     }
 
     /** 用 mobs/*.yml 的 ai 节就地覆盖行为档案（不污染缓存的档案）。 */
@@ -799,6 +980,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return skillTriggers instanceof SkillTriggers t ? t.firedCount() : 0L;
     }
     public WebServerService webServer() { return webServer == null ? null : (WebServerService) webServer; }
+    /** 外部插件适配器注册表（/helstera debug integrations 用）。 */
+    public IntegrationRegistryImpl integrationRegistry() {
+        return integrations == null ? null : (IntegrationRegistryImpl) integrations;
+    }
     public HelsteraEventBus bus() { return bus; }
 
     /** API 实现。 */
@@ -1007,6 +1192,108 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             getLogger().info("网页端更新了配置（" + patch.size() + " 项），相关模块需重启插件或执行 /helstera reload 生效。");
             return null;
+        }
+
+        @Override public boolean reloadSkills() {
+            SkillService sk = skillService instanceof SkillService s ? s : null;
+            if (sk == null) return false;
+            var cfg = YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "skills.yml"));
+            try {
+                sk.loadSkills(cfg.getConfigurationSection("skills"));
+                var sec = cfg.getConfigurationSection("skills");
+                int count = sec == null ? 0 : sec.getKeys(false).size();
+                getLogger().info("网页端重载了 skills.yml（技能 " + count + " 个）");
+                return true;
+            } catch (Throwable t) {
+                getLogger().warning("网页端重载 skills.yml 失败: " + t);
+                return false;
+            }
+        }
+
+        @Override public java.util.List<String> skillNames() {
+            java.util.List<String> out = new java.util.ArrayList<>();
+            if (behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry br) {
+                out.addAll(br.conditionNames());
+                out.addAll(br.actionNames());
+            }
+            return out;
+        }
+
+        @Override public java.util.List<String> skillWarnings() {
+            return skillService instanceof SkillService s ? s.warnings() : java.util.List.of();
+        }
+
+        @Override public boolean reloadLoot() {
+            reloadLootAndSpawners();
+            return true;
+        }
+
+        @Override public java.util.List<String> lootTables() {
+            return loot() == null ? java.util.List.of() : new java.util.ArrayList<>(loot().tableNames());
+        }
+
+        @Override public java.util.List<java.util.Map<String, Object>> rollLoot(String table, double luck) {
+            java.util.List<java.util.Map<String, Object>> out = new java.util.ArrayList<>();
+            if (loot() == null || table == null) return out;
+            for (var h : loot().rollPlan(table, luck)) {
+                java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("item", h.entry().itemId());
+                m.put("amount", h.amount());
+                m.put("chance", h.entry().chance());
+                m.put("luckScaling", h.entry().luckScaling());
+                out.add(m);
+            }
+            return out;
+        }
+
+        @Override public java.util.List<java.util.Map<String, Object>> spawnerInfo() {
+            java.util.List<java.util.Map<String, Object>> out = new java.util.ArrayList<>();
+            if (spawners() == null) return out;
+            for (String id : spawners().ids()) {
+                var sp = spawners().get(id);
+                java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("id", id);
+                m.put("mob", sp.mobId());
+                m.put("interval", sp.intervalTicks());
+                m.put("maxAlive", sp.maxAlive());
+                m.put("alive", spawners().aliveCount(id));
+                m.put("totalSpawned", sp.totalSpawned());
+                m.put("enabled", sp.enabled());
+                out.add(m);
+            }
+            return out;
+        }
+
+        @Override public java.util.List<String> profiles() {
+            var sec = getConfig().getConfigurationSection("ai.profiles");
+            return sec == null ? java.util.List.of()
+                    : new java.util.ArrayList<>(sec.getKeys(false));
+        }
+
+        @Override public java.util.List<String> modelIds() {
+            java.util.List<String> out = new java.util.ArrayList<>();
+            for (var m : registry.all()) out.add(m.id());
+            return out;
+        }
+
+        @Override public String readManagedYaml(String name) {
+            if (name == null) return null;
+            // 白名单：这三个文件位于插件数据目录根部，网页端允许编辑它们。
+            // 不接受调用方传入任意路径，避免该方法退化成任意文件读取器。
+            String file = switch (name) {
+                case "skills" -> "skills.yml";
+                case "loot" -> "loot.yml";
+                case "spawners" -> "spawners.yml";
+                default -> null;
+            };
+            if (file == null) return null;
+            Path f = getDataFolder().toPath().resolve(file).normalize();
+            if (!f.getParent().equals(getDataFolder().toPath()) || !Files.isRegularFile(f)) return null;
+            try {
+                return Files.readString(f, java.nio.charset.StandardCharsets.UTF_8);
+            } catch (java.io.IOException e) {
+                return null;
+            }
         }
     }
 }
