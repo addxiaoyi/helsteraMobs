@@ -120,7 +120,10 @@ public final class ModelParser {
 
         Map<String, ModelDefinitionImpl.BoneImpl> built = new LinkedHashMap<>();
         for (Map.Entry<String, JsonObject> e : rawBones.entrySet()) {
-            built.put(e.getKey(), buildBone(e.getKey(), e.getValue(), modelFile));
+            // parent 必须在这里一次性解析出来并写进骨骼：父子挂接只会调用 addChild，
+            // 之后再回填不可变字段做不到，留在这里 BoneImpl.parent() 会永远是 null
+            // （网页端的骨骼树、以及按父骨骼查找子级的逻辑都依赖它）。
+            built.put(e.getKey(), buildBone(e.getKey(), parentOf(e.getValue()), e.getValue(), modelFile));
         }
         // 链接父子 + 检查缺失父节点与循环
         List<ModelDefinitionImpl.BoneImpl> roots = new ArrayList<>();
@@ -234,7 +237,11 @@ public final class ModelParser {
         out.put(name, b);
     }
 
-    private static ModelDefinitionImpl.BoneImpl buildBone(String name, JsonObject b, Path file) {
+    private static String parentOf(JsonObject b) {
+        return b.has("parent") && !b.get("parent").isJsonNull() ? b.get("parent").getAsString() : null;
+    }
+
+    private static ModelDefinitionImpl.BoneImpl buildBone(String name, String parent, JsonObject b, Path file) {
         Vec3 pivot = hasVec(b, "pivot") ? vec(b.get("pivot"), "骨骼 \"" + name + "\" 的 pivot", file) : Vec3.ZERO;
         Vec3 restRot = hasVec(b, "rotation") ? vec(b.get("rotation"), "骨骼 \"" + name + "\" 的 rotation", file) : Vec3.ZERO;
 
@@ -310,7 +317,7 @@ public final class ModelParser {
             boneHitbox = new ModelHitbox(getD(hb, "width", 0.5), getD(hb, "height", 0.5));
         }
         String texture = b.has("texture") && !b.get("texture").isJsonNull() ? b.get("texture").getAsString() : null;
-        return new ModelDefinitionImpl.BoneImpl(name, null, pivot, restRot, cubes, attach, boneHitbox, texture);
+        return new ModelDefinitionImpl.BoneImpl(name, parent, pivot, restRot, cubes, attach, boneHitbox, texture);
     }
 
     private static int[] readUv(JsonObject c) {

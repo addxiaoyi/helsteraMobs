@@ -21,6 +21,28 @@
             <artifactId>joml</artifactId>
             <version>1.10.5</version>
         </dependency>
+        <!--
+            全部 helstera 模块在基础段以 provided 作用域声明：只进编译期类路径，不进 uber jar。
+
+            这样做的原因：HelsteraPlugin / HelsteraCommand 直接 import 了 web、platform、
+            integrations、migration 的类型（用于类型安全的局部变量与优雅降级），
+            若这些模块不进编译类路径，任何 -P phaseN 构建都会在 compile 期报
+            "找不到符号"，分阶段出包根本产不出来。
+
+            shade 只打包 compile/runtime 作用域，因此 provided 的模块不会被并进 jar；
+            实际打进哪些模块由下方 profile 决定。运行期缺失由 onEnable 里的
+            try/catch NoClassDefFoundError 降级处理。
+        -->
+        <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>dev.helstera</groupId><artifactId>helstera-render-paper</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>dev.helstera</groupId><artifactId>helstera-resourcepack</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>dev.helstera</groupId><artifactId>helstera-ai</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>dev.helstera</groupId><artifactId>helstera-integrations</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>dev.helstera</groupId><artifactId>helstera-web</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>dev.helstera</groupId><artifactId>helstera-migration</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>dev.helstera</groupId><artifactId>helstera-platform</artifactId><scope>provided</scope></dependency>
     </dependencies>
 
     <build>
