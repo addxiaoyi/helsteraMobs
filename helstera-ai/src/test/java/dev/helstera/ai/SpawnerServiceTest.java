@@ -1,0 +1,256 @@
+package dev.helstera.ai;
+
+import dev.helstera.ai.spawner.SpawnerService;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * 刷怪点配置解析的测试。
+ *
+ * <p>只测 {@code load} 的解析与校验部分。生成逻辑（随机取点、地面吸附、
+ * 上限门控）需要 Bukkit 的 World/BukkitTask，装不上去测不了，
+ * 那些路径依赖运行时验证而不是单测。</p>
+ */
+class SpawnerServiceTest {
+
+    /** 无需 Bukkit 调度器的裸服务：plugin 传 null，任何真正调度/取世界的调用都会 NPE。 */
+    private static SpawnerService service(String yaml) {
+        List<String> spawned = new ArrayList<>();
+        SpawnerService s = new SpawnerService(null, null, (mob, loc) -> {
+            spawned.add(mob);
+            return spawned.size();
+        });
+        s.load(YamlConfiguration.loadConfiguration(new StringReader(yaml)).getConfigurationSection("spawners"));
+        return s;
+    }
+
+    @Test
+    @DisplayName("解析基础字段，间隔低于 20 被抬到 20")
+    void parsesBasicFields() {
+        SpawnerService s = service("""
+                spawners:
+                  cave:
+                    mob: crystal_boss
+                    world: world
+                    x: 100.5
+                    y: 64
+                    z: -20.5
+                    radius: 8.5
+                    interval: 5
+                    max-alive: 4
+                """);
+        assertEquals(1, s.size());
+        var sp = s.get("cave");
+        assertNotNull(sp);
+        assertEquals("crystal_boss", sp.mobId());
+        assertEquals("world", sp.world());
+        assertEquals(8.5, sp.radius(), 1e-9);
+        assertEquals(20, sp.intervalTicks(), "interval<20 应抬到 20");
+        assertEquals(4, sp.maxAlive());
+        assertTrue(sp.enabled());
+    }
+
+    @Test
+    @DisplayName("缺少 mob 的刷怪点被跳过并告警")
+    void skipsSpawnerWithoutMob() {
+        SpawnerService s = service("""
+                spawners:
+                  bad:
+                    x: 0
+                    z: 0
+                  good:
+                    mob: a
+                    x: 0
+                    z: 0
+                """);
+        assertEquals(1, s.size());
+        assertNotNull(s.get("good"));
+        assertNull(s.get("bad"));
+        assertEquals(1, s.warnings().size());
+        assertTrue(s.warnings().get(0).contains("缺少 mob"));
+    }
+
+    @Test
+    @DisplayName("缺少 x/z 的刷怪点被跳过并告警")
+    void skipsSpawnerWithoutCoordinates() {
+        SpawnerService s = service("""
+                spawners:
+                  bad:
+                    mob: a
+                  good:
+                    mob: a
+                    x: 1
+                    z: 2
+                """);
+        assertEquals(1, s.size());
+        assertNull(s.get("bad"));
+        assertTrue(s.warnings().get(0).contains("坐标"));
+    }
+
+    @Test
+    @DisplayName("max-alive 至少为 1，避免配成 0 导致永远不刷")
+    void clampsMaxAliveToAtLeastOne() {
+        SpawnerService s = service("""
+                spawners:
+                  t:
+                    mob: a
+                    x: 0
+                    z: 0
+                    max-alive: 0
+                """);
+        assertEquals(1, s.get("t").maxAlive());
+    }
+
+    @Test
+    @DisplayName("min-players 负值被归零")
+    void clampsMinPlayersToZero() {
+        SpawnerService s = service("""
+                spawners:
+                  t:
+                    mob: a
+                    x: 0
+                    z: 0
+                    min-players: -5
+                """);
+        assertEquals(0, s.get("t").minPlayers());
+    }
+
+    @Test
+    @DisplayName("y-range 负值被归零")
+    void clampsYRangeToZero() {
+        SpawnerService s = service("""
+                spawners:
+                  t:
+                    mob: a
+                    x: 0
+                    z: 0
+                    y-range: -3
+                """);
+        assertEquals(0.0, s.get("t").yRange(), 1e-9);
+    }
+
+    @Test
+    @DisplayName("enabled=false 被正确读取")
+    void readsEnabledFlag() {
+        // 注意：键名不能用 on/off——YAML 1.1 会把它们解析成布尔值，键名变成 "true"/"false"
+        SpawnerService s = service("""
+                spawners:
+                  alpha:
+                    mob: a
+                    x: 0
+                    z: 0
+                  beta:
+                    mob: a
+                    x: 0
+                    z: 0
+                    enabled: false
+                """);
+        assertTrue(s.get("alpha").enabled());
+        assertFalse(s.get("beta").enabled());
+    }
+
+    @Test
+    @DisplayName("max-spawns 默认为 0（不限）")
+    void maxSpawnsDefaultsToUnlimited() {
+        SpawnerService s = service("""
+                spawners:
+                  t:
+                    mob: a
+                    x: 0
+                    z: 0
+                """);
+        assertEquals(0, s.get("t").maxSpawns());
+    }
+
+    @Test
+    @DisplayName("刷怪点 ID 大小写不敏感")
+    void idsAreCaseInsensitive() {
+        SpawnerService s = service("""
+                spawners:
+                  Cave_Spawn:
+                    mob: a
+                    x: 0
+                    z: 0
+                """);
+        assertNotNull(s.get("cave_spawn"));
+        assertNotNull(s.get("CAVE_SPAWN"));
+    }
+
+    @Test
+    @DisplayName("null 节与空节安全返回，不抛异常")
+    void toleratesNullAndEmpty() {
+        SpawnerService s = new SpawnerService(null, null, (m, l) -> -1);
+        s.load(null);
+        assertEquals(0, s.size());
+        s.load(YamlConfiguration.loadConfiguration(new StringReader("")).getConfigurationSection("spawners"));
+        assertEquals(0, s.size());
+        assertTrue(s.warnings().isEmpty());
+    }
+
+    @Test
+    @DisplayName("重复 load 会清空旧定义，不残留已删除的刷怪点")
+    void reloadClearsPreviousSpawners() {
+        SpawnerService s = new SpawnerService(null, null, (m, l) -> -1);
+        s.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                spawners:
+                  old:
+                    mob: a
+                    x: 0
+                    z: 0
+                """)).getConfigurationSection("spawners"));
+        assertNotNull(s.get("old"));
+
+        s.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                spawners:
+                  fresh:
+                    mob: b
+                    x: 0
+                    z: 0
+                """)).getConfigurationSection("spawners"));
+        assertNull(s.get("old"), "旧刷怪点应被清掉");
+        assertNotNull(s.get("fresh"));
+    }
+
+    @Test
+    @DisplayName("ids 反映已装载的刷怪点")
+    void listsSpawnerIds() {
+        SpawnerService s = service("""
+                spawners:
+                  a:
+                    mob: m1
+                    x: 0
+                    z: 0
+                  b:
+                    mob: m2
+                    x: 0
+                    z: 0
+                """);
+        assertEquals(2, s.ids().size());
+        assertTrue(s.ids().containsAll(List.of("a", "b")));
+    }
+
+    @Test
+    @DisplayName("未知刷怪点返回 null")
+    void unknownSpawnerIsNull() {
+        SpawnerService s = service("""
+                spawners:
+                  a:
+                    mob: m
+                    x: 0
+                    z: 0
+                """);
+        assertNull(s.get("nope"));
+        assertNull(s.get(null));
+    }
+}
