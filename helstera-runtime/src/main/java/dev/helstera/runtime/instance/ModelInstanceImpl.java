@@ -43,6 +43,12 @@ public final class ModelInstanceImpl implements ModelInstance {
     /** AI 行为控制器（helstera-ai 注入），可为 null。 */
     public volatile Object aiController;
 
+    /** 死亡时投掷的掉落表名（mobs/*.yml 的 drops.table），无掉落时为 null。 */
+    public volatile String lootTable;
+
+    /** 掉落是否计入击杀者的幸运值（mobs/*.yml 的 drops.luck），默认 true。 */
+    public volatile boolean lootUsesLuck = true;
+
     /** 实体动画状态机（AI 意图 -> 动画选择）。 */
     public volatile dev.helstera.runtime.animation.EntityAnimationStateMachine stateMachine;
 

@@ -76,6 +76,27 @@ ai:
       can-patrol: true
       can-attack: true
 
+# 掉落表与刷怪点。
+# 这两块各自独立成 loot.yml / spawners.yml（首次启动自动生成到插件目录），
+# 单独成文件的原因：掉落表和刷怪点是内容型配置，会被频繁增删，
+# 混在主 config.yml 里会让 reload 时把整份主配置反复重写。
+#
+# 生效方式：
+#   mobs/<生物>.yml 里引用掉落表
+#     drops:
+#       table: boss_loot     # 对应 loot.yml 的 tables.<名字>
+#       luck: true           # 是否计入击杀者主手的抢夺等级
+#   编辑后执行 /helstera reload loot（会同时重载 spawners.yml）
+loot:
+  # 留空则使用插件目录下的 loot.yml
+  enabled: true
+
+spawners:
+  # 留空则使用插件目录下的 spawners.yml
+  enabled: true
+  # 是否要求范围内有玩家才刷怪（实际门控由各刷怪点的 min-players 控制）
+  require-players: false
+
 web:
   enabled: true
   # 监听地址。默认仅监听本机（需求 3.10 要求）。

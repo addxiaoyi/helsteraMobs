@@ -1,0 +1,62 @@
+# ==========================================================================
+#  掉落表（loot.yml）
+# ==========================================================================
+#  被 mobs/<id>.yml 的 drops.table 引用，在生物死亡时投掷。
+#
+#  tables.<表名>.luck-factor
+#     幸运加成系数：击杀者的幸运值（默认 0.05）乘以此值，加到 chance 上。
+#     设为 0 则完全不吃幸运加成。
+#
+#  entries[] 每一条可写字段：
+#     item               物品 ID。
+#                        - 原版材质：DIAMOND / DIAMOND_SWORD / GOLDEN_APPLE
+#                        - 自定义命名空间：helstera:ember_shard（需装 ItemAdder/CraftEngine，
+#                          否则回落到去掉命名空间后的材质名）
+#     amount-min/max     数量区间（含两端），默认 1/1
+#     chance             掉落概率 0..1，默认 1.0（必掉）
+#     luck-scaling       是否吃幸运加成，默认 true
+#     enchantments       附魔，如 SHARPNESS: 3、LOOTING: 2
+#     name               自定义显示名（支持 § 颜色码）
+#     custom-model-data  自定义模型数据值（配合资源包）
+#     glow               是否强制发光
+#
+#  用法：
+#     mobs/crystal_boss.yml 里写
+#       drops:
+#         table: boss_loot
+#         luck: true          # 把击杀者的幸运值计入
+# ==========================================================================
+tables:
+  # ---- 示例：普通怪 ----
+  common:
+    entries:
+      - item: BREAD
+        amount-min: 1
+        amount-max: 3
+        chance: 0.6
+      - item: IRON_INGOT
+        amount-min: 1
+        amount-max: 2
+        chance: 0.25
+
+  # ---- 示例：精英怪，带自定义模型数据 ----
+  elite:
+    luck-factor: 0.08
+    entries:
+      - item: DIAMOND
+        amount-min: 1
+        amount-max: 2
+        chance: 0.4
+      - item: GOLDEN_APPLE
+        amount-min: 1
+        amount-max: 4
+        chance: 0.7
+        luck-scaling: false
+      - item: DIAMOND_SWORD
+        chance: 0.08
+        enchantments:
+          SHARPNESS: 3
+          UNBREAKING: 2
+        name: "§b§l远古结晶刃"
+        custom-model-data: 1001
+        glow: true
