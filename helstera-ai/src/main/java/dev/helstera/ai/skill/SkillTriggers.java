@@ -111,11 +111,31 @@ public final class SkillTriggers implements Listener {
     /** 求值并执行触发器。context 缺失或实例已失效时安全返回。 */
     private void dispatch(String event, dev.helstera.api.instance.ModelInstance instance,
                           Player target, org.bukkit.Location loc) {
-        if (instance == null || !instance.isValid()) return;
+        // 三处提前返回各自留痕：此前它们都静默 return，触发器不生效时
+        // 从日志上完全看不出断在哪一层。计数不增时靠这几行定位。
+        if (instance == null) {
+            trace(event, "实例为 null");
+            return;
+        }
+        if (!instance.isValid()) {
+            trace(event, "实例 #" + instance.instanceId() + " 已失效（实体未完成添加或已移除）");
+            return;
+        }
         AiProfile profile = ai.profileOf(instance.instanceId());
-        if (profile == null) return;
+        if (profile == null) {
+            trace(event, "实例 #" + instance.instanceId() + " 未绑定 AI 档案（该生物 yml 缺少 ai 节）");
+            return;
+        }
         AiProfile.TriggerSpec spec = profile.triggers.get(event);
-        if (spec == null || spec.actions.isEmpty()) return;
+        if (spec == null) {
+            trace(event, "档案 " + profile.name + " 未定义 " + event
+                    + "（已定义：" + profile.triggers.keySet() + "）");
+            return;
+        }
+        if (spec.actions.isEmpty()) {
+            trace(event, event + " 的 do 为空");
+            return;
+        }
 
         double healthRatio = 1.0;
         double distance = -1;
@@ -144,5 +164,18 @@ public final class SkillTriggers implements Listener {
 
     private void warn(String msg) {
         if (log != null) log.warning("[技能] " + msg);
+    }
+
+    /**
+     * 触发器未执行的留痕。
+     *
+     * <p>只在 debug.trace-triggers 开启时输出：正常服务器上每次生成生物都会走
+     * dispatch，一行 INFO 足以刷屏。而触发器静默失效时恰恰需要看见断在哪一层，
+     * 所以这个开关默认关闭，排查时才打开。</p>
+     */
+    private void trace(String event, String why) {
+        if (log != null && plugin.getConfig().getBoolean("debug.trace-triggers", false)) {
+            log.info("[技能] " + event + " 未执行：" + why);
+        }
     }
 }
