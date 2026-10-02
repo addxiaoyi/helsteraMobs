@@ -208,6 +208,8 @@
       <div class="tab on" data-tab="model">模型详情</div>
       <div class="tab" data-tab="files">模型文件</div>
       <div class="tab" data-tab="mobs">生物配置</div>
+      <div class="tab" data-tab="skills">技能</div>
+      <div class="tab" data-tab="loot">掉落 / 刷怪</div>
       <div class="tab" data-tab="validate">校验</div>
       <div class="tab" data-tab="config">配置</div>
       <div class="tab" data-tab="log">日志</div>
@@ -273,6 +275,77 @@
           <div class="tt" id="mfTex"></div>
           <textarea class="mono tall" id="mfText" spellcheck="false" style="margin-top:10px"></textarea>
           <pre class="out" id="mfOut" style="display:none"></pre>
+          <div class="row tight" style="margin-top:10px">
+            <button class="sm ghost" id="mfExport">导出为 zip</button>
+            <button class="sm ghost" id="mfImportPick">导入 zip…</button>
+            <input type="file" id="mfImportFile" accept=".zip,application/zip" style="display:none">
+            <span class="hint" style="margin:0">导出当前目录；导入会写入所填目录（路径越界会被拒绝）</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 技能 ===== -->
+      <div class="pane" id="pane-skills">
+        <div class="grid2">
+          <div class="card">
+            <h3>技能与触发器 <span class="hint">skills.yml：命名技能（require 条件 + on-decision 动作）</span></h3>
+            <textarea class="mono tall" id="skText" spellcheck="false"
+              placeholder="选择已加载的技能，或直接编辑 skills.yml"></textarea>
+            <div class="row tight" style="margin-top:9px">
+              <button class="sm" id="bSaveSkills">保存并重载</button>
+              <button class="sm ghost" id="bSkillsRefresh">重新载入</button>
+            </div>
+            <pre class="out" id="skOut" style="display:none"></pre>
+          </div>
+          <div class="card">
+            <h3>内置条件 / 动作速查</h3>
+            <p class="kv">写技能时可直接参考，参数以空格分隔；引号内的空格会被保留。</p>
+            <table>
+              <tr><th>条件</th><th>说明</th></tr>
+              <tr><td colspan="2" id="skConds" class="mono"></td></tr>
+            </table>
+            <table style="margin-top:10px">
+              <tr><th>动作</th><th>说明</th></tr>
+              <tr><td colspan="2" id="skActs" class="mono"></td></tr>
+            </table>
+            <div id="skWarnBox" style="display:none;margin-top:10px">
+              <h3>装载告警</h3>
+              <pre class="out" id="skWarns"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 掉落 ===== -->
+      <div class="pane" id="pane-loot">
+        <div class="grid2">
+          <div class="card">
+            <h3>掉落表 <span class="hint">loot.yml：概率 / 数量区间 / 幸运值 / 附魔</span></h3>
+            <textarea class="mono tall" id="lootText" spellcheck="false"
+              placeholder="loot.yml 内容"></textarea>
+            <div class="row tight" style="margin-top:9px">
+              <button class="sm" id="bSaveLoot">保存并重载</button>
+              <button class="sm ghost" id="bLootRefresh">重新载入</button>
+            </div>
+            <pre class="out" id="lootOut" style="display:none"></pre>
+          </div>
+          <div class="card">
+            <h3>掷骰预览 <span class="hint">只计算概率，不会在世界里真的掉落</span></h3>
+            <div class="row">
+              <select id="rollTable" style="flex:1"></select>
+              <input id="rollLuck" type="number" step="1" min="0" value="0" style="width:90px"
+                     title="幸运值（通常等于击杀者抢夺等级）">
+              <button class="sm" id="bRoll">掷一次</button>
+            </div>
+            <pre class="out" id="rollOut" style="margin-top:9px">点「掷一次」查看结果。</pre>
+
+            <h3 style="margin-top:14px">刷怪点</h3>
+            <p class="kv">spawners.yml 定时生成。保存后可直接在此查看存活数。</p>
+            <div class="row tight">
+              <button class="sm ghost" id="bSpReload">重载 spawners.yml</button>
+            </div>
+            <pre class="out" id="spOut" style="margin-top:8px">加载中…</pre>
+          </div>
         </div>
       </div>
 
@@ -1095,10 +1168,55 @@ $('mfSave').onclick = async () => {
     const d = await api('/api/model/save', { method: 'POST', body: JSON.stringify({ dir: dir, name: name, content: $('mfText').value }) });
     if (d.ok) {
       toast(d.message || '已保存', 'ok') ;
-      await api('/api/reload', { method: 'POST', body: '{}' });
-      setTimeout(refreshAll, 1400);
+      // 保存后不重载：内核重载是异步的，等 SSE 的 reload 事件再刷新列表，
+      // 避免这里硬编码一个延迟（内核慢时刷新到的是旧数据，快时则多刷一次）。
     } else { setOut($('mfOut'), '✗ ' + d.error); toast(d.error, 'err'); }
   } catch (e) { toast('保存失败: ' + e.message, 'err'); }
+};
+/* 导出返回的是 zip 二进制，不能走 api()（它按 JSON 解析），单独 fetch。 */
+$('mfExport').onclick = async () => {
+  const dir = $('mfDir').value.trim();
+  if (!dir) { toast('请先填写模型目录', 'err'); return; }
+  try {
+    const r = await fetch('/api/model/export?id=' + encodeURIComponent(dir),
+      { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+    if (!r.ok) {
+      let msg = 'HTTP ' + r.status;
+      try { msg = (await r.json()).error || msg; } catch (e) { /* 非 JSON 响应 */ }
+      toast(msg, 'err'); return;
+    }
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = dir.substring(dir.lastIndexOf('/') + 1) + '.zip';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast('已导出 ' + dir, 'ok');
+  } catch (e) { toast('导出失败: ' + e.message, 'err'); }
+};
+$('mfImportPick').onclick = () => $('mfImportFile').click();
+$('mfImportFile').onchange = async ev => {
+  const f = ev.target.files && ev.target.files[0];
+  ev.target.value = ''; // 允许连续导入同一个文件
+  if (!f) return;
+  const dir = $('mfDir').value.trim();
+  if (!dir) { toast('请先填写要导入到的模型目录', 'err'); return; }
+  try {
+    const buf = new Uint8Array(await f.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < buf.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+    }
+    const d = await api('/api/model/import', {
+      method: 'POST',
+      body: JSON.stringify({ dir: dir, zip_base64: btoa(bin) })
+    });
+    if (!d.ok) { toast(d.error || '导入失败', 'err'); return; }
+    toast('已导入 ' + d.writtenCount + ' 个文件到 ' + dir, 'ok');
+    if (d.rejected && d.rejected.length) toast('已拒绝: ' + d.rejected.join(', '), 'err');
+    setTimeout(refreshAll, 1200);
+    await loadModelFiles(dir);
+  } catch (e) { toast('导入失败: ' + e.message, 'err'); }
 };
 
 /* ---------------- 生物 ---------------- */
@@ -1241,6 +1359,128 @@ async function loadPlayers() {
     if (cur) sel.value = cur;
   } catch (e) { }
 }
+/* ---------------- 技能 / 掉落 / 刷怪点 ---------------- */
+async function loadSkills() {
+  try {
+    const d = await api('/api/skills');
+    if (!$('skText').dataset.touched) $('skText').value = d.content || '';
+    const warns = d.warnings || [];
+    $('skWarnBox').style.display = warns.length ? 'block' : 'none';
+    if (warns.length) $('skWarns').textContent = warns.join('\n');
+    if (!$('skConds').dataset.filled) {
+      const s = await api('/api/skills/schema');
+      $('skConds').innerHTML = (s.conditions || []).map(c => '· ' + c).join('<br>');
+      $('skActs').innerHTML = (s.actions || []).map(c => '· ' + c).join('<br>');
+      $('skConds').dataset.filled = '1';
+    }
+  } catch (e) { toast('技能载入失败: ' + e.message, 'err'); }
+}
+$('skText').addEventListener('input', () => { $('skText').dataset.touched = '1'; });
+$('bSkillsRefresh').onclick = async () => {
+  delete $('skText').dataset.touched;
+  await loadSkills();
+  toast('已重新载入 skills.yml', 'ok');
+};
+$('bSaveSkills').onclick = async () => {
+  try {
+    const d = await api('/api/skills/save', { method: 'POST', body: JSON.stringify({ content: $('skText').value }) });
+    if (d.ok) {
+      delete $('skText').dataset.touched;
+      setOut($('skOut'), '✓ ' + d.message + (d.version ? '\n已备份版本: ' + d.version : ''));
+      toast(d.message || '已保存', 'ok');
+      await loadSkills();
+    } else { setOut($('skOut'), '✗ ' + d.error); toast(d.error, 'err'); }
+  } catch (e) { toast('保存失败: ' + e.message, 'err'); }
+};
+
+async function loadLoot() {
+  try {
+    const d = await api('/api/loot');
+    if (!$('lootText').dataset.touched) $('lootText').value = d.content || '';
+    const sel = $('rollTable'), cur = sel.value;
+    sel.innerHTML = '';
+    for (const t of (d.tables || [])) {
+      const o = document.createElement('option'); o.value = t; o.textContent = t; sel.appendChild(o);
+    }
+    if (cur) sel.value = cur;
+    if (!sel.options.length) {
+      const o = document.createElement('option');
+      o.value = ''; o.textContent = '（loot.yml 中还没有表）'; sel.appendChild(o);
+    }
+  } catch (e) { toast('掉落表载入失败: ' + e.message, 'err'); }
+}
+$('lootText').addEventListener('input', () => { $('lootText').dataset.touched = '1'; });
+$('bLootRefresh').onclick = async () => {
+  delete $('lootText').dataset.touched;
+  await loadLoot(); toast('已重新载入 loot.yml', 'ok');
+};
+$('bSaveLoot').onclick = async () => {
+  try {
+    const d = await api('/api/loot/save', { method: 'POST', body: JSON.stringify({ content: $('lootText').value }) });
+    if (d.ok) {
+      delete $('lootText').dataset.touched;
+      setOut($('lootOut'), '✓ ' + d.message + (d.version ? '\n已备份版本: ' + d.version : ''));
+      toast(d.message || '已保存', 'ok');
+      await loadLoot();
+    } else { setOut($('lootOut'), '✗ ' + d.error); toast(d.error, 'err'); }
+  } catch (e) { toast('保存失败: ' + e.message, 'err'); }
+};
+$('bRoll').onclick = async () => {
+  const table = $('rollTable').value;
+  if (!table) { toast('先在 loot.yml 里定义一张表', 'err'); return; }
+  try {
+    const d = await api('/api/loot/roll', {
+      method: 'POST',
+      body: JSON.stringify({ table, luck: parseFloat($('rollLuck').value) || 0 })
+    });
+    if (!d.hits || !d.hits.length) {
+      setOut($('rollOut'), '本次未命中任何条目（概率判定属正常结果）');
+    } else {
+      setOut($('rollOut'), '表 ' + d.table + '  幸运值 ' + d.luck + '\n命中 ' + d.hits.length + ' 条：\n'
+        + d.hits.map(h => '  ' + h.amount + 'x ' + h.item
+            + '  (概率 ' + h.chance.toFixed(2) + (h.luckScaling ? '，吃幸运加成)' : '，固定概率)')).join('\n'));
+    }
+  } catch (e) { toast('掷骰失败: ' + e.message, 'err'); }
+};
+
+async function loadSpawners() {
+  try {
+    const d = await api('/api/spawners');
+    const list = d.spawners || [];
+    if (!list.length) { $('spOut').textContent = '（spawners.yml 的 spawners 为空）'; return; }
+    $('spOut').textContent = list.map(s =>
+      s.id + '  →  ' + s.mob
+      + '\n    间隔 ' + s.interval + 't'
+      + ' | 存活 ' + s.alive + '/' + s.maxAlive
+      + ' | 累计 ' + s.totalSpawned
+      + (s.enabled ? '' : '  [已禁用]')).join('\n\n');
+  } catch (e) { $('spOut').textContent = '载入失败: ' + e.message; }
+}
+$('bSpReload').onclick = async () => {
+  try {
+    const d = await api('/api/spawners/reload', { method: 'POST', body: '{}' });
+    toast(d.message || '已重载', 'ok');
+    await loadSpawners();
+  } catch (e) { toast('重载失败: ' + e.message, 'err'); }
+};
+
+/* ---------------- SSE：保存后由服务端推送，前端无需盲等 ---------------- */
+function connectEvents() {
+  if (typeof EventSource === 'undefined') return;
+  try {
+    const es = new EventSource('/api/events?token=' + encodeURIComponent(TOKEN));
+    es.addEventListener('reload', ev => {
+      let what = '';
+      try { what = JSON.parse(ev.data).what || ''; } catch (e) { /* 忽略非法负载 */ }
+      toast('服务端已' + (what ? '重载 ' + what : '重载') + '，正在刷新…', 'ok');
+      // 模型重载是异步的，给内核一点时间完成注册再拉列表
+      setTimeout(() => { loadModels().catch(() => {}); }, 1200);
+    });
+    es.onerror = () => { /* 浏览器会自动重连，不打断页面 */ };
+    window.__helsteraEvents = es;
+  } catch (e) { /* SSE 不可用时退回原有的轮询行为 */ }
+}
+
 async function refreshAll() {
   try { await loadModels(); await loadMobs(); await loadStatus(); await loadPlayers(); }
   catch (e) { toast('刷新失败: ' + e.message, 'err'); }
@@ -1249,6 +1489,8 @@ async function refreshAll() {
   const s = await loadStatus();
   if (!s) { toast('无法连接插件（请确认 web.enabled 与服务端状态）', 'err'); return; }
   await refreshAll();
+  connectEvents();
+  await Promise.all([loadSkills(), loadLoot(), loadSpawners()]);
   try { const d = await api('/api/log'); setOut($('logOut'), (d.lines || []).join('\n') || '（暂无记录）'); } catch (e) { }
   setInterval(loadStatus, 5000);
   setInterval(loadPlayers, 15000);

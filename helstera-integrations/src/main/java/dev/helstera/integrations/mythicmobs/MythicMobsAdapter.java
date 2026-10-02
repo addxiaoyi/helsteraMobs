@@ -31,6 +31,7 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
     private Plugin host;
     private boolean connected;
     private String report;
+    private MythicMobsModelMechanics mechanics;
     private final org.bukkit.configuration.file.FileConfiguration cfg;
 
     public MythicMobsAdapter(InstanceManagerImpl instances, dev.helstera.api.model.ModelRegistry registry,
@@ -46,9 +47,13 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
 
     @Override
     public Set<Capability> capabilities() {
-        // 仅声明已实现的能力：3.6 的 SKILLS/CONDITIONS 尚未提供（需 MythicMobs API jar 才能实现），
+        // SKILLS/CONDITIONS 只在 mechanic 真的注册成功后才对外声明：
         // 声明不实会让第三方插件做出错误的能力判断。
-        return Set.of(Capability.MOB_MODEL_BINDING);
+        if (mechanics != null && mechanics.anyRegistered()) {
+            return Set.of(Capability.MOB_MODEL_BINDING, Capability.EVENTS,
+                    Capability.SKILLS, Capability.CONDITIONS);
+        }
+        return Set.of(Capability.MOB_MODEL_BINDING, Capability.EVENTS);
     }
 
     @Override
@@ -75,10 +80,29 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
                     new SpawnExecutor(), host, true);
             connected = true;
             report = null;
+
+            // 注册模型 mechanic / condition，让 MythicMobs 技能表里能直接写
+            // modelspawn / modelplay / modelscale 等。失败不影响上面的绑定能力。
+            StringBuilder mechNote = new StringBuilder();
+            try {
+                mechanics = new MythicMobsModelMechanics(instances, registry);
+                int n = mechanics.register(host);
+                if (n > 0) {
+                    mechNote.append("已注册 ").append(n).append(" 个模型 mechanic/条件: ")
+                            .append(String.join(", ", mechanics.registered().keySet()));
+                } else {
+                    mechNote.append("模型 mechanic 未注册（MythicMobs API 结构不匹配）");
+                }
+                if (!mechanics.problems().isEmpty()) {
+                    mechNote.append("；原因: ").append(String.join("；", mechanics.problems()));
+                    report = mechNote.toString();
+                }
+            } catch (Throwable t) {
+                mechNote.append("模型 mechanic 注册异常: ").append(t);
+            }
+
             host.getLogger().info("已连接 MythicMobs " + mm.getDescription().getVersion()
-                    + "（生物模型绑定已启用；注意：3.6 的 modelspawn/modelremove/modelplay/"
-                    + "modelstop/modelscale/modelmount 技能与对应条件尚未实现，"
-                    + "请用 /helstera 命令或 Java API 驱动模型）");
+                    + "（生物模型绑定已启用）· " + mechNote);
             return true;
         } catch (ClassNotFoundException cnf) {
             report = "MythicMobs 版本过旧/过新，找不到 io.lumine.mythic.bukkit.events.MythicMobSpawnEvent。";

@@ -8,8 +8,12 @@ Minecraft（Paper / Spigot）模型引擎插件。采用「资源包 + Display �
 - 渲染：骨骼 → ItemDisplay 层级，Interaction 碰撞体，玩家可见性订阅（hideEntity），统一 Tick 调度器（批量队列 / 预算 / LOD）。
 - 资源包构建：Box-UV → 模型 JSON、CustomModelData overrides、zip 打包、SHA1、下发。
 - AI 有限状态机（空闲 / 巡逻 / 追击 / 攻击 / 受伤 / 逃跑 / 施法 / 死亡）+ 感知器 + 行为注册表。
-- 网页开发器（JDK HttpServer 自研，本机监听 + 令牌认证）：模型列表 / 预览 / 动画播放 / 生物配置编辑 / 校验 / 保存 / 回滚 / 审计。
+- 目标选择器（Targeter）：最近 / 最远 / 随机 / 最低血量 / 最高血量 / 仅玩家 / 仅怪物，并驱动 `aoe-damage`、`teleport-targets`、`effect-targets`、`ignite-targets`、`knockback-targets`、`message-targets` 等多目标动作。
+- 掉落表（loot.yml）：权重概率、数量区间、幸运值加成、附魔 / 自定义名 / CustomModelData；死亡时自动投掷并可计入抢夺等级。
+- 网页开发器（Javalin 6 + Jackson）：模型列表 / 预览 / 动画播放 / 生物配置编辑 / 校验 / 保存 / 回滚 / 审计 / 模型 zip 导入导出；**技能**（skills.yml）、**掉落表**（loot.yml，含掷骰预览）、**刷怪点**（spawners.yml）可视化编辑；SSE 实时推送重载事件，保存后无需手动刷新。
 - 外部插件适配（MythicMobs / ItemAdder / CraftEngine 反射检测）与迁移中心（四插件导入器 + 自动备份）。
+- 刷怪点（spawners.yml）：定时 + 半径随机 + 存活上限 + 累计上限 + 玩家门控 + 世界绑定；所有刷怪点共用一个调度任务。
+- MythicMobs 模型 mechanic 与条件（反射注册，签名变动自动降级）：`modelspawn` / `modelremove` / `modelplay` / `modelstop` / `modelscale` / `modelmount` / `modelunmount` / `modelheal`，以及 `modelspawned` / `modelremoved` / `modelplaying`。
 
 ## 模块
 
@@ -35,6 +39,9 @@ Minecraft（Paper / Spigot）模型引擎插件。采用「资源包 + Display �
 # 完整版（5.0，含网页开发器）
 mvn -o clean install
 
+# 跑测试（core + ai，共 70 个用例）
+mvn -o test
+
 # 分阶段出包（仅含"已完成"模块，产物名 HelsteraMobs-<n>.0.jar）
 mvn -o clean package -P phase1   # 1.0：核心 api + core
 mvn -o clean package -P phase2   # 2.0：+ runtime + render-paper
@@ -44,6 +51,10 @@ mvn -o clean package -P phase4   # 4.0：+ integrations + migration
 ```
 
 产出的 uber jar 放入服务器 `plugins/` 目录即可。
+
+所有 helstera 模块在 `helstera-plugin` 中以 `provided` 作用域声明（只进编译期类路径），
+实际打进 jar 的模块由 `-P` profile 决定。因此各阶段都能编译通过，
+运行期缺失的子系统由 `onEnable` 的 `try/catch` 优雅降级。
 
 ## 网页开发器
 
