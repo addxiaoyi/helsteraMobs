@@ -448,6 +448,8 @@ public final class WebServerService {
             case "/api/log" -> { return json(200, Map.of("lines", recentAudit())); }
             case "/api/spawn" -> { return json(200, spawn(req)); }
             case "/api/config" -> { return json(200, configEndpoint(req)); }
+            case "/api/model/export" -> { return modelExport(req); }
+            case "/api/model/import" -> { return json(200, modelImport(req)); }
             default -> { return json(404, Map.of("error", "未知接口 " + req.path)); }
         }
     }
@@ -922,6 +924,131 @@ public final class WebServerService {
         Response r = new Response(200, html);
         r.headers.put("content-type", "text/html; charset=utf-8");
         return r;
+    }
+
+    /**
+     * 把单个模型目录打包成 zip 下载（网页端的「导出模型」）。
+     *
+     * <p>只打包 models/ 下的一个目录，不允许整根目录导出：models/ 可能很大，
+     * 一次请求把全部模型传出去既无必要也容易打爆浏览器内存。</p>
+     */
+    private Response modelExport(Request req) {
+        String id = req.queryParam("id");
+        if (id == null || id.isBlank()) id = req.queryParam("dir");
+        Path dir = safeModelDir(id);
+        Map<String, Object> fail = new LinkedHashMap<>();
+        if (dir == null || !Files.isDirectory(dir)) {
+            fail.put("ok", false);
+            fail.put("error", "模型目录不存在或非法: " + id);
+            return json(400, fail);
+        }
+        String rel = modelsRoot.toAbsolutePath().normalize()
+                .relativize(dir.toAbsolutePath().normalize()).toString().replace('\\', '/');
+        String fileName = rel.substring(rel.lastIndexOf('/') + 1).replaceAll("[^A-Za-z0-9_.-]", "_");
+        try {
+            java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+            try (java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(buf)) {
+                try (java.util.stream.Stream<Path> walk = Files.walk(dir)) {
+                    for (Path p : (Iterable<Path>) walk.filter(Files::isRegularFile)::iterator) {
+                        // 只需相对 models 根的路径；relativize 的结果已含 rel 前缀，
+                        // 再拼一次 rel 会得到 example/emberling/example/emberling/... 这样的重复。
+                        String name = modelsRoot.toAbsolutePath().normalize()
+                                .relativize(p.toAbsolutePath().normalize()).toString().replace('\\', '/');
+                        out.putNextEntry(new java.util.zip.ZipEntry(name));
+                        out.write(Files.readAllBytes(p));
+                        out.closeEntry();
+                    }
+                }
+            }
+            Response r = new Response(200, buf.toByteArray());
+            r.headers.put("content-type", "application/zip");
+            r.headers.put("content-disposition",
+                    "attachment; filename=\"" + fileName + ".zip\"");
+            return r;
+        } catch (IOException e) {
+            return json(500, Map.of("error", String.valueOf(e.getMessage())));
+        }
+    }
+
+    /**
+     * 导入模型。
+     *
+     * <p>接受两种负载：{@code files:[{path,content}]} 直接写文本文件，
+     * 或 {@code zip_base64} 上传整包。逐文件都经 {@code safeModelDir} 校验，
+     * 任何越界路径立即拒绝，避免 zip slip。</p>
+     */
+    private Map<String, Object> modelImport(Request req) throws IOException {
+        Map<?, ?> body = readJson(req);
+        Map<String, Object> out = new LinkedHashMap<>();
+        Path target = safeModelDir(str(body.get("dir")));
+        if (target == null) {
+            out.put("ok", false);
+            out.put("error", "目标目录非法（仅允许字母数字下划线与 / -，不允许 ..）: " + body.get("dir"));
+            return out;
+        }
+        List<String> written = new ArrayList<>();
+        List<String> rejected = new ArrayList<>();
+
+        String zipB64 = str(body.get("zip_base64"));
+        if (zipB64 != null && !zipB64.isBlank()) {
+            byte[] raw;
+            try {
+                raw = java.util.Base64.getMimeDecoder().decode(zipB64);
+            } catch (IllegalArgumentException e) {
+                out.put("ok", false);
+                out.put("error", "zip_base64 解码失败: " + e.getMessage());
+                return out;
+            }
+            try (java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(
+                    new java.io.ByteArrayInputStream(raw))) {
+                java.util.zip.ZipEntry e;
+                while ((e = zis.getNextEntry()) != null) {
+                    if (e.isDirectory()) continue;
+                    // zip slip：条目名可能是 ../../evil.yml
+                    Path dest = target.resolve(e.getName().replace('\\', '/')).normalize();
+                    if (!dest.startsWith(target)) {
+                        rejected.add(e.getName() + "（越界路径）");
+                        continue;
+                    }
+                    Files.createDirectories(dest.getParent());
+                    Files.write(dest, zis.readAllBytes());
+                    written.add(e.getName());
+                }
+            }
+        }
+
+        Object files = body.get("files");
+        if (files instanceof List<?> list) {
+            for (Object item : list) {
+                if (!(item instanceof Map<?, ?> m)) continue;
+                String rel = str(m.get("path"));
+                if (rel == null || rel.isBlank()) continue;
+                Path dest = target.resolve(rel.replace('\\', '/')).normalize();
+                if (!dest.startsWith(target)) {
+                    rejected.add(rel + "（越界路径）");
+                    continue;
+                }
+                Files.createDirectories(dest.getParent());
+                Files.writeString(dest, str(m.get("content")) == null ? "" : str(m.get("content")),
+                        StandardCharsets.UTF_8);
+                written.add(rel);
+            }
+        }
+
+        if (written.isEmpty() && rejected.isEmpty()) {
+            out.put("ok", false);
+            out.put("error", "未提供任何文件（需要 files 或 zip_base64）");
+            return out;
+        }
+        Files.createDirectories(target);
+        out.put("ok", true);
+        out.put("written", written);
+        out.put("writtenCount", written.size());
+        if (!rejected.isEmpty()) out.put("rejected", rejected);
+        // 需显式重载才生效，接口不代劳：解析在主线程，重载会打断其他实例。
+        out.put("note", "文件已写入，执行 /api/reload 后生效");
+        bridge.reloadModels();
+        return out;
     }
 
     private Response servePack() {
