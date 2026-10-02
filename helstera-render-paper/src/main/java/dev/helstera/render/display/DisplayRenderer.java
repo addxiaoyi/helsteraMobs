@@ -77,6 +77,15 @@ public final class DisplayRenderer implements InstanceRenderer {
         return visuals.get(inst.instanceId());
     }
 
+    /**
+     * 该实例当前持有的渲染实体总数（载体 + 骨骼 Display + 标签 + 交互体）。
+     * 供启动自检等包外调用方做只读诊断。
+     */
+    public int renderedEntityCount(int instanceId) {
+        Visuals v = visuals.get(instanceId);
+        return v == null ? 0 : v.allEntityIds.size();
+    }
+
     // ------------------------------------------------------------------
     // 创建
     // ------------------------------------------------------------------
@@ -117,8 +126,14 @@ public final class DisplayRenderer implements InstanceRenderer {
                 d.setInterpolationDelay(-1);
                 d.setInterpolationDuration(interpolationTicks);
                 d.setTeleportDuration(interpolationTicks);
-                d.setViewRange(1.0f);
-                d.setShadowRadius(0f);
+                // 能力探测：setViewRange / setShadowRadius 在部分版本不存在，
+                // 缺失时降级为默认值（范围 1f、无阴影），不影响骨骼显示。
+                if (VersionAdapter.canSetViewRange()) {
+                    d.setViewRange(1.0f);
+                }
+                if (VersionAdapter.canSetShadowRadius()) {
+                    d.setShadowRadius(0f);
+                }
                 d.setPersistent(options.persistent());
                 d.setGlowing(options.glowing());
                 d.setBillboard(Display.Billboard.FIXED);
@@ -177,14 +192,23 @@ public final class DisplayRenderer implements InstanceRenderer {
         computeWorldMatrices(inst, base, v);
 
         List<ItemDisplay> displays = v.boneDisplays;
+        boolean async = VersionAdapter.canTeleportAsync();
+        boolean matrix = VersionAdapter.canSetTransformationMatrix();
         for (int i = 0; i < displays.size() && i < v.worldMatrices.size(); i++) {
             ItemDisplay d = displays.get(i);
             if (!d.isValid()) continue;
             Location p = v.bonePositions.get(i);
-            d.teleportAsync(p);
+            // teleportAsync 在旧版本不存在；缺失时同步传送，行为一致但阻塞主线程更久。
+            if (async) {
+                d.teleportAsync(p);
+            } else {
+                d.teleport(p);
+            }
             d.setInterpolationDelay(0);
             d.setInterpolationDuration(interpolationTicks);
-            d.setTransformationMatrix(v.worldMatrices.get(i));
+            if (matrix) {
+                d.setTransformationMatrix(v.worldMatrices.get(i));
+            }
         }
 
         // 碰撞盒跟随

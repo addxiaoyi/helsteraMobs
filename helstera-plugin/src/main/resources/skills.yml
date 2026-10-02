@@ -1,0 +1,42 @@
+# helsteraMobs 技能定义
+#
+# 技能 = 一组可复用的「前置条件」+「决策后动作」。
+# 定义后可在 ai.profiles.<档案>.skills 与 mobs/<生物>.yml 的 ai.skills 中按名引用。
+#
+# 语法：
+#   require:     全部为 true 才执行该档案的内置决策（任一为 false 则本节拍跳过）
+#   on-decision: 每次决策后执行（无论当次走哪个分支）
+#   每行格式：名称 [参数...]，带空格的参数用引号包裹
+#
+# 内置条件：has-target / health-below / health-above / distance-below / distance-above /
+#           state-is / animation-is / every-n-decisions
+# 内置动作：set-scale / play-animation / stop-animation / set-intent / damage-target /
+#           message-target / sound / particle / heal-self
+#
+# 第三方插件可用 Java API 注册同名自定义条件/动作，配置写法与内置完全一致。
+
+schema-version: 1
+
+skills:
+  # 示例：血量低于 30% 时停止追击并狂暴（放大 + 播攻击动画）
+  berserk:
+    require:
+      - health-below 0.3
+    on-decision:
+      - set-scale 1.25
+      - play-animation attack false 6
+      - sound ENTITY_WITHER_SPAWN 0.6
+
+  # 示例：无目标时原地待命，不追击不巡逻
+  guard_post:
+    require:
+      - has-target false
+    on-decision:
+      - set-intent IDLE
+
+  # 示例：远距离玩家靠近时才进入战斗姿态
+  alert_on_proximity:
+    require:
+      - distance-below 12
+    on-decision:
+      - set-intent ATTACK

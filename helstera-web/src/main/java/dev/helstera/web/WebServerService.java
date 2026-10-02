@@ -447,6 +447,7 @@ public final class WebServerService {
             case "/api/templates" -> { return json(200, templates(req)); }
             case "/api/log" -> { return json(200, Map.of("lines", recentAudit())); }
             case "/api/spawn" -> { return json(200, spawn(req)); }
+            case "/api/config" -> { return json(200, configEndpoint(req)); }
             default -> { return json(404, Map.of("error", "未知接口 " + req.path)); }
         }
     }
@@ -473,6 +474,7 @@ public final class WebServerService {
         s.put("instances", stats.getOrDefault("instances", 0));
         s.put("players", stats.getOrDefault("players", 0));
         s.put("tps", stats.getOrDefault("tps", 20.0));
+        s.put("skillTriggers", stats.getOrDefault("skillTriggers", 0L));
         s.put("errorCount", bridge.errors().size());
         return s;
     }
@@ -567,9 +569,15 @@ public final class WebServerService {
         String rel = str(r.get("dir"));
         String id = str(r.get("id"));
         Path dir = safeModelDir(rel);
+        // 回退：未给 dir 时，模型 id 本身就是相对模型根的路径（如 example/emberling），
+        // 直接按 id 解析。此前读 modelDetail(id) 的 "dir" 键，该键并不存在，
+        // 导致传 id 的请求恒定报「目录不存在: null」。
         if ((dir == null || !Files.isDirectory(dir)) && id != null && !id.isBlank()) {
-            Map<String, Object> detail = bridge.modelDetail(id);
-            if (detail != null) dir = safeModelDir(str(detail.get("dir")));
+            Path byId = safeModelDir(id);
+            if (byId != null && Files.isDirectory(byId)) {
+                dir = byId;
+                rel = id;
+            }
         }
         Map<String, Object> out = new LinkedHashMap<>();
         if (dir == null || !Files.isDirectory(dir)) {
@@ -634,6 +642,46 @@ public final class WebServerService {
                 out.add(e);
             });
         } catch (IOException ignored) {
+        }
+        return out;
+    }
+
+    /**
+     * 配置读写端点。
+     *
+     * <ul>
+     *   <li>GET  → 返回全量配置（扁平化键值对）与不可经网页修改的键清单</li>
+     *   <li>POST → 合并补丁并落盘，逐键失败即整体报错，不做部分写入</li>
+     * </ul>
+     *
+     * <p>写入是合并而非替换：网页端只提交改动字段，若整体 setValues 会清掉
+     * 未提交的所有键。令牌相关键由桥接层剔除，避免网页把自己改到无法鉴权。</p>
+     */
+    private Map<String, Object> configEndpoint(Request req) throws IOException {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if ("GET".equals(req.method)) {
+            out.put("ok", true);
+            out.put("config", bridge.configSnapshot());
+            out.put("protected", List.of("web.token", "web.port", "web.host"));
+            out.put("note", "写入后需执行 /helstera reload 或重启插件方能对运行期生效");
+            return out;
+        }
+        Map<?, ?> body = readJson(req);
+        Object patch = body.get("config");
+        if (!(patch instanceof Map<?, ?> m)) {
+            out.put("ok", false);
+            out.put("error", "请求体需为 {\"config\": {...}}");
+            return out;
+        }
+        java.util.LinkedHashMap<String, Object> typed = new java.util.LinkedHashMap<>();
+        for (Map.Entry<?, ?> e : m.entrySet()) typed.put(String.valueOf(e.getKey()), e.getValue());
+        String err = bridge.applyConfigPatch(typed);
+        out.put("ok", err == null);
+        if (err != null) {
+            out.put("error", err);
+        } else {
+            out.put("applied", typed.size());
+            out.put("config", bridge.configSnapshot());
         }
         return out;
     }

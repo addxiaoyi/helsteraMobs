@@ -1,9 +1,15 @@
-# MythicMobs 集成配置
-# 让神话生物显示 helstera 模型：
+# 可选互通：把已存在的 MythicMobs 生物显示为 helstera 模型
+#
+# 定位说明：helsteraMobs 不依赖 MythicMobs 提供能力。
+# 本节仅在你已经在用 MythicMobs 时省去手动绑定模型的步骤；
+# 移除 MythicMobs 后，核心模型/动画/AI 功能完全不受影响。
+#
+# 未安装 MythicMobs 时整个小节会被静默忽略。
+#
 # mythicmobs:
 #   mobs:
 #     SkeletalKnight:
-#       model: example/crystal_golem
+#       model: example/crystal_golem  # 需为已加载的模型 ID
 #       scale: 1.2
 #       default-animation: idle
 mythicmobs:

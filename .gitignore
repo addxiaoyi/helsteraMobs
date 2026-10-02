@@ -30,3 +30,19 @@ Thumbs.db
 # Misc
 *.tmp
 *.bak
+
+# Local test servers (downloaded jars, worlds, logs — hundreds of MB)
+srv-*/
+test-server*/
+tools/
+
+# Local sweep/probe scripts and their output
+sweep*.ps1
+sweep*.out
+sweep*.err
+swa.out
+swa.err
+analyze.ps1
+cdp*.ps1
+probe.js
+shots/

@@ -14,6 +14,8 @@ import dev.helstera.api.resourcepack.ResourcePackService;
 import dev.helstera.api.visibility.PlayerVisibilityService;
 import dev.helstera.ai.AiManager;
 import dev.helstera.ai.BehaviorRegistryImpl;
+import dev.helstera.ai.skill.SkillService;
+import dev.helstera.ai.skill.SkillTriggers;
 import dev.helstera.core.ModelRegistryImpl;
 import dev.helstera.core.parse.ModelParser;
 import dev.helstera.core.parse.ModelScanner;
@@ -31,6 +33,7 @@ import dev.helstera.migration.importer.MythicMobsImporter;
 import dev.helstera.platform.PlatformAdapter;
 import dev.helstera.render.display.BoneCommandMapping;
 import dev.helstera.render.display.DisplayRenderer;
+import dev.helstera.render.display.VersionAdapter;
 import dev.helstera.render.display.RenderListeners;
 import dev.helstera.render.visibility.PlayerVisibilityServiceImpl;
 import dev.helstera.render.visibility.VisibilityRefresher;
@@ -99,6 +102,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private Object scheduler;                    // HelsteraScheduler
     private Object resourcePack;                 // ResourcePackServiceImpl
     private Object behaviorRegistry;             // BehaviorRegistryImpl
+    private Object skillService;                 // dev.helstera.ai.skill.SkillService
+    private Object skillTriggers;                // dev.helstera.ai.skill.SkillTriggers
     private Object ai;                           // AiManager
     private Object migration;                    // MigrationServiceImpl
     private Object webServer;                    // WebServerService
@@ -112,6 +117,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        // saveDefaultConfig() 只在配置文件不存在时写盘。插件更新后新增的键不会到达
+        // 已有安装——用户看不到新配置项，只能吃默认值（表现为"配置写了没反应"）。
+        // 这里把缺失的默认键补写进现有配置，已有值一律不动。
+        backfillConfigDefaults();
         if (!new java.io.File(getDataFolder(), "integrations.yml").exists()) {
             saveResource("integrations.yml", false);
         }
@@ -154,6 +163,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
         // ---- 渲染 + 实例 + 调度 + 可见性（helstera-render-paper / helstera-runtime）----
         try {
+            // 启动期探测 MC 版本与 Display 能力，渲染层据此走兼容分支。
+            VersionAdapter.init(getLogger());
             BoneCommandMapping m = new BoneCommandMapping();
             this.cmdMapping = m;
             DisplayRenderer r = new DisplayRenderer(this, m);
@@ -187,9 +198,26 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         // ---- 资源包（helstera-resourcepack）----
         try {
             BoneCommandMapping m = cmdMapping == null ? null : (BoneCommandMapping) cmdMapping;
+            // pack-format 支持 auto：优先按运行中服务器的 Minecraft 版本查表，
+            // 查不到才用配置值，最后回落到保守默认值（见 PackFormats）。
+            int packFormat = dev.helstera.resourcepack.PackFormats.resolve(
+                    dev.helstera.resourcepack.PackFormats.parseConfigured(
+                            getConfig().get("resourcepack.pack-format")),
+                    getLogger());
             ResourcePackServiceImpl rp = new ResourcePackServiceImpl(this, m, getDataFolder().toPath(),
                     getConfig().getString("resourcepack.url", ""),
-                    () -> new ArrayList<>(registry.all()));
+                    () -> new ArrayList<>(registry.all()),
+                    packFormat);
+            rp.setFallbackUrl(() -> {
+                Object ws = webServer;
+                if (!(ws instanceof WebServerService s) || !s.isRunning()) return null;
+                String host = s.host();
+                // 0.0.0.0 是监听地址，不能作为客户端可访问的下载主机
+                if (host == null || host.isBlank() || "0.0.0.0".equals(host) || "::".equals(host)) {
+                    host = "127.0.0.1";
+                }
+                return "http://" + host + ":" + s.port() + "/pack.zip";
+            });
             this.resourcePack = rp;
         } catch (Throwable t) {
             getLogger().warning("资源包服务不可用: " + t);
@@ -198,10 +226,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         // ---- AI（helstera-ai）----
         try {
             BehaviorRegistryImpl br = new BehaviorRegistryImpl();
+            br.logger(getLogger());
             this.behaviorRegistry = br;
             if (getConfig().getBoolean("ai.enabled", true)) {
                 AiManager a = new AiManager(this, (InstanceManagerImpl) instances, bus);
+                a.setBehaviors(br);
+                SkillService skills = new SkillService(br, getLogger());
+                if (!new java.io.File(getDataFolder(), "skills.yml").exists()) {
+                    saveResource("skills.yml", false);
+                }
+                skills.loadSkills(YamlConfiguration.loadConfiguration(
+                        new java.io.File(getDataFolder(), "skills.yml")).getConfigurationSection("skills"));
+                if (!skills.warnings().isEmpty()) {
+                    getLogger().warning("技能配置有 " + skills.warnings().size()
+                            + " 处告警（/helstera debug skills 查看）");
+                }
+                this.skillService = skills;
+                a.setSkills(skills);
                 a.loadProfiles(getConfig().getConfigurationSection("ai.profiles"));
+                SkillTriggers trig = new SkillTriggers(this, a, br, bus, getLogger());
+                trig.start();
+                this.skillTriggers = trig;
                 this.ai = a;
             }
         } catch (Throwable t) {
@@ -316,6 +361,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             reloadModels();
         }
 
+        // 启动自检（debug.self-test）：生成一只示例生物，验证渲染层是否真的能跑通。
+        // 目的：跨版本验证不依赖人工进服，也不需要 RCON / 网页通道。
+        if (getConfig().getBoolean("debug.self-test", false)) {
+            runSelfTest();
+        }
+
         boot.append("模型根目录: ").append(modelRoots()).append('\n');
         getLogger().info(boot.toString());
         if (webServer == null) {
@@ -334,6 +385,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         HelsteraApi.unregister();
         if (scheduler != null) ((HelsteraScheduler) scheduler).stop();
         if (refresher != null) ((VisibilityRefresher) refresher).stop();
+        if (skillTriggers instanceof SkillTriggers st) st.stop();
         if (ai != null) ((AiManager) ai).stop();
         if (webServer != null) ((WebServerService) webServer).stop();
         if (integrations != null) ((IntegrationRegistryImpl) integrations).disableAll();
@@ -368,6 +420,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     public Path modelsRoot() {
         return modelRoots().get(0);
+    }
+
+    /**
+     * 把模型的源目录转成「相对模型根的路径」，用正斜杠。
+     *
+     * <p>网页端用这个键把「已加载模型」与「扫描到的目录」对齐。缺失时前端只能
+     * 退而用 id 兜底，会在模型列表里产生重复条目，故此处必须返回非空值。</p>
+     */
+    public String relativeDirOf(Path sourceDir) {
+        if (sourceDir == null) return "";
+        Path target = sourceDir.toAbsolutePath().normalize();
+        for (Path root : modelRoots()) {
+            Path rn = root.toAbsolutePath().normalize();
+            if (target.startsWith(rn)) {
+                String rel = rn.relativize(target).toString().replace('\\', '/');
+                return rel.isEmpty() ? target.getFileName().toString() : rel;
+            }
+        }
+        return sourceDir.getFileName() == null ? "" : sourceDir.getFileName().toString();
     }
 
     public boolean reloadModels() {
@@ -417,6 +488,39 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return true;
     }
 
+    /**
+     * 把插件内置 config.yml 里存在、但用户配置中缺失的键补写进去。
+     *
+     * <p>Bukkit 的 {@code saveDefaultConfig()} 仅在文件不存在时写盘，插件更新后新增的
+     * 配置项不会到达已有安装，表现为「配置写了没反应」——实际是键根本没被读到。
+     * 这里显式比对并补写缺失键，已有值一律保留，用户的手工配置不会被覆盖。</p>
+     */
+    private void backfillConfigDefaults() {
+        try {
+            java.io.InputStream in = getResource("config.yml");
+            if (in == null) return;
+            org.bukkit.configuration.file.YamlConfiguration defaults;
+            try (java.io.InputStream s = in) {
+                defaults = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                        new java.io.InputStreamReader(s, java.nio.charset.StandardCharsets.UTF_8));
+            }
+            boolean changed = false;
+            for (String key : defaults.getKeys(true)) {
+                if (defaults.isConfigurationSection(key)) continue;
+                if (!getConfig().contains(key)) {
+                    getConfig().set(key, defaults.get(key));
+                    changed = true;
+                }
+            }
+            if (changed) {
+                saveConfig();
+                getLogger().info("已将新增的默认配置项补写到 config.yml（原有配置值未改动）。");
+            }
+        } catch (Exception e) {
+            getLogger().warning("补写默认配置项失败: " + e.getMessage());
+        }
+    }
+
     /** 构建资源包（异步）；applyAll=true 时向在线玩家下发。 */
     public CompletableFuture<String> buildResourcePack(boolean applyAll) {
         if (resourcePack == null) return CompletableFuture.completedFuture(null);
@@ -427,6 +531,64 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             return hash;
         });
+    }
+
+    /**
+     * 启动自检：延迟若干 Tick 后生成一只示例生物，验证渲染层能否真正跑通，
+     * 并把结果写入日志。用于跨版本验证，无需人工进服或 RCON/网页通道。
+     *
+     * <p>自检失败不会影响服务运行：任何异常都捕获并记为自检失败。</p>
+     */
+    private void runSelfTest() {
+        int delay = getConfig().getInt("debug.self-test-delay-ticks", 40);
+        String model = getConfig().getString("debug.self-test-model", "example/emberling");
+        getServer().getScheduler().runTaskLater(this, () -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append("[自检] 开始 | ").append(VersionAdapter.describe());
+            getLogger().info(sb.toString());
+            try {
+                if (instances == null) {
+                    getLogger().warning("[自检] 失败: 实例系统未启用");
+                    return;
+                }
+                if (registry.get(model).isEmpty()) {
+                    getLogger().warning("[自检] 失败: 模型未加载 " + model);
+                    return;
+                }
+                var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+                if (world == null) {
+                    getLogger().warning("[自检] 失败: 没有可用世界");
+                    return;
+                }
+                Location loc = world.getSpawnLocation().clone().add(0, 2, 0);
+                var opts = dev.helstera.api.instance.SpawnOptions.defaults()
+                        .showName(true).displayName("§e[自检]").persistent(false);
+                var inst = instances().spawn(model, loc, opts);
+
+                // 再等 10 Tick，确认骨骼 Display 已创建且位置有效。
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    try {
+                        var impl = (dev.helstera.runtime.instance.ModelInstanceImpl) inst;
+                        int displays = renderer instanceof DisplayRenderer dr
+                                ? dr.renderedEntityCount(inst.instanceId()) : 0;
+                        boolean valid = inst.isValid();
+                        String verdict = (displays > 0 && valid) ? "通过" : "未通过";
+                        getLogger().info("[自检] 结果=" + verdict
+                                + " 实例#" + inst.instanceId()
+                                + " 模型=" + model
+                                + " 骨骼数=" + (registry.get(model).isEmpty() ? 0
+                                        : registry.get(model).get().allBones().size())
+                                + " Display实体数=" + displays
+                                + " 实例有效=" + valid
+                                + " 动画=" + inst.animation().currentAnimation().orElse("(无)"));
+                    } catch (Throwable t) {
+                        getLogger().warning("[自检] 渲染检查异常: " + t);
+                    }
+                }, 10L);
+            } catch (Throwable t) {
+                getLogger().warning("[自检] 生成异常: " + t);
+            }
+        }, Math.max(1, delay));
     }
 
     // vecList 供内部及 WebBridgeAdapter.modelDetail 复用
@@ -440,6 +602,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
      *  - ai 节：引用行为档案并可就地覆盖参数。
      */
     public String spawnMob(String mobId, String modelOverride, org.bukkit.entity.Player atPlayer) {
+        org.bukkit.entity.Player p = atPlayer;
+        if (p == null) {
+            var online = new java.util.ArrayList<>(org.bukkit.Bukkit.getOnlinePlayers());
+            if (!online.isEmpty()) p = online.get(0);
+        }
+        org.bukkit.Location base;
+        if (p != null) {
+            base = p.getLocation().clone();
+        } else {
+            var w = org.bukkit.Bukkit.getWorlds().isEmpty() ? null : org.bukkit.Bukkit.getWorlds().get(0);
+            if (w == null) return "没有可用世界，无法确定生成位置";
+            base = w.getSpawnLocation().clone();
+        }
+        return spawnMob(mobId, modelOverride, base);
+    }
+
+    /**
+     * 在指定位置附近生成 mobs/&lt;mobId&gt;yml 定义的生物。控制台与自动化测试用此入口。
+     *
+     * @param base 基准位置，实际生成点为该位置水平方向前方 3 格
+     */
+    public String spawnMob(String mobId, String modelOverride, org.bukkit.Location base) {
         org.bukkit.configuration.ConfigurationSection cfg = mobConfig(mobId);
         if (cfg == null) return null;
         if (instances == null) return "实例系统未启用（需 2.0+ 版本）";
@@ -454,12 +638,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 .persistent(cfg.getBoolean("persistent", true))
                 .spawnHitbox(cfg.getBoolean("spawn-hitbox", true));
 
-        if (atPlayer == null) {
-            var online = new java.util.ArrayList<>(org.bukkit.Bukkit.getOnlinePlayers());
-            if (online.isEmpty()) return "需要在线玩家来确定生成位置（网页端可在生成时指定玩家）";
-            atPlayer = online.get(0);
-        }
-        org.bukkit.Location loc = atPlayer.getLocation().clone();
+        if (base == null || base.getWorld() == null) return "生成位置无效";
+        org.bukkit.Location loc = base.clone();
         org.bukkit.util.Vector dir = loc.getDirection().setY(0).normalize().multiply(3);
         loc.add(dir);
 
@@ -489,6 +669,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (aiSec != null && ai() != null) {
             AiProfile profile = ai().profile(aiSec.getString("profile", "default"));
             profile = overrideProfile(profile, aiSec);
+            // 生物级技能引用：与档案级 skills 同样经 SkillService 展开为已绑定键
+            if (skillService instanceof SkillService sk) {
+                sk.expand(profile, aiSec.getStringList("skills"));
+            }
             ai().attach((dev.helstera.runtime.instance.ModelInstanceImpl) inst, profile);
         }
         return "已生成 " + mobId + "（模型 " + model + ", 实例 #" + inst.instanceId() + "）";
@@ -496,7 +680,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     /** 用 mobs/*.yml 的 ai 节就地覆盖行为档案（不污染缓存的档案）。 */
     private AiProfile overrideProfile(AiProfile base, org.bukkit.configuration.ConfigurationSection s) {
-        AiProfile p = new AiProfile(base.name);
+        // 从 base 复制（含 require/onDecision），再叠加本节的标量覆盖，
+        // 避免改动共享缓存档案导致其他生物行为被连带污染。
+        AiProfile p = new AiProfile(base);
         p.sightRadius = s.getDouble("sight-radius", base.sightRadius);
         p.attackRadius = s.getDouble("attack-radius", base.attackRadius);
         p.attackDamage = s.getDouble("attack-damage", base.attackDamage);
@@ -541,8 +727,34 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     public void onJoin(PlayerJoinEvent e) {
         if (resourcePack == null) return;
         String url = ((ResourcePackService) resourcePack).url();
-        if (url != null && ((ResourcePackServiceImpl) resourcePack).currentHash() != null) {
-            ((ResourcePackServiceImpl) resourcePack).apply(e.getPlayer());
+        if (url == null) {
+            getLogger().warning("资源包无下载地址，玩家 " + e.getPlayer().getName()
+                    + " 将看不到模型贴图。请配置 resourcepack.url 或启用 web.enabled");
+            return;
+        }
+        if (((ResourcePackServiceImpl) resourcePack).currentHash() == null) {
+            getLogger().warning("资源包尚未构建，" + e.getPlayer().getName()
+                    + " 暂时无法收到。执行 /helstera pack build 后重进");
+            return;
+        }
+        ((ResourcePackServiceImpl) resourcePack).apply(e.getPlayer());
+    }
+
+    /** 资源包下发结果回执：拒绝 / 下载失败在控制台直接可见，便于定位"用不了"。 */
+    @EventHandler
+    public void onPackStatus(org.bukkit.event.player.PlayerResourcePackStatusEvent e) {
+        if (!(resourcePack instanceof ResourcePackServiceImpl rp)) return;
+        var s = e.getStatus();
+        rp.setStatus(e.getPlayer().getUniqueId(), s.name());
+        switch (s) {
+            case SUCCESSFULLY_LOADED -> getLogger().info("玩家 " + e.getPlayer().getName() + " 已加载资源包");
+            case DECLINED -> getLogger().warning("玩家 " + e.getPlayer().getName()
+                    + " 拒绝了资源包，模型将显示为默认贴图。可在客户端「服务器-资源包」中改为允许。");
+            case FAILED_DOWNLOAD -> getLogger().warning("玩家 " + e.getPlayer().getName()
+                    + " 资源包下载失败：下载地址 " + rp.url()
+                    + " 对该玩家不可达（127.0.0.1 只在本机有效，远程玩家需填服务器真实 IP 或公网地址）。");
+            case DOWNLOADED -> getLogger().fine("玩家 " + e.getPlayer().getName() + " 资源包已下载，待重进应用");
+            default -> { }
         }
     }
 
@@ -567,6 +779,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     public ResourcePackService resourcePack() { return resourcePack == null ? null : (ResourcePackService) resourcePack; }
     public AiManager ai() { return ai == null ? null : (AiManager) ai; }
     public MigrationServiceImpl migration() { return migration == null ? null : (MigrationServiceImpl) migration; }
+    public BehaviorRegistry behaviorRegistry() { return behaviorRegistry == null ? null : (BehaviorRegistry) behaviorRegistry; }
+    /** 技能装载期告警（未知名/参数非法）；无告警时返回空列表。 */
+    public List<String> skillWarnings() {
+        return skillService instanceof SkillService s ? s.warnings() : List.of();
+    }
+    /** 事件触发器累计执行次数；用于确认触发链路是否真的跑通。 */
+    public long triggerFiredCount() {
+        return skillTriggers instanceof SkillTriggers t ? t.firedCount() : 0L;
+    }
     public WebServerService webServer() { return webServer == null ? null : (WebServerService) webServer; }
     public HelsteraEventBus bus() { return bus; }
 
@@ -625,6 +846,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             for (ModelDefinition m : registry.all()) {
                 Map<String, Object> e = new LinkedHashMap<>();
                 e.put("id", m.id()); e.put("name", m.name());
+                e.put("dir", HelsteraPlugin.this.relativeDirOf(m.sourceDirectory()));
                 e.put("version", m.version()); e.put("scale", m.scale());
                 e.put("bones", m.allBones().size());
                 e.put("animations", m.animationNames());
@@ -639,6 +861,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (m == null) return null;
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("id", m.id()); out.put("name", m.name());
+            out.put("dir", HelsteraPlugin.this.relativeDirOf(m.sourceDirectory()));
             out.put("version", m.version()); out.put("author", m.author());
             out.put("scale", m.scale()); out.put("defaultAnimation", m.defaultAnimation());
             out.put("hitbox", Map.of("width", m.hitbox().width(), "height", m.hitbox().height()));
@@ -714,6 +937,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             s.put("instances", instances() == null ? 0 : instances().activeCount());
             s.put("players", org.bukkit.Bukkit.getOnlinePlayers().size());
             try { s.put("tps", org.bukkit.Bukkit.getTPS()[0]); } catch (Throwable t) { s.put("tps", 20.0); }
+            // 技能触发计数。此前只在 /helstera debug 里能看到，整条触发链路
+            // 从未有过运行时可观测数据；放进 status 才能随时确认它到底跑没跑。
+            s.put("skillTriggers", HelsteraPlugin.this.triggerFiredCount());
             return s;
         }
         @Override public List<String> players() {
@@ -741,6 +967,36 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             org.bukkit.entity.Player p = null;
             if (playerName != null && !playerName.isBlank()) p = org.bukkit.Bukkit.getPlayerExact(playerName);
             return spawnMob(mobId, null, p);
+        }
+        @Override public java.util.Map<String, Object> configSnapshot() {
+            java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+            for (String key : getConfig().getKeys(true)) {
+                if (getConfig().isConfigurationSection(key)) continue;
+                Object v = getConfig().get(key);
+                out.put(key, v instanceof String || v instanceof Number || v instanceof Boolean ? v : String.valueOf(v));
+            }
+            return out;
+        }
+        @Override public String applyConfigPatch(java.util.Map<String, Object> patch) {
+            if (patch == null || patch.isEmpty()) return "配置补丁为空";
+            // 令牌不允许经网页改写：它同时是网页鉴权凭据，改掉会把自己关在门外。
+            for (String key : new String[]{"web.token", "web.port", "web.host"}) {
+                patch.remove(key);
+            }
+            for (var e : patch.entrySet()) {
+                try {
+                    getConfig().set(e.getKey(), e.getValue());
+                } catch (Throwable t) {
+                    return "写入 " + e.getKey() + " 失败: " + t.getMessage();
+                }
+            }
+            try {
+                saveConfig();
+            } catch (Throwable t) {
+                return "落盘失败: " + t.getMessage();
+            }
+            getLogger().info("网页端更新了配置（" + patch.size() + " 项），相关模块需重启插件或执行 /helstera reload 生效。");
+            return null;
         }
     }
 }

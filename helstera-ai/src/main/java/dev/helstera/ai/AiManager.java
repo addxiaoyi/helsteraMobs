@@ -29,6 +29,14 @@ public final class AiManager implements Listener {
     private final Plugin plugin;
     private final InstanceManagerImpl instances;
     private final HelsteraEventBus bus;
+    /** 自定义条件/动作来源，透传给每个控制器；可为 null。 */
+    private dev.helstera.api.behavior.BehaviorRegistry behaviors;
+    /** 技能装载器：把 skills.yml 与 profile 中的文本定义绑定为可执行键；可为 null。 */
+    private dev.helstera.ai.skill.SkillService skills;
+    /** 实例 -> 实际绑定的档案（含 mobs/*.yml 局部覆盖）；事件触发器据此取档案。 */
+    private final Map<Integer, AiProfile> boundProfiles = new ConcurrentHashMap<>();
+    /** 受控实例，避免事件触发器反查时反复遍历全量实例。 */
+    private final Map<Integer, ModelInstanceImpl> controlled = new ConcurrentHashMap<>();
     private final Map<String, AiProfile> profiles = new ConcurrentHashMap<>();
     private final Map<Integer, AiController> controllers = new ConcurrentHashMap<>();
     private BukkitTask task;
@@ -39,11 +47,37 @@ public final class AiManager implements Listener {
         this.bus = bus;
     }
 
+    /** 注入自定义条件/动作注册表，使 profile 的 require / on-decision 生效。 */
+    public void setBehaviors(dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+        this.behaviors = behaviors;
+    }
+
+    /** 注入技能装载器，用于把 profile 的 skills 列表展开为已绑定的条件/动作。 */
+    public void setSkills(dev.helstera.ai.skill.SkillService skills) {
+        this.skills = skills;
+    }
+
     public void loadProfiles(org.bukkit.configuration.ConfigurationSection root) {
         profiles.clear();
         if (root == null) return;
         for (String key : root.getKeys(false)) {
-            profiles.put(key, AiProfile.fromSection(key, root.getConfigurationSection(key)));
+            var sec = root.getConfigurationSection(key);
+            AiProfile p = AiProfile.fromSection(key, sec);
+            // 先把 skills 引用展开，再把 require/on-decision 的文本定义绑定成可执行键。
+            // 顺序重要：技能内部的条件/动作必须先完成绑定，展开时才能按名引用。
+            if (skills != null && sec != null) {
+                skills.expand(p, sec.getStringList("skills"));
+            }
+            p.require.replaceAll(s -> {
+                String bound = skills == null ? null : skills.bindCondition(s);
+                return bound == null ? s : bound;
+            });
+            p.onDecision.replaceAll(s -> {
+                String bound = skills == null ? null : skills.bindAction(s);
+                return bound == null ? s : bound;
+            });
+            if (skills != null) skills.expandTriggers(p);
+            profiles.put(key, p);
         }
     }
 
@@ -60,17 +94,32 @@ public final class AiManager implements Listener {
     public void attach(ModelInstanceImpl inst, AiProfile profile) {
         var anim = inst.stateMachine;
         if (anim == null) return;
-        AiController c = new AiController(inst, profile == null ? profile("default") : profile, anim, bus);
+        AiProfile p = profile == null ? profile("default") : profile;
+        AiController c = new AiController(inst, p, anim, bus, behaviors);
         inst.aiController = c;
         controllers.put(inst.instanceId(), c);
+        boundProfiles.put(inst.instanceId(), p);
+        controlled.put(inst.instanceId(), inst);
     }
 
     public AiController controllerOf(ModelInstance inst) {
         return controllers.get(inst.instanceId());
     }
 
+    /** 取某实例实际绑定的档案（含 mobs/*.yml 局部覆盖）；未启用 AI 时返回 null。 */
+    public AiProfile profileOf(int instanceId) {
+        return boundProfiles.get(instanceId);
+    }
+
+    /** 全部受控实例，供事件触发器按实体反查。O(n) 拷贝，无嵌套遍历。 */
+    public java.util.Collection<ModelInstanceImpl> allInstances() {
+        return java.util.List.copyOf(controlled.values());
+    }
+
     public void detach(int instanceId) {
         controllers.remove(instanceId);
+        boundProfiles.remove(instanceId);
+        controlled.remove(instanceId);
     }
 
     public void start(int decisionTicks) {
@@ -99,6 +148,8 @@ public final class AiManager implements Listener {
         }
         HandlerList.unregisterAll(this);
         controllers.clear();
+        boundProfiles.clear();
+        controlled.clear();
     }
 
     public int activeCount() {

@@ -57,4 +57,19 @@ public interface WebBridge {
 
     /** 生成一个生物实例，返回提示文本。 */
     String spawn(String mobId, String playerName);
+
+    /**
+     * 当前 config.yml 的完整内容（已解析为嵌套 Map）。
+     *
+     * <p>供网页端渲染配置表单。返回副本，调用方修改不影响服务端。</p>
+     */
+    Map<String, Object> configSnapshot();
+
+    /**
+     * 写入配置并落盘。
+     *
+     * @param patch 要合并进现有配置的键值（嵌套结构）
+     * @return null 表示成功；非 null 为面向用户的错误说明
+     */
+    String applyConfigPatch(Map<String, Object> patch);
 }

@@ -46,7 +46,9 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
 
     @Override
     public Set<Capability> capabilities() {
-        return Set.of(Capability.MOB_MODEL_BINDING, Capability.SKILLS, Capability.CONDITIONS, Capability.EVENTS);
+        // 仅声明已实现的能力：3.6 的 SKILLS/CONDITIONS 尚未提供（需 MythicMobs API jar 才能实现），
+        // 声明不实会让第三方插件做出错误的能力判断。
+        return Set.of(Capability.MOB_MODEL_BINDING);
     }
 
     @Override
@@ -74,7 +76,9 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
             connected = true;
             report = null;
             host.getLogger().info("已连接 MythicMobs " + mm.getDescription().getVersion()
-                    + "（生物模型绑定已启用；技能请用 helstera 的 API/命令或 modelspawn 等桥接技能）");
+                    + "（生物模型绑定已启用；注意：3.6 的 modelspawn/modelremove/modelplay/"
+                    + "modelstop/modelscale/modelmount 技能与对应条件尚未实现，"
+                    + "请用 /helstera 命令或 Java API 驱动模型）");
             return true;
         } catch (ClassNotFoundException cnf) {
             report = "MythicMobs 版本过旧/过新，找不到 io.lumine.mythic.bukkit.events.MythicMobSpawnEvent。";

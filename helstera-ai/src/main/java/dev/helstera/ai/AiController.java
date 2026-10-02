@@ -26,21 +26,31 @@ public final class AiController {
     private final AiProfile profile;
     private final EntityAnimationStateMachine anim;
     private final HelsteraEventBus bus;
+    /** 自定义条件/动作来源；为 null 时决策链不执行任何扩展钩子。 */
+    private final dev.helstera.api.behavior.BehaviorRegistry behaviors;
 
     private State state = State.IDLE;
     private Player target;
     private long lastAttack;
     private long lastPatrol;
+    private long decisions;
     private Location patrolTarget;
     private Location home;
     private final Random random = new Random();
 
     public AiController(ModelInstanceImpl inst, AiProfile profile,
                         EntityAnimationStateMachine anim, HelsteraEventBus bus) {
+        this(inst, profile, anim, bus, null);
+    }
+
+    public AiController(ModelInstanceImpl inst, AiProfile profile,
+                        EntityAnimationStateMachine anim, HelsteraEventBus bus,
+                        dev.helstera.api.behavior.BehaviorRegistry behaviors) {
         this.inst = inst;
         this.profile = profile;
         this.anim = anim;
         this.bus = bus;
+        this.behaviors = behaviors;
         this.home = inst.location() != null ? inst.location().clone() : null;
     }
 
@@ -82,6 +92,29 @@ public final class AiController {
         // 感知：最近可视线玩家
         Player sensed = sense(loc);
 
+        decisions++;
+        dev.helstera.api.behavior.BehaviorContext ctx = behaviors == null ? null
+                : dev.helstera.api.behavior.BehaviorContext.of(
+                        inst, target != null ? target : sensed, healthRatio,
+                        sensed == null ? -1 : sensed.getLocation().distance(loc), decisions, state.name());
+
+        // 扩展点一：自定义前置条件，任一不通过则本节拍不做内置决策
+        if (behaviors != null && ctx != null) {
+            for (String c : profile.require) {
+                if (!behaviors.testCondition(c, ctx)) return;
+            }
+        }
+
+        decide(loc, sensed, healthRatio);
+
+        // 扩展点二：每次决策后执行自定义动作（无论本次走了哪个分支）
+        if (behaviors != null && ctx != null) {
+            for (String a : profile.onDecision) behaviors.runAction(a, ctx);
+        }
+    }
+
+    /** 内置状态机决策（优先级从高到低）。 */
+    private void decide(Location loc, Player sensed, double healthRatio) {
         // 决策（优先级从高到低）
         if (state == State.DEAD) return;
         if (profile.canFlee && healthRatio <= profile.fleeHealthRatio) {

@@ -7,36 +7,48 @@
 <style>
   :root{
     --bg:#f2f5f9; --panel:#fff; --panel2:#fafbfd; --line:#e2e8f0; --line2:#eef2f7;
-    --txt:#0f172a; --txt2:#54607a; --txt3:#8b95a8;
+    /* txt3 承载标签/表头/空态等真实文本，对比度需达 WCAG AA 4.5:1 */
+    --txt:#0f172a; --txt2:#54607a; --txt3:#647084;
     --accent:#2f6fed; --accent2:#1e56d6; --soft:#eaf1ff;
-    --ok:#15a34a; --oksoft:#e6f7ec; --warn:#d97706; --warnsoft:#fdf3e3;
-    --err:#dc2626; --errsoft:#fdecec; --code:#f6f8fb;
-    --radius:12px; --shadow:0 1px 2px rgba(15,23,42,.05),0 10px 28px -18px rgba(15,23,42,.35);
+    --ok:#15a34a; --oksoft:#e6f7ec; --warn:#a8600a; --warnsoft:#fdf3e3;
+    --err:#c92a2a; --errsoft:#fdecec; --code:#f6f8fb;
+    /* 圆角收敛为三档：控件 8px / 面板 10px / 胶囊 999px */
+    --radius:10px; --radius-sm:8px;
+    --shadow:0 1px 2px rgba(15,23,42,.05),0 10px 28px -18px rgba(15,23,42,.35);
   }
   html[data-theme=dark]{
     --bg:#0f1420; --panel:#161c2a; --panel2:#1b2231; --line:#28303f; --line2:#202836;
-    --txt:#e8edf6; --txt2:#a3adc2; --txt3:#6f7b91;
+    --txt:#e8edf6; --txt2:#a3adc2; --txt3:#7d89a0;
     --accent:#5b8cff; --accent2:#7ba2ff; --soft:#1d2740;
-    --ok:#4ade80; --oksoft:#132a1d; --warn:#fbbf24; --warnsoft:#2b2413;
+    --ok:#4ade80; --oksoft:#132a1d; --warn:#e0a336; --warnsoft:#2b2413;
     --err:#f87171; --errsoft:#2c1717; --code:#111826;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -18px rgba(0,0,0,.8);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
        background:var(--bg);color:var(--txt);height:100vh;display:flex;flex-direction:column;overflow:hidden}
-  button{font:inherit;cursor:pointer;border:1px solid transparent;border-radius:9px;padding:7px 13px;
-         background:var(--accent);color:#fff;transition:.14s}
+  button{font:inherit;cursor:pointer;border:1px solid transparent;border-radius:var(--radius-sm);padding:7px 13px;
+         background:var(--accent);color:#fff;
+         transition:background-color .14s,border-color .14s,color .14s}
   button:hover{background:var(--accent2)}
   button.ghost{background:var(--panel);color:var(--txt);border-color:var(--line)}
   button.ghost:hover{background:var(--panel2);border-color:var(--accent)}
   button.danger{background:var(--panel);color:var(--err);border-color:var(--line)}
   button.danger:hover{background:var(--errsoft);border-color:var(--err)}
   button:disabled{opacity:.5;cursor:not-allowed}
-  button.sm{padding:4px 9px;font-size:12.5px;border-radius:8px}
+  button.sm{padding:4px 9px;font-size:12px;border-radius:6px}
   input,select,textarea{font:inherit;color:var(--txt);background:var(--panel);border:1px solid var(--line);
-       border-radius:9px;padding:7px 10px;outline:none}
+       border-radius:var(--radius-sm);padding:7px 10px;outline:none}
   input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--soft)}
+  /* 键盘可达性：按钮/链接/列表项/折叠标题此前均无可见焦点态 */
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
   a{color:var(--accent)}
+  /* 尊重系统的减少动态偏好：全站去除过渡与动画 */
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;
+                          animation-iteration-count:1!important}
+  }
 
   /* ---- top bar ---- */
   .top{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);
@@ -47,7 +59,7 @@
   .brand small{font-weight:500;color:var(--txt3);font-size:12px}
   .chips{display:flex;gap:7px;flex-wrap:wrap}
   .chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);
-        border-radius:999px;padding:3px 10px;font-size:12.5px;color:var(--txt2)}
+        border-radius:999px;padding:3px 10px;font-size:12px;color:var(--txt2)}
   .chip b{color:var(--txt);font-weight:600}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
   .dot.err{background:var(--err)}
@@ -67,7 +79,7 @@
   main{flex:1;display:grid;grid-template-columns:300px 1fr;min-height:0}
   aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
   .side-pad{padding:10px 12px;border-bottom:1px solid var(--line2);display:flex;gap:8px}
-  .side-sec{padding:10px 12px 4px;font-size:11.5px;font-weight:700;color:var(--txt3);letter-spacing:.08em;
+  .side-sec{padding:10px 12px 4px;font-size:12px;font-weight:700;color:var(--txt3);letter-spacing:.08em;
             text-transform:uppercase;display:flex;align-items:center;justify-content:space-between}
   .scroll{overflow:auto;flex:1;padding:0 8px 12px}
   ul.list{list-style:none}
@@ -80,7 +92,23 @@
 
   /* ---- content ---- */
   section.content{display:flex;flex-direction:column;min-height:0;min-width:0}
-  .tabs{display:flex;gap:4px;padding:9px 14px 0;background:var(--panel);border-bottom:1px solid var(--line)}
+  .cfg-sec{margin-bottom:4px}
+  .cfg-sec>h4{font-size:12px;font-weight:700;color:var(--txt2);letter-spacing:.06em;text-transform:uppercase;
+             margin:14px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--line2)}
+  .cfg-row{display:grid;grid-template-columns:minmax(200px,1.1fr) minmax(160px,1fr) auto;gap:10px;
+           align-items:center;padding:5px 7px;border-radius:var(--radius-sm)}
+  .cfg-row:hover{background:var(--panel2)}
+  .cfg-row.changed{background:var(--oksoft)}
+  .cfg-row.changed .cfg-k{color:var(--ok)}
+  .cfg-k{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--txt2);word-break:break-all}
+  .cfg-row.protected .cfg-k{color:var(--warn)}
+  .cfg-row.protected input,.cfg-row.protected select{opacity:.55;pointer-events:none}
+  .cfg-v{font-size:12px;color:var(--txt3)}
+  .cfg-row input,.cfg-row select{padding:5px 8px;font-size:13px;width:100%}
+  .cfg-lock{font-size:11px;color:var(--warn);white-space:nowrap}
+  .tabs{display:flex;gap:4px;padding:9px 14px 0;background:var(--panel);border-bottom:1px solid var(--line);
+        overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
   .tab{padding:8px 14px;border-radius:9px 9px 0 0;font-size:13px;color:var(--txt2);cursor:pointer;border:1px solid transparent;
        border-bottom:none;margin-bottom:-1px}
   .tab:hover{color:var(--txt)}
@@ -90,7 +118,7 @@
   .pane.on{display:block}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;
         box-shadow:var(--shadow);margin-bottom:14px}
-  .card h3{font-size:13.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card h3{font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .card h3 .hint{font-weight:400;color:var(--txt3);font-size:12px}
   .grid2{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.25fr);gap:14px;align-items:start}
   @media(max-width:1180px){.grid2{grid-template-columns:1fr}}
@@ -106,7 +134,7 @@
   th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line2)}
   th{color:var(--txt3);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
   code,pre,textarea.mono{font-family:ui-monospace,Consolas,"Courier New",monospace}
-  pre.out{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12.5px;
+  pre.out{background:var(--code);border:1px solid var(--line);border-radius:var(--radius);padding:10px;font-size:12.5px;
           white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;color:var(--txt2)}
   textarea.mono{width:100%;min-height:340px;font-size:12.5px;line-height:1.55;resize:vertical;background:var(--code)}
   textarea.mono.tall{min-height:460px}
@@ -134,7 +162,7 @@
   details.fold[open]>summary{border-bottom:1px solid var(--line2)}
   details.fold .body{padding:9px 11px}
   .kv{font-size:12.5px;color:var(--txt2)}
-  .bone-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:7px;cursor:pointer}
+  .bone-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer}
   .bone-row:hover{background:var(--panel2)}
   .bone-row.hot{background:var(--soft)}
   .swatch{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
@@ -181,6 +209,7 @@
       <div class="tab" data-tab="files">模型文件</div>
       <div class="tab" data-tab="mobs">生物配置</div>
       <div class="tab" data-tab="validate">校验</div>
+      <div class="tab" data-tab="config">配置</div>
       <div class="tab" data-tab="log">日志</div>
     </div>
     <div class="panes">
@@ -308,6 +337,28 @@
       </div>
 
       <!-- ===== 日志 ===== -->
+      <div class="pane" id="pane-config">
+        <div class="card">
+          <h3>插件配置 <span class="hint" id="cfgHint">来自 config.yml，保存后需 /helstera reload 生效</span></h3>
+          <div class="row" style="margin-bottom:10px">
+            <button class="ghost sm" id="cfgLoad">重新载入</button>
+            <button class="ghost sm" id="cfgRaw">查看原始 YAML</button>
+            <span class="tt" id="cfgStat" style="margin:0"></span>
+          </div>
+          <pre class="out" id="cfgRawOut" style="display:none;margin-bottom:10px"></pre>
+          <div class="row" style="margin-bottom:10px">
+            <input id="cfgFilter" placeholder="过滤配置项，如 render / ai / debug">
+            <label class="kv" style="white-space:nowrap"><input type="checkbox" id="cfgOnlyChanged"> 仅显示已修改</label>
+          </div>
+          <div id="cfgList"></div>
+          <div class="row" style="margin-top:12px">
+            <button id="cfgSave">保存全部修改</button>
+            <button class="ghost" id="cfgRevert">放弃修改</button>
+            <span class="tt" id="cfgPending" style="margin:0"></span>
+          </div>
+        </div>
+      </div>
+
       <div class="pane" id="pane-log">
         <div class="card">
           <h3>操作审计日志 <span class="hint">保存 / 回滚 / 生成等写操作</span></h3>
@@ -383,6 +434,151 @@ function showTab(name) {
   if (name === 'model') draw();
 }
 
+/* ---------------- 配置面板 ---------------- */
+const CFG = { data: {}, pending: {}, protected: [] };
+
+async function cfgLoad() {
+  $('cfgStat').textContent = '载入中…';
+  try {
+    const r = await api('/api/config');
+    if (!r || !r.ok) { $('cfgStat').textContent = '载入失败'; return; }
+    CFG.data = r.config || {};
+    CFG.pending = {};
+    CFG.protected = r.protected || [];
+    $('cfgStat').textContent = Object.keys(CFG.data).length + ' 项';
+    cfgRender();
+    cfgPending();
+  } catch (e) {
+    $('cfgStat').textContent = '载入失败: ' + e;
+  }
+}
+
+/** 把点号键按第一段分组，便于阅读 */
+function cfgGroups(filter, onlyChanged) {
+  const g = new Map();
+  const f = (filter || '').trim().toLowerCase();
+  for (const [key, val] of Object.entries(CFG.data)) {
+    if (f && !key.toLowerCase().includes(f)) continue;
+    const changed = Object.prototype.hasOwnProperty.call(CFG.pending, key);
+    if (onlyChanged && !changed) continue;
+    const head = key.includes('.') ? key.slice(0, key.indexOf('.')) : '(根)';
+    if (!g.has(head)) g.set(head, []);
+    g.get(head).push([key, val, changed]);
+  }
+  return g;
+}
+
+function cfgRender() {
+  const filter = $('cfgFilter').value;
+  const onlyChanged = $('cfgOnlyChanged').checked;
+  const groups = cfgGroups(filter, onlyChanged);
+  const box = $('cfgList');
+  box.textContent = '';
+
+  if (!groups.size) {
+    const e = document.createElement('div');
+    e.className = 'empty';
+    e.textContent = onlyChanged ? '没有已修改的配置项。' : '没有匹配的配置项。';
+    box.appendChild(e);
+    return;
+  }
+
+  for (const [head, rows] of groups) {
+    const sec = document.createElement('div');
+    sec.className = 'cfg-sec';
+    const h = document.createElement('h4');
+    h.textContent = head;
+    sec.appendChild(h);
+
+    for (const [key, val, changed] of rows) {
+      const locked = CFG.protected.includes(key);
+      const row = document.createElement('div');
+      row.className = 'cfg-row' + (changed ? ' changed' : '') + (locked ? ' protected' : '');
+
+      const k = document.createElement('div');
+      k.className = 'cfg-k';
+      k.textContent = key;
+      row.appendChild(k);
+
+      // 依据当前值类型选择控件；类型无法确定时退回文本框
+      const inp = document.createElement('input');
+      if (typeof val === 'boolean') {
+        const wrap = document.createElement('select');
+        for (const [t, lbl] of [[true, 'true'], [false, 'false']]) {
+          const o = document.createElement('option');
+          o.value = String(t); o.textContent = lbl;
+          if (val === t) o.selected = true;
+          wrap.appendChild(o);
+        }
+        wrap.onchange = () => CFG.pending[key] = (wrap.value === 'true');
+        row.appendChild(wrap);
+      } else {
+        inp.value = val == null ? '' : String(val);
+        inp.oninput = () => {
+          const raw = inp.value;
+          // 原值是数字就保持数字类型，避免写回 config.yml 时类型漂移
+          CFG.pending[key] = (typeof val === 'number' && raw !== '' && !Number.isNaN(Number(raw)))
+            ? Number(raw) : raw;
+        };
+        row.appendChild(inp);
+      }
+
+      const right = document.createElement('div');
+      right.className = 'cfg-v';
+      if (locked) {
+        const lk = document.createElement('span');
+        lk.className = 'cfg-lock';
+        lk.textContent = '🔒 不可改';
+        right.appendChild(lk);
+      } else {
+        right.textContent = changed ? '已改' : (typeof val);
+      }
+      row.appendChild(right);
+      sec.appendChild(row);
+    }
+    box.appendChild(sec);
+  }
+}
+
+function cfgPending() {
+  const n = Object.keys(CFG.pending).length;
+  $('cfgPending').textContent = n ? n + ' 项待保存' : '';
+  cfgRender();
+}
+
+async function cfgSave() {
+  const n = Object.keys(CFG.pending).length;
+  if (!n) { toast('没有需要保存的修改'); return; }
+  try {
+    const r = await api('/api/config', {
+      method: 'POST',
+      body: JSON.stringify({ config: CFG.pending })
+    });
+    if (!r || !r.ok) { toast('保存失败: ' + (r && r.error || '未知错误')); return; }
+    toast('已保存 ' + (r.applied ?? n) + ' 项');
+    await cfgLoad();
+  } catch (e) {
+    toast('保存失败: ' + e);
+  }
+}
+
+$('cfgLoad').onclick = cfgLoad;
+$('cfgSave').onclick = cfgSave;
+$('cfgRevert').onclick = () => { CFG.pending = {}; cfgPending(); toast('已放弃未保存的修改'); };
+$('cfgFilter').oninput = cfgRender;
+$('cfgOnlyChanged').onchange = cfgRender;
+$('cfgRaw').onclick = async () => {
+  const out = $('cfgRawOut');
+  if (out.style.display !== 'none') { out.style.display = 'none'; return; }
+  out.style.display = '';
+  out.textContent = '读取中…';
+  try {
+    const r = await api('/api/config');
+    const lines = Object.entries(r.config || {}).map(([k, v]) => `${k}: ${v}`);
+    out.textContent = lines.join('\n') || '(空)';
+  } catch (e) { out.textContent = '失败: ' + e; }
+};
+
 /* ---------------- 状态 ---------------- */
 async function loadStatus() {
   try {
@@ -421,8 +617,12 @@ function modelItems() {
   const items = [];
   const loadedDirs = {};
   for (const m of S.models) {
-    loadedDirs[m.dir] = true;
-    items.push({ ok: true, id: m.id, dir: m.dir, name: m.name || m.id, bones: m.bones, anims: (m.animations || []).length, errs: errDirs[m.dir] || [] });
+    // 模型摘要未必带 dir（实测为空），此时用 id 作为目录键——两者在当前
+    // 目录结构下同为 models 根下的相对路径。之前只信 m.dir，会登记成空键，
+    // 导致同一目录在列表里出现两次：一条正常、一条被标成「失败」。
+    const key = m.dir || m.id;
+    loadedDirs[key] = true;
+    items.push({ ok: true, id: m.id, dir: key, name: m.name || m.id, bones: m.bones, anims: (m.animations || []).length, errs: errDirs[key] || [] });
   }
   for (const d of S.dirs) if (!loadedDirs[d]) items.push({ ok: false, id: d, dir: d, name: d, errs: errDirs[d] || ['未加载（原因未知，可点“模型文件”查看）'] });
   for (const d of Object.keys(errDirs)) if (!S.dirs.includes(d) && !loadedDirs[d]) items.push({ ok: false, id: d, dir: d, name: d, errs: errDirs[d] });

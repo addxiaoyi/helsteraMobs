@@ -58,7 +58,14 @@ public final class ModelRegistryImpl implements ModelRegistry {
                     + "（当前来自 " + model.sourceDirectory() + "，请修改 manifest.yml 的 id）");
         }
         models.put(model.id(), model);
+        // 错误键有两套命名：load() 用模型目录名，register() 侧用模型 id。
+        // 只按 id 清理会留下按目录名登记的旧错误，导致同一目录在列表里既显示
+        // 「已加载」又显示「失败」。两套键都清。
         errors.remove(model.id());
+        Path src = model.sourceDirectory();
+        if (src != null && src.getFileName() != null) {
+            errors.remove(src.getFileName().toString());
+        }
         eventBus.post(new ModelLoadedEvent(model, true, null));
     }
 

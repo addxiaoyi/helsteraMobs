@@ -31,6 +31,17 @@
         <paper.version>1.21.1-R0.1-SNAPSHOT</paper.version>
     </properties>
 
+    <!--
+      paper-api 不发布到 Maven Central，必须显式声明 PaperMC 仓库，
+      否则干净环境下构建会因依赖无法解析而失败。
+    -->
+    <repositories>
+        <repository>
+            <id>papermc</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+    </repositories>
+
     <dependencyManagement>
         <dependencies>
             <dependency>

@@ -160,26 +160,37 @@ public final class HelsteraCommand implements TabExecutor {
         }
         switch (args[1]) {
             case "spawn" -> {
-                if (!(s instanceof Player p)) {
-                    s.sendMessage("§c仅玩家可执行（或在控制台用 API）");
-                    return;
-                }
                 if (args.length < 3) {
                     s.sendMessage("§c用法: /helstera mob spawn <配置名|模型ID> [模型ID覆盖]");
                     return;
                 }
                 String a = args[2];
                 String b = args.length > 3 ? args[3] : null;
+                // 玩家在自己面前生成；控制台用第一个在线世界出生点（首个在线玩家位置优先）。
+                org.bukkit.Location base;
+                if (s instanceof Player p) {
+                    base = p.getLocation();
+                } else {
+                    var online = new java.util.ArrayList<>(org.bukkit.Bukkit.getOnlinePlayers());
+                    if (!online.isEmpty()) {
+                        base = online.get(0).getLocation();
+                    } else if (!org.bukkit.Bukkit.getWorlds().isEmpty()) {
+                        base = org.bukkit.Bukkit.getWorlds().get(0).getSpawnLocation();
+                    } else {
+                        s.sendMessage("§c没有可用世界，无法确定生成位置");
+                        return;
+                    }
+                }
                 String result;
                 if (plugin.mobConfig(a) != null) {
                     // 走完整 mobs/*.yml 流程（支持 entity 真实实体承载 + ai 覆盖）
-                    result = plugin.spawnMob(a, b, p);
+                    result = plugin.spawnMob(a, b, base);
                 } else {
                     // 当作模型 ID 直接生成（默认展示，不带 AI）
                     try {
                         var opts = dev.helstera.api.instance.SpawnOptions.defaults()
                                 .showName(true).displayName("§b" + a).glowing(true);
-                        ModelInstance inst = plugin.instances().spawn(a, p.getLocation(), opts);
+                        ModelInstance inst = plugin.instances().spawn(a, base, opts);
                         result = "已生成实例 #" + inst.instanceId() + "（模型 " + a + "）";
                     } catch (Exception e) {
                         result = "§c生成失败: " + e.getMessage();
@@ -387,6 +398,22 @@ public final class HelsteraCommand implements TabExecutor {
         }
         if (area.equals("ai") || area.equals("all")) {
             s.sendMessage("§7AI 控制器: §f" + (plugin.ai() == null ? 0 : plugin.ai().activeCount()));
+        }
+        if (area.equals("skills") || area.equals("all")) {
+            s.sendMessage("§7事件触发器已执行: §f" + plugin.triggerFiredCount());
+            s.sendMessage("§7已绑定条件: §f"
+                    + (plugin.behaviorRegistry() == null ? 0 : plugin.behaviorRegistry().conditionNames().size())
+                    + " §7已绑定动作: §f"
+                    + (plugin.behaviorRegistry() == null ? 0 : plugin.behaviorRegistry().actionNames().size()));
+            if (plugin.behaviorRegistry() != null) {
+                plugin.behaviorRegistry().conditionNames().forEach(n -> s.sendMessage("§8  §7条件 §f" + n));
+                plugin.behaviorRegistry().actionNames().forEach(n -> s.sendMessage("§8  §7动作 §f" + n));
+            }
+            var ws = plugin.skillWarnings();
+            if (!ws.isEmpty()) {
+                s.sendMessage("§c技能配置告警 " + ws.size() + " 条:");
+                ws.forEach(w -> s.sendMessage("§c- " + w));
+            }
         }
     }
 

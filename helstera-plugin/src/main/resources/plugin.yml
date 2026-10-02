@@ -1,7 +1,7 @@
 name: helsteraMobs
 version: 1.0.0
 main: dev.helstera.plugin.HelsteraPlugin
-api-version: '1.21'
+api-version: '1.20'
 description: 轻量化模型与生物引擎（MythicMobs + ModelEngine 类效果），资源包 + Display 实体方案
 author: helstera
 website: https://helstera.dev

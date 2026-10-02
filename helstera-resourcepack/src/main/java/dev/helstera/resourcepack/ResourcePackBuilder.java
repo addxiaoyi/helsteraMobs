@@ -23,9 +23,15 @@ import java.util.List;
 public final class ResourcePackBuilder {
 
     private final BoneCommandMapping mapping;
+    private final int packFormat;
 
     public ResourcePackBuilder(BoneCommandMapping mapping) {
+        this(mapping, ResourcePackServiceImpl.DEFAULT_PACK_FORMAT);
+    }
+
+    public ResourcePackBuilder(BoneCommandMapping mapping, int packFormat) {
         this.mapping = mapping;
+        this.packFormat = packFormat;
     }
 
     /** 构建资源包根目录内容（assets/...），返回写入的文件数。 */
@@ -89,7 +95,7 @@ public final class ResourcePackBuilder {
         // 4. pack.mcmeta
         JsonObject meta = new JsonObject();
         JsonObject packObj = new JsonObject();
-        packObj.addProperty("pack_format", 34); // 1.21.1
+        packObj.addProperty("pack_format", packFormat);
         packObj.addProperty("description", "helsteraMobs generated resource pack");
         meta.add("pack", packObj);
         Path metaFile = rpRoot.resolve("pack.mcmeta");
