@@ -6,11 +6,42 @@
 #
 # 未安装 MythicMobs 时整个小节会被静默忽略。
 #
+# ---------------------------------------------------------------
+# 方式一：本文件声明（MythicMobs 生物生成时自动绑定模型）
+# ---------------------------------------------------------------
 # mythicmobs:
 #   mobs:
 #     SkeletalKnight:
 #       model: example/crystal_golem  # 需为已加载的模型 ID
 #       scale: 1.2
 #       default-animation: idle
+#
+# ---------------------------------------------------------------
+# 方式二：MythicMobs 技能表里直接调用模型 mechanic
+# ---------------------------------------------------------------
+# 连接成功时 helsteraMobs 会向 MythicMobs 注册下列 mechanic / 条件，
+# 于是在 MythicMobs 的技能 YAML 里可以直接写：
+#
+#   Skills:
+#   - modelspawn{m=<模型ID>}      绑定模型（已绑定则不重复叠加）
+#       可选参数: modelspawn{m=<模型ID>} <缩放> <动画> <循环>
+#   - modelplay{m=<动画名>}       播放动画
+#       可选参数: modelplay{m=<动画名>} <循环> <优先级>
+#   - modelstop{m=}               停止全部动画
+#       可选参数: modelstop{m=<动画名>}  仅停止指定动画
+#   - modelscale{m=<倍率>}        改缩放
+#   - modelremove{}               解绑并销毁模型
+#   - modelmount{}                显式复位跟随位置
+#   - modelunmount{}              解除跟随并解绑
+#   - modelheal{}                 按载体血量比例同步缩放
+#
+# 可用条件（用于 MythicMobs 的 Conditions 段）：
+#   modelspawned       该生物是否已绑定模型
+#   modelremoved       该生物是否已解绑模型
+#   modelplaying{m=<动画名>}   是否在播放指定动画（省略参数=是否在播放任意动画）
+#
+# 若启动日志提示「模型 mechanic 未注册」，说明当前 MythicMobs 版本的
+# 内部接口结构与预期不同；此时模型绑定（方式一）仍然可用，
+# 原因详情可用 /helstera debug 集成 查看。
 mythicmobs:
   mobs: {}

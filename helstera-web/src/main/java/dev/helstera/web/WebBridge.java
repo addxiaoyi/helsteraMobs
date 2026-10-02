@@ -72,4 +72,51 @@ public interface WebBridge {
      * @return null 表示成功；非 null 为面向用户的错误说明
      */
     String applyConfigPatch(Map<String, Object> patch);
+
+    // ------------------------------------------------------------------
+    // 技能 / 掉落 / 刷怪点（网页端可编辑）
+    // ------------------------------------------------------------------
+
+    /** 重载 skills.yml 并让已绑定的条件/动作重新生效。返回是否成功。 */
+    boolean reloadSkills();
+
+    /** 已装载技能名列表（含条件与动作名，供网页端提示可用值）。 */
+    List<String> skillNames();
+
+    /** 技能装载期告警（未知名、参数缺失等）。 */
+    List<String> skillWarnings();
+
+    /** 重载 loot.yml 与 spawners.yml。 */
+    boolean reloadLoot();
+
+    /** 掉落表名列表。 */
+    List<String> lootTables();
+
+    /**
+     * 掷一次掉落表，只返回决策结果（条目与数量），不生成实体。
+     *
+     * <p>网页端用它预览概率，不会在世界里真的掉东西。</p>
+     */
+    List<Map<String, Object>> rollLoot(String table, double luck);
+
+    /** 刷怪点摘要：id -> 存活数/间隔/上限等。 */
+    List<Map<String, Object>> spawnerInfo();
+
+    /** config.yml 中已定义的 ai.profiles 名称，供 Mob 表单下拉选择。 */
+    List<String> profiles();
+
+    /** 已加载的模型 ID 列表，供 Mob 表单下拉选择。 */
+    List<String> modelIds();
+
+    /**
+     * 读一个由网页端管理的受信任 YAML 文件内容。
+     *
+     * <p>刻意只接受白名单里的三个文件（skills.yml / loot.yml / spawners.yml），
+     * 不接受调用方传入任意路径——这个方法的存在意义就是让网页端能读到
+     * 「不在 models/ 与 mobs/ 下、但也允许编辑」的那几个配置。</p>
+     *
+     * @param name 逻辑名：skills | loot | spawners
+     * @return 文件内容；名字不在白名单或文件不存在时返回 null
+     */
+    String readManagedYaml(String name);
 }

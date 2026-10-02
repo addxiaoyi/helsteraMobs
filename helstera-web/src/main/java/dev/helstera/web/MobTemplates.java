@@ -109,7 +109,14 @@ public final class MobTemplates {
             "  attack-radius: 2.4\n" +
             "  attack-damage: 5.0\n" +
             "  can-chase: true\n" +
-            "  can-flee: false\n";
+            "  can-flee: false\n" +
+            "\n" +
+            "# ---- 掉落表（loot.yml 的 tables.<名字>）----\n" +
+            "#  写了 drops.table 后死亡时不再掉原版战利品，完全按表投掷。\n" +
+            "#  用 /helstera loot roll <表名> 可预览一次投掷结果。\n" +
+            "drops:\n" +
+            "  table: common\n" +
+            "  luck: true            # 把击杀者主手的抢夺等级计入概率\n";
 
     private static final String NPC = CARET +
             "#  NPC / 装饰模型：纯展示，不承载实体、不移动、不攻击\n" +

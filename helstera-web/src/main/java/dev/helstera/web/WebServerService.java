@@ -4,17 +4,17 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import dev.helstera.core.parse.ModelParser;
+import io.javalin.Javalin;
+import io.javalin.http.Context;
+import io.javalin.http.staticfiles.Location;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -30,8 +30,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -68,11 +68,11 @@ public final class WebServerService {
     private final long startedAt = System.currentTimeMillis();
     private final List<String> audit = Collections.synchronizedList(new ArrayList<>());
 
-    private ServerSocket serverSocket;
-    private ExecutorService executor;
-    private Thread acceptThread;
+    private volatile Javalin app;
     private volatile boolean running;
     private String cachedHtml;
+    /** SSE 订阅者（Javalin Context 列表）。重载事件广播给它们，前端据此即时刷新。 */
+    private final List<io.javalin.http.sse.SseClient> sseClients = new CopyOnWriteArrayList<>();
 
     public WebServerService(org.bukkit.plugin.Plugin plugin, WebBridge bridge, String host, int port, String token) {
         this.plugin = plugin;
@@ -89,7 +89,7 @@ public final class WebServerService {
     }
 
     // ------------------------------------------------------------------
-    // 生命周期（ServerSocket 实现）
+    // 生命周期（Javalin）
     // ------------------------------------------------------------------
 
     public void start() throws IOException {
@@ -100,25 +100,52 @@ public final class WebServerService {
     public void start(String overrideHost) throws IOException {
         if (overrideHost != null && !overrideHost.isBlank()) this.host = overrideHost;
         stop();
-        InetSocketAddress bind;
-        if ("0.0.0.0".equals(host)) {
-            bind = new InetSocketAddress((InetAddress) null, port); // 通配符：监听所有网卡
-        } else {
-            bind = new InetSocketAddress(InetAddress.getByName(host), port);
-        }
-        serverSocket = new ServerSocket();
-        serverSocket.setReuseAddress(true);
         try {
-            serverSocket.bind(bind);
-        } catch (IOException e) {
+            app = Javalin.create(cfg -> {
+                cfg.showJavalinBanner = false;
+                cfg.http.defaultContentType = "application/json; charset=utf-8";
+                // Javalin 6 的静态文件配置是「注册式」的：直接给 staticFiles 赋值
+                // 的写法是 4.x 的 API，6.x 下不存在这些 setter。
+                cfg.staticFiles.add(sf -> {
+                    sf.hostedPath = "/";
+                    sf.directory = "/web";
+                    sf.location = Location.CLASSPATH;
+                });
+            });
+            // 令牌校验放在所有 API 之前；静态资源与 pack.zip 不需要令牌
+            app.before(ctx -> {
+                if (!ctx.path().startsWith("/api/")) return;
+                if (ctx.path().equals("/api/events")) return; // SSE 自行鉴权
+                if (authorizedOn(ctx)) return;
+                ctx.status(401);
+                ctx.result(GSON.toJson(Map.of("error", "令牌无效（页面打开的 URL 已自动带令牌）")));
+                ctx.skipRemainingHandlers();
+            });
+            // SSE 订阅端点：保存后实时推送，取代前端「保存后盲等 1.4 秒」
+            app.sse("/api/events", client -> {
+                if (!authorizedOnSse(client.ctx())) {
+                    client.ctx().status(401);
+                    client.ctx().result(GSON.toJson(Map.of("error", "令牌无效")));
+                    return;
+                }
+                sseClients.add(client);
+                client.sendEvent("hello", "{\"ok\":true}");
+            });
+            // 其余请求统一交给既有业务层：把 Javalin 请求转成内部 Request，
+            // 复用已验证过的路由与处理逻辑，避免为了换传输层重写一千多行。
+            app.get("/{p}", this::adapt);
+            app.post("/{p}", this::adapt);
+            app.put("/{p}", this::adapt);
+            app.delete("/{p}", this::adapt);
+            app.options("/{p}", this::adapt);
+            app.start(host, port);
+        } catch (Throwable e) {
+            app = null;
             throw new IOException("网页开发器无法在 " + host + ":" + port + " 监听：" + e.getMessage()
                     + "（端口被占用？权限不足？请更换 web.port 或释放端口）", e);
         }
         running = true;
-        executor = Executors.newFixedThreadPool(4);
-        acceptThread = new Thread(this::acceptLoop, "helstera-web");
-        acceptThread.setDaemon(true);
-        acceptThread.start();
+        startSsePump();
         if ("0.0.0.0".equals(host)) {
             plugin.getLogger().warning("网页开发器已监听 0.0.0.0:" + port
                     + "（所有网卡）。任何人凭令牌均可访问，请确保服务端防火墙已限制，或改用 web.host: 127.0.0.1");
@@ -141,24 +168,103 @@ public final class WebServerService {
         }
     }
 
+    /** Javalin 请求 -> 内部 Request -> 既有业务路由 -> 回写 Javalin 响应。 */
+    private void adapt(Context ctx) {
+        try {
+            Request req = new Request();
+            // Javalin 的 method() 返回 HandlerType 枚举，不是 String
+            req.method = ctx.method().name().toUpperCase(Locale.ROOT);
+            req.path = ctx.path();
+            req.query = ctx.queryString();
+            ctx.headerMap().forEach((k, v) -> req.headers.put(k.toLowerCase(Locale.ROOT), v));
+            req.body = ctx.body();
+            Response resp = route(req);
+            ctx.status(resp.status);
+            resp.headers.forEach((k, v) -> {
+                // content-length / connection 由容器接管，避免与其冲突
+                if (k.equalsIgnoreCase("content-length") || k.equalsIgnoreCase("connection")) return;
+                ctx.header(k, v);
+            });
+            ctx.result(resp.body == null ? "" : new String(resp.body, StandardCharsets.UTF_8));
+        } catch (Throwable t) {
+            ctx.status(500);
+            ctx.result(GSON.toJson(Map.of("error", String.valueOf(t.getMessage()))));
+        }
+    }
+
+    private boolean authorizedOn(Context ctx) {
+        String auth = ctx.header("Authorization");
+        if (auth != null && ("Bearer " + token).equals(auth)) return true;
+        return token.equals(ctx.queryParam("token"));
+    }
+
+    private boolean authorizedOnSse(Context ctx) {
+        return ctx != null && authorizedOn(ctx);
+    }
+
     public void stop() {
         running = false;
-        if (acceptThread != null) {
-            try { acceptThread.interrupt(); } catch (Throwable ignored) {}
-            acceptThread = null;
-        }
-        if (executor != null) {
-            try { executor.shutdownNow(); } catch (Throwable ignored) {}
-            executor = null;
-        }
-        if (serverSocket != null) {
-            try { serverSocket.close(); } catch (IOException ignored) {}
-            serverSocket = null;
+        sseClients.clear();
+        Javalin a = app;
+        if (a != null) {
+            try { a.stop(); } catch (Throwable ignored) {}
+            app = null;
         }
     }
 
     public boolean isRunning() {
-        return running && serverSocket != null && !serverSocket.isClosed();
+        return running && app != null;
+    }
+
+    /** SSE 客户端数量（调试用）。 */
+    public int sseClientCount() {
+        return sseClients.size();
+    }
+
+    /**
+     * 广播一个事件给所有 SSE 订阅者。
+     *
+     * <p>直接写 {@link Context} 在 Javalin 里是阻塞的，因此这里不能在主线程批量调用——
+     * 逐个写入会阻塞到客户端消费为止。改为把事件塞进无界队列，由一个独立守护线程慢慢写，
+     * 主线程只做一次 offer，永不因某个慢客户端而被拖住。</p>
+     */
+    private final java.util.concurrent.LinkedBlockingQueue<Map<String, String>> sseOutbox =
+            new java.util.concurrent.LinkedBlockingQueue<>();
+    private volatile Thread ssePump;
+
+    /** 供业务层在重载后调用，通知前端刷新。 */
+    public void broadcastReload(String what) {
+        sseOutbox.offer(Map.of(
+                "event", "reload",
+                "data", GSON.toJson(Map.of(
+                        "what", what == null ? "reload" : what,
+                        "at", LocalDateTime.now().toString()))));
+    }
+
+    private void startSsePump() {
+        if (ssePump != null) return;
+        Thread t = new Thread(() -> {
+            while (running) {
+                try {
+                    Map<String, String> payload = sseOutbox.poll(200, TimeUnit.MILLISECONDS);
+                    if (payload == null) continue;
+                    for (var c : sseClients) {
+                        try {
+                            c.sendEvent(payload.get("event"), payload.get("data"));
+                        } catch (Throwable e) {
+                            sseClients.remove(c);
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                } catch (Throwable ignored) {
+                }
+            }
+        }, "helstera-web-sse");
+        t.setDaemon(true);
+        t.start();
+        ssePump = t;
     }
 
     public int port() { return port; }
@@ -292,113 +398,6 @@ public final class WebServerService {
     }
 
     // ------------------------------------------------------------------
-    // 连接处理
-    // ------------------------------------------------------------------
-
-    private void acceptLoop() {
-        while (running && serverSocket != null && !serverSocket.isClosed()) {
-            try {
-                Socket sock = serverSocket.accept();
-                if (executor != null) executor.submit(() -> handleConnection(sock));
-            } catch (IOException e) {
-                if (running) plugin.getLogger().warning("网页开发器 accept 出错: " + e.getMessage());
-            }
-        }
-    }
-
-    private void handleConnection(Socket sock) {
-        try (Socket s = sock;
-             InputStream in = s.getInputStream();
-             OutputStream out = s.getOutputStream()) {
-            // 注意：必须全程从同一个 InputStream 逐字节读取，不能混用 BufferedReader（缓冲会吞掉请求体）。
-            String requestLine = readLine(in);
-            if (requestLine == null || requestLine.isEmpty()) return;
-            String[] parts = requestLine.split(" ");
-            if (parts.length < 2) {
-                writeResponse(out, new Response(400, "Bad Request".getBytes(StandardCharsets.UTF_8)));
-                return;
-            }
-            Request req = new Request();
-            req.method = parts[0].toUpperCase(Locale.ROOT);
-            String fp = parts[1];
-            int qi = fp.indexOf('?');
-            if (qi >= 0) {
-                req.path = fp.substring(0, qi);
-                req.query = fp.substring(qi + 1);
-            } else {
-                req.path = fp;
-            }
-            String line;
-            int contentLength = 0;
-            while (!(line = readLine(in)).isEmpty()) {
-                int ci = line.indexOf(':');
-                if (ci > 0) {
-                    String k = line.substring(0, ci).trim().toLowerCase(Locale.ROOT);
-                    String v = line.substring(ci + 1).trim();
-                    req.headers.put(k, v);
-                    if (k.equals("content-length")) {
-                        try { contentLength = Integer.parseInt(v); } catch (NumberFormatException ignored) {}
-                    }
-                }
-            }
-            if (contentLength > 0) {
-                byte[] buf = new byte[contentLength];
-                int read = 0;
-                while (read < contentLength) {
-                    int n = in.read(buf, read, contentLength - read);
-                    if (n < 0) break;
-                    read += n;
-                }
-                req.body = new String(buf, 0, read, StandardCharsets.UTF_8);
-            }
-            writeResponse(out, route(req));
-        } catch (Exception e) {
-            // 单连接异常不影响服务
-        }
-    }
-
-    /** 从 InputStream 逐字节读取一行（到 \n 为止），不含行结束符。 */
-    private static String readLine(InputStream in) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        int c;
-        while ((c = in.read()) != -1) {
-            if (c == '\n') break;
-            if (c == '\r') continue;
-            bos.write(c);
-        }
-        return bos.toString(StandardCharsets.UTF_8);
-    }
-
-    private void writeResponse(OutputStream out, Response resp) throws IOException {
-        StringBuilder head = new StringBuilder();
-        head.append("HTTP/1.1 ").append(resp.status).append(' ').append(statusText(resp.status)).append("\r\n");
-        if (!resp.headers.containsKey("content-type")) {
-            resp.headers.put("content-type", "application/json; charset=utf-8");
-        }
-        resp.headers.put("content-length", String.valueOf(resp.body == null ? 0 : resp.body.length));
-        resp.headers.put("connection", "close");
-        for (var e : resp.headers.entrySet()) {
-            head.append(e.getKey()).append(": ").append(e.getValue()).append("\r\n");
-        }
-        head.append("\r\n");
-        out.write(head.toString().getBytes(StandardCharsets.UTF_8));
-        if (resp.body != null && resp.body.length > 0) out.write(resp.body);
-        out.flush();
-    }
-
-    private static String statusText(int code) {
-        return switch (code) {
-            case 200 -> "OK";
-            case 204 -> "No Content";
-            case 400 -> "Bad Request";
-            case 401 -> "Unauthorized";
-            case 404 -> "Not Found";
-            case 500 -> "Internal Server Error";
-            default -> "Status";
-        };
-    }
-
-    // ------------------------------------------------------------------
     // 路由
     // ------------------------------------------------------------------
 
@@ -450,6 +449,19 @@ public final class WebServerService {
             case "/api/config" -> { return json(200, configEndpoint(req)); }
             case "/api/model/export" -> { return modelExport(req); }
             case "/api/model/import" -> { return json(200, modelImport(req)); }
+            case "/api/skills" -> { return json(200, skillsPayload(req)); }
+            case "/api/skills/file" -> { return json(200, skillFile(req)); }
+            case "/api/skills/save" -> { return json(200, skillSave(req)); }
+            case "/api/skills/schema" -> { return json(200, skillSchema()); }
+            case "/api/loot" -> { return json(200, lootPayload(req)); }
+            case "/api/loot/file" -> { return json(200, lootFile(req)); }
+            case "/api/loot/save" -> { return json(200, lootSave(req)); }
+            case "/api/loot/roll" -> { return json(200, lootRoll(req)); }
+            case "/api/spawners" -> { return json(200, spawnersPayload()); }
+            case "/api/spawners/file" -> { return json(200, readYamlEndpoint(req, spawnersFile(), "spawners.yml")); }
+            case "/api/spawners/save" -> { return json(200, spawnersSave(req)); }
+            case "/api/spawners/reload" -> { return json(200, spawnersReload()); }
+            case "/api/mob/schema" -> { return json(200, mobSchema()); }
             default -> { return json(404, Map.of("error", "未知接口 " + req.path)); }
         }
     }
@@ -559,6 +571,10 @@ public final class WebServerService {
         Path f = dir.resolve(name);
         String version = backup(f, "models", rel.replace('/', '_'));
         Files.writeString(f, content, StandardCharsets.UTF_8);
+        // 保存即重载：前端不再自行调 /api/reload（那会让「内核还没注册完」就被读取），
+        // 统一由这里触发并广播，前端收到 reload 事件后再拉列表。
+        bridge.reloadModels();
+        broadcastReload("models");
         audit("model-save", rel + "/" + name, version == null ? "-" : version);
         out.put("ok", true);
         out.put("version", version);
@@ -606,6 +622,10 @@ public final class WebServerService {
 
     private Map<String, Object> reload() {
         boolean ok = bridge.reloadModels();
+        // 模型重载是异步的（内核里排队解析后回主线程注册），
+        // 真正就绪通常在 1~2 秒后。这里只广播"已触发"，
+        // 前端收到事件后自己去轮询状态，避免宣称一个尚未发生的完成态。
+        broadcastReload("models");
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", ok);
         out.put("message", ok ? "已触发模型重载（异步，约 1~2 秒后刷新查看）" : "模型注册表不可用");
@@ -1091,6 +1111,310 @@ public final class WebServerService {
 
     private static Response json(int code, Object o) {
         return new Response(code, GSON.toJson(o).getBytes(StandardCharsets.UTF_8));
+    }
+
+    // ------------------------------------------------------------------
+    // 技能 / 掉落 / 刷怪点 / Mob 表单
+    // ------------------------------------------------------------------
+
+    /** skills.yml 的绝对路径（不存在则返回 null）。 */
+    private Path skillsFile() {
+        Path f = dataFolder.resolve("skills.yml");
+        return Files.isRegularFile(f) ? f : null;
+    }
+
+    /** spawners.yml 的绝对路径（不存在则返回 null）。 */
+    private Path spawnersFile() {
+        Path f = dataFolder.resolve("spawners.yml");
+        return Files.isRegularFile(f) ? f : null;
+    }
+
+    /** loot.yml 的绝对路径（不存在则返回 null）。 */
+    private Path lootFile_() {
+        Path f = dataFolder.resolve("loot.yml");
+        return Files.isRegularFile(f) ? f : null;
+    }
+
+    /**
+     * 校验一段 YAML 能被 Bukkit 解析。
+     *
+     * <p>用 YamlConfiguration.loadFromString 而不是 SnakeYAML：它对「缩进错误 /
+     * 类型错位」的报错带行号，比直接抛 YAMLException 更适合展示给网页用户。</p>
+     */
+    private static String ymlSyntaxError(String content) {
+        try {
+            // loadFromString 是实例方法（不是静态），必须先 new 一个配置对象；
+            // 它解析失败时抛异常，正好用来做语法校验。
+            String yaml = content == null ? "" : content;
+            new YamlConfiguration().loadFromString(yaml);
+            return null;
+        } catch (Throwable t) {
+            String m = t.getMessage();
+            return m == null ? t.toString() : m;
+        }
+    }
+
+    /** 读一个受白名单约束的 YAML 文件，返回文本；越界或不存在返回错误。 */
+    private Map<String, Object> readYamlEndpoint(Request req, Path file, String label) throws IOException {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (file == null) {
+            out.put("ok", false);
+            out.put("error", label + " 尚未生成（插件首次启动时自动创建）");
+            return out;
+        }
+        out.put("ok", true);
+        out.put("path", file.getFileName().toString());
+        out.put("content", Files.readString(file, StandardCharsets.UTF_8));
+        return out;
+    }
+
+    /** 技能列表 + 告警 + 已绑定键。 */
+    private Map<String, Object> skillsPayload(Request req) throws IOException {
+        Map<String, Object> out = new LinkedHashMap<>();
+        Path f = skillsFile();
+        out.put("ok", f != null);
+        out.put("names", bridge.skillNames());
+        out.put("warnings", bridge.skillWarnings());
+        if (f == null) {
+            out.put("error", "skills.yml 尚未生成");
+            out.put("content", "");
+            return out;
+        }
+        out.put("content", Files.readString(f, StandardCharsets.UTF_8));
+        return out;
+    }
+
+    private Map<String, Object> skillFile(Request req) throws IOException {
+        return readYamlEndpoint(req, skillsFile(), "skills.yml");
+    }
+
+    /** 保存 skills.yml：先语法校验，再版本备份，再落盘，最后触发技能重载。 */
+    private Map<String, Object> skillSave(Request req) throws IOException {
+        Map<?, ?> r = readJson(req);
+        String content = str(r.get("content"));
+        Map<String, Object> out = new LinkedHashMap<>();
+        Path f = skillsFile();
+        if (f == null) {
+            f = dataFolder.resolve("skills.yml");
+        }
+        String err = ymlSyntaxError(content);
+        if (err != null) {
+            out.put("ok", false);
+            out.put("error", "YAML 语法错误：" + err);
+            return out;
+        }
+        String version = backup(f, "skills", "skills");
+        Files.createDirectories(f.getParent());
+        Files.writeString(f, content, StandardCharsets.UTF_8);
+        boolean reloaded = bridge.reloadSkills();
+        broadcastReload("skills");
+        audit("skills-save", "skills.yml", version == null ? "-" : version);
+        out.put("ok", true);
+        out.put("version", version);
+        out.put("reloaded", reloaded);
+        out.put("warnings", bridge.skillWarnings());
+        out.put("message", reloaded
+                ? "已保存 skills.yml 并重载技能绑定。"
+                : "已保存 skills.yml，但技能重载未生效，请查看控制台。");
+        return out;
+    }
+
+    /** 内置条件/动作名 + 参数说明，供网页端做补全与提示。 */
+    private Map<String, Object> skillSchema() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", true);
+        out.put("conditions", List.of(
+                "has-target [bool]", "health-below <0..1>", "health-above <0..1>",
+                "distance-below <格>", "distance-above <格>", "state-is <状态名>",
+                "animation-is <动画名>", "every-n-decisions [N]",
+                "targets-exist <选择器> <半径> [最少个数]", "targets-in-range <选择器> <半径> [最少个数]"));
+        out.put("actions", List.of(
+                "set-scale <倍率>", "play-animation <动画> [循环] [优先级]", "stop-animation [动画]",
+                "set-intent <状态>", "damage-target <伤害>", "message-target <文本>",
+                "sound <音效>", "particle <粒子>", "heal-self <数量>",
+                "aoe-damage <选择器> <半径> [数量] [伤害]",
+                "teleport-targets <选择器> <半径> [数量] [Y偏移]",
+                "effect-targets <选择器> <半径> [数量] <效果> [tick] [等级]",
+                "ignite-targets <选择器> <半径> [数量] [tick]",
+                "knockback-targets <选择器> <半径> [数量] [力度] [上抛]",
+                "message-targets <选择器> <半径> [数量] <文本>"));
+        out.put("targeters", List.of("nearest", "farthest", "random", "lowest-health",
+                "highest-health", "players", "mobs"));
+        out.put("states", List.of("IDLE", "PATROL", "CHASE", "ATTACK", "HURT", "FLEE", "DEAD"));
+        return out;
+    }
+
+    /** 掉落表列表 + 内容。 */
+    private Map<String, Object> lootPayload(Request req) throws IOException {
+        Map<String, Object> out = new LinkedHashMap<>();
+        Path f = lootFile_();
+        out.put("ok", f != null);
+        out.put("tables", bridge.lootTables());
+        if (f == null) {
+            out.put("error", "loot.yml 尚未生成");
+            out.put("content", "");
+            return out;
+        }
+        out.put("content", Files.readString(f, StandardCharsets.UTF_8));
+        return out;
+    }
+
+    private Map<String, Object> lootFile(Request req) throws IOException {
+        return readYamlEndpoint(req, lootFile_(), "loot.yml");
+    }
+
+    /** 保存 loot.yml：语法校验 + 备份 + 落盘 + 重载。 */
+    private Map<String, Object> lootSave(Request req) throws IOException {
+        Map<?, ?> r = readJson(req);
+        String content = str(r.get("content"));
+        Map<String, Object> out = new LinkedHashMap<>();
+        Path f = lootFile_();
+        if (f == null) f = dataFolder.resolve("loot.yml");
+        String err = ymlSyntaxError(content);
+        if (err != null) {
+            out.put("ok", false);
+            out.put("error", "YAML 语法错误：" + err);
+            return out;
+        }
+        String version = backup(f, "loot", "loot");
+        Files.createDirectories(f.getParent());
+        Files.writeString(f, content, StandardCharsets.UTF_8);
+        bridge.reloadLoot();
+        broadcastReload("loot");
+        audit("loot-save", "loot.yml", version == null ? "-" : version);
+        out.put("ok", true);
+        out.put("version", version);
+        out.put("tables", bridge.lootTables());
+        out.put("message", "已保存 loot.yml 并重载掉落表。");
+        return out;
+    }
+
+    /** 掷骰预览：只算不落地，不会在世界里真的掉东西。 */
+    private Map<String, Object> lootRoll(Request req) throws IOException {
+        Map<?, ?> r = readJson(req);
+        String table = str(r.get("table"));
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (table == null || table.isBlank()) {
+            out.put("ok", false);
+            out.put("error", "缺少 table 参数");
+            return out;
+        }
+        double luck = 0;
+        Object lv = r.get("luck");
+        if (lv instanceof Number n) luck = n.doubleValue();
+        out.put("ok", true);
+        out.put("table", table);
+        out.put("luck", luck);
+        out.put("hits", bridge.rollLoot(table, luck));
+        return out;
+    }
+
+    /** 刷怪点摘要。 */
+    private Map<String, Object> spawnersPayload() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", true);
+        out.put("spawners", bridge.spawnerInfo());
+        return out;
+    }
+
+    /** 保存 spawners.yml：语法校验 + 备份 + 落盘 + 重载。 */
+    private Map<String, Object> spawnersSave(Request req) throws IOException {
+        Map<?, ?> r = readJson(req);
+        String content = str(r.get("content"));
+        Map<String, Object> out = new LinkedHashMap<>();
+        Path f = spawnersFile();
+        if (f == null) f = dataFolder.resolve("spawners.yml");
+        String err = ymlSyntaxError(content);
+        if (err != null) {
+            out.put("ok", false);
+            out.put("error", "YAML 语法错误：" + err);
+            return out;
+        }
+        String version = backup(f, "spawners", "spawners");
+        Files.createDirectories(f.getParent());
+        Files.writeString(f, content, StandardCharsets.UTF_8);
+        bridge.reloadLoot();
+        broadcastReload("spawners");
+        audit("spawners-save", "spawners.yml", version == null ? "-" : version);
+        out.put("ok", true);
+        out.put("version", version);
+        out.put("spawners", bridge.spawnerInfo());
+        out.put("message", "已保存 spawners.yml 并重载刷怪点。");
+        return out;
+    }
+
+    /** 重载 spawners.yml（不动已追踪的存活名额）。 */
+    private Map<String, Object> spawnersReload() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        boolean ok = bridge.reloadLoot();
+        audit("spawners-reload", "spawners.yml", "-");
+        out.put("ok", ok);
+        out.put("spawners", bridge.spawnerInfo());
+        out.put("message", "已重载 spawners.yml。");
+        return out;
+    }
+
+    /**
+     * mobs/*.yml 的字段元数据，供网页端渲染表单。
+     *
+     * <p>表单化编辑的关键是「字段定义与校验规则来自服务端」：前端只按这张表生成控件，
+     * 于是新增字段时前端无需同步改。</p>
+     */
+    private Map<String, Object> mobSchema() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", true);
+        out.put("fields", List.of(
+                field("id", "string", "ID", "与文件名一致，创建后不可改", true),
+                field("display-name", "string", "显示名称", "支持 § 颜色码", false),
+                field("model", "model", "模型", "必须是已加载的模型 ID", true),
+                field("scale", "number", "缩放", "> 0，1.0 = 原始大小", false),
+                field("glowing", "bool", "发光轮廓", "BOSS 更醒目", false),
+                field("show-name", "bool", "显示名称", "头顶展示 display-name", false),
+                field("persistent", "bool", "常驻", "区块卸载后是否保留", false),
+                field("spawn-hitbox", "bool", "点击碰撞", "纯展示模型用 Interaction 承接点击", false),
+                field("entity.type", "entitytype", "真实实体类型", "留空 = 纯展示模型", false),
+                field("entity.health", "number", "最大血量", "仅真实实体生效", false),
+                field("entity.invisible", "bool", "隐身体", "仅真实实体生效", false),
+                field("entity.silent", "bool", "静音", "仅真实实体生效", false),
+                field("entity.no-ai", "bool", "停用原版 AI", "仅真实实体生效", false),
+                field("drops.table", "loottable", "掉落表", "留空 = 保留原版掉落", false),
+                field("drops.luck", "bool", "计入抢夺", "把击杀者抢夺等级计入掉落概率", false),
+                field("ai.profile", "string", "行为档案", "引用 config.yml 的 ai.profiles", false),
+                field("ai.sight-radius", "number", "视野半径", "仅真实实体生效", false),
+                field("ai.attack-radius", "number", "攻击半径", "仅真实实体生效", false),
+                field("ai.attack-damage", "number", "攻击伤害", "仅真实实体生效", false),
+                field("ai.attack-cooldown", "number", "攻击冷却（秒）", "仅真实实体生效", false),
+                field("ai.move-speed", "number", "移动速度", "仅真实实体生效", false),
+                field("ai.can-chase", "bool", "可追击", "仅真实实体生效", false),
+                field("ai.can-flee", "bool", "可逃跑", "仅真实实体生效", false),
+                field("ai.can-attack", "bool", "可攻击", "仅真实实体生效", false),
+                field("ai.can-patrol", "bool", "可巡逻", "仅真实实体生效", false)));
+        out.put("entityTypes", entityTypeNames());
+        out.put("lootTables", bridge.lootTables());
+        out.put("profiles", bridge.profiles());
+        out.put("models", bridge.modelIds());
+        return out;
+    }
+
+    private static Map<String, Object> field(String path, String type, String label,
+                                             String hint, boolean required) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("path", path);
+        m.put("type", type);
+        m.put("label", label);
+        m.put("hint", hint);
+        m.put("required", required);
+        return m;
+    }
+
+    private static List<String> entityTypeNames() {
+        List<String> out = new ArrayList<>();
+        for (org.bukkit.entity.EntityType t : org.bukkit.entity.EntityType.values()) {
+            if (t.isSpawnable() && org.bukkit.entity.LivingEntity.class.isAssignableFrom(t.getEntityClass())) {
+                out.add(t.name());
+            }
+        }
+        return out;
     }
 
     private void audit(String action, String target, String detail) {
