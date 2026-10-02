@@ -675,6 +675,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             ai().attach((dev.helstera.runtime.instance.ModelInstanceImpl) inst, profile);
         }
+        // 实例就绪后派发生成事件：SkillTriggers 的 on-spawn 依赖它。
+        // 此前全工程没有任何地方 post 该事件，触发器链路完全未接通。
+        bus.post(new dev.helstera.api.event.ModelSpawnEvent(inst, inst.baseEntity()
+                .map(org.bukkit.entity.Entity::getLocation).orElse(loc)));
         return "已生成 " + mobId + "（模型 " + model + ", 实例 #" + inst.instanceId() + "）";
     }
 
@@ -695,6 +699,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         p.canFlee = s.getBoolean("can-flee", base.canFlee);
         p.canPatrol = s.getBoolean("can-patrol", base.canPatrol);
         p.canAttack = s.getBoolean("can-attack", base.canAttack);
+        // 生物级触发器此前未被解析：mobs/*.yml 里写的 ai.triggers 被静默忽略，
+        // on-spawn/on-damage 永不触发。此处按档案级同样规则覆盖。
+        if (s.isConfigurationSection("triggers")) {
+            p.triggers.clear();
+            p.applyTriggersFrom(s);
+        }
         return p;
     }
 

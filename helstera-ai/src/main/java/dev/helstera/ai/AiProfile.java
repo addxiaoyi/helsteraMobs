@@ -99,17 +99,27 @@ public final class AiProfile {
         p.onDecision.clear();
         p.onDecision.addAll(s.getStringList("on-decision"));
         p.triggers.clear();
-        org.bukkit.configuration.ConfigurationSection trSec = s.getConfigurationSection("triggers");
-        if (trSec != null) {
-            for (String event : trSec.getKeys(false)) {
-                var evSec = trSec.getConfigurationSection(event);
-                if (evSec == null) continue;
-                TriggerSpec spec = new TriggerSpec();
-                spec.require.addAll(evSec.getStringList("require"));
-                spec.actions.addAll(evSec.getStringList("do"));
-                p.triggers.put(event.toLowerCase(java.util.Locale.ROOT), spec);
-            }
-        }
+        p.applyTriggersFrom(s);
         return p;
+    }
+
+    /**
+     * 用配置节的 {@code triggers} 节覆盖本档案的触发器（整体替换，不合并）。
+     *
+     * <p>{@link #fromSection} 与生物级档案覆盖（mobs/*.yml 的 ai 节）都要读这一段，
+     * 此前只有前者解析，导致 mobs/*.yml 里写的 triggers 被静默忽略、
+     * on-spawn/on-damage 永不触发。</p>
+     */
+    public void applyTriggersFrom(ConfigurationSection s) {
+        org.bukkit.configuration.ConfigurationSection trSec = s.getConfigurationSection("triggers");
+        if (trSec == null) return;
+        for (String event : trSec.getKeys(false)) {
+            var evSec = trSec.getConfigurationSection(event);
+            if (evSec == null) continue;
+            TriggerSpec spec = new TriggerSpec();
+            spec.require.addAll(evSec.getStringList("require"));
+            spec.actions.addAll(evSec.getStringList("do"));
+            this.triggers.put(event.toLowerCase(java.util.Locale.ROOT), spec);
+        }
     }
 }
