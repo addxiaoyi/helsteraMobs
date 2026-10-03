@@ -35,7 +35,7 @@ public final class HelsteraCommand implements TabExecutor {
 
     private static final List<String> SUBS = List.of(
             "reload", "model", "mob", "animation", "migrate", "web", "debug", "stats", "pack",
-            "loot", "spawner", "help");
+            "loot", "spawner", "check", "help");
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -56,6 +56,7 @@ public final class HelsteraCommand implements TabExecutor {
             case "pack" -> pack(sender, args);
             case "loot" -> loot(sender, args);
             case "spawner" -> spawner(sender, args);
+            case "check" -> check(sender);
             default -> help(sender);
         }
         return true;
@@ -75,6 +76,7 @@ public final class HelsteraCommand implements TabExecutor {
         s.sendMessage("§b/helstera web firewall §7- 一键放行 Windows 防火墙端口");
         s.sendMessage("§b/helstera debug [render|animation|network|ai|skills|integrations] §7- 调试");
         s.sendMessage("§b/helstera stats §7- 性能统计");
+        s.sendMessage("§b/helstera check §7- 配置体检：技能/刷怪点有没有写错");
         s.sendMessage("§b/helstera pack build|apply §7- 资源包");
     }
 
@@ -469,6 +471,61 @@ public final class HelsteraCommand implements TabExecutor {
     /** 微秒转毫秒并保留两位，避免各处重复格式化。 */
     private static String fmt(double micros) {
         return String.format("%.2f", micros / 1000.0);
+    }
+
+    /**
+     * 汇总配置体检结果。
+     *
+     * <p>此前各模块的校验告警只写进启动日志，重载一次就淹没在控制台里了——
+     * 管理员在游戏里没有任何办法确认「我改的配置到底有没有生效」。
+     * 这里把散落的告警重新汇总，并直接指出该改哪个文件。</p>
+     */
+    private void check(CommandSender s) {
+        if (!s.hasPermission("helstera.check")) { deny(s); return; }
+
+        int problems = 0;
+
+        // 1. 模型加载
+        int models = plugin.registry().count();
+        int instances = plugin.instances().activeCount();
+        s.sendMessage("§b== 配置体检 ==");
+        s.sendMessage("§7模型 §f" + models + " §7个 §7· 活动实例 §f" + instances);
+
+        // 2. 技能定义
+        var skillWarn = plugin.skillWarnings();
+        if (skillWarn.isEmpty()) {
+            s.sendMessage("§a✓ §7技能定义无问题");
+        } else {
+            problems += skillWarn.size();
+            s.sendMessage("§e✗ §7技能定义 §f" + skillWarn.size() + " §7处问题 §8(改 skills 配置后 /helstera reload)");
+            for (int i = 0; i < Math.min(skillWarn.size(), 8); i++) {
+                s.sendMessage("§8  - §7" + skillWarn.get(i));
+            }
+            if (skillWarn.size() > 8) {
+                s.sendMessage("§8  … 还有 " + (skillWarn.size() - 8) + " 条，看控制台 [技能] 开头日志");
+            }
+        }
+
+        // 3. 刷怪点
+        var spawnWarn = plugin.spawners().warnings();
+        if (spawnWarn.isEmpty()) {
+            s.sendMessage("§a✓ §7刷怪点无问题");
+        } else {
+            problems += spawnWarn.size();
+            s.sendMessage("§e✗ §7刷怪点 §f" + spawnWarn.size() + " §7处问题 §8(改 spawners.yml 后 /helstera reload)");
+            for (int i = 0; i < Math.min(spawnWarn.size(), 8); i++) {
+                s.sendMessage("§8  - §7" + spawnWarn.get(i));
+            }
+            if (spawnWarn.size() > 8) {
+                s.sendMessage("§8  … 还有 " + (spawnWarn.size() - 8) + " 条");
+            }
+        }
+
+        if (problems == 0) {
+            s.sendMessage("§a全部检查通过。");
+        } else {
+            s.sendMessage("§e共 §f" + problems + " §e处待处理。改动后用 §b/helstera reload §e重载。");
+        }
     }
 
     private void pack(CommandSender s, String[] args) {
