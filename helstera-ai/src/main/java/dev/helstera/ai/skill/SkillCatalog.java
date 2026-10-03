@@ -108,6 +108,55 @@ public final class SkillCatalog {
                     double radius = num(a, 1, 6);
                     int min = (int) num(a, 2, 1);
                     return ctx -> select(ctx, tn, radius).size() >= Math.max(1, min);
+                }),
+
+                // ---- 视线 / 目标类型 / 冷却 ----
+
+                // 无目标时按「看不见」处理：条件用于 require 时，
+                // 无视距的生物不该因为缺少视线判定而一直放行。
+                java.util.Map.entry("has-line-of-sight", (ConditionFactory) a -> {
+                    return ctx -> {
+                        if (!ctx.instanceValid()) return false;
+                        var self = ctx.instance().baseEntity().orElse(null);
+                        var tgt = ctx.target().orElse(null);
+                        if (self == null || tgt == null) return false;
+                        if (self.getWorld() != tgt.getWorld()) return false;
+                        return self instanceof LivingEntity le && le.hasLineOfSight(tgt);
+                    };
+                }),
+
+                // 目标类型判定。玩家/生物/生物群系分别可用 kind 支持的取值，
+                // 未知取值一律按 false，避免配置写错时条件恒真。
+                java.util.Map.entry("target-is", (ConditionFactory) a -> {
+                    String kind = str(a, 0, "player").toLowerCase(Locale.ROOT);
+                    return switch (kind) {
+                        case "player" -> ctx -> ctx.target().isPresent();
+                        case "minecraft", "living", "entity" ->
+                                ctx -> ctx.target().orElse(null) != null;
+                        case "survival", "creative", "adventure", "spectator" -> ctx -> ctx.target()
+                                .map(p -> p.getGameMode().name().equalsIgnoreCase(kind)).orElse(false);
+                        default -> ctx -> false;
+                    };
+                }),
+
+                // 冷却：同一实例两次放行之间的最小间隔（秒）。
+                // 状态存在闭包内的 Map 里，按实例 id 记录上次放行时间；
+                // 之所以不放 BehaviorContext，是因为它是不可变的决策快照。
+                java.util.Map.entry("cooldown-ready", (ConditionFactory) a -> {
+                    double seconds = Math.max(0, num(a, 0, 0));
+                    java.util.Map<Integer, Long> lastFired = new java.util.concurrent.ConcurrentHashMap<>();
+                    return ctx -> {
+                        if (seconds <= 0) return true;
+                        if (!ctx.instanceValid()) return false;
+                        int key = ctx.instance().instanceId();
+                        long now = System.nanoTime();
+                        Long prev = lastFired.get(key);
+                        if (prev != null && (now - prev) < (long) (seconds * 1_000_000_000L)) {
+                            return false;
+                        }
+                        lastFired.put(key, now);
+                        return true;
+                    };
                 })
         );
     }
