@@ -503,8 +503,9 @@ public final class SkillCatalog {
         Location target = ctx.target().map(t -> t.getLocation()).orElse(null);
         if (target != null && me.getWorld() != null && target.getWorld() == me.getWorld()) {
             org.bukkit.util.Vector diff = target.toVector().subtract(me.toVector());
-            if ("back".equals(mode)) diff = diff.negate();
-            else if ("near".equals(mode) || "away".equals(mode)) diff = diff.normalize().negate();
+            // 用 multiply(-1) 而非 negate()：后者不在当前 Paper API 的 Vector 上
+            if ("back".equals(mode)) diff = diff.multiply(-1);
+            else if ("near".equals(mode) || "away".equals(mode)) diff = diff.normalize().multiply(-1);
             if (diff.lengthSquared() > 1e-6) {
                 return diff.normalize();
             }
