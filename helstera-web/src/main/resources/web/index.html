@@ -83,20 +83,69 @@
   .banner li b{color:var(--err)}
 
   /* ---- layout ---- */
-  /* ---- layout：三列 —— 对象列表 / 左轨导航 / 主区 ----
-     中列是导航而非顶部横条：8 个面板数量固定，纵向轨道位置稳定，
-     切换面板不会引起主区上下跳动，窄屏也能靠横向滚动保持可达。 */
-  main{flex:1;display:grid;grid-template-columns:286px 188px minmax(0,1fr);min-height:0}
-  /* 窄屏：先收窄对象列表，再把导航转为顶部横条，保证主区始终有足够宽度 */
-  @media(max-width:1100px){main{grid-template-columns:236px minmax(0,1fr)}
-    .tabs{grid-column:1/-1;flex-direction:row;border-right:none;border-bottom:1px solid var(--line)}
-    .tab{width:auto;white-space:nowrap}}
+  /* ---- 骨架：极窄图标栏 + 应用区 ----
+     导航只留图标并靠 title/tooltip 说明，不占横向空间；
+     所有文字型信息（标题、说明、计数）下沉到顶栏与页头，
+     避免「图标 + 文字」标签在窄栏里挤成两行。 */
+  .rail{width:60px;flex:0 0 60px;background:var(--panel);border-right:1px solid var(--line);
+        display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:4px}
+  .app{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+  .rail .tab{width:38px;height:38px;justify-content:center;padding:0;font-size:16px;border-radius:9px}
+  .rail .tab .n{display:none}
+  .rail .rail-sep{width:22px;height:1px;background:var(--line);margin:7px 0}
+  .rail .spacer{flex:1}
+
+  /* ---- 顶栏：面包屑在左，搜索与动作在右 ---- */
+  .top{display:flex;align-items:center;gap:12px;padding:0 20px;height:52px;background:var(--panel);
+       border-bottom:1px solid var(--line);flex:0 0 auto}
+  .crumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--txt3);min-width:0}
+  .crumb .sep{opacity:.5}
+  .crumb b{color:var(--txt);font-weight:600}
+  .crumb .lock{font-size:11px;color:var(--txt3)}
+  .top-search{flex:1;max-width:280px;margin-left:auto}
+  .acts{display:flex;gap:6px;align-items:center}
+  .icon-btn{width:32px;height:32px;padding:0;display:grid;place-items:center;font-size:15px;
+            background:var(--panel);color:var(--txt2);border:1px solid var(--line)}
+  .icon-btn:hover{background:var(--panel2);color:var(--txt)}
+
+  /* ---- 页头：大标题 + 副标题 + 右侧指标 ----
+     每个面板的首屏都用它定位「我在哪、当前状态如何」，
+     替代过去散落在顶栏胶囊里的小号数字。 */
+  .pagehead{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap;
+            padding:20px 0 16px;border-bottom:1px solid var(--line)}
+  .pagehead .eyebrow{font-size:11px;font-weight:700;color:var(--txt3);letter-spacing:.08em;
+                     text-transform:uppercase;margin-bottom:5px;display:flex;align-items:center;gap:7px}
+  .pagehead h1{font-size:25px;font-weight:700;letter-spacing:-.01em;line-height:1.2;margin:0}
+  .pagehead .sub{font-size:12.5px;color:var(--txt3);margin-top:6px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .pagehead .stats{margin-left:auto;display:flex;gap:26px;align-items:flex-end}
+  .pagehead .stat{min-width:78px}
+  .pagehead .stat .k{font-size:11px;color:var(--txt3);letter-spacing:.05em;text-transform:uppercase}
+  .pagehead .stat .v{font-size:23px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;
+                     line-height:1.25;display:flex;align-items:baseline;gap:3px}
+  .pagehead .stat .v small{font-size:12px;color:var(--txt3);font-weight:500}
+  .pagehead .stat .meter{height:3px;border-radius:2px;background:var(--panel3);margin-top:5px;overflow:hidden;max-width:92px}
+  .pagehead .stat .meter i{display:block;height:100%;border-radius:2px;background:var(--accent);width:var(--w,0%)}
+  /* 窄屏时指标换行到标题下方，不再并排挤压 */
+  @container pane (max-width:860px){.pagehead .stats{margin-left:0;gap:20px}}
+
+  /* ---- layout：对象列表 + 主区 ---- */
+  main{flex:1;display:grid;grid-template-columns:286px minmax(0,1fr);min-height:0}
+  /* 窄屏：收窄对象列表；导航已在最左图标栏，无需再转横条 */
+  @media(max-width:1100px){main{grid-template-columns:236px minmax(0,1fr)}}
   @media(max-width:760px){main{grid-template-columns:minmax(0,1fr)}
     aside{max-height:42vh;border-right:none;border-bottom:1px solid var(--line)}}
-  /* 超宽屏：列表与导航适度加宽，主区设上限——否则 2560px 下文本行会拉到
+  /* 超宽屏：列表适度加宽，主区留白上限——否则 2560px 下文本行会拉到
      近 2000px 宽，阅读时视线要横跨整个屏幕才换行。 */
-  @media(min-width:1700px){main{grid-template-columns:330px 208px minmax(0,1fr)}
+  @media(min-width:1700px){main{grid-template-columns:330px minmax(0,1fr)}
     .panes{padding:22px 30px 48px}}
+  /* 极窄屏：图标栏转为底部横排，把纵向空间留给主区 */
+  @media(max-width:560px){
+    .rail{width:auto;flex:0 0 auto;flex-direction:row;padding:0 6px;border-right:none;
+          border-bottom:1px solid var(--line);height:46px}
+    .rail .spacer{display:none}
+    .top{height:auto;padding:8px 14px;flex-wrap:wrap}
+    .top-search{max-width:none;order:3;flex-basis:100%;margin-left:0}
+  }
   /* 矮屏：画布与顶栏同时压缩，优先保证主区能看到内容 */
   @media(max-height:620px){
     .top{padding:7px 14px}
@@ -265,31 +314,39 @@
 </head>
 <body>
 
-<div class="top">
-  <div class="brand"><span class="logo">◆</span><span>helsteraMobs 开发器<br><small>模型引擎 · 本地控制台 v__VERSION__</small></span></div>
-  <div class="chips">
-    <span class="chip"><span class="dot" id="dRun"></span><b id="cVer">-</b></span>
-    <span class="chip">模型 <b id="cModels">0</b></span>
-    <span class="chip">实例 <b id="cInst">0</b></span>
-    <span class="chip">玩家 <b id="cPlayers">0</b></span>
-    <span class="chip">TPS <b id="cTps">-</b></span>
-    <span class="chip" id="cErrWrap">错误 <b id="cErr">0</b></span>
-  </div>
+<div class="rail" role="tablist" aria-label="面板">
+  <div class="tab on" data-tab="model" role="tab" title="模型详情" aria-label="模型详情"><span class="ic">◆</span></div>
+  <div class="tab" data-tab="files" role="tab" title="模型文件" aria-label="模型文件"><span class="ic">▤</span></div>
+  <div class="tab" data-tab="mobs" role="tab" title="生物配置" aria-label="生物配置"><span class="ic">☟</span><span class="n" id="nMobs"></span></div>
+  <div class="tab" data-tab="skills" role="tab" title="技能" aria-label="技能"><span class="ic">✦</span></div>
+  <div class="tab" data-tab="loot" role="tab" title="掉落 / 刷怪" aria-label="掉落与刷怪点"><span class="ic">◈</span></div>
+  <div class="tab" data-tab="validate" role="tab" title="校验" aria-label="模型校验"><span class="ic">✓</span></div>
+  <div class="tab" data-tab="config" role="tab" title="配置" aria-label="插件配置"><span class="ic">⚙</span></div>
+  <div class="tab" data-tab="log" role="tab" title="日志" aria-label="审计日志"><span class="ic">≡</span></div>
+  <div class="rail-sep"></div>
   <span class="spacer"></span>
-  <div class="acts">
-    <button class="ghost" id="bReload">重载模型</button>
-    <button class="ghost" id="bPack">构建资源包</button>
-    <a href="/pack.zip"><button class="ghost">下载资源包</button></a>
-    <button class="ghost" id="bTheme" title="切换主题">◐</button>
+  <button class="icon-btn" id="bTheme" title="切换主题" aria-label="切换主题">◐</button>
+</div>
+
+<div class="app">
+  <div class="top">
+    <div class="crumb">
+      <span class="lock">◆</span><span>helsteraMobs</span><span class="sep">/</span><b id="crumbTab">模型详情</b>
+    </div>
+    <input id="search" class="top-search" placeholder="搜索模型 / 生物…">
+    <div class="acts">
+      <button class="icon-btn" id="bReload" title="重载模型" aria-label="重载模型">↻</button>
+      <button class="icon-btn" id="bPack" title="构建资源包" aria-label="构建资源包">▦</button>
+      <a href="/pack.zip" class="icon-btn" title="下载资源包" aria-label="下载资源包">↓</a>
+    </div>
   </div>
-</div>
 
-<div class="banner" id="banner">
-  <div class="btitle">⚠ 模型加载失败 / 校验错误</div>
-  <ul id="bannerList"></ul>
-</div>
+  <div class="banner" id="banner">
+    <div class="btitle">⚠ 模型加载失败 / 校验错误</div>
+    <ul id="bannerList"></ul>
+  </div>
 
-<main>
+  <main>
   <aside>
     <div class="side-pad"><input id="search" placeholder="搜索模型 / 生物…" style="flex:1"></div>
     <div class="side-sec">模型 <span id="mCount" class="tag"></span></div>
@@ -298,18 +355,22 @@
     <div class="scroll"><ul class="list" id="mobList"></ul></div>
   </aside>
 
-  <nav class="tabs" role="tablist" aria-label="面板">
-    <div class="tab on" data-tab="model" role="tab"><span class="ic">◆</span>模型详情</div>
-    <div class="tab" data-tab="files" role="tab"><span class="ic">▤</span>模型文件</div>
-    <div class="tab" data-tab="mobs" role="tab"><span class="ic">☟</span>生物配置<span class="n" id="nMobs"></span></div>
-    <div class="tab" data-tab="skills" role="tab"><span class="ic">✦</span>技能<span class="n" id="nSkills"></span></div>
-    <div class="tab" data-tab="loot" role="tab"><span class="ic">◈</span>掉落 / 刷怪</div>
-    <div class="tab" data-tab="validate" role="tab"><span class="ic">✓</span>校验</div>
-    <div class="tab" data-tab="config" role="tab"><span class="ic">⚙</span>配置<span class="n" id="nCfg"></span></div>
-    <div class="tab" data-tab="log" role="tab"><span class="ic">≡</span>日志</div>
-  </nav>
-
   <section class="content">
+    <div class="pagehead">
+      <div class="ph-main">
+        <div class="eyebrow"><span class="dot" id="dRun"></span><span id="phEyebrow">RENDER · 实时</span></div>
+        <h1 id="phTitle">模型详情</h1>
+        <div class="sub" id="phSub">模型引擎 · 本地控制台 v__VERSION__</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="k">版本</div><div class="v" id="cVer">-</div></div>
+        <div class="stat"><div class="k">模型</div><div class="v" id="cModels">0</div></div>
+        <div class="stat"><div class="k">实例</div><div class="v" id="cInst">0</div></div>
+        <div class="stat"><div class="k">玩家</div><div class="v" id="cPlayers">0</div></div>
+        <div class="stat"><div class="k">TPS</div><div class="v" id="cTps">-</div></div>
+        <div class="stat" id="cErrWrap"><div class="k">错误</div><div class="v" id="cErr">0</div></div>
+      </div>
+    </div>
     <div class="panes">
 
       <!-- ===== 模型详情 ===== -->
@@ -541,6 +602,7 @@
     </div>
   </section>
 </main>
+</div><!-- /.app -->
 
 <div class="modal" id="modal">
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mdlgT">
@@ -695,6 +757,18 @@ document.querySelectorAll('.tab').forEach(t => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showTab(t.dataset.tab); }
   });
 });
+/* 每个面板的页头文案：面包屑与大标题都取自这里，
+   保证「我在哪」在切换后立即可见，不必靠图标猜。 */
+const PAGE = {
+  model:    ['RENDER · 实时',   '模型详情',     '查看骨骼、立方体与动画，拖拽画布可旋转模型。'],
+  files:    ['RENDER · 源文件', '模型文件',     '直接编辑 manifest.yml / model.json / animations.json。'],
+  mobs:     ['SPAWNER · 生物',  '生物配置',     '定义血量、缩放、AI 行为与生成条件。'],
+  skills:   ['BEHAVIOR · 行为', '技能',         '命名技能：require 条件 + on-decision 动作。'],
+  loot:     ['LOOT · 掉落',     '掉落 / 刷怪',  '配置掉落概率与定时生成点，掷骰可预览结果。'],
+  validate: ['RENDER · 校验',   '模型校验',     '解析并校验纹理、骨骼与引用的纹理声明。'],
+  config:   ['PLUGIN · 插件',   '配置',         '来自 config.yml，保存后需 /helstera reload 生效。'],
+  log:      ['AUDIT · 审计',    '日志',         '保存、回滚、生成等写操作的记录。'],
+};
 function showTab(name) {
   document.querySelectorAll('.tab').forEach(x => {
     const on = x.dataset.tab === name;
@@ -706,6 +780,13 @@ function showTab(name) {
     x.classList.toggle('on', on);
     x.hidden = !on;
   });
+  const meta = PAGE[name];
+  if (meta) {
+    $('crumbTab').textContent = meta[1];
+    $('phTitle').textContent = meta[1];
+    $('phEyebrow').textContent = meta[0];
+    $('phSub').textContent = meta[2];
+  }
   if (name === 'model') draw();
 }
 
