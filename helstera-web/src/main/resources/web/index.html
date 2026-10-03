@@ -93,6 +93,15 @@
     .tab{width:auto;white-space:nowrap}}
   @media(max-width:760px){main{grid-template-columns:minmax(0,1fr)}
     aside{max-height:42vh;border-right:none;border-bottom:1px solid var(--line)}}
+  /* 超宽屏：列表与导航适度加宽，主区设上限——否则 2560px 下文本行会拉到
+     近 2000px 宽，阅读时视线要横跨整个屏幕才换行。 */
+  @media(min-width:1700px){main{grid-template-columns:330px 208px minmax(0,1fr)}
+    .panes{padding:22px 30px 48px}}
+  /* 矮屏：画布与顶栏同时压缩，优先保证主区能看到内容 */
+  @media(max-height:620px){
+    .top{padding:7px 14px}
+    canvas{height:clamp(190px,30vh,260px)}
+  }
   aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
   .side-pad{padding:10px 12px;border-bottom:1px solid var(--line2);display:flex;gap:8px}
   .side-sec{padding:10px 12px 4px;font-size:12px;font-weight:700;color:var(--txt3);letter-spacing:.08em;
@@ -121,6 +130,12 @@
   .cfg-row.protected input,.cfg-row.protected select{opacity:.55;pointer-events:none}
   .cfg-v{font-size:12px;color:var(--txt3)}
   .cfg-row input,.cfg-row select{padding:5px 8px;font-size:13px;width:100%}
+  /* 窄屏把配置行由三列压成两列：键与控件同行，状态值移到下一行，
+     否则三列会被挤到每列不足 90px，长配置键和 URL 都无法完整显示。 */
+  @container pane (max-width:620px){
+    .cfg-row{grid-template-columns:minmax(0,1fr) auto}
+    .cfg-k{grid-column:1/-1}
+  }
   .cfg-lock{font-size:11px;color:var(--warn);white-space:nowrap}
   /* ---- 左轨导航（取代横向 tab 条）----
      8 个面板做成固定侧轨：位置稳定、切换不引起纵向跳动，
@@ -168,7 +183,12 @@
   .subblock{background:var(--panel2);border-radius:var(--radius-sm);padding:11px 12px}
   .subblock h3{font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:8px}
   .grid2{display:grid;grid-template-columns:minmax(300px,1fr) minmax(340px,1.2fr);gap:0 26px;align-items:start}
-  @media(max-width:1240px){.grid2{grid-template-columns:1fr}}
+  /* 双栏改为容器查询而非视口断点：主区宽度由左轨与对象列表挤压决定，
+     视口 1400px 时主区实际只剩 ~900px，视口断点会误判为「够宽」而不降列，
+     导致两栏各被压到 450px 左右。容器查询按真实可用宽度决策。
+     不支持容器查询的浏览器回落到 1240px 视口断点。 */
+  .panes{container-type:inline-size;container-name:pane}
+  @container pane (max-width:1000px){.grid2{grid-template-columns:minmax(0,1fr)}}
 
   /* ---- 四态：加载 / 空 / 错误 / 离线 ----
      统一由 .state 承载，图标+一行标题+一行说明+一个可选动作，
@@ -217,7 +237,9 @@
   .lbl{font-size:12px;color:var(--txt3);margin-bottom:4px;display:block}
   .canvas-wrap{position:relative;background:linear-gradient(180deg,var(--panel2),var(--panel));
                border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  canvas{display:block;width:100%;height:330px;cursor:grab;touch-action:none}
+  /* 画布高度随可用宽度自适应：固定 330px 在窄屏会挤掉下方全部内容，
+     在宽屏又显得局促。用 clamp 同时照顾两端。 */
+  canvas{display:block;width:100%;height:clamp(230px,34vh,380px);cursor:grab;touch-action:none}
   canvas:active{cursor:grabbing}
   .cv-tools{position:absolute;right:8px;top:8px;display:flex;gap:6px}
   .cv-tools button{background:rgba(255,255,255,.86);color:var(--txt);border:1px solid var(--line);backdrop-filter:blur(4px)}
