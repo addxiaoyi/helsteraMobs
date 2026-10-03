@@ -32,7 +32,11 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
-       background:var(--bg);color:var(--txt);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+       background:var(--bg);color:var(--txt);height:100vh;overflow:hidden;
+       /* 必须横向：.rail 是左侧图标栏、.app 是右侧应用区，二者是并排关系。
+          之前误用 column，导致 .rail 的 flex-basis 作用在高度上，
+          图标栏变成顶部一条横带、内容整体下移错位。 */
+       display:flex;flex-direction:row}
   button{font:inherit;cursor:pointer;border:1px solid transparent;border-radius:var(--radius-sm);padding:7px 13px;
          background:var(--accent);color:#fff;
          transition:background-color .14s,border-color .14s,color .14s}
