@@ -4,6 +4,7 @@ import dev.helstera.api.instance.ModelInstance;
 import dev.helstera.runtime.animation.AnimationControllerImpl;
 import dev.helstera.runtime.instance.InstanceManagerImpl;
 import dev.helstera.runtime.instance.ModelInstanceImpl;
+import dev.helstera.runtime.perf.RollingMetrics;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
@@ -43,6 +44,11 @@ public final class HelsteraScheduler {
     private volatile long skippedNoViewer;
     private volatile long skippedBudget;
     private volatile double lastSampleMillis;
+
+    // 滚动窗口：瞬时值看不出趋势（抖动与性能恶化读数一样），
+    // 用 p50/p95/p99 判断实例量上去后是抖动还是真退化。
+    private final RollingMetrics tickCostMicros = new RollingMetrics(200);
+    private final RollingMetrics updatedPerSample = new RollingMetrics(200);
 
     public HelsteraScheduler(Plugin plugin, InstanceManagerImpl instances,
                              ToIntFunction<ModelInstance> visibleCount,
@@ -157,7 +163,11 @@ public final class HelsteraScheduler {
         totalUpdates += updates;
         skippedNoViewer = skippedView;
         skippedBudget = skippedBudgetLocal;
-        lastSampleMillis = (System.nanoTime() - start) / 1_000_000.0;
+        long elapsed = System.nanoTime() - start;
+        lastSampleMillis = elapsed / 1_000_000.0;
+        // 采样间隔非 1 时，耗时里含跳过轮次的空转，除以实际采样数才有可比性
+        tickCostMicros.record(elapsed / 1_000L);
+        updatedPerSample.record(updates);
     }
 
     // ---- 可观测性 ----
@@ -166,4 +176,21 @@ public final class HelsteraScheduler {
     public long skippedNoViewer() { return skippedNoViewer; }
     public long skippedBudget() { return skippedBudget; }
     public double lastSampleMillis() { return lastSampleMillis; }
+
+    /**
+     * 采样循环耗时分布（微秒）。
+     *
+     * <p>对外暴露窗口快照而非裸数组：调用方（HTTP 线程、命令）只读一次即可，
+     * 且不会因为并发遍历环形缓冲看到撕裂的中间态。</p>
+     */
+    public RollingMetrics.Snapshot tickCostSnapshot() { return tickCostMicros.snapshot(); }
+
+    /** 每轮实际更新的实例数分布，用于确认 LOD 与预算是否在按预期降级。 */
+    public RollingMetrics.Snapshot updatesPerSampleSnapshot() { return updatedPerSample.snapshot(); }
+
+    /** 重载/停服时清空窗口，避免上一段运行的样本污染新一轮观测。 */
+    public void resetMetrics() {
+        tickCostMicros.reset();
+        updatedPerSample.reset();
+    }
 }
