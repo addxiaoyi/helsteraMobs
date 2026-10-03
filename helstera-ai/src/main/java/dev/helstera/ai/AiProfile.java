@@ -36,6 +36,8 @@ public final class AiProfile {
     public final List<String> onDecision = new ArrayList<>();
     /** 事件驱动触发器：事件名 -> 规格。 */
     public final Map<String, TriggerSpec> triggers = new LinkedHashMap<>();
+    /** Boss 血量阶段；为空表示该档案未启用分阶段。 */
+    public final List<BossPhase> phases = new ArrayList<>();
 
     /**
      * 单个事件触发器：{@code require} 全部满足时才执行 {@code actions}。
@@ -70,6 +72,7 @@ public final class AiProfile {
         this.canAttack = base.canAttack;
         this.require.addAll(base.require);
         this.onDecision.addAll(base.onDecision);
+        this.phases.addAll(base.phases);
         for (var e : base.triggers.entrySet()) {
             TriggerSpec src = e.getValue();
             TriggerSpec dst = new TriggerSpec();
@@ -100,6 +103,8 @@ public final class AiProfile {
         p.onDecision.addAll(s.getStringList("on-decision"));
         p.triggers.clear();
         p.applyTriggersFrom(s);
+        p.phases.clear();
+        p.phases.addAll(BossPhase.parseList(s, new ArrayList<>()));
         return p;
     }
 
