@@ -99,21 +99,62 @@ public final class LootService {
 
     /** 可注入随机源的纯函数重载，供单元测试使用。 */
     public List<Hit> rollPlan(DropTable t, double luck, Random rnd) {
+        return rollPlan(t, luck, rnd, -1);
+    }
+
+    /**
+     * 带击杀者档位的纯函数重载。
+     *
+     * <p>{@code killerTier} 小于 0 表示击杀者未知：不套用任何 tier 门槛，
+     * 免得因为拿不到档位就把所有带门槛的掉落全吞掉。</p>
+     */
+    public List<Hit> rollPlan(DropTable t, double luck, Random rnd, int killerTier) {
         if (t == null || t.isEmpty()) return List.of();
         List<Hit> hits = new ArrayList<>(t.entries().size());
         for (DropTable.Entry e : t.entries()) {
+            // 击杀者档位门槛：不满足时直接跳过，连 chance 都不掷
+            if (e.minTierLevel() != null && killerTier >= 0 && killerTier < e.minTierLevel()) {
+                continue;
+            }
             double chance = e.chance();
             if (e.luckScaling()) {
                 // 幸运值只往上加成，永不把 chance 推到 1 以外
                 chance = DropTable.clamp(chance + Math.max(0, luck) * t.luckFactor(), 0, 1);
             }
             if (rnd.nextDouble() >= chance) continue;
-            int amount = e.amountMin() >= e.amountMax()
-                    ? e.amountMin()
-                    : e.amountMin() + rnd.nextInt(e.amountMax() - e.amountMin() + 1);
-            hits.add(new Hit(e, Math.max(1, amount)));
+            hits.add(new Hit(e, pickAmount(e, rnd)));
         }
         return hits;
+    }
+
+    /**
+     * 按分层权重抽数量；未配置档位时退回原来的均匀区间。
+     *
+     * <p>分母为 0 时退回均匀区间：权重全是非正数属于配置错误，但不该让掉落整条消失。</p>
+     */
+    private static int pickAmount(DropTable.Entry e, Random rnd) {
+        if (!e.hasTiers()) {
+            return e.amountMin() >= e.amountMax()
+                    ? e.amountMin()
+                    : e.amountMin() + rnd.nextInt(e.amountMax() - e.amountMin() + 1);
+        }
+        double total = 0;
+        for (DropTable.Tier t : e.tiers()) total += t.weight();
+        if (total <= 0) return e.amountMin();
+
+        double roll = rnd.nextDouble() * total;
+        DropTable.Tier chosen = e.tiers().get(e.tiers().size() - 1);
+        double acc = 0;
+        for (DropTable.Tier t : e.tiers()) {
+            acc += t.weight();
+            if (roll < acc) {
+                chosen = t;
+                break;
+            }
+        }
+        return chosen.amountMin() >= chosen.amountMax()
+                ? chosen.amountMin()
+                : chosen.amountMin() + rnd.nextInt(chosen.amountMax() - chosen.amountMin() + 1);
     }
 
     /**
