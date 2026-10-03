@@ -6,23 +6,29 @@
 <title>helsteraMobs 开发器</title>
 <style>
   :root{
-    --bg:#f2f5f9; --panel:#fff; --panel2:#fafbfd; --line:#e2e8f0; --line2:#eef2f7;
+    /* 中性底 + 单一品牌绿。绿色只承载「可操作 / 已就绪」，
+       其余层级全部走灰阶，避免多色系互相争抢注意力。 */
+    --bg:#f5f7f4; --panel:#fff; --panel2:#fafbf9; --panel3:#f2f4f1;
+    --line:#e2e6df; --line2:#eef1ec;
     /* txt3 承载标签/表头/空态等真实文本，对比度需达 WCAG AA 4.5:1 */
-    --txt:#0f172a; --txt2:#54607a; --txt3:#647084;
-    --accent:#2f6fed; --accent2:#1e56d6; --soft:#eaf1ff;
-    --ok:#15a34a; --oksoft:#e6f7ec; --warn:#a8600a; --warnsoft:#fdf3e3;
-    --err:#c92a2a; --errsoft:#fdecec; --code:#f6f8fb;
-    /* 圆角收敛为三档：控件 8px / 面板 10px / 胶囊 999px */
-    --radius:10px; --radius-sm:8px;
-    --shadow:0 1px 2px rgba(15,23,42,.05),0 10px 28px -18px rgba(15,23,42,.35);
+    --txt:#171b16; --txt2:#57604f; --txt3:#7e8878;
+    --accent:#1f7a4d; --accent2:#16603b; --soft:#e6f2eb; --accentline:#bcdcc9;
+    --ok:#1f7a4d; --oksoft:#e6f2eb; --warn:#a86a0c; --warnsoft:#fdf4e3;
+    --err:#bf3b31; --errsoft:#fceceb; --code:#f7f9f6;
+    /* 圆角收敛为三档：控件 6px / 面板 9px / 胶囊 999px */
+    --radius:9px; --radius-sm:6px;
+    --shadow:0 1px 2px rgba(23,27,16,.04);
+    --shadow-lg:0 8px 24px -14px rgba(23,27,16,.28);
   }
   html[data-theme=dark]{
-    --bg:#0f1420; --panel:#161c2a; --panel2:#1b2231; --line:#28303f; --line2:#202836;
-    --txt:#e8edf6; --txt2:#a3adc2; --txt3:#7d89a0;
-    --accent:#5b8cff; --accent2:#7ba2ff; --soft:#1d2740;
-    --ok:#4ade80; --oksoft:#132a1d; --warn:#e0a336; --warnsoft:#2b2413;
-    --err:#f87171; --errsoft:#2c1717; --code:#111826;
-    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -18px rgba(0,0,0,.8);
+    --bg:#12150f; --panel:#1a1e17; --panel2:#1f241c; --panel3:#252b22;
+    --line:#2c3329; --line2:#232920;
+    --txt:#e9ede6; --txt2:#a8b1a4; --txt3:#8b9488;
+    --accent:#4cc38a; --accent2:#68d3a0; --soft:#152a20; --accentline:#295140;
+    --ok:#4cc38a; --oksoft:#152a20; --warn:#d9a445; --warnsoft:#2a2314;
+    --err:#e8837a; --errsoft:#2c1a19; --code:#15190f;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+    --shadow-lg:0 8px 26px -16px rgba(0,0,0,.8);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
@@ -54,7 +60,8 @@
   .top{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);
        border-bottom:1px solid var(--line);flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.2px}
-  .logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#2f6fed,#7ba2ff);
+  /* 徽标同样用品牌绿渐变，避免整页唯一残留的蓝色块 */
+  .logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#1f7a4d,#43a373);
         display:grid;place-items:center;color:#fff;font-size:14px}
   .brand small{font-weight:500;color:var(--txt3);font-size:12px}
   .chips{display:flex;gap:7px;flex-wrap:wrap}
@@ -76,7 +83,16 @@
   .banner li b{color:var(--err)}
 
   /* ---- layout ---- */
-  main{flex:1;display:grid;grid-template-columns:300px 1fr;min-height:0}
+  /* ---- layout：三列 —— 对象列表 / 左轨导航 / 主区 ----
+     中列是导航而非顶部横条：8 个面板数量固定，纵向轨道位置稳定，
+     切换面板不会引起主区上下跳动，窄屏也能靠横向滚动保持可达。 */
+  main{flex:1;display:grid;grid-template-columns:286px 188px minmax(0,1fr);min-height:0}
+  /* 窄屏：先收窄对象列表，再把导航转为顶部横条，保证主区始终有足够宽度 */
+  @media(max-width:1100px){main{grid-template-columns:236px minmax(0,1fr)}
+    .tabs{grid-column:1/-1;flex-direction:row;border-right:none;border-bottom:1px solid var(--line)}
+    .tab{width:auto;white-space:nowrap}}
+  @media(max-width:760px){main{grid-template-columns:minmax(0,1fr)}
+    aside{max-height:42vh;border-right:none;border-bottom:1px solid var(--line)}}
   aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
   .side-pad{padding:10px 12px;border-bottom:1px solid var(--line2);display:flex;gap:8px}
   .side-sec{padding:10px 12px 4px;font-size:12px;font-weight:700;color:var(--txt3);letter-spacing:.08em;
@@ -106,22 +122,79 @@
   .cfg-v{font-size:12px;color:var(--txt3)}
   .cfg-row input,.cfg-row select{padding:5px 8px;font-size:13px;width:100%}
   .cfg-lock{font-size:11px;color:var(--warn);white-space:nowrap}
-  .tabs{display:flex;gap:4px;padding:9px 14px 0;background:var(--panel);border-bottom:1px solid var(--line);
-        overflow-x:auto;scrollbar-width:none}
+  /* ---- 左轨导航（取代横向 tab 条）----
+     8 个面板做成固定侧轨：位置稳定、切换不引起纵向跳动，
+     也避免横向 tab 在窄屏下溢出滚动。 */
+  /* ---- 对话框（取代原生 prompt/confirm）----
+     原生弹窗无法承载模板列表这类结构化内容，也无法统一样式；
+     这里用一个 Promise 化的对话框，后续所有确认类交互都走它。 */
+  .modal{position:fixed;inset:0;background:rgba(23,27,16,.42);display:none;
+         align-items:center;justify-content:center;padding:24px;z-index:60}
+  .modal.on{display:flex}
+  .modal .sheet{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+                box-shadow:var(--shadow-lg);width:min(440px,100%);padding:18px}
+  .modal h3{font-size:14px;margin-bottom:6px}
+  .modal p{font-size:12.5px;color:var(--txt2);margin-bottom:12px;line-height:1.65}
+  .modal input{width:100%;margin-bottom:12px}
+  .modal .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:2px}
+  .modal .hint-list{max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:var(--radius-sm);
+                    padding:8px 10px;margin-bottom:12px;background:var(--panel2)}
+  .modal .hint-list b{display:block;font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--txt2)}
+  .modal .hint-list span{display:block;font-size:12px;color:var(--txt3);padding-bottom:5px}
+
+  .tabs{display:flex;flex-direction:column;gap:2px;padding:8px;border-bottom:none;
+        border-right:1px solid var(--line);background:var(--panel2);flex:0 0 auto}
   .tabs::-webkit-scrollbar{display:none}
-  .tab{padding:8px 14px;border-radius:9px 9px 0 0;font-size:13px;color:var(--txt2);cursor:pointer;border:1px solid transparent;
-       border-bottom:none;margin-bottom:-1px}
-  .tab:hover{color:var(--txt)}
-  .tab.on{background:var(--bg);border-color:var(--line);color:var(--txt);font-weight:600}
-  .panes{flex:1;overflow:auto;padding:14px;min-height:0}
+  .tab{padding:7px 10px;border-radius:var(--radius-sm);font-size:13px;color:var(--txt2);cursor:pointer;
+       border:none;background:transparent;display:flex;align-items:center;gap:8px;text-align:left;width:100%}
+  .tab:hover{background:var(--panel);color:var(--txt)}
+  .tab.on{background:var(--soft);color:var(--accent2);font-weight:600}
+  .tab .ic{width:16px;text-align:center;flex:0 0 auto;font-size:13px;opacity:.85}
+  .tab .n{margin-left:auto;font-size:11px;color:var(--txt3);font-variant-numeric:tabular-nums}
+  .tab.on .n{color:var(--accent)}
+  .panes{flex:1;overflow:auto;padding:18px 22px 40px;min-height:0}
   .pane{display:none}
   .pane.on{display:block}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;
-        box-shadow:var(--shadow);margin-bottom:14px}
-  .card h3{font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .card h3 .hint{font-weight:400;color:var(--txt3);font-size:12px}
-  .grid2{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.25fr);gap:14px;align-items:start}
-  @media(max-width:1180px){.grid2{grid-template-columns:1fr}}
+  /* 分区（取代原来的 .card 网格）：
+     用「标题行 + 顶部细线」划分连续区块，不再给每一块套独立卡片，
+     避免卡片套卡片造成的视觉噪声与层级过载。 */
+  .sec{padding:16px 0;border-top:1px solid var(--line)}
+  .sec:first-child{border-top:none;padding-top:2px}
+  .sec>h3{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:3px;
+         display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .sec>h3 .hint{font-weight:400;color:var(--txt3);font-size:12px}
+  .sec .lede{color:var(--txt3);font-size:12.5px;margin:0 0 10px;line-height:1.6}
+  /* 分区内的次级信息块：只做极轻的底色区分，不再画边框+阴影 */
+  .subblock{background:var(--panel2);border-radius:var(--radius-sm);padding:11px 12px}
+  .subblock h3{font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:8px}
+  .grid2{display:grid;grid-template-columns:minmax(300px,1fr) minmax(340px,1.2fr);gap:0 26px;align-items:start}
+  @media(max-width:1240px){.grid2{grid-template-columns:1fr}}
+
+  /* ---- 四态：加载 / 空 / 错误 / 离线 ----
+     统一由 .state 承载，图标+一行标题+一行说明+一个可选动作，
+     避免每个面板各写一套导致观感不一致。 */
+  .state{display:flex;flex-direction:column;align-items:center;justify-content:center;
+         gap:9px;padding:44px 24px;text-align:center;color:var(--txt3)}
+  .state .ico{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+              background:var(--panel3);color:var(--txt3);font-size:15px}
+  .state b{color:var(--txt2);font-size:13.5px;font-weight:600}
+  .state p{margin:0;font-size:12.5px;max-width:42ch;line-height:1.65}
+  .state.err .ico{background:var(--errsoft);color:var(--err)}
+  .state.offline .ico{background:var(--warnsoft);color:var(--warn)}
+  .state button{margin-top:3px}
+  /* 加载：细进度条循环，比转圈更轻 */
+  .state.loading .bar{width:104px;height:2px;border-radius:2px;background:var(--panel3);overflow:hidden;position:relative}
+  .state.loading .bar::after{content:"";position:absolute;inset:0;width:42%;border-radius:2px;
+                             background:var(--accent);animation:slide 1.1s ease-in-out infinite}
+  @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(240%)}}
+  @media (prefers-reduced-motion:reduce){.state.loading .bar::after{animation:none;width:100%;opacity:.5}}
+
+  /* 行内小状态（列表项加载中 / 局部失败） */
+  .state-inline{display:flex;align-items:center;gap:8px;color:var(--txt3);font-size:12.5px;padding:9px 10px}
+  .spinner{width:12px;height:12px;border-radius:50%;border:2px solid var(--panel3);
+           border-top-color:var(--accent);animation:spin .7s linear infinite;flex:0 0 auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spinner{animation:none;border-top-color:var(--accentline)}}
   .meta{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13px}
   .meta dt{color:var(--txt3)}
   .meta dd{color:var(--txt);font-weight:500;word-break:break-all}
@@ -203,22 +276,23 @@
     <div class="scroll"><ul class="list" id="mobList"></ul></div>
   </aside>
 
+  <nav class="tabs" role="tablist" aria-label="面板">
+    <div class="tab on" data-tab="model" role="tab"><span class="ic">◆</span>模型详情</div>
+    <div class="tab" data-tab="files" role="tab"><span class="ic">▤</span>模型文件</div>
+    <div class="tab" data-tab="mobs" role="tab"><span class="ic">☟</span>生物配置<span class="n" id="nMobs"></span></div>
+    <div class="tab" data-tab="skills" role="tab"><span class="ic">✦</span>技能<span class="n" id="nSkills"></span></div>
+    <div class="tab" data-tab="loot" role="tab"><span class="ic">◈</span>掉落 / 刷怪</div>
+    <div class="tab" data-tab="validate" role="tab"><span class="ic">✓</span>校验</div>
+    <div class="tab" data-tab="config" role="tab"><span class="ic">⚙</span>配置<span class="n" id="nCfg"></span></div>
+    <div class="tab" data-tab="log" role="tab"><span class="ic">≡</span>日志</div>
+  </nav>
+
   <section class="content">
-    <div class="tabs">
-      <div class="tab on" data-tab="model">模型详情</div>
-      <div class="tab" data-tab="files">模型文件</div>
-      <div class="tab" data-tab="mobs">生物配置</div>
-      <div class="tab" data-tab="skills">技能</div>
-      <div class="tab" data-tab="loot">掉落 / 刷怪</div>
-      <div class="tab" data-tab="validate">校验</div>
-      <div class="tab" data-tab="config">配置</div>
-      <div class="tab" data-tab="log">日志</div>
-    </div>
     <div class="panes">
 
       <!-- ===== 模型详情 ===== -->
       <div class="pane on" id="pane-model">
-        <div class="card">
+        <div class="sec">
           <h3>模型详情 <span class="hint" id="mdHint">← 从左侧选择一个模型</span></h3>
           <div id="mdEmpty" class="empty">尚未选择模型。</div>
           <div id="mdBody" style="display:none">
@@ -264,7 +338,7 @@
 
       <!-- ===== 模型文件 ===== -->
       <div class="pane" id="pane-files">
-        <div class="card">
+        <div class="sec">
           <h3>模型源文件 <span class="hint">直接编辑 manifest.yml / model.json / animations.json，保存需先通过语法校验</span></h3>
           <div class="row">
             <input id="mfDir" placeholder="模型目录（相对 models 根），如 example/crystal_golem">
@@ -287,7 +361,7 @@
       <!-- ===== 技能 ===== -->
       <div class="pane" id="pane-skills">
         <div class="grid2">
-          <div class="card">
+          <div class="sec">
             <h3>技能与触发器 <span class="hint">skills.yml：命名技能（require 条件 + on-decision 动作）</span></h3>
             <textarea class="mono tall" id="skText" spellcheck="false"
               placeholder="选择已加载的技能，或直接编辑 skills.yml"></textarea>
@@ -297,7 +371,7 @@
             </div>
             <pre class="out" id="skOut" style="display:none"></pre>
           </div>
-          <div class="card">
+          <div class="sec">
             <h3>内置条件 / 动作速查</h3>
             <p class="kv">写技能时可直接参考，参数以空格分隔；引号内的空格会被保留。</p>
             <table>
@@ -319,7 +393,7 @@
       <!-- ===== 掉落 ===== -->
       <div class="pane" id="pane-loot">
         <div class="grid2">
-          <div class="card">
+          <div class="sec">
             <h3>掉落表 <span class="hint">loot.yml：概率 / 数量区间 / 幸运值 / 附魔</span></h3>
             <textarea class="mono tall" id="lootText" spellcheck="false"
               placeholder="loot.yml 内容"></textarea>
@@ -329,7 +403,7 @@
             </div>
             <pre class="out" id="lootOut" style="display:none"></pre>
           </div>
-          <div class="card">
+          <div class="sec">
             <h3>掷骰预览 <span class="hint">只计算概率，不会在世界里真的掉落</span></h3>
             <div class="row">
               <select id="rollTable" style="flex:1"></select>
@@ -352,7 +426,7 @@
       <!-- ===== 生物配置 ===== -->
       <div class="pane" id="pane-mobs">
         <div class="grid2">
-          <div class="card">
+          <div class="sec">
             <h3>生物 YAML <span class="hint" id="mobHint">← 从左侧选择，或新建</span></h3>
             <div class="row tight" style="margin-bottom:8px">
               <label class="lbl" style="margin:0">文件名</label>
@@ -369,10 +443,10 @@
             </div>
             <select id="spawnPlayer" style="margin-top:8px;width:100%"></select>
           </div>
-          <div class="card">
+          <div class="sec">
             <h3>字段说明 &amp; 生成预览</h3>
             <pre class="out" id="mobOut">选择生物后可在左侧编辑。</pre>
-            <div class="card" style="box-shadow:none;margin-top:10px;background:var(--panel2)">
+            <div class="sec" style="box-shadow:none;margin-top:10px;background:var(--panel2)">
               <h3 style="margin-bottom:8px">实际生效的字段</h3>
               <table>
                 <tr><th>字段</th><th>作用</th></tr>
@@ -394,7 +468,7 @@
 
       <!-- ===== 校验 ===== -->
       <div class="pane" id="pane-validate">
-        <div class="card">
+        <div class="sec">
           <h3>模型校验 <span class="hint">解析 + 校验（纹理、骨骼、引用的纹理声明）</span></h3>
           <div class="row">
             <input id="valDir" placeholder="模型目录，如 example/crystal_golem">
@@ -402,7 +476,7 @@
           </div>
           <pre class="out" id="valOut" style="display:none;margin-top:10px"></pre>
         </div>
-        <div class="card">
+        <div class="sec">
           <h3>批量重载</h3>
           <p class="kv">修改模型文件后点击下面的按钮，让服务器重新扫描并加载 <code>models/</code> 下的全部模型。</p>
           <button style="margin-top:9px" id="bReload2">立即重载模型</button>
@@ -411,7 +485,7 @@
 
       <!-- ===== 日志 ===== -->
       <div class="pane" id="pane-config">
-        <div class="card">
+        <div class="sec">
           <h3>插件配置 <span class="hint" id="cfgHint">来自 config.yml，保存后需 /helstera reload 生效</span></h3>
           <div class="row" style="margin-bottom:10px">
             <button class="ghost sm" id="cfgLoad">重新载入</button>
@@ -433,7 +507,7 @@
       </div>
 
       <div class="pane" id="pane-log">
-        <div class="card">
+        <div class="sec">
           <h3>操作审计日志 <span class="hint">保存 / 回滚 / 生成等写操作</span></h3>
           <div class="row" style="margin-bottom:9px"><button class="ghost sm" id="bLog">刷新</button></div>
           <pre class="out" id="logOut" style="max-height:520px">—</pre>
@@ -443,6 +517,19 @@
     </div>
   </section>
 </main>
+
+<div class="modal" id="modal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mdlgT">
+    <h3 id="mdlgT"></h3>
+    <p id="mdlgD" style="display:none"></p>
+    <div class="hint-list" id="mdlgL" style="display:none"></div>
+    <input id="mdlgI" style="display:none">
+    <div class="acts">
+      <button class="ghost" id="mdlgX">取消</button>
+      <button id="mdlgOk">确定</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -479,6 +566,49 @@ function toast(msg, kind) {
   $('toast').appendChild(d);
   setTimeout(() => d.remove(), kind === 'err' ? 6000 : 3200);
 }
+/* ---------------- 对话框（取代原生 prompt/confirm）----------------
+   原生弹窗无法承载模板列表这类结构化内容，样式也无法统一，
+   且不能被键盘完整操作。这里做 Promise 化的对话框，调用方直接 await。 */
+function dialog(opt) {
+  return new Promise(resolve => {
+    const m = $('modal');
+    $('mdlgT').textContent = opt.title || '';
+    const d = $('mdlgD'), l = $('mdlgL'), i = $('mdlgI');
+    d.style.display = opt.desc ? '' : 'none';
+    if (opt.desc) d.textContent = opt.desc;
+    l.style.display = opt.list && opt.list.length ? '' : 'none';
+    if (opt.list && opt.list.length) {
+      l.textContent = '';
+      for (const it of opt.list) {
+        const b = document.createElement('b'); b.textContent = it.label; l.appendChild(b);
+        if (it.desc) { const sp = document.createElement('span'); sp.textContent = it.desc; l.appendChild(sp); }
+      }
+    }
+    const needInput = opt.input !== false;
+    i.style.display = needInput ? '' : 'none';
+    i.value = opt.value || '';
+    i.placeholder = opt.placeholder || '';
+    $('mdlgOk').textContent = opt.okLabel || '确定';
+    $('mdlgX').style.display = opt.hideCancel ? 'none' : '';
+    m.classList.add('on');
+    const done = v => {
+      m.classList.remove('on');
+      document.removeEventListener('keydown', onKey);
+      resolve(v);
+    };
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); done(null); }
+      else if (e.key === 'Enter') { e.preventDefault(); done(needInput ? i.value.trim() : true); }
+    };
+    document.addEventListener('keydown', onKey);
+    $('mdlgOk').onclick = () => done(needInput ? i.value.trim() : true);
+    $('mdlgX').onclick = () => done(null);
+    m.onclick = e => { if (e.target === m) done(null); };
+    if (needInput) setTimeout(() => { i.focus(); i.select(); }, 30);
+    else setTimeout(() => $('mdlgOk').focus(), 30);
+  });
+}
+
 function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -499,11 +629,59 @@ function setOut(el, obj) {
   };
 })();
 
+/* ---------------- 四态：加载 / 空 / 错误 / 离线 ----------------
+   全站统一走这一个入口，保证每个面板的空态与错误态观感一致，
+   此前每个面板各写一套空态字符串，导致观感不一致。 */
+function stateBox(kind, title, desc, action) {
+  const ico = { loading: '', empty: '○', err: '!', offline: '⚡' }[kind] || '○';
+  const wrap = document.createElement('div');
+  wrap.className = 'state ' + kind;
+  const i = document.createElement('div'); i.className = 'ico'; i.textContent = ico;
+  wrap.appendChild(i);
+  if (kind === 'loading') {
+    const bar = document.createElement('div'); bar.className = 'bar'; wrap.appendChild(bar);
+  }
+  const b = document.createElement('b'); b.textContent = title; wrap.appendChild(b);
+  if (desc) { const p = document.createElement('p'); p.textContent = desc; wrap.appendChild(p); }
+  if (action && action.label) {
+    const btn = document.createElement('button');
+    btn.className = 'ghost sm'; btn.textContent = action.label;
+    btn.onclick = action.onClick;
+    wrap.appendChild(btn);
+  }
+  return wrap;
+}
+/** 把某个容器切到指定状态。 */
+function setState(el, kind, title, desc, action) {
+  if (!el) return;
+  el.textContent = '';
+  el.appendChild(stateBox(kind, title, desc, action));
+}
+/** 让容器进入加载态并在返回后关闭；调用方无需手动收尾。 */
+async function withLoading(el, title, fn, desc) {
+  setState(el, 'loading', title || '载入中…', desc);
+  try { return await fn(); } finally { /* 由调用方渲染内容或再次 setState */ }
+}
+
 /* ---------------- 标签页 ---------------- */
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => showTab(t.dataset.tab));
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => showTab(t.dataset.tab);
+  t.tabIndex = 0;
+  t.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showTab(t.dataset.tab); }
+  });
+});
 function showTab(name) {
-  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.tab === name));
-  document.querySelectorAll('.pane').forEach(x => x.classList.toggle('on', x.id === 'pane-' + name));
+  document.querySelectorAll('.tab').forEach(x => {
+    const on = x.dataset.tab === name;
+    x.classList.toggle('on', on);
+    x.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  document.querySelectorAll('.pane').forEach(x => {
+    const on = x.id === 'pane-' + name;
+    x.classList.toggle('on', on);
+    x.hidden = !on;
+  });
   if (name === 'model') draw();
 }
 
@@ -1271,7 +1449,12 @@ $('bSaveMob').onclick = async () => {
 $('bDelMob').onclick = async () => {
   const name = $('mobName').value.trim();
   if (!name) { toast('请填写文件名', 'err'); return; }
-  if (!confirm('确认删除 ' + name + '.yml ？会保留一份版本备份。')) return;
+  const yes = await dialog({
+    title: '删除 ' + name + '.yml ?',
+    desc: '会保留一份版本备份，可在「版本」下拉里回滚。此操作不可直接撤销。',
+    okLabel: '删除'
+  });
+  if (!yes) return;
   try {
     const d = await api('/api/mobs/delete', { method: 'POST', body: JSON.stringify({ name: name }) });
     toast(d.message || d.error, d.ok ? 'ok' : 'err');
@@ -1300,10 +1483,31 @@ $('bSpawn').onclick = async () => {
 $('bNewMob').onclick = async () => {
   let tpls = [];
   try { tpls = (await api('/api/templates')).templates || []; } catch (e) { }
-  const names = tpls.map(t => t.id + ' — ' + t.description).join('\n');
-  const input = prompt('新建生物配置\n\n可选模板:\n' + names + '\n\n请输入文件名（不含 .yml）:', 'new_mob');
+  const input = await dialog({
+    title: '新建生物配置',
+    desc: '填写文件名（不含 .yml）。选择一个模板作为起点，之后可自由编辑。',
+    value: 'new_mob',
+    placeholder: '如 crystal_boss',
+    list: tpls.map(t => ({ label: t.id, desc: t.description })),
+    okLabel: '创建'
+  });
   if (!input) return;
-  const kind = (prompt('模板 id（boss / elite / npc / blank）:', 'boss') || 'blank').trim();
+  // 模板用下拉而非第二个弹窗：少一次上下文切换，也避免两个 prompt 连问时焦点跳走。
+  const pick = document.createElement('select');
+  pick.style.marginBottom = '12px';
+  pick.style.width = '100%';
+  const blank = { id: 'blank', description: '空白配置' };
+  const all = [blank].concat(tpls);
+  for (const t of all) {
+    const o = document.createElement('option');
+    o.value = t.id; o.textContent = t.id + ' — ' + t.description;
+    if (t.id === 'boss') o.selected = true;
+    pick.appendChild(o);
+  }
+  $('mdlgL').after(pick);
+  const wait = new Promise(r => { $('mdlgOk').onclick = () => r(pick.value); });
+  const kind = await wait;
+  if (kind == null) return;
   try {
     const d = await api('/api/mobs/create', { method: 'POST', body: JSON.stringify({ name: input.trim(), template: kind }) });
     if (d.ok) { toast(d.message, 'ok'); await loadMobs(); await openMob(d.name); showTab('mobs'); }
