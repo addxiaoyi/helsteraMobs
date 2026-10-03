@@ -45,8 +45,17 @@
         <dependency><groupId>dev.helstera</groupId><artifactId>helstera-platform</artifactId><scope>provided</scope></dependency>
     </dependencies>
 
+    <properties>
+        <!-- 每个 profile 覆盖 build.variant，产出互不覆盖的 jar。
+             此前所有 profile 共用 finalName=helsteraMobs-${project.version}，
+             phase 构建会静默覆盖完整版产物：按 phase 验证完再部署，
+             拿到的却是上一轮 phase 的残缺 jar（实测 1.03MB、缺 web 模块）。 -->
+        <build.variant>full</build.variant>
+    </properties>
+
     <build>
-        <finalName>helsteraMobs-${project.version}</finalName>
+        <!-- full 保持 helsteraMobs-${project.version} 原名，避免影响既有发布流程 -->
+        <finalName>helsteraMobs-${project.version}-${build.variant}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -89,6 +98,9 @@
         <!-- full / 5.0：完整版（默认激活） -->
         <profile>
             <id>full</id>
+            <properties>
+                <build.variant>full</build.variant>
+            </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
@@ -109,6 +121,9 @@
         <!-- 1.0：仅核心（api + core）：模型解析/校验/注册表/命令 -->
         <profile>
             <id>phase1</id>
+            <properties>
+                <build.variant>phase1</build.variant>
+            </properties>
             <dependencies>
                 <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
                 <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
@@ -118,6 +133,9 @@
         <!-- 2.0：+ runtime + render-paper：实例渲染 + 动画 + 玩家可见性 -->
         <profile>
             <id>phase2</id>
+            <properties>
+                <build.variant>phase2</build.variant>
+            </properties>
             <dependencies>
                 <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
                 <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
@@ -129,6 +147,9 @@
         <!-- 3.0：+ resourcepack + ai：资源包构建 + AI 行为 -->
         <profile>
             <id>phase3</id>
+            <properties>
+                <build.variant>phase3</build.variant>
+            </properties>
             <dependencies>
                 <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
                 <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
@@ -142,6 +163,9 @@
         <!-- 4.0：+ integrations + migration：外部插件适配 + 迁移中心 -->
         <profile>
             <id>phase4</id>
+            <properties>
+                <build.variant>phase4</build.variant>
+            </properties>
             <dependencies>
                 <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
                 <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
