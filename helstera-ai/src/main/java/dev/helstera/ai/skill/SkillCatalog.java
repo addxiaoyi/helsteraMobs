@@ -347,6 +347,61 @@ public final class SkillCatalog {
                             }
                         }
                     };
+                }),
+
+                // ---- 自身位移 ----
+
+                // dash <距离> [朝向]：以自身朝向为基准前冲，遇墙截断。
+                // blink <距离> [朝向]：朝目标方向瞬移，无目标时退回自身朝向。
+                // 朝向可选 target / forward——前者在无目标时同样退回 forward，
+                // 因此两个动作只在「有目标时朝谁」上有区别。
+                java.util.Map.entry("dash", (ActionFactory) a -> {
+                    double distance = Math.max(0.5, num(a, 0, 5));
+                    String mode = str(a, 1, "target").toLowerCase(Locale.ROOT);
+                    return ctx -> {
+                        if (!ctx.instanceValid()) return;
+                        Location me = ctx.instance().location();
+                        if (me == null || me.getWorld() == null) return;
+                        org.bukkit.util.Vector dir = dashDirection(ctx, me, mode);
+                        if (dir == null) return;
+                        step(ctx.instance().baseEntity().orElse(null), dir, distance);
+                    };
+                }),
+                java.util.Map.entry("blink", (ActionFactory) a -> {
+                    double distance = Math.max(0.5, num(a, 0, 8));
+                    String mode = str(a, 1, "target").toLowerCase(Locale.ROOT);
+                    return ctx -> {
+                        if (!ctx.instanceValid()) return;
+                        Location me = ctx.instance().location();
+                        if (me == null || me.getWorld() == null) return;
+                        org.bukkit.util.Vector dir = dashDirection(ctx, me, mode);
+                        if (dir == null) return;
+                        Location dest = walkClear(me, dir, distance);
+                        if (dest == null) return;
+                        var self = ctx.instance().baseEntity().orElse(null);
+                        if (self == null) return;
+                        try {
+                            self.teleport(dest);
+                        } catch (Throwable ignored) {
+                        }
+                    };
+                }),
+
+                // knockback-self <水平力> [上抛力>：给自身一个冲量，配合位移做击退效果。
+                java.util.Map.entry("knockback-self", (ActionFactory) a -> {
+                    double power = num(a, 0, 1.0);
+                    double up = num(a, 1, 0.4);
+                    return ctx -> {
+                        if (!ctx.instanceValid()) return;
+                        var self = ctx.instance().baseEntity().orElse(null);
+                        Location me = ctx.instance().location();
+                        if (self == null || me == null) return;
+                        try {
+                            org.bukkit.util.Vector dir = dashDirection(ctx, me, "forward");
+                            self.setVelocity(dir.multiply(power).setY(up));
+                        } catch (Throwable ignored) {
+                        }
+                    };
                 })
         );
     }
@@ -384,6 +439,62 @@ public final class SkillCatalog {
         List<LivingEntity> cands = nearby(me, radius);
         if (cands.isEmpty()) return List.of();
         return t.select(ctx.instance(), cands, List.of());
+    }
+
+    // ------------------------------------------------------------------
+    // 自身位移辅助
+    // ------------------------------------------------------------------
+
+    /**
+     * 求位移方向。
+     *
+     * <p>优先按目标方向；没有目标时退回自身朝向，让「向前突进」在无仇恨时依然可用。
+     * 方向退化（与目标重合）时同样退回朝向，避免归一化除零得到 NaN。</p>
+     */
+    private static org.bukkit.util.Vector dashDirection(BehaviorContext ctx, Location me, String mode) {
+        Location target = ctx.target().map(t -> t.getLocation()).orElse(null);
+        if (target != null && me.getWorld() != null && target.getWorld() == me.getWorld()) {
+            org.bukkit.util.Vector diff = target.toVector().subtract(me.toVector());
+            if ("back".equals(mode)) diff = diff.negate();
+            else if ("near".equals(mode) || "away".equals(mode)) diff = diff.normalize().negate();
+            if (diff.lengthSquared() > 1e-6) {
+                return diff.normalize();
+            }
+        }
+        return me.getDirection();
+    }
+
+    /** 按方向设置速度向量，实现前冲。速度按 1 tick 换算，故直接以位移量作速度。 */
+    private static void step(org.bukkit.entity.Entity self, org.bukkit.util.Vector dir, double distance) {
+        if (self == null) return;
+        try {
+            self.setVelocity(dir.multiply(distance));
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * 逐格探测前方通路，返回第一个遇到方块前的落脚点。
+     *
+     * <p>遇墙即停，不穿墙——传送类位移若不探测，会把模型送到实心方块内部，
+     * 之后所有碰撞判定与客户端渲染都跟着错位。</p>
+     */
+    private static Location walkClear(Location from, org.bukkit.util.Vector dir, double distance) {
+        org.bukkit.util.Vector d = dir.clone().normalize();
+        Location cur = from.clone();
+        int steps = Math.max(1, (int) Math.ceil(distance));
+        for (int i = 0; i < steps; i++) {
+            Location next = cur.clone().add(d);
+            try {
+                if (cur.getWorld().getBlockAt(next).getType() != org.bukkit.Material.AIR) {
+                    return i == 0 ? null : cur;
+                }
+            } catch (Throwable t) {
+                return cur;
+            }
+            cur = next;
+        }
+        return cur;
     }
 
     /** 半径内的其它生物；自身排除在外，避免动作把自己的模型当目标。 */
