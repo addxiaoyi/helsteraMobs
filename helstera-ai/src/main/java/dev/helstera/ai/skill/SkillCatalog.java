@@ -33,6 +33,28 @@ public final class SkillCatalog {
         Consumer<BehaviorContext> create(List<String> args);
     }
 
+    /**
+     * 召唤目标：由运行期注入，供 summon 动作生成实例。
+     *
+     * <p>刻意做成注入钩子而非直接依赖 InstanceManager：{@link SkillCatalog} 是纯
+     * 目录类，若在这里直接构造实例管理器，它就无法在单元测试里被加载。</p>
+     */
+    public interface Summoner {
+        /** 生成一个实例；返回 false 表示模型未加载或位置非法。 */
+        boolean summon(String modelId, org.bukkit.Location at);
+    }
+
+    /**
+     * 召唤钩子。由 {@code AiManager} 在启动时注入实例管理器。
+     *
+     * <p>未注入时 summon 动作静默返回——技能目录不应因为运行期组件缺失而无法加载。</p>
+     */
+    private static volatile Summoner summoner;
+
+    public static void summoner(Summoner s) {
+        summoner = s;
+    }
+
     private SkillCatalog() {
     }
 
@@ -400,6 +422,32 @@ public final class SkillCatalog {
                             org.bukkit.util.Vector dir = dashDirection(ctx, me, "forward");
                             self.setVelocity(dir.multiply(power).setY(up));
                         } catch (Throwable ignored) {
+                        }
+                    };
+                }),
+
+                // ---- 召唤 ----
+
+                // summon <modelId> [数量] [半径]：在自身附近生成同模型实例。
+                // 数量与半径都做上限约束——一份配置就能刷出上百个实例把渲染打满，
+                // 而这种错误在服务端上表现为整体卡顿，很难定位到具体配置项。
+                java.util.Map.entry("summon", (ActionFactory) a -> {
+                    String modelId = str(a, 0, "");
+                    int count = (int) Math.max(1, Math.min(8, num(a, 1, 1)));
+                    double radius = Math.max(0, Math.min(32, num(a, 2, 3)));
+                    return ctx -> {
+                        Summoner hook = summoner;
+                        if (hook == null || modelId.isBlank() || !ctx.instanceValid()) return;
+                        Location me = ctx.instance().location();
+                        if (me == null || me.getWorld() == null) return;
+                        for (int i = 0; i < count; i++) {
+                            // 环形散布，避免多个召唤物完全重叠
+                            double ang = (Math.PI * 2 * i) / count;
+                            Location at = me.clone().add(Math.cos(ang) * radius, 0, Math.sin(ang) * radius);
+                            try {
+                                hook.summon(modelId, at);
+                            } catch (Throwable ignored) {
+                            }
                         }
                     };
                 })

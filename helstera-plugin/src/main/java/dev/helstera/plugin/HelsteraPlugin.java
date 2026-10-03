@@ -233,6 +233,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (getConfig().getBoolean("ai.enabled", true)) {
                 AiManager a = new AiManager(this, (InstanceManagerImpl) instances, bus);
                 a.setBehaviors(br);
+                // summon 动作需要一个生成钩子才能落地；SkillCatalog 是纯目录类，
+                // 不能直接依赖实例管理器，否则单元测试里根本加载不了它。
+                dev.helstera.ai.skill.SkillCatalog.summoner((modelId, at) -> {
+                    var inst = ((InstanceManagerImpl) instances)
+                            .spawn(modelId, at, dev.helstera.api.instance.SpawnOptions.defaults());
+                    return inst != null;
+                });
                 SkillService skills = new SkillService(br, getLogger());
                 if (!new java.io.File(getDataFolder(), "skills.yml").exists()) {
                     saveResource("skills.yml", false);
