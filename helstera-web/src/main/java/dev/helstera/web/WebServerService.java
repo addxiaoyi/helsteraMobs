@@ -57,6 +57,21 @@ public final class WebServerService {
     private static final Set<String> MODEL_FILE_SET = Set.copyOf(MODEL_FILES);
 
     private final org.bukkit.plugin.Plugin plugin;
+    /**
+     * 兜底路由的路径模式，按段数从 1 到 5。
+     *
+     * <p>Javalin 的路径参数不跨 "/"，所以多段路径必须逐级注册。
+     * 现有 API 最深的是 4 段（/api/mobs/versions/restore 一类），
+     * 这里留到 5 段作为余量。</p>
+     */
+    private static final String[][] CATCH_ALL_PATTERNS = {
+            {"/{p}"},
+            {"/{p}/{q}"},
+            {"/{p}/{q}/{r}"},
+            {"/{p}/{q}/{r}/{s}"},
+            {"/{p}/{q}/{r}/{s}/{t}"},
+    };
+
     private final WebBridge bridge;
     private String host;
     private final int port;
@@ -133,11 +148,17 @@ public final class WebServerService {
             });
             // 其余请求统一交给既有业务层：把 Javalin 请求转成内部 Request，
             // 复用已验证过的路由与处理逻辑，避免为了换传输层重写一千多行。
-            app.get("/{p}", this::adapt);
-            app.post("/{p}", this::adapt);
-            app.put("/{p}", this::adapt);
-            app.delete("/{p}", this::adapt);
-            app.options("/{p}", this::adapt);
+            //
+            // 必须按段数逐级注册：Javalin 的 "/{p}" 只匹配**一段**路径，
+            // 而业务 API 绝大多数是两段以上（/api/status、/api/model/files…）。
+            // 只注册 "/{p}" 的后果是静态资源能开、但所有 API 一律 404。
+            for (String[] pat : CATCH_ALL_PATTERNS) {
+                app.get(pat[0], this::adapt);
+                app.post(pat[0], this::adapt);
+                app.put(pat[0], this::adapt);
+                app.delete(pat[0], this::adapt);
+                app.options(pat[0], this::adapt);
+            }
             app.start(host, port);
         } catch (Throwable e) {
             app = null;
@@ -420,6 +441,8 @@ public final class WebServerService {
                 return json(401, Map.of("error", "令牌无效（页面打开的 URL 已自动带令牌）"));
             }
             return handleApi(req);
+        } catch (BadRequestException bad) {
+            return json(400, Map.of("error", bad.getMessage()));
         } catch (Throwable t) {
             return json(500, Map.of("error", String.valueOf(t.getMessage())));
         }
@@ -929,9 +952,19 @@ public final class WebServerService {
     private Map<?, ?> readJson(Request req) {
         if (req.body == null || req.body.isBlank()) return Map.of();
         try {
-            return GSON.fromJson(req.body, Map.class);
+            Map<?, ?> m = GSON.fromJson(req.body, Map.class);
+            return m == null ? Map.of() : m;
         } catch (Exception e) {
-            return Map.of();
+            // 请求体不是合法 JSON：显式标记成 400。静默当成空对象会让
+            // 「客户端发错了」被误判成「客户端没传字段」，最后写出一个空配置。
+            throw new BadRequestException("请求体不是合法 JSON：" + e.getMessage());
+        }
+    }
+
+    /** 请求方的问题（非法 JSON / 越界路径），对应 HTTP 400 而非 500。 */
+    private static final class BadRequestException extends RuntimeException {
+        BadRequestException(String m) {
+            super(m);
         }
     }
 
