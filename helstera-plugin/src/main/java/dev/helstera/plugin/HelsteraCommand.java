@@ -6,6 +6,7 @@ import dev.helstera.api.instance.ModelInstance;
 import dev.helstera.api.migration.MigrationReport;
 import dev.helstera.api.model.ModelDefinition;
 import dev.helstera.runtime.instance.InstanceManagerImpl;
+import dev.helstera.runtime.perf.RollingMetrics;
 import dev.helstera.runtime.scheduler.HelsteraScheduler;
 import dev.helstera.web.WebServerService;
 import org.bukkit.Location;
@@ -449,10 +450,25 @@ public final class HelsteraCommand implements TabExecutor {
                 + " §7玩家订阅: §f" + plugin.visibility().totalSubscriptions());
         s.sendMessage("§7本 Tick 渲染更新: §f" + sch.updatesLastTick()
                 + " §7累计: §f" + sch.totalUpdates());
-        s.sendMessage("§7采样耗时: §f" + String.format("%.2f", sch.lastSampleMillis()) + " ms"
+        // 分位数才是判断性能是否退化的依据：瞬时值看不出抖动与恶化的区别
+        RollingMetrics.Snapshot cost = sch.tickCostSnapshot();
+        RollingMetrics.Snapshot perSample = sch.updatesSnapshot();
+        s.sendMessage("§7采样耗时 §8(最近 " + cost.count() + "/" + cost.capacity() + " 轮) §7"
+                + "p50 §f" + fmt(cost.p50())
+                + "§7  p95 §f" + fmt(cost.p95())
+                + "§7  p99 §f" + fmt(cost.p99())
+                + "§7  max §f" + fmt(cost.max()) + " ms"
+                + (cost.reliable() ? "" : " §8(样本不足，仅供参考)"));
+        s.sendMessage("§7每轮更新数 §7p50 §f" + (int) perSample.p50()
+                + " §7p99 §f" + (int) perSample.p99()
                 + " §7无观众跳过: §f" + sch.skippedNoViewer()
                 + " §7预算跳过: §f" + sch.skippedBudget());
         s.sendMessage("§7TPS: §f" + String.format("%.1f", plugin.getServer().getTPS()[0]));
+    }
+
+    /** 微秒转毫秒并保留两位，避免各处重复格式化。 */
+    private static String fmt(double micros) {
+        return String.format("%.2f", micros / 1000.0);
     }
 
     private void pack(CommandSender s, String[] args) {

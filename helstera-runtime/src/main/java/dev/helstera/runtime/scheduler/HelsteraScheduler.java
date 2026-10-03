@@ -177,18 +177,13 @@ public final class HelsteraScheduler {
     public long skippedBudget() { return skippedBudget; }
     public double lastSampleMillis() { return lastSampleMillis; }
 
-    /**
-     * 采样循环耗时分布（微秒）。
-     *
-     * <p>对外暴露窗口快照而非裸数组：调用方（HTTP 线程、命令）只读一次即可，
-     * 且不会因为并发遍历环形缓冲看到撕裂的中间态。</p>
-     */
+    /** 采样循环耗时的分位数快照，单位微秒。 */
     public RollingMetrics.Snapshot tickCostSnapshot() { return tickCostMicros.snapshot(); }
 
-    /** 每轮实际更新的实例数分布，用于确认 LOD 与预算是否在按预期降级。 */
-    public RollingMetrics.Snapshot updatesPerSampleSnapshot() { return updatedPerSample.snapshot(); }
+    /** 每轮实际更新实例数的分位数快照。 */
+    public RollingMetrics.Snapshot updatesSnapshot() { return updatedPerSample.snapshot(); }
 
-    /** 重载/停服时清空窗口，避免上一段运行的样本污染新一轮观测。 */
+    /** 清空指标窗口：重载后调用，避免上一段运行的样本混入新一轮观测。 */
     public void resetMetrics() {
         tickCostMicros.reset();
         updatedPerSample.reset();
