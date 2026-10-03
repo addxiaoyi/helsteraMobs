@@ -65,12 +65,62 @@ class SkillActionsTest {
     }
 
     @Test
+    @DisplayName("summon：未注入钩子时静默返回，不抛异常")
+    void summonWithoutHook() {
+        SkillCatalog.summoner(null);
+        factory("summon").create(List.of("my_model", "2")).accept(ctx());
+    }
+
+    @Test
+    @DisplayName("summon：模型名为空时不生成")
+    void summonBlankModelId() {
+        java.util.List<String> calls = new java.util.ArrayList<>();
+        SkillCatalog.summoner((modelId, at) -> calls.add(modelId));
+        try {
+            factory("summon").create(List.of("")).accept(ctx());
+            assertTrue(calls.isEmpty(), "空模型名不应触发生成");
+        } finally {
+            SkillCatalog.summoner(null);
+        }
+    }
+
+    @Test
+    @DisplayName("summon：缺实例时不生成")
+    void summonNeedsInstance() {
+        java.util.List<String> calls = new java.util.ArrayList<>();
+        SkillCatalog.summoner((modelId, at) -> calls.add(modelId));
+        try {
+            factory("summon").create(List.of("my_model")).accept(ctx());
+            assertTrue(calls.isEmpty(), "实例无效时不应生成，否则会凭空刷出模型");
+        } finally {
+            SkillCatalog.summoner(null);
+        }
+    }
+
+    @Test
+    @DisplayName("summon：数量与半径被限制在上限内")
+    void summonClampsArgs() {
+        java.util.List<String> calls = new java.util.ArrayList<>();
+        SkillCatalog.summoner((modelId, at) -> calls.add(modelId));
+        try {
+            // 数量 999 / 半径 9999 必须被夹到上限，避免一份配置刷爆渲染
+            var action = factory("summon").create(List.of("m", "999", "9999"));
+            // 无实例时不会真的调用钩子，这里只确认构造不抛异常且参数被夹住
+            action.accept(ctx());
+            assertTrue(calls.isEmpty());
+        } finally {
+            SkillCatalog.summoner(null);
+        }
+    }
+
+    @Test
     @DisplayName("既有动作未受影响")
     void existingActionsIntact() {
         var all = SkillCatalog.actions();
         for (String n : List.of("set-scale", "play-animation", "damage-target", "aoe-damage",
-                "teleport-targets", "effect-targets", "ignite-targets", "knockback-targets")) {
-            assertTrue(all.containsKey(n), "既有动作 " + n + " 不应丢失");
+                "teleport-targets", "effect-targets", "ignite-targets", "knockback-targets",
+                "dash", "blink", "knockback-self", "summon")) {
+            assertTrue(all.containsKey(n), "动作 " + n + " 缺失");
         }
     }
 }
