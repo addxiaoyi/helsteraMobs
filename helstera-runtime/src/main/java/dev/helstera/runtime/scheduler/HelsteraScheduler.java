@@ -30,6 +30,7 @@ public final class HelsteraScheduler {
     private final InstanceManagerImpl instances;
     private final ToIntFunction<ModelInstance> visibleCount;
     private final ToDoubleFunction<ModelInstance> nearestViewerDistance;
+    private final TaskQueue tasks = new TaskQueue();
 
     private BukkitTask task;
     private int updateRateTicks = 1;          // render.update-rate（多少 Tick 更新一次动画采样）
@@ -71,11 +72,33 @@ public final class HelsteraScheduler {
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tickAll, 1L, 1L);
     }
 
+    /**
+     * 排队一个单次任务，延迟 {@code delayTicks} 个 tick 后执行。
+     *
+     * <p>刻意不直接用 {@code BukkitScheduler.runTaskLater}：每个模型生成一个
+     * 定时器在几百个实例下就是几百个任务对象，而 Bukkit 的任务表是线性扫描的。
+     * 统一并进本调度器的一条 Tick，所有任务的遍历成本是常数级。</p>
+     */
+    public TaskQueue.Handle runLater(Runnable body, int delayTicks) {
+        return tasks.runLater(tick, body, delayTicks);
+    }
+
+    /** 排队一个重复任务：先等 delayTicks，之后每 periodTicks 执行一次。 */
+    public TaskQueue.Handle runTimer(Runnable body, int delayTicks, int periodTicks) {
+        return tasks.runTimer(tick, body, delayTicks, periodTicks);
+    }
+
+    /** 队列中待执行的任务数。 */
+    public int queuedTasks() {
+        return tasks.size();
+    }
+
     public void stop() {
         if (task != null) {
             task.cancel();
             task = null;
         }
+        tasks.clear();
     }
 
     /** 检测基础实体位置/朝向变化并同步显示实体（骑乘、传送、行走）。 */
@@ -105,6 +128,11 @@ public final class HelsteraScheduler {
     private void tickAll() {
         tick++;
         long start = System.nanoTime();
+
+        // 队列任务先于实例更新执行：延时效果在这一 Tick 就生效，
+        // 不必等到下一次实例采样。
+        tasks.drain(tick);
+
         List<ModelInstanceImpl> batch = new ArrayList<>(instances.allImpl());
 
         // 基础实体移动同步 & 失效清理每 Tick 执行（位置检测便宜）
