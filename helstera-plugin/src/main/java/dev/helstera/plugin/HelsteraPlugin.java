@@ -971,6 +971,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     // ------------------------------------------------------------------
 
     public ModelRegistryImpl registry() { return registry; }
+
+    /** 模型校验器；供 /helstera check 汇总结构性问题。 */
+    public ModelValidator validator() { return validator; }
     public InstanceManagerImpl instances() { return instances == null ? null : (InstanceManagerImpl) instances; }
     public PlayerVisibilityService visibility() { return visibility == null ? null : (PlayerVisibilityService) visibility; }
     public HelsteraScheduler scheduler() { return scheduler == null ? null : (HelsteraScheduler) scheduler; }

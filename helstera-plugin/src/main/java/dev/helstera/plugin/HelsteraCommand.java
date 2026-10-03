@@ -521,6 +521,51 @@ public final class HelsteraCommand implements TabExecutor {
             }
         }
 
+        // 4. 掉落表
+        var lootWarn = plugin.loot().warnings();
+        if (lootWarn.isEmpty()) {
+            s.sendMessage("§a✓ §7掉落表无问题");
+        } else {
+            problems += lootWarn.size();
+            s.sendMessage("§e✗ §7掉落表 §f" + lootWarn.size()
+                    + " §7处问题 §8(改 loot.yml 后 /helstera reload)");
+            for (int i = 0; i < Math.min(lootWarn.size(), 8); i++) {
+                s.sendMessage("§8  - §7" + lootWarn.get(i));
+            }
+            if (lootWarn.size() > 8) {
+                s.sendMessage("§8  … 还有 " + (lootWarn.size() - 8) + " 条");
+            }
+        }
+
+        // 5. 模型校验：逐个模型跑一遍 validate，把结构性问题也纳入体检。
+        //    刻意跳过文件路径——路径在聊天框里会折行，反而看不清是哪条规则不满足。
+        int modelIssues = 0;
+        var validator = plugin.validator();
+        for (var m : plugin.registry().all()) {
+            List<String> found;
+            try {
+                found = validator.validate((dev.helstera.core.model.ModelDefinitionImpl) m);
+            } catch (Throwable t) {
+                found = List.of("校验时抛异常：" + t);
+            }
+            for (String issue : found) {
+                if (modelIssues < 8) {
+                    s.sendMessage("§8  - §7" + m.id() + " §8" + issue);
+                }
+                modelIssues++;
+            }
+        }
+        if (modelIssues == 0) {
+            s.sendMessage("§a✓ §7模型校验通过 §8(" + models + " 个模型)");
+        } else {
+            problems += modelIssues;
+            s.sendMessage("§e✗ §7模型校验 §f" + modelIssues
+                    + " §7处问题");
+            if (modelIssues > 8) {
+                s.sendMessage("§8  … 还有 " + (modelIssues - 8) + " 条");
+            }
+        }
+
         if (problems == 0) {
             s.sendMessage("§a全部检查通过。");
         } else {
