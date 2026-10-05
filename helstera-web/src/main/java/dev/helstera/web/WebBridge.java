@@ -105,6 +105,21 @@ public interface WebBridge {
     /** config.yml 中已定义的 ai.profiles 名称，供 Mob 表单下拉选择。 */
     List<String> profiles();
 
+    /**
+     * 各档案的免疫/伤害倍率摘要，供网页端展示。
+     *
+     * <p>把<b>已编译的规则</b>而不是原始配置发出去：网页端要显示的是
+     * 「这个 cause 会被哪条规则盖住」，而不是「作者写了什么」。
+     * 只发原始配置的话，未知名、重复声明、已跳过条目在页面上完全看不出来，
+     * 而这些正是「配了没效果」的全部来源。</p>
+     *
+     * @return 每个档案一条：name / rules（key/kind/multiplier/negate/conditions）/ warnings
+     */
+    List<Map<String, Object>> immunityInfo();
+
+    /** 免疫监听器是否已注册；false 时所有免疫规则都不会生效。 */
+    boolean immunityActive();
+
     /** 已加载的模型 ID 列表，供 Mob 表单下拉选择。 */
     List<String> modelIds();
 

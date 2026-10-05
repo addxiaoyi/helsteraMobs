@@ -75,7 +75,10 @@ class SkillActionsTest {
     @DisplayName("summon：模型名为空时不生成")
     void summonBlankModelId() {
         java.util.List<String> calls = new java.util.ArrayList<>();
-        SkillCatalog.summoner((modelId, at) -> calls.add(modelId));
+        SkillCatalog.summoner((modelId, at) -> {
+            calls.add(modelId);
+            return 1;   // Summoner 现返回新实例 id（-1 表示失败）
+        });
         try {
             factory("summon").create(List.of("")).accept(ctx());
             assertTrue(calls.isEmpty(), "空模型名不应触发生成");
@@ -88,7 +91,10 @@ class SkillActionsTest {
     @DisplayName("summon：缺实例时不生成")
     void summonNeedsInstance() {
         java.util.List<String> calls = new java.util.ArrayList<>();
-        SkillCatalog.summoner((modelId, at) -> calls.add(modelId));
+        SkillCatalog.summoner((modelId, at) -> {
+            calls.add(modelId);
+            return 1;   // Summoner 现返回新实例 id（-1 表示失败）
+        });
         try {
             factory("summon").create(List.of("my_model")).accept(ctx());
             assertTrue(calls.isEmpty(), "实例无效时不应生成，否则会凭空刷出模型");
@@ -101,7 +107,10 @@ class SkillActionsTest {
     @DisplayName("summon：数量与半径被限制在上限内")
     void summonClampsArgs() {
         java.util.List<String> calls = new java.util.ArrayList<>();
-        SkillCatalog.summoner((modelId, at) -> calls.add(modelId));
+        SkillCatalog.summoner((modelId, at) -> {
+            calls.add(modelId);
+            return 1;   // Summoner 现返回新实例 id（-1 表示失败）
+        });
         try {
             // 数量 999 / 半径 9999 必须被夹到上限，避免一份配置刷爆渲染
             var action = factory("summon").create(List.of("m", "999", "9999"));

@@ -33,6 +33,16 @@
             实际打进哪些模块由下方 profile 决定。运行期缺失由 onEnable 里的
             try/catch NoClassDefFoundError 降级处理。
         -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId><scope>provided</scope></dependency>
         <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId><scope>provided</scope></dependency>
         <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId><scope>provided</scope></dependency>

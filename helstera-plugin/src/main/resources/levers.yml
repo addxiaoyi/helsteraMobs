@@ -1,0 +1,31 @@
+# 拉杆（Levers）
+# 玩家右键指定区域内的方块时，执行 actions 里的动作。
+# 动作语法与 mobs/*.yml 的 Skills 完全一致。
+#
+# 区域两种写法：
+#   1) pos1 / pos2 —— 立方体范围，两个角点可以任意顺序写
+#   2) at: [x, y, z] —— 单个方块
+#
+# 常见「按了没反应」的原因，都会在 /helstera lever 里列出来：
+#   - actions 为空
+#   - pos1/pos2 或 at 都没写
+#   - world 写错（必须是服务器的世界名，如 world / world_nether）
+
+levers:
+  # 示例：主城传送开关。右键后广播并播放声音。
+  teleport_hub:
+    world: world
+    at: [10, 64, -20]
+    cooldown: 20          # 20 tick = 1 秒；0 表示无冷却
+    permission: helstera.lever
+    actions:
+      - "message-global §a传送阵已启动"
+
+  # 示例：区域型拉杆。覆盖一个房间，右键房间内任意方块都触发。
+  boss_chest:
+    world: world
+    pos1: {x: 100, y: 60, z: 100}
+    pos2: {x: 108, y: 66, z: 108}
+    cooldown: 100
+    actions:
+      - "sound ENTITY_ENDER_DRAGON_GROWL"

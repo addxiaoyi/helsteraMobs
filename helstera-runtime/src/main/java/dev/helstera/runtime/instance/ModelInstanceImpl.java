@@ -200,6 +200,33 @@ public final class ModelInstanceImpl implements ModelInstance {
         return pose;
     }
 
+    /**
+     * 骨骼名 -> 当前世界坐标（块单位）。
+     *
+     * <p>由渲染层在计算世界矩阵时顺带写入，AI 等非渲染模块读取。此前骨骼世界坐标
+     * 只存在渲染器私有的 Visuals 里，模型作者在 JSON 里写的 {@code bone.hitbox}
+     * 因而在运行期无人消费——命中判定退回成以模型原点为心的球。</p>
+     *
+     * <p>空 Map 表示渲染层尚未写入过（例如实例未启用渲染）：此时命中判定应退回
+     * 球形近似，而不是判为「全部命中」。</p>
+     */
+    private volatile Map<String, Location> boneWorld = Map.of();
+
+    /**
+     * 写入骨骼世界坐标。调用方须交出该 Map 的所有权（之后不再修改）。
+     *
+     * <p>刻意不做 {@code Map.copyOf}：这是每 Tick 每实例都会走一次的路径，
+     * 多一次全量拷贝在几十个实例同时活动时是可观的垃圾，而渲染层本来就在
+     * 每 Tick 新建这个 Map，交出所有权不会带来别名问题。</p>
+     */
+    public void setBoneWorld(Map<String, Location> boneWorld) {
+        this.boneWorld = boneWorld == null ? Map.of() : boneWorld;
+    }
+
+    public Map<String, Location> getBoneWorld() {
+        return boneWorld;
+    }
+
     /** 骨骼 pivot 查询（渲染层计算世界变换用）。 */
     public Vec3 bonePivot(String boneName) {
         var b = model.bone(boneName);

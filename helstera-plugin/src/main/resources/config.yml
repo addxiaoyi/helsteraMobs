@@ -48,6 +48,42 @@ ai:
   enabled: true
   # AI 决策间隔（Tick）
   decision-ticks: 10
+  # ---- 阵营 ----
+  # 阵营影响三处：目标选择跳过同伙、同阵营之间免伤、/helstera faction 可查询。
+  # 未归队（档案不写 faction）= 与所有阵营敌对，这是存量配置不变的前提。
+  factions:
+    # 玩家所属阵营；留空表示玩家不归队。
+    players: ""
+    # 同阵营之间是否免伤。关掉后阵营只影响「打谁」，不影响「打不打得动」。
+    block-friendly-fire: true
+    factions:
+      # 只需在一方声明 allies，另一侧自动对称，无需写两遍
+      royal-guard:
+        display: "王近卫"
+        allies: [kingdom]
+      kingdom:
+        display: "王国"
+      bandit:
+        display: "山贼"
+        allies: [bandit-camp]
+      bandit-camp:
+        display: "贼营"
+  # ---- 寻路 ----
+  # 仅当档案写了 can-pathfind: true 时才生效；未开启时全部走直线，行为不变。
+  # 通行判定优先级：blocked-materials > passable-materials > Bukkit isPassable()
+  # ---- 召唤（minion）----
+  # summon 动作与 on-summon 触发器会互相触发，没有上限时一份配置就能无限套娃，
+  # 表现为「生成上千只怪、服务端直接卡死」且不报错。<=0 会回落到默认值。
+  summon:
+    max-depth: 2        # 召唤物还能再召唤几层
+    max-per-owner: 24   # 同一召唤主名下最多几只召唤物
+  nav:
+    # 显式视为可穿过（默认按 Bukkit 判定即可覆盖大多数情形）
+    passable-materials: [oak_door, iron_door, ladder, vine, torch]
+    # 显式视为不可穿过。放这里能覆盖 Bukkit 的判定，例如把水当墙来禁止涉水。
+    blocked-materials: []
+    # 垂直方向可爬升的格数；0 表示纯水平寻路。调大会让搜索空间膨胀。
+    vertical-range: 4
   profiles:
     default:
       sight-radius: 16.0
@@ -75,6 +111,51 @@ ai:
       can-flee: false
       can-patrol: true
       can-attack: true
+      # ---- 免疫 / 伤害倍率（对标 MythicMobs Immunities / DamageModifiers）----
+      # 未配置 = 不免疫。这里不做任何默认免疫，因为漏配的表现是「怪物打不动」，
+      # 比多配隐蔽得多：多配至少还有日志，漏配什么都没有。
+      #
+      # immunities 是免疫清单（伤害归零）；damage-modifiers 是倍率表。
+      # 两者都可以写「精确 cause」或「类别名」，同名时精确 cause 优先。
+      #
+      # 精确 cause（Bukkit 1.21.1 的 DamageCause 常量）示例：
+      #   FIRE / FIRE_TICK / LAVA / DROWNING / SUFFOCATION / STARVATION /
+      #   VOID / FALL / POISON / ENTITY_ATTACK / PROJECTILE / MAGIC / THORNS ...
+      #   大小写与分隔符不敏感：fire_tick、FIRE-TICK、FireTick 都成立。
+      #
+      # 类别名（/helstera immunity 会列出每个类别覆盖了哪些 cause）：
+      #   entity-attack  近战（含横扫）      fire        火/岩浆/熔岩/热方块/仙人掌
+      #   projectile     远程弹丸            fall        摔落/撞墙/坠落方块
+      #   magic          法术与龙息          drowning    溺水/干燥/窒息/挤压
+      #   poison         毒与凋零            explosion   爆炸
+      #   environment    全部环境伤害        void        虚空与世界边界
+      #   elemental      雷击与冰冻          starvation  饥饿
+      #   contact/thorns/self/sonic/custom   各自对应的单一来源
+      #   all            一切伤害
+      #
+      # 优先级：精确 cause > 类别；多条类别同时命中时「先写的那条」生效。
+      #
+      # 负倍率 = 回血。倍率作用于「事件原始伤害」而非已修正过的值，因此不会逐次衰减。
+      #
+      # 条件化：任一条规则都可带 when（单条）或 conditions（多条件，全部满足才生效）。
+      # 条件名与技能 require / on-decision 用的是同一套 BehaviorRegistry，
+      # 因此技能里能用的条件这里也能用。写错条件名的表现是「该条永不生效」，
+      # 用 /helstera immunity 的逐 cause 试算排查。
+      #
+      # 条件不成立时按「该条规则不存在」处理，并继续向下匹配下一条，
+      # 而不是把伤害整体冻结——所以条件规则可以和类别规则共存。
+      #
+      # 下面几行是示例，删掉即恢复默认（不免疫）。修改后 /helstera reload config。
+      immunities: []
+      # damage-modifiers:
+      #   fire: 0.5              # 火伤减半（类别，覆盖 FIRE/FIRE_TICK/LAVA/...）
+      #   entity-attack: -1.0    # 近战伤害转为回血
+      #   PROJECTILE:            # 精确 cause：免疫箭与所有弹丸
+      #     immune: true
+      #   drowning: 0.25         # 溺水只剩四分之一
+      #   fire:                  # 同名 key 只保留一条：免疫与倍率是同一张表
+      #     when: health-below 0.3
+      #     multiplier: 0.0
 
 # 掉落表与刷怪点。
 # 这两块各自独立成 loot.yml / spawners.yml（首次启动自动生成到插件目录），

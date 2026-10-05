@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -99,6 +101,107 @@ class ImportersTest {
     void mythicWithoutMobs(@TempDir Path root) throws Exception {
         Path f = write(root, "Mobs/b.yml", "something-else:\n  x: 1\n");
         assertTrue(new MythicMobsImporter().convert(f).isEmpty());
+    }
+
+    // ---------- MythicMobs：免疫 / 伤害倍率 ----------
+
+    private static YamlConfiguration converted(Path f) throws Exception {
+        Optional<Map<String, Object>> p = plan(new MythicMobsImporter().convert(f));
+        assertTrue(p.isPresent(), "应产生写入计划");
+        return YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(p.get().get("content"))));
+    }
+
+    @Test
+    @DisplayName("MythicMobs：Immunities 落地为 mob.immunities，不再报 BLOCKER")
+    void mythicMapsImmunities(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/b.yml",
+                "mobs:\n  Boss:\n    Immunities:\n      - FIRE\n      - LAVA\n");
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(f);
+        YamlConfiguration t = converted(f);
+        assertEquals(List.of("FIRE", "LAVA"), t.getStringList("mob.immunities"),
+                "MM 免疫清单应直接落地，否则用户得手工重建本可自动迁移的配置");
+        assertFalse(entries.stream().anyMatch(e ->
+                        "unsupported".equals(e.get("status"))
+                                && String.valueOf(e.get("source-key")).contains("Immunities")),
+                "已支持的 Immunities 不得再报 unsupported");
+        assertTrue(t.get("mob.unsupported.Immunities") == null,
+                "已迁移的节不应同时留在 unsupported 里");
+    }
+
+    @Test
+    @DisplayName("MythicMobs：Immunities 写单条时退化成字符串也要生效")
+    void mythicMapsSingleImmunity(@TempDir Path root) throws Exception {
+        // YAML 里只写一条会退化成字符串；只判 isList 会让这一条静默消失
+        Path f = write(root, "Mobs/b.yml", "mobs:\n  Boss:\n    Immunities: FIRE\n");
+        assertEquals(List.of("FIRE"), converted(f).getStringList("mob.immunities"));
+    }
+
+    @Test
+    @DisplayName("MythicMobs：DamageModifiers 裸倍率落地")
+    void mythicMapsBareModifiers(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/b.yml",
+                "mobs:\n  Boss:\n    DamageModifiers:\n      fire: 0.5\n      entity-attack: 2.0\n");
+        YamlConfiguration t = converted(f);
+        assertEquals(0.5, t.getDouble("mob.damage-modifiers.fire"), 1e-9);
+        assertEquals(2.0, t.getDouble("mob.damage-modifiers.entity-attack"), 1e-9);
+    }
+
+    @Test
+    @DisplayName("MythicMobs：带 multiplier 与 conditions 的 modifier 落地为条件规则")
+    void mythicMapsConditionalModifier(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/b.yml",
+                "mobs:\n  Boss:\n    DamageModifiers:\n      PROJECTILE:\n"
+                        + "        multiplier: 0.25\n        conditions:\n          - enraged\n");
+        YamlConfiguration t = converted(f);
+        assertEquals(0.25, t.getDouble("mob.damage-modifiers.PROJECTILE.multiplier"), 1e-9);
+        assertEquals(List.of("enraged"), t.getStringList("mob.damage-modifiers.PROJECTILE.conditions"),
+                "条件必须一起迁移：丢掉它会让规则无条件生效，强度直接翻倍");
+    }
+
+    @Test
+    @DisplayName("MythicMobs：只有 conditions 时按免疫迁移")
+    void mythicMapsConditionsOnlyAsImmune(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/b.yml",
+                "mobs:\n  Boss:\n    DamageModifiers:\n      FIRE:\n        conditions:\n          - invulnerable\n");
+        YamlConfiguration t = converted(f);
+        assertTrue(t.getBoolean("mob.damage-modifiers.FIRE.immune"),
+                "只有 conditions 无 multiplier 时应迁为免疫，否则这条规则会被丢弃");
+        assertEquals(List.of("invulnerable"), t.getStringList("mob.damage-modifiers.FIRE.conditions"));
+    }
+
+    @Test
+    @DisplayName("MythicMobs：多条目写法只迁第一条并提示需手工合并")
+    void mythicFlagsMultipleModifiers(@TempDir Path root) throws Exception {
+        // helstera 同一键只保留一条；MM 可写多条。静默只取第一条会让人以为全部迁完
+        Path f = write(root, "Mobs/b.yml",
+                "mobs:\n  Boss:\n    DamageModifiers:\n      FIRE:\n"
+                        + "        - multiplier: 0.5\n        - multiplier: 0.2\n");
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(f);
+        assertEquals(0.5, converted(f).getDouble("mob.damage-modifiers.FIRE.multiplier"), 1e-9);
+        assertTrue(entries.stream().anyMatch(e ->
+                        String.valueOf(e.get("note")).contains("需手工合并")),
+                "只迁第一条时必须提示其余条目需手工合并");
+    }
+
+    @Test
+    @DisplayName("MythicMobs：无法识别的 modifier 条目报 WARN 而非静默丢弃")
+    void mythicWarnsOnUnknownModifier(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/b.yml",
+                "mobs:\n  Boss:\n    DamageModifiers:\n      FIRE:\n        nonsense: true\n");
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(f);
+        assertTrue(entries.stream().anyMatch(e ->
+                        "unsupported".equals(e.get("status")) && "WARN".equals(e.get("severity"))),
+                "识别不出的条目必须告警，静默丢弃正是本项目最想消灭的失败模式");
+    }
+
+    @Test
+    @DisplayName("MythicMobs：未配置免疫时不产生空节")
+    void mythicNoEmptyImmunitySections(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/b.yml", "mobs:\n  Boss:\n    Health: 10\n");
+        YamlConfiguration t = converted(f);
+        assertNull(t.get("mob.immunities"), "未配置时不该写空列表");
+        assertNull(t.get("mob.damage-modifiers"), "未配置时不该写空节");
     }
 
     // ---------- ItemAdder ----------

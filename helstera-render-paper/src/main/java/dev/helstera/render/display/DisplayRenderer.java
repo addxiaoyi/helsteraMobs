@@ -239,6 +239,9 @@ public final class DisplayRenderer implements InstanceRenderer {
         float yawRad = -base.getYaw() * ((float) Math.PI / 180f);
         Matrix4f baseRot = new Matrix4f().rotationY(yawRad);
         Map<String, BonePose> pose = inst.getPose();
+        // 同步一份骨骼世界坐标到实例：命中判定在 AI 模块，而这里恰好是唯一算出
+        // 骨骼世界坐标的地方。顺带写入而非让 AI 重算矩阵，避免两份实现漂移。
+        Map<String, Location> boneWorld = new HashMap<>();
 
         // 迭代（骨骼已保证父在前）
         Map<String, Matrix4f> worldByBone = new HashMap<>();
@@ -269,6 +272,7 @@ public final class DisplayRenderer implements InstanceRenderer {
             w.transformPosition(pv);
             Location bp2 = base.clone().add(pv.x() * globalScale, pv.y() * globalScale, pv.z() * globalScale);
             v.bonePositions.add(bp2);
+            boneWorld.put(bone.name(), bp2);
 
             // 实体矩阵：lin(W) · (scale/16)
             Matrix4f m = new Matrix4f(w);
@@ -278,6 +282,7 @@ public final class DisplayRenderer implements InstanceRenderer {
             m.scale(new Vector3f((float) globalScale));
             v.worldMatrices.add(m);
         }
+        inst.setBoneWorld(boneWorld);
     }
 
     // ------------------------------------------------------------------
