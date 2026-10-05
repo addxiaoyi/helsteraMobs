@@ -2,6 +2,7 @@ package dev.helstera.ai.loot;
 
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -32,15 +33,33 @@ public final class LootService {
     public record Hit(DropTable.Entry entry, int amount) {
     }
 
+    /**
+     * 击杀者档位提供者：把玩家映射为可用于 {@code min-tier-level} 比较的整数。
+     *
+     * <p>做成注入钩子而非在服务里读玩家：档位语义属于玩法配置（权限组、
+     * 队伍等级、第三方插件的评分都可能），而 LootService 只关心拿到一个数字。
+     * 返回负数表示「档位未知」，此时不套用任何门槛。</p>
+     */
+    public interface TierResolver {
+        int tierOf(Player killer);
+    }
+
     private final Map<String, DropTable> tables = new ConcurrentHashMap<>();
     private final Logger log;
     private final Random random = new Random();
     private final List<String> problems = new ArrayList<>();
     /** 可选：自定义命名空间物品解析器（ItemAdder / CraftEngine 接入点）。 */
     private volatile java.util.function.Function<String, ItemStack> customItemResolver;
+    /** 击杀者档位解析；未注入时按「未知」处理，门槛型掉落照常参与掷骰。 */
+    private volatile TierResolver tierResolver;
 
     public LootService(Logger log) {
         this.log = log;
+    }
+
+    /** 注入击杀者档位解析器，使 {@code min-tier-level} 在运行期生效。 */
+    public void setTierResolver(TierResolver resolver) {
+        this.tierResolver = resolver;
     }
 
     /**
@@ -232,8 +251,37 @@ public final class LootService {
 
     /** 便捷方法：掷骰 + 实体化 + 落地。 */
     public int rollAndDrop(org.bukkit.Location loc, String tableName, double luck) {
-        List<ItemStack> items = materialize(rollPlan(tableName, luck));
+        return rollAndDrop(loc, tableName, luck, null);
+    }
+
+    /**
+     * 掷骰 + 实体化 + 落地，并按击杀者档位套用 {@code min-tier-level} 门槛。
+     *
+     * <p>killer 为 null 时按档位未知处理：门槛全部放行，而不是因为拿不到
+     * 击杀者就把整张表的高端掉落吞掉。</p>
+     */
+    public int rollAndDrop(org.bukkit.Location loc, String tableName, double luck, Player killer) {
+        DropTable t = table(tableName);
+        List<ItemStack> items = materialize(rollPlan(t, luck, random, tierOf(killer)));
         drop(loc, items);
         return items.size();
+    }
+
+    /**
+     * 取击杀者档位；解析器缺失、抛异常或返回负值时一律视为未知（-1）。
+     *
+     * <p>档位未知必须与档位 0 区分开：门槛配置写的是「至少 5 档才能掉」，
+     * 拿不到档位时按 0 处理会让击杀奖励凭空消失。</p>
+     */
+    public int tierOf(Player killer) {
+        TierResolver r = tierResolver;
+        if (r == null || killer == null) return -1;
+        try {
+            int tier = r.tierOf(killer);
+            return tier < 0 ? -1 : tier;
+        } catch (Throwable t) {
+            if (log != null) log.warning("[掉落] 解析击杀者档位失败，按未知处理: " + t);
+            return -1;
+        }
     }
 }

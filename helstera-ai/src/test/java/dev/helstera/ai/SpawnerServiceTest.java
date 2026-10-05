@@ -141,6 +141,50 @@ class SpawnerServiceTest {
     }
 
     @Test
+    @DisplayName("players-radius 有独立默认值，不随 min-players 变化")
+    void playersRadiusIndependentOfMinPlayers() {
+        SpawnerService s = service("""
+                spawners:
+                  three:
+                    mob: a
+                    x: 0
+                    z: 0
+                    min-players: 3
+                  eight:
+                    mob: a
+                    x: 0
+                    z: 0
+                    min-players: 8
+                """);
+        // 半径是「在多大范围内数人」，与「需要几名玩家」是两个维度。
+        // 早前把它写成 min*min*16，等于门槛越严判定范围越大。
+        assertEquals(24.0, s.get("three").playersRadius(), 1e-9);
+        assertEquals(24.0, s.get("eight").playersRadius(), 1e-9,
+                "两名刷怪点的判定半径不应因 min-players 不同而变化");
+    }
+
+    @Test
+    @DisplayName("players-radius 可显式配置，负值被归零")
+    void readsAndClampsPlayersRadius() {
+        SpawnerService s = service("""
+                spawners:
+                  custom:
+                    mob: a
+                    x: 0
+                    z: 0
+                    players-radius: 40
+                  bad:
+                    mob: a
+                    x: 0
+                    z: 0
+                    players-radius: -8
+                """);
+        assertEquals(40.0, s.get("custom").playersRadius(), 1e-9);
+        assertEquals(0.0, s.get("bad").playersRadius(), 1e-9,
+                "负半径应归零；此时人数门控恒不满足，而不是抛异常");
+    }
+
+    @Test
     @DisplayName("enabled=false 被正确读取")
     void readsEnabledFlag() {
         // 注意：键名不能用 on/off——YAML 1.1 会把它们解析成布尔值，键名变成 "true"/"false"

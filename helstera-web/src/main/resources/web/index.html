@@ -1,613 +1,2461 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="light">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>helsteraMobs 开发器</title>
+<title>helsteraMobs 控制台</title>
 <style>
-  :root{
-    /* 中性底 + 单一品牌绿。绿色只承载「可操作 / 已就绪」，
-       其余层级全部走灰阶，避免多色系互相争抢注意力。 */
-    --bg:#f5f7f4; --panel:#fff; --panel2:#fafbf9; --panel3:#f2f4f1;
-    --line:#e2e6df; --line2:#eef1ec;
-    /* txt3 承载标签/表头/空态等真实文本，对比度需达 WCAG AA 4.5:1 */
-    --txt:#171b16; --txt2:#57604f; --txt3:#7e8878;
-    --accent:#1f7a4d; --accent2:#16603b; --soft:#e6f2eb; --accentline:#bcdcc9;
-    --ok:#1f7a4d; --oksoft:#e6f2eb; --warn:#a86a0c; --warnsoft:#fdf4e3;
-    --err:#bf3b31; --errsoft:#fceceb; --code:#f7f9f6;
-    /* 圆角收敛为三档：控件 6px / 面板 9px / 胶囊 999px */
-    --radius:9px; --radius-sm:6px;
-    --shadow:0 1px 2px rgba(23,27,16,.04);
-    --shadow-lg:0 8px 24px -14px rgba(23,27,16,.28);
-  }
-  html[data-theme=dark]{
-    --bg:#12150f; --panel:#1a1e17; --panel2:#1f241c; --panel3:#252b22;
-    --line:#2c3329; --line2:#232920;
-    --txt:#e9ede6; --txt2:#a8b1a4; --txt3:#8b9488;
-    --accent:#4cc38a; --accent2:#68d3a0; --soft:#152a20; --accentline:#295140;
-    --ok:#4cc38a; --oksoft:#152a20; --warn:#d9a445; --warnsoft:#2a2314;
-    --err:#e8837a; --errsoft:#2c1a19; --code:#15190f;
-    --shadow:0 1px 2px rgba(0,0,0,.4);
-    --shadow-lg:0 8px 26px -16px rgba(0,0,0,.8);
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
-       background:var(--bg);color:var(--txt);height:100vh;overflow:hidden;
-       /* 必须横向：.rail 是左侧图标栏、.app 是右侧应用区，二者是并排关系。
-          之前误用 column，导致 .rail 的 flex-basis 作用在高度上，
-          图标栏变成顶部一条横带、内容整体下移错位。 */
-       display:flex;flex-direction:row}
-  button{font:inherit;cursor:pointer;border:1px solid transparent;border-radius:var(--radius-sm);padding:7px 13px;
-         background:var(--accent);color:#fff;
-         transition:background-color .14s,border-color .14s,color .14s}
-  button:hover{background:var(--accent2)}
-  button.ghost{background:var(--panel);color:var(--txt);border-color:var(--line)}
-  button.ghost:hover{background:var(--panel2);border-color:var(--accent)}
-  button.danger{background:var(--panel);color:var(--err);border-color:var(--line)}
-  button.danger:hover{background:var(--errsoft);border-color:var(--err)}
-  button:disabled{opacity:.5;cursor:not-allowed}
-  button.sm{padding:4px 9px;font-size:12px;border-radius:6px}
-  input,select,textarea{font:inherit;color:var(--txt);background:var(--panel);border:1px solid var(--line);
-       border-radius:var(--radius-sm);padding:7px 10px;outline:none}
-  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--soft)}
-  /* 键盘可达性：按钮/链接/列表项/折叠标题此前均无可见焦点态 */
-  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
-  input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
-  a{color:var(--accent)}
-  /* 尊重系统的减少动态偏好：全站去除过渡与动画 */
-  @media (prefers-reduced-motion:reduce){
-    *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;
-                          animation-iteration-count:1!important}
+  :root {
+    /* 浅色模式 - 纯净冷灰黑白与高级黑白灰 (Linear / Apple 风格) */
+    --bg: #f8fafc;
+    --panel: #ffffff;
+    --panel2: #f1f5f9;
+    --panel3: #e2e8f0;
+    --line: #e2e8f0;
+    --line2: #f1f5f9;
+    --txt: #0f172a;
+    --txt2: #475569;
+    --txt3: #94a3b8;
+    --accent: #0f172a;
+    --accent2: #1e293b;
+    --accent-glow: transparent;
+    --soft: #f1f5f9;
+    --accentline: #cbd5e1;
+    --ok: #059669;
+    --oksoft: #ecfdf5;
+    --warn: #d97706;
+    --warnsoft: #fffbeb;
+    --err: #dc2626;
+    --errsoft: #fef2f2;
+    --code: #0f172a;
+    --code-txt: #f8fafc;
+    --radius-sm: 6px;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow: 0 3px 8px -1px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.03);
+    --shadow-lg: 0 12px 28px -4px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   }
 
-  /* ---- top bar ---- */
-  .top{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);
-       border-bottom:1px solid var(--line);flex-wrap:wrap}
-  .brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.2px}
-  /* 徽标同样用品牌绿渐变，避免整页唯一残留的蓝色块 */
-  .logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#1f7a4d,#43a373);
-        display:grid;place-items:center;color:#fff;font-size:14px}
-  .brand small{font-weight:500;color:var(--txt3);font-size:12px}
-  .chips{display:flex;gap:7px;flex-wrap:wrap}
-  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);
-        border-radius:999px;padding:3px 10px;font-size:12px;color:var(--txt2)}
-  .chip b{color:var(--txt);font-weight:600}
-  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
-  .dot.err{background:var(--err)}
-  .spacer{flex:1}
-  .acts{display:flex;gap:8px;flex-wrap:wrap}
-
-  /* ---- banner ---- */
-  .banner{display:none;align-items:flex-start;gap:10px;padding:10px 16px;background:var(--errsoft);
-          border-bottom:1px solid var(--line);color:var(--txt)}
-  .banner.on{display:flex}
-  .banner .btitle{font-weight:700;color:var(--err);white-space:nowrap}
-  .banner ul{list-style:none;font-size:12.5px;font-family:ui-monospace,Consolas,monospace;overflow:auto;max-height:92px}
-  .banner li{padding:1px 0;color:var(--txt2)}
-  .banner li b{color:var(--err)}
-
-  /* ---- layout ---- */
-  /* ---- 骨架：极窄图标栏 + 应用区 ----
-     导航只留图标并靠 title/tooltip 说明，不占横向空间；
-     所有文字型信息（标题、说明、计数）下沉到顶栏与页头，
-     避免「图标 + 文字」标签在窄栏里挤成两行。 */
-  .rail{width:60px;flex:0 0 60px;background:var(--panel);border-right:1px solid var(--line);
-        display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:4px}
-  .app{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
-  .rail .tab{width:38px;height:38px;justify-content:center;padding:0;font-size:16px;border-radius:9px}
-  .rail .tab .n{display:none}
-  .rail .rail-sep{width:22px;height:1px;background:var(--line);margin:7px 0}
-  .rail .spacer{flex:1}
-
-  /* ---- 顶栏：面包屑在左，搜索与动作在右 ---- */
-  .top{display:flex;align-items:center;gap:12px;padding:0 20px;height:52px;background:var(--panel);
-       border-bottom:1px solid var(--line);flex:0 0 auto}
-  .crumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--txt3);min-width:0}
-  .crumb .sep{opacity:.5}
-  .crumb b{color:var(--txt);font-weight:600}
-  .crumb .lock{font-size:11px;color:var(--txt3)}
-  .top-search{flex:1;max-width:280px;margin-left:auto}
-  .acts{display:flex;gap:6px;align-items:center}
-  .icon-btn{width:32px;height:32px;padding:0;display:grid;place-items:center;font-size:15px;
-            background:var(--panel);color:var(--txt2);border:1px solid var(--line)}
-  .icon-btn:hover{background:var(--panel2);color:var(--txt)}
-
-  /* ---- 页头：大标题 + 副标题 + 右侧指标 ----
-     每个面板的首屏都用它定位「我在哪、当前状态如何」，
-     替代过去散落在顶栏胶囊里的小号数字。 */
-  .pagehead{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap;
-            padding:20px 0 16px;border-bottom:1px solid var(--line)}
-  .pagehead .eyebrow{font-size:11px;font-weight:700;color:var(--txt3);letter-spacing:.08em;
-                     text-transform:uppercase;margin-bottom:5px;display:flex;align-items:center;gap:7px}
-  .pagehead h1{font-size:25px;font-weight:700;letter-spacing:-.01em;line-height:1.2;margin:0}
-  .pagehead .sub{font-size:12.5px;color:var(--txt3);margin-top:6px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-  .pagehead .stats{margin-left:auto;display:flex;gap:26px;align-items:flex-end}
-  .pagehead .stat{min-width:78px}
-  .pagehead .stat .k{font-size:11px;color:var(--txt3);letter-spacing:.05em;text-transform:uppercase}
-  .pagehead .stat .v{font-size:23px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;
-                     line-height:1.25;display:flex;align-items:baseline;gap:3px}
-  .pagehead .stat .v small{font-size:12px;color:var(--txt3);font-weight:500}
-  .pagehead .stat .meter{height:3px;border-radius:2px;background:var(--panel3);margin-top:5px;overflow:hidden;max-width:92px}
-  .pagehead .stat .meter i{display:block;height:100%;border-radius:2px;background:var(--accent);width:var(--w,0%)}
-  /* 窄屏时指标换行到标题下方，不再并排挤压 */
-  @container pane (max-width:860px){.pagehead .stats{margin-left:0;gap:20px}}
-
-  /* ---- layout：对象列表 + 主区 ---- */
-  main{flex:1;display:grid;grid-template-columns:286px minmax(0,1fr);min-height:0}
-  /* 窄屏：收窄对象列表；导航已在最左图标栏，无需再转横条 */
-  @media(max-width:1100px){main{grid-template-columns:236px minmax(0,1fr)}}
-  @media(max-width:760px){main{grid-template-columns:minmax(0,1fr)}
-    aside{max-height:42vh;border-right:none;border-bottom:1px solid var(--line)}}
-  /* 超宽屏：列表适度加宽，主区留白上限——否则 2560px 下文本行会拉到
-     近 2000px 宽，阅读时视线要横跨整个屏幕才换行。 */
-  @media(min-width:1700px){main{grid-template-columns:330px minmax(0,1fr)}
-    .panes{padding:22px 30px 48px}}
-  /* 极窄屏：图标栏转为底部横排，把纵向空间留给主区 */
-  @media(max-width:560px){
-    .rail{width:auto;flex:0 0 auto;flex-direction:row;padding:0 6px;border-right:none;
-          border-bottom:1px solid var(--line);height:46px}
-    .rail .spacer{display:none}
-    .top{height:auto;padding:8px 14px;flex-wrap:wrap}
-    .top-search{max-width:none;order:3;flex-basis:100%;margin-left:0}
+  html[data-theme=dark] {
+    /* 深色模式 - 高级中性石墨黑 (Linear / Raycast 风格，摒弃大面积绿染) */
+    --bg: #09090b;
+    --panel: #111114;
+    --panel2: #18181b;
+    --panel3: #222226;
+    --line: rgba(255, 255, 255, 0.08);
+    --line2: rgba(255, 255, 255, 0.04);
+    --txt: #f4f4f5;
+    --txt2: #a1a1aa;
+    --txt3: #71717a;
+    --accent: #10b981;
+    --accent2: #059669;
+    --accent-glow: transparent;
+    --soft: rgba(255, 255, 255, 0.05);
+    --accentline: rgba(255, 255, 255, 0.12);
+    --ok: #10b981;
+    --oksoft: rgba(16, 185, 129, 0.1);
+    --warn: #f59e0b;
+    --warnsoft: rgba(245, 158, 11, 0.1);
+    --err: #ef4444;
+    --errsoft: rgba(239, 68, 68, 0.1);
+    --code: #0c0d10;
+    --code-txt: #e4e4e7;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 16px 36px -6px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.4);
   }
-  /* 矮屏：画布与顶栏同时压缩，优先保证主区能看到内容 */
-  @media(max-height:620px){
-    .top{padding:7px 14px}
-    canvas{height:clamp(190px,30vh,260px)}
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    letter-spacing: -0.01em;
+    background: var(--bg);
+    color: var(--txt);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
-  aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-  .side-pad{padding:10px 12px;border-bottom:1px solid var(--line2);display:flex;gap:8px}
-  .side-sec{padding:10px 12px 4px;font-size:12px;font-weight:700;color:var(--txt3);letter-spacing:.08em;
-            text-transform:uppercase;display:flex;align-items:center;justify-content:space-between}
-  .scroll{overflow:auto;flex:1;padding:0 8px 12px}
-  ul.list{list-style:none}
-  ul.list li{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:9px;cursor:pointer;font-size:13px}
-  ul.list li:hover{background:var(--panel2)}
-  ul.list li.sel{background:var(--soft);font-weight:600}
-  ul.list li .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  ul.list li .tag{font-size:11px;color:var(--txt3);font-weight:500}
-  .empty{color:var(--txt3);font-size:12.5px;padding:8px 10px}
 
-  /* ---- content ---- */
-  section.content{display:flex;flex-direction:column;min-height:0;min-width:0}
-  .cfg-sec{margin-bottom:4px}
-  .cfg-sec>h4{font-size:12px;font-weight:700;color:var(--txt2);letter-spacing:.06em;text-transform:uppercase;
-             margin:14px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--line2)}
-  .cfg-row{display:grid;grid-template-columns:minmax(200px,1.1fr) minmax(160px,1fr) auto;gap:10px;
-           align-items:center;padding:5px 7px;border-radius:var(--radius-sm)}
-  .cfg-row:hover{background:var(--panel2)}
-  .cfg-row.changed{background:var(--oksoft)}
-  .cfg-row.changed .cfg-k{color:var(--ok)}
-  .cfg-k{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--txt2);word-break:break-all}
-  .cfg-row.protected .cfg-k{color:var(--warn)}
-  .cfg-row.protected input,.cfg-row.protected select{opacity:.55;pointer-events:none}
-  .cfg-v{font-size:12px;color:var(--txt3)}
-  .cfg-row input,.cfg-row select{padding:5px 8px;font-size:13px;width:100%}
-  /* 窄屏把配置行由三列压成两列：键与控件同行，状态值移到下一行，
-     否则三列会被挤到每列不足 90px，长配置键和 URL 都无法完整显示。 */
-  @container pane (max-width:620px){
-    .cfg-row{grid-template-columns:minmax(0,1fr) auto}
-    .cfg-k{grid-column:1/-1}
+  /* 极细、克制的滚动条 */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--txt3); }
+
+  /* 统一高级克制的按钮体系 */
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 5px 12px;
+    background: var(--panel2);
+    color: var(--txt);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 500;
+    transition: background-color .12s ease, border-color .12s ease, transform .08s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
+    user-select: none;
   }
-  .cfg-lock{font-size:11px;color:var(--warn);white-space:nowrap}
-  /* ---- 左轨导航（取代横向 tab 条）----
-     8 个面板做成固定侧轨：位置稳定、切换不引起纵向跳动，
-     也避免横向 tab 在窄屏下溢出滚动。 */
-  /* ---- 对话框（取代原生 prompt/confirm）----
-     原生弹窗无法承载模板列表这类结构化内容，也无法统一样式；
-     这里用一个 Promise 化的对话框，后续所有确认类交互都走它。 */
-  .modal{position:fixed;inset:0;background:rgba(23,27,16,.42);display:none;
-         align-items:center;justify-content:center;padding:24px;z-index:60}
-  .modal.on{display:flex}
-  .modal .sheet{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
-                box-shadow:var(--shadow-lg);width:min(440px,100%);padding:18px}
-  .modal h3{font-size:14px;margin-bottom:6px}
-  .modal p{font-size:12.5px;color:var(--txt2);margin-bottom:12px;line-height:1.65}
-  .modal input{width:100%;margin-bottom:12px}
-  .modal .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:2px}
-  .modal .hint-list{max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:var(--radius-sm);
-                    padding:8px 10px;margin-bottom:12px;background:var(--panel2)}
-  .modal .hint-list b{display:block;font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--txt2)}
-  .modal .hint-list span{display:block;font-size:12px;color:var(--txt3);padding-bottom:5px}
+  button:hover {
+    background: var(--panel3);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+  html[data-theme=light] button:hover {
+    border-color: #cbd5e1;
+  }
+  button:active {
+    transform: scale(0.985);
+  }
+  button.sm {
+    padding: 3px 8px;
+    font-size: 11.5px;
+    border-radius: 4px;
+  }
+  button.ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--txt2);
+    box-shadow: none;
+  }
+  button.ghost:hover {
+    background: var(--panel2);
+    border-color: var(--line);
+    color: var(--txt);
+  }
+  button.primary,
+  button#cfgSave,
+  button#mfSave,
+  button#bSaveMob,
+  button#bSaveSkills,
+  button#bSaveLoot,
+  button#mdlgOk,
+  button#bReload2 {
+    background: #f4f4f5;
+    color: #09090b;
+    border-color: transparent;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+  button.primary:hover,
+  button#cfgSave:hover,
+  button#mfSave:hover,
+  button#bSaveMob:hover,
+  button#bSaveSkills:hover,
+  button#bSaveLoot:hover,
+  button#mdlgOk:hover,
+  button#bReload2:hover {
+    background: #ffffff;
+    opacity: 0.95;
+  }
+  html[data-theme=light] button.primary,
+  html[data-theme=light] button#cfgSave,
+  html[data-theme=light] button#mfSave,
+  html[data-theme=light] button#bSaveMob,
+  html[data-theme=light] button#bSaveSkills,
+  html[data-theme=light] button#bSaveLoot,
+  html[data-theme=light] button#mdlgOk,
+  html[data-theme=light] button#bReload2 {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: transparent;
+  }
+  html[data-theme=light] button.primary:hover,
+  html[data-theme=light] button#cfgSave:hover,
+  html[data-theme=light] button#mfSave:hover,
+  html[data-theme=light] button#bSaveMob:hover,
+  html[data-theme=light] button#bSaveSkills:hover,
+  html[data-theme=light] button#bSaveLoot:hover,
+  html[data-theme=light] button#mdlgOk:hover,
+  html[data-theme=light] button#bReload2:hover {
+    background: #1e293b;
+    opacity: 1;
+  }
+  button.danger {
+    background: var(--errsoft);
+    color: var(--err);
+    border-color: rgba(239, 68, 68, 0.25);
+  }
+  button.danger:hover {
+    background: var(--err);
+    color: #ffffff;
+    border-color: var(--err);
+  }
+  button:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+    transform: none !important;
+  }
 
-  .tabs{display:flex;flex-direction:column;gap:2px;padding:8px;border-bottom:none;
-        border-right:1px solid var(--line);background:var(--panel2);flex:0 0 auto}
-  .tabs::-webkit-scrollbar{display:none}
-  .tab{padding:7px 10px;border-radius:var(--radius-sm);font-size:13px;color:var(--txt2);cursor:pointer;
-       border:none;background:transparent;display:flex;align-items:center;gap:8px;text-align:left;width:100%}
-  .tab:hover{background:var(--panel);color:var(--txt)}
-  .tab.on{background:var(--soft);color:var(--accent2);font-weight:600}
-  .tab .ic{width:16px;text-align:center;flex:0 0 auto;font-size:13px;opacity:.85}
-  .tab .n{margin-left:auto;font-size:11px;color:var(--txt3);font-variant-numeric:tabular-nums}
-  .tab.on .n{color:var(--accent)}
-  .panes{flex:1;overflow:auto;padding:18px 22px 40px;min-height:0}
-  .pane{display:none}
-  .pane.on{display:block}
-  /* 分区（取代原来的 .card 网格）：
-     用「标题行 + 顶部细线」划分连续区块，不再给每一块套独立卡片，
-     避免卡片套卡片造成的视觉噪声与层级过载。 */
-  .sec{padding:16px 0;border-top:1px solid var(--line)}
-  .sec:first-child{border-top:none;padding-top:2px}
-  .sec>h3{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:3px;
-         display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .sec>h3 .hint{font-weight:400;color:var(--txt3);font-size:12px}
-  .sec .lede{color:var(--txt3);font-size:12.5px;margin:0 0 10px;line-height:1.6}
-  /* 分区内的次级信息块：只做极轻的底色区分，不再画边框+阴影 */
-  .subblock{background:var(--panel2);border-radius:var(--radius-sm);padding:11px 12px}
-  .subblock h3{font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:8px}
-  .grid2{display:grid;grid-template-columns:minmax(300px,1fr) minmax(340px,1.2fr);gap:0 26px;align-items:start}
-  /* 双栏改为容器查询而非视口断点：主区宽度由左轨与对象列表挤压决定，
-     视口 1400px 时主区实际只剩 ~900px，视口断点会误判为「够宽」而不降列，
-     导致两栏各被压到 450px 左右。容器查询按真实可用宽度决策。
-     不支持容器查询的浏览器回落到 1240px 视口断点。 */
-  .panes{container-type:inline-size;container-name:pane}
-  @container pane (max-width:1000px){.grid2{grid-template-columns:minmax(0,1fr)}}
+  input, select, textarea {
+    font: inherit;
+    color: var(--txt);
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 5px 10px;
+    font-size: 12.5px;
+    outline: none;
+    transition: border-color .12s, box-shadow .12s, background-color .12s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+    background: var(--panel);
+  }
+  html[data-theme=light] input:focus, 
+  html[data-theme=light] select:focus, 
+  html[data-theme=light] textarea:focus {
+    border-color: #94a3b8;
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--txt3);
+    opacity: 0.75;
+  }
 
-  /* ---- 四态：加载 / 空 / 错误 / 离线 ----
-     统一由 .state 承载，图标+一行标题+一行说明+一个可选动作，
-     避免每个面板各写一套导致观感不一致。 */
-  .state{display:flex;flex-direction:column;align-items:center;justify-content:center;
-         gap:9px;padding:44px 24px;text-align:center;color:var(--txt3)}
-  .state .ico{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
-              background:var(--panel3);color:var(--txt3);font-size:15px}
-  .state b{color:var(--txt2);font-size:13.5px;font-weight:600}
-  .state p{margin:0;font-size:12.5px;max-width:42ch;line-height:1.65}
-  .state.err .ico{background:var(--errsoft);color:var(--err)}
-  .state.offline .ico{background:var(--warnsoft);color:var(--warn)}
-  .state button{margin-top:3px}
-  /* 加载：细进度条循环，比转圈更轻 */
-  .state.loading .bar{width:104px;height:2px;border-radius:2px;background:var(--panel3);overflow:hidden;position:relative}
-  .state.loading .bar::after{content:"";position:absolute;inset:0;width:42%;border-radius:2px;
-                             background:var(--accent);animation:slide 1.1s ease-in-out infinite}
-  @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(240%)}}
-  @media (prefers-reduced-motion:reduce){.state.loading .bar::after{animation:none;width:100%;opacity:.5}}
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
+  a { color: var(--txt); text-decoration: underline; text-underline-offset: 3px; }
+  a:hover { opacity: 0.8; }
 
-  /* 行内小状态（列表项加载中 / 局部失败） */
-  .state-inline{display:flex;align-items:center;gap:8px;color:var(--txt3);font-size:12.5px;padding:9px 10px}
-  .spinner{width:12px;height:12px;border-radius:50%;border:2px solid var(--panel3);
-           border-top-color:var(--accent);animation:spin .7s linear infinite;flex:0 0 auto}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  @media (prefers-reduced-motion:reduce){.spinner{animation:none;border-top-color:var(--accentline)}}
-  .meta{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13px}
-  .meta dt{color:var(--txt3)}
-  .meta dd{color:var(--txt);font-weight:500;word-break:break-all}
-  .chips2{display:flex;gap:6px;flex-wrap:wrap}
-  .pill{background:var(--soft);color:var(--accent2);border-radius:999px;padding:2px 9px;font-size:12px}
-  .pill.g{background:var(--oksoft);color:var(--ok)}
-  .pill.w{background:var(--warnsoft);color:var(--warn)}
-  .pill.r{background:var(--errsoft);color:var(--err)}
-  table{width:100%;border-collapse:collapse;font-size:12.5px}
-  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line2)}
-  th{color:var(--txt3);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
-  code,pre,textarea.mono{font-family:ui-monospace,Consolas,"Courier New",monospace}
-  pre.out{background:var(--code);border:1px solid var(--line);border-radius:var(--radius);padding:10px;font-size:12.5px;
-          white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;color:var(--txt2)}
-  textarea.mono{width:100%;min-height:340px;font-size:12.5px;line-height:1.55;resize:vertical;background:var(--code)}
-  textarea.mono.tall{min-height:460px}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .row.tight{gap:6px}
-  .row>input{flex:1;min-width:140px}
-  .lbl{font-size:12px;color:var(--txt3);margin-bottom:4px;display:block}
-  .canvas-wrap{position:relative;background:linear-gradient(180deg,var(--panel2),var(--panel));
-               border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  /* 画布高度随可用宽度自适应：固定 330px 在窄屏会挤掉下方全部内容，
-     在宽屏又显得局促。用 clamp 同时照顾两端。 */
-  canvas{display:block;width:100%;height:clamp(230px,34vh,380px);cursor:grab;touch-action:none}
-  canvas:active{cursor:grabbing}
-  .cv-tools{position:absolute;right:8px;top:8px;display:flex;gap:6px}
-  .cv-tools button{background:rgba(255,255,255,.86);color:var(--txt);border:1px solid var(--line);backdrop-filter:blur(4px)}
-  html[data-theme=dark] .cv-tools button{background:rgba(22,28,42,.85)}
-  .cv-legend{position:absolute;left:9px;bottom:8px;font-size:11.5px;color:var(--txt3)}
-  .toast{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50}
-  .toast div{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
-             border-radius:10px;padding:9px 13px;box-shadow:var(--shadow);max-width:380px;font-size:12.5px;
-             animation:in .18s ease-out}
-  .toast div.ok{border-left-color:var(--ok)} .toast div.err{border-left-color:var(--err)}
-  @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  .tt{font-size:12px;color:var(--txt3);margin-top:6px}
-  details.fold{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden}
-  details.fold>summary{cursor:pointer;padding:7px 11px;font-size:13px;background:var(--panel2);font-weight:600}
-  details.fold[open]>summary{border-bottom:1px solid var(--line2)}
-  details.fold .body{padding:9px 11px}
-  .kv{font-size:12.5px;color:var(--txt2)}
-  .bone-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer}
-  .bone-row:hover{background:var(--panel2)}
-  .bone-row.hot{background:var(--soft)}
-  .swatch{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: .01ms !important;
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+
+  /* ---- 侧边导航栏 (Rail) ---- */
+  .rail {
+    width: 56px;
+    flex: 0 0 56px;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0;
+    gap: 4px;
+    z-index: 30;
+    user-select: none;
+  }
+  .rail-brand {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--txt);
+    margin-bottom: 6px;
+    transition: background-color .14s ease, border-color .14s ease;
+    cursor: pointer;
+  }
+  .rail-brand:hover {
+    background: var(--panel3);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+  html[data-theme=light] .rail-brand:hover {
+    border-color: #cbd5e1;
+  }
+  .rail-brand svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .rail .tab, .rail .rail-action {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    color: var(--txt3);
+    cursor: pointer;
+    position: relative;
+    transition: color .12s ease, background-color .12s ease;
+    background: transparent;
+    border: 1px solid transparent;
+  }
+  .rail .tab:hover, .rail .rail-action:hover {
+    color: var(--txt);
+    background: var(--panel2);
+  }
+  .rail .tab.on {
+    color: var(--txt);
+    background: var(--panel2);
+    border-color: var(--line);
+  }
+  .rail .tab.on::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 11px;
+    bottom: 11px;
+    width: 2.5px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .rail .tab svg, .rail .rail-action svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.8;
+  }
+  .rail .tab .n {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: none;
+  }
+  .rail .tab .n:not(:empty) { display: block; }
+
+  /* 悬浮提示 Tooltip */
+  .rail .tab .tab-tip, .rail .rail-action .tab-tip {
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%) translateX(-4px);
+    background: var(--panel);
+    color: var(--txt);
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .12s ease, transform .12s ease;
+    z-index: 100;
+  }
+  .rail .tab:hover .tab-tip, .rail .rail-action:hover .tab-tip {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+
+  .rail-sep {
+    width: 24px;
+    height: 1px;
+    background: var(--line);
+    margin: 6px 0;
+  }
+  .rail .spacer { flex: 1; }
+
+  /* 主应用区 */
+  .app {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--bg);
+  }
+
+  /* ---- 顶部导航栏 ---- */
+  /* ---- 全局工作台顶栏 (Top Bar) ---- */
+  .top {
+    height: 46px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    flex: 0 0 auto;
+    z-index: 20;
+    user-select: none;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    color: var(--txt);
+    flex-shrink: 0;
+  }
+  .brand .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 8px var(--oksoft);
+    display: inline-block;
+  }
+  .brand .dot.err {
+    background: var(--err);
+    box-shadow: 0 0 8px var(--errsoft);
+  }
+  .brand-ver {
+    font-size: 10.5px;
+    font-family: var(--font-mono);
+    color: var(--txt3);
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .crumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--txt3);
+    min-width: 0;
+  }
+  .crumb .sep { opacity: .35; }
+  .crumb b { color: var(--txt); font-weight: 550; }
+
+  /* 状态微胶囊 (Status Capsule) - 替代原 140px KPI 墙，高密度一体化 */
+  .status-capsule {
+    display: inline-flex;
+    align-items: center;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 9999px;
+    padding: 3px 12px;
+    gap: 9px;
+    margin-left: 4px;
+    font-size: 11.5px;
+    transition: border-color .15s ease, background-color .15s ease;
+  }
+  .status-capsule:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+  html[data-theme=light] .status-capsule:hover {
+    border-color: #cbd5e1;
+  }
+  .sc-item {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .sc-k {
+    font-size: 10px;
+    color: var(--txt3);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .sc-v, .stat .v {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--txt);
+    font-family: var(--font-mono);
+  }
+  .sc-v.tps-ok, .v.tps-ok { color: var(--ok); }
+  .sc-v.tps-warn, .v.tps-warn { color: var(--warn); }
+  .sc-v.tps-err, .v.tps-err { color: var(--err); }
+  .sc-v.err-bad, .v.err-bad { color: var(--err); }
+  .sc-item.is-err {
+    background: rgba(239, 68, 68, 0.15);
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin: -1px -3px;
+  }
+  .sc-sep {
+    width: 1px;
+    height: 10px;
+    background: var(--line);
+  }
+
+  /* 搜索框容器 */
+  .search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    width: 220px;
+  }
+  .search-wrap svg.search-ic {
+    position: absolute;
+    left: 8px;
+    width: 14px;
+    height: 14px;
+    color: var(--txt3);
+    pointer-events: none;
+  }
+  .search-wrap input {
+    width: 100%;
+    padding: 4px 26px 4px 28px;
+    font-size: 12px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    transition: width .16s ease, border-color .16s ease;
+  }
+  .search-wrap input:focus {
+    background: var(--panel);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+    width: 260px;
+  }
+  html[data-theme=light] .search-wrap input:focus {
+    border-color: #94a3b8;
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+  }
+  .search-wrap .search-clear {
+    position: absolute;
+    right: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+    color: var(--txt3);
+    background: var(--panel3);
+  }
+  .search-wrap .search-clear:hover {
+    color: var(--txt);
+  }
+  .search-kbd {
+    position: absolute;
+    right: 6px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--txt3);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 4px;
+    pointer-events: none;
+  }
+
+  .acts {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .icon-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--panel2);
+    color: var(--txt2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+  }
+  .icon-btn:hover {
+    background: var(--panel3);
+    color: var(--txt);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+  html[data-theme=light] .icon-btn:hover {
+    border-color: #cbd5e1;
+  }
+  .icon-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  .icon-btn.rotating svg {
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- 警告横幅 ---- */
+  .banner {
+    display: none;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--errsoft);
+    border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+    color: var(--txt);
+    animation: in .2s ease;
+  }
+  .banner.on { display: flex; }
+  .banner .btitle {
+    font-weight: 600;
+    color: var(--err);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+  }
+  .banner ul {
+    list-style: none;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    overflow: auto;
+    max-height: 90px;
+    flex: 1;
+  }
+  .banner li { padding: 1px 0; color: var(--txt2); }
+  .banner li b { color: var(--err); }
+
+  /* ---- 主框架：连续分区工作台 (Main Workbench Layout) ---- */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    min-height: 0;
+  }
+  @media(max-width: 1050px) { main { grid-template-columns: 210px minmax(0, 1fr); } }
+  @media(max-width: 760px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    aside { max-height: 40vh; border-right: none; border-bottom: 1px solid var(--line); }
+  }
+
+  /* ---- 对象浏览器侧栏 (Object Explorer Aside) ---- */
+  aside {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .aside-nav-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .segmented-ctrl {
+    display: flex;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    flex: 1;
+    gap: 2px;
+  }
+  .seg-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--txt3);
+    padding: 3px 6px;
+    font-size: 11.5px;
+    font-weight: 500;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    box-shadow: none;
+    transition: background-color .12s ease, color .12s ease;
+  }
+  .seg-btn:hover {
+    color: var(--txt);
+    background: rgba(255, 255, 255, 0.04);
+  }
+  html[data-theme=light] .seg-btn:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+  .seg-btn.on {
+    background: var(--panel3);
+    color: var(--txt);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+  }
+  .seg-count {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--txt3);
+    background: var(--panel2);
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+  .seg-btn.on .seg-count {
+    color: var(--txt2);
+    background: var(--panel);
+  }
+  .icon-add {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+  }
+  .aside-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .scroll {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    padding: 4px 6px 12px;
+  }
+  ul.list { list-style: none; }
+  ul.list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12.5px;
+    transition: background-color .12s ease, border-color .12s ease;
+    margin-bottom: 2px;
+    border: 1px solid transparent;
+    border-left: 2px solid transparent;
+  }
+  ul.list li:hover {
+    background: var(--panel2);
+  }
+  ul.list li.sel {
+    background: var(--panel2);
+    border-color: var(--line);
+    border-left: 2px solid var(--accent);
+    color: var(--txt);
+    font-weight: 550;
+  }
+  ul.list li .nm {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--txt);
+  }
+  ul.list li.sel .nm {
+    color: var(--txt);
+    font-weight: 600;
+  }
+  ul.list li .tag {
+    font-size: 10.5px;
+    color: var(--txt3);
+    background: var(--panel3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 500;
+    font-family: var(--font-mono);
+  }
+  ul.list li.sel .tag {
+    background: var(--panel3);
+    color: var(--txt2);
+  }
+
+  /* 稳重、克制的状态指示小圆点 */
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ok);
+    flex: 0 0 auto;
+    display: inline-block;
+  }
+  .dot.err {
+    background: var(--err);
+  }
+
+  /* ---- 内容主视口区 (Content & Panes) ---- */
+  section.content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    background: var(--bg);
+    flex: 1;
+  }
+  .panes {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .pane {
+    display: none;
+    height: 100%;
+    width: 100%;
+    min-height: 0;
+  }
+  .pane.on {
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn .14s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .pane-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 22px 48px;
+    max-width: 1300px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* ---- 3D Studio 连续工作台 (pane-model) ---- */
+  .studio-layout {
+    display: grid;
+    grid-template-columns: minmax(360px, 1.35fr) minmax(320px, 1fr);
+    height: 100%;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+  }
+  @media(max-width: 900px) {
+    .studio-layout {
+      grid-template-columns: minmax(0, 1fr);
+      overflow-y: auto;
+    }
+  }
+  .studio-viewport {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    border-right: 1px solid var(--line);
+    background: #090a0d;
+    position: relative;
+  }
+  html[data-theme=light] .studio-viewport {
+    background: #f8fafc;
+  }
+  .studio-viewport .canvas-wrap {
+    flex: 1;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    min-height: 280px;
+  }
+  .studio-viewport canvas {
+    width: 100%;
+    height: 100%;
+    min-height: 260px;
+  }
+  .studio-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+    flex-shrink: 0;
+    gap: 12px;
+  }
+  .studio-toggles {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .toggle-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: var(--txt2);
+    cursor: pointer;
+    user-select: none;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background-color .12s ease, color .12s ease;
+  }
+  .toggle-pill:hover {
+    background: var(--panel2);
+    color: var(--txt);
+  }
+  .toggle-pill input {
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+  .studio-inspector {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+  .insp-section {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .insp-section.flex-1 {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 220px;
+    border-bottom: none;
+  }
+  .insp-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--txt3);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* ---- 生物联调连续工作台 (pane-mobs) ---- */
+  .mobs-workbench {
+    display: grid;
+    grid-template-columns: minmax(360px, 1.25fr) minmax(300px, 1fr);
+    height: 100%;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+  }
+  @media(max-width: 900px) {
+    .mobs-workbench {
+      grid-template-columns: minmax(0, 1fr);
+      overflow-y: auto;
+    }
+  }
+  .mobs-editor-col {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    border-right: 1px solid var(--line);
+    background: var(--code);
+  }
+  .editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 12px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .et-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  .et-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--txt3);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .et-input {
+    flex: 1;
+    max-width: 240px;
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+  .et-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .editor-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    position: relative;
+  }
+  .editor-body textarea.full-h {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    padding: 12px 14px;
+    resize: none;
+    background: var(--code);
+    color: var(--code-txt);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    outline: none;
+  }
+  .editor-footer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 12px;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    gap: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .ef-versions, .ef-spawn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mobs-inspector-col {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+  .mobs-inspector-col .insp-scroll {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .spec-reference {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .spec-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--txt3);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: 8px;
+  }
+  .compact-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .compact-table td {
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--line2);
+    color: var(--txt2);
+  }
+  .compact-table tr:last-child td {
+    border-bottom: none;
+  }
+  .compact-table code {
+    font-family: var(--font-mono);
+    color: var(--txt);
+    background: var(--panel);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 11.5px;
+  }
+
+  .sec {
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
+  }
+  .sec:first-child { border-top: none; padding-top: 0; }
+  .sec > h3 {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--txt);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .sec > h3 .hint {
+    font-weight: 400;
+    color: var(--txt3);
+    font-size: 12px;
+  }
+  .sec .lede {
+    color: var(--txt3);
+    font-size: 12.5px;
+    margin: 0 0 12px;
+    line-height: 1.6;
+  }
+
+  .grid2 {
+    display: grid;
+    grid-template-columns: minmax(280px, 1.15fr) minmax(260px, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+  @container pane (max-width: 680px) {
+    .grid2 { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  }
+
+  /* ---- 3D 画布视口 ---- */
+  .canvas-wrap {
+    position: relative;
+    background: #090a0d;
+    background-image:
+      radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      radial-gradient(ellipse at 50% 40%, #16181f 0%, #090a0d 100%);
+    background-size: 24px 24px, 100% 100%;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), var(--shadow);
+  }
+  html[data-theme=light] .canvas-wrap {
+    background: #f8fafc;
+    background-image:
+      radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+      radial-gradient(ellipse at 50% 40%, #ffffff 0%, #e2e8f0 100%);
+    background-size: 24px 24px, 100% 100%;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: clamp(240px, 36vh, 420px);
+    cursor: grab;
+    touch-action: none;
+  }
+  canvas:active { cursor: grabbing; }
+  
+  .cv-tools {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    display: flex;
+    gap: 4px;
+    background: rgba(17, 17, 20, 0.75);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 3px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: var(--shadow-sm);
+  }
+  html[data-theme=light] .cv-tools {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+  .cv-tools button {
+    background: transparent;
+    color: var(--txt2);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    box-shadow: none;
+  }
+  .cv-tools button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--txt);
+  }
+  html[data-theme=light] .cv-tools button:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+  .cv-legend {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--txt3);
+    background: rgba(17, 17, 20, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    pointer-events: none;
+  }
+  html[data-theme=light] .cv-legend {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  /* ---- 动画控制器 ---- */
+  .anim-ctrl-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 5px 10px;
+    margin-top: 8px;
+  }
+  .anim-ctrl-bar button {
+    padding: 3px 9px;
+    font-size: 11.5px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--txt);
+  }
+  .anim-ctrl-bar button:hover {
+    background: var(--panel3);
+  }
+  .anim-ctrl-bar .tag {
+    white-space: nowrap;
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-family: var(--font-mono);
+  }
+  .anim-ctrl-bar input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--panel3);
+    outline: none;
+    border: none;
+  }
+  .anim-ctrl-bar input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    transition: transform .12s ease;
+  }
+  .anim-ctrl-bar input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+  }
+
+  /* ---- 骨骼列表 ---- */
+  .bone-tree {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .bone-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color .1s ease, color .1s ease;
+    border-left: 2px solid transparent;
+  }
+  .bone-row:hover { background: var(--panel2); }
+  .bone-row.hot {
+    background: var(--panel2);
+    font-weight: 550;
+    color: var(--txt);
+    border-left-color: var(--accent);
+  }
+  .swatch {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex: 0 0 auto;
+  }
+
+  /* 元信息键值表 */
+  .meta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 5px 14px;
+    font-size: 12.5px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+  }
+  .meta dt { color: var(--txt3); font-weight: 500; font-size: 12px; }
+  .meta dd { color: var(--txt); font-weight: 550; word-break: break-all; }
+
+  .chips2 { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .pill {
+    background: var(--panel2);
+    color: var(--txt2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 11.5px;
+    font-weight: 500;
+    transition: background-color .12s ease, border-color .12s ease;
+  }
+  .pill.g { background: var(--oksoft); color: var(--ok); border-color: rgba(16, 185, 129, 0.25); }
+  .pill.w { background: var(--warnsoft); color: var(--warn); border-color: rgba(245, 158, 11, 0.25); }
+  .pill.r { background: var(--errsoft); color: var(--err); border-color: rgba(239, 68, 68, 0.25); }
+  .pill.interactive { cursor: pointer; }
+  .pill.interactive:hover { border-color: var(--txt2); color: var(--txt); }
+
+  /* 表格样式 */
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line2); }
+  th {
+    color: var(--txt3);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    background: var(--panel2);
+  }
+  tr:hover td { background: var(--panel2); }
+
+  /* 代码与输出区域 */
+  code, pre, textarea.mono {
+    font-family: var(--font-mono);
+  }
+  pre.out {
+    background: var(--code);
+    color: var(--code-txt);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 260px;
+    overflow: auto;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+  textarea.mono {
+    width: 100%;
+    min-height: 340px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    resize: vertical;
+    background: var(--code);
+    color: var(--code-txt);
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+    padding: 12px 14px;
+  }
+  textarea.mono.tall { min-height: 480px; }
+
+  /* 编辑器外壳 (Editor Chrome) */
+  .editor-wrap {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .editor-header {
+    background: var(--panel2);
+    border-bottom: 1px solid var(--line);
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--txt3);
+  }
+  .editor-header .dots {
+    display: flex;
+    gap: 6px;
+  }
+  .editor-header .dot-mac {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--line);
+  }
+
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row.tight { gap: 6px; }
+  .lbl { font-size: 12px; color: var(--txt3); margin-bottom: 5px; font-weight: 500; display: block; }
+  .tt { font-size: 12px; color: var(--txt3); margin-top: 6px; }
+
+  /* ---- 状态框 State Box (四态) ---- */
+  .state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--txt3);
+    background: var(--panel);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+  }
+  .state .ico {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--panel2);
+    color: var(--txt3);
+    font-size: 18px;
+  }
+  .state b { color: var(--txt2); font-size: 14px; font-weight: 600; }
+  .state p { margin: 0; font-size: 12.5px; max-width: 42ch; line-height: 1.6; }
+  .state.err .ico { background: var(--errsoft); color: var(--err); }
+  .state.offline .ico { background: var(--warnsoft); color: var(--warn); }
+  .state.loading .bar {
+    width: 120px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--panel3);
+    overflow: hidden;
+    position: relative;
+  }
+  .state.loading .bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    border-radius: 2px;
+    background: var(--accent);
+    animation: slide 1.1s ease-in-out infinite;
+  }
+  @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+
+  /* ---- 配置面板 Config ---- */
+  .cfg-sec {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .cfg-sec > h4 {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--txt3);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    background: var(--panel2);
+    border-bottom: 1px solid var(--line2);
+  }
+  .cfg-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.2fr) minmax(160px, 1fr) 90px;
+    gap: 12px;
+    align-items: center;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--line2);
+    transition: background-color .1s;
+  }
+  .cfg-row:last-child { border-bottom: none; }
+  .cfg-row:hover { background: var(--panel2); }
+  .cfg-row.changed { background: var(--oksoft); }
+  .cfg-row.changed .cfg-k { color: var(--ok); font-weight: 600; }
+  .cfg-k {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--txt2);
+    word-break: break-all;
+  }
+  .cfg-row.protected .cfg-k { color: var(--warn); }
+  .cfg-row.protected input, .cfg-row.protected select { opacity: .5; pointer-events: none; }
+  .cfg-v { font-size: 12px; color: var(--txt3); text-align: right; }
+  .cfg-lock {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    color: var(--warn);
+    background: var(--warnsoft);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+  }
+
+  /* 现代紧凑、平滑的 Switch 开关 */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 19px;
+    flex: 0 0 34px;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: var(--panel3);
+    border: 1px solid var(--line);
+    transition: background-color .15s ease, border-color .15s ease;
+    border-radius: 19px;
+  }
+  .switch .slider:before {
+    position: absolute;
+    content: "";
+    height: 13px;
+    width: 13px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #ffffff;
+    transition: transform .15s cubic-bezier(0.2, 0, 0, 1);
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  .switch input:checked + .slider {
+    background-color: #10b981;
+    border-color: #10b981;
+  }
+  .switch input:checked + .slider:before {
+    transform: translateX(15px);
+  }
+  .switch input:disabled + .slider {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ---- 对话框 (Modal) ---- */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .modal.on { display: flex; animation: modalIn .15s cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .modal .sheet {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    width: min(440px, 100%);
+    padding: 18px 20px;
+  }
+  .modal h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--txt); }
+  .modal p { font-size: 12.5px; color: var(--txt2); margin-bottom: 12px; line-height: 1.5; }
+  .modal input { width: 100%; margin-bottom: 12px; }
+  .modal .acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+  .modal .hint-list {
+    max-height: 160px;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    margin-bottom: 12px;
+    background: var(--panel2);
+  }
+  .modal .hint-list b { display: block; font-family: var(--font-mono); font-size: 11.5px; color: var(--txt); }
+  .modal .hint-list span { display: block; font-size: 11.5px; color: var(--txt3); padding-bottom: 4px; }
+
+  /* ---- 悬浮通知 (Toast) ---- */
+  .toast {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 120;
+    pointer-events: none;
+  }
+  .toast div {
+    pointer-events: auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    box-shadow: var(--shadow-lg);
+    max-width: 400px;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: toastIn .18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .toast div.ok { border-left-color: var(--ok); }
+  .toast div.err { border-left-color: var(--err); }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: none; } }
+
+  /* 主题切换按钮图标 */
+  .theme-sun { display: none; }
+  .theme-moon { display: block; }
+  html[data-theme=dark] .theme-sun { display: block; }
+  html[data-theme=dark] .theme-moon { display: none; }
+
+  /* ---- 代码编辑器状态条 ---- */
+  .editor-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--txt3);
+    font-family: var(--font-mono);
+    padding: 4px 6px 0 6px;
+    user-select: none;
+  }
+  .editor-status .es-tag {
+    opacity: 0.8;
+  }
+
+  /* ---- 键盘快捷键徽标 ---- */
+  kbd, .search-kbd, .cmd-kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--panel3);
+    border: 1px solid var(--line);
+    color: var(--txt3);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  }
+  .search-kbd {
+    position: absolute;
+    right: 8px;
+    pointer-events: none;
+    font-size: 9.5px;
+  }
+
+  /* ---- 全局命令面板 (Command Palette Ctrl+K) ---- */
+  .cmd-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: min(15vh, 120px);
+    padding-left: 16px;
+    padding-right: 16px;
+    z-index: 200;
+  }
+  .cmd-backdrop.visible {
+    display: flex;
+    animation: fadeIn .12s ease;
+  }
+  .cmd-box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg), 0 20px 48px -10px rgba(0, 0, 0, 0.5);
+    width: min(580px, 100%);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: min(480px, 75vh);
+  }
+  .cmd-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel2);
+  }
+  .cmd-input-wrap svg {
+    width: 18px;
+    height: 18px;
+    color: var(--txt3);
+    flex: 0 0 auto;
+  }
+  .cmd-input-wrap input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none !important;
+    font-size: 13.5px;
+    color: var(--txt);
+    padding: 0;
+  }
+  .cmd-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .cmd-group {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--txt3);
+    padding: 6px 10px 4px;
+  }
+  .cmd-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--txt);
+    transition: background-color .08s ease;
+    user-select: none;
+  }
+  .cmd-item:hover, .cmd-item.active {
+    background: var(--panel2);
+  }
+  .cmd-item svg {
+    width: 15px;
+    height: 15px;
+    color: var(--txt3);
+    flex: 0 0 auto;
+  }
+  .cmd-item.active svg {
+    color: var(--accent);
+  }
+  .cmd-item .cmd-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cmd-item .cmd-badge {
+    font-size: 10.5px;
+    color: var(--txt3);
+    font-family: var(--font-mono);
+  }
+  .cmd-footer {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--panel2);
+    border-top: 1px solid var(--line2);
+    font-size: 11px;
+    color: var(--txt3);
+  }
+
+  /* ---- 3D 剧场全屏模式 (Theater Mode) ---- */
+  .canvas-wrap.theater {
+    position: fixed !important;
+    inset: 16px !important;
+    z-index: 150 !important;
+    height: auto !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px var(--line) !important;
+    border-radius: var(--radius-lg) !important;
+  }
+  .canvas-wrap.theater canvas {
+    height: calc(100vh - 32px) !important;
+  }
+
+  /* ---- 快捷键指南弹窗 ---- */
+  .hotkey-grid {
+    display: grid;
+    gap: 6px;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+  .hk-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: var(--panel2);
+    border: 1px solid var(--line2);
+    font-size: 12px;
+  }
+  .hk-name { color: var(--txt); }
+  .hk-keys { display: flex; gap: 4px; align-items: center; }
+
+  /* ---- 未保存修改浮动条 (Unsaved Changes Floating Bar) ---- */
+  .unsaved-bar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(50px);
+    opacity: 0;
+    pointer-events: none;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 10px 6px 16px;
+    box-shadow: var(--shadow-lg), 0 10px 30px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 100;
+    transition: transform .2s cubic-bezier(0.16, 1, 0.3, 1), opacity .2s ease;
+  }
+  .unsaved-bar.visible {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .unsaved-bar .ub-text {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--txt);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .unsaved-bar .ub-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--warn);
+  }
+
+  /* ---- 悬停一键复制微交互 ---- */
+  .copy-btn {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: transparent;
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: var(--txt3);
+    font-size: 11px;
+    box-shadow: none;
+  }
+  .copy-btn:hover {
+    color: var(--txt);
+    background: var(--panel3);
+  }
+
 </style>
 </head>
 <body>
 
-<div class="rail" role="tablist" aria-label="面板">
-  <div class="tab on" data-tab="model" role="tab" title="模型详情" aria-label="模型详情"><span class="ic">◆</span></div>
-  <div class="tab" data-tab="files" role="tab" title="模型文件" aria-label="模型文件"><span class="ic">▤</span></div>
-  <div class="tab" data-tab="mobs" role="tab" title="生物配置" aria-label="生物配置"><span class="ic">☟</span><span class="n" id="nMobs"></span></div>
-  <div class="tab" data-tab="skills" role="tab" title="技能" aria-label="技能"><span class="ic">✦</span></div>
-  <div class="tab" data-tab="loot" role="tab" title="掉落 / 刷怪" aria-label="掉落与刷怪点"><span class="ic">◈</span></div>
-  <div class="tab" data-tab="validate" role="tab" title="校验" aria-label="模型校验"><span class="ic">✓</span></div>
-  <div class="tab" data-tab="config" role="tab" title="配置" aria-label="插件配置"><span class="ic">⚙</span></div>
-  <div class="tab" data-tab="log" role="tab" title="日志" aria-label="审计日志"><span class="ic">≡</span></div>
+<!-- 左侧图标导航栏 (Rail) -->
+<div class="rail" role="tablist" aria-label="面板导航">
+  <!-- 品牌 Logo -->
+  <div class="rail-brand" title="helsteraMobs 控制台">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+      <line x1="12" y1="22.08" x2="12" y2="12"></line>
+    </svg>
+  </div>
+
+  <div class="tab on" data-tab="model" role="tab" title="模型详情" aria-label="模型详情">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      <polyline points="7.5 4.21 12 6.81 16.5 4.21"></polyline>
+      <polyline points="7.5 19.79 7.5 14.6 3 12"></polyline>
+      <polyline points="21 12 16.5 14.6 16.5 19.79"></polyline>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+      <line x1="12" y1="22.08" x2="12" y2="12"></line>
+    </svg>
+    <span class="tab-tip">模型详情 (Model)</span>
+  </div>
+
+  <div class="tab" data-tab="files" role="tab" title="模型文件" aria-label="模型文件">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <polyline points="10 13 8 15 10 17"></polyline>
+      <polyline points="14 13 16 15 14 17"></polyline>
+    </svg>
+    <span class="tab-tip">模型文件 (Files)</span>
+  </div>
+
+  <div class="tab" data-tab="mobs" role="tab" title="生物配置" aria-label="生物配置">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="9" cy="12" r="1.5"></circle>
+      <circle cx="15" cy="12" r="1.5"></circle>
+      <path d="M12 2a8 8 0 0 0-8 8v11l4-2 4 2 4-2 4 2V10a8 8 0 0 0-8-8z"></path>
+      <line x1="9" y1="16" x2="15" y2="16"></line>
+    </svg>
+    <span class="n" id="nMobs"></span>
+    <span class="tab-tip">生物配置 (Mobs)</span>
+  </div>
+
+  <div class="tab" data-tab="skills" role="tab" title="技能" aria-label="技能">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+    </svg>
+    <span class="tab-tip">技能逻辑 (Skills)</span>
+  </div>
+
+  <div class="tab" data-tab="loot" role="tab" title="掉落 / 刷怪" aria-label="掉落与刷怪点">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 12v10H4V12"></path>
+      <path d="M2 7h20v5H2z"></path>
+      <path d="M12 22V7"></path>
+      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+    </svg>
+    <span class="tab-tip">掉落与刷怪 (Loot)</span>
+  </div>
+
+  <div class="tab" data-tab="validate" role="tab" title="校验" aria-label="模型校验">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+      <polyline points="9 12 11 14 15 10"></polyline>
+    </svg>
+    <span class="tab-tip">模型校验 (Validate)</span>
+  </div>
+
+  <div class="tab" data-tab="config" role="tab" title="配置" aria-label="插件配置">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+    <span class="tab-tip">插件配置 (Config)</span>
+  </div>
+
+  <div class="tab" data-tab="log" role="tab" title="日志" aria-label="审计日志">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="4 17 10 11 4 5"></polyline>
+      <line x1="12" y1="19" x2="20" y2="19"></line>
+    </svg>
+    <span class="tab-tip">审计日志 (Log)</span>
+  </div>
+
   <div class="rail-sep"></div>
   <span class="spacer"></span>
-  <button class="icon-btn" id="bTheme" title="切换主题" aria-label="切换主题">◐</button>
+
+  <!-- 快捷键指南 -->
+  <button class="rail-action" id="bHotkeys" title="键盘快捷键 (?)" aria-label="快捷键">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+      <line x1="6" y1="8" x2="6" y2="8"></line>
+      <line x1="10" y1="8" x2="10" y2="8"></line>
+      <line x1="14" y1="8" x2="14" y2="8"></line>
+      <line x1="18" y1="8" x2="18" y2="8"></line>
+      <line x1="6" y1="12" x2="6" y2="12"></line>
+      <line x1="18" y1="12" x2="18" y2="12"></line>
+      <line x1="9" y1="16" x2="15" y2="16"></line>
+    </svg>
+    <span class="tab-tip">快捷键 (?)</span>
+  </button>
+
+  <!-- 主题切换 -->
+  <button class="rail-action" id="bTheme" title="切换暗黑/明亮主题 (Alt+T)" aria-label="切换主题">
+    <svg class="theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+    <svg class="theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+    <span class="tab-tip">切换主题 (Alt+T)</span>
+  </button>
 </div>
 
+<!-- 主内容应用区 -->
 <div class="app">
+  <!-- 顶栏 (Top Bar) -->
   <div class="top">
-    <div class="crumb">
-      <span class="lock">◆</span><span>helsteraMobs</span><span class="sep">/</span><b id="crumbTab">模型详情</b>
+    <!-- 品牌与连接状态 -->
+    <div class="brand">
+      <span class="dot" id="dRun" title="服务端状态正常"></span>
+      <span class="brand-name">helsteraMobs</span>
+      <span class="brand-ver" id="cVer">v__VERSION__</span>
     </div>
-    <input id="search" class="top-search" placeholder="搜索模型 / 生物…">
+
+    <!-- 当前工作区面包屑 -->
+    <div class="crumb">
+      <span class="sep">/</span>
+      <b id="crumbTab">模型详情</b>
+    </div>
+
+    <!-- 紧凑状态微胶囊 (Status Capsule) - 替代原 140px KPI 墙 -->
+    <div class="status-capsule" id="topStatus">
+      <div class="sc-item" title="服务端实时 TPS">
+        <span class="sc-k">TPS</span>
+        <span class="sc-v" id="cTps">20.0</span>
+      </div>
+      <div class="sc-sep"></div>
+      <div class="sc-item" title="已注册模型总数">
+        <span class="sc-k">模型</span>
+        <span class="sc-v" id="cModels">0</span>
+      </div>
+      <div class="sc-sep"></div>
+      <div class="sc-item" title="当前活跃实体实例">
+        <span class="sc-k">实例</span>
+        <span class="sc-v" id="cInst">0</span>
+      </div>
+      <div class="sc-sep"></div>
+      <div class="sc-item" title="在线玩家数">
+        <span class="sc-k">玩家</span>
+        <span class="sc-v" id="cPlayers">0</span>
+      </div>
+      <div class="sc-sep"></div>
+      <div class="sc-item" id="cErrWrap" title="运行时异常错误">
+        <span class="sc-k">异常</span>
+        <span class="sc-v" id="cErr">0</span>
+      </div>
+    </div>
+
+    <!-- 隐藏但保留 DOM 的元数据标签，保证 JS 兼容 -->
+    <span id="phTitle" style="display:none">模型详情</span>
+    <span id="phEyebrow" style="display:none">RENDER · 实时</span>
+    <span id="phSub" style="display:none">模型引擎 · 本地控制台</span>
+
+    <!-- 顶部搜索框 -->
+    <div class="search-wrap" id="searchWrap" title="点击或按 Ctrl+K 打开命令面板">
+      <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input id="search" placeholder="快速搜索模型 / 生物…" autocomplete="off">
+      <kbd class="search-kbd" id="searchKbd">Ctrl K</kbd>
+      <span class="search-clear" id="searchClear" title="清除">✕</span>
+    </div>
+
+    <!-- 顶栏快捷操作 -->
     <div class="acts">
-      <button class="icon-btn" id="bReload" title="重载模型" aria-label="重载模型">↻</button>
-      <button class="icon-btn" id="bPack" title="构建资源包" aria-label="构建资源包">▦</button>
-      <a href="/pack.zip" class="icon-btn" title="下载资源包" aria-label="下载资源包">↓</a>
+      <button class="icon-btn" id="bReload" title="重载服务端模型缓存" aria-label="重载模型">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+      </button>
+      <button class="icon-btn" id="bPack" title="构建客户端资源包 (pack.zip)" aria-label="构建资源包">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          <polyline points="7.5 4.21 12 6.81 16.5 4.21"></polyline>
+          <polyline points="7.5 19.79 7.5 14.6 3 12"></polyline>
+          <polyline points="21 12 16.5 14.6 16.5 19.79"></polyline>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+      </button>
+      <a href="/pack.zip" class="icon-btn" title="下载客户端资源包" aria-label="下载资源包">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+      </a>
     </div>
   </div>
 
+  <!-- 错误横幅 -->
   <div class="banner" id="banner">
-    <div class="btitle">⚠ 模型加载失败 / 校验错误</div>
+    <div class="btitle">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      模型加载失败 / 校验异常
+    </div>
     <ul id="bannerList"></ul>
   </div>
 
   <main>
-  <aside>
-    <div class="side-pad"><input id="search" placeholder="搜索模型 / 生物…" style="flex:1"></div>
-    <div class="side-sec">模型 <span id="mCount" class="tag"></span></div>
-    <div class="scroll" style="max-height:46%"><ul class="list" id="modelList"></ul></div>
-    <div class="side-sec">生物配置 <button class="sm ghost" id="bNewMob">＋ 新建</button></div>
-    <div class="scroll"><ul class="list" id="mobList"></ul></div>
-  </aside>
-
-  <section class="content">
-    <div class="pagehead">
-      <div class="ph-main">
-        <div class="eyebrow"><span class="dot" id="dRun"></span><span id="phEyebrow">RENDER · 实时</span></div>
-        <h1 id="phTitle">模型详情</h1>
-        <div class="sub" id="phSub">模型引擎 · 本地控制台 v__VERSION__</div>
+    <!-- 左侧资源对象列表 (Object Explorer Aside) -->
+    <aside>
+      <div class="aside-nav-bar">
+        <div class="segmented-ctrl">
+          <button class="seg-btn on" id="tabObjModels" onclick="switchObjTab('models')" title="浏览 3D 模型">
+            <span>模型</span>
+            <span id="mCount" class="seg-count">0</span>
+          </button>
+          <button class="seg-btn" id="tabObjMobs" onclick="switchObjTab('mobs')" title="浏览生物 YAML 配置">
+            <span>生物</span>
+            <span id="mobCount" class="seg-count">0</span>
+          </button>
+        </div>
+        <button class="icon-btn icon-add" id="bNewMob" title="新建生物配置 YAML">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
       </div>
-      <div class="stats">
-        <div class="stat"><div class="k">版本</div><div class="v" id="cVer">-</div></div>
-        <div class="stat"><div class="k">模型</div><div class="v" id="cModels">0</div></div>
-        <div class="stat"><div class="k">实例</div><div class="v" id="cInst">0</div></div>
-        <div class="stat"><div class="k">玩家</div><div class="v" id="cPlayers">0</div></div>
-        <div class="stat"><div class="k">TPS</div><div class="v" id="cTps">-</div></div>
-        <div class="stat" id="cErrWrap"><div class="k">错误</div><div class="v" id="cErr">0</div></div>
-      </div>
-    </div>
-    <div class="panes">
 
-      <!-- ===== 模型详情 ===== -->
-      <div class="pane on" id="pane-model">
-        <div class="sec">
-          <h3>模型详情 <span class="hint" id="mdHint">← 从左侧选择一个模型</span></h3>
-          <div id="mdEmpty" class="empty">尚未选择模型。</div>
-          <div id="mdBody" style="display:none">
-            <div class="grid2">
-              <div>
-                <div class="canvas-wrap">
-                  <canvas id="canvas"></canvas>
-                  <div class="cv-tools">
-                    <button class="sm" id="cvReset" title="重置视角">重置</button>
-                    <button class="sm" id="cvSpin" title="自动旋转">旋转</button>
-                  </div>
-                  <div class="cv-legend" id="cvLegend">拖拽旋转 · 滚轮缩放</div>
+      <!-- 模型列表面板 -->
+      <div class="aside-pane on" id="asidePaneModels">
+        <div class="scroll">
+          <ul class="list" id="modelList"></ul>
+        </div>
+      </div>
+
+      <!-- 生物列表面板 -->
+      <div class="aside-pane" id="asidePaneMobs" style="display:none;">
+        <div class="scroll">
+          <ul class="list" id="mobList"></ul>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 右侧内容视口区 -->
+    <section class="content">
+      <div class="panes">
+
+        <!-- ===== 模型空间 3D 工作台 ===== -->
+        <div class="pane on" id="pane-model">
+          <div id="mdEmpty" class="empty" style="height: 100%; display: flex; align-items: center; justify-content: center;">
+            尚未选择模型。
+          </div>
+          <div id="mdBody" class="studio-layout" style="display:none">
+            <!-- 3D 视口主区 -->
+            <div class="studio-viewport">
+              <div class="canvas-wrap" id="canvasWrap">
+                <canvas id="canvas"></canvas>
+                <div class="cv-tools">
+                  <button class="sm" id="cvReset" title="等轴视角 (R)">等轴</button>
+                  <button class="sm" id="cvFront" title="正视图 (Z)">正视</button>
+                  <button class="sm" id="cvSide" title="侧视图 (X)">侧视</button>
+                  <button class="sm" id="cvTop" title="俯视图 (C)">俯视</button>
+                  <button class="sm" id="cvSpin" title="自动旋转 (T)">旋转</button>
+                  <button class="sm" id="cvExpand" title="剧场全屏 (F)">全屏</button>
                 </div>
-                <div class="row tight" style="margin-top:8px">
-                  <label class="kv"><input type="checkbox" id="cvHitbox" checked> 显示碰撞盒</label>
-                  <label class="kv"><input type="checkbox" id="cvGrid" checked> 显示地面网格</label>
-                </div>
+                <div class="cv-legend" id="cvLegend">拖拽旋转 · 滚轮缩放</div>
               </div>
-              <div>
-                <dl class="meta" id="mdMeta"></dl>
-                <div style="margin-top:12px">
-                  <div class="lbl">动画 <span class="tag" id="animTime"></span></div>
-                  <div class="chips2" id="mdAnims"></div>
-                  <div class="row tight" style="margin-top:8px">
-                    <button class="sm ghost" id="animPlay">▶ 播放</button>
-                    <input id="animSeek" type="range" min="0" max="1000" value="0" style="flex:1">
-                    <span class="tag" id="animName">—</span>
-                  </div>
+              <div class="studio-bar">
+                <div class="studio-toggles">
+                  <label class="toggle-pill">
+                    <input type="checkbox" id="cvHitbox" checked>
+                    <span>碰撞盒</span>
+                  </label>
+                  <label class="toggle-pill">
+                    <input type="checkbox" id="cvGrid" checked>
+                    <span>网格</span>
+                  </label>
+                  <label class="toggle-pill">
+                    <input type="checkbox" id="cvWire">
+                    <span>线框</span>
+                  </label>
                 </div>
-                <div style="margin-top:12px">
-                  <div class="lbl">纹理</div>
+                <div class="hint" id="mdHint" style="margin: 0; font-size: 11.5px;"></div>
+              </div>
+            </div>
+
+            <!-- 连续检查器侧栏 -->
+            <div class="studio-inspector">
+              <div class="insp-section">
+                <div class="insp-title">
+                  <span>模型参数与尺寸</span>
+                </div>
+                <dl class="meta" id="mdMeta"></dl>
+                <div style="margin-top: 12px">
+                  <div class="lbl">绑定纹理 (Textures)</div>
                   <div class="chips2" id="mdTex"></div>
                 </div>
               </div>
-            </div>
-            <div style="margin-top:14px">
-              <div class="lbl">骨骼（点击高亮，共 <span id="mdBoneN">0</span> 根）</div>
-              <div id="mdBones"></div>
+
+              <div class="insp-section">
+                <div class="insp-title">
+                  <span>动作序列 (Animations)</span>
+                </div>
+                <div class="chips2" id="mdAnims"></div>
+                <div class="anim-ctrl-bar" style="margin-top: 10px;">
+                  <button class="sm ghost" id="animPlay" title="播放/暂停 (Space)">▶ 播放</button>
+                  <button class="sm ghost" id="animPrev" title="上一帧 (-0.05s)" style="padding: 2px 6px;">⏮</button>
+                  <input id="animSeek" type="range" min="0" max="1000" value="0">
+                  <button class="sm ghost" id="animNext" title="下一帧 (+0.05s)" style="padding: 2px 6px;">⏭</button>
+                  <select id="animSpeed" class="sm" style="padding: 2px 4px; font-size: 11px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; color: var(--txt2);" title="播放倍速">
+                    <option value="0.25">0.25x</option>
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1.0x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2.0x</option>
+                  </select>
+                  <span class="tag" id="animTime" style="font-family: var(--font-mono); font-size: 11px;">0.00s</span>
+                  <span class="tag" id="animName" style="color: var(--accent); font-weight: 600;">—</span>
+                </div>
+              </div>
+
+              <div class="insp-section flex-1">
+                <div class="insp-title">
+                  <span>骨骼层级 (Bones)</span>
+                  <span class="tag" id="mdBoneN">0</span>
+                </div>
+                <div class="bone-tree scroll" id="mdBones"></div>
+              </div>
             </div>
           </div>
         </div>
+
+        <!-- ===== 模型文件 ===== -->
+        <div class="pane" id="pane-files">
+          <div class="pane-scroll">
+            <div class="sec">
+              <h3>模型源文件 <span class="hint">直接在线修改 manifest.yml / model.json / animations.json</span></h3>
+              <div class="row" style="margin-bottom: 12px;">
+                <input id="mfDir" placeholder="模型目录（相对 models 根），如 example/emberling" style="flex: 1; max-width: 380px;">
+                <button class="ghost" id="mfLoad">载入</button>
+                <select id="mfWhich" style="min-width: 150px;"></select>
+                <button id="mfSave">保存并更新</button>
+              </div>
+              <div class="tt" id="mfTex" style="margin-bottom: 8px;"></div>
+              
+              <div class="editor-wrap">
+                <div class="editor-header">
+                  <div class="dots"><span class="dot-mac"></span><span class="dot-mac"></span><span class="dot-mac"></span></div>
+                  <span id="mfEditorTitle">SOURCE EDITOR</span>
+                  <span class="tag" style="font-size: 11px;">UTF-8</span>
+                </div>
+                <textarea class="mono tall" id="mfText" spellcheck="false" placeholder="在此编辑文件内容…"></textarea>
+                <div class="editor-status" id="mfStatus"><span>第 1 行，第 1 列</span><span class="es-tag">Tab 缩进 · Shift+Tab 反缩进</span></div>
+              </div>
+              <pre class="out" id="mfOut" style="display:none; margin-top: 10px;"></pre>
+              <div class="row tight" style="margin-top: 12px">
+                <button class="sm ghost" id="mfExport">导出为 ZIP 包</button>
+                <button class="sm ghost" id="mfImportPick">导入 ZIP 包…</button>
+                <input type="file" id="mfImportFile" accept=".zip,application/zip" style="display:none">
+                <span class="hint" style="margin:0">支持导入 Blockbench 导出的模型包</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 生物配置工作台 ===== -->
+        <div class="pane" id="pane-mobs">
+          <div class="mobs-workbench">
+            <div class="mobs-editor-col">
+              <div class="editor-toolbar">
+                <div class="et-field">
+                  <span class="et-label">文件名</span>
+                  <input id="mobName" class="et-input" placeholder="如 crystal_boss">
+                </div>
+                <div class="et-actions">
+                  <button class="sm" id="bSaveMob">保存</button>
+                  <button class="sm danger" id="bDelMob">删除</button>
+                </div>
+              </div>
+              <div class="editor-body">
+                <textarea class="mono tall full-h" id="mobText" spellcheck="false"
+                  placeholder="从左侧选择生物，或点击左栏「＋」新建…"></textarea>
+              </div>
+              <div class="editor-status" id="mobStatus">
+                <span>第 1 行，第 1 列</span>
+                <span class="es-tag">Tab 缩进 · Shift+Tab 反缩进</span>
+              </div>
+              <div class="editor-footer-bar">
+                <div class="ef-versions">
+                  <select id="mobVers" class="sm" style="max-width: 170px;" title="历史版本快照"></select>
+                  <button class="sm ghost" id="bRestore">回滚版本</button>
+                </div>
+                <div class="ef-spawn">
+                  <select id="spawnPlayer" class="sm" style="max-width: 130px;" title="生成目标玩家"></select>
+                  <button class="sm ghost" id="bSpawn">生成到游戏</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mobs-inspector-col">
+              <div class="insp-title" style="padding: 10px 16px; border-bottom: 1px solid var(--line); margin: 0;">
+                <span>就地联调助理</span>
+                <span class="hint" id="mobHint" style="margin:0; font-size:11px;"></span>
+              </div>
+              <div class="insp-scroll">
+                <div id="mobOut">选择生物后可在左侧实时编辑并调试。</div>
+                <div class="spec-reference">
+                  <div class="spec-title">生效参数速查</div>
+                  <table class="compact-table">
+                    <tr><td><code>model</code></td><td>模型 ID（匹配已注册模型）</td></tr>
+                    <tr><td><code>display-name</code></td><td>头顶展示名称（支持 § 颜色代码）</td></tr>
+                    <tr><td><code>scale</code></td><td>整体缩放倍率 (默认 1.0)</td></tr>
+                    <tr><td><code>glowing</code></td><td>外轮廓发光高亮 (true/false)</td></tr>
+                    <tr><td><code>entity.type</code></td><td>基底实体类型 (如 ZOMBIE, IRON_GOLEM)</td></tr>
+                    <tr><td><code>entity.health</code></td><td>最大生命值 (Max HP)</td></tr>
+                    <tr><td><code>ai.profile</code></td><td>引用预设 AI 策略</td></tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ===== 技能 ===== -->
+        <div class="pane" id="pane-skills">
+          <div class="pane-scroll">
+            <div class="grid2">
+              <div class="sec">
+                <h3>技能与触发器 (Skills &amp; Triggers) <span class="hint">skills.yml</span></h3>
+                <div id="skBox" style="display:none"></div>
+                <textarea class="mono tall" id="skText" spellcheck="false"
+                  placeholder="编辑 skills.yml 配置文件…"></textarea>
+                <div class="editor-status" id="skStatus"><span>第 1 行，第 1 列</span><span class="es-tag">Tab 缩进 · Shift+Tab 反缩进</span></div>
+                <div class="row tight" style="margin-top: 10px">
+                  <button class="sm" id="bSaveSkills">保存并应用</button>
+                  <button class="sm ghost" id="bSkillsRefresh">重新读取</button>
+                </div>
+                <pre class="out" id="skOut" style="display:none; margin-top: 10px;"></pre>
+              </div>
+
+              <div class="sec">
+                <h3>内置触发条件 / 技能动作速查表</h3>
+                <p class="lede">配置时可直接套用，参数之间以空格分隔；支持带引号的字符串参数。</p>
+                <div style="background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden;">
+                  <table>
+                    <tr><th style="width: 120px;">支持条件</th><th>说明</th></tr>
+                    <tr><td colspan="2" id="skConds" class="mono" style="padding: 10px; line-height: 1.8;"></td></tr>
+                  </table>
+                </div>
+                <div style="margin-top: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden;">
+                  <table>
+                    <tr><th style="width: 120px;">技能动作</th><th>说明</th></tr>
+                    <tr><td colspan="2" id="skActs" class="mono" style="padding: 10px; line-height: 1.8;"></td></tr>
+                  </table>
+                </div>
+                <div id="skWarnBox" style="display:none; margin-top: 12px;">
+                  <h3 style="color: var(--warn)">装载警告</h3>
+                  <pre class="out" id="skWarns"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 掉落 / 刷怪 ===== -->
+        <div class="pane" id="pane-loot">
+          <div class="pane-scroll">
+            <div class="grid2">
+              <div class="sec">
+                <h3>掉落配置表 (Loot Tables) <span class="hint">loot.yml</span></h3>
+                <div id="lootBox" style="display:none"></div>
+                <textarea class="mono tall" id="lootText" spellcheck="false" placeholder="loot.yml 内容"></textarea>
+                <div class="editor-status" id="lootStatus"><span>第 1 行，第 1 列</span><span class="es-tag">Tab 缩进 · Shift+Tab 反缩进</span></div>
+                <div class="row tight" style="margin-top: 10px">
+                  <button class="sm" id="bSaveLoot">保存并生效</button>
+                  <button class="sm ghost" id="bLootRefresh">重新载入</button>
+                </div>
+                <pre class="out" id="lootOut" style="display:none; margin-top: 10px;"></pre>
+              </div>
+
+              <div class="sec">
+                <h3>掉落概率掷骰仿真器</h3>
+                <p class="lede">基于算法模拟掉落概率与幸运加成，不会在实际游戏世界产生实体掉落物。</p>
+                <div class="row" style="margin-bottom: 10px;">
+                  <select id="rollTable" style="flex:1"></select>
+                  <input id="rollLuck" type="number" step="1" min="0" value="0" style="width: 80px;" title="模拟玩家幸运值 (Luck)" placeholder="Luck">
+                  <button class="sm" id="bRoll" title="模拟单次抽奖">单抽 (1x)</button>
+                  <button class="sm ghost" id="bRoll10" title="连续仿真 10 次">十连 (10x)</button>
+                  <button class="sm ghost" id="bRoll100" title="批量高频仿真 100 次">百连 (100x)</button>
+                </div>
+                <pre class="out" id="rollOut">点击上方抽奖按钮开始模拟掉落概率与数量统计。</pre>
+
+                <h3 style="margin-top: 20px;">定时刷怪点监控 (Spawners)</h3>
+                <p class="lede">读取 spawners.yml，管理世界中自动生成的据点与生物存活监控。</p>
+                <div class="row tight">
+                  <button class="sm ghost" id="bSpReload">重新读取 spawners.yml</button>
+                </div>
+                <pre class="out" id="spOut" style="margin-top: 10px;">加载中…</pre>
+
+                <h3 style="margin-top: 20px;">免疫 / 伤害倍率诊断 (Immunity)</h3>
+                <p class="lede">读取已编译的免疫规则，逐条显示它盖住了哪些伤害原因、10 点原始伤害下的最终取值，以及装载期告警。</p>
+                <div class="row tight">
+                  <button class="sm ghost" id="bImReload">刷新免疫诊断</button>
+                </div>
+                <pre class="out" id="imOut" style="margin-top: 10px;">加载中…</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 校验 ===== -->
+        <div class="pane" id="pane-validate">
+          <div class="pane-scroll">
+            <div class="sec">
+              <h3>模型完整性静态校验 <span class="hint">严格解析骨骼树、贴图引用、物理碰撞和格式规范</span></h3>
+              <div class="row">
+                <input id="valDir" placeholder="模型目录，如 example/emberling" style="flex: 1; max-width: 400px;">
+                <button class="ghost" id="bValidate">开始校验</button>
+              </div>
+              <pre class="out" id="valOut" style="display:none; margin-top: 12px;"></pre>
+            </div>
+            <div class="sec">
+              <h3>全量热重载 (Hot Reload)</h3>
+              <p class="lede">触发服务端后台重新扫描 <code>models/</code> 目录，更新内存映射并同步所有客户端。</p>
+              <button id="bReload2">立即触发模型热重载</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 配置 ===== -->
+        <div class="pane" id="pane-config">
+          <div class="pane-scroll">
+            <div class="sec">
+              <h3>插件系统全局参数配置 <span class="hint" id="cfgHint">来自 config.yml，保存后需 /helstera reload 生效</span></h3>
+              <div class="row" style="margin-bottom: 12px">
+                <button class="ghost sm" id="cfgLoad">重新载入</button>
+                <button class="ghost sm" id="cfgRaw">查看原始 YAML</button>
+                <span class="tt" id="cfgStat" style="margin:0; font-weight: 500;"></span>
+              </div>
+              <pre class="out" id="cfgRawOut" style="display:none; margin-bottom: 12px;"></pre>
+              
+              <div class="row" style="margin-bottom: 14px">
+                <input id="cfgFilter" placeholder="搜索过滤配置键，如 render / ai / debug / web …" style="flex: 1; max-width: 380px;">
+                <label class="kv" style="white-space:nowrap; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="cfgOnlyChanged"> 仅显示已修改的项
+                </label>
+              </div>
+              
+              <div id="cfgList"></div>
+              
+              <div class="row" style="margin-top: 16px; background: var(--panel2); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--line);">
+                <button id="cfgSave">保存所有配置修改</button>
+                <button class="ghost" id="cfgRevert">放弃全部未保存改动</button>
+                <span class="tt" id="cfgPending" style="margin: 0; color: var(--accent); font-weight: 600;"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 日志 ===== -->
+        <div class="pane" id="pane-log">
+          <div class="pane-scroll">
+            <div class="sec">
+              <h3>操作审计与运行日志 (Audit Logs) <span class="hint">记录生物生成、配置更新、版本回滚等关键写操作</span></h3>
+              <div class="row tight" style="margin-bottom: 12px; gap: 8px; flex-wrap: wrap;">
+                <input id="logFilter" placeholder="搜索过滤日志关键词…" style="flex: 1; max-width: 320px;">
+                <button class="ghost sm" id="bLog">刷新日志</button>
+                <button class="ghost sm" id="bLogCopy">复制全部</button>
+                <button class="ghost sm" id="bLogClear">清空展示</button>
+                <label class="kv" style="cursor: pointer; display: flex; align-items: center; gap: 6px; margin-left: 6px; white-space: nowrap;">
+                  <input type="checkbox" id="logAutoScroll" checked> 自动滚动触底
+                </label>
+              </div>
+              <pre class="out" id="logOut" style="max-height: 560px; font-size: 12px; overflow-y: auto;">—</pre>
+            </div>
+          </div>
+        </div>
+
       </div>
+    </section>
+  </main>
+</div>
 
-      <!-- ===== 模型文件 ===== -->
-      <div class="pane" id="pane-files">
-        <div class="sec">
-          <h3>模型源文件 <span class="hint">直接编辑 manifest.yml / model.json / animations.json，保存需先通过语法校验</span></h3>
-          <div class="row">
-            <input id="mfDir" placeholder="模型目录（相对 models 根），如 example/crystal_golem">
-            <button class="ghost" id="mfLoad">载入</button>
-            <select id="mfWhich"></select>
-            <button id="mfSave">保存并重载</button>
-          </div>
-          <div class="tt" id="mfTex"></div>
-          <textarea class="mono tall" id="mfText" spellcheck="false" style="margin-top:10px"></textarea>
-          <pre class="out" id="mfOut" style="display:none"></pre>
-          <div class="row tight" style="margin-top:10px">
-            <button class="sm ghost" id="mfExport">导出为 zip</button>
-            <button class="sm ghost" id="mfImportPick">导入 zip…</button>
-            <input type="file" id="mfImportFile" accept=".zip,application/zip" style="display:none">
-            <span class="hint" style="margin:0">导出当前目录；导入会写入所填目录（路径越界会被拒绝）</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== 技能 ===== -->
-      <div class="pane" id="pane-skills">
-        <div class="grid2">
-          <div class="sec">
-            <h3>技能与触发器 <span class="hint">skills.yml：命名技能（require 条件 + on-decision 动作）</span></h3>
-            <div id="skBox" style="display:none"></div>
-            <textarea class="mono tall" id="skText" spellcheck="false"
-              placeholder="选择已加载的技能，或直接编辑 skills.yml"></textarea>
-            <div class="row tight" style="margin-top:9px">
-              <button class="sm" id="bSaveSkills">保存并重载</button>
-              <button class="sm ghost" id="bSkillsRefresh">重新载入</button>
-            </div>
-            <pre class="out" id="skOut" style="display:none"></pre>
-          </div>
-          <div class="sec">
-            <h3>内置条件 / 动作速查</h3>
-            <p class="kv">写技能时可直接参考，参数以空格分隔；引号内的空格会被保留。</p>
-            <table>
-              <tr><th>条件</th><th>说明</th></tr>
-              <tr><td colspan="2" id="skConds" class="mono"></td></tr>
-            </table>
-            <table style="margin-top:10px">
-              <tr><th>动作</th><th>说明</th></tr>
-              <tr><td colspan="2" id="skActs" class="mono"></td></tr>
-            </table>
-            <div id="skWarnBox" style="display:none;margin-top:10px">
-              <h3>装载告警</h3>
-              <pre class="out" id="skWarns"></pre>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== 掉落 ===== -->
-      <div class="pane" id="pane-loot">
-        <div class="grid2">
-          <div class="sec">
-            <h3>掉落表 <span class="hint">loot.yml：概率 / 数量区间 / 幸运值 / 附魔</span></h3>
-            <div id="lootBox" style="display:none"></div>
-            <textarea class="mono tall" id="lootText" spellcheck="false"
-              placeholder="loot.yml 内容"></textarea>
-            <div class="row tight" style="margin-top:9px">
-              <button class="sm" id="bSaveLoot">保存并重载</button>
-              <button class="sm ghost" id="bLootRefresh">重新载入</button>
-            </div>
-            <pre class="out" id="lootOut" style="display:none"></pre>
-          </div>
-          <div class="sec">
-            <h3>掷骰预览 <span class="hint">只计算概率，不会在世界里真的掉落</span></h3>
-            <div class="row">
-              <select id="rollTable" style="flex:1"></select>
-              <input id="rollLuck" type="number" step="1" min="0" value="0" style="width:90px"
-                     title="幸运值（通常等于击杀者抢夺等级）">
-              <button class="sm" id="bRoll">掷一次</button>
-            </div>
-            <pre class="out" id="rollOut" style="margin-top:9px">点「掷一次」查看结果。</pre>
-
-            <h3 style="margin-top:14px">刷怪点</h3>
-            <p class="kv">spawners.yml 定时生成。保存后可直接在此查看存活数。</p>
-            <div class="row tight">
-              <button class="sm ghost" id="bSpReload">重载 spawners.yml</button>
-            </div>
-            <pre class="out" id="spOut" style="margin-top:8px">加载中…</pre>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== 生物配置 ===== -->
-      <div class="pane" id="pane-mobs">
-        <div class="grid2">
-          <div class="sec">
-            <h3>生物 YAML <span class="hint" id="mobHint">← 从左侧选择，或新建</span></h3>
-            <div class="row tight" style="margin-bottom:8px">
-              <label class="lbl" style="margin:0">文件名</label>
-              <input id="mobName" placeholder="如 crystal_boss" style="flex:1">
-              <button class="sm" id="bSaveMob">保存</button>
-              <button class="sm danger" id="bDelMob">删除</button>
-            </div>
-            <textarea class="mono tall" id="mobText" spellcheck="false"
-              placeholder="从左侧选择生物，或用顶部“＋ 新建”按模板创建"></textarea>
-            <div class="row tight" style="margin-top:9px">
-              <select id="mobVers" style="flex:1"></select>
-              <button class="sm ghost" id="bRestore">回滚到该版本</button>
-              <button class="sm ghost" id="bSpawn">生成到游戏</button>
-            </div>
-            <select id="spawnPlayer" style="margin-top:8px;width:100%"></select>
-          </div>
-          <div class="sec">
-            <h3>字段说明 &amp; 生成预览</h3>
-            <pre class="out" id="mobOut">选择生物后可在左侧编辑。</pre>
-            <div class="sec" style="box-shadow:none;margin-top:10px;background:var(--panel2)">
-              <h3 style="margin-bottom:8px">实际生效的字段</h3>
-              <table>
-                <tr><th>字段</th><th>作用</th></tr>
-                <tr><td><code>model</code></td><td>使用的模型 ID（manifest.yml 里的 id）</td></tr>
-                <tr><td><code>display-name</code></td><td>头顶名称（支持 § 颜色码）</td></tr>
-                <tr><td><code>scale</code></td><td>模型缩放</td></tr>
-                <tr><td><code>glowing</code> / <code>show-name</code></td><td>发光轮廓 / 显示名称</td></tr>
-                <tr><td><code>spawn-hitbox</code></td><td>纯展示模型是否生成点击碰撞盒</td></tr>
-                <tr><td><code>entity.type</code></td><td>真实实体类型：有血量、可被打死（推荐 BOSS）</td></tr>
-                <tr><td><code>entity.health</code></td><td>最大血量</td></tr>
-                <tr><td><code>entity.invisible/silent/no-ai</code></td><td>隐形 / 静音 / 停用原版 AI</td></tr>
-                <tr><td><code>ai.profile</code></td><td>引用 config.yml 的 ai.profiles</td></tr>
-                <tr><td><code>ai.*</code></td><td>就地覆盖视野/攻击/追击等调参</td></tr>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== 校验 ===== -->
-      <div class="pane" id="pane-validate">
-        <div class="sec">
-          <h3>模型校验 <span class="hint">解析 + 校验（纹理、骨骼、引用的纹理声明）</span></h3>
-          <div class="row">
-            <input id="valDir" placeholder="模型目录，如 example/crystal_golem">
-            <button class="ghost" id="bValidate">校验</button>
-          </div>
-          <pre class="out" id="valOut" style="display:none;margin-top:10px"></pre>
-        </div>
-        <div class="sec">
-          <h3>批量重载</h3>
-          <p class="kv">修改模型文件后点击下面的按钮，让服务器重新扫描并加载 <code>models/</code> 下的全部模型。</p>
-          <button style="margin-top:9px" id="bReload2">立即重载模型</button>
-        </div>
-      </div>
-
-      <!-- ===== 日志 ===== -->
-      <div class="pane" id="pane-config">
-        <div class="sec">
-          <h3>插件配置 <span class="hint" id="cfgHint">来自 config.yml，保存后需 /helstera reload 生效</span></h3>
-          <div class="row" style="margin-bottom:10px">
-            <button class="ghost sm" id="cfgLoad">重新载入</button>
-            <button class="ghost sm" id="cfgRaw">查看原始 YAML</button>
-            <span class="tt" id="cfgStat" style="margin:0"></span>
-          </div>
-          <pre class="out" id="cfgRawOut" style="display:none;margin-bottom:10px"></pre>
-          <div class="row" style="margin-bottom:10px">
-            <input id="cfgFilter" placeholder="过滤配置项，如 render / ai / debug">
-            <label class="kv" style="white-space:nowrap"><input type="checkbox" id="cfgOnlyChanged"> 仅显示已修改</label>
-          </div>
-          <div id="cfgList"></div>
-          <div class="row" style="margin-top:12px">
-            <button id="cfgSave">保存全部修改</button>
-            <button class="ghost" id="cfgRevert">放弃修改</button>
-            <span class="tt" id="cfgPending" style="margin:0"></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="pane" id="pane-log">
-        <div class="sec">
-          <h3>操作审计日志 <span class="hint">保存 / 回滚 / 生成等写操作</span></h3>
-          <div class="row" style="margin-bottom:9px"><button class="ghost sm" id="bLog">刷新</button></div>
-          <pre class="out" id="logOut" style="max-height:520px">—</pre>
-        </div>
-      </div>
-
-    </div>
-  </section>
-</main>
-</div><!-- /.app -->
-
+<!-- 现代对话框 (Modal) -->
 <div class="modal" id="modal">
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mdlgT">
     <h3 id="mdlgT"></h3>
@@ -621,7 +2469,64 @@
   </div>
 </div>
 
+<!-- 浮动 Toast 消息通知框 -->
 <div class="toast" id="toast"></div>
+
+<!-- 全局命令面板 (Command Palette Ctrl+K) -->
+<div class="cmd-backdrop" id="cmdPalette">
+  <div class="cmd-box" role="dialog" aria-modal="true" aria-label="全局命令检索">
+    <div class="cmd-input-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input id="cmdInput" placeholder="输入命令、模型名称或动作… (↑↓ 移动，Enter 执行，Esc 关闭)" autocomplete="off">
+      <span class="cmd-kbd" id="cmdEsc" style="cursor:pointer" onclick="closeCmdPalette()">ESC</span>
+    </div>
+    <div class="cmd-list" id="cmdList"></div>
+    <div class="cmd-footer">
+      <span><kbd>↑</kbd> <kbd>↓</kbd> 移动</span>
+      <span><kbd>↵</kbd> 执行</span>
+      <span><kbd>ESC</kbd> 退出</span>
+    </div>
+  </div>
+</div>
+
+<!-- 键盘快捷键指南弹窗 -->
+<div class="modal" id="hotkeysModal">
+  <div class="sheet" style="max-width: 480px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <h3 style="margin: 0; font-size: 14px; font-weight: 600;">键盘快捷键指南</h3>
+      <span class="cmd-kbd" style="cursor: pointer;" onclick="$('hotkeysModal').classList.remove('on')">ESC</span>
+    </div>
+    <div class="hotkey-grid">
+      <div class="hk-row"><span class="hk-name">打开命令面板 / 快速检索</span><span class="hk-keys"><kbd>Ctrl</kbd> + <kbd>K</kbd></span></div>
+      <div class="hk-row"><span class="hk-name">直达 1~8 功能面板</span><span class="hk-keys"><kbd>1</kbd> ~ <kbd>8</kbd></span></div>
+      <div class="hk-row"><span class="hk-name">播放 / 暂停 3D 动画</span><span class="hk-keys"><kbd>Space</kbd></span></div>
+      <div class="hk-row"><span class="hk-name">3D 视口等轴视角</span><span class="hk-keys"><kbd>R</kbd></span></div>
+      <div class="hk-row"><span class="hk-name">3D 正视 / 侧视 / 俯视切角</span><span class="hk-keys"><kbd>Z</kbd> / <kbd>X</kbd> / <kbd>C</kbd></span></div>
+      <div class="hk-row"><span class="hk-name">开启 / 关闭 3D 自动旋转</span><span class="hk-keys"><kbd>T</kbd></span></div>
+      <div class="hk-row"><span class="hk-name">3D 视口剧场全屏模式</span><span class="hk-keys"><kbd>F</kbd></span></div>
+      <div class="hk-row"><span class="hk-name">代码/YAML 缩进与反缩进</span><span class="hk-keys"><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd></span></div>
+      <div class="hk-row"><span class="hk-name">快捷保存当前配置/文件</span><span class="hk-keys"><kbd>Ctrl</kbd> + <kbd>S</kbd></span></div>
+      <div class="hk-row"><span class="hk-name">快速切换明/暗主题</span><span class="hk-keys"><kbd>Alt</kbd> + <kbd>T</kbd></span></div>
+      <div class="hk-row"><span class="hk-name">显示快捷键指南</span><span class="hk-keys"><kbd>?</kbd></span></div>
+    </div>
+    <div class="acts" style="margin-top: 14px;">
+      <button class="primary sm" onclick="$('hotkeysModal').classList.remove('on')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 未保存修改浮动通知条 -->
+<div class="unsaved-bar" id="unsavedBar">
+  <div class="ub-text">
+    <span class="ub-dot"></span>
+    <span id="unsavedText">有未保存的配置修改</span>
+  </div>
+  <button class="primary sm" id="unsavedSave">保存修改 (Ctrl+S)</button>
+  <button class="ghost sm" id="unsavedRevert">放弃</button>
+</div>
 
 <script>
 const TOKEN = "__TOKEN__";
@@ -649,6 +2554,7 @@ async function api(path, opts) {
   if (!r.ok) throw new Error((data && data.error) || ('HTTP ' + r.status));
   return data;
 }
+
 function toast(msg, kind) {
   const d = document.createElement('div');
   if (kind) d.className = kind;
@@ -656,9 +2562,28 @@ function toast(msg, kind) {
   $('toast').appendChild(d);
   setTimeout(() => d.remove(), kind === 'err' ? 6000 : 3200);
 }
-/* ---------------- 对话框（取代原生 prompt/confirm）----------------
-   原生弹窗无法承载模板列表这类结构化内容，样式也无法统一，
-   且不能被键盘完整操作。这里做 Promise 化的对话框，调用方直接 await。 */
+
+function copyText(text, label) {
+  if (!text) return;
+  const done = () => toast('✓ 已复制 ' + (label ? label + ': ' : '') + text, 'ok');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, cb) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); if (cb) cb(); } catch(e) { toast('复制失败', 'err'); }
+  document.body.removeChild(ta);
+}
+
+/* ---------------- 对话框 ---------------- */
 function dialog(opt) {
   return new Promise(resolve => {
     const m = $('modal');
@@ -708,25 +2633,28 @@ function setOut(el, obj) {
 }
 
 /* ---------------- 主题 ---------------- */
+function toggleTheme() {
+  const cur = document.documentElement.dataset.theme;
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('helstera.theme', next);
+  draw();
+  toast('已切换为' + (next === 'dark' ? '暗黑' : '明亮') + '模式', 'info');
+}
 (function () {
   const saved = localStorage.getItem('helstera.theme');
   if (saved) document.documentElement.dataset.theme = saved;
-  $('bTheme').onclick = () => {
-    const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = t;
-    localStorage.setItem('helstera.theme', t);
-    draw();
-  };
+  const btn = $('bTheme');
+  if (btn) btn.onclick = toggleTheme;
 })();
 
-/* ---------------- 四态：加载 / 空 / 错误 / 离线 ----------------
-   全站统一走这一个入口，保证每个面板的空态与错误态观感一致，
-   此前每个面板各写一套空态字符串，导致观感不一致。 */
+/* ---------------- 四态：加载 / 空 / 错误 / 离线 ---------------- */
 function stateBox(kind, title, desc, action) {
-  const ico = { loading: '', empty: '○', err: '!', offline: '⚡' }[kind] || '○';
   const wrap = document.createElement('div');
   wrap.className = 'state ' + kind;
-  const i = document.createElement('div'); i.className = 'ico'; i.textContent = ico;
+  const i = document.createElement('div');
+  i.className = 'ico';
+  i.textContent = { loading: '', empty: '○', err: '!', offline: '⚡' }[kind] || '○';
   wrap.appendChild(i);
   if (kind === 'loading') {
     const bar = document.createElement('div'); bar.className = 'bar'; wrap.appendChild(bar);
@@ -741,28 +2669,27 @@ function stateBox(kind, title, desc, action) {
   }
   return wrap;
 }
-/** 把某个容器切到指定状态。 */
+
 function setState(el, kind, title, desc, action) {
   if (!el) return;
   el.textContent = '';
   el.appendChild(stateBox(kind, title, desc, action));
 }
-/** 让容器进入加载态并在返回后关闭；调用方无需手动收尾。 */
+
 async function withLoading(el, title, fn, desc) {
   setState(el, 'loading', title || '载入中…', desc);
-  try { return await fn(); } finally { /* 由调用方渲染内容或再次 setState */ }
+  try { return await fn(); } finally { }
 }
 
 /* ---------------- 标签页 ---------------- */
-document.querySelectorAll('.tab').forEach(t => {
+document.querySelectorAll('.rail .tab[data-tab]').forEach(t => {
   t.onclick = () => showTab(t.dataset.tab);
   t.tabIndex = 0;
   t.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showTab(t.dataset.tab); }
   });
 });
-/* 每个面板的页头文案：面包屑与大标题都取自这里，
-   保证「我在哪」在切换后立即可见，不必靠图标猜。 */
+
 const PAGE = {
   model:    ['RENDER · 实时',   '模型详情',     '查看骨骼、立方体与动画，拖拽画布可旋转模型。'],
   files:    ['RENDER · 源文件', '模型文件',     '直接编辑 manifest.yml / model.json / animations.json。'],
@@ -770,11 +2697,25 @@ const PAGE = {
   skills:   ['BEHAVIOR · 行为', '技能',         '命名技能：require 条件 + on-decision 动作。'],
   loot:     ['LOOT · 掉落',     '掉落 / 刷怪',  '配置掉落概率与定时生成点，掷骰可预览结果。'],
   validate: ['RENDER · 校验',   '模型校验',     '解析并校验纹理、骨骼与引用的纹理声明。'],
-  config:   ['PLUGIN · 插件',   '配置',         '来自 config.yml，保存后需 /helstera reload 生效。'],
-  log:      ['AUDIT · 审计',    '日志',         '保存、回滚、生成等写操作的记录。'],
+  config:   ['PLUGIN · 插件',   '系统全局配置', '来自 config.yml，保存后需 /helstera reload 生效。'],
+  log:      ['AUDIT · 审计',    '操作审计日志', '保存、回滚、生成等写操作的完整审计记录。'],
 };
+
+function switchObjTab(tab) {
+  const isModels = tab === 'models';
+  const bModels = $('tabObjModels');
+  const bMobs = $('tabObjMobs');
+  if (bModels) bModels.classList.toggle('on', isModels);
+  if (bMobs) bMobs.classList.toggle('on', !isModels);
+  const pModels = $('asidePaneModels');
+  const pMobs = $('asidePaneMobs');
+  if (pModels) pModels.style.display = isModels ? 'flex' : 'none';
+  if (pMobs) pMobs.style.display = !isModels ? 'flex' : 'none';
+}
+
 function showTab(name) {
-  document.querySelectorAll('.tab').forEach(x => {
+  if (!name) return;
+  document.querySelectorAll('.rail .tab[data-tab]').forEach(x => {
     const on = x.dataset.tab === name;
     x.classList.toggle('on', on);
     x.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -791,7 +2732,18 @@ function showTab(name) {
     $('phEyebrow').textContent = meta[0];
     $('phSub').textContent = meta[2];
   }
-  if (name === 'model') draw();
+  if (name === 'mobs') switchObjTab('mobs');
+  else if (name === 'model' || name === 'files' || name === 'validate') switchObjTab('models');
+
+  if (name === 'model') {
+    setTimeout(draw, 50);
+  }
+  if (name === 'config' && (!CFG.data || !Object.keys(CFG.data).length)) {
+    cfgLoad();
+  }
+  if (name === 'log') {
+    if (typeof loadLog === 'function') loadLog();
+  }
 }
 
 /* ---------------- 配置面板 ---------------- */
@@ -805,7 +2757,7 @@ async function cfgLoad() {
     CFG.data = r.config || {};
     CFG.pending = {};
     CFG.protected = r.protected || [];
-    $('cfgStat').textContent = Object.keys(CFG.data).length + ' 项';
+    $('cfgStat').textContent = Object.keys(CFG.data).length + ' 项配置';
     cfgRender();
     cfgPending();
   } catch (e) {
@@ -813,7 +2765,6 @@ async function cfgLoad() {
   }
 }
 
-/** 把点号键按第一段分组，便于阅读 */
 function cfgGroups(filter, onlyChanged) {
   const g = new Map();
   const f = (filter || '').trim().toLowerCase();
@@ -860,39 +2811,72 @@ function cfgRender() {
       k.textContent = key;
       row.appendChild(k);
 
-      // 依据当前值类型选择控件；类型无法确定时退回文本框
-      const inp = document.createElement('input');
       if (typeof val === 'boolean') {
-        const wrap = document.createElement('select');
-        for (const [t, lbl] of [[true, 'true'], [false, 'false']]) {
-          const o = document.createElement('option');
-          o.value = String(t); o.textContent = lbl;
-          if (val === t) o.selected = true;
-          wrap.appendChild(o);
-        }
-        wrap.onchange = () => CFG.pending[key] = (wrap.value === 'true');
-        row.appendChild(wrap);
+        const sw = document.createElement('label');
+        sw.className = 'switch';
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.checked = Object.prototype.hasOwnProperty.call(CFG.pending, key) ? !!CFG.pending[key] : !!val;
+        chk.disabled = locked;
+        const sl = document.createElement('span');
+        sl.className = 'slider';
+        sw.appendChild(chk);
+        sw.appendChild(sl);
+        chk.onchange = () => {
+          CFG.pending[key] = chk.checked;
+          cfgPending();
+        };
+        row.appendChild(sw);
       } else {
-        inp.value = val == null ? '' : String(val);
+        const inp = document.createElement('input');
+        inp.value = Object.prototype.hasOwnProperty.call(CFG.pending, key) ? String(CFG.pending[key]) : (val == null ? '' : String(val));
+        inp.disabled = locked;
         inp.oninput = () => {
           const raw = inp.value;
-          // 原值是数字就保持数字类型，避免写回 config.yml 时类型漂移
-          CFG.pending[key] = (typeof val === 'number' && raw !== '' && !Number.isNaN(Number(raw)))
-            ? Number(raw) : raw;
+          const orig = val == null ? '' : String(val);
+          const hasChanged = raw !== orig;
+          if (hasChanged) {
+            CFG.pending[key] = (typeof val === 'number' && raw !== '' && !Number.isNaN(Number(raw)))
+              ? Number(raw) : raw;
+          } else {
+            delete CFG.pending[key];
+          }
+          row.classList.toggle('changed', hasChanged);
+          updateRight(hasChanged);
+          cfgPendingText();
         };
         row.appendChild(inp);
       }
 
       const right = document.createElement('div');
       right.className = 'cfg-v';
-      if (locked) {
-        const lk = document.createElement('span');
-        lk.className = 'cfg-lock';
-        lk.textContent = '🔒 不可改';
-        right.appendChild(lk);
-      } else {
-        right.textContent = changed ? '已改' : (typeof val);
+
+      function updateRight(isChg) {
+        right.innerHTML = '';
+        if (locked) {
+          const lk = document.createElement('span');
+          lk.className = 'cfg-lock';
+          lk.textContent = '🔒 受保护';
+          right.appendChild(lk);
+        } else if (isChg) {
+          const chg = document.createElement('span');
+          chg.textContent = '已修改';
+          chg.style.color = 'var(--accent)';
+          chg.style.fontWeight = '500';
+          right.appendChild(chg);
+
+          const rev = document.createElement('button');
+          rev.className = 'ghost sm';
+          rev.style.cssText = 'padding: 1px 6px; font-size: 11px; margin-left: 6px; height: 20px;';
+          rev.title = '撤销本项修改';
+          rev.textContent = '↩ 撤销';
+          rev.onclick = () => cfgRevertKey(key);
+          right.appendChild(rev);
+        } else {
+          right.textContent = typeof val;
+        }
       }
+      updateRight(changed);
       row.appendChild(right);
       sec.appendChild(row);
     }
@@ -900,9 +2884,30 @@ function cfgRender() {
   }
 }
 
-function cfgPending() {
+function cfgRevertKey(key) {
+  if (Object.prototype.hasOwnProperty.call(CFG.pending, key)) {
+    delete CFG.pending[key];
+    cfgPending();
+    toast('已撤销配置项「' + key + '」的修改', 'info');
+  }
+}
+
+function cfgPendingText() {
   const n = Object.keys(CFG.pending).length;
   $('cfgPending').textContent = n ? n + ' 项待保存' : '';
+  const ub = $('unsavedBar');
+  if (ub) {
+    if (n) {
+      $('unsavedText').textContent = n + ' 项配置修改未保存';
+      ub.classList.add('visible');
+    } else {
+      ub.classList.remove('visible');
+    }
+  }
+}
+
+function cfgPending() {
+  cfgPendingText();
   cfgRender();
 }
 
@@ -914,17 +2919,24 @@ async function cfgSave() {
       method: 'POST',
       body: JSON.stringify({ config: CFG.pending })
     });
-    if (!r || !r.ok) { toast('保存失败: ' + (r && r.error || '未知错误')); return; }
-    toast('已保存 ' + (r.applied ?? n) + ' 项');
+    if (!r || !r.ok) { toast('保存失败: ' + (r && r.error || '未知错误'), 'err'); return; }
+    toast('已保存 ' + (r.applied ?? n) + ' 项配置', 'ok');
+    CFG.pending = {};
+    cfgPendingText();
     await cfgLoad();
   } catch (e) {
-    toast('保存失败: ' + e);
+    toast('保存失败: ' + e, 'err');
   }
 }
 
-$('cfgLoad').onclick = cfgLoad;
-$('cfgSave').onclick = cfgSave;
-$('cfgRevert').onclick = () => { CFG.pending = {}; cfgPending(); toast('已放弃未保存的修改'); };
+function cfgRevert() {
+  CFG.pending = {};
+  cfgPending();
+  toast('已放弃未保存的修改', 'info');
+}
+$('cfgRevert').onclick = cfgRevert;
+$('unsavedSave').onclick = cfgSave;
+$('unsavedRevert').onclick = cfgRevert;
 $('cfgFilter').oninput = cfgRender;
 $('cfgOnlyChanged').onchange = cfgRender;
 $('cfgRaw').onclick = async () => {
@@ -939,7 +2951,7 @@ $('cfgRaw').onclick = async () => {
   } catch (e) { out.textContent = '失败: ' + e; }
 };
 
-/* ---------------- 状态 ---------------- */
+/* ---------------- 状态监控 ---------------- */
 async function loadStatus() {
   try {
     const s = await api('/api/status');
@@ -947,11 +2959,18 @@ async function loadStatus() {
     $('cModels').textContent = s.models;
     $('cInst').textContent = s.instances;
     $('cPlayers').textContent = s.players;
-    $('cTps').textContent = (s.tps || 0).toFixed ? s.tps.toFixed(1) : s.tps;
+    const tps = (s.tps || 0);
+    const tpsVal = tps.toFixed ? tps.toFixed(1) : tps;
+    $('cTps').textContent = tpsVal;
+    $('cTps').className = 'v ' + (tps >= 19.5 ? 'tps-ok' : (tps >= 16 ? 'tps-warn' : 'tps-err'));
     $('cErr').textContent = s.errorCount;
+    $('cErr').className = 'v ' + (s.errorCount > 0 ? 'err-bad' : '');
     $('dRun').className = 'dot' + (s.errorCount > 0 ? ' err' : '');
     return s;
-  } catch (e) { $('dRun').className = 'dot err'; return null; }
+  } catch (e) {
+    $('dRun').className = 'dot err';
+    return null;
+  }
 }
 
 /* ---------------- 模型列表 ---------------- */
@@ -963,7 +2982,11 @@ async function loadModels() {
   renderModels();
   renderBanner();
   await loadStatus();
+  if (!S.selId && !S.selDir && S.models.length > 0) {
+    selectModel(S.models[0].id);
+  }
 }
+
 function errorDirs() {
   const out = {};
   for (const k of Object.keys(S.errors || {})) {
@@ -972,56 +2995,58 @@ function errorDirs() {
   }
   return out;
 }
+
 function modelItems() {
   const errDirs = errorDirs();
   const items = [];
   const loadedDirs = {};
   for (const m of S.models) {
-    // 模型摘要未必带 dir（实测为空），此时用 id 作为目录键——两者在当前
-    // 目录结构下同为 models 根下的相对路径。之前只信 m.dir，会登记成空键，
-    // 导致同一目录在列表里出现两次：一条正常、一条被标成「失败」。
     const key = m.dir || m.id;
     loadedDirs[key] = true;
     items.push({ ok: true, id: m.id, dir: key, name: m.name || m.id, bones: m.bones, anims: (m.animations || []).length, errs: errDirs[key] || [] });
   }
-  for (const d of S.dirs) if (!loadedDirs[d]) items.push({ ok: false, id: d, dir: d, name: d, errs: errDirs[d] || ['未加载（原因未知，可点“模型文件”查看）'] });
+  for (const d of S.dirs) if (!loadedDirs[d]) items.push({ ok: false, id: d, dir: d, name: d, errs: errDirs[d] || ['未加载（可在“模型文件”排查）'] });
   for (const d of Object.keys(errDirs)) if (!S.dirs.includes(d) && !loadedDirs[d]) items.push({ ok: false, id: d, dir: d, name: d, errs: errDirs[d] });
   return items;
 }
+
 function renderModels() {
   const q = ($('search').value || '').toLowerCase();
   const ul = $('modelList'); ul.innerHTML = '';
   let items = modelItems().filter(i => !q || (i.name + ' ' + i.dir + ' ' + i.id).toLowerCase().indexOf(q) >= 0);
-  $('mCount').textContent = items.length + ' 个';
+  $('mCount').textContent = items.length;
+  
   if (!items.length) {
-    // 空态要区分「真的没有」和「搜索没命中」——后者给清除搜索的动作，
-    // 否则用户会以为模型丢了。
     const searched = !!($('search').value || '').trim();
     setState(ul, 'empty',
-      searched ? '没有匹配「' + $('search').value.trim() + '」的模型' : '还没有模型',
-      searched ? '换个关键词，或清除搜索看全部。' : '把模型包放进 models/ 目录后重载。',
-      searched ? { label: '清除搜索', onClick: () => { $('search').value = ''; renderModels(); loadMobs(); $('search').focus(); } } : null);
+      searched ? '无匹配模型' : '暂无模型',
+      searched ? '换个关键词，或清除搜索看全部。' : '放入 models/ 目录后重载。',
+      searched ? { label: '清除搜索', onClick: () => { $('search').value = ''; renderModels(); loadMobs(); } } : null);
     return;
   }
+  
   for (const it of items) {
     const li = document.createElement('li');
-    li.className = (S.selDir === it.dir ? 'sel' : '');
+    li.className = (S.selDir === it.dir || S.selId === it.id ? 'sel' : '');
     const dot = document.createElement('span');
     dot.className = 'dot' + (it.ok && !it.errs.length ? '' : ' err');
-    dot.style.flex = '0 0 auto';
     li.appendChild(dot);
+    
     const nm = document.createElement('span');
     nm.className = 'nm'; nm.textContent = it.name;
     li.appendChild(nm);
+    
     const tag = document.createElement('span');
     tag.className = 'tag';
-    tag.textContent = it.ok ? (it.bones + ' 骨 / ' + it.anims + ' 动画') : '失败';
+    tag.textContent = it.ok ? (it.bones + ' 骨 · ' + it.anims + ' 动画') : '失败';
     li.appendChild(tag);
+    
     li.onclick = () => it.ok ? selectModel(it.id) : showModelFiles(it.dir);
     ul.appendChild(li);
   }
   return items;
 }
+
 function renderBanner() {
   const dirs = errorDirs();
   const keys = Object.keys(dirs);
@@ -1037,57 +3062,56 @@ function renderBanner() {
 
 /* ---------------- 模型详情 ---------------- */
 async function selectModel(id) {
-  // 先切到加载态：模型详情带骨骼/立方体，拉取期间旧内容会误导用户以为已切换成功
   $('mdBody').style.display = 'none';
-  setState($('mdEmpty'), 'loading', '载入 ' + id + ' …', '正在读取骨骼、立方体与动画数据。');
+  setState($('mdEmpty'), 'loading', '载入 ' + id + ' …', '正在读取骨骼树、立方体与动作数据。');
   $('mdEmpty').style.display = '';
   try {
     const d = await api('/api/model?id=' + encodeURIComponent(id));
     if (!d.ok) {
-      setState($('mdEmpty'), 'err', '模型未加载', d.error || '内核里没有这个模型。',
+      setState($('mdEmpty'), 'err', '模型未就绪', d.error || '未注册该模型。',
         { label: '打开模型文件', onClick: () => showModelFiles(id) });
       return;
     }
     S.detail = d.model; S.selId = id; S.selDir = d.model.dir;
     $('mdEmpty').style.display = 'none';
-    $('mdBody').style.display = 'block';
+    $('mdBody').style.display = 'grid';
     $('mdHint').textContent = '(' + id + ')';
     const m = d.model;
     $('mdMeta').innerHTML =
-      '<dt>ID</dt><dd>' + esc(m.id) + '</dd>' +
-      '<dt>名称</dt><dd>' + esc(m.name) + '</dd>' +
+      '<dt>标识 ID</dt><dd style="display:flex;align-items:center;gap:6px;"><span>' + esc(m.id) + '</span><button class="ghost sm" style="padding:1px 6px;font-size:11px;height:20px;border-radius:4px" title="复制 ID" onclick="copyText(\'' + esc(m.id).replace(/'/g, "\\'") + '\', \'模型 ID\')">复制</button></dd>' +
+      '<dt>显示名称</dt><dd>' + esc(m.name) + '</dd>' +
       '<dt>版本 / 作者</dt><dd>' + esc(m.version) + ' · ' + esc(m.author) + '</dd>' +
-      '<dt>缩放</dt><dd>×' + m.scale + '</dd>' +
-      '<dt>碰撞盒</dt><dd>' + m.hitbox.width + ' × ' + m.hitbox.height + ' 格</dd>' +
+      '<dt>基础缩放</dt><dd>×' + m.scale + '</dd>' +
+      '<dt>碰撞盒 (W×H)</dt><dd>' + m.hitbox.width + ' × ' + m.hitbox.height + ' 格</dd>' +
       '<dt>骨骼 / 立方体</dt><dd>' + m.bones.length + ' / ' + (m.cubeCount != null ? m.cubeCount : totalCubes(m)) + '</dd>' +
-      '<dt>目录</dt><dd>' + esc(m.dir) + '</dd>';
+      '<dt>存储目录</dt><dd style="display:flex;align-items:center;gap:6px;"><span style="word-break:break-all">' + esc(m.dir) + '</span><button class="ghost sm" style="padding:1px 6px;font-size:11px;height:20px;border-radius:4px" title="复制路径" onclick="copyText(\'' + esc(m.dir).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\', \'模型路径\')">复制</button></dd>';
     $('mdTex').innerHTML = (m.textures || []).map(a => '<span class="pill">' + esc(a) + '</span>').join('') || '<span class="pill w">未声明纹理</span>';
     buildBones(m);
     buildCubes(m);
     setupAnims(m);
     fitView();
-    $('valDir').value = m.dir;
-    $('mfDir').value = m.dir;
+    const relDir = (m.id || (m.dir || '').replace(/^.*[\\/]models[\\/]/, '')).replace(/\\/g, '/');
+    $('valDir').value = relDir;
+    $('mfDir').value = relDir;
     showTab('model');
     draw();
+    renderModels();
     const errs = (errorDirs()[m.dir] || []);
-    if (errs.length) toast('该模型存在警告/错误：' + errs.join('；'), 'err');
+    if (errs.length) toast('该模型存在警告：' + errs.join('；'), 'err');
   } catch (e) {
-    // 取不到数据时必须让状态留在内容区，而不是只弹一下就消失——
-    // 否则用户看到的是一片空白，无法判断是没选中还是加载失败。
     const kind = isOffline(e) ? 'offline' : 'err';
     setState($('mdEmpty'), kind,
       isOffline(e) ? '连不上服务端' : '加载失败',
-      isOffline(e) ? '服务端可能已停止，或 web.enabled 被关掉了。' : e.message,
+      isOffline(e) ? '请确认 Minecraft 服务端已启动且端口正常。' : e.message,
       { label: '重试', onClick: () => selectModel(id) });
   }
 }
 
-/** 区分「服务端不可达」与「服务端返回了错误」——两者的处置方式完全不同。 */
 function isOffline(e) {
   const m = String((e && e.message) || '');
   return /Failed to fetch|NetworkError|Load failed|ECONNREFUSED/i.test(m);
 }
+
 function buildBones(m) {
   const depth = {};
   const byName = {};
@@ -1098,22 +3122,35 @@ function buildBones(m) {
   (m.bones || []).forEach((b, i) => {
     const row = document.createElement('div');
     row.className = 'bone-row';
-    row.style.paddingLeft = (6 + depth[b.name] * 16) + 'px';
+    row.style.paddingLeft = (8 + depth[b.name] * 16) + 'px';
     const sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = boneColor(i);
     row.appendChild(sw);
     const nm = document.createElement('span'); nm.style.flex = '1'; nm.textContent = b.name;
-    if (b.parent) { const p = document.createElement('span'); p.className = 'tag'; p.textContent = '← ' + b.parent; nm.appendChild(p); }
+    if (b.parent) {
+      const p = document.createElement('span');
+      p.className = 'tag';
+      p.style.marginLeft = '6px';
+      p.style.opacity = '0.7';
+      p.textContent = '↳ ' + b.parent;
+      nm.appendChild(p);
+    }
     row.appendChild(nm);
     const info = document.createElement('span'); info.className = 'tag';
     const attachN = (b.attachPoints ? Object.keys(b.attachPoints).length : 0);
-    info.textContent = (b.cubes ? b.cubes.length : 0) + ' 方块' + (attachN ? ' · 挂接 ' + attachN : '');
+    info.textContent = (b.cubes ? b.cubes.length : 0) + ' 方块' + (attachN ? ' · 挂载 ' + attachN : '');
     row.appendChild(info);
     row.onmouseenter = () => { S.hoverBone = b.name; if (!$('cvSpin').classList.contains('on')) draw(); };
     row.onmouseleave = () => { S.hoverBone = null; draw(); };
-    row.onclick = () => { S.selBone = (S.selBone === b.name ? null : b.name); draw(); };
+    row.onclick = () => {
+      S.selBone = (S.selBone === b.name ? null : b.name);
+      document.querySelectorAll('.bone-row').forEach(r => r.classList.remove('hot'));
+      if (S.selBone) row.classList.add('hot');
+      draw();
+    };
     box.appendChild(row);
   });
 }
+
 function buildCubes(m) {
   S.cubes = [];
   (m.bones || []).forEach((b, bi) => {
@@ -1126,11 +3163,12 @@ function buildCubes(m) {
     });
   });
 }
+
 function totalCubes(m) {
   let n = 0; (m.bones || []).forEach(b => n += (b.cubes ? b.cubes.length : 0)); return n;
 }
 
-/* ---------------- 动画 ---------------- */
+/* ---------------- 动画系统 ---------------- */
 function sampleChannel(frames, t) {
   if (!frames || !frames.length) return [0, 0, 0];
   if (t <= frames[0].time) return frames[0].value;
@@ -1147,25 +3185,30 @@ function sampleChannel(frames, t) {
   }
   return last.value;
 }
+
 function rotX(p, a) { a = a * Math.PI / 180; const c = Math.cos(a), s = Math.sin(a); return [p[0], p[1] * c - p[2] * s, p[1] * s + p[2] * c]; }
 function rotY(p, a) { a = a * Math.PI / 180; const c = Math.cos(a), s = Math.sin(a); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; }
 function rotZ(p, a) { a = a * Math.PI / 180; const c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c, p[2]]; }
+
 function applyBone(q, pivot, rot, pos) {
   let r = [q[0] - pivot[0], q[1] - pivot[1], q[2] - pivot[2]];
   r = rotX(r, rot[0]); r = rotY(r, rot[1]); r = rotZ(r, rot[2]);
   return [r[0] + pivot[0] + pos[0], r[1] + pivot[1] + pos[1], r[2] + pivot[2] + pos[2]];
 }
+
 function ancestorChain(name) {
   const chain = [name]; let cur = S.boneByName[name]; let g = 0;
   while (cur && cur.parent && S.boneByName[cur.parent] && g++ < 200) { chain.push(cur.parent); cur = S.boneByName[cur.parent]; }
   return chain;
 }
+
 function boneAnimTransform(name, t) {
   const data = S.detail && S.detail.animationsData ? S.detail.animationsData[S.anim.name] : null;
   if (!data || !data.bones || !data.bones[name]) return { rot: [0, 0, 0], pos: [0, 0, 0] };
   const bt = data.bones[name];
   return { rot: sampleChannel(bt.rotation, t), pos: sampleChannel(bt.position, t) };
 }
+
 function transformCorner(p, boneName, t) {
   let q = p;
   for (const nm of ancestorChain(boneName)) {
@@ -1175,6 +3218,7 @@ function transformCorner(p, boneName, t) {
   }
   return q;
 }
+
 function computeAnimCubes() {
   S.animCubes = [];
   const t = S.anim.time;
@@ -1182,24 +3226,33 @@ function computeAnimCubes() {
   (S.detail.bones || []).forEach(b => {
     (b.cubes || []).forEach(c => {
       const o = c.origin, s = c.size;
-      const corners = [[o[0], o[1], o[2]], [o[0] + s[0], o[1], o[2]], [o[0] + s[0], o[1] + s[1], o[2]], [o[0], o[1] + s[1], o[2]],
-        [o[0], o[1], o[2] + s[2]], [o[0] + s[0], o[1], o[2] + s[2]], [o[0] + s[0], o[1] + s[1], o[2] + s[2]], [o[0], o[1] + s[1], o[2] + s[2]]];
+      const corners = [
+        [o[0], o[1], o[2]], [o[0] + s[0], o[1], o[2]], [o[0] + s[0], o[1] + s[1], o[2]], [o[0], o[1] + s[1], o[2]],
+        [o[0], o[1], o[2] + s[2]], [o[0] + s[0], o[1], o[2] + s[2]], [o[0] + s[0], o[1] + s[1], o[2] + s[2]], [o[0], o[1] + s[1], o[2] + s[2]]
+      ];
       let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
-      for (const cnr of corners) { const q = transformCorner(cnr, b.name, t); for (let i = 0; i < 3; i++) { mn[i] = Math.min(mn[i], q[i]); mx[i] = Math.max(mx[i], q[i]); } }
+      for (const cnr of corners) {
+        const q = transformCorner(cnr, b.name, t);
+        for (let i = 0; i < 3; i++) { mn[i] = Math.min(mn[i], q[i]); mx[i] = Math.max(mx[i], q[i]); }
+      }
       S.animCubes.push({ bone: b.name, bi: bi, min: mn, max: mx });
     });
     bi++;
   });
 }
+
 function setupAnims(m) {
   S.boneByName = {}; (m.bones || []).forEach(b => S.boneByName[b.name] = b);
   const anims = m.animations || [];
   const wrap = $('mdAnims'); wrap.innerHTML = '';
   stopAnim();
-  if (!anims.length) { wrap.innerHTML = '<span class="kv">无动画</span>'; S.selAnim = null; $('animName').textContent = '—'; updateAnimTime(); return; }
+  if (!anims.length) { wrap.innerHTML = '<span class="kv">无动画数据</span>'; S.selAnim = null; $('animName').textContent = '—'; updateAnimTime(); return; }
   S.selAnim = (m.defaultAnimation && anims.includes(m.defaultAnimation)) ? m.defaultAnimation : anims[0];
   anims.forEach(a => {
-    const p = document.createElement('span'); p.className = 'pill g'; p.textContent = a; p.style.cursor = 'pointer'; p.dataset.anim = a;
+    const p = document.createElement('span');
+    p.className = 'pill interactive' + (a === S.selAnim ? ' g' : '');
+    p.textContent = a;
+    p.dataset.anim = a;
     p.onclick = () => { S.selAnim = a; markSelAnim(); seekTo(0); };
     wrap.appendChild(p);
   });
@@ -1210,14 +3263,21 @@ function setupAnims(m) {
   $('animName').textContent = S.selAnim;
   draw();
 }
+
 function markSelAnim() {
-  document.querySelectorAll('#mdAnims .pill').forEach(p => p.style.outline = (p.dataset.anim === S.selAnim) ? '2px solid var(--accent)' : 'none');
+  document.querySelectorAll('#mdAnims .pill').forEach(p => {
+    const isCur = p.dataset.anim === S.selAnim;
+    p.className = 'pill interactive' + (isCur ? ' g' : '');
+    p.style.boxShadow = isCur ? '0 0 8px var(--accent-glow)' : 'none';
+  });
 }
+
 function updateAnimTime() {
   const data = S.detail && S.detail.animationsData ? S.detail.animationsData[S.anim.name] : null;
   const len = data ? data.length : 0;
   $('animTime').textContent = S.anim.time.toFixed(2) + 's / ' + len.toFixed(2) + 's';
 }
+
 function seekTo(t) {
   S.anim.time = t;
   const data = S.detail && S.detail.animationsData ? S.detail.animationsData[S.anim.name] : null;
@@ -1225,11 +3285,14 @@ function seekTo(t) {
   $('animSeek').value = Math.round(t / len * 1000);
   updateAnimTime(); computeAnimCubes(); draw();
 }
+
 let _animTs = 0;
 function animTick(ts) {
   if (!S.anim.playing) return;
   if (!_animTs) _animTs = ts || 0;
-  const dt = Math.min(0.1, ((ts || 0) - _animTs) / 1000); _animTs = ts || 0;
+  const speedEl = $('animSpeed');
+  const speed = speedEl ? (parseFloat(speedEl.value) || 1) : 1;
+  const dt = Math.min(0.1, ((ts || 0) - _animTs) / 1000) * speed; _animTs = ts || 0;
   const data = S.detail && S.detail.animationsData ? S.detail.animationsData[S.anim.name] : null;
   const len = data ? data.length : 1;
   S.anim.time += dt;
@@ -1241,18 +3304,32 @@ function animTick(ts) {
   updateAnimTime(); computeAnimCubes(); draw();
   if (S.anim.playing) S.anim.raf = requestAnimationFrame(animTick);
 }
+
 function playAnim() {
   if (!S.selAnim) return;
   S.anim.name = S.selAnim; S.anim.playing = true; _animTs = 0;
   $('animPlay').textContent = '⏸ 暂停';
+  $('animPlay').className = 'sm';
   S.anim.raf = requestAnimationFrame(animTick);
 }
+
 function stopAnim() {
   S.anim.playing = false;
   if (S.anim.raf) cancelAnimationFrame(S.anim.raf);
   S.anim.raf = 0; _animTs = 0;
-  const b = $('animPlay'); if (b) b.textContent = '▶ 播放';
+  const b = $('animPlay');
+  if (b) { b.textContent = '▶ 播放'; b.className = 'sm ghost'; }
 }
+
+function stepAnim(delta) {
+  const data = S.detail && S.detail.animationsData ? S.detail.animationsData[S.anim.name] : null;
+  if (!data) return;
+  const len = data.length || 1;
+  S.anim.time = Math.max(0, Math.min(len, (S.anim.time || 0) + delta));
+  $('animSeek').value = Math.round(S.anim.time / len * 1000);
+  updateAnimTime(); computeAnimCubes(); draw();
+}
+
 $('animPlay').onclick = () => { if (S.anim.playing) stopAnim(); else playAnim(); };
 $('animSeek').oninput = () => {
   const data = S.detail && S.detail.animationsData ? S.detail.animationsData[S.anim.name] : null;
@@ -1260,17 +3337,19 @@ $('animSeek').oninput = () => {
   S.anim.time = ($('animSeek').value / 1000) * len;
   updateAnimTime(); computeAnimCubes(); draw();
 };
+if ($('animPrev')) $('animPrev').onclick = () => stepAnim(-0.05);
+if ($('animNext')) $('animNext').onclick = () => stepAnim(0.05);
 
-/* ---------------- 3D 预览 ---------------- */
+/* ---------------- 3D 渲染器 ---------------- */
 function boneColor(i) {
   const h = (i * 47) % 360;
-  return 'hsl(' + h + ',62%,56%)';
+  return 'hsl(' + h + ', 68%, 56%)';
 }
+
 function fitView() {
   if (!S.cubes.length) return;
   const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
   for (const c of S.cubes) for (let i = 0; i < 3; i++) { mn[i] = Math.min(mn[i], c.min[i]); mx[i] = Math.max(mx[i], c.max[i]); }
-  // 把碰撞盒计入包围盒，方便观察体型
   if (S.detail && S.detail.hitbox) {
     const w = S.detail.hitbox.width * 8, h = S.detail.hitbox.height * 16;
     mn[0] = Math.min(mn[0], -w); mx[0] = Math.max(mx[0], w);
@@ -1284,16 +3363,19 @@ function fitView() {
   S.view.min = S.radius * 1.1; S.view.max = S.radius * 10;
   S.view.fit = false;
 }
+
 function rotv(v, yaw, pitch) {
   const cy = Math.cos(yaw), sy = Math.sin(yaw);
   const x1 = v[0] * cy + v[2] * sy, z1 = -v[0] * sy + v[2] * cy;
   const cp = Math.cos(pitch), sp = Math.sin(pitch);
   return [x1, v[1] * cp - z1 * sp, v[1] * sp + z1 * cp];
 }
+
 function toCam(p, yaw, pitch, dist) {
   const v = rotv([p[0] - S.center[0], p[1] - S.center[1], p[2] - S.center[2]], yaw, pitch);
   return [v[0], v[1], v[2] + dist];
 }
+
 const FACES = [
   { i: [0, 3, 2, 1], n: [0, 0, -1] },
   { i: [4, 5, 6, 7], n: [0, 0, 1] },
@@ -1306,7 +3388,7 @@ const LIGHT = (() => { const l = [0.35, 0.78, 0.52]; const n = Math.hypot(l[0], 
 
 function draw() {
   const cv = $('canvas'); if (!cv) return;
-  const W = cv.clientWidth || 600, H = cv.clientHeight || 330;
+  const W = cv.clientWidth || 600, H = cv.clientHeight || 340;
   const dpr = window.devicePixelRatio || 1;
   if (cv.width !== W * dpr || cv.height !== H * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
   const ctx = cv.getContext('2d');
@@ -1316,24 +3398,24 @@ function draw() {
   if (!d || !S.cubes.length) {
     ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--txt3');
     ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('无立方体可预览', W / 2, H / 2);
+    ctx.fillText('无模型立方体可预览', W / 2, H / 2);
     return;
   }
   const yaw = S.view.yaw, pitch = S.view.pitch, dist = S.view.dist;
   const f = Math.min(W, H) * 0.95, ox = W / 2, oy = H / 2;
 
-  // 地面网格
+  // 地面投影网格
   if ($('cvGrid').checked && S.bbox) {
     const mn = S.bbox.mn, mx = S.bbox.mx;
     const y = mn[1], step = gridStep(mx[0] - mn[0], mx[2] - mn[2]);
-    ctx.strokeStyle = color2('--line2', '#eef2f7'); ctx.lineWidth = 1;
+    ctx.strokeStyle = color2('--line', '#2c392f'); ctx.lineWidth = 1;
     for (let x = Math.floor(mn[0] / step) * step; x <= mx[0] + step; x += step) gridLine(ctx, [x, y, mn[2] - step], [x, y, mx[2] + step], yaw, pitch, dist, f, ox, oy);
     for (let z = Math.floor(mn[2] / step) * step; z <= mx[2] + step; z += step) gridLine(ctx, [mn[0] - step, y, z], [mx[0] + step, y, z], yaw, pitch, dist, f, ox, oy);
   }
 
   // 立方体面
   const faces = [];
-  const cubes = (S.anim.playing && S.animCubes.length) ? S.animCubes : S.cubes;
+  const cubes = (S.animCubes && S.animCubes.length && (S.anim.playing || S.anim.name)) ? S.animCubes : S.cubes;
   for (const cube of cubes) {
     const mn = cube.min, mx = cube.max;
     const C = [
@@ -1345,33 +3427,37 @@ function draw() {
       const nr = rotv(fa.n, yaw, pitch);
       const a = C[fa.i[0]], b = C[fa.i[1]], c = C[fa.i[2]], e2 = C[fa.i[3]];
       const ctr = [(a[0] + b[0] + c[0] + e2[0]) / 4, (a[1] + b[1] + c[1] + e2[1]) / 4, (a[2] + b[2] + c[2] + e2[2]) / 4];
-      if (nr[0] * ctr[0] + nr[1] * ctr[1] + nr[2] * ctr[2] >= 0) continue; // 背面剔除
+      if (nr[0] * ctr[0] + nr[1] * ctr[1] + nr[2] * ctr[2] >= 0) continue;
       const pts = fa.i.map(i => [ox + f * C[i][0] / C[i][2], oy - f * C[i][1] / C[i][2]]);
       const depth = (a[2] + b[2] + c[2] + e2[2]) / 4;
       const lam = Math.max(0, nr[0] * LIGHT[0] + nr[1] * LIGHT[1] + nr[2] * LIGHT[2]);
-      faces.push({ pts: pts, depth: depth, shade: 0.42 + 0.58 * lam, hi: hi, bi: cube.bi });
+      faces.push({ pts: pts, depth: depth, shade: 0.45 + 0.55 * lam, hi: hi, bi: cube.bi });
     }
   }
-  faces.sort((p, q) => q.depth - p.depth);
+  const isWire = $('cvWire')?.checked;
   for (const fc of faces) {
-    const base = fc.hi ? 'hsl(212,85%,56%)' : boneColor(fc.bi);
+    const base = fc.hi ? 'hsl(150, 90%, 55%)' : boneColor(fc.bi);
     ctx.beginPath();
     ctx.moveTo(fc.pts[0][0], fc.pts[0][1]);
     for (let i = 1; i < 4; i++) ctx.lineTo(fc.pts[i][0], fc.pts[i][1]);
     ctx.closePath();
-    ctx.fillStyle = shade(base, fc.shade);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,.16)'; ctx.lineWidth = 0.6; ctx.stroke();
+    if (!isWire) {
+      ctx.fillStyle = shade(base, fc.shade);
+      ctx.fill();
+    }
+    ctx.strokeStyle = isWire ? (fc.hi ? '#10b981' : base) : (fc.hi ? 'rgba(255,255,255,.6)' : 'rgba(0,0,0,.2)');
+    ctx.lineWidth = isWire ? (fc.hi ? 1.8 : 1.0) : (fc.hi ? 1.2 : 0.6);
+    ctx.stroke();
   }
 
-  // 碰撞盒
+  // 实体碰撞盒
   if ($('cvHitbox').checked && d.hitbox) {
     const w = d.hitbox.width * 8, h = d.hitbox.height * 16;
     const box = [[-w, 0, -w], [w, 0, -w], [w, h, -w], [-w, h, -w], [-w, 0, w], [w, 0, w], [w, h, w], [-w, h, w]];
     const P = box.map(p => toCam(p, yaw, pitch, dist));
     const S2 = P.map(p => [ox + f * p[0] / p[2], oy - f * p[1] / p[2]]);
     const E = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
-    ctx.strokeStyle = 'rgba(21,163,74,.75)'; ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = 'rgba(16, 185, 129, 0.85)'; ctx.lineWidth = 1.3; ctx.setLineDash([5, 4]);
     for (const e of E) { ctx.beginPath(); ctx.moveTo(S2[e[0]][0], S2[e[0]][1]); ctx.lineTo(S2[e[1]][0], S2[e[1]][1]); ctx.stroke(); }
     ctx.setLineDash([]);
   }
@@ -1379,8 +3465,8 @@ function draw() {
   // 原点坐标轴
   const O = toCam([0, 0, 0], yaw, pitch, dist);
   const o2 = [ox + f * O[0] / O[2], oy - f * O[1] / O[2]];
-  const axes = [[[6, 0, 0], '#e5484d'], [[0, 6, 0], '#30a46c'], [[0, 0, 6], '#3b82f6']];
-  ctx.lineWidth = 1.6;
+  const axes = [[[6, 0, 0], '#ef4444'], [[0, 6, 0], '#10b981'], [[0, 0, 6], '#3b82f6']];
+  ctx.lineWidth = 1.8;
   for (const ax of axes) {
     const p = toCam(ax[0], yaw, pitch, dist);
     ctx.strokeStyle = ax[1];
@@ -1388,10 +3474,12 @@ function draw() {
   }
   $('cvLegend').textContent = '立方体 ' + S.cubes.length + ' · 拖拽旋转 · 滚轮缩放' + (S.selBone ? ' · 已选 ' + S.selBone : '');
 }
+
 function gridStep(sx, sz) {
   const s = Math.max(sx, sz, 8);
   return s <= 40 ? 4 : s <= 96 ? 8 : 16;
 }
+
 function gridLine(ctx, a, b, yaw, pitch, dist, f, ox, oy) {
   const p = toCam(a, yaw, pitch, dist), q = toCam(b, yaw, pitch, dist);
   if (p[2] <= 1 || q[2] <= 1) return;
@@ -1400,17 +3488,20 @@ function gridLine(ctx, a, b, yaw, pitch, dist, f, ox, oy) {
   ctx.lineTo(ox + f * q[0] / q[2], oy - f * q[1] / q[2]);
   ctx.stroke();
 }
+
 function color2(v, fb) {
   const c = getComputedStyle(document.documentElement).getPropertyValue(v);
   return (c && c.trim()) || fb;
 }
+
 function shade(hsl, k) {
   const m = /hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/.exec(hsl);
   if (!m) return hsl;
   const l = Math.max(6, Math.min(92, Math.round(Number(m[3]) * k)));
   return 'hsl(' + m[1] + ',' + m[2] + '%,' + l + '%)';
 }
-/* 交互 */
+
+/* 画布鼠标与触控事件 */
 (function () {
   const cv = $('canvas');
   let drag = null;
@@ -1432,6 +3523,7 @@ function shade(hsl, k) {
   }, { passive: false });
   window.addEventListener('resize', () => draw());
 })();
+
 function spinLoop() {
   cancelAnimationFrame(S.raf);
   const step = () => {
@@ -1442,25 +3534,183 @@ function spinLoop() {
   };
   if (S.view.auto) S.raf = requestAnimationFrame(step);
 }
-$('cvReset').onclick = () => { S.view.yaw = -0.68; S.view.pitch = 0.40; fitView(); draw(); };
-$('cvSpin').onclick = e => {
+
+function setCamAngle(angle) {
+  if (angle === 'front') { S.view.yaw = 0; S.view.pitch = 0.04; }
+  else if (angle === 'side') { S.view.yaw = Math.PI / 2; S.view.pitch = 0.04; }
+  else if (angle === 'top') { S.view.yaw = 0; S.view.pitch = Math.PI / 2 * 0.96; }
+  else { S.view.yaw = -0.68; S.view.pitch = 0.40; } // 'iso'
+  fitView();
+  draw();
+}
+
+function resetCam() {
+  setCamAngle('iso');
+}
+
+function tSpin() {
   S.view.auto = !S.view.auto;
-  e.currentTarget.style.background = S.view.auto ? 'var(--soft)' : '';
+  const btn = $('cvSpin');
+  if (btn) {
+    btn.style.background = S.view.auto ? 'var(--soft)' : '';
+    btn.style.color = S.view.auto ? 'var(--accent)' : '';
+  }
   spinLoop();
-};
+}
+
+function toggleTheater() {
+  const wrap = $('canvasWrap');
+  if (!wrap) return;
+  wrap.classList.toggle('theater');
+  const isTh = wrap.classList.contains('theater');
+  const btn = $('cvExpand');
+  if (btn) {
+    btn.textContent = isTh ? '退出' : '全屏';
+    btn.classList.toggle('on', isTh);
+  }
+  setTimeout(() => { draw(); }, 50);
+}
+
+$('cvReset').onclick = () => setCamAngle('iso');
+if ($('cvFront')) $('cvFront').onclick = () => setCamAngle('front');
+if ($('cvSide')) $('cvSide').onclick = () => setCamAngle('side');
+if ($('cvTop')) $('cvTop').onclick = () => setCamAngle('top');
+$('cvSpin').onclick = tSpin;
+if ($('cvExpand')) $('cvExpand').onclick = toggleTheater;
 $('cvHitbox').onchange = draw;
 $('cvGrid').onchange = draw;
+if ($('cvWire')) $('cvWire').onchange = draw;
 
-/* ---------------- 模型文件 ---------------- */
-async function showModelFiles(dir) {
-  $('mfDir').value = dir || '';
-  showTab('files');
-  await loadModelFiles(dir);
+/* ---------------- 代码编辑器交互引擎 (Tab缩进/自动对齐/闭合) ---------------- */
+function setupCodeEditor(ta, statusEl) {
+  if (!ta) return;
+  ta.addEventListener('keydown', e => {
+    // 1. Tab / Shift+Tab 缩进与反缩进
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const val = ta.value;
+
+      if (start === end) {
+        if (!e.shiftKey) {
+          ta.value = val.substring(0, start) + '  ' + val.substring(end);
+          ta.selectionStart = ta.selectionEnd = start + 2;
+        } else {
+          const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+          if (val.substring(lineStart, lineStart + 2) === '  ') {
+            ta.value = val.substring(0, lineStart) + val.substring(lineStart + 2);
+            ta.selectionStart = ta.selectionEnd = Math.max(lineStart, start - 2);
+          }
+        }
+      } else {
+        const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+        const lineEnd = val.indexOf('\n', end);
+        const selText = val.substring(lineStart, lineEnd === -1 ? val.length : lineEnd);
+        const lines = selText.split('\n');
+
+        let modified;
+        if (!e.shiftKey) {
+          modified = lines.map(l => '  ' + l).join('\n');
+          ta.value = val.substring(0, lineStart) + modified + val.substring(lineEnd === -1 ? val.length : lineEnd);
+          ta.selectionStart = start + 2;
+          ta.selectionEnd = end + (lines.length * 2);
+        } else {
+          let removedTotal = 0;
+          let removedFirst = 0;
+          modified = lines.map((l, idx) => {
+            if (l.startsWith('  ')) {
+              if (idx === 0) removedFirst = 2;
+              removedTotal += 2;
+              return l.substring(2);
+            } else if (l.startsWith(' ')) {
+              if (idx === 0) removedFirst = 1;
+              removedTotal += 1;
+              return l.substring(1);
+            }
+            return l;
+          }).join('\n');
+          ta.value = val.substring(0, lineStart) + modified + val.substring(lineEnd === -1 ? val.length : lineEnd);
+          ta.selectionStart = Math.max(lineStart, start - removedFirst);
+          ta.selectionEnd = Math.max(lineStart, end - removedTotal);
+        }
+      }
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      updateStatus();
+      return;
+    }
+
+    // 2. 回车自动延续上一行缩进 (若上一行以 : 结尾则额外缩进2格)
+    if (e.key === 'Enter') {
+      const start = ta.selectionStart;
+      const val = ta.value;
+      const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+      const line = val.substring(lineStart, start);
+      const match = line.match(/^(\s+)/);
+      let indent = match ? match[1] : '';
+      if (line.trim().endsWith(':')) {
+        indent += '  ';
+      }
+      if (indent.length > 0) {
+        e.preventDefault();
+        ta.value = val.substring(0, start) + '\n' + indent + val.substring(start);
+        ta.selectionStart = ta.selectionEnd = start + 1 + indent.length;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        updateStatus();
+        return;
+      }
+    }
+
+    // 3. 引号与括号自动闭合
+    const PAIRS = { '"': '"', "'": "'", '[': ']', '{': '}', '(': ')' };
+    if (PAIRS[e.key] && ta.selectionStart === ta.selectionEnd) {
+      const start = ta.selectionStart;
+      const val = ta.value;
+      const nextChar = val.charAt(start);
+      if (!nextChar || /\s|[\],})]/.test(nextChar)) {
+        e.preventDefault();
+        const close = PAIRS[e.key];
+        ta.value = val.substring(0, start) + e.key + close + val.substring(start);
+        ta.selectionStart = ta.selectionEnd = start + 1;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        updateStatus();
+        return;
+      }
+    }
+  });
+
+  function updateStatus() {
+    if (!statusEl) return;
+    const val = ta.value || '';
+    const pos = ta.selectionStart || 0;
+    const upToPos = val.substring(0, pos);
+    const line = upToPos.split('\n').length;
+    const col = pos - upToPos.lastIndexOf('\n');
+    const totalLines = val.split('\n').length;
+    const bytes = new Blob([val]).size;
+    const sizeStr = bytes > 1024 ? (bytes / 1024).toFixed(1) + ' KB' : bytes + ' B';
+    statusEl.innerHTML = '<span>第 ' + line + ' 行，第 ' + col + ' 列 · 共 ' + totalLines + ' 行 (' + sizeStr + ')</span><span class="es-tag">Tab 缩进 · Shift+Tab 反缩进</span>';
+  }
+
+  ta.addEventListener('keyup', updateStatus);
+  ta.addEventListener('click', updateStatus);
+  ta.addEventListener('input', updateStatus);
+  setTimeout(updateStatus, 100);
 }
+
+/* ---------------- 模型文件编辑 ---------------- */
+async function showModelFiles(dir) {
+  const relDir = (dir || '').replace(/^.*[\\/]models[\\/]/, '').replace(/\\/g, '/');
+  $('mfDir').value = relDir;
+  showTab('files');
+  await loadModelFiles(relDir);
+}
+
 async function loadModelFiles(dir) {
   if (!dir) { toast('请先填写模型目录', 'err'); return; }
+  const relDir = dir.replace(/^.*[\\/]models[\\/]/, '').replace(/\\/g, '/');
   try {
-    const d = await api('/api/model/files?dir=' + encodeURIComponent(dir));
+    const d = await api('/api/model/files?dir=' + encodeURIComponent(relDir));
     if (!d.ok) { toast(d.error, 'err'); return; }
     const sel = $('mfWhich'); const cur = sel.value;
     sel.innerHTML = '';
@@ -1470,14 +3720,17 @@ async function loadModelFiles(dir) {
     sel.value = ['manifest.yml', 'model.json', 'animations.json'].includes(cur) ? cur : 'manifest.yml';
     S.files = d.files || {};
     $('mfText').value = S.files[sel.value] == null ? '' : S.files[sel.value];
-    $('mfTex').textContent = '纹理: ' + ((d.textures || []).join(', ') || '（无）');
+    $('mfTex').textContent = '纹理资源: ' + ((d.textures || []).join(', ') || '（无）');
     $('mfDir').value = d.dir;
+    $('mfEditorTitle').textContent = d.dir + '/' + sel.value;
     S.selDir = d.dir;
   } catch (e) { toast('载入失败: ' + e.message, 'err'); }
 }
+
 $('mfWhich').onchange = () => {
   const n = $('mfWhich').value;
   $('mfText').value = (S.files && S.files[n] != null) ? S.files[n] : '';
+  $('mfEditorTitle').textContent = $('mfDir').value.trim() + '/' + n;
 };
 $('mfLoad').onclick = () => loadModelFiles($('mfDir').value.trim());
 $('mfSave').onclick = async () => {
@@ -1485,13 +3738,11 @@ $('mfSave').onclick = async () => {
   try {
     const d = await api('/api/model/save', { method: 'POST', body: JSON.stringify({ dir: dir, name: name, content: $('mfText').value }) });
     if (d.ok) {
-      toast(d.message || '已保存', 'ok') ;
-      // 保存后不重载：内核重载是异步的，等 SSE 的 reload 事件再刷新列表，
-      // 避免这里硬编码一个延迟（内核慢时刷新到的是旧数据，快时则多刷一次）。
+      toast(d.message || '已成功保存', 'ok');
     } else { setOut($('mfOut'), '✗ ' + d.error); toast(d.error, 'err'); }
   } catch (e) { toast('保存失败: ' + e.message, 'err'); }
 };
-/* 导出返回的是 zip 二进制，不能走 api()（它按 JSON 解析），单独 fetch。 */
+
 $('mfExport').onclick = async () => {
   const dir = $('mfDir').value.trim();
   if (!dir) { toast('请先填写模型目录', 'err'); return; }
@@ -1500,7 +3751,7 @@ $('mfExport').onclick = async () => {
       { headers: { 'Authorization': 'Bearer ' + TOKEN } });
     if (!r.ok) {
       let msg = 'HTTP ' + r.status;
-      try { msg = (await r.json()).error || msg; } catch (e) { /* 非 JSON 响应 */ }
+      try { msg = (await r.json()).error || msg; } catch (e) { }
       toast(msg, 'err'); return;
     }
     const blob = await r.blob();
@@ -1509,13 +3760,14 @@ $('mfExport').onclick = async () => {
     a.download = dir.substring(dir.lastIndexOf('/') + 1) + '.zip';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    toast('已导出 ' + dir, 'ok');
+    toast('已导出 ZIP 压缩包 ' + dir, 'ok');
   } catch (e) { toast('导出失败: ' + e.message, 'err'); }
 };
+
 $('mfImportPick').onclick = () => $('mfImportFile').click();
 $('mfImportFile').onchange = async ev => {
   const f = ev.target.files && ev.target.files[0];
-  ev.target.value = ''; // 允许连续导入同一个文件
+  ev.target.value = '';
   if (!f) return;
   const dir = $('mfDir').value.trim();
   if (!dir) { toast('请先填写要导入到的模型目录', 'err'); return; }
@@ -1531,26 +3783,29 @@ $('mfImportFile').onchange = async ev => {
     });
     if (!d.ok) { toast(d.error || '导入失败', 'err'); return; }
     toast('已导入 ' + d.writtenCount + ' 个文件到 ' + dir, 'ok');
-    if (d.rejected && d.rejected.length) toast('已拒绝: ' + d.rejected.join(', '), 'err');
+    if (d.rejected && d.rejected.length) toast('已拒绝非法路径: ' + d.rejected.join(', '), 'err');
     setTimeout(refreshAll, 1200);
     await loadModelFiles(dir);
   } catch (e) { toast('导入失败: ' + e.message, 'err'); }
 };
 
-/* ---------------- 生物 ---------------- */
+/* ---------------- 生物配置 ---------------- */
 async function loadMobs() {
   const d = await api('/api/mobs');
   S.mobs = d.mobs || [];
   const ul = $('mobList'); ul.innerHTML = '';
   const q = ($('search').value || '').toLowerCase();
   const list = S.mobs.filter(m => !q || (m.file + ' ' + (m.model || '')).toLowerCase().indexOf(q) >= 0);
+  if ($('mobCount')) $('mobCount').textContent = list.length;
+  
   if (!list.length) {
     const searched = !!($('search').value || '').trim();
     setState(ul, 'empty',
-      searched ? '没有匹配的生物' : '还没有生物配置',
-      searched ? '换个关键词试试。' : '点「＋ 新建」按模板生成一个。',
+      searched ? '无匹配生物' : '暂无生物配置',
+      searched ? '换个关键词试试。' : '点右上「＋ 新建」生成配置。',
       searched ? { label: '清除搜索', onClick: () => { $('search').value = ''; renderModels(); loadMobs(); } } : null);
   }
+  
   for (const m of list) {
     const li = document.createElement('li');
     li.className = (S.mobFile === m.file ? 'sel' : '');
@@ -1563,6 +3818,7 @@ async function loadMobs() {
     ul.appendChild(li);
   }
 }
+
 async function openMob(file) {
   try {
     const d = await api('/api/mobs/file?name=' + encodeURIComponent(file));
@@ -1572,33 +3828,99 @@ async function openMob(file) {
     $('mobText').value = d.content;
     $('mobHint').textContent = '(' + file + ')';
     await loadMobVersions(file);
+    updateMobAssistant();
     showTab('mobs');
-    renderMobs();
+    loadMobs();
   } catch (e) { toast('读取失败: ' + e.message, 'err'); }
 }
+
+function updateMobAssistant() {
+  const content = $('mobText')?.value || '';
+  const mobName = ($('mobName')?.value || '').trim() || 'mob_name';
+  const out = $('mobOut');
+  if (!out) return;
+  if (!content.trim()) {
+    out.innerHTML = '<span style="color:var(--txt3)">从左侧选择生物配置后实时查看指令与关联模型。</span>';
+    return;
+  }
+  const modelMatch = content.match(/^\s*model:\s*['"]?([^'"#\r\n]+)['"]?/m);
+  const modelId = modelMatch ? modelMatch[1].trim() : null;
+  const entityMatch = content.match(/^\s*type:\s*['"]?([^'"#\r\n]+)['"]?/m);
+  const entity = entityMatch ? entityMatch[1].trim() : '默认';
+  const healthMatch = content.match(/^\s*health:\s*([0-9.]+)/m);
+  const hp = healthMatch ? healthMatch[1] : '-';
+  const scaleMatch = content.match(/^\s*scale:\s*([0-9.]+)/m);
+  const scale = scaleMatch ? scaleMatch[1] : '1.0';
+
+  let html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel);padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--line);">'
+    + '<div>'
+    + '<div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">控制台 / 游戏内生成指令</div>'
+    + '<code style="font-size:12px;color:var(--accent);display:inline-block;margin-top:2px;">/helstera spawn ' + esc(mobName) + '</code>'
+    + '</div>'
+    + '<button class="ghost sm" style="padding:3px 10px;font-size:12px;" onclick="copyText(\'/helstera spawn ' + esc(mobName).replace(/'/g, "\\'") + '\', \'生成指令\')">📋 复制</button>'
+    + '</div>';
+
+  if (modelId) {
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel);padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--line);">'
+      + '<div>'
+      + '<div style="font-size:11px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">关联渲染模型</div>'
+      + '<div style="font-weight:600;font-size:13px;margin-top:2px;">' + esc(modelId) + '</div>'
+      + '</div>'
+      + '<button class="primary sm" style="padding:3px 10px;font-size:12px;" onclick="selectModel(\'' + esc(modelId).replace(/'/g, "\\'") + '\');showTab(\'model\');">▶ 3D 空间预览</button>'
+      + '</div>';
+  }
+
+  html += '<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;">'
+    + '<div style="background:var(--panel);padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--line);text-align:center;">'
+    + '<div style="font-size:11px;color:var(--txt3);">基底实体</div>'
+    + '<div style="font-weight:600;font-size:12px;margin-top:2px;" class="mono">' + esc(entity) + '</div>'
+    + '</div>'
+    + '<div style="background:var(--panel);padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--line);text-align:center;">'
+    + '<div style="font-size:11px;color:var(--txt3);">生命值 (HP)</div>'
+    + '<div style="font-weight:600;font-size:12px;margin-top:2px;color:var(--err);" class="mono">' + esc(hp) + '</div>'
+    + '</div>'
+    + '<div style="background:var(--panel);padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--line);text-align:center;">'
+    + '<div style="font-size:11px;color:var(--txt3);">模型缩放</div>'
+    + '<div style="font-weight:600;font-size:12px;margin-top:2px;" class="mono">×' + esc(scale) + '</div>'
+    + '</div>'
+    + '</div>';
+
+  html += '</div>';
+  out.innerHTML = html;
+}
+if ($('mobText')) $('mobText').addEventListener('input', updateMobAssistant);
+if ($('mobName')) $('mobName').addEventListener('input', updateMobAssistant);
+
 async function loadMobVersions(file) {
   const d = await api('/api/mobs/versions?name=' + encodeURIComponent(file));
   const s = $('mobVers'); s.innerHTML = '';
   const vs = d.versions || [];
-  if (!vs.length) { const o = document.createElement('option'); o.textContent = '（暂无历史版本）'; o.value = ''; s.appendChild(o); return; }
+  if (!vs.length) { const o = document.createElement('option'); o.textContent = '（暂无历史版本备份）'; o.value = ''; s.appendChild(o); return; }
   vs.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; s.appendChild(o); });
 }
+
 $('bSaveMob').onclick = async () => {
   const name = $('mobName').value.trim();
   if (!name) { toast('请填写文件名', 'err'); return; }
   try {
     const d = await api('/api/mobs/save', { method: 'POST', body: JSON.stringify({ name: name, content: $('mobText').value }) });
-    if (d.ok) { toast(d.message || '已保存', 'ok'); S.mobFile = name.replace(/\.yml$/, '') + '.yml'; await loadMobs(); await loadMobVersions(S.mobFile); }
-    else { toast(d.error, 'err'); setOut($('mobOut'), '✗ ' + d.error); }
+    if (d.ok) {
+      toast(d.message || '已成功保存', 'ok');
+      S.mobFile = name.replace(/\.yml$/, '') + '.yml';
+      await loadMobs();
+      await loadMobVersions(S.mobFile);
+    } else { toast(d.error, 'err'); setOut($('mobOut'), '✗ ' + d.error); }
   } catch (e) { toast('保存失败: ' + e.message, 'err'); }
 };
+
 $('bDelMob').onclick = async () => {
   const name = $('mobName').value.trim();
   if (!name) { toast('请填写文件名', 'err'); return; }
   const yes = await dialog({
-    title: '删除 ' + name + '.yml ?',
-    desc: '会保留一份版本备份，可在「版本」下拉里回滚。此操作不可直接撤销。',
-    okLabel: '删除'
+    title: '确定删除 ' + name + '.yml ?',
+    desc: '系统会保留一份备份版本，可在「历史版本」中随时回滚。确认执行吗？',
+    okLabel: '确定删除'
   });
   if (!yes) return;
   try {
@@ -1608,41 +3930,43 @@ $('bDelMob').onclick = async () => {
     await loadMobs();
   } catch (e) { toast('删除失败: ' + e.message, 'err'); }
 };
+
 $('bRestore').onclick = async () => {
   const v = $('mobVers').value, name = $('mobName').value.trim();
-  if (!v || !name) { toast('请选择版本', 'err'); return; }
+  if (!v || !name) { toast('请选择要回滚的版本', 'err'); return; }
   try {
     const d = await api('/api/mobs/restore', { method: 'POST', body: JSON.stringify({ name: name, version: v }) });
     toast(d.message || d.error, d.ok ? 'ok' : 'err');
     if (d.ok) await openMob(name.replace(/\.yml$/, '') + '.yml');
   } catch (e) { toast('回滚失败: ' + e.message, 'err'); }
 };
+
 $('bSpawn').onclick = async () => {
   const name = $('mobName').value.trim();
-  if (!name) { toast('请先填写/选择生物', 'err'); return; }
+  if (!name) { toast('请先选择生物配置', 'err'); return; }
   try {
     const d = await api('/api/spawn', { method: 'POST', body: JSON.stringify({ mob: name, player: $('spawnPlayer').value }) });
     toast(d.message || d.error, d.ok ? 'ok' : 'err');
     setOut($('mobOut'), d.message || ('✗ ' + d.error));
   } catch (e) { toast('生成失败: ' + e.message, 'err'); }
 };
+
 $('bNewMob').onclick = async () => {
   let tpls = [];
   try { tpls = (await api('/api/templates')).templates || []; } catch (e) { }
   const input = await dialog({
-    title: '新建生物配置',
-    desc: '填写文件名（不含 .yml）。选择一个模板作为起点，之后可自由编辑。',
+    title: '新建生物配置 YAML',
+    desc: '输入文件名（不含 .yml），可选择内置模板作为初始脚手架：',
     value: 'new_mob',
-    placeholder: '如 crystal_boss',
+    placeholder: '如 flame_sentinel',
     list: tpls.map(t => ({ label: t.id, desc: t.description })),
-    okLabel: '创建'
+    okLabel: '立即创建'
   });
   if (!input) return;
-  // 模板用下拉而非第二个弹窗：少一次上下文切换，也避免两个 prompt 连问时焦点跳走。
   const pick = document.createElement('select');
-  pick.style.marginBottom = '12px';
+  pick.style.marginBottom = '14px';
   pick.style.width = '100%';
-  const blank = { id: 'blank', description: '空白配置' };
+  const blank = { id: 'blank', description: '空白配置文件' };
   const all = [blank].concat(tpls);
   for (const t of all) {
     const o = document.createElement('option');
@@ -1661,54 +3985,117 @@ $('bNewMob').onclick = async () => {
   } catch (e) { toast('创建失败: ' + e.message, 'err'); }
 };
 
-/* ---------------- 校验 / 日志 / 动作 ---------------- */
+/* ---------------- 校验 / 热重载 / 动作 ---------------- */
 $('bValidate').onclick = async () => {
   const v = $('valDir').value.trim();
-  const body = v.indexOf('/') >= 0 || v.indexOf('_') >= 0 ? { dir: v, id: v } : { id: v, dir: v };
+  const relDir = v.replace(/^.*[\\/]models[\\/]/, '').replace(/\\/g, '/');
+  const body = relDir.indexOf('/') >= 0 || relDir.indexOf('_') >= 0 ? { dir: relDir, id: relDir } : { id: relDir, dir: relDir };
   try {
     const d = await api('/api/validate', { method: 'POST', body: JSON.stringify(body) });
     const errs = d.errors || [];
     if (d.ok) {
-      setOut($('valOut'), '✓ 校验通过\n模型 ID: ' + d.id + '\n骨骼: ' + d.bones + '\n动画: ' + (d.animations || []).join(', ') +
-        (d.warnings && d.warnings.length ? '\n\n警告:\n- ' + d.warnings.join('\n- ') : ''));
-      toast('校验通过', 'ok');
+      setOut($('valOut'), '✓ 静态校验通过\n模型 ID: ' + d.id + '\n骨骼总数: ' + d.bones + '\n动作序列: ' + (d.animations || []).join(', ') +
+        (d.warnings && d.warnings.length ? '\n\n警告提示:\n- ' + d.warnings.join('\n- ') : ''));
+      toast('模型校验通过', 'ok');
     } else {
-      setOut($('valOut'), '✗ 校验失败\n' + errs.map(e => '- ' + e).join('\n') + (d.error ? '\n' + d.error : ''));
-      toast('校验失败，详见下方', 'err');
+      setOut($('valOut'), '✗ 校验发现错误\n' + errs.map(e => '- ' + e).join('\n') + (d.error ? '\n' + d.error : ''));
+      toast('校验存在异常，详见下方报告', 'err');
     }
   } catch (e) { toast('校验请求失败: ' + e.message, 'err'); }
 };
+
 async function doReload() {
+  const b = $('bReload');
+  b.classList.add('rotating');
   try {
     const d = await api('/api/reload', { method: 'POST', body: '{}' });
-    toast(d.message || '已触发重载', d.ok ? 'ok' : 'err');
-    setTimeout(refreshAll, 1500);
+    toast(d.message || '已触发模型重载', d.ok ? 'ok' : 'err');
+    setTimeout(refreshAll, 1400);
   } catch (e) { toast('重载失败: ' + e.message, 'err'); }
+  finally { setTimeout(() => b.classList.remove('rotating'), 800); }
 }
+
 $('bReload').onclick = doReload;
 $('bReload2').onclick = doReload;
-$('bPack').onclick = async () => {
-  try { const d = await api('/api/pack/build', { method: 'POST', body: '{}' }); toast(d.message || d.error, d.ok ? 'ok' : 'err'); }
-  catch (e) { toast('构建失败: ' + e.message, 'err'); }
-};
-$('bLog').onclick = async () => {
-  try { const d = await api('/api/log'); setOut($('logOut'), (d.lines || []).join('\n') || '（暂无记录）'); }
-  catch (e) { toast('读取日志失败: ' + e.message, 'err'); }
-};
-$('search').oninput = () => { renderModels(); loadMobs(); };
 
-/* ---------------- 初始化 ---------------- */
+$('bPack').onclick = async () => {
+  try {
+    const d = await api('/api/pack/build', { method: 'POST', body: '{}' });
+    toast(d.message || d.error, d.ok ? 'ok' : 'err');
+  } catch (e) { toast('构建失败: ' + e.message, 'err'); }
+};
+
+let _rawLogLines = [];
+async function loadLog() {
+  try {
+    const d = await api('/api/log');
+    _rawLogLines = d.lines || [];
+    renderLog();
+  } catch (e) { toast('读取日志失败: ' + e.message, 'err'); }
+}
+
+function renderLog() {
+  const q = ($('logFilter')?.value || '').trim().toLowerCase();
+  const filtered = q ? _rawLogLines.filter(l => l.toLowerCase().includes(q)) : _rawLogLines;
+  setOut($('logOut'), filtered.join('\n') || (q ? '（无匹配日志记录）' : '（暂无审计记录）'));
+  if ($('logAutoScroll')?.checked) {
+    const pre = $('logOut');
+    if (pre) pre.scrollTop = pre.scrollHeight;
+  }
+}
+
+$('bLog').onclick = loadLog;
+if ($('logFilter')) $('logFilter').oninput = renderLog;
+if ($('bLogCopy')) $('bLogCopy').onclick = () => {
+  const txt = $('logOut')?.textContent || '';
+  copyText(txt, '日志内容');
+};
+if ($('bLogClear')) $('bLogClear').onclick = () => {
+  setOut($('logOut'), '（展示已清空，点击「刷新日志」重新载入）');
+};
+
+/* 搜索交互 */
+$('search').oninput = () => {
+  $('searchClear').style.display = $('search').value ? 'flex' : 'none';
+  renderModels();
+  loadMobs();
+};
+$('searchClear').onclick = () => {
+  $('search').value = '';
+  $('searchClear').style.display = 'none';
+  renderModels();
+  loadMobs();
+  $('search').focus();
+};
+
+/* 快捷键：Ctrl/Cmd + K 快速聚焦搜索 */
+window.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    $('search').focus();
+    $('search').select();
+  }
+});
+
+/* ---------------- 玩家在线列表 ---------------- */
 async function loadPlayers() {
   try {
     const d = await api('/api/players');
     const sel = $('spawnPlayer'); const cur = sel.value;
     sel.innerHTML = '';
     const list = d.players || [];
-    if (!list.length) { const o = document.createElement('option'); o.textContent = '（无在线玩家，将生成到首位）'; o.value = ''; sel.appendChild(o); return; }
-    list.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
+    if (!list.length) {
+      const o = document.createElement('option');
+      o.textContent = '（暂无在线玩家，将生成到默认原点）';
+      o.value = '';
+      sel.appendChild(o);
+      return;
+    }
+    list.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = '生成在玩家 ' + n + ' 身旁'; sel.appendChild(o); });
     if (cur) sel.value = cur;
   } catch (e) { }
 }
+
 /* ---------------- 技能 / 掉落 / 刷怪点 ---------------- */
 async function loadSkills() {
   $('skBox').style.display = '';
@@ -1722,14 +4109,14 @@ async function loadSkills() {
     if (warns.length) $('skWarns').textContent = warns.join('\n');
     if (!$('skConds').dataset.filled) {
       const s = await api('/api/skills/schema');
-      $('skConds').innerHTML = (s.conditions || []).map(c => '· ' + c).join('<br>');
-      $('skActs').innerHTML = (s.actions || []).map(c => '· ' + c).join('<br>');
+      $('skConds').innerHTML = (s.conditions || []).map(c => '• ' + c).join('<br>');
+      $('skActs').innerHTML = (s.actions || []).map(c => '• ' + c).join('<br>');
       $('skConds').dataset.filled = '1';
     }
   } catch (e) {
     const off = isOffline(e);
     setState($('skBox'), off ? 'offline' : 'err',
-      off ? '连不上服务端' : '技能载入失败', off ? '服务端可能已停止。' : e.message,
+      off ? '连不上服务端' : '技能配置载入失败', off ? '服务端可能已停止。' : e.message,
       { label: '重试', onClick: loadSkills });
   }
 }
@@ -1744,8 +4131,8 @@ $('bSaveSkills').onclick = async () => {
     const d = await api('/api/skills/save', { method: 'POST', body: JSON.stringify({ content: $('skText').value }) });
     if (d.ok) {
       delete $('skText').dataset.touched;
-      setOut($('skOut'), '✓ ' + d.message + (d.version ? '\n已备份版本: ' + d.version : ''));
-      toast(d.message || '已保存', 'ok');
+      setOut($('skOut'), '✓ ' + d.message + (d.version ? '\n备份版本: ' + d.version : ''));
+      toast(d.message || '已成功保存', 'ok');
       await loadSkills();
     } else { setOut($('skOut'), '✗ ' + d.error); toast(d.error, 'err'); }
   } catch (e) { toast('保存失败: ' + e.message, 'err'); }
@@ -1766,12 +4153,12 @@ async function loadLoot() {
     if (cur) sel.value = cur;
     if (!sel.options.length) {
       const o = document.createElement('option');
-      o.value = ''; o.textContent = '（loot.yml 中还没有表）'; sel.appendChild(o);
+      o.value = ''; o.textContent = '（loot.yml 中尚未定义表）'; sel.appendChild(o);
     }
   } catch (e) {
     const off = isOffline(e);
     setState($('lootBox'), off ? 'offline' : 'err',
-      off ? '连不上服务端' : '掉落表载入失败', off ? '服务端可能已停止。' : e.message,
+      off ? '连不上服务端' : '掉落配置载入失败', off ? '服务端可能已停止。' : e.message,
       { label: '重试', onClick: loadLoot });
   }
 }
@@ -1785,46 +4172,96 @@ $('bSaveLoot').onclick = async () => {
     const d = await api('/api/loot/save', { method: 'POST', body: JSON.stringify({ content: $('lootText').value }) });
     if (d.ok) {
       delete $('lootText').dataset.touched;
-      setOut($('lootOut'), '✓ ' + d.message + (d.version ? '\n已备份版本: ' + d.version : ''));
-      toast(d.message || '已保存', 'ok');
+      setOut($('lootOut'), '✓ ' + d.message + (d.version ? '\n备份版本: ' + d.version : ''));
+      toast(d.message || '已成功保存', 'ok');
       await loadLoot();
     } else { setOut($('lootOut'), '✗ ' + d.error); toast(d.error, 'err'); }
   } catch (e) { toast('保存失败: ' + e.message, 'err'); }
 };
+
 $('bRoll').onclick = async () => {
   const table = $('rollTable').value;
-  if (!table) { toast('先在 loot.yml 里定义一张表', 'err'); return; }
+  if (!table) { toast('请先在 loot.yml 中定义表', 'err'); return; }
   try {
     const d = await api('/api/loot/roll', {
       method: 'POST',
       body: JSON.stringify({ table, luck: parseFloat($('rollLuck').value) || 0 })
     });
     if (!d.hits || !d.hits.length) {
-      setOut($('rollOut'), '本次未命中任何条目（概率判定属正常结果）');
+      setOut($('rollOut'), '本次掷骰未命中任何条目（属于正常概率结果）');
     } else {
-      setOut($('rollOut'), '表 ' + d.table + '  幸运值 ' + d.luck + '\n命中 ' + d.hits.length + ' 条：\n'
-        + d.hits.map(h => '  ' + h.amount + 'x ' + h.item
-            + '  (概率 ' + h.chance.toFixed(2) + (h.luckScaling ? '，吃幸运加成)' : '，固定概率)')).join('\n'));
+      setOut($('rollOut'), '掉落表: ' + d.table + '  模拟幸运值: ' + d.luck + '\n共命中 ' + d.hits.length + ' 项奖励：\n'
+        + d.hits.map(h => '  • ' + h.amount + 'x ' + h.item
+            + '  (基础几率 ' + h.chance.toFixed(2) + (h.luckScaling ? '，含幸运加成)' : '，固定几率)')).join('\n'));
     }
-  } catch (e) { toast('掷骰失败: ' + e.message, 'err'); }
+  } catch (e) { toast('掷骰仿真失败: ' + e.message, 'err'); }
 };
 
+async function doMultiRoll(times) {
+  const table = $('rollTable').value;
+  if (!table) { toast('请先在 loot.yml 中定义表', 'err'); return; }
+  const luck = parseFloat($('rollLuck').value) || 0;
+  setOut($('rollOut'), '正在进行 ' + times + ' 次连续掷骰仿真…');
+  try {
+    const promises = [];
+    for (let i = 0; i < times; i++) {
+      promises.push(api('/api/loot/roll', {
+        method: 'POST',
+        body: JSON.stringify({ table, luck })
+      }));
+    }
+    const results = await Promise.all(promises);
+    const counts = {};
+    let emptyRolls = 0;
+    let totalItems = 0;
+    for (const d of results) {
+      if (!d.hits || !d.hits.length) {
+        emptyRolls++;
+      } else {
+        for (const h of d.hits) {
+          const qty = h.amount || 1;
+          totalItems += qty;
+          counts[h.item] = (counts[h.item] || 0) + qty;
+        }
+      }
+    }
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    let report = '🎲 掉落表: ' + table + ' | 仿真轮数: ' + times + ' 次 | 幸运值: ' + luck + '\n';
+    report += '总产出物品: ' + totalItems + ' 件 | 空轮率: ' + ((emptyRolls / times) * 100).toFixed(1) + '% (' + emptyRolls + '/' + times + ')\n';
+    report += '──────────────────────────────────────────────────\n';
+    if (sorted.length === 0) {
+      report += '所有轮次均未命中任何掉落物。';
+    } else {
+      report += sorted.map(([item, cnt]) => {
+        const avg = (cnt / times).toFixed(2);
+        return '  • ' + item.padEnd(20, ' ') + ' : 共 ' + cnt + ' 件  (场均 ' + avg + ' 件)';
+      }).join('\n');
+    }
+    setOut($('rollOut'), report);
+    toast('已完成 ' + times + ' 次掉落仿真', 'ok');
+  } catch (e) {
+    toast('仿真失败: ' + e.message, 'err');
+  }
+}
+if ($('bRoll10')) $('bRoll10').onclick = () => doMultiRoll(10);
+if ($('bRoll100')) $('bRoll100').onclick = () => doMultiRoll(100);
+
 async function loadSpawners() {
-  setState($('spOut'), 'loading', '载入刷怪点 …');
+  setState($('spOut'), 'loading', '载入刷怪据点 …');
   try {
     const d = await api('/api/spawners');
     const list = d.spawners || [];
     if (!list.length) {
-      setState($('spOut'), 'empty', '还没有刷怪点',
-        'spawners.yml 的 spawners 为空。在文件里添加后点「重载 spawners.yml」。');
+      setState($('spOut'), 'empty', '暂无刷怪点',
+        'spawners.yml 列表为空。在配置中添加后点「重新读取 spawners.yml」。');
       return;
     }
     $('spOut').textContent = list.map(s =>
-      s.id + '  →  ' + s.mob
-      + '\n    间隔 ' + s.interval + 't'
-      + ' | 存活 ' + s.alive + '/' + s.maxAlive
-      + ' | 累计 ' + s.totalSpawned
-      + (s.enabled ? '' : '  [已禁用]')).join('\n\n');
+      '据点 [' + s.id + '] → 生物: ' + s.mob
+      + '\n    触发周期: ' + s.interval + ' ticks'
+      + ' | 存活数: ' + s.alive + '/' + s.maxAlive
+      + ' | 累计生成: ' + s.totalSpawned
+      + (s.enabled ? '' : '  [状态: 已停用]')).join('\n\n');
   } catch (e) {
     const off = isOffline(e);
     setState($('spOut'), off ? 'offline' : 'err',
@@ -1835,39 +4272,374 @@ async function loadSpawners() {
 $('bSpReload').onclick = async () => {
   try {
     const d = await api('/api/spawners/reload', { method: 'POST', body: '{}' });
-    toast(d.message || '已重载', 'ok');
+    toast(d.message || '刷怪点已重载', 'ok');
     await loadSpawners();
   } catch (e) { toast('重载失败: ' + e.message, 'err'); }
 };
 
-/* ---------------- SSE：保存后由服务端推送，前端无需盲等 ---------------- */
+/* ---------------- 免疫 / 伤害倍率诊断 ---------------- */
+async function loadImmunity() {
+  setState($('imOut'), 'loading', '读取免疫规则 …');
+  try {
+    const d = await api('/api/immunity');
+    if (!d.active) {
+      // 必须显著提示：监听器未注册时全部免疫规则静默失效，
+      // 而 config.yml 看起来完全正常
+      setState($('imOut'), 'err', '免疫监听器未注册',
+        '所有免疫与伤害倍率规则当前都不会生效（配置本身看不出异常）。请查看启动日志的 [免疫配置] 段。');
+      return;
+    }
+    const list = d.profiles || [];
+    if (!list.length) {
+      setState($('imOut'), 'empty', '没有档案配置免疫/倍率',
+        '这是默认值：未配置 = 不免疫。在 ai.profiles.*.immunities 或 damage-modifiers 中添加。');
+      return;
+    }
+    $('imOut').textContent = list.map(p => {
+      const head = '档案 [' + p.name + '] — ' + (p.rules || []).length + ' 条规则';
+      const warn = (p.warnings || []).length
+        ? '\n  ⚠ 装载期告警（这些规则已被跳过）:\n'
+          + p.warnings.map(w => '    - ' + w).join('\n')
+        : '';
+      const rules = (p.rules || []).map(r => {
+        const kind = r.kind === 'CATEGORY' ? '类别' : '精确';
+        const eff = r.negate ? '免疫(0)' : '×' + r.multiplier;
+        const cond = (r.conditions || []).length ? ' [当 ' + r.conditions.join(' & ') + ']' : '';
+        const cov = (r.covers || []).map(c => '        ' + c.cause + ' → '
+          + (c.heal > 0 ? '回血 ' + c.heal : c.damage) + ' (' + c.rule + ')');
+        return '  · [' + kind + '] ' + r.key + ' → ' + eff + cond
+          + (cov.length ? '\n' + cov.join('\n') : '\n        （未匹配到任何 cause）');
+      });
+      return head + warn + '\n' + rules.join('\n');
+    }).join('\n\n');
+  } catch (e) {
+    const off = isOffline(e);
+    setState($('imOut'), off ? 'offline' : 'err',
+      off ? '连不上服务端' : '载入失败', off ? '服务端可能已停止。' : e.message,
+      { label: '重试', onClick: loadImmunity });
+  }
+}
+$('bImReload').onclick = () => loadImmunity();
+if ($('imOut')) loadImmunity();
+
+/* ---------------- SSE 实时服务端事件 ---------------- */
 function connectEvents() {
   if (typeof EventSource === 'undefined') return;
   try {
     const es = new EventSource('/api/events?token=' + encodeURIComponent(TOKEN));
     es.addEventListener('reload', ev => {
       let what = '';
-      try { what = JSON.parse(ev.data).what || ''; } catch (e) { /* 忽略非法负载 */ }
-      toast('服务端已' + (what ? '重载 ' + what : '重载') + '，正在刷新…', 'ok');
-      // 模型重载是异步的，给内核一点时间完成注册再拉列表
+      try { what = JSON.parse(ev.data).what || ''; } catch (e) { }
+      toast('服务端已' + (what ? '热重载 ' + what : '热重载') + '，正在同步…', 'ok');
       setTimeout(() => { loadModels().catch(() => {}); }, 1200);
     });
-    es.onerror = () => { /* 浏览器会自动重连，不打断页面 */ };
+    es.onerror = () => { };
     window.__helsteraEvents = es;
-  } catch (e) { /* SSE 不可用时退回原有的轮询行为 */ }
+  } catch (e) { }
 }
 
-async function refreshAll() {
-  try { await loadModels(); await loadMobs(); await loadStatus(); await loadPlayers(); }
-  catch (e) { toast('刷新失败: ' + e.message, 'err'); }
+/* ---------------- 命令面板 (Ctrl+K) 与快捷键系统 ---------------- */
+let _cmdItems = [];
+let _cmdIdx = 0;
+
+function openHotkeysModal() {
+  const m = $('hotkeysModal');
+  if (m) m.classList.add('on');
 }
+function closeHotkeysModal() {
+  const m = $('hotkeysModal');
+  if (m) m.classList.remove('on');
+}
+if ($('bHotkeys')) $('bHotkeys').onclick = openHotkeysModal;
+if ($('bHotkeysClose')) $('bHotkeysClose').onclick = closeHotkeysModal;
+if ($('hotkeysModal')) {
+  $('hotkeysModal').onclick = e => {
+    if (e.target === $('hotkeysModal')) closeHotkeysModal();
+  };
+}
+
+function getBaseCommands() {
+  return [
+    { id: 'tab_model', title: '切换到：3D 模型空间预览', category: '导航', kbd: '1', action: () => showTab('model') },
+    { id: 'tab_files', title: '切换到：模型源文件编辑', category: '导航', kbd: '2', action: () => showTab('files') },
+    { id: 'tab_mobs', title: '切换到：生物 YAML 配置', category: '导航', kbd: '3', action: () => showTab('mobs') },
+    { id: 'tab_skills', title: '切换到：技能逻辑配置', category: '导航', kbd: '4', action: () => showTab('skills') },
+    { id: 'tab_loot', title: '切换到：掉落与刷怪据点', category: '导航', kbd: '5', action: () => showTab('loot') },
+    { id: 'tab_validate', title: '切换到：模型静态校验', category: '导航', kbd: '6', action: () => showTab('validate') },
+    { id: 'tab_config', title: '切换到：系统全局参数配置', category: '导航', kbd: '7', action: () => showTab('config') },
+    { id: 'tab_log', title: '切换到：运行与操作审计日志', category: '导航', kbd: '8', action: () => showTab('log') },
+
+    { id: 'act_reload', title: '重新加载模型缓存 (Hot Reload)', category: '操作', kbd: 'Ctrl+R', action: () => $('bReload')?.click() },
+    { id: 'act_save', title: '保存当前面板修改', category: '操作', kbd: 'Ctrl+S', action: saveCurrent },
+    { id: 'act_pack', title: '构建客户端资源包 (pack.zip)', category: '操作', kbd: '', action: () => $('bPack')?.click() },
+    { id: 'act_theme', title: '切换暗黑 / 明亮主题', category: '操作', kbd: 'Alt+T', action: toggleTheme },
+
+    { id: 'cv_play', title: '播放 / 暂停 3D 骨骼动画', category: '3D 视口', kbd: 'Space', action: () => { if (S.anim.playing) stopAnim(); else playAnim(); } },
+    { id: 'cv_reset', title: '3D 视口：等轴观察视角', category: '3D 视口', kbd: 'R', action: () => setCamAngle('iso') },
+    { id: 'cv_front', title: '3D 视口：正视图 (Front)', category: '3D 视口', kbd: 'Z', action: () => setCamAngle('front') },
+    { id: 'cv_side', title: '3D 视口：侧视图 (Side)', category: '3D 视口', kbd: 'X', action: () => setCamAngle('side') },
+    { id: 'cv_top', title: '3D 视口：顶视图 (Top)', category: '3D 视口', kbd: 'C', action: () => setCamAngle('top') },
+    { id: 'cv_wire', title: '3D 视口：切换纯线框模式', category: '3D 视口', kbd: '', action: () => { if ($('cvWire')) { $('cvWire').checked = !$('cvWire').checked; draw(); } } },
+    { id: 'cv_spin', title: '开启 / 关闭 3D 自动旋转', category: '3D 视口', kbd: 'T', action: tSpin },
+    { id: 'cv_theater', title: '切换 3D 剧场宽屏模式', category: '3D 视口', kbd: 'F', action: toggleTheater },
+
+    { id: 'help_hotkeys', title: '显示键盘快捷键指南', category: '帮助', kbd: '?', action: openHotkeysModal }
+  ];
+}
+
+function openCmdPalette() {
+  const p = $('cmdPalette');
+  if (!p) return;
+  p.classList.add('visible');
+  const inp = $('cmdInput');
+  if (inp) {
+    inp.value = '';
+    setTimeout(() => inp.focus(), 30);
+  }
+  filterCmdItems('');
+}
+
+function closeCmdPalette() {
+  const p = $('cmdPalette');
+  if (p) p.classList.remove('visible');
+}
+
+if ($('cmdPalette')) {
+  $('cmdPalette').onclick = e => {
+    if (e.target === $('cmdPalette')) closeCmdPalette();
+  };
+}
+if ($('searchKbd')) {
+  $('searchKbd').onclick = openCmdPalette;
+}
+
+function filterCmdItems(q) {
+  q = (q || '').trim().toLowerCase();
+  const base = getBaseCommands();
+  const extra = [];
+  (S.models || []).forEach(m => {
+    extra.push({
+      id: 'm_' + m.id,
+      title: '模型: ' + (m.name || m.id) + ' (' + m.id + ')',
+      category: '模型',
+      kbd: 'Enter',
+      action: () => { selectModel(m.id); showTab('model'); }
+    });
+  });
+  (S.mobs || []).forEach(mob => {
+    extra.push({
+      id: 'mob_' + mob.id,
+      title: '生物: ' + (mob.name || mob.id) + ' (' + mob.id + ')',
+      category: '生物',
+      kbd: 'Enter',
+      action: () => { selectMob(mob.id); showTab('mobs'); }
+    });
+  });
+
+  const all = [...base, ...extra];
+  _cmdItems = q ? all.filter(it => (it.title + ' ' + it.category).toLowerCase().includes(q)) : all;
+  _cmdIdx = 0;
+  renderCmdList();
+}
+
+function renderCmdList() {
+  const list = $('cmdList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!_cmdItems.length) {
+    list.innerHTML = '<div class="cmd-empty">无匹配命令或资源，换个关键词试试</div>';
+    return;
+  }
+  _cmdItems.slice(0, 30).forEach((it, idx) => {
+    const el = document.createElement('div');
+    el.className = 'cmd-item' + (idx === _cmdIdx ? ' active' : '');
+    el.innerHTML = '<span class="cmd-badge">' + esc(it.category) + '</span>'
+      + '<span class="cmd-title">' + esc(it.title) + '</span>'
+      + (it.kbd ? '<kbd class="cmd-kbd">' + esc(it.kbd) + '</kbd>' : '');
+    el.onmouseenter = () => {
+      _cmdIdx = idx;
+      renderCmdActive();
+    };
+    el.onclick = () => {
+      closeCmdPalette();
+      it.action();
+    };
+    list.appendChild(el);
+  });
+  scrollCmdActiveIntoView();
+}
+
+function renderCmdActive() {
+  const items = document.querySelectorAll('#cmdList .cmd-item');
+  items.forEach((el, idx) => {
+    el.classList.toggle('active', idx === _cmdIdx);
+  });
+  scrollCmdActiveIntoView();
+}
+
+function scrollCmdActiveIntoView() {
+  const cur = document.querySelectorAll('#cmdList .cmd-item')[_cmdIdx];
+  if (cur && cur.scrollIntoViewIfNeeded) cur.scrollIntoViewIfNeeded(false);
+  else if (cur) cur.scrollIntoView({ block: 'nearest' });
+}
+
+function moveCmdSelection(dir) {
+  if (!_cmdItems.length) return;
+  const count = Math.min(_cmdItems.length, 30);
+  _cmdIdx = (_cmdIdx + dir + count) % count;
+  renderCmdActive();
+}
+
+function execCmdSelection() {
+  if (!_cmdItems.length || !_cmdItems[_cmdIdx]) return;
+  const it = _cmdItems[_cmdIdx];
+  closeCmdPalette();
+  it.action();
+}
+
+if ($('cmdInput')) {
+  $('cmdInput').oninput = e => filterCmdItems(e.target.value);
+}
+
+function saveCurrent() {
+  const activeTab = document.querySelector('.rail .tab.on')?.dataset.tab;
+  if (activeTab === 'config') {
+    cfgSave();
+  } else if (activeTab === 'files') {
+    $('mfSave')?.click();
+  } else if (activeTab === 'mobs') {
+    $('bSaveMob')?.click();
+  } else if (activeTab === 'skills') {
+    $('bSaveSkills')?.click();
+  } else if (activeTab === 'loot') {
+    $('bSaveLoot')?.click();
+  } else {
+    toast('当前「' + (PAGE[activeTab] ? PAGE[activeTab][1] : activeTab) + '」面板无需保存', 'info');
+  }
+}
+
+/* 全局键盘快捷键 */
+window.addEventListener('keydown', e => {
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
+  const isCmdOpen = $('cmdPalette')?.classList.contains('visible');
+  const isHotkeysOpen = $('hotkeysModal')?.classList.contains('on');
+
+  // Escape 处理
+  if (e.key === 'Escape') {
+    if (isCmdOpen) { closeCmdPalette(); e.preventDefault(); return; }
+    if (isHotkeysOpen) { closeHotkeysModal(); e.preventDefault(); return; }
+    if ($('canvasWrap')?.classList.contains('theater')) { toggleTheater(); e.preventDefault(); return; }
+  }
+
+  // Ctrl+K / Cmd+K 命令面板
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    if (isCmdOpen) closeCmdPalette(); else openCmdPalette();
+    return;
+  }
+
+  // Ctrl+S / Cmd+S 智能保存
+  if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+    e.preventDefault();
+    saveCurrent();
+    return;
+  }
+
+  // Alt+T 切换主题
+  if (e.altKey && (e.key === 't' || e.key === 'T')) {
+    e.preventDefault();
+    toggleTheme();
+    return;
+  }
+
+  // 命令面板上下导航与回车执行
+  if (isCmdOpen) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveCmdSelection(1); return; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); moveCmdSelection(-1); return; }
+    if (e.key === 'Enter') { e.preventDefault(); execCmdSelection(); return; }
+    return;
+  }
+
+  // 输入框中输入时不触发单键快捷键
+  if (isInput) return;
+
+  // ? 打开快捷键指南
+  if (e.key === '?') {
+    e.preventDefault();
+    openHotkeysModal();
+    return;
+  }
+
+  // 1-8 标签页直达
+  const num = parseInt(e.key, 10);
+  if (num >= 1 && num <= 8) {
+    const tabs = ['model', 'files', 'mobs', 'skills', 'loot', 'validate', 'config', 'log'];
+    if (tabs[num - 1]) {
+      e.preventDefault();
+      showTab(tabs[num - 1]);
+      return;
+    }
+  }
+
+  // 3D 视口快捷键 (仅当处于 model 标签时)
+  const curTab = document.querySelector('.rail .tab.on')?.dataset.tab;
+  if (curTab === 'model') {
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (S.anim.playing) stopAnim(); else playAnim();
+      return;
+    }
+    if (e.key === 'r' || e.key === 'R') {
+      e.preventDefault();
+      setCamAngle('iso');
+      return;
+    }
+    if (e.key === 'z' || e.key === 'Z') {
+      e.preventDefault();
+      setCamAngle('front');
+      return;
+    }
+    if (e.key === 'x' || e.key === 'X') {
+      e.preventDefault();
+      setCamAngle('side');
+      return;
+    }
+    if (e.key === 'c' || e.key === 'C') {
+      e.preventDefault();
+      setCamAngle('top');
+      return;
+    }
+    if (e.key === 't' || e.key === 'T') {
+      e.preventDefault();
+      tSpin();
+      return;
+    }
+    if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault();
+      toggleTheater();
+      return;
+    }
+  }
+});
+
+async function refreshAll() {
+  try {
+    await Promise.all([loadModels(), loadMobs(), loadStatus(), loadPlayers()]);
+  } catch (e) { toast('刷新失败: ' + e.message, 'err'); }
+}
+
 (async function init() {
+  setupCodeEditor($('mfText'), $('mfStatus'));
+  setupCodeEditor($('mobText'), $('mobStatus'));
+  setupCodeEditor($('skText'), $('skStatus'));
+  setupCodeEditor($('lootText'), $('lootStatus'));
   const s = await loadStatus();
-  if (!s) { toast('无法连接插件（请确认 web.enabled 与服务端状态）', 'err'); return; }
+  if (!s) { toast('无法连接插件（请确认 web.enabled 与服务端状态）', 'err'); }
   await refreshAll();
   connectEvents();
   await Promise.all([loadSkills(), loadLoot(), loadSpawners()]);
-  try { const d = await api('/api/log'); setOut($('logOut'), (d.lines || []).join('\n') || '（暂无记录）'); } catch (e) { }
+  await loadLog();
   setInterval(loadStatus, 5000);
   setInterval(loadPlayers, 15000);
 })();

@@ -51,6 +51,7 @@ public final class SpawnerService {
         private final int maxAlive;
         private final int maxSpawns;
         private final int minPlayers;
+        private final double playersRadius;
         private final boolean enabled;
         private final double yRange;
         private long nextSpawnTick;
@@ -58,7 +59,7 @@ public final class SpawnerService {
 
         Spawner(String id, String mobId, String world, double x, double y, double z,
                 double radius, int intervalTicks, int maxAlive, int maxSpawns,
-                int minPlayers, boolean enabled, double yRange) {
+                int minPlayers, double playersRadius, boolean enabled, double yRange) {
             this.id = id;
             this.mobId = mobId;
             this.world = world;
@@ -70,6 +71,7 @@ public final class SpawnerService {
             this.maxAlive = Math.max(1, maxAlive);
             this.maxSpawns = maxSpawns;
             this.minPlayers = Math.max(0, minPlayers);
+            this.playersRadius = Math.max(0, playersRadius);
             this.enabled = enabled;
             this.yRange = Math.max(0, yRange);
             this.nextSpawnTick = 0;
@@ -83,6 +85,7 @@ public final class SpawnerService {
         public int maxAlive() { return maxAlive; }
         public int maxSpawns() { return maxSpawns; }
         public int minPlayers() { return minPlayers; }
+        public double playersRadius() { return playersRadius; }
         public double yRange() { return yRange; }
         public boolean enabled() { return enabled; }
         public int totalSpawned() { return totalSpawned; }
@@ -140,6 +143,7 @@ public final class SpawnerService {
                     s.getInt("max-alive", 3),
                     s.getInt("max-spawns", 0),
                     s.getInt("min-players", 0),
+                    s.getDouble("players-radius", 24.0),
                     s.getBoolean("enabled", true),
                     s.getDouble("y-range", 0));
             spawners.put(id, sp);
@@ -244,7 +248,7 @@ public final class SpawnerService {
         if (aliveCount(sp.id()) >= sp.maxAlive()) return;
         Location loc = randomLocation(sp);
         if (loc == null) return;
-        if (sp.minPlayers() > 0 && countPlayersNear(loc, sp.minPlayers()) < sp.minPlayers()) return;
+        if (sp.minPlayers() > 0 && countPlayersNear(loc, sp.minPlayers(), sp.playersRadius()) < sp.minPlayers()) return;
         int instId = safeSpawn(sp.mobId(), loc);
         if (instId > 0) {
             alive.computeIfAbsent(sp.id(), k -> Collections.synchronizedList(new ArrayList<>()))
@@ -315,15 +319,24 @@ public final class SpawnerService {
         }
     }
 
-    /** 半径内玩家数（含生成点自身）；用于 min-players 门控。 */
-    private int countPlayersNear(Location loc, int min) {
+    /**
+     * 半径内玩家数；用于 min-players 门控。
+     *
+     * <p>半径由 {@code players-radius} 独立给出，不再从 {@code min-players} 推导：
+     * 两者是「需要几名玩家」与「在多大范围内数人」，语义不同。
+     * 早先把半径写成 {@code min * min * 16.0}，等于把人数当格数——
+     * 配 3 人时判定范围 12 格，配 8 人时 32 格，门槛越严反而数到的人越远。</p>
+     */
+    private int countPlayersNear(Location loc, int min, double radius) {
+        if (radius <= 0) return 0;
         int count = 0;
+        double r2 = radius * radius;
         try {
             for (Player p : loc.getWorld().getPlayers()) {
                 if (p.getGameMode() == org.bukkit.GameMode.SPECTATOR || p.getGameMode() == org.bukkit.GameMode.CREATIVE) {
                     continue;
                 }
-                if (loc.getWorld().equals(p.getWorld()) && loc.distanceSquared(p.getLocation()) <= min * min * 16.0) {
+                if (loc.getWorld().equals(p.getWorld()) && loc.distanceSquared(p.getLocation()) <= r2) {
                     count++;
                     if (count >= min) break;
                 }

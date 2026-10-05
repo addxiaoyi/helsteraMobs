@@ -104,6 +104,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private Object behaviorRegistry;             // BehaviorRegistryImpl
     private Object skillService;                 // dev.helstera.ai.skill.SkillService
     private Object skillTriggers;                // dev.helstera.ai.skill.SkillTriggers
+    /** 拉杆服务；未装载时为 null。 */
+    private dev.helstera.ai.lever.LeverService leverService;
+    /** 免疫/伤害倍率监听器；未装载时为 null。 */
+    private dev.helstera.ai.immunity.ImmunityListener immunityListener;
     private Object ai;                           // AiManager
     private Object lootService;                 // dev.helstera.ai.loot.LootService
     private Object spawnerService;              // dev.helstera.ai.spawner.SpawnerService
@@ -238,8 +242,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 dev.helstera.ai.skill.SkillCatalog.summoner((modelId, at) -> {
                     var inst = ((InstanceManagerImpl) instances)
                             .spawn(modelId, at, dev.helstera.api.instance.SpawnOptions.defaults());
-                    return inst != null;
+                    // 必须回真实实例 id：召唤闸门靠它推算递归深度，
+                    // 返回布尔会让深度恒为 1，闸门形同虚设
+                    return inst == null ? -1 : inst.instanceId();
                 });
+                // SkillExtras 里的 dot / despawn 等动作需要调度器与实例管理器，
+                // 同样走注入钩子而非直接依赖，保证目录类可被单元测试加载。
+                dev.helstera.ai.skill.SkillExtras.host(this);
+                dev.helstera.ai.skill.SkillExtras.despawner(
+                        instanceId -> ((InstanceManagerImpl) instances).despawn(instanceId));
                 SkillService skills = new SkillService(br, getLogger());
                 if (!new java.io.File(getDataFolder(), "skills.yml").exists()) {
                     saveResource("skills.yml", false);
@@ -252,15 +263,74 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
                 this.skillService = skills;
                 a.setSkills(skills);
+                // 阵营必须先于档案装载：档案里的 faction 会被登记进阵营表
+                a.loadFactions(getConfig().getConfigurationSection("ai.factions"));
+                // 寻路规则必须在 attach 之前装载：控制器在构造时就要拿到 NavService，
+                // 否则已存在的实例在本次 reload 后仍按直线走
+                a.loadNav(getConfig().getConfigurationSection("ai.nav"));
+                // 召唤闸门：必须在任何 summon 动作执行前装载，否则无限套娃无从拦截
+                a.loadSummon(getConfig().getInt("ai.summon.max-depth", 2),
+                        getConfig().getInt("ai.summon.max-per-owner", 24));
+                // 变身钩子要在 loadFactions 之后注入：它持有阵营服务，
+                // 换载体时要把阵营搬到新 UUID 上
+                var transformer = new dev.helstera.ai.Transformer(a.factions());
+                dev.helstera.ai.skill.SkillCatalog.transformer((inst, type) -> {
+                    var r = transformer.transform(inst, type);
+                    if (!r.ok()) {
+                        getLogger().fine("变身失败（实例 #" + inst.instanceId() + " -> "
+                                + type + "）：" + r.reason());
+                    }
+                    return r.reason();
+                });
                 a.loadProfiles(getConfig().getConfigurationSection("ai.profiles"));
-                SkillTriggers trig = new SkillTriggers(this, a, br, bus, getLogger());
+                SkillTriggers trig = new SkillTriggers(this, a, br, bus, getLogger(), skills);
+                // 必须在 a.start() 之前注入：attack_hit 桥接在 start 时就捕获了
+                // SkillTriggers 的引用，晚注入会让攻击命中静默不派发
+                a.setTriggers(trig);
                 trig.start();
                 this.skillTriggers = trig;
+                // 免疫/倍率监听器：优先级 HIGH，早于 SkillTriggers 的 MONITOR 结算，
+                // 因此 on-damage 技能读到的已是修正后的最终值。
+                // 必须注册成独立监听器而非改 onDamage 优先级——那会让技能提前到结算前跑。
+                var imm = new dev.helstera.ai.immunity.ImmunityListener(a);
+                getServer().getPluginManager().registerEvents(imm, this);
+                this.immunityListener = imm;
+                // 装载期告警直接进日志：免疫写错的表现是「怪物打不动」，
+                // 而运行时没有任何异常，静默失效是本项目最大的缺陷来源
+                int immWarn = 0;
+                for (var e : a.profiles().entrySet()) {
+                    for (String w : e.getValue().immunityWarnings()) {
+                        getLogger().warning("免疫配置 [档案 " + e.getKey() + "] " + w);
+                        immWarn++;
+                    }
+                }
+                if (immWarn > 0) {
+                    getLogger().warning("免疫配置有 " + immWarn
+                            + " 处告警（/helstera immunity 查看，规则已按告警跳过）");
+                }
                 this.ai = a;
             }
         } catch (Throwable t) {
             getLogger().warning("AI 层不可用: " + t);
         }
+
+        // ---- 拉杆（helstera-ai）----
+        // 动作执行走技能目录，因此必须在技能服务装载之后注册
+        if (!new java.io.File(getDataFolder(), "levers.yml").exists()) {
+            saveResource("levers.yml", false);
+        }
+        var leverSvc = new dev.helstera.ai.lever.LeverService();
+        leverSvc.load(dev.helstera.ai.lever.LeverService.fromSection(
+                YamlConfiguration.loadConfiguration(
+                        new java.io.File(getDataFolder(), "levers.yml"))
+                        .getConfigurationSection("levers")));
+        for (var w : leverSvc.warnings()) getLogger().warning("拉杆配置: " + w);
+        this.leverService = leverSvc;
+        getServer().getPluginManager().registerEvents(
+                new dev.helstera.ai.lever.LeverListener(leverSvc,
+                        (uuid, lever) -> getLogger().info("拉杆 " + lever.id()
+                                + " 被玩家 " + uuid + " 触发: " + lever.triggers())),
+                this);
 
         // ---- 掉落表 + 刷怪点（helstera-ai）----
         // 两者都依赖 mobs/*.yml 的解析能力，放在 AI 块之后初始化。
@@ -271,6 +341,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             loot.load(YamlConfiguration.loadConfiguration(
                     new java.io.File(getDataFolder(), "loot.yml")).getConfigurationSection("tables"));
+            // 档位按权限节点 helstera.tier.<n> 判定：档位语义属玩法配置，
+            // 而权限是服务端唯一现成的、不引入依赖的等级载体。
+            // 未持有任何节点时返回 -1（未知），门槛型掉落照常参与掷骰。
+            loot.setTierResolver(p -> permissionTier(p));
             this.lootService = loot;
         } catch (Throwable t) {
             getLogger().warning("掉落表不可用: " + t);
@@ -372,6 +446,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             c.setExecutor(command);
             c.setTabCompleter(command);
         });
+        // 拉杆监听已在 AI 块装载完 leverService 后注册，此处只注册插件自身监听
         getServer().getPluginManager().registerEvents(this, this);
         if (renderer != null) {
             getServer().getPluginManager().registerEvents(
@@ -439,6 +514,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (scheduler != null) ((HelsteraScheduler) scheduler).stop();
         if (refresher != null) ((VisibilityRefresher) refresher).stop();
         if (skillTriggers instanceof SkillTriggers st) st.stop();
+        if (immunityListener != null) {
+            org.bukkit.event.HandlerList.unregisterAll(immunityListener);
+            immunityListener = null;
+        }
         if (ai != null) ((AiManager) ai).stop();
         if (spawnerService instanceof dev.helstera.ai.spawner.SpawnerService sp) sp.stop();
         if (webServer != null) ((WebServerService) webServer).stop();
@@ -809,10 +888,29 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         }
         try {
-            loot.rollAndDrop(ent.getLocation(), inst.lootTable, luck);
+            // 传入击杀者：min-tier-level 门槛需要它才能在运行期生效
+            loot.rollAndDrop(ent.getLocation(), inst.lootTable, luck, e.getEntity().getKiller());
         } catch (Throwable t) {
             getLogger().warning("掉落投掷失败: " + t);
         }
+    }
+
+    /**
+     * 取玩家持有的最高档位：扫描 {@code helstera.tier.<n>} 权限节点取最大值。
+     *
+     * <p>扫描上限 10 是刻意的：档位写成权限节点本身就可被玩家自行授权，
+     * 不设上限等于给玩家一个「授权越大的数字」来绕过门槛。找不到任何节点返回 -1。</p>
+     */
+    private int permissionTier(org.bukkit.entity.Player p) {
+        if (p == null) return -1;
+        int best = -1;
+        try {
+            for (int i = 1; i <= 10; i++) {
+                if (p.hasPermission("helstera.tier." + i)) best = i;
+            }
+        } catch (Throwable ignored) {
+        }
+        return best;
     }
 
     /**
@@ -872,28 +970,30 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     /** 用 mobs/*.yml 的 ai 节就地覆盖行为档案（不污染缓存的档案）。 */
     private AiProfile overrideProfile(AiProfile base, org.bukkit.configuration.ConfigurationSection s) {
-        // 从 base 复制（含 require/onDecision），再叠加本节的标量覆盖，
-        // 避免改动共享缓存档案导致其他生物行为被连带污染。
+        // 从 base 复制，再叠加本节的覆盖。复制而非直接改 base，是避免污染共享缓存档案：
+        // 同一档案被多个生物引用，就地修改会让其它生物的行为被连带改掉。
         AiProfile p = new AiProfile(base);
-        p.sightRadius = s.getDouble("sight-radius", base.sightRadius);
-        p.attackRadius = s.getDouble("attack-radius", base.attackRadius);
-        p.attackDamage = s.getDouble("attack-damage", base.attackDamage);
-        p.attackCooldown = s.getDouble("attack-cooldown", base.attackCooldown);
-        p.fleeHealthRatio = s.getDouble("flee-health-ratio", base.fleeHealthRatio);
-        p.patrolRadius = s.getDouble("patrol-radius", base.patrolRadius);
-        p.patrolInterval = s.getDouble("patrol-interval", base.patrolInterval);
-        p.moveSpeed = s.getDouble("move-speed", base.moveSpeed);
-        p.canChase = s.getBoolean("can-chase", base.canChase);
-        p.canFlee = s.getBoolean("can-flee", base.canFlee);
-        p.canPatrol = s.getBoolean("can-patrol", base.canPatrol);
-        p.canAttack = s.getBoolean("can-attack", base.canAttack);
-        // 生物级触发器此前未被解析：mobs/*.yml 里写的 ai.triggers 被静默忽略，
-        // on-spawn/on-damage 永不触发。此处按档案级同样规则覆盖。
-        if (s.isConfigurationSection("triggers")) {
-            p.triggers.clear();
-            p.applyTriggersFrom(s);
+        p.applyOverridesFrom(s);
+        // 生物级 require / on-decision / triggers 也需要按名绑定成可执行键，
+        // 档案级由 loadProfiles 做过这一步，生物级此前只展开了 skills——
+        // 结果是 mobs/*.yml 里写的 require 文本永远匹配不到注册表。
+        if (skillService instanceof SkillService sk) {
+            bindProfileKeys(sk, p);
         }
         return p;
+    }
+
+    /** 把档案中的 require / on-decision / triggers 文本定义替换为已绑定的键。 */
+    private void bindProfileKeys(SkillService sk, AiProfile p) {
+        p.require.replaceAll(spec -> {
+            String k = sk.bindCondition(spec);
+            return k == null ? spec : k;
+        });
+        p.onDecision.replaceAll(spec -> {
+            String k = sk.bindAction(spec);
+            return k == null ? spec : k;
+        });
+        sk.expandTriggers(p);
     }
 
     // ------------------------------------------------------------------
@@ -979,6 +1079,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     public HelsteraScheduler scheduler() { return scheduler == null ? null : (HelsteraScheduler) scheduler; }
     public ResourcePackService resourcePack() { return resourcePack == null ? null : (ResourcePackService) resourcePack; }
     public AiManager ai() { return ai == null ? null : (AiManager) ai; }
+    /** 拉杆服务；未装载时为 null。 */
+    public dev.helstera.ai.lever.LeverService leverService() { return leverService; }
+    /** 免疫/倍率监听器；未装载时为 null。 */
+    public dev.helstera.ai.immunity.ImmunityListener immunityListener() { return immunityListener; }
+    /**
+     * 免疫/倍率的装载期告警（未知名 / 参数非法），跨全部档案汇总。
+     *
+     * <p>单独开一个聚合入口而非让命令逐档案遍历：{@code /helstera check} 已经在
+     * 遍历档案做阵营校验，免疫告警再走一遍同样的循环只会让命令层多一处可能
+     * 写错的拼写。</p>
+     */
+    public List<String> immunityWarnings() {
+        AiManager a = ai();
+        if (a == null) return List.of();
+        List<String> out = new ArrayList<>();
+        for (var e : a.profiles().entrySet()) {
+            for (String w : e.getValue().immunityWarnings()) {
+                out.add("档案 " + e.getKey() + ": " + w);
+            }
+        }
+        return List.copyOf(out);
+    }
     public MigrationServiceImpl migration() { return migration == null ? null : (MigrationServiceImpl) migration; }
     public BehaviorRegistry behaviorRegistry() { return behaviorRegistry == null ? null : (BehaviorRegistry) behaviorRegistry; }
     /** 技能装载期告警（未知名/参数非法）；无告警时返回空列表。 */
@@ -1284,6 +1406,55 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             java.util.List<String> out = new java.util.ArrayList<>();
             for (var m : registry.all()) out.add(m.id());
             return out;
+        }
+
+        /**
+         * 发<b>已编译</b>的规则而非原始配置：网页端要回答的是「这个 cause 会被哪条
+         * 规则盖住」，未知名 / 重复声明 / 已跳过条目在原始配置里看不出来，
+         * 而这些正是「配了没效果」的全部来源。
+         */
+        @Override public java.util.List<Map<String, Object>> immunityInfo() {
+            java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
+            AiManager a = ai();
+            if (a == null) return out;
+            for (var e : a.profiles().entrySet()) {
+                var table = e.getValue().immunityTable();
+                if (table.isEmpty()) continue;
+                java.util.List<Map<String, Object>> rules = new java.util.ArrayList<>();
+                for (var r : table.rules()) {
+                    Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    row.put("key", r.key());
+                    row.put("kind", r.kind().name());
+                    row.put("multiplier", r.multiplier());
+                    row.put("negate", r.negate());
+                    row.put("conditions", r.conditions());
+                    // 每个 cause 的最终取值：网页端据此显示「这档会怎样」，
+                    // 而不是让人自己拿倍率去心算
+                    java.util.List<Map<String, Object>> sample = new java.util.ArrayList<>();
+                    for (String cause : dev.helstera.ai.immunity.DamageCategory.KNOWN_CAUSES) {
+                        var res = table.evaluate(cause, 10.0);
+                        if (!res.matched()) continue;
+                        Map<String, Object> c = new java.util.LinkedHashMap<>();
+                        c.put("cause", cause);
+                        c.put("damage", res.damage());
+                        c.put("heal", res.isHeal() ? res.healAmount() : 0);
+                        c.put("rule", res.matchedKey());
+                        sample.add(c);
+                    }
+                    row.put("covers", sample);
+                    rules.add(row);
+                }
+                Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("name", e.getKey());
+                m.put("rules", rules);
+                m.put("warnings", table.warnings());
+                out.add(m);
+            }
+            return out;
+        }
+
+        @Override public boolean immunityActive() {
+            return immunityListener != null;
         }
 
         @Override public String readManagedYaml(String name) {

@@ -1,0 +1,108 @@
+package dev.helstera.web;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * 网页端接口对账：前端调用的每个 {@code /api/*}，服务端必须真的提供。
+ *
+ * <p><b>这个测试存在的理由</b>：本模块此前<b>一个测试都没有</b>，而
+ * 「前端调用的接口服务端没实现」是本项目最典型的静默缺陷——没有编译错误、
+ * 没有运行时报错、其它模块全绿，只有点开那个页面的人会发现它 404，
+ * 而那往往要等到发版之后。</p>
+ *
+ * <p>刻意只做「前端 → 服务端」单��检查：服务端多出的路由（无前端调用者）
+ * 是正常的演进痕迹，而前端调用不存在的路由一律是缺陷。</p>
+ */
+class WebEndpointAuditTest {
+
+    private static final Path HTML = Path.of("src", "main", "resources", "web", "index.html");
+    private static final Path SERVER = Path.of("src", "main", "java", "dev", "helstera", "web",
+            "WebServerService.java");
+
+    private static String read(Path p) throws IOException {
+        return Files.readString(p, StandardCharsets.UTF_8);
+    }
+
+    /** 前端里出现的 /api/... 字面量。 */
+    private static Set<String> frontendEndpoints(String html) {
+        // 只取引号内的路径，避免把文案里的斜杠误当端点
+        Matcher m = Pattern.compile("['\"`](/api/[A-Za-z0-9_/-]+)").matcher(html);
+        Set<String> out = new LinkedHashSet<>();
+        while (m.find()) out.add(m.group(1));
+        return out;
+    }
+
+    /** 服务端 switch 里的路由。 */
+    private static Set<String> serverRoutes(String src) {
+        Matcher m = Pattern.compile("case\\s+\"(/api/[A-Za-z0-9_/-]*)\"\\s*->").matcher(src);
+        Set<String> out = new LinkedHashSet<>();
+        while (m.find()) out.add(m.group(1));
+        return out;
+    }
+
+    @Test
+    @DisplayName("前端调用的每个 /api 端点，服务端都真的实现了")
+    void everyFrontendCallIsServed() throws IOException {
+        String html = read(HTML);
+        String src = read(SERVER);
+
+        Set<String> called = frontendEndpoints(html);
+        assertTrue(called.size() >= 30,
+                "只从页面提取到 " + called.size() + " 个端点，正则多半没匹配上，测试本身可能已失效");
+
+        Set<String> missing = new LinkedHashSet<>();
+        for (String ep : called) {
+            // 在整个服务端源码里找该字面量：路由可能由 switch 分发，也可能
+            // 走 javalin 的其它注册方式，只查 switch 会误报
+            if (!src.contains("\"" + ep + "\"")) missing.add(ep);
+        }
+        assertTrue(missing.isEmpty(),
+                "前端调用了服务端未提供的端点（运行时静默 404）: " + missing);
+    }
+
+    @Test
+    @DisplayName("本次新增的免疫诊断端点两端都在")
+    void immunityEndpointIsWired() throws IOException {
+        String html = read(HTML);
+        String src = read(SERVER);
+        assertTrue(src.contains("/api/immunity"),
+                "服务端缺少 /api/immunity 路由");
+        assertTrue(html.contains("/api/immunity"),
+                "前端没有调用 /api/immunity：接口已实现却没有任何调用者，"
+                        + "属于另一种「实现了但没接线」，同样不会报任何错");
+    }
+
+    @Test
+    @DisplayName("免疫诊断前端必须处理 active=false，否则监听器未注册时静默失效")
+    void immunityPanelHandlesInactive() throws IOException {
+        String html = read(HTML);
+        assertTrue(html.contains("d.active"),
+                "前端未读取 active 标志位：监听器未注册时全部免疫规则静默失效，"
+                        + "而页面若只显示「没有配置」，管理员会以为是自己没配");
+        assertTrue(html.contains("imOut"), "缺少免疫诊断输出节点");
+    }
+
+    @Test
+    @DisplayName("两份 index.html 副本保持同步")
+    void frontendCopiesAreInSync() throws IOException {
+        Path res = HTML;
+        Path copy = Path.of("..", "frontend", "index.html");
+        if (!Files.exists(copy)) return;   // 单模块构建时副本不在，跨仓校验跳过
+        assertTrue(Files.readString(res, StandardCharsets.UTF_8)
+                        .equals(Files.readString(copy, StandardCharsets.UTF_8)),
+                "frontend/index.html 与 helstera-web 资源目录下的副本已漂移："
+                        + "发布用的是后者，前者会让人以为改过了但实际没生效");
+    }
+}

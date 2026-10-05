@@ -35,7 +35,7 @@ public final class HelsteraCommand implements TabExecutor {
 
     private static final List<String> SUBS = List.of(
             "reload", "model", "mob", "animation", "migrate", "web", "debug", "stats", "pack",
-            "loot", "spawner", "check", "help");
+            "loot", "spawner", "check", "faction", "codex", "nav", "lever", "immunity", "help");
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -57,6 +57,11 @@ public final class HelsteraCommand implements TabExecutor {
             case "loot" -> loot(sender, args);
             case "spawner" -> spawner(sender, args);
             case "check" -> check(sender);
+            case "faction" -> faction(sender, args);
+            case "codex" -> codex(sender, args);
+            case "nav" -> nav(sender, args);
+            case "lever" -> lever(sender, args);
+            case "immunity" -> immunity(sender, args);
             default -> help(sender);
         }
         return true;
@@ -77,6 +82,9 @@ public final class HelsteraCommand implements TabExecutor {
         s.sendMessage("§b/helstera debug [render|animation|network|ai|skills|integrations] §7- 调试");
         s.sendMessage("§b/helstera stats §7- 性能统计");
         s.sendMessage("§b/helstera check §7- 配置体检：技能/刷怪点有没有写错");
+        s.sendMessage("§b/helstera lever list §7- 拉杆");
+        s.sendMessage("§b/helstera immunity [档案] §7- 免疫/伤害倍率诊断");
+        s.sendMessage("§b/helstera faction list|info <名> §7- 阵营与同盟关系");
         s.sendMessage("§b/helstera pack build|apply §7- 资源包");
     }
 
@@ -425,6 +433,9 @@ public final class HelsteraCommand implements TabExecutor {
                 s.sendMessage("§c技能配置告警 " + ws.size() + " 条:");
                 ws.forEach(w -> s.sendMessage("§c- " + w));
             }
+            // 静默失败留痕：这些动作被 try/catch 吞掉过，不看这里无法发现
+            dev.helstera.ai.skill.SkillFaults.faults().forEach(f ->
+                    s.sendMessage("§c失败动作 " + f.what() + " ×" + f.count()));
         }
         if (area.equals("integrations") || area.equals("ai") || area.equals("all")) {
             s.sendMessage("§7== 外部插件适配器 ==");
@@ -537,6 +548,76 @@ public final class HelsteraCommand implements TabExecutor {
             }
         }
 
+        // 4.1 触发器接线情况：先报「你实际写了哪些未接线的」，再给全局缺口。
+//     两段都要有——只报前者，用户不知道自己还能期望什么；
+//     只报后者（此前形态），21 个名字里哪怕一个都没用也会刷屏，且无从定位档案。
+var ai = plugin.ai();
+        if (ai != null) {
+            var usedUnwired = ai.unwiredTriggerUsage();
+            if (usedUnwired.isEmpty()) {
+                s.sendMessage("§a✓ §7档案触发器全部已接线 §8(" + ai.profileNames().size() + " 个档案)");
+            } else {
+                problems += usedUnwired.size();
+                s.sendMessage("§e✗ §7档案里写了未接线的触发器 §f" + usedUnwired.size()
+                        + " §7处 §8(这些配置不会触发)");
+                for (int i = 0; i < Math.min(usedUnwired.size(), 8); i++) {
+                    s.sendMessage("§8  - §7" + usedUnwired.get(i));
+                }
+                if (usedUnwired.size() > 8) {
+                    s.sendMessage("§8  … 还有 " + (usedUnwired.size() - 8) + " 条");
+                }
+            }
+        }
+        var unwired = dev.helstera.ai.skill.SkillTrigger.unwiredNames();
+        if (!unwired.isEmpty()) {
+            s.sendMessage("§7尚未实现的触发器 §f" + unwired.size() + " §7个 §8(可用技能+ on-condition 替代)");
+            s.sendMessage("§8  §7" + String.join("§7§8, §7", unwired));
+        }
+
+        // 4.2 阵营配置：两个方向的错配都要报出来
+        if (ai != null) {
+            var fs = ai.factions();
+            var factionWarn = new java.util.ArrayList<String>(fs.warnings());
+            // 档案写了 factions 段里不存在的阵营：打起来仍是「与所有人敌对」，
+            // 而作者以为它们互相免伤——这类错配没有任何运行时症状
+            var declared = new java.util.HashSet<String>(fs.names());
+            for (var e : ai.profiles().entrySet()) {
+                String f = e.getValue().faction;
+                if (f != null && !declared.contains(f.toLowerCase(Locale.ROOT))) {
+                    factionWarn.add("档案 " + e.getKey() + " 的 faction \"" + f + "\" 未在 ai.factions.factions 中定义");
+                }
+            }
+            if (factionWarn.isEmpty()) {
+                s.sendMessage("§a✓ §7阵营配置无问题 §8(" + fs.names().size() + " 个阵营)");
+            } else {
+                problems += factionWarn.size();
+                s.sendMessage("§e✗ §7阵营配置 §f" + factionWarn.size() + " §7处问题");
+                for (int i = 0; i < Math.min(factionWarn.size(), 8); i++) {
+                    s.sendMessage("§8  - §7" + factionWarn.get(i));
+                }
+            }
+        }
+
+        // 4.3 免疫/伤害倍率：未知名与非法参数必须在体检里报出来。
+        //     免疫写错在服务端完全没有症状——规则静默永不匹配，与「没配这条」
+        //     在现场无法区分。若只在 /helstera immunity 里报，管理员多半不会去跑那条命令。
+        var immWarn = plugin.immunityWarnings();
+        if (plugin.ai() != null && plugin.immunityListener() == null) {
+            problems++;
+            s.sendMessage("§e✗ §7免疫监听器未注册，免疫与伤害倍率不会生效");
+        } else if (immWarn.isEmpty()) {
+            s.sendMessage("§a✓ §7免疫/倍率配置无问题");
+        } else {
+            problems += immWarn.size();
+            s.sendMessage("§e✗ §7免疫/倍率 §f" + immWarn.size() + " §7处问题 §8(这些规则已被跳过，看起来就是「配了没效果」)");
+            for (int i = 0; i < Math.min(immWarn.size(), 8); i++) {
+                s.sendMessage("§8  - §7" + immWarn.get(i));
+            }
+            if (immWarn.size() > 8) {
+                s.sendMessage("§8  … 还有 " + (immWarn.size() - 8) + " 条，看 §f/helstera immunity");
+            }
+        }
+
         // 5. 模型校验：逐个模型跑一遍 validate，把结构性问题也纳入体检。
         //    刻意跳过文件路径——路径在聊天框里会折行，反而看不清是哪条规则不满足。
         int modelIssues = 0;
@@ -570,6 +651,323 @@ public final class HelsteraCommand implements TabExecutor {
             s.sendMessage("§a全部检查通过。");
         } else {
             s.sendMessage("§e共 §f" + problems + " §e处待处理。改动后用 §b/helstera reload §e重载。");
+        }
+    }
+
+    /**
+ * 寻路诊断：{@code /helstera nav}。
+ *
+ * <p>存在的理由：寻路失效几乎全是静默的——生物贴墙走、绕远、或不动，服务端不报错。
+ * 本命令把那些失败变成可见计数，于是「看起来卡住」能被归类到具体一类（预算超限 /
+ * 不可达 / 起终点被堵 / 反复侧移），而不必靠观察现象猜。</p>
+ */
+    private void nav(CommandSender s, String[] args) {
+        if (!s.hasPermission("helstera.nav")) { deny(s); return; }
+        var ai = plugin.ai();
+        if (ai == null) {
+            s.sendMessage("§cAI 层未启用");
+            return;
+        }
+        var navSvc = ai.nav();
+        if (navSvc == null) {
+            s.sendMessage("§c寻路未装载");
+            return;
+        }
+        // reset 是唯一可写操作；仍需显式参数，避免误触清掉正在观察的数据
+        if (args.length > 1 && args[1].equalsIgnoreCase("reset")) {
+            navSvc.metrics().reset();
+            s.sendMessage("§a已重置寻路计数");
+            return;
+        }
+        var m = navSvc.metrics();
+        s.sendMessage("§b== 寻路诊断 ==");
+        s.sendMessage("§7" + navSvc.summary());
+        int enabled = 0;
+        for (var p : ai.profiles().entrySet()) {
+            if (p.getValue().canPathfind) enabled++;
+        }
+        s.sendMessage("§7启用寻路的档案: §f" + enabled + " §7/ §f" + ai.profiles().size());
+        if (enabled == 0) {
+            s.sendMessage("§e⚠ 没有档案写 §fcan-pathfind: true§e，寻路不会被调用");
+        }
+        for (var e : m.snapshot().entrySet()) {
+            if (e.getValue() == 0) continue;
+            s.sendMessage("§7  " + e.getKey() + " §f" + e.getValue());
+        }
+        // 把「该调什么」直接写出来，而不是只给数字让人自己想
+        if (m.get(dev.helstera.ai.nav.NavMetrics.Kind.BUDGET_EXCEEDED) > 0) {
+            s.sendMessage("§e→ 预算超限偏多: 调大档案的 §fpath-budget§e 或缩短战斗距离");
+        }
+        if (m.get(dev.helstera.ai.nav.NavMetrics.Kind.ENDPOINT_BLOCKED) > 0) {
+            s.sendMessage("§e→ 起终点被堵偏多: 检查目标是否站在不可通行方块上");
+        }
+        if (m.get(dev.helstera.ai.nav.NavMetrics.Kind.SIDESTEP) > 0) {
+            s.sendMessage("§e→ 侧移偏多: 地形狭窄或生物被顶住，考虑加大 §fmove-speed§e");
+        }
+        s.sendMessage("§8  规则: 通行 §f" + navSvc.rules().passableMaterials()
+                + " §7阻断 §f" + navSvc.rules().blockedMaterials()
+                + " §7垂直±" + navSvc.rules().verticalRange());
+    }
+
+    /**
+     * 拉杆诊断：{@code /helstera lever}。
+     *
+     * <p>存在的理由同 {@code /helstera nav}：拉杆的「按了没反应」在服务端毫无
+     * 迹象。本命令把装载期告警（空动作、缺区域、坐标写反）直接列出来。</p>
+     */
+    private void lever(CommandSender s, String[] args) {
+        if (!s.hasPermission("helstera.lever")) { deny(s); return; }
+        var svc = plugin.leverService();
+        if (svc == null) {
+            s.sendMessage("§c拉杆未装载");
+            return;
+        }
+        s.sendMessage("§b== 拉杆 == §7" + svc.size() + " §7个");
+        if (svc.size() == 0) {
+            s.sendMessage("§7在 levers.yml 的 levers 下配置");
+            return;
+        }
+        for (var l : svc.levers()) {
+            s.sendMessage("§7  " + l.id() + " §8" + l.region()
+                    + " §7动作§f" + l.triggers().size()
+                    + (l.cooldownTicks() > 0 ? " §8冷却" + l.cooldownTicks() + "t" : ""));
+        }
+        var w = svc.warnings();
+        if (w.isEmpty()) {
+            s.sendMessage("§a✓ 无装载期告警");
+        } else {
+            s.sendMessage("§e⚠ §f" + w.size() + " §7条告警（这些通常就是「按了没反应」）:");
+            for (String x : w) s.sendMessage("§8  - §7" + x);
+        }
+    }
+
+    /**
+     * 免疫/伤害倍率诊断：{@code /helstera immunity [档案名]}。
+     *
+     * <p>存在的理由同 {@code /helstera nav}：免疫写错<b>永远不报错</b>。
+     * 名字拼错 → 规则永不匹配；类别名与 cause 名搞混 → 命中范围不是你以为的那一大片。
+     * 两种故障在服务端都表现为「怪物打不动」，且控制台没有任何异常。</p>
+     *
+     * <p>所以这里不只列规则，还要把<b>会被哪些 cause 命中</b>算出来：
+     * 类别规则尤其需要，因为它覆盖的 cause 往往比作者预期多（environment 覆盖 20 多种）。</p>
+     */
+    private void immunity(CommandSender s, String[] args) {
+        if (!s.hasPermission("helstera.immunity")) { deny(s); return; }
+        var ai = plugin.ai();
+        if (ai == null) {
+            s.sendMessage("§cAI 层未启用（config.yml 的 ai.enabled）");
+            return;
+        }
+        if (plugin.immunityListener() == null) {
+            s.sendMessage("§c免疫监听器未注册，规则不会生效（查看启动日志 [免疫配置]）");
+            return;
+        }
+        s.sendMessage("§b== 免疫 / 伤害倍率 ==");
+        String only = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : null;
+
+        int configured = 0;
+        for (var e : ai.profiles().entrySet()) {
+            String name = e.getKey().toLowerCase(Locale.ROOT);
+            if (only != null && !name.equals(only)) continue;
+            var table = e.getValue().immunityTable();
+            if (table.isEmpty()) continue;
+            configured++;
+            s.sendMessage("§7档案 §f" + e.getKey() + " §7（" + table.size() + " 条规则）");
+            for (var r : table.rules()) {
+                String scope = r.kind() == dev.helstera.ai.immunity.ImmunityService.Kind.CATEGORY
+                        ? "类别 " : "精确 ";
+                String hits = describeHits(r);
+                s.sendMessage("§8  - §7" + scope + "§f" + r.key()
+                        + " §8→ §7" + (r.negate() ? "免疫(0)" : "×" + r.multiplier())
+                        + (hits.isEmpty() ? "" : " §8命中: §7" + hits));
+            }
+        }
+        if (configured == 0) {
+            s.sendMessage("§7没有任何档案配置免疫/倍率（这是默认值：未配置 = 不免疫）");
+            s.sendMessage("§8  写法: §7immunities: [FIRE, LAVA]§8 / §7damage-modifiers: {fire: 0.5}");
+        }
+
+        // 逐 cause 试算：把「这条规则到底盖住了哪些伤害」摊开，
+        // 这是排查「我配了却还在掉血」唯一有效的一步
+        s.sendMessage("§7-- 逐 cause 试算（按 10 点原始伤害）§8--");
+        AiProfileView view = new AiProfileView(ai, only);
+        var t = view.table();
+        if (t == null || t.isEmpty()) {
+            s.sendMessage("§8  （没有带规则的档案）");
+        }
+        for (String cause : dev.helstera.ai.immunity.DamageCategory.KNOWN_CAUSES) {
+            if (t == null || t.isEmpty()) break;
+            var res = t.evaluate(cause, 10.0);
+            if (!res.matched()) continue;
+            // 回血规则必须按实际行为展示：伤害归 0 + 回血 N。
+            // 显示成 -10.0 会让人以为「这生物会掉 10 点血」，与真实结果完全相反。
+            String effect = res.isHeal()
+                    ? "§a回血 " + fmtDamage(res.healAmount())
+                    : "§f" + fmtDamage(res.damage());
+            s.sendMessage("§8  §7" + cause + " §8→ " + effect
+                    + " §8(" + res.matchedKey() + ")");
+        }
+
+        var warns = plugin.immunityWarnings();
+        if (warns.isEmpty()) {
+            s.sendMessage("§a✓ §7无装载期告警");
+        } else {
+            s.sendMessage("§e⚠ §f" + warns.size() + " §7条告警（这些规则已被跳过，通常就是「配了没效果」）:");
+            for (int i = 0; i < Math.min(warns.size(), 10); i++) {
+                s.sendMessage("§8  - §7" + warns.get(i));
+            }
+        }
+        // 回血落空计数：必须露出，否则「写了 -1 倍率却没回血」无法区分于
+        // 「规则压根没生效」——两者在现场都是「血量没变」
+        long skipped = dev.helstera.ai.immunity.ImmunityListener.skippedHealCount();
+        if (skipped > 0) {
+            s.sendMessage("§e⚠ §f" + skipped
+                    + " §7次回血未执行（载体不是生物或血量已满）§8— 若期望回血生效，检查该实例的载体类型");
+        }
+        s.sendMessage("§8  可用类别: §7" + String.join("§8, §7",
+                dev.helstera.ai.immunity.DamageCategory.configNames()));
+    }
+
+    /** 规则覆盖的 cause 清单（类别规则才有意义）。 */
+    private static String describeHits(dev.helstera.ai.immunity.ImmunityService.Rule r) {
+        if (r.kind() == dev.helstera.ai.immunity.ImmunityService.Kind.CAUSE) return "";
+        var cat = dev.helstera.ai.immunity.DamageCategory.of(r.key());
+        if (cat == null) return "";
+        return String.join(",", cat.causes());
+    }
+
+    private static String fmtDamage(double d) {
+        return d == Math.rint(d) ? String.valueOf((long) d) : String.valueOf(d);
+    }
+
+    /** 取单个档案的规则表（only 为 null 时用第一个有规则的档案）。 */
+    private record AiProfileView(dev.helstera.ai.AiManager ai, String only) {
+        dev.helstera.ai.immunity.ImmunityService.Table table() {
+            if (only != null) {
+                for (var e : ai.profiles().entrySet()) {
+                    if (e.getKey().equalsIgnoreCase(only)) return e.getValue().immunityTable();
+                }
+                return null;
+            }
+            for (var e : ai.profiles().entrySet()) {
+                var t = e.getValue().immunityTable();
+                if (t != null && !t.isEmpty()) return t;
+            }
+            return null;
+        }
+    }
+
+    /** 图鉴：{@code /helstera codex [关键字]}。
+     *
+     * <p>目录每次调用都重建而非缓存：模型可被网页端热重载，缓存下来的目录
+     * 会在卸载模型后仍然显示旧条目，而「图鉴里还有已删除的模型」比慢一点更难解释。</p>
+     */
+    private void codex(CommandSender s, String[] args) {
+        if (!s.hasPermission("helstera.codex")) { deny(s); return; }
+        String query = args.length > 1 ? String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length))
+                : null;
+        var entries = new java.util.ArrayList<dev.helstera.ai.codex.CodexEntry>();
+        for (var m : plugin.registry().all()) {
+            try {
+                entries.add(dev.helstera.ai.codex.CodexEntry.of(m));
+            } catch (Throwable ignored) {
+                // 单个模型元数据异常不该让整份图鉴不可用
+            }
+        }
+        var catalog = new dev.helstera.ai.codex.CodexCatalog(entries);
+        var found = catalog.search(query);
+
+        s.sendMessage("§b== 图鉴 == §7" + found.size() + " §7条"
+                + (query == null ? "" : " §8(关键字: " + query + ")"));
+        if (found.isEmpty()) {
+            s.sendMessage("§7没有匹配的模型条目");
+            return;
+        }
+        for (var e : found) {
+            var lines = dev.helstera.ai.codex.CodexBook.renderEntry(e);
+            s.sendMessage(lines.isEmpty() ? "§8" + e.id() : lines.get(0));
+            // 折叠成两行，避免每条模型刷 10 行把聊天框冲掉
+            String detail = lines.size() > 1 ? String.join("§8, ", lines.subList(1, lines.size())) : "";
+            s.sendMessage("§8  " + detail);
+        }
+        var sparse = catalog.sparse();
+        if (!sparse.isEmpty()) {
+            s.sendMessage("§e⚠ §f" + sparse.size() + " §7条缺少骨骼或动画，功能可能不会生效");
+        }
+    }
+
+    /**
+     * 阵营查询：{@code /helstera faction list|info <名称>}。
+     *
+     * <p>只读不写。改阵营属于档案配置（{@code ai.profiles.*.faction}），
+     * 放进命令层会造成「命令改了、reload 又被配置文件覆盖」的双重真相。</p>
+     */
+    private void faction(CommandSender s, String[] args) {
+        if (!s.hasPermission("helstera.faction")) { deny(s); return; }
+        var ai = plugin.ai();
+        if (ai == null) {
+            s.sendMessage("§cAI 层未启用");
+            return;
+        }
+        var fs = ai.factions();
+        String sub = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "list";
+        switch (sub) {
+            case "list" -> {
+                s.sendMessage("§b== 阵营 ==");
+                var names = fs.names();
+                if (names.isEmpty()) {
+                    s.sendMessage("§7未配置任何阵营 §8(在 config.yml 的 ai.factions.factions 下声明)");
+                } else {
+                    s.sendMessage("§7玩家阵营 §f" + (fs.playerFaction() == null ? "§7无" : fs.playerFaction()));
+                    s.sendMessage("§7同阵营免伤 §f" + (fs.blockFriendlyFire() ? "开" : "关"));
+                    for (String n : names) {
+                        var allies = fs.alliesOf(n);
+                        StringBuilder sb = new StringBuilder();
+                        for (String a : allies) {
+                            if (a.equals(n)) continue;
+                            if (sb.length() > 0) sb.append("§7, §f");
+                            sb.append(a);
+                        }
+                        String disp = fs.displayOf(n);
+                        s.sendMessage("§f" + n + " §7(" + disp + ")"
+                                + (sb.length() == 0 ? " §8无盟友" : " §7盟友: §f" + sb));
+                    }
+                }
+                var warn = fs.warnings();
+                if (!warn.isEmpty()) {
+                    s.sendMessage("§e配置告警 §f" + warn.size() + " §7处:");
+                    for (int i = 0; i < Math.min(warn.size(), 6); i++) {
+                        s.sendMessage("§8  - §7" + warn.get(i));
+                    }
+                }
+            }
+            case "info" -> {
+                if (args.length < 3) {
+                    s.sendMessage("§c用法: §f/helstera faction info <阵营名>");
+                    return;
+                }
+                String n = args[2].toLowerCase(Locale.ROOT);
+                if (fs.displayOf(n) == null) {
+                    s.sendMessage("§c没有名为 §f" + n + " §c的阵营");
+                    return;
+                }
+                s.sendMessage("§b" + n + " §7(" + fs.displayOf(n) + ")");
+                var allies = fs.alliesOf(n);
+                StringBuilder sb = new StringBuilder();
+                for (String a : allies) {
+                    if (sb.length() > 0) sb.append("§7, §f");
+                    sb.append(a);
+                }
+                s.sendMessage("§7同盟(含自身): §f" + sb);
+                // 反查哪些档案声明了它——这是管理员排查「为什么这货不打同伙」时
+                // 唯一需要的信息，而它只存在于档案里、不存在于 config 的阵营段
+                for (var e : ai.profiles().entrySet()) {
+                    if (n.equalsIgnoreCase(String.valueOf(e.getValue().faction))) {
+                        s.sendMessage("§7档案 §f" + e.getKey() + " §7属于此阵营");
+                    }
+                }
+            }
+            default -> s.sendMessage("§7用法: §f/helstera faction list|info <名称>");
         }
     }
 
@@ -754,6 +1152,9 @@ public final class HelsteraCommand implements TabExecutor {
                 }
                 case "spawner force" -> {
                     if (plugin.spawners() != null) plugin.spawners().ids().forEach(out::add);
+                }
+                case "immunity" -> {
+                    if (plugin.ai() != null) plugin.ai().profileNames().forEach(out::add);
                 }
             }
         } else if (args.length == 4) {

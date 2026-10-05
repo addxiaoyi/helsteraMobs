@@ -22,15 +22,42 @@ public final class BehaviorContext {
     private final double distanceToTarget;
     private final long decisionCount;
     private final String state;
+    /**
+     * 技能信号载荷；非信号来源的决策为 null。
+     *
+     * <p>放在最外层而非复用 {@code state}：state 已被 {@code state-is} 类条件占用，
+     * 且语义不同——state 是 AI 状态机状态，payload 是技能间传递的数据。</p>
+     */
+    private final String payload;
 
     private BehaviorContext(ModelInstance instance, Player target, double healthRatio,
                             double distanceToTarget, long decisionCount, String state) {
+        this(instance, target, healthRatio, distanceToTarget, decisionCount, state, null);
+    }
+
+    private BehaviorContext(ModelInstance instance, Player target, double healthRatio,
+                            double distanceToTarget, long decisionCount, String state,
+                            String payload) {
         this.instance = instance;
         this.target = target;
         this.healthRatio = healthRatio;
         this.distanceToTarget = distanceToTarget;
         this.decisionCount = decisionCount;
         this.state = state;
+        this.payload = payload;
+    }
+
+    /**
+     * 构造带信号载荷的上下文（供 on-signal 使用）。
+     *
+     * <p>独立重载而非给现有工厂加参数：已有五处调用点都要传 null，
+     * 加参数会让每个调用点多出一个无意义的 null。</p>
+     */
+    public static BehaviorContext withPayload(ModelInstance instance, Player target,
+                                              double healthRatio, double distanceToTarget,
+                                              long decisionCount, String state, String payload) {
+        return new BehaviorContext(instance, target, healthRatio, distanceToTarget,
+                decisionCount, state, payload);
     }
 
     /** 构造决策上下文；target 为 null 时视为无目标，distanceToTarget 记为 -1。 */
@@ -58,6 +85,16 @@ public final class BehaviorContext {
     /** 当前仇恨目标，无目标时 empty。 */
     public Optional<Player> target() {
         return Optional.ofNullable(target);
+    }
+
+    /**
+     * 技能信号载荷；非信号来源或未带载荷时 empty。
+     *
+     * <p>供 {@code on-signal} 下的条件/动作读取 {@code signal} 动作传来的内容，
+     * 例如 {@code <ctx.payload>}。不使用信号时恒为 empty，不会影响其它条件。</p>
+     */
+    public Optional<String> payload() {
+        return Optional.ofNullable(payload).filter(s -> !s.isEmpty());
     }
 
     /** 当前目标血量比例 0..1；载体无血量时为 1。 */

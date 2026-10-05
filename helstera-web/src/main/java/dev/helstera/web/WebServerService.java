@@ -485,6 +485,7 @@ public final class WebServerService {
             case "/api/spawners/save" -> { return json(200, spawnersSave(req)); }
             case "/api/spawners/reload" -> { return json(200, spawnersReload()); }
             case "/api/mob/schema" -> { return json(200, mobSchema()); }
+            case "/api/immunity" -> { return json(200, immunityPayload()); }
             default -> { return json(404, Map.of("error", "未知接口 " + req.path)); }
         }
     }
@@ -1343,6 +1344,24 @@ public final class WebServerService {
     }
 
     /** 刷怪点摘要。 */
+    /**
+     * 免疫/伤害倍率诊断载荷。
+     *
+     * <p>发<b>已编译</b>的规则与每条 cause 的最终取值，而不是原始配置：
+     * 原始配置里看不出未知名、重复声明、已跳过条目，而这些正是「配了没效果」
+     * 的全部来源；让前端心算倍率同样不可靠。</p>
+     *
+     * <p>{@code active=false} 时前端须显著提示——该状态下<b>全部</b>免疫规则
+     * 静默失效，而配置本身看起来完全正常。</p>
+     */
+    private Map<String, Object> immunityPayload() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", true);
+        out.put("active", bridge.immunityActive());
+        out.put("profiles", bridge.immunityInfo());
+        return out;
+    }
+
     private Map<String, Object> spawnersPayload() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", true);

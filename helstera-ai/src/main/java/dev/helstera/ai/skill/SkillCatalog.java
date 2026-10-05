@@ -40,8 +40,14 @@ public final class SkillCatalog {
      * 目录类，若在这里直接构造实例管理器，它就无法在单元测试里被加载。</p>
      */
     public interface Summoner {
-        /** 生成一个实例；返回 false 表示模型未加载或位置非法。 */
-        boolean summon(String modelId, org.bukkit.Location at);
+        /**
+         * 生成一个实例。
+         *
+         * @return 新实例的 id；失败（模型未加载或位置非法）返回 -1。
+         *         必须返回真实 id——召唤闸门要用它推算递归深度，
+         *         拿位置哈希之类的替代值会让深度恒为 1，从而闸门形同虚设。
+         */
+        int summon(String modelId, org.bukkit.Location at);
     }
 
     /**
@@ -53,6 +59,54 @@ public final class SkillCatalog {
 
     public static void summoner(Summoner s) {
         summoner = s;
+    }
+
+    /**
+     * 召唤闸门：由运行期注入，检查递归深度与数量上限。
+     *
+     * <p>与 {@link Summoner} 分开是因为职责不同：{@code Summoner} 只负责「生成」，
+     * 而闸门负责「该不该生成」。合成一个接口会让实现方既管生成又管判定，
+     * 而判定逻辑恰恰是最该被单测的那部分。</p>
+     */
+    public interface SummonGate {
+        /**
+         * 询问能否再召唤一只。
+         *
+         * @return 允许返回 null；拒绝返回原因（用于日志/诊断）
+         */
+        String whyBlocked(int ownerInstanceId);
+
+        /** 记录一次成功召唤，用于计数与深度推算。 */
+        void onSummoned(int ownerInstanceId, int minionInstanceId);
+    }
+
+    private static volatile SummonGate summonGate;
+
+    public static void summonGate(SummonGate g) {
+        summonGate = g;
+    }
+
+    /**
+     * 变身目标：由运行期注入，供 transform 动作更换实例的载体实体。
+     *
+     * <p>与 {@link Summoner} 同理做成钩子：SkillCatalog 不持有实例管理器。</p>
+     */
+    public interface Transformer {
+        /**
+         * 把实例载体换成指定实体类型。
+         *
+         * @return 失败原因；成功返回 null
+         */
+        String transform(dev.helstera.runtime.instance.ModelInstanceImpl inst, String entityType);
+    }
+
+    /**
+     * 变身钩子。未注入时 transform 动作静默返回——目录类不应因运行期组件缺失而加载失败。
+     */
+    private static volatile Transformer transformer;
+
+    public static void transformer(Transformer t) {
+        transformer = t;
     }
 
     private SkillCatalog() {
@@ -441,13 +495,42 @@ public final class SkillCatalog {
                         Location me = ctx.instance().location();
                         if (me == null || me.getWorld() == null) return;
                         for (int i = 0; i < count; i++) {
+                            // 闸门先于生成：闸门在循环内而非循环外，
+                            // 否则一次技能会绕过数量上限把额度用光后才被拦下
+                            SummonGate gate = summonGate;
+                            if (gate != null) {
+                                String blocked = gate.whyBlocked(ctx.instance().instanceId());
+                                if (blocked != null) break;
+                            }
                             // 环形散布，避免多个召唤物完全重叠
                             double ang = (Math.PI * 2 * i) / count;
                             Location at = me.clone().add(Math.cos(ang) * radius, 0, Math.sin(ang) * radius);
                             try {
-                                hook.summon(modelId, at);
+                                int minionId = hook.summon(modelId, at);
+                                if (minionId >= 0 && gate != null) {
+                                    gate.onSummoned(ctx.instance().instanceId(), minionId);
+                                }
                             } catch (Throwable ignored) {
                             }
+                        }
+                    };
+                }),
+
+                // ---- 变身 ----
+
+                // transform <实体类型>：把自身载体换成另一种实体，保留位置与朝向。
+                // 用于「半血变狂暴形态」这类需求。类型名非法时静默跳过——
+                // 加载期已由 Transformer 校验过，运行期报错只会打断整条技能链。
+                java.util.Map.entry("transform", (ActionFactory) a -> {
+                    String entityType = str(a, 0, "");
+                    return ctx -> {
+                        Transformer hook = transformer;
+                        if (hook == null || entityType.isBlank() || !ctx.instanceValid()) return;
+                        if (!(ctx.instance() instanceof
+                                dev.helstera.runtime.instance.ModelInstanceImpl impl)) return;
+                        try {
+                            hook.transform(impl, entityType);
+                        } catch (Throwable ignored) {
                         }
                     };
                 })
@@ -471,7 +554,7 @@ public final class SkillCatalog {
         if (t == null) return List.of();
         Location me = ctx.instance().location();
         if (me == null || me.getWorld() == null) return List.of();
-        List<LivingEntity> cands = nearby(me, radius);
+        List<LivingEntity> cands = nearby(me, radius, ctx.instance().baseEntity().orElse(null));
         if (cands.isEmpty()) return List.of();
         List<LivingEntity> picked = t.select(ctx.instance(), cands, List.of());
         return picked.size() > count ? picked.subList(0, count) : picked;
@@ -484,7 +567,7 @@ public final class SkillCatalog {
         if (t == null) return List.of();
         Location me = ctx.instance().location();
         if (me == null || me.getWorld() == null) return List.of();
-        List<LivingEntity> cands = nearby(me, radius);
+        List<LivingEntity> cands = nearby(me, radius, ctx.instance().baseEntity().orElse(null));
         if (cands.isEmpty()) return List.of();
         return t.select(ctx.instance(), cands, List.of());
     }
@@ -546,15 +629,26 @@ public final class SkillCatalog {
         return cur;
     }
 
-    /** 半径内的其它生物；自身排除在外，避免动作把自己的模型当目标。 */
-    private static List<LivingEntity> nearby(Location center, double radius) {
+    /**
+     * 半径内的其它生物；自身与同阵营实体排除在外。
+     *
+     * <p>同阵营过滤放在这里而不是各动作内部：{@code pick} 与 {@code select}
+     * 两条路径都走这一个入口，在动作层过滤必然漏掉某几个 aoe / heal 类动作，
+     * 而漏掉的后果是「守卫的群攻技能会打死自己人」——这种 bug 现场极难定位。</p>
+     *
+     * @param center 中心位置
+     * @param radius 半径
+     * @param source 发起方实体，用于同阵营判定；可为 null（跳过阵营过滤）
+     */
+    private static List<LivingEntity> nearby(Location center, double radius,
+                                             org.bukkit.entity.Entity source) {
         if (radius <= 0) return List.of();
         List<LivingEntity> out = new ArrayList<>();
         try {
             for (org.bukkit.entity.Entity e : center.getWorld().getNearbyEntities(center, radius, radius, radius)) {
                 if (!(e instanceof LivingEntity le)) continue;
                 if (!le.isValid()) continue;
-                // 决策发起方的载体实体不能成为自己的目标，否则 aoe-damage 会自伤
+                if (source != null && dev.helstera.api.behavior.Factions.allied(source, le)) continue;
                 out.add(le);
             }
         } catch (Throwable ignored) {

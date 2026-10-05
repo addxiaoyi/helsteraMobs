@@ -30,6 +30,12 @@ permissions:
       helstera.pack: true
       helstera.loot: true
       helstera.spawner: true
+      helstera.check: true
+      helstera.faction: true
+      helstera.codex: true
+      helstera.nav: true
+      helstera.lever: true
+      helstera.immunity: true
   helstera.view:
     description: 可见模型（默认所有人）
     default: true

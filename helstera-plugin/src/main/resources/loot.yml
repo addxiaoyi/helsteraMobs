@@ -19,6 +19,17 @@
 #     name               自定义显示名（支持 § 颜色码）
 #     custom-model-data  自定义模型数据值（配合资源包）
 #     glow               是否强制发光
+#     tiers[]            数量分层权重（可选），用于表达偏斜分布，如
+#                        「70% 掉 1 个 / 25% 掉 2~3 个 / 5% 掉 5 个」。
+#                        配了 tiers 就忽略 amount-min/max。每档写：
+#                          weight        权重，必须 > 0
+#                          amount-min/max 该档数量区间
+#                          note          备注，仅供调试
+#     min-tier-level     击杀者档位门槛（可选）：低于该档位不掉这条。
+#                        档位由击杀者的权限节点 helstera.tier.<n> 决定，
+#                        取其最大值，扫描范围 1~10。拿不到击杀者（环境死亡）
+#                        或没有该节点时按「档位未知」处理，门槛一律放行，
+#                        不会因为读不到档位就把高端掉落吞掉。
 #
 #  用法：
 #     mobs/crystal_boss.yml 里写
@@ -47,11 +58,14 @@ tables:
         amount-min: 1
         amount-max: 2
         chance: 0.4
+      # 数量偏斜：绝大多数 1 个，偶尔一簇
       - item: GOLDEN_APPLE
-        amount-min: 1
-        amount-max: 4
         chance: 0.7
         luck-scaling: false
+        tiers:
+          - {weight: 70, amount-min: 1, amount-max: 1}
+          - {weight: 25, amount-min: 2, amount-max: 3}
+          - {weight: 5,  amount-min: 5, amount-max: 5}
       - item: DIAMOND_SWORD
         chance: 0.08
         enchantments:
@@ -60,3 +74,7 @@ tables:
         name: "§b§l远古结晶刃"
         custom-model-data: 1001
         glow: true
+      # 只掉给 5 档及以上的击杀者（需要 helstera.tier.5 权限）
+      - item: NETHERITE_INGOT
+        chance: 0.02
+        min-tier-level: 5
