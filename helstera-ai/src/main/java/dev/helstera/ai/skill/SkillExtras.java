@@ -53,6 +53,37 @@ public final class SkillExtras {
 
     private static volatile Despawner despawner;
 
+    /**
+     * 连杀计数表。
+     *
+     * <p>条件/动作工厂是静态表，拿不到注入实例，因此由 {@code SkillTriggers}
+     * 在构造时把自己的 {@code KillStreak} 注入到这里。与 {@link #host} 同一理由：
+     * 未注入时条件一律判 false，绝不抛异常——配置里写了却静默不放行，
+     * 表现与「没写这条条件」完全一致。</p>
+     */
+    private static volatile KillStreak streaks;
+
+    public static void killStreak(KillStreak s) {
+        streaks = s;
+    }
+
+    /** 连杀计数表；未注入时返回 null，调用方必须自行判空。 */
+    static KillStreak streaks() {
+        return streaks;
+    }
+
+    /**
+     * 本实例击杀者的当前连杀数；表未注入、无击杀者或已超窗均返回 0。
+     *
+     * <p>未注入返回 0 而不是 NPE：条件在决策链里求值，抛异常会打断整轮决策，
+     * 症状是「这个 Boss 的技能全都不动了」，比条件不成立严重得多。</p>
+     */
+    private static int streak(BehaviorContext ctx) {
+        var t = streaks();
+        if (t == null || !hasInstance(ctx)) return 0;
+        return t.streakOfInstance(id(ctx), System.nanoTime());
+    }
+
     public static void host(Plugin plugin) {
         host = plugin;
     }
@@ -372,6 +403,15 @@ public final class SkillExtras {
                     int threshold = (int) num(a, 1, 0);
                     return ctx -> scoreOf(ctx, name) >= threshold;
                 }),
+                // ---- 连杀 ----
+                Map.entry("kill-streak-at-least", (SkillCatalog.ConditionFactory) a -> {
+                    int threshold = (int) num(a, 0, 0);
+                    // 未注入表时一律判 false 而不是抛 NPE：条件求值在决策链里，
+                    // 抛异常会打断整轮决策，症状是「这个 Boss 的技能全都不动了」
+                    return ctx -> hasInstance(ctx) && streak(ctx) >= threshold;
+                }),
+                Map.entry("kill-streak-active", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> hasInstance(ctx) && streak(ctx) > 0),
                 Map.entry("skill-cooldown", (SkillCatalog.ConditionFactory) a -> {
                     String name = str(a, 0, "");
                     double seconds = num(a, 1, 0);
@@ -693,6 +733,17 @@ public final class SkillExtras {
                         scoresOf(id(ctx)).merge(name, v, Integer::sum);
                     };
                 }),
+                // 连杀清零：给「领奖一次后打回原形」这类玩法用。
+                // 不提供「直接置数」动作——连杀只能由真实击杀累积，
+                // 允许动作改写会让 on-kill-player 的奖励凭空刷出来。
+                Map.entry("kill-streak-reset", (SkillCatalog.ActionFactory) a ->
+                        ctx -> {
+                            if (!hasInstance(ctx)) return;
+                            var table = streaks();
+                            if (table == null) return;
+                            var killer = table.lastKillerOf(id(ctx));
+                            if (killer != null) table.reset(killer);
+                        }),
                 Map.entry("set-global-cooldown", (SkillCatalog.ActionFactory) a -> {
                     String name = str(a, 0, "");
                     double seconds = num(a, 1, 1);
