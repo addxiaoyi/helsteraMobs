@@ -54,6 +54,9 @@ public final class SkillTriggers implements Listener {
     /** 定时技能的调度精度（tick）。1 表示每 tick 检查一次，最灵敏也最费。 */
     private static final int TIMER_TICK = 1;
 
+    /** 连杀表回收间隔（tick）。1 秒一次足够：窗口判定是惰性的，回收只是清内存。 */
+    private static final int STREAK_PRUNE_TICKS = 20;
+
     private final Plugin plugin;
     private final AiManager ai;
     private final BehaviorRegistry registry;
@@ -66,7 +69,18 @@ public final class SkillTriggers implements Listener {
     private BukkitTask timerTask;
     /** 全局 tick 计数：定时技能据此判断是否到点，避免每 tick 读系统时钟。 */
     private long tick;
+    /**
+     * 连杀计数（按玩家 UUID）。
+     *
+     * <p>用 {@code nanoTime} 而非 {@code currentTimeMillis}：后者会被系统时间调整
+     * 影响，改时间后连杀可能永不重置或立刻归零。</p>
+     */
+    private final KillStreak streaks = new KillStreak();
 
+    /** 连杀计数表，供条件 {@code kill-streak-at-least} 与诊断命令读取。 */
+    public KillStreak killStreak() {
+        return streaks;
+    }
     public SkillTriggers(Plugin plugin, AiManager ai, BehaviorRegistry registry,
                          HelsteraEventBus bus, Logger log) {
         this(plugin, ai, registry, bus, log, null);
@@ -80,6 +94,9 @@ public final class SkillTriggers implements Listener {
         this.bus = bus;
         this.log = log;
         this.skills = skills;
+        // 条件/动作工厂表是 static，拿不到本实例持有的连杀表；
+        // 不桥接的话 kill-streak-at-least 读的是另一张空表，症状是「连杀永远 0」
+        SkillExtras.killStreak(streaks);
     }
 
     /**
@@ -476,6 +493,11 @@ public final class SkillTriggers implements Listener {
     /** 推进全局 tick 并放行到期的 on-timer 技能。 */
     private void runTimers() {
         tick++;
+        // 连杀表回收：每 tick 都扫是纯浪费，而漏扫又会让内存随玩家进出无界增长。
+        // 折中为每 20 tick 一次——窗口判定本身是惰性的，回收早一点晚一点都不影响连杀语义。
+        if (tick % STREAK_PRUNE_TICKS == 0) {
+            streaks.prune(System.nanoTime());
+        }
         var snapshot = ai.allInstances();
         pollConditions(snapshot);
         pollDerived(snapshot);
@@ -560,6 +582,11 @@ public final class SkillTriggers implements Listener {
         if (shouldFireKillPlayer(e.getEntity(), e.getEntity().getKiller())) {
             dispatch(SkillTrigger.KILL_PLAYER, inst, (Player) e.getEntity(),
                     e.getEntity().getLocation());
+        }
+        // 连杀按「击杀者」记，且只认玩家击杀：投射物 / 陷阱 / 环境致死都拿不到
+        // Player 击杀者，若把它们也算进去，玩家站在岩浆边就能刷出连杀。
+        if (e.getEntity().getKiller() instanceof Player killer) {
+            streaks.record(inst.instanceId(), killer.getUniqueId(), System.nanoTime());
         }
     }
 
