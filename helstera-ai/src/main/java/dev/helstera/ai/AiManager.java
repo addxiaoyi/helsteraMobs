@@ -283,6 +283,18 @@ public final class AiManager implements Listener {
         return controllers.get(inst.instanceId());
     }
 
+    /**
+     * 按实例 id 取控制器；无控制器（未 attach 或已销毁）返回 null。
+     *
+     * <p>存在的理由：条件/动作工厂表里只有实例 id（{@code BehaviorContext}
+     * 不持有 {@code ModelInstance}），若让调用方自己反查实例再调
+     * {@link #controllerOf}，每个调用点都要写一遍「取实例 → 空判 → 取控制器」，
+     * 漏掉空判就是 NPE。</p>
+     */
+    public AiController controllerById(int instanceId) {
+        return controllers.get(instanceId);
+    }
+
     /** 取某实例实际绑定的档案（含 mobs/*.yml 局部覆盖）；未启用 AI 时返回 null。 */
     public AiProfile profileOf(int instanceId) {
         return boundProfiles.get(instanceId);

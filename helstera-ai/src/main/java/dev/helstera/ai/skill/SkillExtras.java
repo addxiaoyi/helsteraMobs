@@ -54,6 +54,46 @@ public final class SkillExtras {
     private static volatile Despawner despawner;
 
     /**
+     * 仇恨表访问器。
+     *
+     * <p>与 {@link #host} / {@link #streaks} 同一理由：静态工厂表拿不到
+     * {@code AiController}，而仇恨条件/动作必须读同一实例的那张表。
+     * 另建一份表会让条件按自己记的仇恨判断，与实际选目标用的表不是同一份，
+     * 症状是「条件永远不成立」。</p>
+     */
+    public interface ThreatLookup {
+        /** 取该实例的仇恨表；档案未启用 threat 或实例无控制器时返回 null。 */
+        dev.helstera.ai.ThreatTable of(int instanceId);
+    }
+
+    private static volatile ThreatLookup threatLookup;
+
+    public static void threatLookup(ThreatLookup l) {
+        threatLookup = l;
+    }
+
+    /** 供条件/动作取本实例的仇恨表；未接线时返回 null，调用方自行判空。 */
+    static dev.helstera.ai.ThreatTable threatOf(BehaviorContext ctx) {
+        var l = threatLookup;
+        if (l == null || !hasInstance(ctx)) return null;
+        return l.of(id(ctx));
+    }
+
+    /**
+     * 当前目标在本实例仇恨表中的威胁值。
+     *
+     * <p>返回 {@link Double#NaN} 而非 0 表示「查不到」：NaN 与任何阈值比较
+     * 都返回 false，天然满足「无表 / 无目标时判 false」，而返回 0 会让
+     * {@code threat-below 100} 在无表时错误成立。</p>
+     */
+    private static double targetThreat(BehaviorContext ctx) {
+        var t = threatOf(ctx);
+        var tgt = ctx.target();
+        if (t == null || tgt.isEmpty()) return Double.NaN;
+        return t.threatOf(tgt.get().getUniqueId());
+    }
+
+    /**
      * 连杀计数表。
      *
      * <p>条件/动作工厂是静态表，拿不到注入实例，因此由 {@code SkillTriggers}
@@ -412,6 +452,31 @@ public final class SkillExtras {
                 }),
                 Map.entry("kill-streak-active", (SkillCatalog.ConditionFactory) a ->
                         ctx -> hasInstance(ctx) && streak(ctx) > 0),
+                // ---- 仇恨 ----
+                // 未接线或档案未启用 threat 时一律判 false：那两种情况下
+                // 「没有仇恨表」与「仇恨为 0」对作者是同一件事，判 false 最保守
+                Map.entry("threat-above", (SkillCatalog.ConditionFactory) a -> {
+                    double threshold = num(a, 0, 0);
+                    return ctx -> targetThreat(ctx) > threshold;
+                }),
+                Map.entry("threat-below", (SkillCatalog.ConditionFactory) a -> {
+                    double threshold = num(a, 0, 0);
+                    // 用 targetThreat 而非表对象：无表/无目标时返回 NaN，
+                    // 与任何阈值的比较都是 false，不会误放行
+                    return ctx -> targetThreat(ctx) < threshold;
+                }),
+                Map.entry("has-threat", (SkillCatalog.ConditionFactory) a -> {
+                    double threshold = num(a, 0, 0.01);
+                    return ctx -> targetThreat(ctx) > threshold;
+                }),
+                // 仇恨表里有几个有效目标：对应 MM 里「周围还有 N 个人值得打」
+                Map.entry("threat-targets-at-least", (SkillCatalog.ConditionFactory) a -> {
+                    int n = (int) num(a, 0, 2);
+                    return ctx -> {
+                        var t = threatOf(ctx);
+                        return t != null && t.size() >= n;
+                    };
+                }),
                 Map.entry("skill-cooldown", (SkillCatalog.ConditionFactory) a -> {
                     String name = str(a, 0, "");
                     double seconds = num(a, 1, 0);
@@ -743,6 +808,43 @@ public final class SkillExtras {
                             if (table == null) return;
                             var killer = table.lastKillerOf(id(ctx));
                             if (killer != null) table.reset(killer);
+                        }),
+                // ---- 仇恨动作（对标 MM 的 threat / clearThreat） ----
+                Map.entry("threat-add", (SkillCatalog.ActionFactory) a -> {
+                    double amount = num(a, 0, 0);
+                    return ctx -> {
+                        var t = threatOf(ctx);
+                        // 无目标时静默跳过：MM 的 threat 动作同样需要一个作用对象，
+                        // 找不到对象却仍加仇恨只会凭空造出一个不存在的目标
+                        var tgt = ctx.target();
+                        if (t == null || tgt.isEmpty() || amount <= 0) return;
+                        t.addThreat(tgt.get().getUniqueId(), amount);
+                    };
+                }),
+                Map.entry("threat-clear", (SkillCatalog.ActionFactory) a -> {
+                    boolean only = bool(a, 0, false);
+                    return ctx -> {
+                        var t = threatOf(ctx);
+                        if (t == null) return;
+                        if (!only) {
+                            t.clear();
+                            return;
+                        }
+                        // threat-clear true：只清当前目标，保留其余人的仇恨
+                        var tgt = ctx.target();
+                        if (tgt.isPresent()) t.remove(tgt.get().getUniqueId());
+                    };
+                }),
+                // 把某目标顶成首要目标：等价于给它一次性高仇恨。
+                // 刻意不提供「直接设指定玩家的仇恨值」——那会绕过仇恨表的
+                // 距离权重与衰减，直接改写内部状态，破坏排序平衡。
+                Map.entry("threat-focus", (SkillCatalog.ActionFactory) a ->
+                        ctx -> {
+                            var t = threatOf(ctx);
+                            var tgt = ctx.target();
+                            if (t == null || tgt.isEmpty()) return;
+                            var id2 = tgt.get().getUniqueId();
+                            t.addThreat(id2, t.threatOf(id2) + Math.max(1, t.size()) * 1000.0);
                         }),
                 Map.entry("set-global-cooldown", (SkillCatalog.ActionFactory) a -> {
                     String name = str(a, 0, "");
