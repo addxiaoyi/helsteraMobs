@@ -1074,6 +1074,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     /** 模型校验器；供 /helstera check 汇总结构性问题。 */
     public ModelValidator validator() { return validator; }
+    /**
+     * 命令层与各子系统的唯一依赖面。
+     *
+     * <p>命令层只依赖 {@link dev.helstera.api.bridge.HelsteraBridge}，不直接 import
+     * web / runtime 的实现类——否则分阶段出包缺模块时，异常要到玩家敲命令那一刻
+     * 才抛，且堆栈指向命令而非缺失模块。</p>
+     */
+    public dev.helstera.api.bridge.HelsteraBridge bridge() {
+        if (bridgeImpl == null) bridgeImpl = new PluginBridge(this);
+        return bridgeImpl;
+    }
+    private PluginBridge bridgeImpl;
     public InstanceManagerImpl instances() { return instances == null ? null : (InstanceManagerImpl) instances; }
     public PlayerVisibilityService visibility() { return visibility == null ? null : (PlayerVisibilityService) visibility; }
     public HelsteraScheduler scheduler() { return scheduler == null ? null : (HelsteraScheduler) scheduler; }

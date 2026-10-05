@@ -6,9 +6,6 @@ import dev.helstera.api.instance.ModelInstance;
 import dev.helstera.api.migration.MigrationReport;
 import dev.helstera.api.model.ModelDefinition;
 import dev.helstera.runtime.instance.InstanceManagerImpl;
-import dev.helstera.runtime.perf.RollingMetrics;
-import dev.helstera.runtime.scheduler.HelsteraScheduler;
-import dev.helstera.web.WebServerService;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -348,48 +345,43 @@ public final class HelsteraCommand implements TabExecutor {
 
     private void web(CommandSender s, String[] args) {
         if (!s.hasPermission("helstera.web")) { deny(s); return; }
-        if (plugin.webServer() == null) {
+        // 只依赖 HelsteraBridge 接口，不直接持有 WebServerService：
+        // 分阶段出包缺 web 模块时，这里打印「未启用」而不是抛 NoClassDefFoundError
+        var ws = plugin.bridge();
+        if (!ws.webEnabled()) {
             s.sendMessage("§c网页开发器未启用（请确认使用 5.0 版本且 config.yml 中 web.enabled=true）");
             return;
         }
-        WebServerService ws = plugin.webServer();
         String action = args.length > 1 ? args[1] : "status";
         switch (action) {
             case "start" -> {
                 try {
                     String hostArg = args.length > 2 ? args[2] : null;
-                    if (hostArg != null) {
-                        ws.start(hostArg);
-                        s.sendMessage("§a网页开发器已启动（监听 " + hostArg + "）: http://" + hostArg + ":"
-                                + ws.port() + "/ 令牌: " + ws.token());
-                    } else {
-                        ws.start();
-                        s.sendMessage("§a网页开发器已启动: http://" + ws.host() + ":"
-                                + ws.port() + "/ 令牌: " + ws.token());
-                    }
-                    s.sendMessage("§7别人打不开就跑一次 §f/helstera web doctor §7看诊断。");
+                    ws.webStart(hostArg);
+                    s.sendMessage("§a网页开发器已启动（监听 " + ws.webHost() + "）: http://"
+                            + ws.webHost() + ":" + ws.webPort() + "/ 令牌: " + ws.webToken());
                 } catch (Exception e) {
                     s.sendMessage("§c启动失败: " + e.getMessage());
                 }
             }
             case "stop" -> {
-                ws.stop();
+                ws.webStop();
                 s.sendMessage("§a已停止");
             }
             case "doctor", "check", "diag" -> {
                 s.sendMessage("§b== 网页开发器自检 ==");
-                for (String line : ws.doctor()) s.sendMessage("§7" + line);
+                for (String line : ws.webDoctor()) s.sendMessage("§7" + line);
             }
             case "firewall", "fix" -> {
-                s.sendMessage("§7正在尝试添加入站放行规则（TCP " + ws.port() + "）…");
-                s.sendMessage("§7" + ws.allowFirewall());
+                s.sendMessage("§7正在尝试添加入站放行规则（TCP " + ws.webPort() + "）…");
+                s.sendMessage("§7" + ws.webAllowFirewall());
             }
             default -> {
-                s.sendMessage("§7网页开发器: " + (ws.isRunning() ? "§a运行中" : "§c已停止")
-                        + " §7监听 " + ws.host() + ":" + ws.port());
-                if (ws.isRunning()) {
-                    s.sendMessage("§7本机地址: http://127.0.0.1:" + ws.port() + "/");
-                    s.sendMessage("§7令牌: " + ws.token());
+                s.sendMessage("§7网页开发器: " + (ws.webRunning() ? "§a运行中" : "§c已停止")
+                        + " §7监听 " + ws.webHost() + ":" + ws.webPort());
+                if (ws.webRunning()) {
+                    s.sendMessage("§7本机地址: http://127.0.0.1:" + ws.webPort() + "/");
+                    s.sendMessage("§7令牌: " + ws.webToken());
                     s.sendMessage("§7远端请用 §f/helstera web doctor §7列出真实可访问地址");
                 }
             }
@@ -410,10 +402,14 @@ public final class HelsteraCommand implements TabExecutor {
             }
         }
         if (area.equals("network") || area.equals("all")) {
-            HelsteraScheduler sch = plugin.scheduler();
-            s.sendMessage("§7上 Tick 更新: §f" + sch.updatesLastTick()
-                    + " §7无观众跳过: §f" + sch.skippedNoViewer()
-                    + " §7预算跳过: §f" + sch.skippedBudget());
+            var ws = plugin.bridge();
+            if (!ws.schedulerEnabled()) {
+                s.sendMessage("§7调度器: §8未启用（本次产物不含 runtime 模块）");
+            } else {
+                s.sendMessage("§7上 Tick 更新: §f" + ws.updatesLastTick()
+                        + " §7无观众跳过: §f" + ws.skippedNoViewer()
+                        + " §7预算跳过: §f" + ws.skippedBudget());
+            }
         }
         if (area.equals("ai") || area.equals("all")) {
             s.sendMessage("§7AI 控制器: §f" + (plugin.ai() == null ? 0 : plugin.ai().activeCount()));
@@ -456,16 +452,22 @@ public final class HelsteraCommand implements TabExecutor {
 
     private void stats(CommandSender s) {
         if (!s.hasPermission("helstera.stats")) { deny(s); return; }
-        HelsteraScheduler sch = plugin.scheduler();
+        var ws = plugin.bridge();
         s.sendMessage("§b== helsteraMobs 统计 ==");
         s.sendMessage("§7模型: §f" + plugin.registry().count()
-                + " §7实例: §f" + plugin.instances().activeCount()
+                + " §7实例: §f" + ws.activeInstanceCount()
                 + " §7玩家订阅: §f" + plugin.visibility().totalSubscriptions());
-        s.sendMessage("§7本 Tick 渲染更新: §f" + sch.updatesLastTick()
-                + " §7累计: §f" + sch.totalUpdates());
+        // 调度器缺失时打印「未启用」而不是 NPE：分阶段出包（phase1）本就没有它
+        if (!ws.schedulerEnabled()) {
+            s.sendMessage("§7调度器: §8未启用（本次产物不含 runtime 模块）");
+            s.sendMessage("§7TPS: §f" + String.format("%.1f", plugin.getServer().getTPS()[0]));
+            return;
+        }
+        s.sendMessage("§7本 Tick 渲染更新: §f" + ws.updatesLastTick()
+                + " §7累计: §f" + ws.totalUpdates());
         // 分位数才是判断性能是否退化的依据：瞬时值看不出抖动与恶化的区别
-        RollingMetrics.Snapshot cost = sch.tickCostSnapshot();
-        RollingMetrics.Snapshot perSample = sch.updatesSnapshot();
+        var cost = ws.tickCost();
+        var perSample = ws.updates();
         s.sendMessage("§7采样耗时 §8(最近 " + cost.count() + "/" + cost.capacity() + " 轮) §7"
                 + "p50 §f" + fmt(cost.p50())
                 + "§7  p95 §f" + fmt(cost.p95())
@@ -474,8 +476,8 @@ public final class HelsteraCommand implements TabExecutor {
                 + (cost.reliable() ? "" : " §8(样本不足，仅供参考)"));
         s.sendMessage("§7每轮更新数 §7p50 §f" + (int) perSample.p50()
                 + " §7p99 §f" + (int) perSample.p99()
-                + " §7无观众跳过: §f" + sch.skippedNoViewer()
-                + " §7预算跳过: §f" + sch.skippedBudget());
+                + " §7无观众跳过: §f" + ws.skippedNoViewer()
+                + " §7预算跳过: §f" + ws.skippedBudget());
         s.sendMessage("§7TPS: §f" + String.format("%.1f", plugin.getServer().getTPS()[0]));
     }
 

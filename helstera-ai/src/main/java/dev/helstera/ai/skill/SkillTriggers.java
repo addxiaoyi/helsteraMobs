@@ -97,6 +97,14 @@ public final class SkillTriggers implements Listener {
         // 条件/动作工厂表是 static，拿不到本实例持有的连杀表；
         // 不桥接的话 kill-streak-at-least 读的是另一张空表，症状是「连杀永远 0」
         SkillExtras.killStreak(streaks);
+        // 仇恨同理：条件要读的是「选目标时用的那张表」，另建一份会让
+        // 条件按自己记的仇恨判断，与实际仇恨平衡脱节
+        SkillExtras.threatLookup(instanceId -> {
+            var mgr = ai;
+            if (mgr == null) return null;
+            var c = mgr.controllerById(instanceId);
+            return c == null ? null : c.threatTable();
+        });
     }
 
     /**
