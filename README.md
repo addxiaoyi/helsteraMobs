@@ -43,19 +43,19 @@ mvn -o clean install
 # 跑测试（全仓库 12 模块，589 个用例）
 mvn -o test
 
-# 分阶段出包（仅含"已完成"模块，产物名 HelsteraMobs-<n>.0.jar）
+# 分阶段出包（仅含"已完成"模块，产物名 HelsteraMobs-<n>.0-<variant>.jar）
 mvn -o clean package -P phase1   # 1.0：核心 api + core
 mvn -o clean package -P phase2   # 2.0：+ runtime + render-paper
 mvn -o clean package -P phase3   # 3.0：+ resourcepack + ai
 mvn -o clean package -P phase4   # 4.0：+ integrations + migration
-# 默认（不激活任何 -P）= 完整版 5.0
+# 默认（不激活任何 -P）= 完整版 5.0（profile 定义在 helstera-plugin/pom.xml，不在根 pom）
 ```
 
-> ⚠ **上述分阶段 profile 当前不存在**：根 `pom.xml` 里没有 `<profiles>`，只有
-> `papermc` 仓库 id。`-P phaseN` 会被 Maven 静默忽略，**四个命令实际都产出完整版
-> 5.0**。要让分阶段出包可用，需先在根 pom 补上对应 `<profiles>`。
-> 不加这条警告的原因是：命令"成功"、产物却和预期不符，而文档与实际不符
-> 比没有文档更费时间。
+产物实测体积（2026-06）：phase1 ≈ 0.89 MB、phase2 ≈ 0.95 MB、phase3 ≈ 1.19 MB、
+phase4 ≈ 1.25 MB、full ≈ 9.50 MB。
+
+各阶段 jar 的名字带 `-<variant>` 后缀而不是共用同一个名字——共用会导致按阶段验证
+时静默覆盖，拿到的却是上一轮的残缺 jar。
 
 产出的 uber jar 放入服务器 `plugins/` 目录即可。
 
