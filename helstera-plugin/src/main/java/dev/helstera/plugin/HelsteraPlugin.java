@@ -289,6 +289,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     dev.helstera.ai.skill.SkillCatalog.dialogueService(dialogueService);
                     dev.helstera.ai.skill.SkillCatalog.pluginRef(this);
                 }
+                // 技能服务钩子：start-cast / cancel-cast 动作需要它来驱动读条
+                if (skills != null) {
+                    dev.helstera.ai.skill.SkillCatalog.skillService(skills);
+                }
                 a.loadProfiles(getConfig().getConfigurationSection("ai.profiles"));
                 SkillTriggers trig = new SkillTriggers(this, a, br, bus, getLogger(), skills);
                 // 必须在 a.start() 之前注入：attack_hit 桥接在 start 时就捕获了

@@ -524,9 +524,11 @@ public final class AiManager implements Listener {
         var entity = inst.baseEntity().orElse(null);
         if (!(entity instanceof org.bukkit.entity.LivingEntity le)) return;
         int level = inst.level > 0 ? inst.level : profile.level;
+        // 读条进度：activeCasts 由 SkillService 管理，无读条时 getCastProgress 返回 null
+        var cast = skills != null ? skills.getCastProgress(inst.instanceId()) : null;
         var render = BossBarState.render(true, profile.bossBar.title(), null,
                 le.getHealth(), le.getMaxHealth(),
-                currentPhaseName(inst.instanceId()), null, level);
+                currentPhaseName(inst.instanceId()), cast, level);
         bossBarService.update(entity.getUniqueId(), render);
     }
 
@@ -556,8 +558,9 @@ public final class AiManager implements Listener {
     public void onDeath(EntityDeathEvent e) {
         ModelInstanceImpl inst = findByEntity(e.getEntity());
         if (inst == null) return;
-        // 死亡时隐藏血条并清理，避免血条残留
+        // 死亡时隐藏血条、清除读条，避免血条残留
         bossBarService.hide(e.getEntity().getUniqueId());
+        if (skills != null) skills.clearAllCastsFor(inst.instanceId());
         AiController c = controllers.get(inst.instanceId());
         if (c != null && c.state() != AiController.State.DEAD) {
             c.markDead();

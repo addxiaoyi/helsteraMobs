@@ -127,6 +127,15 @@ public final class SkillCatalog {
         pluginRef = p;
     }
 
+    /**
+     * 技能服务钩子。用于 start-cast / cancel-cast 动作驱动读条。
+     */
+    private static volatile dev.helstera.ai.skill.SkillService skillServiceRef;
+
+    public static void skillService(dev.helstera.ai.skill.SkillService svc) {
+        skillServiceRef = svc;
+    }
+
     private SkillCatalog() {
     }
 
@@ -604,6 +613,34 @@ public final class SkillCatalog {
                             String err = dev.helstera.ai.DisguiseService.remove(ctx.instance());
                             if (err != null && pluginRef != null)
                                 pluginRef.getLogger().fine("[伪装] " + err);
+                        } catch (Throwable ignored) {
+                        }
+                    };
+                }),
+
+                // ---- 读条（cast） ----
+
+                // start-cast <技能名>：启动命名技能的读条计时，不执行技能动作。
+                // 配合 cast-duration 使用：先 start-cast 开始读条，读条完成后再执行伤害动作。
+                java.util.Map.entry("start-cast", (ActionFactory) a -> {
+                    String skillName = str(a, 0, "");
+                    return ctx -> {
+                        if (!ctx.instanceValid() || skillName.isBlank()) return;
+                        try {
+                            dev.helstera.ai.skill.SkillService svc = skillServiceRef;
+                            if (svc != null) svc.startCast(skillName, ctx);
+                        } catch (Throwable ignored) {
+                        }
+                    };
+                }),
+
+                // cancel-cast：取消当前实例的所有活跃读条。
+                java.util.Map.entry("cancel-cast", (ActionFactory) a -> {
+                    return ctx -> {
+                        if (!ctx.instanceValid()) return;
+                        try {
+                            dev.helstera.ai.skill.SkillService svc = skillServiceRef;
+                            if (svc != null) svc.cancelCast(ctx.instance().instanceId());
                         } catch (Throwable ignored) {
                         }
                     };

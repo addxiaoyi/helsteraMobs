@@ -49,6 +49,8 @@ public final class SkillService {
     private final Map<String, SkillDef> defs = new LinkedHashMap<>();
     /** 冷却记录："实例id|技能名" -> 上次放行时间（epoch 毫秒）。 */
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
+    /** 活跃读条："实例id|技能名" -> 施法记录。 */
+    private final Map<String, SkillCast> activeCasts = new ConcurrentHashMap<>();
     /** 运行期深度守卫。主线程单线程执行，用 ThreadLocal 免去改 BehaviorContext 的成本。 */
     private final ThreadLocal<int[]> depth = ThreadLocal.withInitial(() -> new int[1]);
 
@@ -69,11 +71,32 @@ public final class SkillService {
         public final Set<String> deps = new LinkedHashSet<>();
         /** 冷却毫秒；0 表示无冷却。 */
         public long cooldownMillis;
+        /** 施法持续时间（读条时长）；0 表示无读条。 */
+        public long castMillis;
+        /** 读条标签（标题后缀），默认 "施法中"。 */
+        public String castLabel = "施法中";
         /** 是否被判定参与环。 */
         public boolean cyclic;
 
         SkillDef(String name) {
             this.name = name;
+        }
+    }
+
+    /**
+     * 正在施法的技能实例。
+     *
+     * @param def       技能定义
+     * @param startMs   开始施法的 epoch 毫秒
+     * @param instanceId 所属实例 id
+     */
+    public record SkillCast(SkillDef def, long startMs, int instanceId) {
+        public double progress() {
+            if (def.castMillis <= 0) return 1.0;
+            return Math.min(1.0, (double)(System.currentTimeMillis() - startMs) / def.castMillis);
+        }
+        public boolean isComplete() {
+            return def.castMillis <= 0 || System.currentTimeMillis() - startMs >= def.castMillis;
         }
     }
 
@@ -173,6 +196,7 @@ public final class SkillService {
     public void loadSkills(ConfigurationSection root) {
         defs.clear();
         cooldowns.clear();
+        activeCasts.clear();
         if (root == null) return;
 
         // 1) 解析原始定义
@@ -182,6 +206,8 @@ public final class SkillService {
             String key = skillName.toLowerCase(Locale.ROOT);
             SkillDef def = new SkillDef(key);
             def.cooldownMillis = parseCooldownMillis(s.get("cooldown"));
+            def.castMillis = parseCooldownMillis(s.get("cast-duration"));
+            if (s.contains("cast-label")) def.castLabel = s.getString("cast-label", "施法中");
             for (String spec : stringOrList(s, "require")) {
                 if (spec == null || spec.isBlank()) continue;
                 String dep = parseSkillRef(spec);
@@ -297,10 +323,66 @@ public final class SkillService {
                     warn("技能 \"" + def.name + "\" 动作 \"" + k + "\" 失败: " + t);
                 }
             }
+            // 启动读条：有 cast-duration 时计时，完成后自动清除
+            if (def.castMillis > 0) {
+                int instId = ctx.instance() != null ? ctx.instance().instanceId() : -1;
+                String castKey = instId + "|" + def.name;
+                activeCasts.put(castKey, new SkillCast(def, System.currentTimeMillis(), instId));
+            }
             return true;
         } finally {
             d[0]--;
         }
+    }
+
+    /**
+     * 开始一个命名技能的读条（不执行技能动作本身，只启动计时器）。
+     * 用于「施法前摇」类场景：先读条，读条完成后再执行实际伤害。
+     *
+     * @return 是否成功启动读条
+     */
+    public boolean startCast(String skillName, dev.helstera.api.behavior.BehaviorContext ctx) {
+        if (skillName == null || skillName.isBlank()) return false;
+        SkillDef def = defs.get(skillName.toLowerCase(Locale.ROOT));
+        if (def == null || def.castMillis <= 0) return false;
+        int instId = ctx.instance() != null ? ctx.instance().instanceId() : -1;
+        String castKey = instId + "|" + def.name;
+        activeCasts.put(castKey, new SkillCast(def, System.currentTimeMillis(), instId));
+        return true;
+    }
+
+    /**
+     * 取消指定实例的活跃读条。
+     *
+     * @return 是否成功取消
+     */
+    public boolean cancelCast(int instId) {
+        return activeCasts.values().removeIf(c -> c.instanceId() == instId);
+    }
+
+    /**
+     * 清除某个实例的所有活跃读条（通常在死亡或 despawn 时调用）。
+     */
+    public void clearAllCastsFor(int instId) {
+        activeCasts.values().removeIf(c -> c.instanceId() == instId);
+    }
+
+    /**
+     * 获取实例当前读条进度；无读条时返回 null。
+     *
+     * @return Cast 读条数据（label + progress）；无读条返回 null
+     */
+    public dev.helstera.ai.bossbar.BossBarState.Cast getCastProgress(int instId) {
+        for (var c : activeCasts.values()) {
+            if (c.instanceId() == instId) {
+                if (c.isComplete()) {
+                    activeCasts.remove(c.instanceId() + "|" + c.def().name);
+                    return null;
+                }
+                return new dev.helstera.ai.bossbar.BossBarState.Cast(c.def().castLabel, c.progress());
+            }
+        }
+        return null;
     }
 
     /**
