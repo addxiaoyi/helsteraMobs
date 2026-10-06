@@ -75,6 +75,15 @@ public final class AiManager implements Listener {
         this.plugin = plugin;
         this.instances = instances;
         this.bus = bus;
+        // 仇恨选择器需要按实例反查仇恨表。构造时就注入而不是等到有实例，
+        // 否则「threat」在首个控制器建好前一直返回空候选——而空候选会被
+        // 动作侧当成「没有目标」，技能静默不执行
+        dev.helstera.api.behavior.Targeters.threatProvider((src, cand) -> {
+            var c = src == null ? null : controllers.get(src.instanceId());
+            if (c == null) return 0;
+            var table = c.threatTable();
+            return table == null ? 0 : table.threatOf(cand.getUniqueId());
+        });
     }
 
     /** 注入自定义条件/动作注册表，使 profile 的 require / on-decision 生效。 */

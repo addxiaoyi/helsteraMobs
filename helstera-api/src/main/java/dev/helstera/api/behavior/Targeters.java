@@ -35,7 +35,52 @@ public final class Targeters {
         BUILTIN.put("highest-health", Targeters::highestHealth);
         BUILTIN.put("players", Targeters::playersOnly);
         BUILTIN.put("mobs", Targeters::mobsOnly);
-        BUILTIN.put("threat", Targeters::nearest);
+        BUILTIN.put("threat", Targeters::byThreat);
+    }
+
+    /**
+     * 仇恨排序所需的外部数据源。
+     *
+     * <p>刻意做成接口而非直接依赖实现类：仇恨表在 helstera-ai，而本类位于
+     * helstera-api，直接依赖会形成 api → ai 的反向边（Maven 上是循环依赖）。
+     * 这与 {@code SkillExtras.ThreatLookup} 是同一个桥接模式。</p>
+     */
+    public interface ThreatProvider {
+        /**
+         * 该来源实例眼中，此候选的当前仇恨值。
+         *
+         * <p>必须带来源实例：仇恨表挂在各自的 AiController 上，同一个玩家
+         * 对不同 Boss 的仇恨完全不同，只凭实体无法定位该查哪张表。</p>
+         */
+        double threatOf(ModelInstance src, LivingEntity candidate);
+    }
+
+    /**
+     * 注入仇恨数据源；由 helstera-ai 在启动时调用。
+     *
+     * <p>未注入时 {@code threat} 选择器返回空候选<b>而不是回落 nearest</b>。
+     * 回落会让「按仇恨选目标」静默变成「选最近的」，症状是坦克拉不住仇恨，
+     * 而配置与文档看上去完全正常——这正是本类注释里明令禁止的那种行为。</p>
+     */
+    private static volatile ThreatProvider threatProvider;
+
+    public static void threatProvider(ThreatProvider p) {
+        threatProvider = p;
+    }
+
+    /** 按当前仇恨降序排列；无数据源时返回空列表（见 {@link #threatProvider}）。 */
+    private static List<LivingEntity> byThreat(ModelInstance src,
+                                               Collection<? extends LivingEntity> candidates,
+                                               List<String> args) {
+        var p = threatProvider;
+        if (p == null) return List.of();
+        List<LivingEntity> list = new ArrayList<>(candidates);
+        // 并列时退回距离，保证结果确定——否则每次遍历顺序微变都会让模型在
+        // 等仇恨目标之间反复横跳，表现为周期性抽搐转向
+        list.sort(Comparator
+                .comparingDouble((LivingEntity e) -> -p.threatOf(src, e))
+                .thenComparingDouble(e -> distance(src, e)));
+        return list;
     }
 
     private Targeters() {
