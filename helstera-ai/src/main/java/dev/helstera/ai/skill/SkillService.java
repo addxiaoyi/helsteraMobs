@@ -385,6 +385,11 @@ public final class SkillService {
         return null;
     }
 
+    /** 当前活跃读条总数（供诊断命令与统计面板使用）。 */
+    public int activeCastCount() {
+        return activeCasts.size();
+    }
+
     /**
      * 冷却键按「实例 + 技能」组合。
      *

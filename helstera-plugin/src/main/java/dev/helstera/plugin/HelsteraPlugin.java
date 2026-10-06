@@ -1082,6 +1082,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return (dev.helstera.ai.loot.LootService) lootService;
     }
 
+    /** 技能服务，未启用时为 null。 */
+    public dev.helstera.ai.skill.SkillService skillService() {
+        return skillService instanceof dev.helstera.ai.skill.SkillService s ? s : null;
+    }
+
     /** Boss 血条服务，未启用时为 null。 */
     public dev.helstera.ai.bossbar.BossBarService bossBarService() {
         var ai = ai();
