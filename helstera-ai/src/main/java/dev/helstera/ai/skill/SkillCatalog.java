@@ -109,6 +109,24 @@ public final class SkillCatalog {
         transformer = t;
     }
 
+    /**
+     * 对话服务钩子。未注入时 start-dialogue 动作静默返回。
+     */
+    private static volatile dev.helstera.ai.dialog.DialogueService dialogueService;
+
+    public static void dialogueService(dev.helstera.ai.dialog.DialogueService ds) {
+        dialogueService = ds;
+    }
+
+    /**
+     * 插件引用钩子。用于 start-dialogue 动作启动 cinematic 步进器。
+     */
+    private static volatile org.bukkit.plugin.java.JavaPlugin pluginRef;
+
+    public static void pluginRef(org.bukkit.plugin.java.JavaPlugin p) {
+        pluginRef = p;
+    }
+
     private SkillCatalog() {
     }
 
@@ -530,6 +548,29 @@ public final class SkillCatalog {
                                 dev.helstera.runtime.instance.ModelInstanceImpl impl)) return;
                         try {
                             hook.transform(impl, entityType);
+                        } catch (Throwable ignored) {
+                        }
+                    };
+                }),
+
+                // ---- 对话与电影脚本 ----
+
+                // start-dialogue <对话ID>:<cinematic名>：开始播放指定 cinematic。
+                // 格式：<对话ID>:<cinematic名>，冒号分隔；省略 cinematic 名则播放第一个。
+                // 同一实例同时只运行一条 cinematic，重复触发会打断并重新开始。
+                java.util.Map.entry("start-dialogue", (ActionFactory) a -> {
+                    String arg = str(a, 0, "");
+                    return ctx -> {
+                        if (!ctx.instanceValid()) return;
+                        int instId = ctx.instance().instanceId();
+                        int colon = arg.indexOf(':');
+                        String dialogueId = colon < 0 ? arg : arg.substring(0, colon).trim();
+                        String cinematicName = colon < 0 ? "" : arg.substring(colon + 1).trim();
+                        if (dialogueId.isBlank()) return;
+                        try {
+                            dev.helstera.ai.dialog.DialogueService ds = dialogueService;
+                            if (ds == null) return;
+                            ds.start(instId, dialogueId, pluginRef);
                         } catch (Throwable ignored) {
                         }
                     };

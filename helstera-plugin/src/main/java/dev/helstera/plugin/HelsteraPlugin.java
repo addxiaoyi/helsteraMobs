@@ -112,6 +112,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private Object ai;                           // AiManager
     private Object lootService;                 // dev.helstera.ai.loot.LootService
     private Object spawnerService;              // dev.helstera.ai.spawner.SpawnerService
+    private dev.helstera.ai.dialog.DialogueService dialogueService;
     private Object migration;                    // MigrationServiceImpl
     private Object webServer;                    // WebServerService
     private Object integrations;                 // IntegrationRegistryImpl
@@ -283,6 +284,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     }
                     return r.reason();
                 });
+                // 对话服务钩子：start-dialogue 动作需要它来驱动 cinematic 步进
+                if (dialogueService != null) {
+                    dev.helstera.ai.skill.SkillCatalog.dialogueService(dialogueService);
+                    dev.helstera.ai.skill.SkillCatalog.pluginRef(this);
+                }
                 a.loadProfiles(getConfig().getConfigurationSection("ai.profiles"));
                 SkillTriggers trig = new SkillTriggers(this, a, br, bus, getLogger(), skills);
                 // 必须在 a.start() 之前注入：attack_hit 桥接在 start 时就捕获了
@@ -368,6 +374,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             this.spawnerService = sp;
         } catch (Throwable t) {
             getLogger().warning("刷怪点不可用: " + t);
+        }
+        // ---- 对话系统（dialogs.yml）----
+        try {
+            dev.helstera.ai.dialog.DialogueService ds = new dev.helstera.ai.dialog.DialogueService(
+                    getLogger(), id -> {
+                        var im = instances();
+                        if (im == null) return null;
+                        return im.impl(id);
+                    });
+            if (!new java.io.File(getDataFolder(), "dialogs.yml").exists()) {
+                saveResource("dialogs.yml", false);
+            }
+            java.util.List<String> probs = new java.util.ArrayList<>();
+            ds.load(YamlConfiguration.loadConfiguration(
+                    new java.io.File(getDataFolder(), "dialogs.yml")).getConfigurationSection("dialogues"), probs);
+            for (String w : probs) getLogger().warning("[对话] " + w);
+            this.dialogueService = ds;
+        } catch (Throwable t) {
+            getLogger().warning("对话系统不可用: " + t);
         }
 
         // ---- 迁移中心（helstera-migration）----
@@ -1000,11 +1025,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     new java.io.File(getDataFolder(), "spawners.yml")).getConfigurationSection("spawners"));
             spawners().start();
         }
+        // 对话系统就地重载：不打断正在运行的 cinematic
+        if (dialogueService != null) {
+            java.util.List<String> probs = new java.util.ArrayList<>();
+            dialogueService.load(YamlConfiguration.loadConfiguration(
+                    new java.io.File(getDataFolder(), "dialogs.yml")).getConfigurationSection("dialogues"), probs);
+            for (String w : probs) getLogger().warning("[对话] " + w);
+        }
     }
 
     /** 刷怪点服务（spawners.yml），未启用时为 null。 */
     public dev.helstera.ai.spawner.SpawnerService spawners() {
         return (dev.helstera.ai.spawner.SpawnerService) spawnerService;
+    }
+
+    /** 对话服务（dialogs.yml），未启用时为 null。 */
+    public dev.helstera.ai.dialog.DialogueService dialogueService() {
+        return dialogueService;
     }
 
     /** 从 ai 配置节解析等级缩放配置列表，复用了 AiProfile.parseLevels 的形态。 */

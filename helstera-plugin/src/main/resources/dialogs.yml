@@ -1,0 +1,35 @@
+# ==========================================================================
+#  对话与电影脚本（dialogs.yml）
+# ==========================================================================
+#  每个顶层 key 是一个对话 ID，可通过 skills.yml 的 start-dialogue 动作调用。
+#
+#  cinematics 节：命名 cinematic 序列，每段含 commands 列表。
+#  支持的命令：
+#    - say <说话者> <文本>          向附近玩家发送聊天消息
+#    - move <dx> <dy> <dz> <速度>  移动实例载体（世界坐标偏移）
+#    - look <yaw> <pitch>          设置实例载体朝向
+#    - wait <ticks>                等待指定 tick 数（20 ticks = 1 秒）
+#    - play <动画名>               播放动画（由 animation 子系统处理）
+#
+#  示例：
+#    my_dialogue:
+#      cinematics:
+#        intro:
+#          commands:
+#            - say 守卫 [严肃] 站住！此处禁止通行。
+#            - wait 60
+#            - look 90 0
+#            - say 守卫 [警告] 再不后退我将呼叫支援。
+#            - wait 80
+#            - say 守卫 [愤怒] 既然你不听……攻击！
+#        outro:
+#          commands:
+#            - say 守卫 [疲惫] 看来你比我想象的要强……走吧。
+#
+#  在 mobs/*.yml 中通过 ai.triggers 引用：
+#    triggers:
+#      on-spawn:
+#        do: [start-dialogue my_dialogue:intro]
+#
+# ==========================================================================
+dialogues: {}

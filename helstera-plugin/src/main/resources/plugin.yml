@@ -37,6 +37,7 @@ permissions:
       helstera.nav: true
       helstera.lever: true
       helstera.immunity: true
+      helstera.dialog: true
   helstera.view:
     description: 可见模型（默认所有人）
     default: true
