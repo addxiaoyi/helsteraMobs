@@ -842,6 +842,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             double hp = entitySec.getDouble("health", 20.0);
             ent.setMaxHealth(hp);
             ent.setHealth(hp);
+            // 装备：items 节，支持 material:amount 和带附魔的写法
+            applyEntityEquipment(ent, entitySec);
             inst = instances().bind(model, ent, opts);
         } else {
             inst = instances().spawn(model, loc, opts);
@@ -988,6 +990,87 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         }
         return null;
+    }
+
+    /**
+     * 应用实体装备（物品与药水）到已生成的生物实体。
+     *
+     * <p>从 {@code entity} 配置节解析 {@code items} 和 {@code potions} 子节：
+     * items 支持 "MATERIAL"、"MATERIAL:amount"、"MATERIAL:amount:ENCHANT:level" 写法；
+     * potions 为列表，每项含 effect / amplifier / duration 键。</p>
+     */
+    private void applyEntityEquipment(org.bukkit.entity.LivingEntity ent,
+                                       org.bukkit.configuration.ConfigurationSection sec) {
+        // ---- 装备 ----
+        org.bukkit.configuration.ConfigurationSection itemsSec = sec.getConfigurationSection("items");
+        if (itemsSec != null) {
+            for (String slotKey : itemsSec.getKeys(false)) {
+                String raw = itemsSec.getString(slotKey, "");
+                if (raw == null || raw.isBlank()) continue;
+                org.bukkit.inventory.ItemStack stack = parseItemStack(raw);
+                if (stack == null || stack.getType() == org.bukkit.Material.AIR) continue;
+                org.bukkit.inventory.EquipmentSlot slot;
+                switch (slotKey.toLowerCase(java.util.Locale.ROOT)) {
+                    case "main-hand": slot = org.bukkit.inventory.EquipmentSlot.HAND; break;
+                    case "off-hand": slot = org.bukkit.inventory.EquipmentSlot.OFF_HAND; break;
+                    case "helmet": slot = org.bukkit.inventory.EquipmentSlot.HEAD; break;
+                    case "chestplate": slot = org.bukkit.inventory.EquipmentSlot.CHEST; break;
+                    case "leggings": slot = org.bukkit.inventory.EquipmentSlot.LEGS; break;
+                    case "boots": slot = org.bukkit.inventory.EquipmentSlot.FEET; break;
+                    default: continue;
+                }
+                try { ent.getEquipment().setItem(slot, stack); } catch (Throwable ignored) {}
+            }
+        }
+        // ---- 药水效果 ----
+        org.bukkit.configuration.ConfigurationSection potionsSec = sec.getConfigurationSection("potions");
+        if (potionsSec != null) {
+            for (String key : potionsSec.getKeys(false)) {
+                org.bukkit.configuration.ConfigurationSection pSec = potionsSec.getConfigurationSection(key);
+                if (pSec == null) continue;
+                String effectName = pSec.getString("effect", "");
+                if (effectName.isBlank()) continue;
+                org.bukkit.potion.PotionEffectType type = org.bukkit.potion.PotionEffectType.getByName(effectName.toUpperCase(java.util.Locale.ROOT));
+                if (type == null) continue;
+                int amplifier = pSec.getInt("amplifier", 0);
+                int duration = pSec.getInt("duration", 600);
+                boolean ambient = pSec.getBoolean("ambient", false);
+                boolean particles = pSec.getBoolean("particles", true);
+                boolean showIcon = pSec.getBoolean("icon", true);
+                try { ent.addPotionEffect(new org.bukkit.potion.PotionEffect(type, duration, amplifier, ambient, particles, showIcon)); }
+                catch (Throwable ignored) {}
+            }
+        }
+    }
+
+    /**
+     * 解析单个物品字符串为 ItemStack。
+     * 格式：<b>材质</b> | <b>材质:数量</b> | <b>材质:数量:附魔:等级</b>
+     */
+    private org.bukkit.inventory.ItemStack parseItemStack(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String[] parts = raw.trim().split(":");
+        String matStr = parts[0].trim().toUpperCase(java.util.Locale.ROOT);
+        org.bukkit.Material mat = org.bukkit.Material.getMaterial(matStr);
+        if (mat == null) return null;
+        int amount = 1;
+        if (parts.length > 1) {
+            try { amount = Integer.parseInt(parts[1].trim()); } catch (NumberFormatException ignored) {}
+        }
+        org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(mat, Math.max(1, amount));
+        if (parts.length > 2) {
+            String[] enchParts = parts[2].split(",");
+            for (String ep : enchParts) {
+                String[] ev = ep.trim().split(":");
+                if (ev.length < 2) continue;
+                String enName = ev[0].trim().toUpperCase(java.util.Locale.ROOT);
+                int enLevel = 1;
+                try { enLevel = Integer.parseInt(ev[1].trim()); } catch (NumberFormatException ignored) {}
+                org.bukkit.enchantments.Enchantment en = org.bukkit.enchantments.Enchantment.getByName(enName);
+                if (en != null) stack.addEnchantment(en, enLevel);
+            }
+        }
+        return stack;
     }
 
     /** 掉落服务（loot.yml），未启用时为 null。 */
