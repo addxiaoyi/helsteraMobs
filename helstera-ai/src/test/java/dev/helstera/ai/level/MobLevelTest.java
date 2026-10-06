@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 等级缩放决策层测试。
  *
  * <p>重点守三件「写错了服上只表现为数值不对」的事：
- * <b>未分配等级不缩放</b>、<b>增长幂次正确</b>、<b>属性名拼错不炸系统</b>。</p>
+ * <b>未配置等级时不缩放</b>、<b>增长幂次正确</b>、<b>属性名拼错不炸系统</b>。</p>
  */
 class MobLevelTest {
 
@@ -22,12 +22,12 @@ class MobLevelTest {
             new MobLevel.ScalingConfig("speed", 0.3, 1.02);
 
     @Test
-    @DisplayName("等级 <=0 时所有属性为 0（与「未分配等级」语义一致）")
-    void zeroLevelIsZero() {
+    @DisplayName("等级 <=0 时所有属性为 1.0（identity，等价于无缩放）")
+    void zeroLevelIsIdentity() {
         var r = MobLevel.compute(0, HEALTH, DAMAGE, SPEED);
-        assertEquals(0, r.health(), 1e-9);
-        assertEquals(0, r.damage(), 1e-9);
-        assertEquals(0, r.speed(), 1e-9);
+        assertEquals(1.0, r.health(), 1e-9);
+        assertEquals(1.0, r.damage(), 1e-9);
+        assertEquals(1.0, r.speed(), 1e-9);
     }
 
     @Test
@@ -72,14 +72,15 @@ class MobLevelTest {
         var bad = new MobLevel.ScalingConfig("hp", 1000, 1.10);
         var good = new MobLevel.ScalingConfig("damage", 10, 1.20);
         var r = MobLevel.compute(5, bad, good);
-        assertEquals(0, r.health(), 1e-9,
-                "hp 不是已知属性名，应被忽略，health 保持默认值 0");
+        // hp 不是已知属性名，health 保持 identity 1.0
+        assertEquals(1.0, r.health(), 1e-9,
+                "hp 不是已知属性名，应被忽略，health 保持 identity 1.0");
         assertEquals(10 * Math.pow(1.20, 4), r.damage(), 1e-6,
                 "damage 应正常生效");
     }
 
     @Test
-    @DisplayName("base<=0 时属性值返回 0")
+    @DisplayName("base<=0 时属性值为 0（作者写错时行为可预测）")
     void zeroBaseYieldsZero() {
         var cfg = new MobLevel.ScalingConfig("health", 0, 1.10);
         var r = MobLevel.compute(5, cfg);
@@ -87,10 +88,19 @@ class MobLevelTest {
     }
 
     @Test
-    @DisplayName("null configs 返回空结果（不抛 NPE）")
+    @DisplayName("null configs 返回 identity 结果（不抛 NPE）")
     void nullConfigsHandled() {
         var r = MobLevel.compute(5, (MobLevel.ScalingConfig[]) null);
-        assertEquals(MobLevel.LevelResult.empty(), r);
+        assertEquals(1.0, r.damage(), 1e-9,
+                "无配置时伤害应为 identity 1.0，不应归零");
+    }
+
+    @Test
+    @DisplayName("空 configs 也返回 identity 结果")
+    void emptyConfigsHandled() {
+        var r = MobLevel.compute(10);
+        assertEquals(1.0, r.damage(), 1e-9,
+                "空配置时伤害应为 identity 1.0，否则无等级配置的生物会不攻击");
     }
 
     @Test
@@ -112,5 +122,15 @@ class MobLevelTest {
         double l10 = MobLevel.compute(10, dmg).damage();
         double l20 = MobLevel.compute(20, dmg).damage();
         assertTrue(l5 < l10 && l10 < l20, "等级 5 < 10 < 20 时伤害必须严格递增");
+    }
+
+    @Test
+    @DisplayName("compute 直接返回已缩放值，调用方不需要再乘")
+    void computeReturnsScaledValue() {
+        // 这是核心设计：compute(5, health_base=100, growth=1.10) 应该直接返回 161.051
+        var r = MobLevel.compute(5, new MobLevel.ScalingConfig("health", 100, 1.10));
+        double expected = 100 * Math.pow(1.10, 4);
+        assertEquals(expected, r.health(), 1e-6,
+                "compute 应直接返回 base * growth^(level-1)，无需调用方再做乘法");
     }
 }

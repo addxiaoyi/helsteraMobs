@@ -308,8 +308,31 @@ public final class AiController {
         Location me = inst.location();
         if (me == null || t.getWorld() == null || !t.getWorld().equals(me.getWorld())) return null;
         if (!inHitbox(t)) return null;
-        target.damage(profile.attackDamage, inst.entity());
+        // 应用等级缩放：damage() 直接返回 base * growth^(level-1)
+        // 无等级配置时 damage() = 1.0（identity），等价于不缩放
+        double damage = profile.attackDamage * scaledDamageFactor();
+        target.damage(damage, inst.entity());
         return target;
+    }
+
+    /**
+     * 当前等级对应的伤害缩放倍数；未配置等级系统时返回 1.0。
+     */
+    private double scaledDamageFactor() {
+        int level = inst.level > 0 ? inst.level : profile.level;
+        return dev.helstera.ai.level.MobLevel.compute(level,
+                profile.levels.toArray(new dev.helstera.ai.level.MobLevel.ScalingConfig[0]))
+                .damage();
+    }
+
+    /**
+     * 当前等级对应的移速缩放倍数；未配置等级系统时返回 1.0。
+     */
+    private double scaledSpeedFactor() {
+        int level = inst.level > 0 ? inst.level : profile.level;
+        return dev.helstera.ai.level.MobLevel.compute(level,
+                profile.levels.toArray(new dev.helstera.ai.level.MobLevel.ScalingConfig[0]))
+                .speed();
     }
 
     /**
@@ -476,7 +499,7 @@ public final class AiController {
             next.setYaw((float) (Math.atan2(-velocity.getX(), velocity.getZ()) * 180 / Math.PI));
             base.teleport(next);
         }
-        if (anim != null) anim.setMoveSpeed(profile.moveSpeed * 20);
+        if (anim != null) anim.setMoveSpeed(profile.moveSpeed * scaledSpeedFactor() * 20);
     }
 
     private void faceToward(Location to) {

@@ -33,14 +33,17 @@ public final class MobLevel {
     /**
      * 等级数据：当前等级与已应用的缩放属性值。
      *
-     * @param level 当前等级（>= 1）；0 表示「未分配等级」，所有属性返回 0
-     * @param health 缩放后的生命值
-     * @param damage 缩放后的攻击伤害
-     * @param speed 缩放后的移动速度
+     * @param level 当前等级（>= 1）；0 表示「未分配等级」，所有属性返回 1.0（identity）
+     * @param health 缩放后的生命值基准（base * growth^(level-1)）；无配置时为 0
+     * @param damage 缩放后的攻击伤害基准；无配置时为 0
+     * @param speed 缩放后的移速基准；无配置时为 0
      */
     public record LevelResult(int level, double health, double damage, double speed) {
         public static LevelResult empty() {
-            return new LevelResult(0, 0, 0, 0);
+            // 未分配等级时返回 1.0（identity），而非 0：
+            // 调用方直接乘法即可，无需额外判断"是否配置了等级系统"。
+            // 这与 MobLevel.scaled() 的语义一致：无配置 = 无变化。
+            return new LevelResult(0, 1.0, 1.0, 1.0);
         }
     }
 
@@ -57,7 +60,8 @@ public final class MobLevel {
         if (level <= 0 || configs == null || configs.length == 0) {
             return LevelResult.empty();
         }
-        double health = 0, damage = 0, speed = 0;
+        // 默认 1.0（identity）：只覆盖有配置的属性，未配置的保持不缩放
+        double health = 1.0, damage = 1.0, speed = 1.0;
         for (ScalingConfig c : configs) {
             double scale = Math.pow(c.growthPerLevel(), level - 1);
             double value = c.base() * scale;
