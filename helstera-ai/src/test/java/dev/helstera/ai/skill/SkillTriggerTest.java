@@ -80,10 +80,13 @@ class SkillTriggerTest {
         // 区分靠档案字段而非事件类型。
         assertTrue(SkillTrigger.SPAWN_BOSS.wired(), "on-spawn-boss 已接入 ModelSpawnEvent");
         assertNotNull(SkillTrigger.of("on-spawn-boss"));
-        // on-entity-shoot 曾被标成 true，导致 check 谎报「已支持」：
-        // 模型实例不会自己发射弹丸，没有 ProjectileLaunch 来源接它
-        assertFalse(SkillTrigger.ENTITY_SHOOT.wired(),
-                "on-entity-shoot 无事件来源，标 true 会让 check 谎报");
+        // on-entity-shoot 曾被标成 false，理由是「模型实例不会自己发射弹丸」。
+        // 但载体的 entity.type 可以是 player —— 这类载体确实能射箭，
+        // EntityShootBowEvent 可达，标 false 会让 check 劝退用户不用可用机制。
+        assertTrue(SkillTrigger.ENTITY_SHOOT.wired(),
+                "on-entity-shoot 可由玩家类型载体射箭触发，标 false 会让 check 谎报");
+        assertTrue(SkillTrigger.SUMMON.wired(), "on-summon 已由 ModelSpawnEvent + MinionService 接线");
+        assertTrue(SkillTrigger.LEASH.wired(), "on-leash 已由 PlayerLeashEntityEvent 接线");
     }
 
     @Test
@@ -113,7 +116,8 @@ class SkillTriggerTest {
             assertFalse(unwired.contains(t.configName()),
                     t.configName() + " 已接线，不该出现在未接线清单里");
         }
-        assertTrue(unwired.contains("on-entity-shoot"), "on-entity-shoot 应被如实标记为未接线");
+        assertTrue(unwired.contains("on-pre-target"),
+                "on-pre-target 至今没有事件来源，应如实留在未接线清单里");
         // on-attack-hit 由 AnimationMarkerEvent 的 attack_hit 标记驱动，
         // 桥接在 AiManager#start 里，命中才派发（挥空不触发）
         assertFalse(unwired.contains("on-attack-hit"), "on-attack-hit 已接入桥接");

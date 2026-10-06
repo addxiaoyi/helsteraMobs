@@ -26,9 +26,10 @@ public enum SkillTrigger {
     STATE("on-state", true),
     INTERACT("on-interact", true),
     KILL_PLAYER("on-kill-player", true),
-    // 模型实例不会自己发射弹丸：没有 ProjectileLaunch 来源接它。
-    // 曾标 true，导致 /helstera check 谎报「已支持」，写进 mobs/*.yml 永不触发。
-    ENTITY_SHOOT("on-entity-shoot", false),
+    // 由 EntityShootBowEvent 驱动。此前误判为「模型实例不会自己发射弹丸」而标 false，
+    // 但载体的 entity.type 可以是 player —— 这类载体确实能射箭，事件可达，
+    // 标 false 会让 /helstera check 劝退用户不要用一个可用机制。
+    ENTITY_SHOOT("on-entity-shoot", true),
     // 由 ModelSpawnEvent 驱动，按档案 boss 字段判定（不按血量猜）
     SPAWN_BOSS("on-spawn-boss", true),
     CONDITION_MET("on-condition-met", true),
@@ -63,8 +64,12 @@ public enum SkillTrigger {
     AGE("on-age", true),
     // 由 EntityTransformEvent 的 SHEARED 原因驱动
     SHEAR("on-shear", true),
-    SUMMON("on-summon", false),
-    LEASH("on-leash", false),
+    // 以下标记曾长期错误地写成 false，实际都已有派发点：
+    // SUMMON 由 ModelSpawnEvent + MinionService.isMinion 驱动；LEASH 由
+    // PlayerLeashEntityEvent 驱动（Paper 无 EntityLeashEvent）。
+    // 标错的后果是 /helstera check 劝退用户不要用一个本来能用的机制。
+    SUMMON("on-summon", true),
+    LEASH("on-leash", true),
     PRE_TARGET("on-pre-target", false),
     ON_DAMAGE_NEGATION("on-damage-negation", false),
     ON_DEATH_SKILL("on-death-skill", false);
