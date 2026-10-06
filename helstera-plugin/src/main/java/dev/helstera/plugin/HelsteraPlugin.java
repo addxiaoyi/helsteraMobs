@@ -49,6 +49,7 @@ import dev.helstera.api.model.ModelDefinition;
 import dev.helstera.api.model.Bone;
 import dev.helstera.api.model.ModelCube;
 import dev.helstera.ai.AiProfile;
+import dev.helstera.ai.level.MobLevel;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.util.Vector;
@@ -837,6 +838,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl && aiSecForLevel != null) {
             int lv = aiSecForLevel.getInt("level", 0);
             if (lv > 0) impl.level = lv;
+            // 按等级缩放 HP：先算出缩放后的基础 HP，再覆盖实体的 maxHealth 和当前血量
+            int effectiveLevel = impl.level > 0 ? impl.level : aiSecForLevel.getInt("level", 1);
+            if (effectiveLevel > 1) {
+                var lvlResult = MobLevel.compute(effectiveLevel,
+                        loadLevelConfigs(aiSecForLevel).toArray(new MobLevel.ScalingConfig[0]));
+                if (inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity le) {
+                    double baseHp = entitySec != null ? entitySec.getDouble("health", 20.0) : 20.0;
+                    double scaledHp = baseHp * lvlResult.health();
+                    le.setMaxHealth(scaledHp);
+                    le.setHealth(scaledHp);
+                }
+            }
         }
 
         org.bukkit.configuration.ConfigurationSection aiSec = cfg.getConfigurationSection("ai");
@@ -974,6 +987,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     /** 刷怪点服务（spawners.yml），未启用时为 null。 */
     public dev.helstera.ai.spawner.SpawnerService spawners() {
         return (dev.helstera.ai.spawner.SpawnerService) spawnerService;
+    }
+
+    /** 从 ai 配置节解析等级缩放配置列表，复用了 AiProfile.parseLevels 的形态。 */
+    private static List<MobLevel.ScalingConfig> loadLevelConfigs(
+            org.bukkit.configuration.ConfigurationSection s) {
+        List<MobLevel.ScalingConfig> out = new ArrayList<>();
+        Object raw = s.get("levels");
+        if (raw == null) return out;
+        List<?> items;
+        if (raw instanceof List<?> l) items = l;
+        else if (raw instanceof Map<?, ?>) items = List.of(raw);
+        else return out;
+        for (Object item : items) {
+            if (!(item instanceof Map<?, ?> map)) continue;
+            String property = map.get("property") == null ? null
+                    : String.valueOf(map.get("property")).trim().toLowerCase(Locale.ROOT);
+            double base = map.get("base") instanceof Number n ? n.doubleValue() : 0;
+            double growth = map.get("growthPerLevel") instanceof Number n ? n.doubleValue() : 1.0;
+            if (property.isEmpty()) continue;
+            out.add(new MobLevel.ScalingConfig(property, base, growth));
+        }
+        return out;
     }
 
     /** 用 mobs/*.yml 的 ai 节就地覆盖行为档案（不污染缓存的档案）。 */
