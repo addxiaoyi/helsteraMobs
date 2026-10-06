@@ -143,6 +143,68 @@ ai:
 永远不免疫」，且没有任何报错。无等价物的条件（如 `?onGround`）会**原样保留并在
 报告中告警**，不会静默丢弃。
 
+## 仇恨与连杀
+
+### 仇恨（threat）
+
+`ThreatTable` 按玩家 UUID 记录，威胁值 = 伤害量 × 距离权重，并按秒指数衰减。
+目标选择由它决定，因此「拉仇恨」「切目标」都是可配置行为而非巧合。
+
+```yaml
+ai:
+  profiles:
+    坦克 Boss:
+      threat-enabled: true
+      threat-decay: 0.05
+      threat-distance-weight: 10
+      skills:
+        - trigger: on-target
+          priority: 10
+          require:
+            - threat-above 800        # 某人的仇恨超过 800 才进入狂暴
+          actions:
+            - set-nameplate "&c&l狂暴！"
+            - effect-self speed 2 200
+```
+
+**条件**：`threat-above <n>` / `threat-below <n>` / `has-threat [n]` /
+`threat-targets-at-least <n>`——判定对象是**当前目标**在该实例仇恨表中的值。
+
+**动作**：`threat-add <n>`（给当前目标加仇恨）/ `threat-clear [true]`（`true`
+只清当前目标，缺省清空整表）/ `threat-focus`（把当前目标顶成首要目标）。
+
+排查前要知道的三条：
+
+- **档案必须开 `threat-enabled`**，否则没有仇恨表，四条条件恒为 false。
+  这与「仇恨值确实是 0」在现象上完全一致。
+- **仇恨按实例存储**。同一个玩家对不同 Boss 的仇恨互不相同，
+  条件读的是「这个实例眼中该玩家的值」。
+- `threat-focus` 叠加一个足够大的增量，**不直接改写仇恨值**——直接赋值会
+  绕过距离权重与衰减，破坏仇恨平衡。
+
+目标选择器 `threat` 按仇恨降序排列，等仇恨时按距离兜底（否则模型会在
+候选间反复横跳）。**未注入仇恨数据源时它返回空候选，不会悄悄退回「最近」**。
+
+### 连杀（kill-streak）
+
+按玩家 UUID 记连续击杀，**不按实例**——同一玩家杀 10 只不同的怪是 10 次连杀，
+不是 10 个各为 1 的实例分数。默认窗口 30 秒，用 `System.nanoTime` 计时
+（改系统时间不会让连杀算错或永不重置）。
+
+窗口**惰性求值**：读取时比对时间戳，超时即视为 0。因此不存在
+「定时器漏跑导致连杀不重置」这类只在卡顿时偶发的故障。
+
+**条件**：`kill-streak-at-least <n>` / `kill-streak-active`
+**动作**：`kill-streak-reset`（领奖一次后打回原形）
+
+刻意**不提供「直接设连杀数」的动作**：连杀只能由真实击杀累积，
+否则 `on-kill-player` 的奖励可以凭空刷出来。
+
+判定对象是「击杀了该实例的玩家的连杀数」。因此：
+
+- 只有**玩家**击杀计入；陷阱、投射物、环境致死都拿不到 Player 击杀者
+- 该实例从未被玩家击杀过时判定为 0，**不会**在首次见面时就触发连杀奖励
+
 ## 许可证
 
 见 [LICENSE](LICENSE)。
