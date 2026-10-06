@@ -301,6 +301,49 @@ ai:
 - **`growthPerLevel < 1`** 会被原样保留：若写 `0.5`，等级越高属性越低（衰减而非增长）。这是有意为之，让作者能表达「幼体 weaker、成体 stronger」的反向设计
 - **属性名拼错**（如写 `hp` 而非 `health`）会静默忽略该属性，不影响其他属性
 
+## 对话与电影脚本（Dialogs & Cinematics）
+
+写在 `dialogs.yml` 的 `dialogues` 节里，通过 `start-dialogue` 技能动作触发。
+
+```yaml
+dialogues:
+  guard_intro:
+    cinematics:
+      greeting:
+        commands:
+          - say 守卫 [严肃] 站住！此处禁止通行。
+          - wait 60
+          - look 90 0
+          - say 守卫 [警告] 再不后退我将呼叫支援。
+          - wait 80
+          - say 守卫 [愤怒] 既然你不听……攻击！
+      farewell:
+        commands:
+          - say 守卫 [疲惫] 看来你比我想象的要强……走吧。
+```
+
+| 命令 | 参数 | 说明 |
+| --- | --- | --- |
+| `say` | `<说话者> <文本>` | 向附近 16 格玩家发送聊天消息 |
+| `move` | `<dx> <dy> <dz> <speed>` | 移动实例载体（世界坐标偏移） |
+| `look` | `<yaw> <pitch>` | 设置实例载体朝向 |
+| `wait` | `<ticks>` | 等待指定 tick 数（20 ticks = 1 秒） |
+
+在 mobs/*.yml 中通过 `ai.triggers` 引用：
+
+```yaml
+ai:
+  profile: default
+  triggers:
+    on-spawn:
+      do: [start-dialogue guard_intro:greeting]
+```
+
+排查点：
+- **同一实例同时只运行一条 cinematic**：重复触发会打断并重新开始
+- **命令参数不足时静默跳过**：与技能系统一致，不会报错
+- **未知命令记录告警**：不会中断整个 cinematic
+
 ## 触发器接线状态
 
 `/helstera check` 会区分三种情况，而不是笼统说「未知名」：

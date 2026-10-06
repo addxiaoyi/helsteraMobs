@@ -32,7 +32,7 @@ public final class HelsteraCommand implements TabExecutor {
 
     private static final List<String> SUBS = List.of(
             "reload", "model", "mob", "animation", "migrate", "web", "debug", "stats", "pack",
-            "loot", "bossbar", "spawner", "check", "faction", "codex", "nav", "lever", "immunity", "help");
+            "loot", "bossbar", "spawner", "check", "faction", "codex", "nav", "lever", "immunity", "dialog", "help");
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -60,6 +60,7 @@ public final class HelsteraCommand implements TabExecutor {
             case "nav" -> nav(sender, args);
             case "lever" -> lever(sender, args);
             case "immunity" -> immunity(sender, args);
+            case "dialog" -> dialog(sender, args);
             default -> help(sender);
         }
         return true;
@@ -860,6 +861,55 @@ var ai = plugin.ai();
         }
     }
 
+    /**
+     * 对话系统诊断：{@code /helstera dialog list|start <id> [实例ID]}。
+     */
+    private void dialog(CommandSender s, String[] args) {
+        if (!s.hasPermission("helstera.dialog")) { deny(s); return; }
+        var ds = plugin.dialogueService();
+        if (ds == null) {
+            s.sendMessage("§c对话系统未启用");
+            return;
+        }
+        String action = args.length > 1 ? args[1] : "list";
+        switch (action) {
+            case "list" -> {
+                var names = ds.dialogueNames();
+                if (names.isEmpty()) {
+                    s.sendMessage("§7（dialogs.yml 的 dialogues 为空）");
+                    return;
+                }
+                s.sendMessage("§b对话列表（" + names.size() + " 条）:");
+                for (String name : names) s.sendMessage("§7- §f" + name);
+                s.sendMessage("§7- 活跃 cinematic: §f" + ds.activeCount());
+            }
+            case "start" -> {
+                if (args.length < 3) {
+                    s.sendMessage("§c用法: /helstera dialog start <对话ID> [实例ID]");
+                    return;
+                }
+                String dialogueId = args[2];
+                int instId = args.length > 3 ? Integer.parseInt(args[3]) : -1;
+                if (instId < 0) {
+                    // 使用最近的实例
+                    var instances = plugin.instances();
+                    if (instances != null) {
+                        var all = instances.allImpl();
+                        if (!all.isEmpty()) instId = all.iterator().next().instanceId();
+                    }
+                }
+                if (instId < 0) {
+                    s.sendMessage("§c没有可用的实例");
+                    return;
+                }
+                boolean ok = ds.start(instId, dialogueId, plugin);
+                if (ok) s.sendMessage("§a已启动对话 \"" + dialogueId + "\" 在实例 #" + instId);
+                else s.sendMessage("§c对话不存在: " + dialogueId);
+            }
+            default -> s.sendMessage("§c用法: /helstera dialog list|start <对话ID> [实例ID]");
+        }
+    }
+
     /** 图鉴：{@code /helstera codex [关键字]}。
      *
      * <p>目录每次调用都重建而非缓存：模型可被网页端热重载，缓存下来的目录
@@ -1181,6 +1231,7 @@ var ai = plugin.ai();
                 case "immunity" -> {
                     if (plugin.ai() != null) plugin.ai().profileNames().forEach(out::add);
                 }
+                case "dialog" -> out.addAll(List.of("list", "start"));
             }
         } else if (args.length == 4) {
             if (args[0].equals("animation") && args[1].equals("play")) {
