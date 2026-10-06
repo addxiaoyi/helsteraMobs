@@ -492,8 +492,18 @@ public final class AiManager implements Listener {
         var entity = inst.baseEntity().orElse(null);
         if (!(entity instanceof org.bukkit.entity.LivingEntity le)) return;
         var render = BossBarState.render(true, profile.bossBar.title(), null,
-                le.getHealth(), le.getMaxHealth(), null, null);
+                le.getHealth(), le.getMaxHealth(), currentPhaseName(inst.instanceId()), null);
         bossBarService.update(entity.getUniqueId(), render);
+    }
+
+    /**
+     * 当前阶段名；未接入技能系统或未进入任何阶段时返回 null。
+     *
+     * <p>取不到时返回 null 而非空串：血条标题里拼出「龙 []」比不拼更难排查。</p>
+     */
+    private String currentPhaseName(int instanceId) {
+        var trig = this.triggers;
+        return trig == null ? null : trig.currentPhaseOf(instanceId);
     }
 
     private final dev.helstera.ai.bossbar.BossBarService bossBarService =

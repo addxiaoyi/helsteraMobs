@@ -880,6 +880,17 @@ public final class SkillTriggers implements Listener {
     private final ConcurrentHashMap<Integer, String> currentPhase = new ConcurrentHashMap<>();
 
     /**
+     * 该实例当前阶段名；未进入任何阶段返回 null。
+     *
+     * <p>供 Boss 血条显示阶段：BossPhase.resolve 的求值在
+     * {@link #firePhaseTransition} 里，那里的中间结果没有对外暴露，
+     * 而血条更新走的是另一条路径（受伤事件），无法复用那里的局部变量。</p>
+     */
+    public String currentPhaseOf(int instanceId) {
+        return currentPhase.get(instanceId);
+    }
+
+    /**
      * 血量跨过阶段阈值时执行进入/离开动作。
      *
      * <p>只在阶段真正变化时执行，因此同一阶段内的连续事件不会反复触发。</p>
