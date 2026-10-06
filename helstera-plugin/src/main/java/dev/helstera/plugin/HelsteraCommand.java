@@ -32,7 +32,7 @@ public final class HelsteraCommand implements TabExecutor {
 
     private static final List<String> SUBS = List.of(
             "reload", "model", "mob", "animation", "migrate", "web", "debug", "stats", "pack",
-            "loot", "bossbar", "spawner", "check", "faction", "codex", "nav", "lever", "immunity", "dialog", "help");
+            "loot", "bossbar", "spawner", "check", "faction", "codex", "nav", "lever", "immunity", "dialog", "disguise", "help");
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -61,6 +61,7 @@ public final class HelsteraCommand implements TabExecutor {
             case "lever" -> lever(sender, args);
             case "immunity" -> immunity(sender, args);
             case "dialog" -> dialog(sender, args);
+            case "disguise" -> disguise(sender, args);
             default -> help(sender);
         }
         return true;
@@ -910,6 +911,70 @@ var ai = plugin.ai();
         }
     }
 
+    /**
+     * 伪装诊断：{@code /helstera disguise apply <实例ID> <模型ID>} | {@code remove <实例ID>} | list。
+     */
+    private void disguise(CommandSender s, String[] args) {
+        if (!s.hasPermission("helstera.disguise")) { deny(s); return; }
+        String action = args.length > 1 ? args[1] : "list";
+        switch (action) {
+            case "list" -> {
+                var instances = plugin.instances();
+                if (instances == null) { s.sendMessage("§c实例管理器未启用"); return; }
+                int disguised = 0, total = 0;
+                for (var inst : instances.allInstances()) {
+                    total++;
+                    if (dev.helstera.ai.DisguiseService.isDisguised(inst)) disguised++;
+                }
+                s.sendMessage("§b== 伪装状态 ==");
+                s.sendMessage("§7- 总实例: §f" + total + " §7已伪装: §f" + disguised);
+                if (disguised > 0) {
+                    s.sendMessage("§7已伪装实例:");
+                    for (var inst : instances.allInstances()) {
+                        if (dev.helstera.ai.DisguiseService.isDisguised(inst)) {
+                            var mid = dev.helstera.ai.DisguiseService.getDisguiseModelId(inst);
+                            s.sendMessage("§8  §f#" + inst.instanceId() + " §7→ §f" + mid);
+                        }
+                    }
+                }
+            }
+            case "apply" -> {
+                if (args.length < 4) {
+                    s.sendMessage("§c用法: /helstera disguise apply <实例ID> <模型ID>");
+                    return;
+                }
+                int instId;
+                try { instId = Integer.parseInt(args[2]); }
+                catch (NumberFormatException e) { s.sendMessage("§c实例 ID 必须为整数"); return; }
+                String modelId = args[3];
+                var inst = plugin.instances() == null ? null :
+                        plugin.instances().allInstances().stream()
+                                .filter(i -> i.instanceId() == instId).findFirst().orElse(null);
+                if (inst == null) { s.sendMessage("§c实例不存在: #" + instId); return; }
+                String err = dev.helstera.ai.DisguiseService.apply(inst, modelId);
+                if (err != null) s.sendMessage("§c伪装失败: " + err);
+                else s.sendMessage("§a已伪装实例 #" + instId + " → " + modelId);
+            }
+            case "remove" -> {
+                if (args.length < 3) {
+                    s.sendMessage("§c用法: /helstera disguise remove <实例ID>");
+                    return;
+                }
+                int instId;
+                try { instId = Integer.parseInt(args[2]); }
+                catch (NumberFormatException e) { s.sendMessage("§c实例 ID 必须为整数"); return; }
+                var inst = plugin.instances() == null ? null :
+                        plugin.instances().allInstances().stream()
+                                .filter(i -> i.instanceId() == instId).findFirst().orElse(null);
+                if (inst == null) { s.sendMessage("§c实例不存在: #" + instId); return; }
+                String err = dev.helstera.ai.DisguiseService.remove(inst);
+                if (err != null) s.sendMessage("§c移除伪装失败: " + err);
+                else s.sendMessage("§a已移除实例 #" + instId + " 的伪装");
+            }
+            default -> s.sendMessage("§c用法: /helstera disguise list|apply <实例ID> <模型ID>|remove <实例ID>");
+        }
+    }
+
     /** 图鉴：{@code /helstera codex [关键字]}。
      *
      * <p>目录每次调用都重建而非缓存：模型可被网页端热重载，缓存下来的目录
@@ -1232,6 +1297,7 @@ var ai = plugin.ai();
                     if (plugin.ai() != null) plugin.ai().profileNames().forEach(out::add);
                 }
                 case "dialog" -> out.addAll(List.of("list", "start"));
+                case "disguise" -> out.addAll(List.of("list", "apply", "remove"));
             }
         } else if (args.length == 4) {
             if (args[0].equals("animation") && args[1].equals("play")) {

@@ -40,7 +40,7 @@ public final class Dialogs {
      * 单个对话条目（dialogs.yml 的顶层 key）。
      *
      * @param name      对话名（ID），玩家/技能引用时用
-     * @param cinematics 命名的 cinematic 列表；播放时按顺序取用
+     * @param cinematic 命名的 cinematic 列表；播放时按顺序取用
      */
     public record DialogueEntry(String name, List<CinematicStep> cinematic) {
         public static DialogueEntry of(String name, List<CinematicStep> cinematic) {
