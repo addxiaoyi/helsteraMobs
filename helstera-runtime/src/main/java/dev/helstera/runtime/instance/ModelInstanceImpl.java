@@ -46,8 +46,16 @@ public final class ModelInstanceImpl implements ModelInstance {
     /** 死亡时投掷的掉落表名（mobs/*.yml 的 drops.table），无掉落时为 null。 */
     public volatile String lootTable;
 
-    /** 掉落是否计入击杀者的幸运值（mobs/*.yml 的 drops.luck），默认 true。 */
+/** 掉落是否计入击杀者的幸运值（mobs/*.yml 的 drops.luck），默认 true。 */
     public volatile boolean lootUsesLuck = true;
+
+    /**
+     * 当前等级；0 表示「未指定」，取 profile.level 的默认值。
+     *
+     * <p>由 HelsteraPlugin 在生成时从配置写入：mobs/*.yml 的 level 节，
+     * 或 SpawnOptions 里的 level()。</p>
+     */
+    public volatile int level = 0;
 
     /** 实体动画状态机（AI 意图 -> 动画选择）。 */
     public volatile dev.helstera.runtime.animation.EntityAnimationStateMachine stateMachine;

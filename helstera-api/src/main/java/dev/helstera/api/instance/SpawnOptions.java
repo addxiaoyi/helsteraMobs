@@ -13,6 +13,7 @@ public final class SpawnOptions {
     private double scale = 1.0;
     private boolean persistent = true;
     private String aiProfile = null;
+    private int level = 0;
 
     public static SpawnOptions defaults() {
         return new SpawnOptions();
@@ -50,4 +51,11 @@ public final class SpawnOptions {
     public String aiProfile() { return aiProfile; }
 
     public SpawnOptions aiProfile(String v) { this.aiProfile = v; return this; }
+
+    /**
+     * 等级；0 表示「未指定等级」，由实例上的 profile.level 决定（通常就是 1）。
+     */
+    public int level() { return level; }
+
+    public SpawnOptions level(int v) { this.level = v; return this; }
 }
