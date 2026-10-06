@@ -260,6 +260,47 @@ ai:
 - **`thresholds` 与 `colors` 数量必须一致**。不一致会告警并**忽略整段配色**，血条退回默认绿色，而不是部分生效。
 - **比例低于所有档下界时回落到最低档**。所以把下界都写高时，「只剩一丝血」会显示最低档色而不是满血色——这是刻意的，否则濒死观感与实际相反。
 
+## Mob Levels 等级缩放
+
+写在 `mobs/<档案>.yml` 的 `ai` 节里，**不是**写在 `ai.profiles.<name>` 里。
+
+```yaml
+ai:
+  profile: 巨龙
+  level: 10
+  levels:
+    - property: health
+      base: 1000
+      growthPerLevel: 1.05
+    - property: damage
+      base: 10
+      growthPerLevel: 1.10
+    - property: speed
+      base: 0.3
+      growthPerLevel: 1.02
+```
+
+| 键 | 说明 |
+| --- | --- |
+| `level` | 当前等级；1 = 基础档，不触发缩放 |
+| `levels` | 每个等级的缩放配置列表；为空时不缩放任何属性 |
+| `levels[*].property` | 属性名：`health` / `damage` / `speed`（缺省为其他值时静默忽略） |
+| `levels[*].base` | 该属性在 1 级时的基准值 |
+| `levels[*].growthPerLevel` | 每级的增长倍数；1.0 = 不随等级变化 |
+
+**缩放公式**：`实际值 = base × growthPerLevel^(level-1)`
+
+影响范围：
+- **生命值**：生成时 `setMaxHealth` 与 `setHealth` 按缩放后值写入实体
+- **攻击伤害**：`hitTarget()` 结算时用 `profile.attackDamage × damageScale`
+- **移速**：`moveBy()` 用 `profile.moveSpeed × speedScale`
+- **血条标题**：显示 `Lv.N 名称 [阶段]`，N 来自实例的 level 字段
+
+排查点：
+- **`level: 1` 或省略** 时，`growthPerLevel^0 = 1.0`，所有属性不缩放——这与「未启用等级系统」的语义一致，不会因为少写一个字段而报错
+- **`growthPerLevel < 1`** 会被原样保留：若写 `0.5`，等级越高属性越低（衰减而非增长）。这是有意为之，让作者能表达「幼体 weaker、成体 stronger」的反向设计
+- **属性名拼错**（如写 `hp` 而非 `health`）会静默忽略该属性，不影响其他属性
+
 ## 触发器接线状态
 
 `/helstera check` 会区分三种情况，而不是笼统说「未知名」：

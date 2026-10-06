@@ -838,16 +838,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl && aiSecForLevel != null) {
             int lv = aiSecForLevel.getInt("level", 0);
             if (lv > 0) impl.level = lv;
-            // 按等级缩放 HP：先算出缩放后的基础 HP，再覆盖实体的 maxHealth 和当前血量
+            // 按等级缩放 HP：compute() 直接返回 base * growth^(level-1)，
+            // 无需再乘 baseHp；level<=1 时 compute 返回 identity（1.0），等价于不缩放
             int effectiveLevel = impl.level > 0 ? impl.level : aiSecForLevel.getInt("level", 1);
             if (effectiveLevel > 1) {
                 var lvlResult = MobLevel.compute(effectiveLevel,
                         loadLevelConfigs(aiSecForLevel).toArray(new MobLevel.ScalingConfig[0]));
                 if (inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity le) {
-                    double baseHp = entitySec != null ? entitySec.getDouble("health", 20.0) : 20.0;
-                    double scaledHp = baseHp * lvlResult.health();
-                    le.setMaxHealth(scaledHp);
-                    le.setHealth(scaledHp);
+                    double scaledHp = lvlResult.health();
+                    if (scaledHp > 0) {
+                        le.setMaxHealth(scaledHp);
+                        le.setHealth(scaledHp);
+                    }
                 }
             }
         }
@@ -963,6 +965,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     /** 掉落服务（loot.yml），未启用时为 null。 */
     public dev.helstera.ai.loot.LootService loot() {
         return (dev.helstera.ai.loot.LootService) lootService;
+    }
+
+    /** Boss 血条服务，未启用时为 null。 */
+    public dev.helstera.ai.bossbar.BossBarService bossBarService() {
+        var ai = ai();
+        if (!(ai instanceof dev.helstera.ai.AiManager am)) return null;
+        try {
+            var f = dev.helstera.ai.AiManager.class.getDeclaredField("bossBarService");
+            f.setAccessible(true);
+            return (dev.helstera.ai.bossbar.BossBarService) f.get(am);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**

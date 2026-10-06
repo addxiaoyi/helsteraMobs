@@ -482,12 +482,25 @@ public final class AiManager implements Listener {
         ModelInstanceImpl inst = instances.impl(apiInst.instanceId());
         if (inst == null) return;
         var profile = profileOf(inst.instanceId());
-        if (profile == null || profile.bossBar == null || !profile.bossBar.enabled()) return;
-        if (!(inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity le)) return;
+        if (profile == null) {
+            plugin.getLogger().warning("[BossBar] onModelSpawn: profile is null for inst #" + inst.instanceId());
+            return;
+        }
+        if (profile.bossBar == null || !profile.bossBar.enabled()) {
+            plugin.getLogger().info("[BossBar] onModelSpawn: bossBar not enabled for inst #" + inst.instanceId() +
+                    " (bossBar=" + profile.bossBar + ", enabled=" + (profile.bossBar != null && profile.bossBar.enabled()) + ")");
+            return;
+        }
+        if (!(inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity le)) {
+            plugin.getLogger().warning("[BossBar] onModelSpawn: no LivingEntity for inst #" + inst.instanceId());
+            return;
+        }
         int level = inst.level > 0 ? inst.level : profile.level;
         var render = BossBarState.render(true, profile.bossBar.title(), null,
                 le.getHealth(), le.getMaxHealth(),
                 currentPhaseName(inst.instanceId()), null, level);
+        plugin.getLogger().info("[BossBar] onModelSpawn: showing bar for inst #" + inst.instanceId() +
+                " title=" + render.title() + " health=" + le.getHealth() + "/" + le.getMaxHealth());
         bossBarService.show(le.getUniqueId(), render, profile.bossBar.range());
     }
 

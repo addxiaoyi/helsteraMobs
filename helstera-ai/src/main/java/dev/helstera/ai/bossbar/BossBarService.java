@@ -22,6 +22,9 @@ import java.util.UUID;
 public final class BossBarService {
 
     private final Map<UUID, BossBar> bars = new HashMap<>();
+    private volatile int showCount;
+    private volatile int updateCount;
+    private volatile int hideCount;
 
     /**
      * 生成时挂条。
@@ -32,16 +35,31 @@ public final class BossBarService {
      */
     public void show(UUID entityUuid, BossBarState.Render render, double range) {
         if (!render.visible()) return;
+        showCount++;
         BossBar bar = bars.computeIfAbsent(entityUuid,
                 k -> Bukkit.createBossBar(render.title(), toBarColor(render.color()), BarStyle.SOLID));
         bar.setTitle(render.title());
         bar.setProgress(render.ratio());
         bar.setColor(toBarColor(render.color()));
         bar.removeAll();
+        int visible = 0;
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (range > 0 && p.getLocation().distance(
                     Bukkit.getEntity(entityUuid).getLocation()) > range) continue;
             bar.addPlayer(p);
+            visible++;
+        }
+        // 日志：生成时至少打一条，方便真服调试
+        org.bukkit.plugin.java.JavaPlugin plugin = null;
+        try {
+            plugin = (org.bukkit.plugin.java.JavaPlugin) Bukkit.getPluginManager().getPlugin("helsteraMobs");
+        } catch (Throwable ignored) {
+        }
+        if (plugin != null) {
+            plugin.getLogger().info("[BossBar] show # 实例=" + entityUuid +
+                    " 标题=" + render.title() +
+                    " 血量比例=" + String.format("%.2f", render.ratio()) +
+                    " 可见玩家=" + visible);
         }
     }
 
@@ -54,6 +72,7 @@ public final class BossBarService {
     public void update(UUID entityUuid, BossBarState.Render render) {
         BossBar bar = bars.get(entityUuid);
         if (bar == null) return;
+        updateCount++;
         bar.setTitle(render.title());
         bar.setProgress(render.ratio());
         bar.setColor(toBarColor(render.color()));
@@ -65,6 +84,7 @@ public final class BossBarService {
      * @param entityUuid 实体 UUID
      */
     public void hide(UUID entityUuid) {
+        hideCount++;
         BossBar bar = bars.remove(entityUuid);
         if (bar != null) {
             bar.removeAll();
@@ -81,4 +101,10 @@ public final class BossBarService {
             return BarColor.GREEN;
         }
     }
+
+    /** 本次运行累计调用次数，供诊断命令使用。 */
+    public int showCount() { return showCount; }
+    public int updateCount() { return updateCount; }
+    public int hideCount() { return hideCount; }
+    public int barCount() { return bars.size(); }
 }

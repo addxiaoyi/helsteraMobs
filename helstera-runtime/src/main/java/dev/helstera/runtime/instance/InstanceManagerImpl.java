@@ -54,7 +54,8 @@ public final class InstanceManagerImpl implements InstanceManager {
         inst.lastLocationSet(loc);
         renderer.createVisuals(inst, loc, options);
         renderer.updateTransforms(inst);
-        bus.post(new ModelSpawnEvent(inst, loc));
+        // 不在这里 post ModelSpawnEvent：spawnMobCore 会在 ai().attach() 之后统一派发，
+        // 确保 boundProfiles 已经绑定。此处只负责创建实例和视觉效果。
         return inst;
     }
 
@@ -65,7 +66,7 @@ public final class InstanceManagerImpl implements InstanceManager {
         inst.lastLocationSet(entity.getLocation());
         renderer.createVisuals(inst, entity.getLocation(), options);
         renderer.updateTransforms(inst);
-        bus.post(new ModelSpawnEvent(inst, entity.getLocation()));
+        // 同上：不在这里 post ModelSpawnEvent
         return inst;
     }
 
