@@ -36,6 +36,100 @@ public final class Targeters {
         BUILTIN.put("players", Targeters::playersOnly);
         BUILTIN.put("mobs", Targeters::mobsOnly);
         BUILTIN.put("threat", Targeters::byThreat);
+        BUILTIN.put("living", Targeters::living);
+        BUILTIN.put("vulnerable", Targeters::vulnerable);
+        BUILTIN.put("lowest-health-percent", Targeters::vulnerable);
+        BUILTIN.put("highest-health-percent", Targeters::toughest);
+    }
+
+    /**
+     * 按「分数降序、距离升序」排序。
+     *
+     * <p>抽成泛型纯函数的原因：排序语义是这些选择器里唯一容易写错、又完全不需要
+     * Bukkit 实体就能验证的部分。此前它内联在每个选择器里，只能靠真服观测——
+     * 而「等分时的兜底顺序写反」这类错误在真服上表现为模型偶尔选错目标，
+     * 几乎不可能归因。</p>
+     *
+     * <p>距离兜底不可省：分数相同的候选若不定序，每 tick 因遍历顺序微变就会
+     * 在它们之间反复横跳，表现为周期性抽搐转向。</p>
+     *
+     * @param items 候选；不会被修改，返回的是新列表
+     * @param score 越高越优先
+     * @param distance 越近越优先，仅在分数持平时生效
+     */
+    public static <T> List<T> orderedBy(List<T> items,
+                                        java.util.function.ToDoubleFunction<T> score,
+                                        java.util.function.ToDoubleFunction<T> distance) {
+        List<T> out = new ArrayList<>(items);
+        out.sort(Comparator
+                .comparingDouble((T t) -> -score.applyAsDouble(t))
+                .thenComparingDouble(distance::applyAsDouble));
+        return out;
+    }
+
+    /** 全类型存活实体（含玩家），按距离由近到远。对应 MM 的 living 类目标器。 */
+    private static List<LivingEntity> living(ModelInstance src,
+                                             Collection<? extends LivingEntity> candidates,
+                                             List<String> args) {
+        return orderedBy(new ArrayList<>(candidates), e -> 0, e -> distance(src, e));
+    }
+
+    /**
+     * 血量<b>比例</b>最低者优先。
+     *
+     * <p>刻意与 {@link #lowestHealth}（绝对血量）分开：混血队伍里绝对血量几乎
+     * 恒等于「挑玩家」，而 MM 的 vulnerable 是按比例——满血的坦克应当比残血的
+     * 玩家更「脆弱」与否，取决于比例而非数值本身。</p>
+     */
+    private static List<LivingEntity> vulnerable(ModelInstance src,
+                                                 Collection<? extends LivingEntity> candidates,
+                                                 List<String> args) {
+        return orderedBy(new ArrayList<>(candidates), Targeters::healthRatio,
+                e -> distance(src, e));
+    }
+
+    /** 血量比例最高者优先。 */
+    private static List<LivingEntity> toughest(ModelInstance src,
+                                               Collection<? extends LivingEntity> candidates,
+                                               List<String> args) {
+        return orderedBy(new ArrayList<>(candidates), e -> -healthRatio(e),
+                e -> distance(src, e));
+    }
+
+    /**
+     * 血量比例；取不到血量时返回 0（而非 NaN），保证排序不会因 NaN 退化。
+     *
+     * <p>NaN 会让所有比较返回 false，比较器在这种输入下退化为「保持原序」——
+     * 而原序来自集合遍历顺序，等于不确定行为。</p>
+     */
+    /**
+     * 血量属性常量。
+     *
+     * <p>反射取而非直接引用：该常量在 Paper 1.21.3 由 {@code GENERIC_MAX_HEALTH}
+     * 改名为 {@code MAX_HEALTH}，直接写死任一个名字都会让另一批版本编译失败
+     * 或运行期 {@code NoSuchFieldError}。只解析一次并缓存。</p>
+     */
+    private static final org.bukkit.attribute.Attribute MAX_HEALTH = resolveMaxHealth();
+
+    private static org.bukkit.attribute.Attribute resolveMaxHealth() {
+        for (String n : new String[]{"MAX_HEALTH", "GENERIC_MAX_HEALTH"}) {
+            try {
+                return org.bukkit.attribute.Attribute.valueOf(n);
+            } catch (IllegalArgumentException ignored) {
+                // 该版本没有这个名字，试下一个
+            }
+        }
+        return null;
+    }
+
+    private static double healthRatio(LivingEntity e) {
+        try {
+            var attr = MAX_HEALTH == null ? null : e.getAttribute(MAX_HEALTH);
+            if (attr == null || attr.getValue() <= 0) return 0;
+            return e.getHealth() / attr.getValue();
+        } catch (Throwable t) {
+            return 0;
+        }
     }
 
     /**
