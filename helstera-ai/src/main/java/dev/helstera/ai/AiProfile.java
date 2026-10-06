@@ -101,6 +101,17 @@ public final class AiProfile {
     public final List<BossPhase> phases = new ArrayList<>();
 
     /**
+     * 等级缩放配置：每个等级提升时哪些属性按比例增长。
+     *
+     * <p>为空表示该档案无等级系统；配置形如：
+     * {@code levels: [{property: health, base: 1000, growthPerLevel: 1.05}]}</p>
+     */
+    public final List<dev.helstera.ai.level.MobLevel.ScalingConfig> levels = new ArrayList<>();
+
+    /** 当前等级；1 表示基础档，不配置时保持 1 且不触发缩放。 */
+    public int level = 1;
+
+    /**
      * 单个事件触发器：{@code require} 全部满足时才执行 {@code actions}。
      *
      * <p>事件名取值见 {@link dev.helstera.ai.skill.SkillTrigger}：on-spawn / on-timer /
@@ -217,6 +228,9 @@ public final class AiProfile {
         p.applyTriggersFrom(s);
         p.phases.clear();
         p.phases.addAll(BossPhase.parseList(s, new ArrayList<>()));
+        p.levels.clear();
+        p.levels.addAll(parseLevels(s));
+        p.level = Math.max(1, s.getInt("level", p.level));
         return p;
     }
 
@@ -374,6 +388,11 @@ public final class AiProfile {
             phases.clear();
             phases.addAll(BossPhase.parseList(s, new ArrayList<>()));
         }
+        if (s.contains("levels")) {
+            levels.clear();
+            levels.addAll(parseLevels(s));
+        }
+        level = Math.max(1, s.getInt("level", level));
         if (s.contains("immunities") || s.contains("damage-modifiers")) {
             // 整体替换而非合并：与 require / phases 同理，「清空某项」必须能表达。
             // 免疫漏配的表现是「怪物打不动」，合并语义会让作者写一条就悄悄继承档案的全部免疫。
@@ -401,6 +420,16 @@ public final class AiProfile {
     }
 
     /**
+     * 当前等级对应的缩放结果。
+     *
+     * <p>等级未配置（{@code levels} 为空）时返回 {@link dev.helstera.ai.level.MobLevel#empty()}，
+     * 调用方拿到后直接取属性值即可，不需要再做额外的缩放计算。</p>
+     */
+    public dev.helstera.ai.level.MobLevel.LevelResult levelResult() {
+        return dev.helstera.ai.level.MobLevel.compute(level, levels.toArray(new dev.helstera.ai.level.MobLevel.ScalingConfig[0]));
+    }
+
+    /**
      * 读列表键，同时接受单条字符串。
      *
      * <p>只写一条时 YAML/Bukkit 会退化成字符串，此时 {@code getStringList}
@@ -411,5 +440,34 @@ public final class AiProfile {
         Object raw = s.get(key);
         if (raw instanceof String one) return List.of(one);
         return s.getStringList(key);
+    }
+
+    /**
+     * 解析等级缩放配置列表。
+     *
+     * <p>接受「列表项是映射」的标准 YAML 形态，也兼容「只写一条时退化成单个映射」
+     * 的 Bukkit 退化行为——否则作者写单条等级配置时会静默失效。</p>
+     */
+    private static List<dev.helstera.ai.level.MobLevel.ScalingConfig> parseLevels(ConfigurationSection s) {
+        List<dev.helstera.ai.level.MobLevel.ScalingConfig> out = new ArrayList<>();
+        Object raw = s.get("levels");
+        if (raw == null) return out;
+        List<?> items;
+        if (raw instanceof List<?> l) {
+            items = l;
+        } else if (raw instanceof Map<?, ?>) {
+            items = List.of(raw);
+        } else {
+            return out;
+        }
+        for (Object item : items) {
+            if (!(item instanceof Map<?, ?> map)) continue;
+            String property = map.get("property") == null ? null : String.valueOf(map.get("property")).trim().toLowerCase();
+            double base = map.get("base") instanceof Number n ? n.doubleValue() : 0;
+            double growth = map.get("growthPerLevel") instanceof Number n ? n.doubleValue() : 1.0;
+            if (property.isEmpty()) continue;
+            out.add(new dev.helstera.ai.level.MobLevel.ScalingConfig(property, base, growth));
+        }
+        return out;
     }
 }
