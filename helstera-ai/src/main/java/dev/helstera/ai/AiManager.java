@@ -415,6 +415,11 @@ public final class AiManager implements Listener {
             var trig = this.triggers;
             if (hit != null && trig != null) trig.fireAttackHit(e.instance(), hit);
         });
+        // Boss 血条挂条：订阅自有事件总线，理由见 onModelSpawn 的注释。
+        // 存字段而非就地传方法引用：方法引用每次求值都是新实例，
+        // 反注册时按实例匹配会找不到，反注册静默失败 → reload 后重复订阅。
+        bossBarSpawnListener = this::onModelSpawn;
+        bus.register(ModelSpawnEvent.class, bossBarSpawnListener);
     }
 
     public void stop() {
@@ -423,6 +428,11 @@ public final class AiManager implements Listener {
             task = null;
         }
         HandlerList.unregisterAll(this);
+        // 自有事件的订阅不受 HandlerList.unregisterAll 影响，
+        // 必须显式反注册：否则 reload 后 start() 会再注册一次，
+        // 同一次生成挂两条血条，且 bars map 只留最后一条
+        bus.unregister(ModelSpawnEvent.class, bossBarSpawnListener);
+        bossBarSpawnListener = null;
         controllers.clear();
         boundProfiles.clear();
         controlled.clear();
@@ -457,19 +467,26 @@ public final class AiManager implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onSpawn(ModelSpawnEvent e) {
+    /**
+     * 生成时挂上血条。
+     *
+     * <p><b>必须经事件总线订阅，不能用 {@code @EventHandler}</b>：
+     * {@code ModelSpawnEvent} 是 Helstera 自有事件，由 {@code bus.post} 派发，
+     * 而 Bukkit 的 {@code @EventHandler} 只对 Bukkit 事件生效——标上去会
+     * 静默永不调用，血条永远不会出现，且没有任何报错。
+     * 这与免疫监听器「表解析正确但从未被求值」是同一类缺陷。</p>
+     */
+    private void onModelSpawn(ModelSpawnEvent e) {
         var apiInst = e.instance();
         if (apiInst == null) return;
         ModelInstanceImpl inst = instances.impl(apiInst.instanceId());
         if (inst == null) return;
         var profile = profileOf(inst.instanceId());
         if (profile == null || profile.bossBar == null || !profile.bossBar.enabled()) return;
-        var entity = inst.baseEntity().orElse(null);
-        if (!(entity instanceof org.bukkit.entity.LivingEntity le)) return;
+        if (!(inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity le)) return;
         var render = BossBarState.render(true, profile.bossBar.title(), null,
-                le.getHealth(), le.getMaxHealth(), null, null);
-        bossBarService.show(entity.getUniqueId(), render, profile.bossBar.range());
+                le.getHealth(), le.getMaxHealth(), currentPhaseName(inst.instanceId()), null);
+        bossBarService.show(le.getUniqueId(), render, profile.bossBar.range());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -508,6 +525,15 @@ public final class AiManager implements Listener {
 
     private final dev.helstera.ai.bossbar.BossBarService bossBarService =
             new dev.helstera.ai.bossbar.BossBarService();
+
+    /**
+     * Boss 血条的生成事件订阅句柄；start 时创建、stop 时用于反注册。
+     *
+     * <p>必须是字段：反注册按实例匹配，若注册与反注册各写一次
+     * {@code this::onModelSpawn}，那是两个不同对象，反注册静默失败，
+     * reload 后同一次生成会挂两条血条。</p>
+     */
+    private java.util.function.Consumer<ModelSpawnEvent> bossBarSpawnListener;
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(EntityDeathEvent e) {
