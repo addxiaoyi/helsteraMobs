@@ -29,6 +29,19 @@ class ImmunityServiceTest {
     }
 
     @Test
+    @DisplayName("无条件表走两参 evaluate 必须照常命中（监听器曾在此之前提前 return）")
+    void unconditionalTableStillMatches() {
+        // ImmunityListener 曾写成 `if (!table.hasConditions()) return;` 且位置在
+        // evaluate 之前，于是无条件免疫规则永远不生效：注释只想省掉建上下文的开销，
+        // 代码却省掉了整个求值。症状与「规则没配」完全一致，无任何报错。
+        var t = table(ImmunityService.Row.immune("PROJECTILE"));
+        assertFalse(t.hasConditions(), "本用例的前置条件：该表应报告「无条件」");
+        var r = t.evaluate("PROJECTILE", 10.0);
+        assertTrue(r.matched(), "无条件规则必须命中");
+        assertEquals(0.0, r.damage(), 1e-9, "negate 应把伤害压到 0");
+    }
+
+    @Test
     @DisplayName("isHeal / healAmount：只有负倍率才是回血，且回血量为正数")
     void healSemantics() {
         var heal = table(ImmunityService.Row.of("entity-attack", -1.0)).evaluate("ENTITY_ATTACK", 4.0);

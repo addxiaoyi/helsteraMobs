@@ -57,14 +57,19 @@ public final class ImmunityListener implements Listener {
 
         ImmunityService.Table table = profile.immunityTable();
         if (table == null || table.isEmpty()) return;
-        // 全部规则都无条件时才跳过建上下文：条件求值要造 BehaviorContext，
-        // 而伤害事件是高频路径，不该为无条件档案每次都付这份代价
-        if (!table.hasConditions()) return;
-
         // 先取原值：倍率必须乘在事件原始伤害上。
         // 若此处取 getFinalDamage() 或「当前已修正值」，倍率会逐次衰减。
         double original = e.getDamage();
-        ImmunityService.Result r = table.evaluate(causeOf(e), original, conditionFor(inst, e));
+        // 无条件表走不建 BehaviorContext 的重载：条件求值要造上下文，
+        // 而伤害事件是高频路径，不该为无条件档案每次都付这份代价。
+        //
+        // 此前这里是 `if (!table.hasConditions()) return;` —— 位置在 evaluate 之前，
+        // 于是**无条件免疫规则永远不生效**。注释只想省掉建上下文的开销，
+        // 代码却省掉了整个求值，症状是「免疫写了完全没用且无任何报错」，
+        // 与免疫系统本身的静默失效特征完全一致，最难自查的一种。
+        ImmunityService.Result r = table.hasConditions()
+                ? table.evaluate(causeOf(e), original, conditionFor(inst, e))
+                : table.evaluate(causeOf(e), original);
         if (!r.matched()) return;
 
         double next = r.damage();
