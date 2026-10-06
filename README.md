@@ -344,6 +344,36 @@ ai:
 - **命令参数不足时静默跳过**：与技能系统一致，不会报错
 - **未知命令记录告警**：不会中断整个 cinematic
 
+## 技能读条（Cast Progress）
+
+写在 `skills.yml` 的技能定义里，通过 `start-cast` 动作启动，读条期间 Boss 血条显示进度百分比。
+
+```yaml
+skills:
+  fire-blast:
+    cast-duration: 3s          # 读条时长
+    cast-label: "蓄力中"        # 标题后缀文本
+    on-decision:
+      - start-cast fire-blast  # 开始读条
+      - wait 3s                # 等待读条完成
+      - aoe-damage players 8 1 20  # 读条结束后造成伤害
+  cancel-fire-blast:
+    on-decision:
+      - cancel-cast            # 取消读条
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `cast-duration` | 读条时长（`3s` / `1500ms` / `90t`）；0 或省略 = 无读条 |
+| `cast-label` | 血条标题后缀（如 "蓄力中"）；默认 "施法中" |
+
+**配套动作**：
+- `start-cast <技能名>`：启动读条计时，不执行技能动作
+- `cancel-cast`：取消当前实例的所有活跃读条
+- 死亡/ despawn 时自动清除该实例的所有读条
+
+血条显示格式：`Lv.N 名称 [阶段] 蓄力中 67%`
+
 ## 触发器接线状态
 
 `/helstera check` 会区分三种情况，而不是笼统说「未知名」：
