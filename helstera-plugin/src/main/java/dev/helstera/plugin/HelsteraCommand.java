@@ -32,7 +32,7 @@ public final class HelsteraCommand implements TabExecutor {
 
     private static final List<String> SUBS = List.of(
             "reload", "model", "mob", "animation", "migrate", "web", "debug", "stats", "pack",
-            "loot", "spawner", "check", "faction", "codex", "nav", "lever", "immunity", "help");
+            "loot", "bossbar", "spawner", "check", "faction", "codex", "nav", "lever", "immunity", "help");
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -52,6 +52,7 @@ public final class HelsteraCommand implements TabExecutor {
             case "stats" -> stats(sender);
             case "pack" -> pack(sender, args);
             case "loot" -> loot(sender, args);
+            case "bossbar" -> bossbar(sender, args);
             case "spawner" -> spawner(sender, args);
             case "check" -> check(sender);
             case "faction" -> faction(sender, args);
@@ -1051,6 +1052,27 @@ var ai = plugin.ai();
         }
     }
 
+    /** /helstera bossbar */
+    private void bossbar(CommandSender s, String[] args) {
+        if (!s.hasPermission("helstera.bossbar")) { deny(s); return; }
+        var service = plugin.bossBarService();
+        if (service == null) {
+            s.sendMessage("§c血条系统未启用");
+            return;
+        }
+        s.sendMessage("§b== Boss 血条诊断 ==");
+        s.sendMessage("§7- 挂条次数: §f" + service.showCount());
+        s.sendMessage("§7- 更新次数: §f" + service.updateCount());
+        s.sendMessage("§7- 隐藏次数: §f" + service.hideCount());
+        s.sendMessage("§7- 活跃血条: §f" + service.barCount());
+        if (service.showCount() == 0) {
+            s.sendMessage("§c注意: 从未挂过血条——检查 mobs/*.yml 的 bossbar.enabled 是否为 true");
+        }
+        if (service.barCount() > 0 && service.updateCount() == 0) {
+            s.sendMessage("§e提示: 血条已挂但未更新——可能没有玩家在线（在线玩家数为 0 时 onDamage 不触发）");
+        }
+    }
+
     /** /helstera spawner list|force <id> [数量]|reload */
     private void spawner(CommandSender s, String[] args) {
         if (!s.hasPermission("helstera.spawner")) { deny(s); return; }
@@ -1132,6 +1154,7 @@ var ai = plugin.ai();
                 case "animation" -> out.addAll(List.of("play", "stop", "pause", "resume"));
                 case "migrate" -> out.addAll(List.of("scan", "preview", "apply", "rollback", "report"));
                 case "loot" -> out.addAll(List.of("list", "roll"));
+                case "bossbar" -> out.addAll(List.of());
                 case "spawner" -> out.addAll(List.of("list", "force", "reload"));
                 case "web" -> out.addAll(List.of("start", "stop", "status", "doctor", "firewall"));
                 case "debug" -> out.addAll(List.of("render", "animation", "network", "ai", "skills", "integrations"));

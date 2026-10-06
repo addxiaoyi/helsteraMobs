@@ -29,6 +29,7 @@ permissions:
       helstera.stats: true
       helstera.pack: true
       helstera.loot: true
+      helstera.bossbar: true
       helstera.spawner: true
       helstera.check: true
       helstera.faction: true

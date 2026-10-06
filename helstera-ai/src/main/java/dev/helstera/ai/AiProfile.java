@@ -399,6 +399,10 @@ public final class AiProfile {
             immunity = dev.helstera.ai.immunity.ImmunityService.rowsFromSection(s);
             immunityTable = null;
         }
+        if (s.contains("bossbar")) {
+            bossBar = dev.helstera.ai.bossbar.BossBarConfig.parse(
+                    s.getConfigurationSection("bossbar"), new ArrayList<>());
+        }
     }
 
     /**
