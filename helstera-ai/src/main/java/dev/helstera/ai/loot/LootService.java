@@ -268,6 +268,33 @@ public final class LootService {
     }
 
     /**
+     * 掷骰 + 实体化 + 落地，并合并击杀者档位与 mob 等级为有效档位。
+     *
+     * <p>有效档位取 {@code max(玩家档位, mob等级)}：高等级 mob 的稀有掉落不会因为
+     * 低档位玩家击杀而凭空出现，同时低等级 mob 的高端掉落也不会被高等级玩家意外跳过。
+     * 两者都为负时回落为「未知」，门槛全部放行。</p>
+     */
+    public int rollAndDrop(org.bukkit.Location loc, String tableName, double luck,
+                           Player killer, int mobLevel) {
+        DropTable t = table(tableName);
+        int playerTier = tierOf(killer);
+        // 两者都未知 → -1；否则取最大值（任一已知都算有效档位）
+        int effectiveTier;
+        if (playerTier < 0 && mobLevel <= 0) {
+            effectiveTier = -1;
+        } else if (playerTier < 0) {
+            effectiveTier = mobLevel;
+        } else if (mobLevel <= 0) {
+            effectiveTier = playerTier;
+        } else {
+            effectiveTier = Math.max(playerTier, mobLevel);
+        }
+        List<ItemStack> items = materialize(rollPlan(t, luck, random, effectiveTier));
+        drop(loc, items);
+        return items.size();
+    }
+
+    /**
      * 取击杀者档位；解析器缺失、抛异常或返回负值时一律视为未知（-1）。
      *
      * <p>档位未知必须与档位 0 区分开：门槛配置写的是「至少 5 档才能掉」，

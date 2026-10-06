@@ -1,0 +1,715 @@
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] helsteraMobs Parent                                                [pom]
+[INFO] helstera-api                                                       [jar]
+[INFO] helstera-core                                                      [jar]
+[INFO] helstera-runtime                                                   [jar]
+[INFO] helstera-render-paper                                              [jar]
+[INFO] helstera-resourcepack                                              [jar]
+[INFO] helstera-ai                                                        [jar]
+[INFO] helstera-integrations                                              [jar]
+[INFO] helstera-web                                                       [jar]
+[INFO] helstera-migration                                                 [jar]
+[INFO] helstera-platform                                                  [jar]
+[INFO] helstera-plugin                                                    [jar]
+[INFO] 
+[INFO] --------------------< dev.helstera:helstera-parent >--------------------
+[INFO] Building helsteraMobs Parent 1.0.0                                [1/12]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] ---------------------< dev.helstera:helstera-api >----------------------
+[INFO] Building helstera-api 1.0.0                                       [2/12]
+[INFO]   from helstera-api\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ helstera-api ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-api\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helstera-api ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ helstera-api ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-api\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helstera-api ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ helstera-api ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ helstera-api ---
+[INFO] 
+[INFO] ---------------------< dev.helstera:helstera-core >---------------------
+[INFO] Building helstera-core 1.0.0                                      [3/12]
+[INFO]   from helstera-core\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ helstera-core ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-core\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helstera-core ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ helstera-core ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-core\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helstera-core ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ helstera-core ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ helstera-core ---
+[INFO] 
+[INFO] -------------------< dev.helstera:helstera-runtime >--------------------
+[INFO] Building helstera-runtime 1.0.0                                   [4/12]
+[INFO]   from helstera-runtime\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ helstera-runtime ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-runtime\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helstera-runtime ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ helstera-runtime ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-runtime\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helstera-runtime ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ helstera-runtime ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ helstera-runtime ---
+[INFO] 
+[INFO] -----------------< dev.helstera:helstera-render-paper >-----------------
+[INFO] Building helstera-render-paper 1.0.0                              [5/12]
+[INFO]   from helstera-render-paper\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ helstera-render-paper ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-render-paper\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helstera-render-paper ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ helstera-render-paper ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-render-paper\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helstera-render-paper ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ helstera-render-paper ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ helstera-render-paper ---
+[INFO] 
+[INFO] -----------------< dev.helstera:helstera-resourcepack >-----------------
+[INFO] Building helstera-resourcepack 1.0.0                              [6/12]
+[INFO]   from helstera-resourcepack\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ helstera-resourcepack ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-resourcepack\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helstera-resourcepack ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ helstera-resourcepack ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-resourcepack\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helstera-resourcepack ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ helstera-resourcepack ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ helstera-resourcepack ---
+[INFO] 
+[INFO] ----------------------< dev.helstera:helstera-ai >----------------------
+[INFO] Building helstera-ai 1.0.0                                        [7/12]
+[INFO]   from helstera-ai\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ helstera-ai ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-ai\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helstera-ai ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ helstera-ai ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-ai\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helstera-ai ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ helstera-ai ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ helstera-ai ---
+[INFO] 
+[INFO] -----------------< dev.helstera:helstera-integrations >-----------------
+[INFO] Building helstera-integrations 1.0.0                              [8/12]
+[INFO]   from helstera-integrations\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ helstera-integrations ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-integrations\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helstera-integrations ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ helstera-integrations ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-integrations\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helstera-integrations ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ helstera-integrations ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ helstera-integrations ---
+[INFO] 
+[INFO] ---------------------< dev.helstera:helstera-web >----------------------
+[INFO] Building helstera-web 1.0.0                                       [9/12]
+[INFO]   from helstera-web\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ helstera-web ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helstera-web ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ helstera-web ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-web\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helstera-web ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ helstera-web ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ helstera-web ---
+[INFO] 
+[INFO] ------------------< dev.helstera:helstera-migration >-------------------
+[INFO] Building helstera-migration 1.0.0                                [10/12]
+[INFO]   from helstera-migration\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ helstera-migration ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-migration\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helstera-migration ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ helstera-migration ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-migration\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helstera-migration ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ helstera-migration ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ helstera-migration ---
+[INFO] 
+[INFO] -------------------< dev.helstera:helstera-platform >-------------------
+[INFO] Building helstera-platform 1.0.0                                 [11/12]
+[INFO]   from helstera-platform\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ helstera-platform ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-platform\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helstera-platform ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ helstera-platform ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-platform\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helstera-platform ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ helstera-platform ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ helstera-platform ---
+[INFO] 
+[INFO] --------------------< dev.helstera:helstera-plugin >--------------------
+[INFO] Building helstera-plugin 1.0.0                                   [12/12]
+[INFO]   from helstera-plugin\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ helstera-plugin ---
+[INFO] Copying 15 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helstera-plugin ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ helstera-plugin ---
+[INFO] skip non existing resourceDirectory D:\qwq\项目\helsteraMobs\helstera-plugin\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helstera-plugin ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ helstera-plugin ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ helstera-plugin ---
+[INFO] 
+[INFO] --- shade:3.5.1:shade (default) @ helstera-plugin ---
+[INFO] Including org.slf4j:slf4j-api:jar:2.0.9 in the shaded jar.
+[INFO] Including org.jetbrains:annotations:jar:24.1.0 in the shaded jar.
+[INFO] Including org.joml:joml:jar:1.10.5 in the shaded jar.
+[INFO] Including dev.helstera:helstera-api:jar:1.0.0 in the shaded jar.
+[INFO] Including dev.helstera:helstera-core:jar:1.0.0 in the shaded jar.
+[INFO] Including dev.helstera:helstera-runtime:jar:1.0.0 in the shaded jar.
+[INFO] Including dev.helstera:helstera-render-paper:jar:1.0.0 in the shaded jar.
+[INFO] Including dev.helstera:helstera-resourcepack:jar:1.0.0 in the shaded jar.
+[INFO] Including dev.helstera:helstera-ai:jar:1.0.0 in the shaded jar.
+[INFO] Including dev.helstera:helstera-integrations:jar:1.0.0 in the shaded jar.
+[INFO] Including dev.helstera:helstera-web:jar:1.0.0 in the shaded jar.
+[INFO] Including io.javalin:javalin:jar:6.3.0 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-server:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-http:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-util:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-io:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty.toolchain:jetty-jakarta-servlet-api:jar:5.0.2 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-server:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-servlet:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-security:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-webapp:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty:jetty-xml:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-api:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-jetty-common:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-core-common:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-servlet:jar:11.0.23 in the shaded jar.
+[INFO] Including org.eclipse.jetty.websocket:websocket-core-server:jar:11.0.23 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar:1.9.25 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib:jar:1.9.25 in the shaded jar.
+[INFO] Including org.jetbrains.kotlin:kotlin-stdlib-jdk7:jar:1.9.25 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-databind:jar:2.17.2 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-annotations:jar:2.17.2 in the shaded jar.
+[INFO] Including com.fasterxml.jackson.core:jackson-core:jar:2.17.2 in the shaded jar.
+[INFO] Including dev.helstera:helstera-migration:jar:1.0.0 in the shaded jar.
+[INFO] Including dev.helstera:helstera-platform:jar:1.0.0 in the shaded jar.
+[WARNING] helstera-core-1.0.0.jar, helsteraMobs-1.0.0-full.jar define 14 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/dev.helstera/helstera-core/pom.properties
+[WARNING]   - META-INF/maven/dev.helstera/helstera-core/pom.xml
+[WARNING]   - dev.helstera.core.ModelRegistryImpl
+[WARNING]   - dev.helstera.core.animation.AnimationClip
+[WARNING]   - dev.helstera.core.animation.AnimationClip$EventMarker
+[WARNING]   - dev.helstera.core.animation.KeyframeTrack
+[WARNING]   - dev.helstera.core.animation.KeyframeTrack$BoneTracks
+[WARNING]   - dev.helstera.core.animation.KeyframeTrack$Keyframe
+[WARNING]   - dev.helstera.core.model.ModelDefinitionImpl
+[WARNING]   - dev.helstera.core.model.ModelDefinitionImpl$BoneImpl
+[WARNING]   - 4 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, kotlin-stdlib-1.9.25.jar define 988 overlapping classes and resources: 
+[WARNING]   - META-INF/kotlin-stdlib-jdk7.kotlin_module
+[WARNING]   - META-INF/kotlin-stdlib-jdk8.kotlin_module
+[WARNING]   - META-INF/kotlin-stdlib.kotlin_module
+[WARNING]   - kotlin.ArrayIntrinsicsKt
+[WARNING]   - kotlin.BuilderInference
+[WARNING]   - kotlin.CharCodeJVMKt
+[WARNING]   - kotlin.CharCodeKt
+[WARNING]   - kotlin.CompareToKt
+[WARNING]   - kotlin.ContextFunctionTypeParams
+[WARNING]   - kotlin.DeepRecursiveFunction
+[WARNING]   - 978 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jetty-http-11.0.23.jar define 131 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-http/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-http/pom.xml
+[WARNING]   - META-INF/services/org.eclipse.jetty.http.HttpFieldPreEncoder
+[WARNING]   - org.eclipse.jetty.http.BadMessageException
+[WARNING]   - org.eclipse.jetty.http.ComplianceViolation
+[WARNING]   - org.eclipse.jetty.http.ComplianceViolation$Listener
+[WARNING]   - org.eclipse.jetty.http.ComplianceViolation$Mode
+[WARNING]   - org.eclipse.jetty.http.CompressedContentFormat
+[WARNING]   - org.eclipse.jetty.http.CookieCompliance
+[WARNING]   - org.eclipse.jetty.http.CookieCompliance$Violation
+[WARNING]   - 121 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jetty-http-11.0.23.jar, jetty-io-11.0.23.jar, jetty-security-11.0.23.jar, jetty-server-11.0.23.jar, jetty-servlet-11.0.23.jar, jetty-util-11.0.23.jar, jetty-webapp-11.0.23.jar, jetty-xml-11.0.23.jar, websocket-core-common-11.0.23.jar, websocket-core-server-11.0.23.jar, websocket-jetty-api-11.0.23.jar, websocket-jetty-common-11.0.23.jar, websocket-jetty-server-11.0.23.jar, websocket-servlet-11.0.23.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/NOTICE.txt
+[WARNING] helstera-api-1.0.0.jar, helsteraMobs-1.0.0-full.jar define 45 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/dev.helstera/helstera-api/pom.properties
+[WARNING]   - META-INF/maven/dev.helstera/helstera-api/pom.xml
+[WARNING]   - dev.helstera.api.Helstera
+[WARNING]   - dev.helstera.api.HelsteraApi
+[WARNING]   - dev.helstera.api.Vec3
+[WARNING]   - dev.helstera.api.animation.AnimationController
+[WARNING]   - dev.helstera.api.animation.AnimationOptions
+[WARNING]   - dev.helstera.api.behavior.BehaviorContext
+[WARNING]   - dev.helstera.api.behavior.BehaviorRegistry
+[WARNING]   - dev.helstera.api.behavior.FactionTable
+[WARNING]   - 35 more...
+[WARNING] helstera-runtime-1.0.0.jar, helsteraMobs-1.0.0-full.jar define 18 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/dev.helstera/helstera-runtime/pom.properties
+[WARNING]   - META-INF/maven/dev.helstera/helstera-runtime/pom.xml
+[WARNING]   - dev.helstera.runtime.animation.AnimationControllerImpl
+[WARNING]   - dev.helstera.runtime.animation.AnimationControllerImpl$ActiveClip
+[WARNING]   - dev.helstera.runtime.animation.BonePose
+[WARNING]   - dev.helstera.runtime.animation.EntityAnimationStateMachine
+[WARNING]   - dev.helstera.runtime.animation.EntityAnimationStateMachine$AnimState
+[WARNING]   - dev.helstera.runtime.instance.InstanceManagerImpl
+[WARNING]   - dev.helstera.runtime.instance.InstanceRenderer
+[WARNING]   - dev.helstera.runtime.instance.ModelInstanceImpl
+[WARNING]   - 8 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jackson-annotations-2.17.2.jar, jackson-core-2.17.2.jar, jackson-databind-2.17.2.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/NOTICE
+[WARNING] helsteraMobs-1.0.0-full.jar, websocket-core-server-11.0.23.jar define 27 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-core-server/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-core-server/pom.xml
+[WARNING]   - org.eclipse.jetty.websocket.core.server.FrameHandlerFactory
+[WARNING]   - org.eclipse.jetty.websocket.core.server.Handshaker
+[WARNING]   - org.eclipse.jetty.websocket.core.server.ServerUpgradeRequest
+[WARNING]   - org.eclipse.jetty.websocket.core.server.ServerUpgradeResponse
+[WARNING]   - org.eclipse.jetty.websocket.core.server.WebSocketCreator
+[WARNING]   - org.eclipse.jetty.websocket.core.server.WebSocketMappings
+[WARNING]   - org.eclipse.jetty.websocket.core.server.WebSocketNegotiation
+[WARNING]   - org.eclipse.jetty.websocket.core.server.WebSocketNegotiation$1
+[WARNING]   - 17 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jackson-annotations-2.17.2.jar define 75 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/com.fasterxml.jackson.core/jackson-annotations/pom.properties
+[WARNING]   - META-INF/maven/com.fasterxml.jackson.core/jackson-annotations/pom.xml
+[WARNING]   - com.fasterxml.jackson.annotation.JacksonAnnotation
+[WARNING]   - com.fasterxml.jackson.annotation.JacksonAnnotationValue
+[WARNING]   - com.fasterxml.jackson.annotation.JacksonAnnotationsInside
+[WARNING]   - com.fasterxml.jackson.annotation.JacksonInject
+[WARNING]   - com.fasterxml.jackson.annotation.JacksonInject$Value
+[WARNING]   - com.fasterxml.jackson.annotation.JsonAlias
+[WARNING]   - com.fasterxml.jackson.annotation.JsonAnyGetter
+[WARNING]   - com.fasterxml.jackson.annotation.JsonAnySetter
+[WARNING]   - 65 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jetty-io-11.0.23.jar define 123 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-io/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-io/pom.xml
+[WARNING]   - org.eclipse.jetty.io.AbstractByteBufferPool
+[WARNING]   - org.eclipse.jetty.io.AbstractByteBufferPool$Bucket
+[WARNING]   - org.eclipse.jetty.io.AbstractConnection
+[WARNING]   - org.eclipse.jetty.io.AbstractConnection$1
+[WARNING]   - org.eclipse.jetty.io.AbstractConnection$ReadCallback
+[WARNING]   - org.eclipse.jetty.io.AbstractEndPoint
+[WARNING]   - org.eclipse.jetty.io.AbstractEndPoint$1
+[WARNING]   - org.eclipse.jetty.io.AbstractEndPoint$2
+[WARNING]   - 113 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jetty-util-11.0.23.jar define 308 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-util/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-util/pom.xml
+[WARNING]   - org.eclipse.jetty.util.AbstractTrie
+[WARNING]   - org.eclipse.jetty.util.ArrayTernaryTrie
+[WARNING]   - org.eclipse.jetty.util.ArrayTernaryTrie$Growing
+[WARNING]   - org.eclipse.jetty.util.ArrayTrie
+[WARNING]   - org.eclipse.jetty.util.ArrayTrie$Node
+[WARNING]   - org.eclipse.jetty.util.ArrayUtil
+[WARNING]   - org.eclipse.jetty.util.AsciiLowerCaseSet
+[WARNING]   - org.eclipse.jetty.util.AtomicBiInteger
+[WARNING]   - 298 more...
+[WARNING] helstera-resourcepack-1.0.0.jar, helsteraMobs-1.0.0-full.jar define 5 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/dev.helstera/helstera-resourcepack/pom.properties
+[WARNING]   - META-INF/maven/dev.helstera/helstera-resourcepack/pom.xml
+[WARNING]   - dev.helstera.resourcepack.PackFormats
+[WARNING]   - dev.helstera.resourcepack.ResourcePackBuilder
+[WARNING]   - dev.helstera.resourcepack.ResourcePackServiceImpl
+[WARNING] helsteraMobs-1.0.0-full.jar, websocket-jetty-common-11.0.23.jar define 15 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-common/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-common/pom.xml
+[WARNING]   - META-INF/services/org.eclipse.jetty.websocket.api.ExtensionConfig$Parser
+[WARNING]   - org.eclipse.jetty.websocket.common.ExtensionConfigParser
+[WARNING]   - org.eclipse.jetty.websocket.common.JettyExtensionConfig
+[WARNING]   - org.eclipse.jetty.websocket.common.JettyWebSocketFrame
+[WARNING]   - org.eclipse.jetty.websocket.common.JettyWebSocketFrameHandler
+[WARNING]   - org.eclipse.jetty.websocket.common.JettyWebSocketFrameHandler$1
+[WARNING]   - org.eclipse.jetty.websocket.common.JettyWebSocketFrameHandler$SuspendState
+[WARNING]   - org.eclipse.jetty.websocket.common.JettyWebSocketFrameHandlerFactory
+[WARNING]   - 5 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, websocket-servlet-11.0.23.jar define 4 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-servlet/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-servlet/pom.xml
+[WARNING]   - org.eclipse.jetty.websocket.servlet.WebSocketUpgradeFilter
+[WARNING]   - org.eclipse.jetty.websocket.servlet.WebSocketUpgradeFilter$1
+[WARNING] helsteraMobs-1.0.0-full.jar, jetty-xml-11.0.23.jar define 21 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-xml/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-xml/pom.xml
+[WARNING]   - org.eclipse.jetty.xml.ConfigurationProcessor
+[WARNING]   - org.eclipse.jetty.xml.ConfigurationProcessorFactory
+[WARNING]   - org.eclipse.jetty.xml.XmlAppendable
+[WARNING]   - org.eclipse.jetty.xml.XmlConfiguration
+[WARNING]   - org.eclipse.jetty.xml.XmlConfiguration$ConfigurationParser
+[WARNING]   - org.eclipse.jetty.xml.XmlConfiguration$JettyXmlConfiguration
+[WARNING]   - org.eclipse.jetty.xml.XmlConfiguration$JettyXmlConfiguration$Args
+[WARNING]   - org.eclipse.jetty.xml.XmlConfiguration$JettyXmlConfiguration$AttrOrElementNode
+[WARNING]   - 11 more...
+[WARNING] annotations-24.1.0.jar, helsteraMobs-1.0.0-full.jar, jackson-core-2.17.2.jar, jackson-databind-2.17.2.jar, kotlin-stdlib-1.9.25.jar, kotlin-stdlib-jdk7-1.9.25.jar, kotlin-stdlib-jdk8-1.9.25.jar, slf4j-api-2.0.9.jar define 1 overlapping classes: 
+[WARNING]   - META-INF.versions.9.module-info
+[WARNING] helstera-platform-1.0.0.jar, helsteraMobs-1.0.0-full.jar define 4 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/dev.helstera/helstera-platform/pom.properties
+[WARNING]   - META-INF/maven/dev.helstera/helstera-platform/pom.xml
+[WARNING]   - dev.helstera.platform.PlatformAdapter
+[WARNING]   - dev.helstera.platform.PlatformAdapter$Platform
+[WARNING] helsteraMobs-1.0.0-full.jar, websocket-jetty-server-11.0.23.jar define 18 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-server/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-server/pom.xml
+[WARNING]   - META-INF/services/jakarta.servlet.ServletContainerInitializer
+[WARNING]   - org.eclipse.jetty.websocket.server.JettyServerUpgradeRequest
+[WARNING]   - org.eclipse.jetty.websocket.server.JettyServerUpgradeResponse
+[WARNING]   - org.eclipse.jetty.websocket.server.JettyWebSocketCreator
+[WARNING]   - org.eclipse.jetty.websocket.server.JettyWebSocketServerContainer
+[WARNING]   - org.eclipse.jetty.websocket.server.JettyWebSocketServerContainer$1
+[WARNING]   - org.eclipse.jetty.websocket.server.JettyWebSocketServlet
+[WARNING]   - org.eclipse.jetty.websocket.server.JettyWebSocketServlet$CustomizedWebSocketServletFactory
+[WARNING]   - 8 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jetty-server-11.0.23.jar define 357 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-server/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-server/pom.xml
+[WARNING]   - jetty-dir.css
+[WARNING]   - org.eclipse.jetty.server.AbstractConnectionFactory
+[WARNING]   - org.eclipse.jetty.server.AbstractConnector
+[WARNING]   - org.eclipse.jetty.server.AbstractConnector$1
+[WARNING]   - org.eclipse.jetty.server.AbstractConnector$2
+[WARNING]   - org.eclipse.jetty.server.AbstractConnector$Acceptor
+[WARNING]   - org.eclipse.jetty.server.AbstractNetworkConnector
+[WARNING]   - org.eclipse.jetty.server.AcceptRateLimit
+[WARNING]   - 347 more...
+[WARNING] helstera-web-1.0.0.jar, helsteraMobs-1.0.0-full.jar define 11 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/dev.helstera/helstera-web/pom.properties
+[WARNING]   - META-INF/maven/dev.helstera/helstera-web/pom.xml
+[WARNING]   - dev.helstera.web.MobTemplates
+[WARNING]   - dev.helstera.web.WebBridge
+[WARNING]   - dev.helstera.web.WebPage
+[WARNING]   - dev.helstera.web.WebServerService
+[WARNING]   - dev.helstera.web.WebServerService$BadRequestException
+[WARNING]   - dev.helstera.web.WebServerService$Request
+[WARNING]   - dev.helstera.web.WebServerService$Response
+[WARNING]   - web/index.html
+[WARNING]   - 1 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jetty-servlet-11.0.23.jar define 74 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-servlet/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-servlet/pom.xml
+[WARNING]   - org.eclipse.jetty.servlet.BaseHolder
+[WARNING]   - org.eclipse.jetty.servlet.BaseHolder$Wrapped
+[WARNING]   - org.eclipse.jetty.servlet.DecoratingListener
+[WARNING]   - org.eclipse.jetty.servlet.DecoratingListener$DynamicDecorator
+[WARNING]   - org.eclipse.jetty.servlet.DefaultServlet
+[WARNING]   - org.eclipse.jetty.servlet.ErrorPageErrorHandler
+[WARNING]   - org.eclipse.jetty.servlet.ErrorPageErrorHandler$ErrorCodeRange
+[WARNING]   - org.eclipse.jetty.servlet.ErrorPageErrorHandler$PageLookupTechnique
+[WARNING]   - 64 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jackson-core-2.17.2.jar define 223 overlapping classes and resources: 
+[WARNING]   - META-INF.versions.11.com.fasterxml.jackson.core.io.doubleparser.BigSignificand
+[WARNING]   - META-INF.versions.11.com.fasterxml.jackson.core.io.doubleparser.FastDoubleSwar
+[WARNING]   - META-INF.versions.11.com.fasterxml.jackson.core.io.doubleparser.FastIntegerMath
+[WARNING]   - META-INF.versions.17.com.fasterxml.jackson.core.io.doubleparser.FastDoubleSwar
+[WARNING]   - META-INF.versions.17.com.fasterxml.jackson.core.io.doubleparser.FastIntegerMath
+[WARNING]   - META-INF.versions.21.com.fasterxml.jackson.core.io.doubleparser.FastDoubleSwar
+[WARNING]   - META-INF.versions.21.com.fasterxml.jackson.core.io.doubleparser.FastIntegerMath
+[WARNING]   - META-INF/FastDoubleParser-LICENSE
+[WARNING]   - META-INF/FastDoubleParser-NOTICE
+[WARNING]   - META-INF/maven/com.fasterxml.jackson.core/jackson-core/pom.properties
+[WARNING]   - 213 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jetty-webapp-11.0.23.jar define 61 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-webapp/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-webapp/pom.xml
+[WARNING]   - org.eclipse.jetty.webapp.AbsoluteOrdering
+[WARNING]   - org.eclipse.jetty.webapp.AbstractConfiguration
+[WARNING]   - org.eclipse.jetty.webapp.CachingWebAppClassLoader
+[WARNING]   - org.eclipse.jetty.webapp.ClassMatcher
+[WARNING]   - org.eclipse.jetty.webapp.ClassMatcher$ByClass
+[WARNING]   - org.eclipse.jetty.webapp.ClassMatcher$ByLocation
+[WARNING]   - org.eclipse.jetty.webapp.ClassMatcher$ByLocationOrModule
+[WARNING]   - org.eclipse.jetty.webapp.ClassMatcher$ByModule
+[WARNING]   - 51 more...
+[WARNING] helstera-render-paper-1.0.0.jar, helsteraMobs-1.0.0-full.jar define 10 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/dev.helstera/helstera-render-paper/pom.properties
+[WARNING]   - META-INF/maven/dev.helstera/helstera-render-paper/pom.xml
+[WARNING]   - dev.helstera.render.display.BoneCommandMapping
+[WARNING]   - dev.helstera.render.display.DisplayRenderer
+[WARNING]   - dev.helstera.render.display.DisplayRenderer$Visuals
+[WARNING]   - dev.helstera.render.display.LegacyText
+[WARNING]   - dev.helstera.render.display.RenderListeners
+[WARNING]   - dev.helstera.render.display.VersionAdapter
+[WARNING]   - dev.helstera.render.visibility.PlayerVisibilityServiceImpl
+[WARNING]   - dev.helstera.render.visibility.VisibilityRefresher
+[WARNING] helsteraMobs-1.0.0-full.jar, slf4j-api-2.0.9.jar define 54 overlapping classes and resources: 
+[WARNING]   - META-INF/LICENSE.txt
+[WARNING]   - META-INF/maven/org.slf4j/slf4j-api/pom.properties
+[WARNING]   - META-INF/maven/org.slf4j/slf4j-api/pom.xml
+[WARNING]   - org.slf4j.ILoggerFactory
+[WARNING]   - org.slf4j.IMarkerFactory
+[WARNING]   - org.slf4j.Logger
+[WARNING]   - org.slf4j.LoggerFactory
+[WARNING]   - org.slf4j.LoggerFactoryFriend
+[WARNING]   - org.slf4j.MDC
+[WARNING]   - org.slf4j.MDC$1
+[WARNING]   - 44 more...
+[WARNING] helstera-migration-1.0.0.jar, helsteraMobs-1.0.0-full.jar define 13 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/dev.helstera/helstera-migration/pom.properties
+[WARNING]   - META-INF/maven/dev.helstera/helstera-migration/pom.xml
+[WARNING]   - dev.helstera.migration.MigrationServiceImpl
+[WARNING]   - dev.helstera.migration.importer.CraftEngineImporter
+[WARNING]   - dev.helstera.migration.importer.ImporterUtil
+[WARNING]   - dev.helstera.migration.importer.ItemAdderImporter
+[WARNING]   - dev.helstera.migration.importer.MmConditions
+[WARNING]   - dev.helstera.migration.importer.MmConditions$Mapped
+[WARNING]   - dev.helstera.migration.importer.ModelEngineImporter
+[WARNING]   - dev.helstera.migration.importer.MythicMobsImporter
+[WARNING]   - 3 more...
+[WARNING] helstera-ai-1.0.0.jar, helsteraMobs-1.0.0-full.jar define 98 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/dev.helstera/helstera-ai/pom.properties
+[WARNING]   - META-INF/maven/dev.helstera/helstera-ai/pom.xml
+[WARNING]   - dev.helstera.ai.AiController
+[WARNING]   - dev.helstera.ai.AiController$State
+[WARNING]   - dev.helstera.ai.AiManager
+[WARNING]   - dev.helstera.ai.AiManager$1
+[WARNING]   - dev.helstera.ai.AiProfile
+[WARNING]   - dev.helstera.ai.AiProfile$TriggerSpec
+[WARNING]   - dev.helstera.ai.BehaviorRegistryImpl
+[WARNING]   - dev.helstera.ai.BoneHitbox
+[WARNING]   - 88 more...
+[WARNING] annotations-24.1.0.jar, helsteraMobs-1.0.0-full.jar define 59 overlapping classes: 
+[WARNING]   - org.intellij.lang.annotations.Flow
+[WARNING]   - org.intellij.lang.annotations.Identifier
+[WARNING]   - org.intellij.lang.annotations.JdkConstants
+[WARNING]   - org.intellij.lang.annotations.JdkConstants$AdjustableOrientation
+[WARNING]   - org.intellij.lang.annotations.JdkConstants$BoxLayoutAxis
+[WARNING]   - org.intellij.lang.annotations.JdkConstants$CalendarMonth
+[WARNING]   - org.intellij.lang.annotations.JdkConstants$CursorType
+[WARNING]   - org.intellij.lang.annotations.JdkConstants$FlowLayoutAlignment
+[WARNING]   - org.intellij.lang.annotations.JdkConstants$FontStyle
+[WARNING]   - org.intellij.lang.annotations.JdkConstants$HorizontalAlignment
+[WARNING]   - 49 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, websocket-core-common-11.0.23.jar define 104 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-core-common/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-core-common/pom.xml
+[WARNING]   - META-INF/services/org.eclipse.jetty.websocket.core.Extension
+[WARNING]   - org.eclipse.jetty.websocket.core.AbstractExtension
+[WARNING]   - org.eclipse.jetty.websocket.core.Behavior
+[WARNING]   - org.eclipse.jetty.websocket.core.CloseStatus
+[WARNING]   - org.eclipse.jetty.websocket.core.CloseStatus$CloseFrame
+[WARNING]   - org.eclipse.jetty.websocket.core.CloseStatus$Supplier
+[WARNING]   - org.eclipse.jetty.websocket.core.Configuration
+[WARNING]   - org.eclipse.jetty.websocket.core.Configuration$ConfigurationCustomizer
+[WARNING]   - 94 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jetty-webapp-11.0.23.jar, websocket-jetty-server-11.0.23.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/services/org.eclipse.jetty.webapp.Configuration
+[WARNING] helsteraMobs-1.0.0-full.jar, joml-1.10.5.jar define 113 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.joml/joml/pom.properties
+[WARNING]   - META-INF/maven/org.joml/joml/pom.xml
+[WARNING]   - org.joml.AxisAngle4d
+[WARNING]   - org.joml.AxisAngle4f
+[WARNING]   - org.joml.ConfigurationException
+[WARNING]   - org.joml.FrustumIntersection
+[WARNING]   - org.joml.FrustumRayBuilder
+[WARNING]   - org.joml.GeometryUtils
+[WARNING]   - org.joml.Interpolationd
+[WARNING]   - org.joml.Interpolationf
+[WARNING]   - 103 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, websocket-jetty-api-11.0.23.jar define 44 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-api/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty.websocket/websocket-jetty-api/pom.xml
+[WARNING]   - org.eclipse.jetty.websocket.api.BatchMode
+[WARNING]   - org.eclipse.jetty.websocket.api.CloseStatus
+[WARNING]   - org.eclipse.jetty.websocket.api.ExtensionConfig
+[WARNING]   - org.eclipse.jetty.websocket.api.ExtensionConfig$Parser
+[WARNING]   - org.eclipse.jetty.websocket.api.Frame
+[WARNING]   - org.eclipse.jetty.websocket.api.Frame$Type
+[WARNING]   - org.eclipse.jetty.websocket.api.RemoteEndpoint
+[WARNING]   - org.eclipse.jetty.websocket.api.Session
+[WARNING]   - 34 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, javalin-6.3.0.jar define 484 overlapping classes and resources: 
+[WARNING]   - META-INF/javalin.kotlin_module
+[WARNING]   - META-INF/maven/io.javalin/javalin/pom.properties
+[WARNING]   - META-INF/maven/io.javalin/javalin/pom.xml
+[WARNING]   - io.javalin.Javalin
+[WARNING]   - io.javalin.apibuilder.ApiBuilder
+[WARNING]   - io.javalin.apibuilder.CrudHandler
+[WARNING]   - io.javalin.apibuilder.EndpointGroup
+[WARNING]   - io.javalin.compression.Brotli
+[WARNING]   - io.javalin.compression.Brotli4jCompressor
+[WARNING]   - io.javalin.compression.CompressedOutputStream
+[WARNING]   - 474 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jackson-annotations-2.17.2.jar, jackson-core-2.17.2.jar, jackson-databind-2.17.2.jar, javalin-6.3.0.jar, jetty-http-11.0.23.jar, jetty-io-11.0.23.jar, jetty-security-11.0.23.jar, jetty-server-11.0.23.jar, jetty-servlet-11.0.23.jar, jetty-util-11.0.23.jar, jetty-webapp-11.0.23.jar, jetty-xml-11.0.23.jar, joml-1.10.5.jar, websocket-core-common-11.0.23.jar, websocket-core-server-11.0.23.jar, websocket-jetty-api-11.0.23.jar, websocket-jetty-common-11.0.23.jar, websocket-jetty-server-11.0.23.jar, websocket-servlet-11.0.23.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/LICENSE
+[WARNING] helstera-integrations-1.0.0.jar, helsteraMobs-1.0.0-full.jar define 9 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/dev.helstera/helstera-integrations/pom.properties
+[WARNING]   - META-INF/maven/dev.helstera/helstera-integrations/pom.xml
+[WARNING]   - dev.helstera.integrations.IntegrationRegistryImpl
+[WARNING]   - dev.helstera.integrations.items.CraftEngineAdapter
+[WARNING]   - dev.helstera.integrations.items.ItemAdderAdapter
+[WARNING]   - dev.helstera.integrations.mythicmobs.MythicMobsAdapter
+[WARNING]   - dev.helstera.integrations.mythicmobs.MythicMobsAdapter$SpawnExecutor
+[WARNING]   - dev.helstera.integrations.mythicmobs.MythicMobsModelMechanics
+[WARNING]   - dev.helstera.integrations.mythicmobs.MythicMobsModelMechanics$MechanicBody
+[WARNING] helsteraMobs-1.0.0-full.jar, jackson-databind-2.17.2.jar define 787 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/com.fasterxml.jackson.core/jackson-databind/pom.properties
+[WARNING]   - META-INF/maven/com.fasterxml.jackson.core/jackson-databind/pom.xml
+[WARNING]   - META-INF/services/com.fasterxml.jackson.core.ObjectCodec
+[WARNING]   - com.fasterxml.jackson.databind.AbstractTypeResolver
+[WARNING]   - com.fasterxml.jackson.databind.AnnotationIntrospector
+[WARNING]   - com.fasterxml.jackson.databind.AnnotationIntrospector$ReferenceProperty
+[WARNING]   - com.fasterxml.jackson.databind.AnnotationIntrospector$ReferenceProperty$Type
+[WARNING]   - com.fasterxml.jackson.databind.AnnotationIntrospector$XmlExtensions
+[WARNING]   - com.fasterxml.jackson.databind.BeanDescription
+[WARNING]   - com.fasterxml.jackson.databind.BeanProperty
+[WARNING]   - 777 more...
+[WARNING] annotations-24.1.0.jar, helstera-ai-1.0.0.jar, helstera-api-1.0.0.jar, helstera-core-1.0.0.jar, helstera-integrations-1.0.0.jar, helstera-migration-1.0.0.jar, helstera-platform-1.0.0.jar, helstera-render-paper-1.0.0.jar, helstera-resourcepack-1.0.0.jar, helstera-runtime-1.0.0.jar, helstera-web-1.0.0.jar, helsteraMobs-1.0.0-full.jar, jackson-annotations-2.17.2.jar, jackson-core-2.17.2.jar, jackson-databind-2.17.2.jar, javalin-6.3.0.jar, jetty-http-11.0.23.jar, jetty-io-11.0.23.jar, jetty-jakarta-servlet-api-5.0.2.jar, jetty-security-11.0.23.jar, jetty-server-11.0.23.jar, jetty-servlet-11.0.23.jar, jetty-util-11.0.23.jar, jetty-webapp-11.0.23.jar, jetty-xml-11.0.23.jar, joml-1.10.5.jar, kotlin-stdlib-1.9.25.jar, kotlin-stdlib-jdk7-1.9.25.jar, kotlin-stdlib-jdk8-1.9.25.jar, slf4j-api-2.0.9.jar, websocket-core-common-11.0.23.jar, websocket-core-server-11.0.23.jar, websocket-jetty-api-11.0.23.jar, websocket-jetty-common-11.0.23.jar, websocket-jetty-server-11.0.23.jar, websocket-servlet-11.0.23.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/MANIFEST.MF
+[WARNING] helsteraMobs-1.0.0-full.jar, jetty-jakarta-servlet-api-5.0.2.jar define 204 overlapping classes and resources: 
+[WARNING]   - META-INF/LICENSE.md
+[WARNING]   - META-INF/NOTICE.md
+[WARNING]   - jakarta.servlet.AsyncContext
+[WARNING]   - jakarta.servlet.AsyncEvent
+[WARNING]   - jakarta.servlet.AsyncListener
+[WARNING]   - jakarta.servlet.DispatcherType
+[WARNING]   - jakarta.servlet.Filter
+[WARNING]   - jakarta.servlet.FilterChain
+[WARNING]   - jakarta.servlet.FilterConfig
+[WARNING]   - jakarta.servlet.FilterRegistration
+[WARNING]   - 194 more...
+[WARNING] helsteraMobs-1.0.0-full.jar, jetty-security-11.0.23.jar define 64 overlapping classes and resources: 
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-security/pom.properties
+[WARNING]   - META-INF/maven/org.eclipse.jetty/jetty-security/pom.xml
+[WARNING]   - org.eclipse.jetty.security.AbstractLoginService
+[WARNING]   - org.eclipse.jetty.security.AbstractUserAuthentication
+[WARNING]   - org.eclipse.jetty.security.Authenticator
+[WARNING]   - org.eclipse.jetty.security.Authenticator$AuthConfiguration
+[WARNING]   - org.eclipse.jetty.security.Authenticator$Factory
+[WARNING]   - org.eclipse.jetty.security.ConfigurableSpnegoLoginService
+[WARNING]   - org.eclipse.jetty.security.ConfigurableSpnegoLoginService$GSSContextHolder
+[WARNING]   - org.eclipse.jetty.security.ConfigurableSpnegoLoginService$SpnegoConfiguration
+[WARNING]   - 54 more...
+[WARNING] maven-shade-plugin has detected that some files are
+[WARNING] present in two or more JARs. When this happens, only one
+[WARNING] single version of the file is copied to the uber jar.
+[WARNING] Usually this is not harmful and you can skip these warnings,
+[WARNING] otherwise try to manually exclude artifacts based on
+[WARNING] mvn dependency:tree -Ddetail=true and the above output.
+[WARNING] See https://maven.apache.org/plugins/maven-shade-plugin/
+[INFO] Replacing original artifact with shaded artifact.
+[INFO] Replacing D:\qwq\项目\helsteraMobs\helstera-plugin\target\helsteraMobs-1.0.0-full.jar with D:\qwq\项目\helsteraMobs\helstera-plugin\target\helstera-plugin-1.0.0-shaded.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for helsteraMobs Parent 1.0.0:
+[INFO] 
+[INFO] helsteraMobs Parent ................................ SUCCESS [  0.012 s]
+[INFO] helstera-api ....................................... SUCCESS [  6.135 s]
+[INFO] helstera-core ...................................... SUCCESS [  0.657 s]
+[INFO] helstera-runtime ................................... SUCCESS [  1.004 s]
+[INFO] helstera-render-paper .............................. SUCCESS [  0.458 s]
+[INFO] helstera-resourcepack .............................. SUCCESS [  0.392 s]
+[INFO] helstera-ai ........................................ SUCCESS [  0.950 s]
+[INFO] helstera-integrations .............................. SUCCESS [  0.194 s]
+[INFO] helstera-web ....................................... SUCCESS [  1.056 s]
+[INFO] helstera-migration ................................. SUCCESS [  0.652 s]
+[INFO] helstera-platform .................................. SUCCESS [  0.321 s]
+[INFO] helstera-plugin .................................... SUCCESS [  7.861 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  20.351 s
+[INFO] Finished at: 2026-10-06T21:28:10+08:00
+[INFO] ------------------------------------------------------------------------
