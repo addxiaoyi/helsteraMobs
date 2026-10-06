@@ -911,8 +911,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         }
         try {
-            // 传入击杀者：min-tier-level 门槛需要它才能在运行期生效
-            loot.rollAndDrop(ent.getLocation(), inst.lootTable, luck, e.getEntity().getKiller());
+            // 传入击杀者与 mob 等级：min-tier-level 门槛同时参考玩家档位和 mob 等级，
+            // 取 max(玩家档位, mob等级) 作为有效档位
+            int mobLevel = (inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl)
+                    && impl.level > 0 ? impl.level : 0;
+            loot.rollAndDrop(ent.getLocation(), inst.lootTable, luck, e.getEntity().getKiller(), mobLevel);
         } catch (Throwable t) {
             getLogger().warning("掉落投掷失败: " + t);
         }

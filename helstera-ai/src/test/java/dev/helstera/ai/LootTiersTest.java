@@ -226,4 +226,63 @@ class LootTiersTest {
         assertEquals(1, service().rollPlan(t, 0, new Random(5)).size(),
                 "既有调用方走三参重载，行为不应改变");
     }
+
+    // ---- 五参重载：合并玩家档位与 mob 等级 ----
+
+    @Test
+    @DisplayName("玩家档位与 mob 等级取最大值作为有效档位")
+    void fiveArgUsesMaxTier() {
+        DropTable t = parse("""
+                entries:
+                  - item: DIAMOND
+                    min-tier-level: 3
+                  - item: NETHERITE_INGOT
+                    min-tier-level: 7
+                """, new ArrayList<>());
+        Random rnd = new Random(42);
+        // player=3, mob=5 → effective=5: DIAMOND(门槛3)放行, NETHERITE(门槛7)拦截
+        List<LootService.Hit> hits = service().rollPlan(t, 0, rnd, 5);
+        assertTrue(hits.stream().anyMatch(h -> h.entry().itemId().equals("DIAMOND")));
+        assertFalse(hits.stream().anyMatch(h -> h.entry().itemId().equals("NETHERITE_INGOT")));
+    }
+
+    @Test
+    @DisplayName("mob 等级为 0 时只看玩家档位（旧行为不变）")
+    void mobZeroFallsBackToPlayerTier() {
+        DropTable t = parse("""
+                entries:
+                  - item: GOLD_INGOT
+                    min-tier-level: 2
+                """, new ArrayList<>());
+        // player=1, mob=0 → effective=1: 门槛 2 不满足
+        assertEquals(0, service().rollPlan(t, 0, new Random(1), 1).size());
+        // player=3, mob=0 → effective=3: 门槛 2 满足
+        assertEquals(1, service().rollPlan(t, 0, new Random(1), 3).size());
+    }
+
+    @Test
+    @DisplayName("两者都未知（-1, 0）时有效档位为 -1，门槛全部放行")
+    void bothUnknownAllowsAll() {
+        DropTable t = parse("""
+                entries:
+                  - item: DIAMOND
+                    min-tier-level: 99
+                """, new ArrayList<>());
+        // playerTier=-1, mobLevel=0 → effective=-1: 门槛跳过
+        assertEquals(1, service().rollPlan(t, 0, new Random(3), -1).size());
+    }
+
+    @Test
+    @DisplayName("玩家档位未知但 mob 有等级时用 mob 等级")
+    void mobLevelWinsWhenPlayerUnknown() {
+        DropTable t = parse("""
+                entries:
+                  - item: DIAMOND
+                    min-tier-level: 5
+                """, new ArrayList<>());
+        // playerTier=-1, mobLevel=5 → effective=5: 门槛满足
+        assertEquals(1, service().rollPlan(t, 0, new Random(3), 5).size());
+        // playerTier=-1, mobLevel=3 → effective=3: 门槛不满足
+        assertEquals(0, service().rollPlan(t, 0, new Random(3), 3).size());
+    }
 }
