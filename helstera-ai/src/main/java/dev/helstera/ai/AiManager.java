@@ -2,6 +2,7 @@ package dev.helstera.ai;
 
 import dev.helstera.ai.bossbar.BossBarService;
 import dev.helstera.ai.bossbar.BossBarState;
+import dev.helstera.api.event.ModelSpawnEvent;
 import dev.helstera.ai.skill.SkillTrigger;
 import dev.helstera.api.event.AnimationMarkerEvent;
 import dev.helstera.api.event.HelsteraEventBus;
@@ -454,6 +455,21 @@ public final class AiManager implements Listener {
         if (factions.allied(victim, damager)) {
             e.setCancelled(true);
         }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onSpawn(ModelSpawnEvent e) {
+        var apiInst = e.instance();
+        if (apiInst == null) return;
+        ModelInstanceImpl inst = instances.impl(apiInst.instanceId());
+        if (inst == null) return;
+        var profile = profileOf(inst.instanceId());
+        if (profile == null || profile.bossBar == null || !profile.bossBar.enabled()) return;
+        var entity = inst.baseEntity().orElse(null);
+        if (!(entity instanceof org.bukkit.entity.LivingEntity le)) return;
+        var render = BossBarState.render(true, profile.bossBar.title(), null,
+                le.getHealth(), le.getMaxHealth(), null, null);
+        bossBarService.show(entity.getUniqueId(), render, profile.bossBar.range());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
