@@ -460,6 +460,14 @@ public final class HelsteraCommand implements TabExecutor {
         s.sendMessage("§7模型: §f" + plugin.registry().count()
                 + " §7实例: §f" + ws.activeInstanceCount()
                 + " §7玩家订阅: §f" + plugin.visibility().totalSubscriptions());
+        int disguised = 0;
+        if (plugin.instances() != null) {
+            for (var inst : plugin.instances().allInstances()) {
+                if (dev.helstera.ai.DisguiseService.isDisguised(inst)) disguised++;
+            }
+        }
+        int activeCasts = plugin.skillService() != null ? plugin.skillService().activeCastCount() : 0;
+        s.sendMessage("§7已伪装: §f" + disguised + " §7活跃读条: §f" + activeCasts);
         // 调度器缺失时打印「未启用」而不是 NPE：分阶段出包（phase1）本就没有它
         if (!ws.schedulerEnabled()) {
             s.sendMessage("§7调度器: §8未启用（本次产物不含 runtime 模块）");
