@@ -57,6 +57,14 @@ public final class ModelInstanceImpl implements ModelInstance {
      */
     public volatile int level = 0;
 
+    /**
+     * 伪装模型 ID；null 表示未伪装，使用原始模型。
+     *
+     * <p>applyDisguise/removeDisguise 通过 InstanceManagerImpl 操作，
+     * 此字段仅供渲染层读取 effective model。</p>
+     */
+    public volatile String disguiseModelId = null;
+
     /** 实体动画状态机（AI 意图 -> 动画选择）。 */
     public volatile dev.helstera.runtime.animation.EntityAnimationStateMachine stateMachine;
 
@@ -102,7 +110,71 @@ public final class ModelInstanceImpl implements ModelInstance {
     }
 
     public ModelDefinitionImpl modelImpl() {
+        // 伪装优先：有伪装时使用伪装模型，否则返回原始模型
+        if (disguiseModelId != null) {
+            try {
+                var reg = dev.helstera.api.HelsteraApi.get().getModelRegistry();
+                var opt = reg.get(disguiseModelId);
+                if (opt.isPresent() && opt.get() instanceof ModelDefinitionImpl def) {
+                    return def;
+                }
+                // 伪装模型未加载，回落到原始模型
+            } catch (Throwable ignored) {
+            }
+        }
         return model;
+    }
+
+    /**
+     * 应用伪装：更换模型并重建视觉效果。
+     *
+     * <p>需要主线程调用。若伪装模型未加载则返回失败原因；成功时销毁旧视觉
+     * 并用新模型重建。</p>
+     *
+     * @param newModelId 伪装目标模型 ID
+     * @return 失败原因；成功返回 null
+     */
+    public String applyDisguise(String newModelId) {
+        if (newModelId == null || newModelId.isBlank()) return "伪装模型 ID 为空";
+        if (!isValid()) return "实例已失效";
+        var loc = location();
+        if (loc == null || loc.getWorld() == null) return "实例没有有效位置";
+        try {
+            var reg = dev.helstera.api.HelsteraApi.get().getModelRegistry();
+            var defOpt = reg.get(newModelId);
+            if (defOpt.isEmpty()) return "伪装模型未加载: " + newModelId;
+            if (!(defOpt.get() instanceof ModelDefinitionImpl)) return "伪装模型类型非法";
+            renderer.destroyVisuals(this);
+            disguiseModelId = newModelId;
+            renderer.createVisuals(this, loc.clone(), options);
+            renderer.updateTransforms(this);
+            return null;
+        } catch (IllegalStateException e) {
+            return "HelsteraApi 未就绪: " + e.getMessage();
+        } catch (Throwable e) {
+            return "应用伪装失败: " + e;
+        }
+    }
+
+    /**
+     * 移除伪装：恢复原始模型并重建视觉效果。
+     *
+     * @return 失败原因；成功返回 null
+     */
+    public String removeDisguise() {
+        if (disguiseModelId == null) return null;
+        if (!isValid()) return "实例已失效";
+        var loc = location();
+        if (loc == null || loc.getWorld() == null) return "实例没有有效位置";
+        try {
+            renderer.destroyVisuals(this);
+            disguiseModelId = null;
+            renderer.createVisuals(this, loc.clone(), options);
+            renderer.updateTransforms(this);
+            return null;
+        } catch (Throwable e) {
+            return "移除伪装失败: " + e;
+        }
     }
 
     @Override

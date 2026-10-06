@@ -574,6 +574,39 @@ public final class SkillCatalog {
                         } catch (Throwable ignored) {
                         }
                     };
+                }),
+
+                // ---- 伪装 ----
+
+                // disguise <模型ID>：把当前实例的视觉模型换成另一个模型，载体保留。
+                // 同一实例重复调用会覆盖旧伪装；remove-disguise 可恢复原始模型。
+                java.util.Map.entry("disguise", (ActionFactory) a -> {
+                    String modelId = str(a, 0, "");
+                    return ctx -> {
+                        if (!ctx.instanceValid() || modelId.isBlank()) return;
+                        try {
+                            String err = dev.helstera.ai.DisguiseService.apply(ctx.instance(), modelId);
+                            if (err != null) {
+                                // 记录失败但不中断技能链
+                                if (pluginRef != null)
+                                    pluginRef.getLogger().fine("[伪装] " + err);
+                            }
+                        } catch (Throwable ignored) {
+                        }
+                    };
+                }),
+
+                // remove-disguise：移除当前实例的伪装，恢复原始模型。
+                java.util.Map.entry("remove-disguise", (ActionFactory) a -> {
+                    return ctx -> {
+                        if (!ctx.instanceValid()) return;
+                        try {
+                            String err = dev.helstera.ai.DisguiseService.remove(ctx.instance());
+                            if (err != null && pluginRef != null)
+                                pluginRef.getLogger().fine("[伪装] " + err);
+                        } catch (Throwable ignored) {
+                        }
+                    };
                 })
         );
     }
