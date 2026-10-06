@@ -85,6 +85,9 @@ public final class AiProfile {
     public dev.helstera.ai.immunity.ImmunityService.Config immunity =
             dev.helstera.ai.immunity.ImmunityService.Config.empty();
 
+    /** Boss 血条配置；null 表示未配置。 */
+    public dev.helstera.ai.bossbar.BossBarConfig.Parsed bossBar;
+
     /** 编译后的规则表；null 表示未配置。不可变，可安全跨事件复用。 */
     private transient dev.helstera.ai.immunity.ImmunityService.Table immunityTable;
 
@@ -199,6 +202,8 @@ public final class AiProfile {
         p.canAttack = s.getBoolean("can-attack", p.canAttack);
         p.faction = trimToNull(s.getString("faction"));
         p.immunity = dev.helstera.ai.immunity.ImmunityService.rowsFromSection(s);
+        p.bossBar = dev.helstera.ai.bossbar.BossBarConfig.parse(
+                s.getConfigurationSection("bossbar"), new ArrayList<>());
         p.threatEnabled = s.getBoolean("threat-enabled", p.threatEnabled);
         p.canPathfind = s.getBoolean("can-pathfind", p.canPathfind);
         p.pathBudget = Math.max(1, Math.min(8192, s.getInt("path-budget", p.pathBudget)));

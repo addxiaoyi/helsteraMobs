@@ -1,5 +1,7 @@
 package dev.helstera.ai;
 
+import dev.helstera.ai.bossbar.BossBarService;
+import dev.helstera.ai.bossbar.BossBarState;
 import dev.helstera.ai.skill.SkillTrigger;
 import dev.helstera.api.event.AnimationMarkerEvent;
 import dev.helstera.api.event.HelsteraEventBus;
@@ -462,13 +464,31 @@ public final class AiManager implements Listener {
             // 传实际结算伤害（已扣除护甲/抗性）：威胁按真实扣血计，
             // 否则高护甲目标会凭空拿到成倍仇恨
             if (c != null) c.onDamaged(e.getDamager(), Math.max(0, e.getFinalDamage()));
+            // Boss 血条更新：挂在同一条路径上，避免血条与仇恨脱节
+            updateBossBar(inst);
         }
     }
+
+    /** 更新 Boss 血条；未配置时直接返回。 */
+    private void updateBossBar(ModelInstanceImpl inst) {
+        var profile = profileOf(inst.instanceId());
+        if (profile == null || profile.bossBar == null || !profile.bossBar.enabled()) return;
+        var entity = inst.baseEntity().orElse(null);
+        if (!(entity instanceof org.bukkit.entity.LivingEntity le)) return;
+        var render = BossBarState.render(true, profile.bossBar.title(), null,
+                le.getHealth(), le.getMaxHealth(), null, null);
+        bossBarService.update(entity.getUniqueId(), render);
+    }
+
+    private final dev.helstera.ai.bossbar.BossBarService bossBarService =
+            new dev.helstera.ai.bossbar.BossBarService();
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(EntityDeathEvent e) {
         ModelInstanceImpl inst = findByEntity(e.getEntity());
         if (inst == null) return;
+        // 死亡时隐藏血条并清理，避免血条残留
+        bossBarService.hide(e.getEntity().getUniqueId());
         AiController c = controllers.get(inst.instanceId());
         if (c != null && c.state() != AiController.State.DEAD) {
             c.markDead();
