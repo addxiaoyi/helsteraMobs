@@ -831,6 +831,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         }
 
+        // 等级挂到实例上：AiManager 在受伤/生成事件里靠它取缩放结果
+        // 默认 0 表示「未指定」，AiManager 会回落用 profile.level（通常就是 1）
+        org.bukkit.configuration.ConfigurationSection aiSecForLevel = cfg.getConfigurationSection("ai");
+        if (inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl && aiSecForLevel != null) {
+            int lv = aiSecForLevel.getInt("level", 0);
+            if (lv > 0) impl.level = lv;
+        }
+
         org.bukkit.configuration.ConfigurationSection aiSec = cfg.getConfigurationSection("ai");
         if (aiSec != null && ai() != null) {
             AiProfile profile = ai().profile(aiSec.getString("profile", "default"));

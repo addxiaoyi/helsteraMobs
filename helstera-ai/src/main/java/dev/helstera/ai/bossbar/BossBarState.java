@@ -80,8 +80,8 @@ public final class BossBarState {
     /**
      * 组装显示内容。
      *
-     * <p>标题拼接顺序固定为「名称 [阶段] 读条」：技能读条是玩家最需要立刻读到的信息，
-     * 放在末尾正好落在血条右侧视线末端。</p>
+     * <p>标题拼接顺序固定为「Lv.N 名称 [阶段] 读条」：等级放最前面，
+     * 让玩家一眼就能分辨不同等级的 Boss。</p>
      *
      * @param enabled 档案是否启用了血条
      * @param name 档案名；为空时用 {@code fallbackName}
@@ -90,22 +90,35 @@ public final class BossBarState {
      * @param maxHealth 最大血量；<=0 时按满血处理
      * @param phase 当前阶段名；空表示无阶段
      * @param cast 读条；null 表示无
+     * @param level 当前等级；<=0 时不显示等级前缀
      */
     public static Render render(boolean enabled, String name, String fallbackName,
-                                double health, double maxHealth, String phase, Cast cast) {
+                                double health, double maxHealth, String phase, Cast cast,
+                                int level) {
         if (!enabled) return new Render("", 0, DEFAULT_COLOR, false);
 
         double ratio = maxHealth > 0 ? clamp01(health / maxHealth) : 1.0;
 
+        StringBuilder sb = new StringBuilder();
+        if (level > 0) sb.append("Lv.").append(level).append(' ');
+
         String base = (name == null || name.isBlank()) ? fallbackName : name;
         if (base == null || base.isBlank()) base = "Boss";
+        sb.append(base);
 
-        StringBuilder sb = new StringBuilder(base);
         if (phase != null && !phase.isBlank()) sb.append(" [").append(phase).append(']');
         if (cast != null && cast.label() != null && !cast.label().isBlank()) {
             sb.append(' ').append(cast.label()).append(' ').append(Math.round(cast.clamped() * 100)).append('%');
         }
         return new Render(sb.toString(), ratio, DEFAULT_COLOR, true);
+    }
+
+    /**
+     * 无等级信息的旧版渲染入口（兼容）。
+     */
+    public static Render render(boolean enabled, String name, String fallbackName,
+                                double health, double maxHealth, String phase, Cast cast) {
+        return render(enabled, name, fallbackName, health, maxHealth, phase, cast, 0);
     }
 
     /**

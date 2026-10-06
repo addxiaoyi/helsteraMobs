@@ -484,8 +484,10 @@ public final class AiManager implements Listener {
         var profile = profileOf(inst.instanceId());
         if (profile == null || profile.bossBar == null || !profile.bossBar.enabled()) return;
         if (!(inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity le)) return;
+        int level = inst.level > 0 ? inst.level : profile.level;
         var render = BossBarState.render(true, profile.bossBar.title(), null,
-                le.getHealth(), le.getMaxHealth(), currentPhaseName(inst.instanceId()), null);
+                le.getHealth(), le.getMaxHealth(),
+                currentPhaseName(inst.instanceId()), null, level);
         bossBarService.show(le.getUniqueId(), render, profile.bossBar.range());
     }
 
@@ -508,8 +510,10 @@ public final class AiManager implements Listener {
         if (profile == null || profile.bossBar == null || !profile.bossBar.enabled()) return;
         var entity = inst.baseEntity().orElse(null);
         if (!(entity instanceof org.bukkit.entity.LivingEntity le)) return;
+        int level = inst.level > 0 ? inst.level : profile.level;
         var render = BossBarState.render(true, profile.bossBar.title(), null,
-                le.getHealth(), le.getMaxHealth(), currentPhaseName(inst.instanceId()), null);
+                le.getHealth(), le.getMaxHealth(),
+                currentPhaseName(inst.instanceId()), null, level);
         bossBarService.update(entity.getUniqueId(), render);
     }
 
