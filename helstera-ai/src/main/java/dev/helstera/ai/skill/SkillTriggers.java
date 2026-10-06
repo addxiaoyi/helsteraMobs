@@ -690,7 +690,10 @@ public final class SkillTriggers implements Listener {
     public void onShootBow(EntityShootBowEvent e) {
         var inst = find(e.getEntity());
         if (inst == null) return;
-        dispatch(SkillTrigger.ENTITY_SHOOT, inst, null, e.getEntity().getLocation());
+        // 射箭者必是玩家类型的载体；若将来接入别的发射源，这里判不出就传 null
+        dispatch(SkillTrigger.ENTITY_SHOOT, inst,
+                e.getEntity() instanceof Player shooter ? shooter : null,
+                e.getEntity().getLocation());
     }
 
     public void onPotionEffect(EntityPotionEffectEvent e) {
