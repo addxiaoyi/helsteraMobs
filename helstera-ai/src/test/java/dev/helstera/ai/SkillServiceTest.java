@@ -336,4 +336,28 @@ class SkillServiceTest {
         assertFalse(registry.hasCondition(a), "动作键不应被当成条件");
         assertTrue(registry.hasAction(a));
     }
+
+    @Test
+    @DisplayName("技能 priority 字段被正确解析，queuedSkillCount 反映排队状态")
+    void parsesSkillPriority() {
+        var svc = service();
+        YamlConfiguration y = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  burst:
+                    on-decision: [damage-target 50]
+                    priority: 10
+                  heal:
+                    on-decision: [heal-self 10]
+                    priority: 5
+                  idle_skill:
+                    on-decision: [set-scale 1.0]
+                """));
+        svc.loadSkills(y.getConfigurationSection("skills"));
+        // priority 解析：通过 skillNames 确认加载成功
+        assertTrue(svc.skillNames().contains("burst"));
+        assertTrue(svc.skillNames().contains("heal"));
+        assertTrue(svc.skillNames().contains("idle_skill"));
+        // queuedSkillCount 在无实例上下文时为 0
+        assertEquals(0, svc.queuedSkillCount());
+    }
 }

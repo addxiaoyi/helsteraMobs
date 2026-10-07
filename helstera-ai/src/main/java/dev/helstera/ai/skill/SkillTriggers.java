@@ -142,6 +142,11 @@ public final class SkillTriggers implements Listener {
                     // 退订必须与订阅成对：残留的监听器会持有已失效的实例，
                     // 同名信号再发时会对着一堆死实体派发
                     SkillSignals.global().purgeInstance(e.instance().instanceId());
+                    // 清除队列：实例已死，等待中的技能没有意义
+                    if (skills != null) {
+                        skills.clearQueueFor(e.instance().instanceId());
+                        skills.clearAllCastsFor(e.instance().instanceId());
+                    }
                 };
         java.util.function.Consumer<MobStateChangedEvent> onState = e -> {
             // on-state 只在进入 DEAD 时触发一次，避免每次状态抖动都播死亡动作

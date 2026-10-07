@@ -55,6 +55,18 @@ public final class SkillService {
     private final ThreadLocal<int[]> depth = ThreadLocal.withInitial(() -> new int[1]);
 
     /**
+     * 技能执行队列。key 为实例 id，value 为按优先级降序排列的技能请求链表。
+     *
+     * <p>当同一实例已有技能正在执行时，新触发的技能入队而非立即执行；
+     * 队列按 {@link SkillDef#priority} 降序排列，高优先级先出队执行。</p>
+     *
+     * <p>队列消费在主线程进行，无需额外同步——Bukkit 事件回调也都在主线程。</p>
+     */
+    private final Map<Integer, SkillQueueEntry> skillQueue = new ConcurrentHashMap<>();
+    /** 标记每个实例是否有队列正在被消费（防止递归消费）。 */
+    private final Map<Integer, Boolean> queueProcessing = new ConcurrentHashMap<>();
+
+    /**
      * 单个命名技能的装载结果。
      *
      * <p>刻意不持有冷却状态：冷却键含实例 id，而实例 id 只在运行期的
@@ -77,6 +89,11 @@ public final class SkillService {
         public String castLabel = "施法中";
         /** 是否被判定参与环。 */
         public boolean cyclic;
+        /**
+         * 执行优先级：数值越大越先执行。
+         * 同一 tick 内多个技能触发时，高优先级先进队列；默认 0。
+         */
+        public int priority;
 
         SkillDef(String name) {
             this.name = name;
@@ -98,6 +115,26 @@ public final class SkillService {
         public boolean isComplete() {
             return def.castMillis <= 0 || System.currentTimeMillis() - startMs >= def.castMillis;
         }
+    }
+
+    /**
+     * 技能队列条目：一个待执行的技能请求。
+     */
+    private static final class QueuedSkill {
+        final SkillDef def;
+        final dev.helstera.api.behavior.BehaviorContext ctx;
+
+        QueuedSkill(SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx) {
+            this.def = def;
+            this.ctx = ctx;
+        }
+    }
+
+    /**
+     * 技能执行队列：每个实例一个，按优先级排序。
+     */
+    private static final class SkillQueueEntry {
+        final java.util.List<QueuedSkill> items = new java.util.ArrayList<>();
     }
 
     public SkillService(BehaviorRegistry registry, Logger log) {
@@ -197,6 +234,8 @@ public final class SkillService {
         defs.clear();
         cooldowns.clear();
         activeCasts.clear();
+        skillQueue.clear();
+        queueProcessing.clear();
         if (root == null) return;
 
         // 1) 解析原始定义
@@ -208,6 +247,7 @@ public final class SkillService {
             def.cooldownMillis = parseCooldownMillis(s.get("cooldown"));
             def.castMillis = parseCooldownMillis(s.get("cast-duration"));
             if (s.contains("cast-label")) def.castLabel = s.getString("cast-label", "施法中");
+            if (s.contains("priority")) def.priority = (int) s.get("priority");
             for (String spec : stringOrList(s, "require")) {
                 if (spec == null || spec.isBlank()) continue;
                 String dep = parseSkillRef(spec);
@@ -312,26 +352,85 @@ public final class SkillService {
         if (!cooldownReady(def, cdKey, now)) return false;
         if (def.cooldownMillis > 0) cooldowns.put(cdKey, now);
 
+        // 队列门控：同一实例有技能正在执行时入队
+        int instId = ctx != null && ctx.instance() != null ? ctx.instance().instanceId() : -1;
+        if (instId >= 0 && isInstanceBusy(instId)) {
+            enqueueSkill(instId, def, ctx);
+            return true;
+        }
+
         d[0]++;
         try {
-            // require 语义在 cast 上不阻断：调用方（整体键）已判过条件，
-            // 这里重复判定会让「条件不满足时静默不做事」难以排查。
-            for (String k : def.actions) {
-                try {
-                    registry.runAction(k, ctx);
-                } catch (Throwable t) {
-                    warn("技能 \"" + def.name + "\" 动作 \"" + k + "\" 失败: " + t);
-                }
-            }
-            // 启动读条：有 cast-duration 时计时，完成后自动清除
-            if (def.castMillis > 0) {
-                int instId = ctx.instance() != null ? ctx.instance().instanceId() : -1;
-                String castKey = instId + "|" + def.name;
-                activeCasts.put(castKey, new SkillCast(def, System.currentTimeMillis(), instId));
-            }
+            executeSkillActions(def, ctx);
             return true;
         } finally {
             d[0]--;
+            // 执行完毕后尝试消费队列
+            processQueue(instId);
+        }
+    }
+
+    /** 检查该实例是否有技能正在执行或队列非空。 */
+    private boolean isInstanceBusy(int instId) {
+        // 读条完成判定：activeCasts 里有无该实例的活跃读条
+        boolean hasActiveCast = activeCasts.values().stream().anyMatch(c -> c.instanceId() == instId && !c.isComplete());
+        if (hasActiveCast) return true;
+        // 已有排队任务
+        SkillQueueEntry q = skillQueue.get(instId);
+        return q != null && !q.items.isEmpty();
+    }
+
+    /** 把技能请求按优先级插入排序到实例队列中。 */
+    private void enqueueSkill(int instId, SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx) {
+        skillQueue.compute(instId, (k, q) -> {
+            if (q == null) q = new SkillQueueEntry();
+            q.items.add(new QueuedSkill(def, ctx));
+            // 按优先级降序插入
+            q.items.sort((a, b) -> Integer.compare(b.def.priority, a.def.priority));
+            return q;
+        });
+    }
+
+    /** 尝试消费该实例的队列；仅在当前无任务时启动。 */
+    private void processQueue(int instId) {
+        if (queueProcessing.getOrDefault(instId, false)) return;
+        queueProcessing.put(instId, true);
+        try {
+            SkillQueueEntry q = skillQueue.get(instId);
+            while (q != null && !q.items.isEmpty()) {
+                QueuedSkill qs = q.items.remove(0);
+                int[] d = depth.get();
+                d[0]++;
+                try {
+                    executeSkillActions(qs.def, qs.ctx);
+                } finally {
+                    d[0]--;
+                }
+                // 继续处理下一个
+                q = skillQueue.get(instId);
+            }
+        } finally {
+            queueProcessing.remove(instId);
+            if (skillQueue.get(instId) != null && skillQueue.get(instId).items.isEmpty()) {
+                skillQueue.remove(instId);
+            }
+        }
+    }
+
+    /** 执行技能动作集合并启动读条（复用 castSkill 的逻辑分支）。 */
+    private void executeSkillActions(SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx) {
+        for (String k : def.actions) {
+            try {
+                registry.runAction(k, ctx);
+            } catch (Throwable t) {
+                warn("技能 \"" + def.name + "\" 动作 \"" + k + "\" 失败: " + t);
+            }
+        }
+        // 启动读条：有 cast-duration 时计时，完成后自动清除
+        if (def.castMillis > 0) {
+            int instId = ctx.instance() != null ? ctx.instance().instanceId() : -1;
+            String castKey = instId + "|" + def.name;
+            activeCasts.put(castKey, new SkillCast(def, System.currentTimeMillis(), instId));
         }
     }
 
@@ -368,6 +467,14 @@ public final class SkillService {
     }
 
     /**
+     * 清除指定实例的技能队列与处理标记。
+     */
+    public void clearQueueFor(int instId) {
+        skillQueue.remove(instId);
+        queueProcessing.remove(instId);
+    }
+
+    /**
      * 获取实例当前读条进度；无读条时返回 null。
      *
      * @return Cast 读条数据（label + progress）；无读条返回 null
@@ -388,6 +495,18 @@ public final class SkillService {
     /** 当前活跃读条总数（供诊断命令与统计面板使用）。 */
     public int activeCastCount() {
         return activeCasts.size();
+    }
+
+    /** 当前排队中的技能总数（供诊断命令使用）。 */
+    public int queuedSkillCount() {
+        int total = 0;
+        for (SkillQueueEntry q : skillQueue.values()) total += q.items.size();
+        return total;
+    }
+
+    /** 已装载的技能名集合（供测试与调试）。 */
+    public Set<String> skillNames() {
+        return defs.keySet();
     }
 
     /**
