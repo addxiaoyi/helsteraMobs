@@ -649,12 +649,6 @@ public final class SkillTriggers implements Listener {
     }
 
     /**
-     * 药水效果变化：获得增益 / 效果结束。
-     *
-     * <p>与变形同理，两个触发器共用一个事件来源，靠 {@code action} 区分，
-     * 不拆成两个监听器。</p>
-     */
-    /**
      * 天气切换。
      *
      * <p>与其余事件入口的根本差异：<b>本事件不带实体</b>，只有 World。所以不能
@@ -679,13 +673,6 @@ public final class SkillTriggers implements Listener {
         }
     }
 
-    /**
-     * 药水效果变化：获得增益 / 效果结束。
-     *
-     * <p>与变形同理，两个触发器共用一个事件来源，靠 {@code action} 区分，
-     * 不拆成两个监听器。</p>
-     */
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     /** 召唤关系服务；未装载时为 null，此时不触发 on-summon。 */
     private dev.helstera.ai.summon.MinionService minions() {
         var m = ai;
@@ -728,6 +715,19 @@ public final class SkillTriggers implements Listener {
                 e.getEntity().getLocation());
     }
 
+    /**
+     * 药水效果变化：获得增益 / 效果结束。
+     *
+     * <p>与变形同理，两个触发器共用一个事件来源，靠事件动作区分「刚加上」
+     * 与「刚失效」，不拆成两个监听器。</p>
+     *
+     * <p>此前的 {@code @EventHandler} 注解被错放到下面的 {@link #minions()} 访问器上，
+     * 而本方法裸奔——于是 Bukkit 启动时拒绝注册那个非法签名，同时
+     * {@code on-buff} / {@code on-potion-effect-end} 两个触发器<b>从未真正接线</b>。
+     * 表现是「配置写了永不触发」，且启动日志只有一行注册错误，很容易被忽略。
+     * 注解必须紧贴 {@code @EventHandler} 方法，中间不能插 javadoc 或其它成员。</p>
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPotionEffect(EntityPotionEffectEvent e) {
         SkillTrigger trigger = triggerForPotionAction(e.getAction(), isBeneficial(e.getModifiedType()));
         if (trigger == null) return;
