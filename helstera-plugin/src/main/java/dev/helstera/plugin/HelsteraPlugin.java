@@ -820,6 +820,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 .glowing(cfg.getBoolean("glowing", false))
                 .scale(cfg.getDouble("scale", 1.0))
                 .persistent(cfg.getBoolean("persistent", true))
+                // 血条快捷开关：开启等价于 bossbar.enabled=true（无需写整个 bossbar 节）。
+                // 两个键都写时以 bossbar.enabled 为准——它更具体，能表达「不要血条」。
+                .showHealthBar(cfg.getBoolean("show-health-bar", false)
+                        || cfg.getBoolean("bossbar.enabled", false))
                 .spawnHitbox(cfg.getBoolean("spawn-hitbox", true));
 
         if (base == null || base.getWorld() == null) return new MobSpawn(-1, "生成位置无效");

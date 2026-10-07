@@ -50,6 +50,16 @@ public final class ModelInstanceImpl implements ModelInstance {
     public volatile boolean lootUsesLuck = true;
 
     /**
+     * 是否显示血条；由 {@code SpawnOptions.showHealthBar()} 在生成时写入。
+     *
+     * <p>与 {@code bossbar.enabled} 的关系：后者是完整血条配置（标题/颜色/范围），
+     * 本字段是「只想看到一条血条」的快捷方式。AiManager 取两者的并集——
+     * 任一为真即显示，因此只写 {@code show-health-bar: true} 也能拿到默认血条，
+     * 而写了完整 {@code bossbar} 节时不必再写这个开关。</p>
+     */
+    public volatile boolean showHealthBar = false;
+
+    /**
      * 当前等级；0 表示「未指定」，取 profile.level 的默认值。
      *
      * <p>由 HelsteraPlugin 在生成时从配置写入：mobs/*.yml 的 level 节，
@@ -93,6 +103,7 @@ public final class ModelInstanceImpl implements ModelInstance {
         this.baseEntity = baseEntity;
         this.options = options;
         this.scale = (options != null ? options.scale() : 1.0) * model.scale();
+        this.showHealthBar = options != null && options.showHealthBar();
     }
 
     public void initAnimation(AnimationControllerImpl controller) {

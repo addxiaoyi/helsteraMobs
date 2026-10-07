@@ -481,32 +481,59 @@ public final class AiManager implements Listener {
      * 静默永不调用，血条永远不会出现，且没有任何报错。
      * 这与免疫监听器「表解析正确但从未被求值」是同一类缺陷。</p>
      */
+    /**
+ * 该实例是否应当显示血条。
+ *
+ * <p>取 {@code bossbar.enabled} 与 {@code SpawnOptions.showHealthBar} 的并集：
+ * 后者是「只想看到一条血条」的快捷开关，不写完整 {@code bossbar} 节也能生效。
+ * 任一为真即显示，因此两者不必同时写。</p>
+ *
+ * <p>刻意不要求 {@code bossbar} 节非 null——快捷开关命中的实例走的是默认外观，
+ * 标题回落成档案名、无分段配色。若强行要求 bossbar 节存在，快捷开关就废了。</p>
+     */
+    private boolean healthBarEnabled(ModelInstanceImpl inst, AiProfile profile) {
+        if (inst.showHealthBar) return true;
+        return profile != null && profile.bossBar != null && profile.bossBar.enabled();
+    }
+
+    /**
+     * 该实例应当使用的血条外观配置。
+     *
+     * <p>档案没写 {@code bossbar} 节时给默认配置（启用、无标题、无限距离），
+     * 而不是返回 null 让调用方各自判空——两处判空写法只要有一处漏掉，
+     * 表现就是「血条挂上了但颜色不对」这类半成品，比完全不显示更难排查。</p>
+     */
+    private static dev.helstera.ai.bossbar.BossBarConfig.Parsed barConfig(AiProfile profile) {
+        return profile != null && profile.bossBar != null
+                ? profile.bossBar
+                : dev.helstera.ai.bossbar.BossBarConfig.defaults();
+    }
+
     private void onModelSpawn(ModelSpawnEvent e) {
         var apiInst = e.instance();
         if (apiInst == null) return;
         ModelInstanceImpl inst = instances.impl(apiInst.instanceId());
         if (inst == null) return;
         var profile = profileOf(inst.instanceId());
-        if (profile == null) {
-            plugin.getLogger().warning("[BossBar] onModelSpawn: profile is null for inst #" + inst.instanceId());
-            return;
-        }
-        if (profile.bossBar == null || !profile.bossBar.enabled()) {
-            plugin.getLogger().info("[BossBar] onModelSpawn: bossBar not enabled for inst #" + inst.instanceId() +
-                    " (bossBar=" + profile.bossBar + ", enabled=" + (profile.bossBar != null && profile.bossBar.enabled()) + ")");
+        if (!healthBarEnabled(inst, profile)) {
+            // 只在「档案里写了 bossbar 却没开」时告警。快捷开关未命中是常态，
+            // 每个普通小怪都打一行 INFO 会把真正的配置问题淹掉。
+            if (profile != null && profile.bossBar != null) {
+                plugin.getLogger().info("[BossBar] 实例 #" + inst.instanceId()
+                        + " 的 bossbar.enabled=false，跳过血条");
+            }
             return;
         }
         if (!(inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity le)) {
             plugin.getLogger().warning("[BossBar] onModelSpawn: no LivingEntity for inst #" + inst.instanceId());
             return;
         }
-        int level = inst.level > 0 ? inst.level : profile.level;
-        var render = BossBarState.render(true, profile.bossBar.title(), null,
+        var cfg = barConfig(profile);
+        int level = inst.level > 0 ? inst.level : (profile != null ? profile.level : 1);
+        var render = BossBarState.render(true, cfg.title(), null,
                 le.getHealth(), le.getMaxHealth(),
                 currentPhaseName(inst.instanceId()), null, level);
-        plugin.getLogger().info("[BossBar] onModelSpawn: showing bar for inst #" + inst.instanceId() +
-                " title=" + render.title() + " health=" + le.getHealth() + "/" + le.getMaxHealth());
-        bossBarService.show(le.getUniqueId(), withConfiguredColor(render, profile.bossBar), profile.bossBar.range());
+        bossBarService.show(le.getUniqueId(), withConfiguredColor(render, cfg), cfg.range());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -522,19 +549,20 @@ public final class AiManager implements Listener {
         }
     }
 
-    /** 更新 Boss 血条；未配置时直接返回。 */
+    /** 更新 Boss 血条；未启用时直接返回。 */
     private void updateBossBar(ModelInstanceImpl inst) {
         var profile = profileOf(inst.instanceId());
-        if (profile == null || profile.bossBar == null || !profile.bossBar.enabled()) return;
+        if (!healthBarEnabled(inst, profile)) return;
         var entity = inst.baseEntity().orElse(null);
         if (!(entity instanceof org.bukkit.entity.LivingEntity le)) return;
-        int level = inst.level > 0 ? inst.level : profile.level;
+        var cfg = barConfig(profile);
+        int level = inst.level > 0 ? inst.level : (profile != null ? profile.level : 1);
         // 读条进度：activeCasts 由 SkillService 管理，无读条时 getCastProgress 返回 null
         var cast = skills != null ? skills.getCastProgress(inst.instanceId()) : null;
-        var render = BossBarState.render(true, profile.bossBar.title(), null,
+        var render = BossBarState.render(true, cfg.title(), null,
                 le.getHealth(), le.getMaxHealth(),
                 currentPhaseName(inst.instanceId()), cast, level);
-        bossBarService.update(entity.getUniqueId(), withConfiguredColor(render, profile.bossBar));
+        bossBarService.update(entity.getUniqueId(), withConfiguredColor(render, cfg));
     }
 
     /**
