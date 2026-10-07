@@ -216,4 +216,78 @@ class BossBarStateTest {
         assertTrue(BossBarState.render(true, "龙", null, 0, 100, null, null).visible(),
                 "残血时血条消失，玩家会以为 Boss 已死");
     }
+
+    // ------------------------------------------------------------------
+    // 渐变配色
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("渐变在档位端点取到端点色")
+    void gradientHitsEndpoints() {
+        var segs = List.of(
+                new BossBarState.Segment(0.0, "RED", null),
+                new BossBarState.Segment(1.0, "GREEN", null));
+        assertEquals("RED", BossBarState.gradientOf(segs, 0.0));
+        assertEquals("GREEN", BossBarState.gradientOf(segs, 1.0));
+    }
+
+    @Test
+    @DisplayName("渐变中点插出不同于两端的第三色")
+    void gradientInterpolatesMidpoint() {
+        // RED(255,0,0) 与 GREEN(0,255,0) 的中点是 (128,128,128)，
+        // 在六个可用色里都远，故必落到 PURPLE 或 BLUE 之一——
+        // 关键是它不是任何一个端点色，这才叫插值而不是分段。
+        var segs = List.of(
+                new BossBarState.Segment(0.0, "RED", null),
+                new BossBarState.Segment(1.0, "GREEN", null));
+        String mid = BossBarState.gradientOf(segs, 0.5);
+        assertNotEquals("RED", mid, "中点不该还是端点色");
+        assertNotEquals("GREEN", mid, "中点不该还是端点色");
+        assertTrue(java.util.Arrays.asList(BossBarState.AVAILABLE_COLORS).contains(mid),
+                "插值结果必须落在 Bukkit 支持的颜色里，实际: " + mid);
+    }
+
+    @Test
+    @DisplayName("渐变低于最低档下界时不外推，取最低档色")
+    void gradientDoesNotExtrapolateBelow() {
+        var segs = List.of(
+                new BossBarState.Segment(0.5, "YELLOW", null),
+                new BossBarState.Segment(0.8, "GREEN", null));
+        assertEquals("YELLOW", BossBarState.gradientOf(segs, 0.1),
+                "外推会造出作者没配过的颜色，作者只声明了 0.5 与 0.8 两点");
+    }
+
+    @Test
+    @DisplayName("渐变档位少于 2 时退化为分段，不抛异常")
+    void gradientDegradesToSegments() {
+        assertEquals("RED", BossBarState.gradientOf(
+                List.of(new BossBarState.Segment(0.0, "RED", null)), 0.5));
+        assertEquals("GREEN", BossBarState.gradientOf(List.of(), 0.5));
+        assertEquals("GREEN", BossBarState.gradientOf(null, 0.5));
+    }
+
+    @Test
+    @DisplayName("渐变忽略空颜色档，不让空串参与插值")
+    void gradientSkipsBlankColors() {
+        var segs = List.of(
+                new BossBarState.Segment(0.0, "  ", null),
+                new BossBarState.Segment(0.5, "RED", null),
+                new BossBarState.Segment(1.0, "GREEN", null));
+        assertEquals("RED", BossBarState.gradientOf(segs, 0.5));
+        assertTrue(java.util.Arrays.asList(BossBarState.AVAILABLE_COLORS)
+                        .contains(BossBarState.gradientOf(segs, 0.1)),
+                "空白档若参与插值会把结果拉向 GREEN（空串按绿处理）");
+    }
+
+    @Test
+    @DisplayName("渐变结果单调：越接近高档越取高档色")
+    void gradientIsMonotonic() {
+        var segs = List.of(
+                new BossBarState.Segment(0.0, "BLUE", null),
+                new BossBarState.Segment(1.0, "RED", null));
+        var seen = new java.util.LinkedHashSet<String>();
+        for (double r = 0; r <= 1.0; r += 0.05) seen.add(BossBarState.gradientOf(segs, r));
+        assertTrue(seen.size() >= 2,
+                "整条血量范围内只出现一种色，插值根本没生效，实际: " + seen);
+    }
 }

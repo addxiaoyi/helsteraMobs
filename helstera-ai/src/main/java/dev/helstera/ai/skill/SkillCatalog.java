@@ -331,8 +331,162 @@ public final class SkillCatalog {
                             return dot >= Math.cos(tolerance);
                         } catch (Throwable ignored) { return false; }
                     };
+                }),
+
+                // on-fire：实体是否处于燃烧状态。取燃烧剩余 tick 而非 isBurning，
+                // 后者在部分实现下对「自定义燃烧 tick 的实体」返回 false。
+                java.util.Map.entry("on-fire", (ConditionFactory) a -> {
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        if (base == null) return false;
+                        try { return base.getFireTicks() > 0; }
+                        catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // is-sprinting：实体是否处于疾跑状态。
+                // 限定 Player：isSprinting() 定义在 Player 上，本项目测试用的 Bukkit
+                // 桩不提供更窄的 Human 接口；疾跑本质也是玩家专属行为。
+                java.util.Map.entry("is-sprinting", (ConditionFactory) a -> {
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        if (!(base instanceof Player p)) return false;
+                        try { return p.isSprinting(); } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // in-air：实体是否离开地面。与 on-ground 严格互补——
+                // 两者同时为 false 的状态不存在（实体或在空中或在地）。
+                java.util.Map.entry("in-air", (ConditionFactory) a -> {
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        if (!(base instanceof LivingEntity le)) return false;
+                        try { return !le.isOnGround(); } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // is-swimming：实体是否在游泳（而非仅在水中）。
+                // 与 in-water 的区别是 isSwimming 要求头部也在水里，
+                // 因此站在齐腰浅水中 in-water 为真而 is-swimming 为假。
+                java.util.Map.entry("is-swimming", (ConditionFactory) a -> {
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        if (!(base instanceof LivingEntity le)) return false;
+                        try { return le.isSwimming(); } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // is-climbing：实体是否在攀爬墙/梯。
+                java.util.Map.entry("is-climbing", (ConditionFactory) a -> {
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        if (!(base instanceof LivingEntity le)) return false;
+                        try { return le.isClimbing(); } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // is-invisible：实体是否隐身。用于「隐身时才免疫追踪」这类场景。
+                java.util.Map.entry("is-invisible", (ConditionFactory) a -> {
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        if (base == null) return false;
+                        try { return base.isInvisible(); } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // is-blocked：实体是否被卡在方块里（头顶/四周有方块）。
+                // 无参数时只查头顶；给高度参数则额外查该高度的四邻。
+                java.util.Map.entry("is-blocked", (ConditionFactory) a -> {
+                    double above = num(a, 0, 1.0);
+                    return ctx -> {
+                        if (!ctx.instanceValid()) return false;
+                        Location at = ctx.instance().location();
+                        if (at == null || at.getWorld() == null) return false;
+                        try {
+                            Location head = at.clone().add(0, above, 0);
+                            return at.getWorld().getBlockAt(head).getType() != org.bukkit.Material.AIR;
+                        } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // stand-on <方块名>：实体脚下踩的是指定方块。
+                // 用于「只有站在岩浆上才触发」这类地形绑定技能。
+                java.util.Map.entry("stand-on", (ConditionFactory) a -> {
+                    String mat = str(a, 0, "").toUpperCase(Locale.ROOT);
+                    return ctx -> {
+                        if (mat.isBlank() || !ctx.instanceValid()) return false;
+                        Location at = ctx.instance().location();
+                        if (at == null || at.getWorld() == null) return false;
+                        try {
+                            org.bukkit.Material want;
+                            try {
+                                want = org.bukkit.Material.valueOf(mat);
+                            } catch (IllegalArgumentException e) {
+                                warn("stand-on 方块名非法: " + mat);
+                                return false;
+                            }
+                            // 脚下需向下取整：实体站在半砖上时 y 是小数，直接取整会取到空气格
+                            Location foot = at.clone().add(0, -1, 0);
+                            return at.getWorld().getBlockAt(foot).getType() == want;
+                        } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // daylight <0..1>：判断世界当前光照强度是否达到阈值。
+                // 0 表示完全不要求光照，1 表示要求正午直射。
+                java.util.Map.entry("daylight", (ConditionFactory) a -> {
+                    double min = Math.max(0, Math.min(1, num(a, 0, 1.0)));
+                    return ctx -> {
+                        if (!ctx.instanceValid()) return false;
+                        Location at = ctx.instance().location();
+                        if (at == null || at.getWorld() == null) return false;
+                        try {
+                            long t = at.getWorld().getTime();
+                            // 0~11999 为白昼（不含雨天），12000~23999 为夜晚
+                            if (t < 12000 || t > 24000) return false;
+                            // 太阳高度换算：12000 时为正午，24000 时为地平线
+                            double frac = (t - 12000) / 12000.0;
+                            double light = Math.cos(frac * Math.PI);
+                            return light >= min;
+                        } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // world-is <世界名>：实例所在世界是否匹配。区分大小写不敏感。
+                java.util.Map.entry("world-is", (ConditionFactory) a -> {
+                    String want = str(a, 0, "");
+                    return ctx -> {
+                        if (want.isBlank() || !ctx.instanceValid()) return false;
+                        Location at = ctx.instance().location();
+                        if (at == null || at.getWorld() == null) return false;
+                        return at.getWorld().getName().equalsIgnoreCase(want);
+                    };
                 })
         );
+    }
+
+    /** 条件工厂内的运行期告警（仅用于参数非法等配置问题）。 */
+    private static void warn(String msg) {
+        RUNTIME_WARNINGS.add(msg);
+    }
+
+    /**
+     * 条件工厂的运行期告警。
+     *
+     * <p>与加载期 {@code SkillService.warnings()} 分开：加载期能报「未知条件名」，
+     * 但 {@code stand-on LAVA_TOTEM} 这类「名字认得、参数取值非法」只能在运行期发现。
+     * 若让它静默返回 false，配置作者看到的是「技能永不触发且无任何提示」——
+     * 正是本项目审计测试反复针对的缺陷类别。</p>
+     */
+    private static final java.util.Set<String> RUNTIME_WARNINGS =
+            java.util.Collections.newSetFromMap(
+                    new java.util.concurrent.ConcurrentHashMap<>());
+
+    /** 取出并清空运行期告警，供装载后统一展示。 */
+    public static java.util.List<String> drainRuntimeWarnings() {
+        var out = java.util.List.copyOf(RUNTIME_WARNINGS);
+        RUNTIME_WARNINGS.clear();
+        return out;
     }
 
     /** 内置动作名 -> 工厂。 */

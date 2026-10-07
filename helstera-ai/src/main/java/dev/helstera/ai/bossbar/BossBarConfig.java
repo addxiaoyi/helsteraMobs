@@ -19,6 +19,7 @@ public final class BossBarConfig {
     /** 解析后的血条配置。 */
     public record Parsed(boolean enabled, String title, double range,
                          List<BossBarState.Segment> segments,
+                         boolean gradient,
                          List<String> problems) {
 
         public boolean hasSegments() {
@@ -34,7 +35,7 @@ public final class BossBarConfig {
      */
     public static Parsed parse(ConfigurationSection sec, List<String> problems) {
         if (sec == null) {
-            return new Parsed(false, null, 0, List.of(), List.of());
+            return new Parsed(false, null, 0, List.of(), false, List.of());
         }
         boolean enabled = sec.getBoolean("enabled", false);
         String title = sec.getString("title");
@@ -54,6 +55,12 @@ public final class BossBarConfig {
                 }
             }
         }
-        return new Parsed(enabled, title, range, List.copyOf(segments), List.of());
+        boolean gradient = sec.getBoolean("gradient", false);
+        if (gradient && segments.size() < 2) {
+            // 单档无区间可插值，静默忽略比留一个永远等于该档的开关更诚实
+            problems.add("bossbar 开了 gradient 但可用档位少于 2，已按分段处理");
+            gradient = false;
+        }
+        return new Parsed(enabled, title, range, List.copyOf(segments), gradient, List.of());
     }
 }

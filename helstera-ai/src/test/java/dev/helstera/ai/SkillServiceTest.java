@@ -353,11 +353,118 @@ class SkillServiceTest {
                     on-decision: [set-scale 1.0]
                 """));
         svc.loadSkills(y.getConfigurationSection("skills"));
-        // priority 解析：通过 skillNames 确认加载成功
         assertTrue(svc.skillNames().contains("burst"));
         assertTrue(svc.skillNames().contains("heal"));
         assertTrue(svc.skillNames().contains("idle_skill"));
-        // queuedSkillCount 在无实例上下文时为 0
         assertEquals(0, svc.queuedSkillCount());
+    }
+
+    // ------------------------------------------------------------------
+    // 技能预览（只判定，不执行）
+    // ------------------------------------------------------------------
+
+    private SkillService skillServiceWith(String yaml) {
+        var svc = service();
+        YamlConfiguration y = YamlConfiguration.loadConfiguration(new StringReader(yaml));
+        svc.loadSkills(y.getConfigurationSection("skills"));
+        return svc;
+    }
+
+    @Test
+    @DisplayName("preview 报告条件通过与否，并指出首条未满足项")
+    void previewTracesConditions() {
+        var svc = skillServiceWith("""
+                skills:
+                  enrage:
+                    require:
+                      - health-below 0.3
+                      - has-target true
+                    on-decision: [effect-self speed 2]
+                """);
+        // 满血：health-below 不满足，且无目标时 has-target 也不满足
+        var full = svc.preview("enrage", ctx(1.0, 0));
+        assertNotNull(full);
+        assertFalse(full.wouldRun(), "满血时不该放行");
+        assertEquals("health-below:0.3", full.firstFailing(), "应指出首条未满足的条件");
+        assertEquals(2, full.trace().size(), "轨迹应逐条列出，两条都要能看到");
+
+        // 残血：health-below 满足，但 has-target 仍因无目标而不满足。
+        // 这正是预览的边界——它只能判定标量条件，依赖世界状态的条件
+        // （on-ground / has-target 等）必须上真服验证。轨迹里的 ✗ 含义是
+        // 「需要真服」，而不是「配置写错了」，命令输出里也这样提示。
+        var low = svc.preview("enrage", ctx(0.1, 0));
+        assertNotNull(low);
+        assertTrue(low.trace().get(0).passed(), "残血时 health-below 应满足");
+        assertFalse(low.trace().get(1).passed(), "无目标时 has-target 应不满足");
+        assertEquals("has-target:true", low.firstFailing());
+        assertFalse(low.actions().isEmpty(), "应列出将要执行的动作");
+    }
+
+    @Test
+    @DisplayName("preview 在全部条件可由标量判定时给出确定结论")
+    void previewReachesVerdictOnScalarOnlySkills() {
+        var svc = skillServiceWith("""
+                skills:
+                  panic:
+                    require:
+                      - health-below 0.3
+                      - state-is idle
+                    on-decision: [set-scale 1.5]
+                """);
+        assertFalse(svc.preview("panic", ctx(1.0, 0)).wouldRun(), "满血不该放行");
+        // 残血 + 状态匹配：两条都满足，才给确定结论
+        assertTrue(svc.preview("panic", lowIdleCtx()).wouldRun(), "低血量且状态 idle 时应放行");
+        // 残血 + 状态不匹配
+        var wrongState = BehaviorContext.of(null, null, 0.1, -1, 0, "CHASE");
+        assertFalse(svc.preview("panic", wrongState).wouldRun(), "状态不匹配不该放行");
+    }
+
+    /** 低血量 + idle 状态的上下文。 */
+    private static BehaviorContext lowIdleCtx() {
+        return BehaviorContext.of(null, null, 0.1, -1, 0, "idle");
+    }
+
+    @Test
+    @DisplayName("preview 不执行动作——这是它能安全挂在真服上的前提")
+    void previewDoesNotExecute() {
+        var registry2 = new BehaviorRegistryImpl();
+        var svc = new SkillService(registry2, null);
+        YamlConfiguration y = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  boom:
+                    on-decision: [damage-target 999]
+                """));
+        svc.loadSkills(y.getConfigurationSection("skills"));
+        var r = svc.preview("boom", ctx(1.0, 0));
+        assertNotNull(r);
+        assertTrue(r.wouldRun(), "无 require 时视为恒满足");
+        // 动作键已绑定但未被执行：跑一遍也不会有副作用，这里只断言调用本身安全
+        assertFalse(r.actions().isEmpty());
+    }
+
+    @Test
+    @DisplayName("preview 对不存在的技能返回 null，而不是抛异常")
+    void previewUnknownSkill() {
+        var svc = skillServiceWith("skills:\n  a:\n    on-decision: [set-scale 1.0]\n");
+        assertNull(svc.preview("nope", ctx(1.0, 0)));
+        assertNull(svc.preview(null, ctx(1.0, 0)));
+        assertNull(svc.preview("  ", ctx(1.0, 0)));
+    }
+
+    @Test
+    @DisplayName("preview 的轨迹顺序与 require 书写顺序一致")
+    void previewTracePreservesOrder() {
+        var svc = skillServiceWith("""
+                skills:
+                  ordered:
+                    require:
+                      - health-above 0.9
+                      - state-is idle
+                """);
+        var p = svc.preview("ordered", ctx(1.0, 0));
+        assertNotNull(p);
+        assertEquals(2, p.trace().size());
+        assertEquals("health-above:0.9", p.trace().get(0).key());
+        assertEquals("state-is:idle", p.trace().get(1).key());
     }
 }

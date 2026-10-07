@@ -476,6 +476,7 @@ public final class WebServerService {
             case "/api/skills/file" -> { return json(200, skillFile(req)); }
             case "/api/skills/save" -> { return json(200, skillSave(req)); }
             case "/api/skills/schema" -> { return json(200, skillSchema()); }
+            case "/api/skills/preview" -> { return json(200, skillPreview(req)); }
             case "/api/loot" -> { return json(200, lootPayload(req)); }
             case "/api/loot/file" -> { return json(200, lootFile(req)); }
             case "/api/loot/save" -> { return json(200, lootSave(req)); }
@@ -1323,9 +1324,43 @@ public final class WebServerService {
         return out;
     }
 
-    /** 掷骰预览：只算不落地，不会在世界里真的掉东西。 */
-    private Map<String, Object> lootRoll(Request req) throws IOException {
+    /**
+     * 技能预览：回答「这条技能在给定血量下会不会触发、哪条条件挡住了」。
+     *
+     * <p>与 {@link #lootRoll} 同一设计原则——只算不落地。预览<b>不执行动作</b>，
+     * 因此不会在真 Boss 上打出 AoE 伤害；返回的 {@code wouldRun} 只是判定结论。</p>
+     */
+    private Map<String, Object> skillPreview(Request req) throws IOException {
         Map<?, ?> r = readJson(req);
+        String name = str(r.get("name"));
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (name == null || name.isBlank()) {
+            out.put("ok", false);
+            out.put("error", "缺少 name 参数");
+            return out;
+        }
+        double health = 1.0;
+        Object hv = r.get("health");
+        if (hv instanceof Number n) health = n.doubleValue();
+        // 前端可能传 0..100 的百分数；两种量纲都接受，避免「设成 0.5% 却按 0.5% 血量算」
+        if (health > 1.0) health = health / 100.0;
+        health = Math.max(0, Math.min(1, health));
+
+        Map<String, Object> result = bridge.previewSkill(name, health);
+        if (result == null) {
+            out.put("ok", false);
+            out.put("error", "技能不存在：" + name);
+            return out;
+        }
+        out.put("ok", true);
+        out.put("name", name);
+        out.put("health", health);
+        out.putAll(result);
+        return out;
+    }
+
+    /** 掷骰预览：只算不落地，不会在世界里真的掉东西。 */
+    private Map<String, Object> lootRoll(Request req) throws IOException {        Map<?, ?> r = readJson(req);
         String table = str(r.get("table"));
         Map<String, Object> out = new LinkedHashMap<>();
         if (table == null || table.isBlank()) {
