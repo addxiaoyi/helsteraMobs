@@ -6,6 +6,7 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -259,6 +260,76 @@ public final class SkillCatalog {
                         }
                         lastFired.put(key, now);
                         return true;
+                    };
+                }),
+
+                // ---- MM 常用条件补全 ----
+
+                // on-ground：实体站在固体方块上。
+                // 无目标实体时按 false 处理，避免条件恒真。
+                java.util.Map.entry("on-ground", (ConditionFactory) a -> {
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        if (!(base instanceof LivingEntity le)) return false;
+                        try { return le.isOnGround(); } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // in-water / in-lava：实体处于液体中。
+                // 两种条件共享同一条判断路径，参数决定查哪种流体。
+                java.util.Map.entry("in-water", (ConditionFactory) a -> {
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        if (base == null) return false;
+                        try { return base.isInWater(); } catch (Throwable ignored) { return false; }
+                    };
+                }),
+                java.util.Map.entry("in-lava", (ConditionFactory) a -> {
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        if (base == null) return false;
+                        try { return base.isInLava(); } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // is-sneaking：实体是否潜行。用于「潜行时才能触发」的技能。
+                java.util.Map.entry("is-sneaking", (ConditionFactory) a -> {
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        if (!(base instanceof LivingEntity le)) return false;
+                        try { return le.isSneaking(); } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // is-glowing：实体是否发光（通常由外部效果设置）。
+                java.util.Map.entry("is-glowing", (ConditionFactory) a -> {
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        if (base == null) return false;
+                        try { return base.isGlowing(); } catch (Throwable ignored) { return false; }
+                    };
+                }),
+
+                // facing-target：实体当前朝向目标（允许 ±45° 偏差）。
+                // 用于「只在面对目标时才触发」的场合。
+                java.util.Map.entry("facing-target", (ConditionFactory) a -> {
+                    double tolerance = Math.toRadians(num(a, 0, 45));
+                    return ctx -> {
+                        var base = ctx.instance().baseEntity().orElse(null);
+                        var tgt = ctx.target().orElse(null);
+                        if (base == null || tgt == null) return false;
+                        if (base.getWorld() != tgt.getWorld()) return false;
+                        try {
+                            Location baseLoc = base.getLocation();
+                            Location tgtLoc = tgt.getLocation();
+                            Vector toTarget = tgtLoc.toVector().subtract(baseLoc.toVector());
+                            toTarget.setY(0).normalize();
+                            Vector facing = baseLoc.getDirection();
+                            facing.setY(0).normalize();
+                            if (facing.lengthSquared() < 0.0001) return false;
+                            double dot = facing.dot(toTarget);
+                            return dot >= Math.cos(tolerance);
+                        } catch (Throwable ignored) { return false; }
                     };
                 })
         );

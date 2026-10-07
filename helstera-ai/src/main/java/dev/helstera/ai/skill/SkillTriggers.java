@@ -986,11 +986,13 @@ public final class SkillTriggers implements Listener {
                 warn("阶段 " + phase.id() + " 音效 \"" + ann.sound() + "\" 失败: " + t);
             }
         }
-        // 粒子
+        // 粒子（支持自定义 count / offset / speed）
         if (ann.particle() != null && !ann.particle().isBlank()) {
             try {
                 org.bukkit.Particle p = org.bukkit.Particle.valueOf(ann.particle());
-                at.getWorld().spawnParticle(p, at, 64, 3.0, 2.0, 3.0, 0.0);
+                at.getWorld().spawnParticle(p, at,
+                        ann.particleCount(), ann.particleOffsetX(), ann.particleOffsetY(),
+                        ann.particleOffsetZ(), ann.particleExtra());
             } catch (Throwable t) {
                 warn("阶段 " + phase.id() + " 粒子 \"" + ann.particle() + "\" 失败: " + t);
             }

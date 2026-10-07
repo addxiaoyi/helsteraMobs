@@ -34,10 +34,11 @@ import java.util.logging.Logger;
  */
 public final class SpawnerService {
 
-    /** 插件层提供的生成能力：按 mobs 配置生成，返回实例 ID（-1 表示失败）。 */
+    /** 插件层提供的生成能力：按 mobs 配置生成，返回实例 ID（-1 表示失败）。
+     * {@code aiProfile} 非 null 时覆盖 mob 档案的 AI 配置。 */
     @FunctionalInterface
     public interface MobSpawner {
-        int spawn(String mobId, Location loc);
+        int spawn(String mobId, Location loc, String aiProfile);
     }
 
     /** 单个刷怪点定义。字段名与 spawners.yml 一一对应。 */
@@ -54,12 +55,15 @@ public final class SpawnerService {
         private final double playersRadius;
         private final boolean enabled;
         private final double yRange;
+        /** 覆盖 mob 档案的 AI 配置；null 表示不覆盖，沿用 mob 自身档案。 */
+        private final String aiProfile;
         private long nextSpawnTick;
         private int totalSpawned;
 
         Spawner(String id, String mobId, String world, double x, double y, double z,
                 double radius, int intervalTicks, int maxAlive, int maxSpawns,
-                int minPlayers, double playersRadius, boolean enabled, double yRange) {
+                int minPlayers, double playersRadius, boolean enabled, double yRange,
+                String aiProfile) {
             this.id = id;
             this.mobId = mobId;
             this.world = world;
@@ -74,6 +78,7 @@ public final class SpawnerService {
             this.playersRadius = Math.max(0, playersRadius);
             this.enabled = enabled;
             this.yRange = Math.max(0, yRange);
+            this.aiProfile = aiProfile == null || aiProfile.isBlank() ? null : aiProfile.trim();
             this.nextSpawnTick = 0;
         }
 
@@ -89,6 +94,8 @@ public final class SpawnerService {
         public double yRange() { return yRange; }
         public boolean enabled() { return enabled; }
         public int totalSpawned() { return totalSpawned; }
+        /** 返回覆盖用的 AI 档案名；null 表示不覆盖。 */
+        public String aiProfile() { return aiProfile; }
 
         public Location base(World w) {
             return w == null ? null : new Location(w, x, y, z);
@@ -145,7 +152,8 @@ public final class SpawnerService {
                     s.getInt("min-players", 0),
                     s.getDouble("players-radius", 24.0),
                     s.getBoolean("enabled", true),
-                    s.getDouble("y-range", 0));
+                    s.getDouble("y-range", 0),
+                    s.getString("ai-profile"));
             spawners.put(id, sp);
             alive.put(id, Collections.synchronizedList(new ArrayList<>()));
             minInterval = Math.min(minInterval, sp.intervalTicks);
@@ -219,7 +227,7 @@ public final class SpawnerService {
         if (sp == null) return false;
         Location loc = override != null ? override : randomLocation(sp);
         if (loc == null) return false;
-        int instId = safeSpawn(sp.mobId(), loc);
+        int instId = safeSpawn(sp.mobId(), loc, sp.aiProfile());
         if (instId > 0) {
             alive.computeIfAbsent(sp.id(), k -> Collections.synchronizedList(new ArrayList<>()))
                     .add(instId);
@@ -249,7 +257,7 @@ public final class SpawnerService {
         Location loc = randomLocation(sp);
         if (loc == null) return;
         if (sp.minPlayers() > 0 && countPlayersNear(loc, sp.minPlayers(), sp.playersRadius()) < sp.minPlayers()) return;
-        int instId = safeSpawn(sp.mobId(), loc);
+        int instId = safeSpawn(sp.mobId(), loc, sp.aiProfile());
         if (instId > 0) {
             alive.computeIfAbsent(sp.id(), k -> Collections.synchronizedList(new ArrayList<>()))
                     .add(instId);
@@ -257,9 +265,9 @@ public final class SpawnerService {
         }
     }
 
-    private int safeSpawn(String mobId, Location loc) {
+    private int safeSpawn(String mobId, Location loc, String aiProfile) {
         try {
-            return spawner.spawn(mobId, loc);
+            return spawner.spawn(mobId, loc, aiProfile);
         } catch (Throwable t) {
             if (log != null) log.warning("[刷怪] 生成 " + mobId + " 失败: " + t);
             return -1;

@@ -27,7 +27,7 @@ class SpawnerServiceTest {
     /** 无需 Bukkit 调度器的裸服务：plugin 传 null，任何真正调度/取世界的调用都会 NPE。 */
     private static SpawnerService service(String yaml) {
         List<String> spawned = new ArrayList<>();
-        SpawnerService s = new SpawnerService(null, null, (mob, loc) -> {
+        SpawnerService s = new SpawnerService(null, null, (mob, loc, aiProfile) -> {
             spawned.add(mob);
             return spawned.size();
         });
@@ -234,7 +234,7 @@ class SpawnerServiceTest {
     @Test
     @DisplayName("null 节与空节安全返回，不抛异常")
     void toleratesNullAndEmpty() {
-        SpawnerService s = new SpawnerService(null, null, (m, l) -> -1);
+        SpawnerService s = new SpawnerService(null, null, (m, l, a) -> -1);
         s.load(null);
         assertEquals(0, s.size());
         s.load(YamlConfiguration.loadConfiguration(new StringReader("")).getConfigurationSection("spawners"));
@@ -245,7 +245,7 @@ class SpawnerServiceTest {
     @Test
     @DisplayName("重复 load 会清空旧定义，不残留已删除的刷怪点")
     void reloadClearsPreviousSpawners() {
-        SpawnerService s = new SpawnerService(null, null, (m, l) -> -1);
+        SpawnerService s = new SpawnerService(null, null, (m, l, a) -> -1);
         s.load(YamlConfiguration.loadConfiguration(new StringReader("""
                 spawners:
                   old:
