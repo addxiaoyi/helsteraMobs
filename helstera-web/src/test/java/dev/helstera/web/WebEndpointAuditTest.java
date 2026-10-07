@@ -84,6 +84,77 @@ class WebEndpointAuditTest {
                         + "属于另一种「实现了但没接线」，同样不会报任何错");
     }
 
+    /**
+     * 反向对账：服务端提供的每个 {@code /api/*}，前端都应有调用者。
+     *
+     * <p>与 {@link #everyFrontendCallIsServed} 互补。前者查「前端调了但服务端没有」
+     * （表现为 404），本测试查「服务端有但前端不调」——后者<b>不表现为任何报错</b>：
+     * 接口安静地躺在那里，永远不会被触发，功能等于没做。
+     * 本项目已因此出现过一次真实缺口：{@code /helstera spawner toggle} 做完命令后
+     * 只接了命令行，网页端刷怪点面板上没有对应按钮，管理员只能回控制台敲命令。</p>
+     *
+     * <p>豁免是显式清单而非通配符：确有「给外部工具用的只读端点」时，
+     * 应在 {@link #BRIDGE_ONLY} 写明理由，让例外可见。</p>
+     */
+    @Test
+    @DisplayName("服务端新增的端点，前端也有调用者（否则功能等于没做）")
+    void everyServerEndpointIsUsedByFrontend() throws IOException {
+        String html = read(HTML);
+        String src = read(SERVER);
+
+        Set<String> routes = serverRoutes(src);
+        assertTrue(routes.size() >= 30,
+                "只从服务端提取到 " + routes.size() + " 条路由，正则多半没匹配上，测试本身可能已失效");
+
+        Set<String> unused = new LinkedHashSet<>();
+        for (String ep : routes) {
+            if (BRIDGE_ONLY.contains(ep)) continue;
+            // 子串匹配而非引号精确匹配：前端大量使用模板拼接路径，
+            // 如 api(`/api/model?id=${id}`) 与 api(`/api/model/files`)。
+            // 按引号精确匹配会把这些全部误报成「未接线」，而真实的缺口
+            // （整个端点名都不出现在页面里）依然会被抓到。
+            if (!html.contains(ep)) unused.add(ep);
+        }
+        assertTrue(unused.isEmpty(),
+                "服务端实现了但前端没有任何调用者的端点（不报 404，因此更隐蔽——"
+                        + "功能等于没做）：" + unused
+                        + "。若确实是给外部工具用的只读端点，请加入 BRIDGE_ONLY 并写明理由。");
+    }
+
+    /**
+     * 有意不做前端入口的端点，逐条附理由。
+     *
+     * <p>不是「豁免就完事」——每条都必须写清<b>为什么前端不需要它</b>。
+     * 放宽规则最怕的就是豁免表悄悄长成垃圾桶：列进来的端点越多，
+     * 规则越形同虚设。因此本表刻意保持极短，新增条目需要说服人。</p>
+     */
+    private static final Set<String> BRIDGE_ONLY = new LinkedHashSet<>(java.util.List.of(
+            // 与聚合端点功能重复：/api/skills 与 /api/loot 各自已返回 content
+            // （YAML 全文），前端编辑器直接用它填充文本框。file 端点是给
+            // 「只想取文件不想取元数据」的外部脚本用的备用路径。
+            //
+            // 对照：/api/spawners/file **不可**豁免——/api/spawners 只发摘要
+            // 列表，不含 YAML 文本，编辑器必须走 file 端点。
+            // （这条曾被误列为豁免，理由写错后会让编辑器无从取文本。）
+            "/api/skills/file",
+            "/api/loot/file",
+            // 表单元数据：/api/templates 已提供 mob 表单的字段定义与默认值。
+            // /api/mob/schema 是同一份数据的另一份导出，供外部生成器消费。
+            "/api/mob/schema"
+    ));
+
+    @Test
+    @DisplayName("BRIDGE_ONLY 里列的端点确实存在于服务端，避免过期豁免")
+    void bridgeOnlyEntriesAreReal() throws IOException {
+        String src = read(SERVER);
+        Set<String> stale = new LinkedHashSet<>();
+        for (String ep : BRIDGE_ONLY) {
+            if (!src.contains("\"" + ep + "\"")) stale.add(ep);
+        }
+        assertTrue(stale.isEmpty(),
+                "BRIDGE_ONLY 列了服务端已不存在的端点，应删除以免豁免逐渐膨胀：" + stale);
+    }
+
     @Test
     @DisplayName("免疫诊断前端必须处理 active=false，否则监听器未注册时静默失效")
     void immunityPanelHandlesInactive() throws IOException {

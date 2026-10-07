@@ -537,6 +537,12 @@ skills:
 
 网页端对应接口：`POST /api/skills/preview`，参数 `{name, health}`（血量接受 `0..1` 与 `0..100` 两种量纲）。
 
+技能面板下方有预览入口：选技能 + 填血量百分比 → 点「预览」，直接看到逐条条件的 `✓` / `✗` 与结论。
+
+**网页端端点双向对账**：`WebEndpointAuditTest` 同时检查两个方向 —— 前端调了服务端没实现（404），以及服务端实现了前端没入口（不报任何错，功能等于没做）。后一类更隐蔽，本项目已因此出现过：做完 `/helstera spawner toggle` 只接了命令行，网页端没有对应按钮。
+
+豁免表 `BRIDGE_ONLY` 刻意保持极短，每条必须写清「为什么前端不需要它」，并有测试保证豁免条目不会随时间膨胀。
+
 ## Boss 血条渐变配色
 
 `bossbar.gradient: true` 让血量在相邻档位之间线性插值，而不是到点跳变。
@@ -567,6 +573,10 @@ bossbar:
 - 对 YAML 里本就 `enabled: false` 的点，`toggle` 会明确提示「清除运行期开关但仍不产出，要启用请改 spawners.yml」，而不是骗你说「已启用」。
 - `/helstera reload spawners` 会清空运行期开关，回到 YAML 的值。
 - 已产出的生物不受影响，只影响后续产出。
+
+**网页端**：刷怪点面板每条右侧有「启用 / 停用」按钮，与命令同一套语义，不改文件。面板同时提供 spawners.yml 编辑区（保存走 `/api/spawners/save`，带 YAML 语法校验与版本备份）。
+
+列表接口的 `enabled` 是「现在会不会产出」，`yamlEnabled` 是 YAML 里的原始值 —— 两者不同说明是运行期开关关掉的。
 
 ### 关于 `on-entity-shoot`
 

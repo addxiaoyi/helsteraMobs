@@ -485,6 +485,7 @@ public final class WebServerService {
             case "/api/spawners/file" -> { return json(200, readYamlEndpoint(req, spawnersFile(), "spawners.yml")); }
             case "/api/spawners/save" -> { return json(200, spawnersSave(req)); }
             case "/api/spawners/reload" -> { return json(200, spawnersReload()); }
+            case "/api/spawners/toggle" -> { return json(200, spawnersToggle(req)); }
             case "/api/mob/schema" -> { return json(200, mobSchema()); }
             case "/api/immunity" -> { return json(200, immunityPayload()); }
             default -> { return json(404, Map.of("error", "未知接口 " + req.path)); }
@@ -1438,6 +1439,46 @@ public final class WebServerService {
         out.put("ok", ok);
         out.put("spawners", bridge.spawnerInfo());
         out.put("message", "已重载 spawners.yml。");
+        return out;
+    }
+
+    /**
+     * 翻转刷怪点的运行期开关，不改 spawners.yml。
+     *
+     * <p>与 {@code /helstera spawner toggle} 同一套语义。刻意区分两种「翻转后仍不产出」：
+     * 对 {@code enabled: false} 的点，运行期开关的增删都不改变结果，
+     * 若照直返回 {@code enabled:false} 而不说明原因，网页端就会显示
+     * 「操作成功」却什么都没发生，管理员无从判断该改哪里。</p>
+     */
+    private Map<String, Object> spawnersToggle(Request req) throws IOException {
+        Map<?, ?> r = readJson(req);
+        String id = str(r.get("id"));
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (id == null || id.isBlank()) {
+            out.put("ok", false);
+            out.put("error", "缺少 id 参数");
+            return out;
+        }
+        Boolean now = bridge.toggleSpawner(id);
+        if (now == null) {
+            out.put("ok", false);
+            out.put("error", "刷怪点不存在：" + id);
+            return out;
+        }
+        boolean yamlEnabled = bridge.spawnerInfo().stream()
+                .anyMatch(m -> id.equals(m.get("id")) && Boolean.TRUE.equals(m.get("yamlEnabled")));
+        audit("spawners-toggle", id, String.valueOf(now));
+        out.put("ok", true);
+        out.put("id", id);
+        out.put("enabled", now);
+        out.put("yamlEnabled", yamlEnabled);
+        out.put("spawners", bridge.spawnerInfo());
+        out.put("message", now
+                ? "已启用刷怪点 " + id + "。"
+                : (yamlEnabled
+                    ? "已停用刷怪点 " + id + "，下次 reload 后恢复 YAML 设置。"
+                    : "刷怪点 " + id + " 在 spawners.yml 里就是 enabled: false，"
+                      + "运行期开关已清除但它仍不会产出；要启用请改 spawners.yml 后 reload。"));
         return out;
     }
 
