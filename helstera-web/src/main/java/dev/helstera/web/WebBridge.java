@@ -113,6 +113,18 @@ public interface WebBridge {
     /** 刷怪点摘要：id -> 存活数/间隔/上限等。 */
     List<Map<String, Object>> spawnerInfo();
 
+    /**
+     * 翻转某刷怪点的运行期开关（等价于 {@code /helstera spawner toggle}）。
+     *
+     * <p>与命令同一套语义：只叠加在 YAML 的 {@code enabled} 之上，不改文件。
+     * 网页端不给「启停刷怪点」留入口时，管理员只能去服务器控制台敲命令——
+     * 而刷怪点往往正是要临时处置的东西（活动结束、刷屏了）。</p>
+     *
+     * @param id 刷怪点 id；不存在时实现应返回 null
+     * @return 翻转后的状态，键同 {@link #spawnerInfo()} 的 enabled 字段语义
+     */
+    Boolean toggleSpawner(String id);
+
     /** config.yml 中已定义的 ai.profiles 名称，供 Mob 表单下拉选择。 */
     List<String> profiles();
 

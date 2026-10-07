@@ -2333,6 +2333,26 @@
                 </div>
               </div>
             </div>
+
+            <!-- 技能预览：与掉落掷骰同构，只算不落地 -->
+            <div class="sec" style="margin-top: 16px; border-top: 1px solid var(--line); padding-top: 16px;">
+              <h3>技能预览 <span class="hint">只判定会不会触发，不执行任何动作</span></h3>
+              <p class="lede">
+                逐条列出 require 的求值结果与首条未满足项。依赖世界状态的条件
+                （<span class="mono">on-ground</span> / <span class="mono">has-target</span>）
+                在预览里恒为 <span class="mono">✗</span>，因为它需要真实实体——这类
+                <span class="mono">✗</span> 的含义是「需上真服验证」，不是配置写错了。
+              </p>
+              <div class="row tight">
+                <select id="skPrevName" class="mono" style="flex:1; min-width:180px;"></select>
+                <label class="hint" style="white-space:nowrap;">血量 %
+                  <input type="number" id="skPrevHp" class="mono" value="100" min="0" max="100" step="5"
+                         style="width:80px; margin-left:6px;">
+                </label>
+                <button class="sm" id="bSkPrev">预览</button>
+              </div>
+              <pre class="out" id="skPrevOut" style="display:none; margin-top: 10px;"></pre>
+            </div>
           </div>
         </div>
 
@@ -2370,6 +2390,17 @@
                   <button class="sm ghost" id="bSpReload">重新读取 spawners.yml</button>
                 </div>
                 <pre class="out" id="spOut" style="margin-top: 10px;">加载中…</pre>
+
+                <details style="margin-top: 14px;">
+                  <summary style="cursor:pointer; color: var(--muted);">编辑 spawners.yml</summary>
+                  <textarea class="mono" id="spText" spellcheck="false" style="min-height:220px; margin-top:10px;"
+                    placeholder="spawners.yml 内容"></textarea>
+                  <div class="row tight" style="margin-top: 8px">
+                    <button class="sm" id="bSaveSp">保存并生效</button>
+                    <button class="sm ghost" id="bSpRead">读入编辑器</button>
+                  </div>
+                  <pre class="out" id="spOut2" style="display:none; margin-top: 10px;"></pre>
+                </details>
 
                 <h3 style="margin-top: 20px;">免疫 / 伤害倍率诊断 (Immunity)</h3>
                 <p class="lede">读取已编译的免疫规则，逐条显示它盖住了哪些伤害原因、10 点原始伤害下的最终取值，以及装载期告警。</p>
@@ -4107,6 +4138,13 @@ async function loadSkills() {
     const warns = d.warnings || [];
     $('skWarnBox').style.display = warns.length ? 'block' : 'none';
     if (warns.length) $('skWarns').textContent = warns.join('\n');
+    // 预览下拉：只列命名技能。/api/skills 的 names 同时含条件与动作名，
+    // 这里无法从名字区分，因此预览失败时由服务端如实报错而非前端猜测过滤。
+    const sel = $('skPrevName');
+    const keep = sel.value;
+    sel.innerHTML = (d.names || [])
+      .map(n => '<option value="' + n + '">' + n + '</option>').join('');
+    if (keep) sel.value = keep;
     if (!$('skConds').dataset.filled) {
       const s = await api('/api/skills/schema');
       $('skConds').innerHTML = (s.conditions || []).map(c => '• ' + c).join('<br>');
@@ -4136,6 +4174,34 @@ $('bSaveSkills').onclick = async () => {
       await loadSkills();
     } else { setOut($('skOut'), '✗ ' + d.error); toast(d.error, 'err'); }
   } catch (e) { toast('保存失败: ' + e.message, 'err'); }
+};
+
+/* 技能预览：只判定，不执行任何动作 */
+$('bSkPrev').onclick = async () => {
+  const name = $('skPrevName').value;
+  const hp = $('skPrevHp').value;
+  if (!name) { setOut($('skPrevOut'), '✗ 请先选择技能'); return; }
+  setOut($('skPrevOut'), '计算中 …');
+  try {
+    const d = await api('/api/skills/preview', {
+      method: 'POST',
+      body: JSON.stringify({ name, health: Number(hp) || 0 })
+    });
+    if (d.ok === false) { setOut($('skPrevOut'), '✗ ' + (d.error || '预览失败')); return; }
+    const lines = ['技能 ' + d.name + ' @ 血量 ' + Math.round((d.health ?? 0) * 100) + '%', ''];
+    const trace = d.trace || [];
+    if (!trace.length) lines.push('条件: 无（无条件即恒触发）');
+    for (const t of trace) lines.push((t.passed ? '  ✓ ' : '  ✗ ') + t.key);
+    lines.push('');
+    if (d.wouldRun) {
+      lines.push('结论: 会触发' + (d.cooling ? '（但当前在冷却中）' : ''));
+      if (d.actions && d.actions.length) lines.push('将执行: ' + d.actions.join(', '));
+    } else {
+      lines.push('结论: 不会触发 — 未满足 ' + d.firstFailing);
+      lines.push('提示: 调高血量% 试试哪一档开始满足');
+    }
+    setOut($('skPrevOut'), lines.join('\n'));
+  } catch (e) { setOut($('skPrevOut'), '✗ 预览失败: ' + e.message); }
 };
 
 async function loadLoot() {
@@ -4261,7 +4327,33 @@ async function loadSpawners() {
       + '\n    触发周期: ' + s.interval + ' ticks'
       + ' | 存活数: ' + s.alive + '/' + s.maxAlive
       + ' | 累计生成: ' + s.totalSpawned
-      + (s.enabled ? '' : '  [状态: 已停用]')).join('\n\n');
+      // yamlEnabled 单独提示：enabled:false 的据点即使「运行期开关」也救不回来，
+      // 不说清的话管理员会以为按钮坏了，反复点
+      + (s.enabled ? ''
+         : (s.yamlEnabled ? '  [状态: 运行期已停用]'
+                          : '  [状态: spawners.yml 里就是 enabled: false]'))
+    ).join('\n\n');
+    // 运行期开关按钮：与 /helstera spawner toggle 同一套语义，不改 YAML。
+    list.forEach(s => {
+      const b = document.createElement('button');
+      b.className = 'ghost';
+      b.textContent = s.enabled ? '停用' : '启用';
+      b.onclick = async () => {
+        b.disabled = true;
+        try {
+          const r = await api('/api/spawners/toggle', {
+            method: 'POST',
+            body: JSON.stringify({ id: s.id })
+          });
+          // 服务端已区分「被我停用」与「YAML 本就关着」，直接用它的话术，
+          // 前端不要自己猜——猜错就会给出「操作成功但没效果」的错误提示
+          toast(r.message || (r.enabled ? '已启用' : '已停用'), r.enabled ? 'ok' : 'warn');
+          await loadSpawners();
+        } catch (e) { toast('切换失败: ' + e.message, 'err'); b.disabled = false; }
+      };
+      b.style.marginLeft = '8px';
+      $('spOut').appendChild(b);
+    });
   } catch (e) {
     const off = isOffline(e);
     setState($('spOut'), off ? 'offline' : 'err',
@@ -4275,6 +4367,30 @@ $('bSpReload').onclick = async () => {
     toast(d.message || '刷怪点已重载', 'ok');
     await loadSpawners();
   } catch (e) { toast('重载失败: ' + e.message, 'err'); }
+};
+$('spText').addEventListener('input', () => { $('spText').dataset.touched = '1'; });
+$('bSpRead').onclick = async () => {
+  try {
+    // /api/spawners 只发摘要列表，YAML 全文只能走 file 端点
+    const d = await api('/api/spawners/file');
+    if (!d.ok) { setOut($('spOut2'), '✗ ' + (d.error || '读取失败')); return; }
+    delete $('spText').dataset.touched;
+    $('spText').value = d.content || '';
+    setOut($('spOut2'), '✓ 已读入 spawners.yml（' + $('spText').value.length + ' 字符）');
+  } catch (e) { setOut($('spOut2'), '✗ 读取失败: ' + e.message); }
+};
+$('bSaveSp').onclick = async () => {
+  try {
+    const d = await api('/api/spawners/save', {
+      method: 'POST', body: JSON.stringify({ content: $('spText').value })
+    });
+    if (d.ok) {
+      delete $('spText').dataset.touched;
+      setOut($('spOut2'), '✓ ' + d.message + (d.version ? '\n备份版本: ' + d.version : ''));
+      toast(d.message || '已保存', 'ok');
+      await loadSpawners();
+    } else { setOut($('spOut2'), '✗ ' + d.error); toast(d.error, 'err'); }
+  } catch (e) { toast('保存失败: ' + e.message, 'err'); }
 };
 
 /* ---------------- 免疫 / 伤害倍率诊断 ---------------- */

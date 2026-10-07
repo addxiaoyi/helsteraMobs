@@ -1623,10 +1623,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 m.put("maxAlive", sp.maxAlive());
                 m.put("alive", spawners().aliveCount(id));
                 m.put("totalSpawned", sp.totalSpawned());
-                m.put("enabled", sp.enabled());
+                // active 是「现在会不会产出」= YAML enabled 且未被运行期 toggle 停用。
+                // 只发 YAML 值的话，管理员在网页上 toggle 后刷新，看到的仍是「启用」——
+                // 与命令行的 [停用] 提示互相矛盾，只能靠猜判断操作是否生效。
+                m.put("enabled", spawners().isActive(sp));
+                m.put("yamlEnabled", sp.enabled());
                 out.add(m);
             }
             return out;
+        }
+
+        @Override public Boolean toggleSpawner(String id) {
+            if (spawners() == null || id == null || id.isBlank()) return null;
+            return spawners().toggle(id);
         }
 
         @Override public java.util.List<String> profiles() {
