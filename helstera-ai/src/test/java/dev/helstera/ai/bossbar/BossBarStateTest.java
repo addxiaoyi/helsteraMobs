@@ -3,6 +3,7 @@ package dev.helstera.ai.bossbar;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -289,5 +290,40 @@ class BossBarStateTest {
         for (double r = 0; r <= 1.0; r += 0.05) seen.add(BossBarState.gradientOf(segs, r));
         assertTrue(seen.size() >= 2,
                 "整条血量范围内只出现一种色，插值根本没生效，实际: " + seen);
+    }
+
+    // ------------------------------------------------------------------
+    // 快捷开关的默认配置
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("defaults() 是启用且无配色的裸血条")
+    void defaultsAreEnabledButBare() {
+        var d = BossBarConfig.defaults();
+        assertTrue(d.enabled(), "快捷开关命中时必须显示血条，默认配置若是 disabled 会让开关看起来没生效");
+        assertTrue(d.title() == null, "默认不该带标题，否则会盖掉档案名回落");
+        assertEquals(0.0, d.range(), 1e-9, "默认不限距离");
+        assertFalse(d.hasSegments(), "默认无配色档，withConfiguredColor 应原样返回默认色");
+        assertFalse(d.gradient(), "默认不开渐变");
+    }
+
+    @Test
+    @DisplayName("defaults() 渲染出可见且有标题的血条")
+    void defaultsRenderUsableBar() {
+        var d = BossBarConfig.defaults();
+        var r = BossBarState.render(true, d.title(), null, 60, 100, null, null);
+        assertTrue(r.visible(), "默认配置必须渲染出可见血条");
+        assertEquals("Boss", r.title(), "无标题时应回落到兜底名而非空串");
+        assertEquals(0.6, r.ratio(), 1e-9);
+    }
+
+    @Test
+    @DisplayName("未配置 bossbar 节时返回 disabled，与 defaults() 语义相反")
+    void missingSectionDiffersFromDefaults() {
+        var missing = BossBarConfig.parse(null, new ArrayList<>());
+        assertFalse(missing.enabled(),
+                "未配置节应视为不显示——否则所有生物都会冒出血条");
+        assertTrue(BossBarConfig.defaults().enabled(),
+                "而 defaults() 是给快捷开关用的，必须显示。两者语义不可混同");
     }
 }

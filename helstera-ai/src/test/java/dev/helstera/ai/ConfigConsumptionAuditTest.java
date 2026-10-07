@@ -73,10 +73,6 @@ class ConfigConsumptionAuditTest {
         EXEMPT.put("SpawnerService.alive", "实例追踪表，非配置");
         EXEMPT.put("SpawnerService.spawners", "装载表本身，非配置");
         EXEMPT.put("SpawnerService.runtimeDisabled", "运行期 toggle 覆盖集，非配置键");
-
-        // ---- 已知死配置：待接线，记此以免遗忘 ----
-        // 接线完成后请删除对应行——删除后审计会重新接管。
-        EXEMPT.put("SpawnOptions.showHealthBar", "已知死配置：项目内无 BossBar 机制，待接线");
     }
 
     @Test
@@ -102,17 +98,22 @@ class ConfigConsumptionAuditTest {
     }
 
     @Test
-    @DisplayName("审计本身有效：能发现已知死配置，而不是恒通过")
-    void auditDetectsKnownDeadField() throws IOException {
+    @DisplayName("审计本身有效：能发现死配置，而不是恒通过")
+    void auditDetectsKnownDeadField() {
         // 若此断言失败，说明审计规则太松，上面的测试形同虚设。
-        String corpus = productionCorpus(repoRoot());
-        assertFalse(isConsumed(corpus, "showHealthBar"),
-                "审计应能识别出 showHealthBar 无消费点");
-        // aiProfile 现已被 SpawnerService.aiProfile() 消费，不再作为「死字段」示例。
-        assertTrue(fieldNames(Files.readString(
-                        repoRoot().resolve(AUDITED.get("SpawnOptions")), StandardCharsets.UTF_8))
-                        .contains("showHealthBar"),
-                "showHealthBar 应被识别为配置字段");
+        //
+        // 刻意用合成语料而非「找某个当前恰好没人读的字段」：后者会随接线推进
+        // 而失效——字段一旦接上，断言立刻从「证明规则有效」变成「测试失败」，
+        // 于是下一次改动就得再换一个字段，纯粹的无意义维护。
+        assertFalse(isConsumed("private boolean someUnreadField;", "someUnreadField"),
+                "只有一个声明、没有实例访问的字段应被判为未消费");
+        assertTrue(isConsumed("opts.showHealthBar()", "showHealthBar"),
+                "实例访问即构成消费");
+        assertTrue(isConsumed("inst.showHealthBar", "showHealthBar"),
+                "字段访问也算消费");
+        assertFalse(isConsumed("public SpawnOptions showHealthBar(boolean v) { this.showHealthBar = v; }",
+                        "showHealthBar"),
+                "建造器赋值不算消费，否则整张审计表失去意义");
     }
 
     @Test

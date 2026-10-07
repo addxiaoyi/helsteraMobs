@@ -28,6 +28,17 @@ public final class BossBarConfig {
     }
 
     /**
+     * 血条的默认配置：启用、无标题、无限距离、无配色。
+     *
+     * <p>供 {@code show-health-bar: true} 这类快捷开关使用——用户只想看到一条
+     * 血条，不打算写 {@code bossbar} 节。没有它，快捷开关命中的实例会因
+     * {@code bossBar == null} 被当成「未配置」而跳过，得到的是「开关没生效」的错觉。</p>
+     */
+    public static Parsed defaults() {
+        return new Parsed(true, null, 0, List.of(), false, List.of());
+    }
+
+    /**
      * 从档案节解析血条配置。
      *
      * @param sec {@code bossbar} 节；null 表示未配置
