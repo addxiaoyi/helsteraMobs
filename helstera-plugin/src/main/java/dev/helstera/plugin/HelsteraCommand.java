@@ -32,7 +32,7 @@ public final class HelsteraCommand implements TabExecutor {
 
     private static final List<String> SUBS = List.of(
             "reload", "model", "mob", "animation", "migrate", "web", "debug", "stats", "pack",
-            "loot", "bossbar", "spawner", "check", "faction", "codex", "nav", "lever", "immunity", "dialog", "disguise", "help");
+            "loot", "skill", "bossbar", "spawner", "check", "faction", "codex", "nav", "lever", "immunity", "dialog", "disguise", "help");
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -52,6 +52,7 @@ public final class HelsteraCommand implements TabExecutor {
             case "stats" -> stats(sender);
             case "pack" -> pack(sender, args);
             case "loot" -> loot(sender, args);
+            case "skill" -> skill(sender, args);
             case "bossbar" -> bossbar(sender, args);
             case "spawner" -> spawner(sender, args);
             case "check" -> check(sender);
@@ -75,7 +76,8 @@ public final class HelsteraCommand implements TabExecutor {
         s.sendMessage("§b/helstera animation play|stop|pause|resume <实例> <动画> §7- 动画");
         s.sendMessage("§b/helstera migrate scan|preview|apply|rollback|report <来源> §7- 迁移中心");
         s.sendMessage("§b/helstera loot list|roll <表名> [luck] §7- 掉落表");
-        s.sendMessage("§b/helstera spawner list|force <id> [数量]|reload §7- 刷怪点");
+        s.sendMessage("§b/helstera skill list|info <名>|preview <名> [血量%] §7- 技能预览（不执行动作）");
+        s.sendMessage("§b/helstera spawner list|force <id> [数量]|toggle <id>|reload §7- 刷怪点");
         s.sendMessage("§b/helstera web start [0.0.0.0] §7- 启动网页(加0.0.0.0允许远程)");
         s.sendMessage("§b/helstera web doctor §7- 网页打不开时自检(地址/防火墙/端口映射)");
         s.sendMessage("§b/helstera web firewall §7- 一键放行 Windows 防火墙端口");
@@ -1175,6 +1177,81 @@ var ai = plugin.ai();
         }
     }
 
+    /**
+     * /helstera skill list|info <名>|preview <名> [血量%]
+     *
+     * <p>预览只判定「会不会触发」并给出逐条条件轨迹，<b>不执行任何动作</b>——
+     * 否则在真 Boss 上放一遍 AoE 会造成真实伤害。</p>
+     */
+    private void skill(CommandSender s, String[] args) {
+        if (!s.hasPermission("helstera.skill")) { deny(s); return; }
+        var svc = plugin.skillService();
+        if (svc == null) {
+            s.sendMessage("§c技能系统未启用（skills.yml 加载失败，查看启动日志）");
+            return;
+        }
+        String action = args.length > 1 ? args[1] : "list";
+        switch (action) {
+            case "list" -> {
+                var names = svc.skillNames();
+                s.sendMessage("§b命名技能（" + names.size() + " 条）:");
+                for (String n : names) s.sendMessage("§7- §f" + n);
+                if (names.isEmpty()) s.sendMessage("§7（skills.yml 的 skills 为空）");
+            }
+            case "info" -> {
+                if (args.length < 3) { s.sendMessage("§c用法: /helstera skill info <技能名>"); return; }
+                var p = svc.preview(args[2], dryRunContext(1.0));
+                if (p == null) { s.sendMessage("§c技能不存在: " + args[2]); return; }
+                s.sendMessage("§b技能 §f" + p.skillName() + " §7优先级 " + p.priority());
+                s.sendMessage("§7条件 " + p.trace().size() + " 条: "
+                        + (p.trace().isEmpty() ? "§a无（无条件即恒触发）"
+                        : (p.wouldRun() ? "§a全部满足" : "§c有 " + countFailed(p) + " 条不满足")));
+                s.sendMessage("§7动作 " + p.actions().size() + " 条: " + p.actions());
+            }
+            case "preview" -> {
+                if (args.length < 3) { s.sendMessage("§c用法: /helstera skill preview <技能名> [血量%]"); return; }
+                double hp = args.length > 3 ? parseDouble(args[3], 100) / 100.0 : 1.0;
+                hp = Math.max(0, Math.min(1, hp));
+                var p = svc.preview(args[2], dryRunContext(hp));
+                if (p == null) { s.sendMessage("§c技能不存在: " + args[2]); return; }
+                s.sendMessage("§b预览 §f" + p.skillName() + " §7@ 血量 " + Math.round(hp * 100) + "%");
+                if (p.trace().isEmpty()) {
+                    s.sendMessage("§7条件: §a无（无条件即恒触发）");
+                } else {
+                    for (var t : p.trace()) {
+                        s.sendMessage("§7  " + (t.passed() ? "§a✓" : "§c✗") + " §f" + t.key());
+                    }
+                }
+                if (p.wouldRun()) {
+                    s.sendMessage("§a结论: §f会触发" + (p.cooldown() ? " §c(但当前在冷却中)" : ""));
+                    if (!p.actions().isEmpty()) s.sendMessage("§7将执行: §f" + String.join(", ", p.actions()));
+                } else {
+                    s.sendMessage("§c结论: §f不会触发 §7— 未满足 §f" + p.firstFailing());
+                    s.sendMessage("§7提示: 调高 /helstera skill preview 的血量% 参数试试哪一档开始满足");
+                }
+            }
+            default -> s.sendMessage("§c用法: /helstera skill list|info <名>|preview <名> [血量%]");
+        }
+    }
+
+    private static int countFailed(dev.helstera.ai.skill.SkillService.Preview p) {
+        int n = 0;
+        for (var t : p.trace()) if (!t.passed()) n++;
+        return n;
+    }
+
+    /**
+     * 构造一个用于预览的标量快照上下文。
+     *
+     * <p>{@code instance} 与 {@code target} 都为 null：因此依赖实例的
+     * {@code on-ground} / {@code in-water} 一类条件必然为 false。这是刻意的——
+     * 它们本来就需要真实世界状态，编造一个 true 只会让预览给出「会触发」的
+     * 假希望。轨迹里 {@code ✗} 加上这类条件时，含义是「需上真服验证」而非配置错误。</p>
+     */
+    private static dev.helstera.api.behavior.BehaviorContext dryRunContext(double healthRatio) {
+        return dev.helstera.api.behavior.BehaviorContext.of(null, null, healthRatio, -1, 0, "IDLE");
+    }
+
     /** /helstera bossbar */
     private void bossbar(CommandSender s, String[] args) {
         if (!s.hasPermission("helstera.bossbar")) { deny(s); return; }
@@ -1196,7 +1273,7 @@ var ai = plugin.ai();
         }
     }
 
-    /** /helstera spawner list|force <id> [数量]|reload */
+    /** /helstera spawner list|force <id> [数量]|toggle <id>|reload */
     private void spawner(CommandSender s, String[] args) {
         if (!s.hasPermission("helstera.spawner")) { deny(s); return; }
         var service = plugin.spawners();
@@ -1210,16 +1287,42 @@ var ai = plugin.ai();
                 s.sendMessage("§b刷怪点（" + service.size() + " 个）:");
                 for (String id : service.ids()) {
                     var sp = service.get(id);
+                    boolean active = service.isActive(sp);
                     s.sendMessage("§7- §f" + id + " §7→ 生物 " + sp.mobId()
                             + " §7| 间隔 " + sp.intervalTicks() + "t"
                             + " §7| 存活 " + service.aliveCount(id) + "/" + sp.maxAlive()
                             + " §7| 累计 " + sp.totalSpawned()
-                            + (sp.enabled() ? "" : " §c[已禁用]"));
+                            + (sp.aiProfile() == null ? "" : " §7| AI " + sp.aiProfile())
+                            + (active ? " §a[启用]" : " §c[停用]"));
                 }
                 if (service.ids().isEmpty()) s.sendMessage("§7（spawners.yml 的 spawners 为空）");
                 if (!service.warnings().isEmpty()) {
                     s.sendMessage("§c告警 " + service.warnings().size() + " 条:");
                     service.warnings().forEach(w -> s.sendMessage("§c- " + w));
+                }
+            }
+            case "toggle" -> {
+                if (args.length < 3) {
+                    s.sendMessage("§c用法: /helstera spawner toggle <id>");
+                    return;
+                }
+                Boolean now = service.toggle(args[2]);
+                if (now == null) {
+                    s.sendMessage("§c刷怪点不存在: " + args[2]);
+                    return;
+                }
+                var sp = service.get(args[2]);
+                if (now) {
+                    s.sendMessage("§a已启用刷怪点 §f" + args[2] + "§a（下次 tick 起恢复产出）");
+                } else if (sp != null && !sp.enabled()) {
+                    // 区分「被我停用」与「YAML 本来就是关的」：后者 toggle 回去也白搭，
+                    // 不说清楚会让管理员以为命令失灵，反复点。
+                    s.sendMessage("§e刷怪点 §f" + args[2]
+                            + " §e在 spawners.yml 里就是 enabled: false，运行期开关已清除但它仍不会产出");
+                    s.sendMessage("§7要启用请编辑 spawners.yml 后 §f/helstera reload spawners");
+                } else {
+                    s.sendMessage("§e已停用刷怪点 §f" + args[2]
+                            + "§e（已产出的生物不受影响；reload 后恢复 YAML 设置）");
                 }
             }
             case "force" -> {
@@ -1248,7 +1351,7 @@ var ai = plugin.ai();
                 plugin.reloadLootAndSpawners();
                 s.sendMessage("§a已重载 spawners.yml，当前 " + service.size() + " 个刷怪点");
             }
-            default -> s.sendMessage("§c用法: /helstera spawner list|force <id> [数量]|reload");
+            default -> s.sendMessage("§c用法: /helstera spawner list|force <id> [数量]|toggle <id>|reload");
         }
     }
 
@@ -1277,8 +1380,9 @@ var ai = plugin.ai();
                 case "animation" -> out.addAll(List.of("play", "stop", "pause", "resume"));
                 case "migrate" -> out.addAll(List.of("scan", "preview", "apply", "rollback", "report"));
                 case "loot" -> out.addAll(List.of("list", "roll"));
+                case "skill" -> out.addAll(List.of("list", "info", "preview"));
                 case "bossbar" -> out.addAll(List.of());
-                case "spawner" -> out.addAll(List.of("list", "force", "reload"));
+                case "spawner" -> out.addAll(List.of("list", "force", "toggle", "reload"));
                 case "web" -> out.addAll(List.of("start", "stop", "status", "doctor", "firewall"));
                 case "debug" -> out.addAll(List.of("render", "animation", "network", "ai", "skills", "integrations"));
                 case "pack" -> out.addAll(List.of("build", "apply", "apply-all"));
@@ -1298,7 +1402,10 @@ var ai = plugin.ai();
                 case "loot roll" -> {
                     if (plugin.loot() != null) plugin.loot().tableNames().forEach(out::add);
                 }
-                case "spawner force" -> {
+                case "skill info", "skill preview" -> {
+                    if (plugin.skillService() != null) plugin.skillService().skillNames().forEach(out::add);
+                }
+                case "spawner force", "spawner toggle" -> {
                     if (plugin.spawners() != null) plugin.spawners().ids().forEach(out::add);
                 }
                 case "immunity" -> {

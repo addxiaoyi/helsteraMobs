@@ -72,6 +72,7 @@ class ConfigConsumptionAuditTest {
         EXEMPT.put("SpawnerService.problems", "装载期告警列表，供命令与网页开发器");
         EXEMPT.put("SpawnerService.alive", "实例追踪表，非配置");
         EXEMPT.put("SpawnerService.spawners", "装载表本身，非配置");
+        EXEMPT.put("SpawnerService.runtimeDisabled", "运行期 toggle 覆盖集，非配置键");
 
         // ---- 已知死配置：待接线，记此以免遗忘 ----
         // 接线完成后请删除对应行——删除后审计会重新接管。

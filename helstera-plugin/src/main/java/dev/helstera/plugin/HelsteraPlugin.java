@@ -1561,6 +1561,29 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             return skillService instanceof SkillService s ? s.warnings() : java.util.List.of();
         }
 
+        @Override public java.util.Map<String, Object> previewSkill(String name, double healthRatio) {
+            SkillService sk = skillService instanceof SkillService s ? s : null;
+            if (sk == null) return null;
+            var ctx = dev.helstera.api.behavior.BehaviorContext.of(null, null, healthRatio, -1, 0, "IDLE");
+            var p = sk.preview(name, ctx);
+            if (p == null) return null;
+            java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("wouldRun", p.wouldRun());
+            out.put("firstFailing", p.firstFailing());
+            out.put("cooling", p.cooldown());
+            out.put("priority", p.priority());
+            out.put("actions", p.actions());
+            java.util.List<java.util.Map<String, Object>> trace = new java.util.ArrayList<>();
+            for (var t : p.trace()) {
+                java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
+                row.put("key", t.key());
+                row.put("passed", t.passed());
+                trace.add(row);
+            }
+            out.put("trace", trace);
+            return out;
+        }
+
         @Override public boolean reloadLoot() {
             reloadLootAndSpawners();
             return true;

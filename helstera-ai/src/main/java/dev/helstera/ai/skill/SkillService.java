@@ -162,9 +162,89 @@ public final class SkillService {
         return List.copyOf(warnings);
     }
 
+    /**
+     * 取出并清空全部告警：加载期 + 条件工厂运行期。
+     *
+     * <p>供 {@code /helstera check} 与启动日志消费——只有把两类告警合并展示，
+     * 「参数取值非法导致技能永不触发」这类问题才不会重新变成静默故障。</p>
+     */
+    public List<String> drainAllWarnings() {
+        var runtime = SkillCatalog.drainRuntimeWarnings();
+        var out = new ArrayList<String>(warnings.size() + runtime.size());
+        out.addAll(warnings);
+        out.addAll(runtime);
+        warnings.clear();
+        return List.copyOf(out);
+    }
+
     /** 已装载的命名技能名，供体检与网页端列举。 */
     public List<String> skillNames() {
         return List.copyOf(defs.keySet());
+    }
+
+    /**
+     * 一条 require 的求值结果。
+     *
+     * <p>命名带 {@code Cond} 前缀而非裸 {@code Trace}：本类已有多个嵌套类型，
+     * 裸名会在同文件里与其他 {@code Trace} 撞车。</p>
+     *
+     * @param key    已绑定的条件键
+     * @param passed 该条件在给定上下文下是否为真
+     */
+    public record CondTrace(String key, boolean passed) {
+    }
+
+    /**
+     * 技能预览结果：把「这条技能会不会触发、为什么」摊开给配置作者看。
+     *
+     * @param skillName 技能名
+     * @param trace     逐条 require 的求值轨迹（键 + 是否通过）
+     * @param wouldRun  require 全通过时为 true；否则为 false
+     * @param actions   若执行会依次跑的动作键
+     * @param cooldown  该技能当前是否在冷却中
+     * @param priority  优先级
+     */
+    public record Preview(String skillName, List<CondTrace> trace, boolean wouldRun,
+                          List<String> actions, boolean cooldown, int priority) {
+        /** 首条未通过的 require；全通过时返回 null。 */
+        public String firstFailing() {
+            for (CondTrace t : trace) {
+                if (!t.passed()) return t.key();
+            }
+            return null;
+        }
+    }
+
+    /**
+     * 预览一条命名技能在给定上下文下是否会触发，<b>不执行任何动作</b>。
+     *
+     * <p>存在的理由：「配置写了但永不触发且无任何报错」是本项目反复出现的缺陷类别。
+     * 真服上要验证一条技能只能等 Boss 挨打到那个血量——被动且慢，于是配置作者
+     * 改错条件后继续等待，形成死循环。这里把判定链路完整走一遍并输出轨迹，
+     * 把排查从「等」变成「一条命令」。</p>
+     *
+     * <p>刻意不执行动作：预览是诊断工具，在真 Boss 上放一遍 AoE/点燃会造成真实伤害。
+     * 「会不会触发」能答，「触发后打多少伤害」不能，也不该在这里答。</p>
+     *
+     * @param ctx 模拟上下文；可用 {@code BehaviorContext.of} 构造标量快照
+     * @return 预览结果；技能不存在返回 {@code null}
+     */
+    public Preview preview(String skillName, dev.helstera.api.behavior.BehaviorContext ctx) {
+        if (skillName == null || skillName.isBlank()) return null;
+        SkillDef def = defs.get(skillName.toLowerCase(Locale.ROOT));
+        if (def == null) return null;
+
+        List<CondTrace> trace = new ArrayList<>();
+        boolean allPass = true;
+        for (String condKey : def.require) {
+            boolean ok = registry.testCondition(condKey, ctx);
+            trace.add(new CondTrace(condKey, ok));
+            if (!ok) allPass = false;
+        }
+        boolean cooling = def.cooldownMillis > 0
+                && !cooldownReady(def, cooldownKey(def, ctx), System.currentTimeMillis());
+        return new Preview(def.name, List.copyOf(trace), allPass,
+                List.copyOf(def.actions), cooling, def.priority);
     }
 
     /** 绑定一条条件定义，返回可写入 profile 的键；失败返回 null。 */
@@ -502,11 +582,6 @@ public final class SkillService {
         int total = 0;
         for (SkillQueueEntry q : skillQueue.values()) total += q.items.size();
         return total;
-    }
-
-    /** 已装载的技能名集合（供测试与调试）。 */
-    public Set<String> skillNames() {
-        return defs.keySet();
     }
 
     /**

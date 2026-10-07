@@ -506,7 +506,7 @@ public final class AiManager implements Listener {
                 currentPhaseName(inst.instanceId()), null, level);
         plugin.getLogger().info("[BossBar] onModelSpawn: showing bar for inst #" + inst.instanceId() +
                 " title=" + render.title() + " health=" + le.getHealth() + "/" + le.getMaxHealth());
-        bossBarService.show(le.getUniqueId(), render, profile.bossBar.range());
+        bossBarService.show(le.getUniqueId(), withConfiguredColor(render, profile.bossBar), profile.bossBar.range());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -534,7 +534,25 @@ public final class AiManager implements Listener {
         var render = BossBarState.render(true, profile.bossBar.title(), null,
                 le.getHealth(), le.getMaxHealth(),
                 currentPhaseName(inst.instanceId()), cast, level);
-        bossBarService.update(entity.getUniqueId(), render);
+        bossBarService.update(entity.getUniqueId(), withConfiguredColor(render, profile.bossBar));
+    }
+
+    /**
+     * 把档案配置的分段/渐变配色套到一次渲染结果上。
+     *
+     * <p>{@link BossBarState#render} 只负责标题与进度，颜色交给这里——因为
+     * 「按分段还是按渐变取色」依赖档案配置，而决策层刻意不持有配置。</p>
+     *
+     * <p>未配 segments 时原样返回 render：此时用默认色，而不是让空列表
+     * 落到某个偶然命中的档。</p>
+     */
+    private static BossBarState.Render withConfiguredColor(
+            BossBarState.Render render, dev.helstera.ai.bossbar.BossBarConfig.Parsed cfg) {
+        if (cfg == null || !cfg.hasSegments() || !render.visible()) return render;
+        String color = cfg.gradient()
+                ? BossBarState.gradientOf(cfg.segments(), render.ratio())
+                : BossBarState.colorOf(cfg.segments(), render.ratio());
+        return new BossBarState.Render(render.title(), render.ratio(), color, true);
     }
 
     /**

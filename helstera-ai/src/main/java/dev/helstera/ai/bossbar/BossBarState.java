@@ -74,6 +74,97 @@ public final class BossBarState {
         return DEFAULT_COLOR;
     }
 
+    /**
+     * 渐变配色：在相邻两档之间按比例线性插值，返回最接近的可用色名。
+     *
+     * <p><b>插值到离散色而非真 RGB</b>：Bukkit 的 {@code BossBar} 只接受
+     * {@code PINK/BLUE/RED/GREEN/YELLOW/PURPLE} 六档，没有任意颜色通道。
+     * 声称支持真渐变会让配置作者以为能写出细腻的橙→红过渡，实际只在六个采样点
+     * 上跳变。这里显式按 RGB 距离取最近档，让「渐变」在能力范围内尽可能接近字面意思，
+     * 且插值本身可测。</p>
+     *
+     * @param segments 档位；为空时返回 {@link #DEFAULT_COLOR}
+     * @param ratio 当前血量比例
+     */
+    public static String gradientOf(List<Segment> segments, double ratio) {
+        if (segments == null || segments.size() < 2) return colorOf(segments, ratio);
+        List<Segment> usable = new ArrayList<>();
+        for (Segment s : segments) {
+            if (s.color() != null && !s.color().isBlank()) usable.add(s);
+        }
+        if (usable.size() < 2) return colorOf(segments, ratio);
+        usable.sort((a, b) -> Double.compare(a.fromRatio(), b.fromRatio()));
+        double r = clamp01(ratio);
+
+        // 落在最下档之下：取最下档色，不外推——外推会造出作者没配置过的颜色
+        if (r <= usable.get(0).fromRatio()) return nearest(usable.get(0).color());
+        Segment top = usable.get(usable.size() - 1);
+        if (r >= top.fromRatio()) return nearest(top.color());
+
+        // 定位所在区间并插值
+        for (int i = 1; i < usable.size(); i++) {
+            Segment lo = usable.get(i - 1);
+            Segment hi = usable.get(i);
+            if (r >= hi.fromRatio()) continue;
+            double span = hi.fromRatio() - lo.fromRatio();
+            double t = span <= 1e-9 ? 0 : (r - lo.fromRatio()) / span;
+            return nearest(mix(lo.color(), hi.color(), t));
+        }
+        return nearest(top.color());
+    }
+
+    /** 两个命名色按 {@code t} 线性插值，返回 RGB 三元组。 */
+    private static int[] mix(String a, String b, double t) {
+        int[] ca = rgb(a);
+        int[] cb = rgb(b);
+        double k = clamp01(t);
+        return new int[]{
+                (int) Math.round(ca[0] + (cb[0] - ca[0]) * k),
+                (int) Math.round(ca[1] + (cb[1] - ca[1]) * k),
+                (int) Math.round(ca[2] + (cb[2] - ca[2]) * k)};
+    }
+
+    /** 把 RGB 距离最近的 {@link #AVAILABLE_COLORS} 名返回。 */
+    private static String nearest(int[] rgb) {
+        String best = AVAILABLE_COLORS[0];
+        long bestDist = Long.MAX_VALUE;
+        for (String name : AVAILABLE_COLORS) {
+            int[] c = rgb(name);
+            long d = dr2(rgb[0], c[0]) + dr2(rgb[1], c[1]) + dr2(rgb[2], c[2]);
+            if (d < bestDist) {
+                bestDist = d;
+                best = name;
+            }
+        }
+        return best;
+    }
+
+    private static String nearest(String named) {
+        return nearest(rgb(named));
+    }
+
+    private static long dr2(int a, int b) {
+        long d = (long) a - b;
+        return d * d;
+    }
+
+    /** Bukkit BossBar 支持的全部颜色名；渐变的采样目标集。 */
+    public static final String[] AVAILABLE_COLORS =
+            {"PINK", "BLUE", "RED", "GREEN", "YELLOW", "PURPLE"};
+
+    /** 命名色 → RGB。未知名按绿色处理，与运行期回落到 GREEN 保持一致。 */
+    private static int[] rgb(String named) {
+        if (named == null) return new int[]{0, 255, 0};
+        return switch (named.trim().toUpperCase(java.util.Locale.ROOT)) {
+            case "PINK" -> new int[]{255, 0, 170};
+            case "BLUE" -> new int[]{0, 0, 255};
+            case "RED" -> new int[]{255, 0, 0};
+            case "YELLOW" -> new int[]{255, 255, 0};
+            case "PURPLE" -> new int[]{170, 0, 255};
+            default -> new int[]{0, 255, 0};
+        };
+    }
+
     /** 缺省配色：高于半血绿、以下黄、濒死红。 */
     public static final String DEFAULT_COLOR = "GREEN";
 

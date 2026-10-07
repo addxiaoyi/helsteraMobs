@@ -297,4 +297,99 @@ class SpawnerServiceTest {
         assertNull(s.get("nope"));
         assertNull(s.get(null));
     }
+
+    // ------------------------------------------------------------------
+    // 运行期 toggle
+    // ------------------------------------------------------------------
+
+    /**
+     * 键名刻意避开 {@code on}/{@code off}/{@code yes}/{@code no}：
+     * YAML 1.1 把这些当布尔字面量，{@code on:} 会被解析成键 {@code "true"}，
+     * 于是 {@code get("on")} 返回 null——一个只在测试里出现、却极难归因的坑。
+     */
+    private static SpawnerService toggleService() {
+        return service("""
+                spawners:
+                  alpha:
+                    mob: m
+                    x: 0
+                    z: 0
+                    enabled: true
+                  beta:
+                    mob: m
+                    x: 0
+                    z: 0
+                    enabled: false
+                """);
+    }
+
+    @Test
+    @DisplayName("toggle 翻转运行期状态，两次回到原位")
+    void toggleFlipsAndRestores() {
+        var s = toggleService();
+        var alpha = s.get("alpha");
+        assertTrue(s.isActive(alpha), "YAML enabled: true 应视为启用");
+
+        assertEquals(Boolean.FALSE, s.toggle("alpha"), "第一次 toggle 应关闭");
+        assertFalse(s.isActive(alpha));
+
+        assertEquals(Boolean.TRUE, s.toggle("alpha"), "第二次 toggle 应恢复");
+        assertTrue(s.isActive(alpha));
+    }
+
+    @Test
+    @DisplayName("toggle 不改写 YAML 的 enabled，reload 后回到配置值")
+    void toggleDoesNotMutateYamlIntent() {
+        var s = toggleService();
+        var alpha = s.get("alpha");
+        s.toggle("alpha");
+        assertFalse(s.isActive(alpha), "运行期应停用");
+        assertTrue(alpha.enabled(), "但 Spawner.enabled() 必须仍反映 YAML 的作者意图");
+
+        // reload 会清空运行期覆盖集
+        s.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                spawners:
+                  alpha:
+                    mob: m
+                    x: 0
+                    z: 0
+                    enabled: true
+                """)).getConfigurationSection("spawners"));
+        assertTrue(s.isActive(s.get("alpha")), "reload 后应回到 YAML 的 enabled: true");
+    }
+
+    @Test
+    @DisplayName("YAML 里本就停用的点，toggle 回来仍是停用")
+    void yamlDisabledStaysDisabledAfterToggle() {
+        var s = toggleService();
+        var beta = s.get("beta");
+        assertFalse(s.isActive(beta), "enabled: false 本就不该产出");
+
+        // toggle 返回的是「翻转后是否启用」，而非「运行期覆盖是否被解除」。
+        // 对 enabled:false 的点，解除覆盖也仍然不产出——返回值必须如实为 false，
+        // 否则命令会骗管理员说「已启用」。
+        assertEquals(Boolean.FALSE, s.toggle("beta"));
+        assertFalse(s.isActive(beta), "toggle 只能叠加在 YAML 之上，不能覆盖它");
+
+        assertEquals(Boolean.FALSE, s.toggle("beta"));
+        assertFalse(s.isActive(beta));
+    }
+
+    @Test
+    @DisplayName("toggle 对大小写不敏感的 id 同样生效")
+    void toggleNormalizesIdCase() {
+        var s = toggleService();
+        assertEquals(Boolean.FALSE, s.toggle("ALPHA"), "id 应按与 get() 相同的方式归一化");
+        assertFalse(s.isActive(s.get("alpha")));
+        assertEquals(Boolean.TRUE, s.toggle("Alpha"));
+        assertTrue(s.isActive(s.get("alpha")));
+    }
+
+    @Test
+    @DisplayName("toggle 不存在的刷怪点返回 null，不误报成功")
+    void toggleUnknownReturnsNull() {
+        var s = toggleService();
+        assertNull(s.toggle("nope"));
+        assertNull(s.toggle(null));
+    }
 }

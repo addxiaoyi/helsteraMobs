@@ -86,6 +86,17 @@ public interface WebBridge {
     /** 技能装载期告警（未知名、参数缺失等）。 */
     List<String> skillWarnings();
 
+    /**
+     * 预览一条命名技能：返回逐条条件的求值轨迹与「会不会触发」，<b>不执行动作</b>。
+     *
+     * <p>与 {@link #rollLoot} 同源的调试接口：网页端要能回答「这条技能在
+     * 某个血量下会不会放行」，否则配置作者只能上服等 Boss 挨打到那一档。
+     * 返回 null 表示技能不存在。</p>
+     *
+     * @param healthRatio 模拟血量比例，[0,1]
+     */
+    Map<String, Object> previewSkill(String name, double healthRatio);
+
     /** 重载 loot.yml 与 spawners.yml。 */
     boolean reloadLoot();
 

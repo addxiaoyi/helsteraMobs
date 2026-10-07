@@ -102,6 +102,17 @@ public final class SpawnerService {
         }
     }
 
+    /**
+     * 运行期开关覆盖集：只含被手动关掉的刷怪点 id。
+     *
+     * <p>刻意与 YAML 的 {@code enabled} 分开存而非直接改字段：配置文件里的值是
+     * 「作者意图」，运行期 toggle 是「临时处置」。合并后 reload 会把玩家的临时停用
+     * 悄悄冲掉，且 {@code enabled()} 的语义会随调用时机漂移。</p>
+     */
+    private final java.util.Set<String> runtimeDisabled =
+            java.util.Collections.newSetFromMap(
+                    new java.util.concurrent.ConcurrentHashMap<>());
+
     private final Plugin plugin;
     private final Logger log;
     private final MobSpawner spawner;
@@ -123,6 +134,7 @@ public final class SpawnerService {
         spawners.clear();
         alive.clear();
         problems.clear();
+        runtimeDisabled.clear();
         minInterval = Integer.MAX_VALUE;
         if (root == null) {
             minInterval = 100;
@@ -241,7 +253,7 @@ public final class SpawnerService {
         tickCounter++;
         for (Spawner sp : spawners.values()) {
             try {
-                if (!sp.enabled) continue;
+                if (!isActive(sp)) continue;
                 if (tickCounter < sp.nextSpawnTick) continue;
                 sp.nextSpawnTick = tickCounter + sp.intervalTicks;
                 trySpawn(sp);
@@ -249,6 +261,38 @@ public final class SpawnerService {
                 if (log != null) log.warning("[刷怪] " + sp.id() + " 生成异常: " + t);
             }
         }
+    }
+
+    /**
+     * 刷怪点当前是否应当产出：YAML 的 enabled 且未被运行期停用。
+     *
+     * <p>两个来源都算，因此 {@code toggle} 关掉一个 YAML 里 enabled: false 的点，
+     * 再 toggle 回来仍然是关的——它本来就该关着。</p>
+     */
+    public boolean isActive(Spawner sp) {
+        return sp.enabled && !runtimeDisabled.contains(sp.id);
+    }
+
+    /**
+     * 翻转运行期开关。
+     *
+     * @return 翻转后<b>是否启用</b>；刷怪点不存在返回 {@code null}。
+     *         注意这与「YAML 的 enabled」不同——后者为 false 时本方法恒返回 false，
+     *         因为 toggle 只能在 YAML 之上叠加，不能覆盖作者意图。
+     */
+    public Boolean toggle(String id) {
+        if (id == null) return null;
+        Spawner sp = get(id);
+        if (sp == null) return null;
+        // 必须用 sp.id()（已小写化）而非传入的原始 id：配置里写 Alpha 而命令里打
+        // alpha 时，原始 id 永远匹配不上覆盖集，表现为「toggle 提示成功但没效果」。
+        String key = sp.id();
+        if (runtimeDisabled.remove(key)) {
+            // 之前被手动关过，现在解除
+        } else {
+            runtimeDisabled.add(key);
+        }
+        return isActive(sp);
     }
 
     private void trySpawn(Spawner sp) {

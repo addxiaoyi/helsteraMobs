@@ -459,6 +459,16 @@ spawners:
 | `?isSneaking` | `is-sneaking` | 实体是否潜行 |
 | `?isGlowing` | `is-glowing` | 实体是否发光 |
 | `?facing-{target}` | `facing-target [角度]` | 实体朝向目标（默认 ±45° 容差） |
+| `?onFire` | `on-fire` | 实体处于燃烧状态 |
+| `?isSprinting` | `is-sprinting` | 实体疾跑中（仅玩家载体） |
+| `?inAir` | `in-air` | 实体离开地面 |
+| `?isSwimming` | `is-swimming` | 实体在游泳（区别于仅在水中） |
+| `?isClimbing` | `is-climbing` | 实体在攀爬墙/梯 |
+| `?isInvisible` | `is-invisible` | 实体隐身中 |
+| `?inBlock` | `is-blocked [高度]` | 实体被方块卡住（默认查头顶） |
+| `?standingOn` | `stand-on <方块名>` | 脚下踩的是指定方块 |
+| `?daylight` | `daylight [0..1]` | 太阳高度是否达到阈值 |
+| — | `world-is <世界名>` | 实例所在世界匹配 |
 
 配置示例：
 
@@ -492,6 +502,63 @@ skills:
 - 默认 `priority` 为 0，数值越大越先执行。
 - 队列仅在多技能同时触发时激活；单次触发不受影响。
 - 队列中的技能独立计算冷却，已在冷却中的技能不入队。
+
+## 技能预览（只判定，不执行）
+
+排查「技能写了却永不触发」时最有用的一条命令。真服上验证一条技能只能等 Boss 挨打到那个血量——被动且慢，于是配置作者改错条件后继续等待，形成死循环。预览把判定链路走一遍并输出轨迹。
+
+```
+/helstera skill list                      # 列出所有命名技能
+/helstera skill info <技能名>               # 看条件条数、优先级、动作列表
+/helstera skill preview <技能名> [血量%]      # 逐条条件求值 + 会不会触发
+```
+
+输出示例：
+
+```
+预览 fire-blast @ 血量 20%
+  ✓ health-below:0.3
+  ✗ on-ground
+结论: 不会触发 — 未满足 on-ground
+提示: 调高 /helstera skill preview 的血量% 参数试试哪一档开始满足
+```
+
+**预览绝不执行动作**：在真 Boss 上放一遍 AoE 会造成真实伤害。答案是「会不会触发」，不是「触发后打多少伤害」。
+
+**`✗` 的两种含义**：标量条件（`health-below` / `state-is`）不满足说明配置或时机不对；世界状态条件（`on-ground` / `in-water` / `has-target`）在预览里恒为 `✗`，因为它需要真实实体——这类的 `✗` 含义是「需上真服验证」，不是配置错误。
+
+网页端对应接口：`POST /api/skills/preview`，参数 `{name, health}`（血量接受 `0..1` 与 `0..100` 两种量纲）。
+
+## Boss 血条渐变配色
+
+`bossbar.gradient: true` 让血量在相邻档位之间线性插值，而不是到点跳变。
+
+```yaml
+bossbar:
+  enabled: true
+  gradient: true
+  thresholds: [0.0, 0.5, 1.0]
+  colors: [RED, YELLOW, GREEN]
+```
+
+**必须知道的限制**：Bukkit 的 `BossBar` 只接受 `PINK` / `BLUE` / `RED` / `GREEN` / `YELLOW` / `PURPLE` 六档，没有任意颜色通道。因此渐变是**插值后取最近可用色**，实际观感是在六个采样点之间跳变，而不是连续的橙→红过渡。写更多中间档位只会让跳变点更密，不会得到真正的连续渐变。
+
+其余规则：
+- 档位少于 2 时 `gradient` 自动失效并告警（无区间可插值）。
+- 低于最低档下界时取最低档色，**不外推**——作者只声明了两点，外推会造出没配过的颜色。
+- 空颜色名档位被跳过，不参与插值。
+
+## 刷怪点运行期开关
+
+```
+/helstera spawner toggle <id>     # 启停单个刷怪点，无需改文件
+/helstera spawner list            # 每行显示 [启用] / [停用]
+```
+
+- 运行期状态与 `spawners.yml` 的 `enabled` **分开存储**，不互相污染：`toggle` 只叠加在 YAML 之上。
+- 对 YAML 里本就 `enabled: false` 的点，`toggle` 会明确提示「清除运行期开关但仍不产出，要启用请改 spawners.yml」，而不是骗你说「已启用」。
+- `/helstera reload spawners` 会清空运行期开关，回到 YAML 的值。
+- 已产出的生物不受影响，只影响后续产出。
 
 ### 关于 `on-entity-shoot`
 
