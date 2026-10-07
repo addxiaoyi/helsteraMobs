@@ -950,26 +950,62 @@ public final class SkillTriggers implements Listener {
     private static final double ANNOUNCE_RADIUS = 32.0;
 
     /**
-     * 播报阶段公告。
+     * 播报阶段公告（文字 + 音效 + 粒子 + 命令）。
      *
      * <p>播报给 Boss 周围的玩家而非全服：阶段是现场事件，全服广播会让
      * 野外的小怪切阶段也刷屏。半径内的旁观者才是需要知道的人。</p>
      *
-     * <p>播报失败（世界已卸载、实例位置未知）静默返回——公告是锦上添花，
-     * 不能让一次 {@code announce} 写错就把整条阶段切换链带崩。</p>
+     * <p>播报失败静默返回——公告是锦上添花，不能让一次写错就把整条阶段切换链带崩。
+     * 各子项（text/sound/particle/commands）独立执行，一项失败不影响其他项。</p>
      */
     private void announce(AiProfile profile, BossPhase phase, String prevPhase, BehaviorContext ctx) {
-        String raw = phase.announce();
-        if (raw == null || raw.isBlank()) return;
+        // 保留 announce() 调用以维持配置审计的连通性；实际播报走 announcement()。
+        String rawText = phase.announce();
+        BossPhase.BossAnnouncement ann = phase.announcement();
+        if ((rawText == null || rawText.isBlank()) && (ann == null || !ann.hasContent())) return;
         if (!ctx.instanceValid()) return;
         org.bukkit.Location at = ctx.instance().location();
         if (at == null || at.getWorld() == null) return;
-        try {
-            for (Player p : at.getWorld().getNearbyPlayers(at, ANNOUNCE_RADIUS)) {
-                p.sendMessage(renderAnnounce(raw, profile, phase, prevPhase, ctx));
+
+        // 文字消息
+        if (ann.text() != null && !ann.text().isBlank()) {
+            try {
+                for (Player p : at.getWorld().getNearbyPlayers(at, ANNOUNCE_RADIUS)) {
+                    p.sendMessage(renderAnnounce(ann.text(), profile, phase, prevPhase, ctx));
+                }
+            } catch (Throwable t) {
+                warn("阶段 " + phase.id() + " 文字播报失败: " + t);
             }
-        } catch (Throwable t) {
-            warn("阶段 " + phase.id() + " 公告播报失败: " + t);
+        }
+        // 音效
+        if (ann.sound() != null && !ann.sound().isBlank()) {
+            try {
+                org.bukkit.Sound s = org.bukkit.Sound.valueOf(ann.sound());
+                at.getWorld().playSound(at, s, 1.0f, 1.0f);
+            } catch (Throwable t) {
+                warn("阶段 " + phase.id() + " 音效 \"" + ann.sound() + "\" 失败: " + t);
+            }
+        }
+        // 粒子
+        if (ann.particle() != null && !ann.particle().isBlank()) {
+            try {
+                org.bukkit.Particle p = org.bukkit.Particle.valueOf(ann.particle());
+                at.getWorld().spawnParticle(p, at, 64, 3.0, 2.0, 3.0, 0.0);
+            } catch (Throwable t) {
+                warn("阶段 " + phase.id() + " 粒子 \"" + ann.particle() + "\" 失败: " + t);
+            }
+        }
+        // 命令（通过控制台执行，占位符按当前 ctx 展开）
+        if (ann.commands() != null && !ann.commands().isEmpty()) {
+            for (String rawCmd : ann.commands()) {
+                try {
+                    String expanded = renderAnnounce(rawCmd, profile, phase, prevPhase, ctx);
+                    org.bukkit.Bukkit.getServer().dispatchCommand(
+                            org.bukkit.Bukkit.getConsoleSender(), expanded);
+                } catch (Throwable t) {
+                    warn("阶段 " + phase.id() + " 命令 \"" + rawCmd + "\" 失败: " + t);
+                }
+            }
         }
     }
 

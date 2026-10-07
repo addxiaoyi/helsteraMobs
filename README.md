@@ -260,6 +260,41 @@ ai:
 - **`thresholds` 与 `colors` 数量必须一致**。不一致会告警并**忽略整段配色**，血条退回默认绿色，而不是部分生效。
 - **比例低于所有档下界时回落到最低档**。所以把下界都写高时，「只剩一丝血」会显示最低档色而不是满血色——这是刻意的，否则濒死观感与实际相反。
 
+## 阶段播报（Announcement）
+
+写在 `profiles.<name>.phases[].announce`（文字）及可选的 `sound` / `particle` / `commands`。
+播报范围是 Boss 周围 32 格内的玩家，而非全服广播。
+
+```yaml
+phases:
+  - id: enraged
+    min: 0
+    max: 75
+    announce: "&4[警告] Boss 进入狂暴状态！"
+    sound: ENTITY_WITHER_SPAWN
+    particle: DRIP_LAVA
+    commands:
+      - "say %mob-name% is now in phase %phase%"
+      - "effect give @a nearby 8 speed 10 1"
+  - id: dead_phase
+    min: 75
+    max: 100
+    announce: ""          # 纯音效无文字
+    sound: BLOCK_NOTE_BLOCK_PLING
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `announce` | 文字消息（支持 `%phase%` `/ %hp%` `/ %mob%` 等占位符，同阶段切换公告） |
+| `sound` | Bukkit `Sound` 枚举名，在 Boss 位置播放 |
+| `particle` | Bukkit `Particle` 枚举名，在 Boss 位置发射 64 个粒子 |
+| `commands` | 列表；每条通过控制台执行，占位符同样展开 |
+
+**规则**：
+- 四项独立：文字为空仍可播 sound；command 为空仍可播粒子。
+- 任何一项执行失败只打 warning，不影响其他项。
+- 播报半径固定 32 格，不可配置——这是手感调校后的结论，避免野外 Boss 切阶段刷屏。
+
 ## Mob Levels 等级缩放
 
 写在 `mobs/<档案>.yml` 的 `ai` 节里，**不是**写在 `ai.profiles.<name>` 里。
