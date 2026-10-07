@@ -473,6 +473,26 @@ triggers:
 
 写一个未接线的触发器不会有任何提示，所以配置体检应当习惯性跑一遍。
 
+## 技能队列与优先级
+
+当同一实例在同一 tick 内触发多个技能时，系统按 `priority` 字段降序排队执行，高优先级先执行完再执行下一个。
+
+```yaml
+skills:
+  urgent-heal:
+    priority: 100          # 高优先级：紧急回复
+    on-decision:
+      - heal-target players 20
+  display-effect:
+    priority: 10           # 低优先级：装饰性效果
+    on-decision:
+      - particle heart 5
+```
+
+- 默认 `priority` 为 0，数值越大越先执行。
+- 队列仅在多技能同时触发时激活；单次触发不受影响。
+- 队列中的技能独立计算冷却，已在冷却中的技能不入队。
+
 ### 关于 `on-entity-shoot`
 
 该触发器**可用**：载体的 `entity.type` 可以是 `player`，这类载体确实能射箭，
