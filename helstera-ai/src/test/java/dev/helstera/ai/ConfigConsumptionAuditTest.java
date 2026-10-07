@@ -28,9 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>存在的理由：本项目反复出现同一类缺陷——配置键被解析进数据类、暴露成
  * getter，然后<b>没有任何生产代码读它</b>。已确认多处：{@code phases}、
  * {@code phases[].announce}、{@code min-tier-level}、{@code bone.hitbox}、
- * 生物级 {@code phases}/{@code require}、{@code SpawnOptions.showHealthBar}、
- * {@code SpawnOptions.aiProfile}。服务端表现统一为「配置写得越详细越没效果」，
- * 且日志里没有任何痕迹。</p>
+ * 生物级 {@code phases}/{@code require}、{@code SpawnOptions.showHealthBar}。
+ * 服务端表现统一为「配置写得越详细越没效果」，且日志里没有任何痕迹。</p>
  *
  * <p><b>判定规则</b>：字段名必须以<b>实例访问</b>形态（{@code x.field}）
  * 出现在生产源码中。刻意不用「字段名出现次数」——getter 定义与建造器赋值
@@ -75,10 +74,8 @@ class ConfigConsumptionAuditTest {
         EXEMPT.put("SpawnerService.spawners", "装载表本身，非配置");
 
         // ---- 已知死配置：待接线，记此以免遗忘 ----
-        // 这两项确实无运行期消费点。审计表在此显式挂账，
         // 接线完成后请删除对应行——删除后审计会重新接管。
         EXEMPT.put("SpawnOptions.showHealthBar", "已知死配置：项目内无 BossBar 机制，待接线");
-        EXEMPT.put("SpawnOptions.aiProfile", "已知死配置：mobs/*.yml 走 ai 节独立路径，此项未被读取");
     }
 
     @Test
@@ -110,8 +107,7 @@ class ConfigConsumptionAuditTest {
         String corpus = productionCorpus(repoRoot());
         assertFalse(isConsumed(corpus, "showHealthBar"),
                 "审计应能识别出 showHealthBar 无消费点");
-        assertFalse(isConsumed(corpus, "aiProfile"),
-                "审计应能识别出 aiProfile 无消费点");
+        // aiProfile 现已被 SpawnerService.aiProfile() 消费，不再作为「死字段」示例。
         assertTrue(fieldNames(Files.readString(
                         repoRoot().resolve(AUDITED.get("SpawnOptions")), StandardCharsets.UTF_8))
                         .contains("showHealthBar"),
@@ -129,6 +125,7 @@ class ConfigConsumptionAuditTest {
         // 这正是不能用「跳过声明文件」规则的原因。
         assertTrue(isConsumed(corpus, "minPlayers"), "内部类字段在同文件被消费，不应误报");
         assertTrue(isConsumed(corpus, "yRange"), "内部类字段在同文件被消费，不应误报");
+        assertTrue(isConsumed(corpus, "aiProfile"), "刷怪点 aiProfile 覆盖已在 SpawnerService 消费");
         // 掉落表字段由 LootService 跨文件消费。
         assertTrue(isConsumed(corpus, "luckScaling"), "掉落表字段跨文件被消费");
     }

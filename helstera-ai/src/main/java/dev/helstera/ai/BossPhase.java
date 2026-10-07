@@ -30,11 +30,21 @@ public final class BossPhase {
      * <ul>
      *   <li>{@code text} — 文字消息（原 {@code announce} 字段兼容）</li>
      *   <li>{@code sound} — 播放音效（Bukkit {@code Sound} 枚举名）</li>
-     *   <li>{@code particle} — 发射粒子特效</li>
+     *   <li>{@code particle} — 发射粒子特效；参数名用下划线以避免与 record 字段名冲突</li>
      *   <li>{@code commands} — 控制台命令列表（支持 %placeholder%）</li>
      * </ul>
+     *
+     * <p>粒子参数使用下划线命名（{@code particle_count} 等），与 YAML 配置文件风格一致。</p>
      */
-    public record BossAnnouncement(String text, String sound, String particle, List<String> commands) {
+    public record BossAnnouncement(String text, String sound, String particle,
+                                   int particleCount, double particleOffsetX, double particleOffsetY,
+                                   double particleOffsetZ, double particleExtra,
+                                   List<String> commands) {
+        /** 便捷构造器，兼容旧配置（仅文字）。 */
+        public BossAnnouncement(String text, String sound, String particle, List<String> commands) {
+            this(text, sound, particle, 64, 3.0, 2.0, 3.0, 0.0, commands);
+        }
+
         /** 是否有任何内容需要播报。text 为空字符串时也视为有内容（可能配合 sound 使用）。 */
         public boolean hasContent() {
             return text != null || sound != null || particle != null || commands != null;
@@ -197,6 +207,11 @@ public final class BossPhase {
                             ps.getString("announce"),
                             ps.getString("sound"),
                             ps.getString("particle"),
+                            ps.getInt("particle-count", 64),
+                            ps.getDouble("particle-offset-x", 3.0),
+                            ps.getDouble("particle-offset-y", 2.0),
+                            ps.getDouble("particle-offset-z", 3.0),
+                            ps.getDouble("particle-speed", 0.0),
                             ps.getStringList("commands")),
                     ps.getStringList("on-enter"),
                     ps.getStringList("on-exit")));

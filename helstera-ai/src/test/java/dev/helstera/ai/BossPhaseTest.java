@@ -142,6 +142,11 @@ class BossPhaseTest {
                     announce: "&4龙醒了！"
                     sound: ENTITY_WITHER_SPAWN
                     particle: DRIP_LAVA
+                    particle-count: 128
+                    particle-offset-x: 5.0
+                    particle-offset-y: 3.0
+                    particle-offset-z: 5.0
+                    particle-speed: 0.1
                     commands:
                       - "say %mob% is now in phase %phase%"
                 """;
@@ -153,7 +158,31 @@ class BossPhaseTest {
         assertEquals("&4龙醒了！", ann.text());
         assertEquals("ENTITY_WITHER_SPAWN", ann.sound());
         assertEquals("DRIP_LAVA", ann.particle());
+        assertEquals(128, ann.particleCount());
+        assertEquals(5.0, ann.particleOffsetX(), 0.001);
+        assertEquals(3.0, ann.particleOffsetY(), 0.001);
+        assertEquals(5.0, ann.particleOffsetZ(), 0.001);
+        assertEquals(0.1, ann.particleExtra(), 0.001);
         assertEquals(List.of("say %mob% is now in phase %phase%"), ann.commands());
+    }
+
+    @Test
+    @DisplayName("未配置粒子参数时使用默认值")
+    void particleParamsDefaultWhenNotSpecified() {
+        String yml = """
+                phases:
+                  - id: p1
+                    announce: "&cwarning"
+                    particle: FLAME
+                """;
+        var sec = YamlConfiguration.loadConfiguration(new StringReader(yml));
+        List<BossPhase> phases = BossPhase.parseList(sec, new ArrayList<>());
+        var ann = phases.get(0).announcement();
+        assertEquals(64, ann.particleCount());
+        assertEquals(3.0, ann.particleOffsetX(), 0.001);
+        assertEquals(2.0, ann.particleOffsetY(), 0.001);
+        assertEquals(3.0, ann.particleOffsetZ(), 0.001);
+        assertEquals(0.0, ann.particleExtra(), 0.001);
     }
 
     @Test

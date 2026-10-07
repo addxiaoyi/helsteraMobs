@@ -787,7 +787,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
      * @param base 基准位置，实际生成点为该位置水平方向前方 3 格
      */
     public String spawnMob(String mobId, String modelOverride, org.bukkit.Location base) {
-        MobSpawn r = spawnMobCore(mobId, modelOverride, base, true);
+        MobSpawn r = spawnMobCore(mobId, modelOverride, base, true, null);
         return r == null ? null : r.message();
     }
 
@@ -797,8 +797,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
      * <p>与 {@link #spawnMob} 的区别只是不做"朝视线前方偏移 3 格"的玩家视角偏移，
      * 并且用返回值而不是文案表达结果——刷怪点需要的是可判定的成功标志。</p>
      */
-    public int spawnMobAt(String mobId, org.bukkit.Location loc) {
-        MobSpawn r = spawnMobCore(mobId, null, loc, false);
+    public int spawnMobAt(String mobId, org.bukkit.Location loc, String aiProfile) {
+        MobSpawn r = spawnMobCore(mobId, null, loc, false, aiProfile);
         return r == null ? -1 : r.instanceId();
     }
 
@@ -807,7 +807,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     private MobSpawn spawnMobCore(String mobId, String modelOverride, org.bukkit.Location base,
-                                   boolean forwardOffset) {
+                                   boolean forwardOffset, String aiProfileOverride) {
         org.bukkit.configuration.ConfigurationSection cfg = mobConfig(mobId);
         if (cfg == null) return null;
         if (instances == null) return new MobSpawn(-1, "实例系统未启用（需 2.0+ 版本）");
@@ -887,7 +887,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
         org.bukkit.configuration.ConfigurationSection aiSec = cfg.getConfigurationSection("ai");
         if (aiSec != null && ai() != null) {
-            AiProfile profile = ai().profile(aiSec.getString("profile", "default"));
+            // ai-profile 覆盖：刷怪点指定档案时优先使用，否则沿用 mob 自身配置
+            String profileName = (aiProfileOverride != null && !aiProfileOverride.isBlank())
+                    ? aiProfileOverride.trim()
+                    : aiSec.getString("profile", "default");
+            AiProfile profile = ai().profile(profileName);
             profile = overrideProfile(profile, aiSec);
             // 生物级技能引用：与档案级 skills 同样经 SkillService 展开为已绑定键
             if (skillService instanceof SkillService sk) {
