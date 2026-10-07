@@ -13,7 +13,7 @@ Minecraft（Paper / Spigot）模型引擎插件。采用「资源包 + Display �
 - 免疫与伤害倍率（对标 MythicMobs `Immunities` / `DamageModifiers`）：按档案配置，支持精确 cause 与类别两层匹配、`negate` 免疫、倍率与负倍率回血、单个倍率跨 tick 不衰减、条件化生效；详见下方「免疫 / 伤害倍率」。
 - 网页开发器（Javalin 6 + Jackson）：模型列表 / 预览 / 动画播放 / 生物配置编辑 / 校验 / 保存 / 回滚 / 审计 / 模型 zip 导入导出；**技能**（skills.yml）、**掉落表**（loot.yml，含掷骰预览）、**刷怪点**（spawners.yml）可视化编辑；SSE 实时推送重载事件，保存后无需手动刷新。
 - 外部插件适配（MythicMobs / ItemAdder / CraftEngine 反射检测）与迁移中心（四插件导入器 + 自动备份）。
-- 刷怪点（spawners.yml）：定时 + 半径随机 + 存活上限 + 累计上限 + 玩家门控 + 世界绑定；所有刷怪点共用一个调度任务。
+- 刷怪点（spawners.yml）：定时 + 半径随机 + 存活上限 + 累计上限 + 玩家门控 + 世界绑定；所有刷怪点共用一个调度任务。**支持 `ai-profile` 字段覆盖 mob 档案的 AI 配置**，无需修改原档案即可指定不同的行为配置。
 - MythicMobs 模型 mechanic 与条件（反射注册，签名变动自动降级）：`modelspawn` / `modelremove` / `modelplay` / `modelstop` / `modelscale` / `modelmount` / `modelunmount` / `modelheal`，以及 `modelspawned` / `modelremoved` / `modelplaying`。
 
 ## 模块
@@ -409,6 +409,32 @@ skills:
 
 血条显示格式：`Lv.N 名称 [阶段] 蓄力中 67%`
 
+## 刷怪点 AI 门控
+
+`spawners.yml` 的每个刷怪点可加 `ai-profile` 字段，覆盖 mob 档案的 AI 配置，
+无需修改原档案即可为同一 mob 指定不同的行为配置。
+
+```yaml
+spawners:
+  elite_spawner:
+    mob: dragon
+    x: 0
+    y: 64
+    z: 0
+    radius: 20
+    max-alive: 2
+    ai-profile: "dragon_elite"   # 覆盖 dragon.yml 的 AI 配置
+  normal_spawner:
+    mob: dragon
+    x: 100
+    y: 64
+    z: 100
+    radius: 15
+    # 不写 ai-profile 则沿用 dragon.yml 的默认 AI 配置
+```
+
+优先级：`ai-profile`（刷怪点）> `ai.profile`（mobs/*.yml 的 ai 节）> `default`。
+
 ## 触发器接线状态
 
 `/helstera check` 会区分三种情况，而不是笼统说「未知名」：
@@ -419,9 +445,31 @@ skills:
 | 可写但未接线 | 名字认得，写了**不会报错也不会触发** |
 | 无法识别 | 名字拼错了，改键名即可 |
 
-**未接线的两个**：`on-death-skill`。它没有独立的事件来源（死亡由 `on-death` 覆盖），不要写进配置。
+**全部已接线**：所有触发器（含 `on-pre-target`、`on-damage-negation`、`on-death-skill`）均已接入真实事件来源。
 
-`on-pre-target` 和 `on-damage-negation` **已接线**：前者在 AI 选目标前触发，后者在伤害被免疫完全否定（归零）时触发。
+### MM 条件补全
+
+以下 MythicMobs 常用条件现已在 heights 中可用：
+
+| MM 条件 | heights 写法 | 说明 |
+| --- | --- | --- |
+| `?onGround` | `on-ground` | 实体站在固体方块上 |
+| `?inWater` | `in-water` | 实体处于水中 |
+| `?inLava` | `in-lava` | 实体处于岩浆中 |
+| `?isSneaking` | `is-sneaking` | 实体是否潜行 |
+| `?isGlowing` | `is-glowing` | 实体是否发光 |
+| `?facing-{target}` | `facing-target [角度]` | 实体朝向目标（默认 ±45° 容差） |
+
+配置示例：
+
+```yaml
+triggers:
+  on-spawn:
+    require: [on-ground]          # 只在地面生成时触发
+    do: [sound ENTITY_WITHER_SPAWN]
+  on-damage-negation:
+    do: [ignite-targets players 4 1]  # 被免疫时点燃攻击者
+```
 
 写一个未接线的触发器不会有任何提示，所以配置体检应当习惯性跑一遍。
 
