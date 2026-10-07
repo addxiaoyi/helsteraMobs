@@ -49,27 +49,25 @@ class TriggerWiringAuditTest {
     }
 
     @Test
-    @DisplayName("档案写了未接线触发器时，告警指名道姓说出档案与触发器")
-    void reportsProfileAndTriggerName() {
-        var map = profiles("龙 Boss", profileWith("on-spawn", "on-pre-target"));
+    @DisplayName("拼错的触发器名产生「无法识别」告警")
+    void misspelledTriggerIsFlagged() {
+        var map = profiles("龙 Boss", profileWith("on-spawn", "on-spwan"));
         var out = AiManager.scanUnwiredTriggers(map);
         assertEquals(1, out.size(), "应恰好报出一条，实际: " + out);
         assertTrue(out.get(0).contains("龙 Boss"),
-                "告警必须带档案名，否则用户不知道改哪个文件，实际: " + out.get(0));
-        assertTrue(out.get(0).contains("on-pre-target"),
-                "告警必须带触发器名，实际: " + out.get(0));
+                "告警必须带档案名，实际: " + out.get(0));
+        assertTrue(out.get(0).contains("on-spwan"),
+                "告警必须带拼错的触发器名，实际: " + out.get(0));
     }
 
     @Test
-    @DisplayName("拼错的触发器名与未接线触发器被区分开")
-    void unknownNameIsSeparateFromUnwired() {
-        var map = profiles("boss", profileWith("on-pre-target", "on-banana"));
+    @DisplayName("拼错触发器与未知触发器被区分开")
+    void misspelledAndUnknownAreDistinct() {
+        var map = profiles("boss", profileWith("on-spwan", "on-banana"));
         var out = AiManager.scanUnwiredTriggers(map);
         assertEquals(2, out.size(), "两类故障应各报一条，实际: " + out);
         assertTrue(out.stream().anyMatch(s -> s.contains("无法识别")),
-                "未知名应报「无法识别」，实际: " + out);
-        assertTrue(out.stream().anyMatch(s -> s.contains("on-pre-target")),
-                "已识别但未接线应报 wireHint，实际: " + out);
+                "拼错的触发器应报「无法识别」，实际: " + out);
     }
 
     @Test
@@ -96,13 +94,12 @@ class TriggerWiringAuditTest {
     @DisplayName("告警结果按字典序稳定，便于命令行逐行比对")
     void warningsAreSorted() {
         Map<String, AiProfile> m = new LinkedHashMap<>();
-        m.put("zzz", profileWith("on-pre-target"));
-        m.put("aaa", profileWith("on-buff", "on-spawn"));
+        m.put("zzz", profileWith("on-spwan"));
+        m.put("aaa", profileWith("on-buff", "on-spwan"));
         var out = AiManager.scanUnwiredTriggers(m);
-        // on-buff 已随 EntityPotionEffectEvent 接线，不再告警；
-        // 只有 on-spawn（已接线）与 on-pre-target（未接线）两档，
-        // 故 aaa 侧 0 条、zzz 侧 1 条 —— 断言的是「已接线的不产生告警」
-        assertEquals(1, out.size(), "仅 on-pre-target 未接线，实际: " + out);
-        assertTrue(out.get(0).startsWith("档案 zzz"), "应按档案名排序，实际: " + out);
+        // on-buff 已接线，on-spwan 拼错：两处告警，按档案名排序
+        assertEquals(2, out.size(), "两个档案各一条告警，实际: " + out);
+        assertTrue(out.get(0).startsWith("档案 aaa"), "应按档案名排序，实际: " + out);
+        assertTrue(out.get(1).startsWith("档案 zzz"), "应按档案名排序，实际: " + out);
     }
 }

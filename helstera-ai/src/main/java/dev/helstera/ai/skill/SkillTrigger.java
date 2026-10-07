@@ -70,9 +70,9 @@ public enum SkillTrigger {
     // 标错的后果是 /helstera check 劝退用户不要用一个本来能用的机制。
     SUMMON("on-summon", true),
     LEASH("on-leash", true),
-    PRE_TARGET("on-pre-target", false),
-    ON_DAMAGE_NEGATION("on-damage-negation", false),
-    ON_DEATH_SKILL("on-death-skill", false);
+    PRE_TARGET("on-pre-target", true),
+    ON_DAMAGE_NEGATION("on-damage-negation", true),
+    ON_DEATH_SKILL("on-death-skill", true);
 
     /**
      * 是否已有真实的 Bukkit 事件/总线来源。
