@@ -449,9 +449,9 @@ spawners:
 
 ### MM 条件补全
 
-以下 MythicMobs 常用条件现已在 heights 中可用：
+以下 MythicMobs 常用条件现已在 helstera 中可用：
 
-| MM 条件 | heights 写法 | 说明 |
+| MM 条件 | helstera 写法 | 说明 |
 | --- | --- | --- |
 | `?onGround` | `on-ground` | 实体站在固体方块上 |
 | `?inWater` | `in-water` | 实体处于水中 |
