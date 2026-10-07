@@ -132,6 +132,40 @@ class BossPhaseTest {
     }
 
     @Test
+    @DisplayName("播报扩展字段（sound/particle/commands）正确解析")
+    void parsesAnnouncementExtensions() {
+        String yml = """
+                phases:
+                  - id: announce-all
+                    min: 0
+                    max: 100
+                    announce: "&4龙醒了！"
+                    sound: ENTITY_WITHER_SPAWN
+                    particle: DRIP_LAVA
+                    commands:
+                      - "say %mob% is now in phase %phase%"
+                """;
+        var sec = YamlConfiguration.loadConfiguration(new StringReader(yml));
+        List<BossPhase> phases = BossPhase.parseList(sec, new ArrayList<>());
+        assertEquals(1, phases.size());
+        var ann = phases.get(0).announcement();
+        assertNotNull(ann, "announcement 不应为 null");
+        assertEquals("&4龙醒了！", ann.text());
+        assertEquals("ENTITY_WITHER_SPAWN", ann.sound());
+        assertEquals("DRIP_LAVA", ann.particle());
+        assertEquals(List.of("say %mob% is now in phase %phase%"), ann.commands());
+    }
+
+    @Test
+    @DisplayName("仅 sound/particle 无文本时也视为有内容")
+    void announcementWithOnlyEffectsHasContent() {
+        var ann = new BossPhase.BossAnnouncement(null, "BLOCK_NOTE_BLOCK_PLING", null, null);
+        assertTrue(ann.hasContent(), "纯音效也应算有内容");
+        var annNoContent = new BossPhase.BossAnnouncement(null, null, null, null);
+        assertFalse(annNoContent.hasContent(), "全 null 应无内容");
+    }
+
+    @Test
     @DisplayName("只写一段（映射而非列表）也能解析")
     void parsesSinglePhaseAsMap() {
         var sec = YamlConfiguration.loadConfiguration(

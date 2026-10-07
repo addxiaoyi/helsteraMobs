@@ -23,15 +23,40 @@ import java.util.Locale;
  */
 public final class BossPhase {
 
+    /**
+     * 阶段切换时的多模态播报内容。
+     *
+     * <p>支持四种输出形式，各自独立可选：</p>
+     * <ul>
+     *   <li>{@code text} — 文字消息（原 {@code announce} 字段兼容）</li>
+     *   <li>{@code sound} — 播放音效（Bukkit {@code Sound} 枚举名）</li>
+     *   <li>{@code particle} — 发射粒子特效</li>
+     *   <li>{@code commands} — 控制台命令列表（支持 %placeholder%）</li>
+     * </ul>
+     */
+    public record BossAnnouncement(String text, String sound, String particle, List<String> commands) {
+        /** 是否有任何内容需要播报。text 为空字符串时也视为有内容（可能配合 sound 使用）。 */
+        public boolean hasContent() {
+            return text != null || sound != null || particle != null || commands != null;
+        }
+    }
+
     private final String id;
     private final double minPercent;
     private final double maxPercent;
-    private final String announce;
+    private final BossAnnouncement announcement;
     private final List<String> onEnter;
     private final List<String> onExit;
 
     public BossPhase(String id, double minPercent, double maxPercent,
                      String announce, List<String> onEnter, List<String> onExit) {
+        this(id, minPercent, maxPercent,
+                new BossAnnouncement(announce == null ? "" : announce, null, null, null),
+                onEnter, onExit);
+    }
+
+    public BossPhase(String id, double minPercent, double maxPercent,
+                     BossAnnouncement announcement, List<String> onEnter, List<String> onExit) {
         this.id = id == null ? "" : id.trim();
         double lo = clamp(minPercent);
         double hi = clamp(maxPercent);
@@ -43,7 +68,7 @@ public final class BossPhase {
         }
         this.minPercent = lo;
         this.maxPercent = hi;
-        this.announce = announce == null ? "" : announce;
+        this.announcement = announcement;
         this.onEnter = onEnter == null ? List.of() : List.copyOf(onEnter);
         this.onExit = onExit == null ? List.of() : List.copyOf(onExit);
     }
@@ -60,8 +85,18 @@ public final class BossPhase {
         return maxPercent;
     }
 
+    /**
+     * 播报文本（原 announce 字段兼容性访问器）。
+     *
+     * <p>返回 null 表示该阶段没有配置文本播报（可能有 sound/particle/commands）。
+     * 调用方应用 {@code announcement()} 检查完整播报内容。</p>
+     */
     public String announce() {
-        return announce;
+        return announcement == null ? null : announcement.text();
+    }
+
+    public BossAnnouncement announcement() {
+        return announcement;
     }
 
     public List<String> onEnter() {
@@ -158,7 +193,11 @@ public final class BossPhase {
                 problems.add("阶段 " + id + " 的区间超出 0~100，已夹紧");
             }
             out.add(new BossPhase(id, lo, hi,
-                    ps.getString("announce"),
+                    new BossAnnouncement(
+                            ps.getString("announce"),
+                            ps.getString("sound"),
+                            ps.getString("particle"),
+                            ps.getStringList("commands")),
                     ps.getStringList("on-enter"),
                     ps.getStringList("on-exit")));
         }
