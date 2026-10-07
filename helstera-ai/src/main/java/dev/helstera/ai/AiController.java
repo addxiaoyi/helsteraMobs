@@ -2,6 +2,7 @@ package dev.helstera.ai;
 
 import dev.helstera.api.event.HelsteraEventBus;
 import dev.helstera.api.event.MobStateChangedEvent;
+import dev.helstera.api.event.ModelPreTargetEvent;
 import dev.helstera.ai.nav.NavNode;
 import dev.helstera.ai.nav.PathFollower;
 import dev.helstera.api.model.ModelHitbox;
@@ -285,6 +286,8 @@ public final class AiController {
     }
 
     private void attack(Player targetPlayer) {
+        // 在设定目标前派发 on-pre-target：允许技能在此之前修改仇恨或施加效果
+        bus.post(new ModelPreTargetEvent(inst, targetPlayer));
         this.target = targetPlayer;
         long now = System.currentTimeMillis();
         if (now - lastAttack < profile.attackCooldown * 1000L) {

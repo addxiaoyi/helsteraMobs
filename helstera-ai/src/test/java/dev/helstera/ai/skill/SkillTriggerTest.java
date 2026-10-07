@@ -116,8 +116,10 @@ class SkillTriggerTest {
             assertFalse(unwired.contains(t.configName()),
                     t.configName() + " 已接线，不该出现在未接线清单里");
         }
-        assertTrue(unwired.contains("on-pre-target"),
-                "on-pre-target 至今没有事件来源，应如实留在未接线清单里");
+        // on-pre-target 由 ModelPreTargetEvent 驱动（AiController.attack 前派发）
+        assertFalse(unwired.contains("on-pre-target"), "on-pre-target 已接入桥接");
+        // on-damage-negation 由 ImmunityListener 在伤害归零时派发
+        assertFalse(unwired.contains("on-damage-negation"), "on-damage-negation 已接入桥接");
         // on-attack-hit 由 AnimationMarkerEvent 的 attack_hit 标记驱动，
         // 桥接在 AiManager#start 里，命中才派发（挥空不触发）
         assertFalse(unwired.contains("on-attack-hit"), "on-attack-hit 已接入桥接");

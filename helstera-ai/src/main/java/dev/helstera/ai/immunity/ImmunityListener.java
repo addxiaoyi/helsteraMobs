@@ -2,11 +2,13 @@ package dev.helstera.ai.immunity;
 
 import dev.helstera.ai.AiManager;
 import dev.helstera.ai.AiProfile;
+import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
+import dev.helstera.api.event.ModelDamageNegatedEvent;
 
 /**
  * 免疫/倍率的事件处理器（{@code @EventHandler(priority = HIGH)}）。
@@ -73,6 +75,14 @@ public final class ImmunityListener implements Listener {
         if (!r.matched()) return;
 
         double next = r.damage();
+        if (next <= 0) {
+            // 完全否定：派发给 on-damage-negation，让技能有机会响应免疫生效时刻
+            Location loc = inst.location();
+            if (loc != null && loc.getWorld() != null) {
+                ai.bus().post(new ModelDamageNegatedEvent(
+                        inst, loc, causeOf(e), original));
+            }
+        }
         if (r.isHeal()) {
             // 回血走「伤害压到 0 + 显式加血」，而不是把负值交给事件。
             //

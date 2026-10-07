@@ -60,6 +60,11 @@ public final class AiManager implements Listener {
         return factions;
     }
 
+    /** 事件总线：供 ImmunityListener 等子组件派发自定义事件。 */
+    public HelsteraEventBus bus() {
+        return bus;
+    }
+
     /** 装载阵营配置并注册为全局阵营表。 */
     public void loadFactions(org.bukkit.configuration.ConfigurationSection root) {
         factions.load(root);

@@ -7,6 +7,8 @@ import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.api.behavior.BehaviorRegistry;
 import dev.helstera.api.event.HelsteraEventBus;
 import dev.helstera.api.event.MobStateChangedEvent;
+import dev.helstera.api.event.ModelDamageNegatedEvent;
+import dev.helstera.api.event.ModelPreTargetEvent;
 import dev.helstera.api.event.ModelRemoveEvent;
 import dev.helstera.api.event.ModelSpawnEvent;
 import dev.helstera.api.instance.ModelInstance;
@@ -147,15 +149,30 @@ public final class SkillTriggers implements Listener {
                 dispatch(SkillTrigger.STATE, e.instance(), null, e.instance().location());
             }
         };
+        java.util.function.Consumer<ModelPreTargetEvent> onPreTarget = e -> {
+            if (e.instance() == null || e.potentialTarget() == null) return;
+            dispatch(SkillTrigger.PRE_TARGET, e.instance(), e.potentialTarget(),
+                    e.instance().location());
+        };
+        java.util.function.Consumer<ModelDamageNegatedEvent> onDamageNegated = e -> {
+            if (e.instance() == null) return;
+            dispatch(SkillTrigger.ON_DAMAGE_NEGATION, e.instance(), null, e.location());
+        };
         busSubs.put(ModelSpawnEvent.class.getName(),
                 (java.util.function.Consumer<?>) onSpawn);
         busSubs.put(ModelRemoveEvent.class.getName(),
                 (java.util.function.Consumer<?>) onRemove);
         busSubs.put(MobStateChangedEvent.class.getName(),
                 (java.util.function.Consumer<?>) onState);
+        busSubs.put(ModelPreTargetEvent.class.getName(),
+                (java.util.function.Consumer<?>) onPreTarget);
+        busSubs.put(ModelDamageNegatedEvent.class.getName(),
+                (java.util.function.Consumer<?>) onDamageNegated);
         bus.register(ModelSpawnEvent.class, onSpawn);
         bus.register(ModelRemoveEvent.class, onRemove);
         bus.register(MobStateChangedEvent.class, onState);
+        bus.register(ModelPreTargetEvent.class, onPreTarget);
+        bus.register(ModelDamageNegatedEvent.class, onDamageNegated);
 
         // 共享定时任务：所有 on-timer 技能共用一个调度槽
         timerTask = plugin.getServer().getScheduler().runTaskTimer(
@@ -171,6 +188,10 @@ public final class SkillTriggers implements Listener {
         if (r != null) bus.unregister(ModelRemoveEvent.class, (java.util.function.Consumer<ModelRemoveEvent>) r);
         var st = busSubs.remove(MobStateChangedEvent.class.getName());
         if (st != null) bus.unregister(MobStateChangedEvent.class, (java.util.function.Consumer<MobStateChangedEvent>) st);
+        var pt = busSubs.remove(ModelPreTargetEvent.class.getName());
+        if (pt != null) bus.unregister(ModelPreTargetEvent.class, (java.util.function.Consumer<ModelPreTargetEvent>) pt);
+        var dn = busSubs.remove(ModelDamageNegatedEvent.class.getName());
+        if (dn != null) bus.unregister(ModelDamageNegatedEvent.class, (java.util.function.Consumer<ModelDamageNegatedEvent>) dn);
         if (timerTask != null) {
             timerTask.cancel();
             timerTask = null;
@@ -584,6 +605,12 @@ public final class SkillTriggers implements Listener {
         var inst = find(e.getEntity());
         if (inst == null) return;
         dispatch(SkillTrigger.DEATH, inst, e.getEntity().getKiller(), e.getEntity().getLocation());
+        // on-death-skill 是 on-death 的别名：同一时刻同时触发两者，
+        // 兼容 MythicMobs 的 "deathSkill" 写法（旧配置可能混用两种命名）
+        if (inst.baseEntity().orElse(null) instanceof LivingEntity le && le.getMaxHealth() > 0) {
+            dispatch(SkillTrigger.ON_DEATH_SKILL, inst, e.getEntity().getKiller(),
+                    e.getEntity().getLocation());
+        }
         // on-kill-player 只在「死于本生物且死者是玩家」时触发。
         // 怪物自然死亡（摔落、岩浆）也会走这里，若不判死者类型，
         // 玩家在野外摔死也会触发 Boss 的处决播报。
