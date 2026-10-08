@@ -632,8 +632,20 @@ public final class WebServerService {
         }
         Map<String, Object> out = new LinkedHashMap<>();
         if (dir == null || !Files.isDirectory(dir)) {
-            out.put("ok", false);
-            out.put("error", "目录不存在: " + rel);
+            // 区分「没传参数」与「传了但目录不存在」。
+            //
+            // 本端点只读 POST 的 JSON body，不解析 query string——所以有人直接在
+            // 浏览器地址栏敲 /api/validate?dir=xxx（或某些探活脚本用 GET）时，
+            // 收���到的 rel 是 null。此前一律报「目录不存在: null」，
+            // 字面意思是「有个目录叫 null 且它不存在」，会把人引向错误方向：
+            // 去检查模型目录，而不是检查自己请求方式写错了。
+            if (rel == null || rel.isBlank()) {
+                out.put("ok", false);
+                out.put("error", "缺少 dir 参数（该端点需 POST JSON，如 {\"dir\":\"example/emberling\"}）");
+            } else {
+                out.put("ok", false);
+                out.put("error", "目录不存在: " + rel);
+            }
             return out;
         }
         out.put("dir", rel);

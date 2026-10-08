@@ -4138,8 +4138,9 @@ async function loadSkills() {
     const warns = d.warnings || [];
     $('skWarnBox').style.display = warns.length ? 'block' : 'none';
     if (warns.length) $('skWarns').textContent = warns.join('\n');
-    // 预览下拉：只列命名技能。/api/skills 的 names 同时含条件与动作名，
-    // 这里无法从名字区分，因此预览失败时由服务端如实报错而非前端猜测过滤。
+    // 预览下拉：只列命名技能。
+    // 服务端返回的 names 就是 skills.yml 里定义的技能名（已去重），
+    // 不含条件名与动作名——选任意一项都能真的预览出结果。
     const sel = $('skPrevName');
     const keep = sel.value;
     sel.innerHTML = (d.names || [])
