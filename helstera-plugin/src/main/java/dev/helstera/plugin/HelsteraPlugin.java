@@ -1667,12 +1667,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
 
         @Override public java.util.List<String> skillNames() {
-            java.util.List<String> out = new java.util.ArrayList<>();
-            if (behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry br) {
-                out.addAll(br.conditionNames());
-                out.addAll(br.actionNames());
-            }
-            return out;
+            // 必须取 SkillService 的命名技能，不能用 BehaviorRegistry 的
+            // conditionNames() + actionNames() 拼。
+            //
+            // 后者返回的是「所有可用的条件与动作」（health-above:0.5、set-scale:1.1…），
+            // 与本方法名和调用方的预期完全不符：网页端的技能预览下拉框填的就是它，
+            // 于是下拉里出现的全是选了就预览失败的条目；而且同一条
+            // `skill:smoke_test` 引用（一次在 require、一次在 on-decision）
+            // 会被 collect 两次，下拉框里出现重复项。
+            //
+            // 命令层的 /helstera skill list 用的是 SkillService.skillNames()，
+            // 所以一直是对的——只有网页端这条路径错了。
+            return skillService instanceof SkillService s
+                    ? s.skillNames()
+                    : java.util.List.of();
         }
 
         @Override public java.util.List<String> skillWarnings() {
