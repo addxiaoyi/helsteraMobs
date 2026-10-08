@@ -70,7 +70,10 @@ public final class ModelDefinitionImpl implements ModelDefinition {
         for (Bone b : flat) {
             if (!b.attachPoints().isEmpty()) out.put(b.name(), b.attachPoints());
         }
-        return out;
+        // 必须包 unmodifiableMap：本类的其它集合字段（flat / byName / animations）
+        // 都在构造时做了不可变包装，只有这里漏了。attachPoints 是攻击点定位用的，
+        // 被外部改动会让技能挂载位置偏移，且症状是「技能偶尔打偏」这类难复现的问题。
+        return Collections.unmodifiableMap(out);
     }
 
     @Override public String id() { return id; }

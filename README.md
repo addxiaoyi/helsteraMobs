@@ -545,11 +545,25 @@ skills:
 
 ## 构建质量门
 
-`mvn clean test` 会开启编译器的全部 lint（`-Xlint:all`）。
+`mvn clean test` 开启编译器全部 lint（`-Xlint:all`）；`mvn clean verify` 额外跑 SpotBugs。
 
 本项目此前**没有任何**静态分析环节：无 SpotBugs / Checkstyle / PMD / ErrorProne，编译器也未开 `-Xlint`。javac 不检查的那一类（未使用 import、未使用变量、冗余类型、潜在空指针）只有 IDEA 的 inspection 看得见，CI 与本地构建全都漏掉 —— IDEA 面板里长期挂着 160+ 个问题就是这么来的。
 
-**当前基线**（Paper 1.21.1-133）：
+### 网络前提（重要）
+
+本机 JDK 连不上 `repo.maven.apache.org`（`HttpConnectTimeoutException`，而 PowerShell 能通）。因此：
+
+```bash
+# 日常构建（依赖已缓存）：直接用
+mvn -o clean test
+
+# verify（SpotBugs）：必须指定镜像配置
+mvn -s tools/settings-ci.xml clean verify
+```
+
+`tools/settings-ci.xml` 里 `mirrorOf` 必须写成 `*,!papermc`：Anthropic公共仓库不代理 PaperMC 的内容，写成 `*` 会让 `paper-api` 及其传递依赖解析失败。
+
+### -Xlint 基线
 
 | 警告 | 数量 | 处置 |
 | --- | --- | --- |
@@ -564,7 +578,22 @@ skills:
 
 没有加 `-Werror`：本项目大量使用 Bukkit API 与反射，JDK 升级时可能冒出新警告。让警告可见但不阻断构建，比因为一条 deprecation 就卡住发布更实际。
 
-为什么用 `-Xlint` 而不是 SpotBugs：它随 JDK 自带，零依赖零下载。SpotBugs 能力强得多（能做数据流与空指针分析），等网络环境允许后建议再叠加一层。
+### SpotBugs
+
+只让 `threshold=High` 阻断，即 rank 1-9 的高置信度问题（CORRECTNESS / SECURITY 类）。其余 270+ 个实例不阻断 —— 绝大多数无法在不引入反射与版本分支的前提下修复，硬挡只会逼人加排除把工具关掉。
+
+已由它发现并修复的真实缺陷：
+
+- `AiProfile.parseLevels` / `HelsteraPlugin.loadLevelConfigs`：`levels` 配置缺 `property` 时 `property.isEmpty()` **NPE**，整个生物加载失败（同一 bug 复制到两处）
+- `HelsteraPlugin.reloadModels`：判空只覆盖了 `clearErrors()`，紧接着 `unloadAll()` 仍 NPE
+- `ModelRegistryImpl.hashDirectory`：哈希失败时返回固定 `"unknown"`，导致**所有**失败模型共享同一缓存指纹，改动互相被误判为「未变更」
+- `ModelValidator`：纹理路径为根路径时 `getFileName()` 返回 null → NPE
+
+### 排除清单的防腐化
+
+排除清单是静态分析配置里最危险的东西 —— 加条目很容易，累积起来就是「显示全绿、实际什么都没查」。
+
+`tools/spotbugs-exclude.xml` 每条都写了理由，并由 `SpotbugsExcludeAuditTest` 守住：条目必须有注释理由、数量不超过 12 条、禁止 `<Match/>` 屏蔽全部、以及**已修复的 bug 类型不得重新出现在清单里**。
 
 ## Boss 血条渐变配色
 

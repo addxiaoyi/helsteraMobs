@@ -140,7 +140,11 @@ public final class DialogueService {
 
         void cancel() {
             if (task != null) {
-                try { task.cancel(); } catch (Throwable ignored) { }
+                try { task.cancel(); } catch (Exception e) {
+                    // 取消失败不影响对话结束，但静默会让「对话结束后任务还在跑」
+                    // 这种问题无从查证。只吞 Exception，Error 不吞。
+                    if (log != null) log.warning("[对话] 取消定时任务失败（对话仍正常结束）: " + e.getMessage());
+                }
                 task = null;
             }
         }
@@ -188,10 +192,18 @@ public final class DialogueService {
                         double dx = Double.parseDouble(step.args().get(0));
                         double dy = Double.parseDouble(step.args().get(1));
                         double dz = Double.parseDouble(step.args().get(2));
-                        double speed = Math.max(0.01, Double.parseDouble(step.args().get(3)));
+                        double speed = Double.parseDouble(step.args().get(3));
                         Location target = loc.clone().add(dx, dy, dz);
                         inst.teleport(target);
                         inst.baseEntity().ifPresent(e -> e.teleport(target));
+                        // move 是单步瞬移，速度参数此前被解析出来后直接丢弃。
+                        // 作者写 speed: 5 会以为能控制移动快慢，实际毫无作用——
+                        // 这是「配置写了没效果且无任何提示」的典型症状。
+                        // 真正要控制节奏应该用 wait 步骤。
+                        if (speed > 0 && log != null) {
+                            log.warning("[对话] move 步骤忽略了 speed=" + speed
+                                    + "（move 是瞬移）。要控制节奏请在 move 之后加 wait 步骤。");
+                        }
                     } catch (NumberFormatException e) {
                         if (log != null) log.warning("[对话] move 参数解析失败: " + e.getMessage());
                     }

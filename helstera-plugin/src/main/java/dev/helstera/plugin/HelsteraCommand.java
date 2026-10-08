@@ -135,6 +135,13 @@ public final class HelsteraCommand implements TabExecutor {
                     s.sendMessage("§c加载失败/校验错误:");
                     errors.forEach((k, v) -> s.sendMessage("§c- " + k + ": " + v));
                 }
+                // 缓存告警单独列出：模型本身可用，只是没写缓存。
+                // 不显示的话「缓存一直没生效」就只能靠猜。
+                var cacheWarn = plugin.registry().currentCacheWarnings();
+                if (!cacheWarn.isEmpty()) {
+                    s.sendMessage("§e缓存写入告警（不影响加载，仅下次需重新解析）:");
+                    cacheWarn.forEach((k, v) -> s.sendMessage("§e- " + k + ": " + v));
+                }
                 return;
             }
             case "info" -> {

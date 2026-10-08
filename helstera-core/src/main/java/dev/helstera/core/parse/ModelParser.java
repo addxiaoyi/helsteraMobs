@@ -41,7 +41,17 @@ import java.util.Map;
  */
 public final class ModelParser {
 
-    public record ParseResult(ModelDefinitionImpl model, List<String> warnings) {
+    /**
+ * 解析结果。
+ *
+ * <p>warnings 做防御性复制：解析期的告警是给调用方看的（校验会遍历它们并
+ * 拼进错误报告）。若外部拿到的是内部列表并清了它，后续排查就再也看不到
+ * 原始告警——而告警往往正是「模型看起来不对」的线索。</p>
+ */
+public record ParseResult(ModelDefinitionImpl model, List<String> warnings) {
+        public ParseResult {
+            warnings = warnings == null ? List.of() : List.copyOf(warnings);
+        }
     }
 
     private ModelParser() {

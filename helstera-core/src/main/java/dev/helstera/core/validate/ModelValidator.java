@@ -35,7 +35,14 @@ public final class ModelValidator {
         }
         Set<String> seen = new HashSet<>();
         for (Path tex : model.textures()) {
-            String name = tex.getFileName().toString();
+            // getFileName() 对根路径（如 Path.of("/")）返回 null，
+            // 直接 .toString() 会 NPE，把「纹理路径写错」变成栈溢出般的报错。
+            Path fileName = tex.getFileName();
+            if (fileName == null) {
+                errors.add("[" + model.id() + "] 纹理路径无效（没有文件名）: " + tex);
+                continue;
+            }
+            String name = fileName.toString();
             if (!seen.add(name)) {
                 errors.add("[" + model.id() + "] 重复纹理声明: " + name);
                 continue;
@@ -80,8 +87,14 @@ public final class ModelValidator {
         // 骨骼引用的纹理必须存在
         for (var b : model.allBones()) {
             if (b instanceof ModelDefinitionImpl.BoneImpl impl && impl.texture() != null) {
-                boolean found = model.textures().stream().anyMatch(
-                        t -> t.getFileName().toString().equals(impl.texture()) || t.endsWith(impl.texture()));
+                // 同样不能直接 getFileName().toString()：根路径会返回 null。
+                // t.endsWith(impl.texture()) 一路是安全路径（endsWith 不抛），
+                // 所以只有前半段需要判空。
+                boolean found = model.textures().stream().anyMatch(t -> {
+                    Path fn = t.getFileName();
+                    return (fn != null && fn.toString().equals(impl.texture()))
+                            || t.endsWith(impl.texture());
+                });
                 if (!found) {
                     errors.add("[" + model.id() + "] 骨骼 \"" + b.name() + "\" 引用的纹理 \"" + impl.texture()
                             + "\" 未在 manifest.yml textures 中声明");
