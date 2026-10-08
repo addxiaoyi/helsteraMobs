@@ -1,6 +1,5 @@
 package dev.helstera.ai;
 
-import dev.helstera.api.behavior.FactionTable;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;

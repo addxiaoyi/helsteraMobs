@@ -3,7 +3,6 @@ package dev.helstera.ai.skill;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
 
 /**
  * 条件状态锁存器：对布尔条件做去抖，只在状态<b>确认翻转</b>时给出边沿事件。

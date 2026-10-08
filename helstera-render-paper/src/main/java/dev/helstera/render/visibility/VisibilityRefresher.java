@@ -10,7 +10,6 @@ import dev.helstera.runtime.instance.InstanceManagerImpl;
 import dev.helstera.runtime.instance.ModelInstanceImpl;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;

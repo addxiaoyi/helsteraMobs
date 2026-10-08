@@ -1,6 +1,5 @@
 package dev.helstera.render.visibility;
 
-import dev.helstera.api.event.ModelHitEvent;
 import dev.helstera.api.instance.ModelInstance;
 import dev.helstera.api.visibility.PlayerVisibilityService;
 import dev.helstera.api.visibility.VisibilityFilter;

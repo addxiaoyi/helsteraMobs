@@ -2,7 +2,6 @@ package dev.helstera.ai.skill;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
 
 /**
  * 条件表达式树：支持 {@code &&} {@code ||} {@code !} 与括号组合。
