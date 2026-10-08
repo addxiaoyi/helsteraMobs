@@ -160,12 +160,15 @@ public final class HelsteraCommand implements TabExecutor {
                 }
                 Path dir = plugin.modelsRoot().resolve(args[2]);
                 s.sendMessage("§7校验中: " + dir);
+                // registry.validate 本身已是 supplyAsync，这里只需把结果切回主线程。
+                // 此前这里还串了一个空的 CompletableFuture.runAsync(() -> {})，
+                // 它不做任何事，只是白白多绕一次线程池调度 —— 让 /helstera model validate
+                // 的响应比它应有的慢了一拍，且掩盖了「校验已在异步线程执行」这个事实。
                 plugin.registry().validate(dir).thenAccept(errors ->
-                        CompletableFuture.runAsync(() -> {
-                        }).thenRun(() -> plugin.getServer().getScheduler().runTask(plugin, () -> {
+                        plugin.getServer().getScheduler().runTask(plugin, () -> {
                             if (errors.isEmpty()) s.sendMessage("§a校验通过");
                             else errors.forEach(e -> s.sendMessage("§c- " + e));
-                        })));
+                        }));
                 // 必须显式 return：validate 落进 unload 会真的卸载模型并销毁
                 // 全部实例 —— 一个纯只读命令变成破坏性操作，且校验「通过」后
                 // 模型就消失了，症状与「插件随机删模型」无法区分。

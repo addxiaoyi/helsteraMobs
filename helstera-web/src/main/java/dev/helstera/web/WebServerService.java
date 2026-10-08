@@ -830,7 +830,12 @@ public final class WebServerService {
     private Map<String, Object> mobVersions(Request req) {
         String name = req.queryParam("name");
         List<String> out = new ArrayList<>();
-        Path vDir = versionsDir.resolve("mobs").resolve(stripYml(name));
+        // 必须走 safeMobPath 而不是裸 stripYml：name 来自查询参数，是不可信输入。
+        // stripYml 只去掉 .yml 后缀，name="../../.." 就能把 versionsDir 之外的
+        // 任意目录列一遍——只读，但足以泄露服务器目录结构。
+        Path mobFile = safeMobPath(name);
+        if (mobFile == null) return Map.of("ok", false, "error", "参数非法", "versions", List.of());
+        Path vDir = versionsDir.resolve("mobs").resolve(fileStem(mobFile.getFileName().toString()));
         if (Files.isDirectory(vDir)) {
             try (var s = Files.list(vDir)) {
                 s.forEach(p -> out.add(p.getFileName().toString()));
@@ -838,7 +843,13 @@ public final class WebServerService {
             }
         }
         out.sort(Collections.reverseOrder());
-        return Map.of("versions", out);
+        return Map.of("ok", true, "versions", out);
+    }
+
+    /** 文件名去掉扩展名（如 "a.yml" -> "a"）。 */
+    private static String fileStem(String fileName) {
+        int dot = fileName.lastIndexOf('.');
+        return dot > 0 ? fileName.substring(0, dot) : fileName;
     }
 
     private Map<String, Object> mobRestore(Request req) throws IOException {
