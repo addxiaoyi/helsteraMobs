@@ -563,6 +563,28 @@ mvn -s tools/settings-ci.xml clean verify
 
 `tools/settings-ci.xml` 里 `mirrorOf` 必须写成 `*,!papermc`：Anthropic公共仓库不代理 PaperMC 的内容，写成 `*` 会让 `paper-api` 及其传递依赖解析失败。
 
+> **`.gitignore` 里的 `tools/`**
+>
+> 这个目录**不能**整体忽略，但也不能整体放开：里面的 `settings-ci.xml` 与
+> `spotbugs-exclude.xml` 是构建必需（`pom.xml` 用
+> `${maven.multiModuleProjectDirectory}` 引用后者），而 `tools/jdk25/` 下
+> 是当初为跨版本测试下载的 380MB JDK。
+>
+> 历史上有过整目录被 ignore，导致两个配置文件**从未入库** —— 本地构建正常，
+> clone 下来直接失败，而 git 不会给出任何提示。因此改为逐项排除。
+>
+> 若你看到 `mvn -s tools/settings-ci.xml` 报「找不到文件」，先确认它已入库：
+> `git ls-files tools/` 应当列出这两个文件。
+
+### 前端双副本
+
+`frontend/index.html` 与 `helstera-web/src/main/resources/web/index.html` 是同一份文件的两个副本，**后者才是打包进 jar 的那份**。
+
+- `WebEndpointAuditTest` 在构建时校验两份内容一致。
+- `node frontend/sync-back.cjs` 用于同步。脚本按**修改时间**推断方向，并支持 `--to-real` / `--to-edit` 强制指定；时间戳接近（无法判断）时以退出码 3 **中止**，而不是随便挑一个方向覆盖。
+
+第二点是加固后的行为。旧实现无条件用编辑副本覆盖正式源 —— 一旦有人直接改了正式源（正确的改动位置），下次跑脚本就把改动静默覆盖掉，构建照样通过。
+
 ### -Xlint 基线
 
 | 警告 | 数量 | 处置 |
