@@ -75,6 +75,9 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         }
         try {
             Class<?> eventClass = Class.forName("io.lumine.mythic.bukkit.events.MythicMobSpawnEvent");
+            // 强转无法在编译期校验：MythicMobs 是软依赖，其事件类只有运行时才存在。
+            // 若 MythicMobs 升级改了包名，这里会在 registerEvent 处抛 ClassCastException，
+            // 由外层 catch 转成「未连接」——详见本方法末尾的错误处理。
             Bukkit.getPluginManager().registerEvent((Class<? extends org.bukkit.event.Event>) eventClass, this, EventPriority.NORMAL,
                     new SpawnExecutor(), host, true);
             connected = true;
