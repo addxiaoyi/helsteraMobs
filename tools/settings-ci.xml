@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maven 全局配置（本机可用）。
+
+  为什么需要：本机 JDK 的网络栈连不上 repo.maven.apache.org 与 repo1.maven.org
+  （HttpConnectTimeoutException），而 PowerShell 能通 ——
+  说明不是机器整体断网，是这几个域名对 java.exe 不可达。
+
+  实测（2026-10-08，java.net.http.HttpClient）：
+    repo.maven.apache.org    超时
+    repo1.maven.org          超时
+    maven.aliyun.com        474 ms
+    repo.papermc.io        3900 ms
+
+  !papermc 这个排除项是必需的，不能简化成 *：
+  阿里云 public 仓库不代理 PaperMC 的内容，
+  而 mirrorOf=* 会连项目 pom 里声明的 papermc 仓库一起镜像掉，
+  结果 paper-api 及其传递依赖（net.md-5:bungeecord-chat 等）解析失败。
+  排除后 central 走镜像，papermc 保持直连（项目 pom 已声明，无需在此重复）。
+
+  localRepository 指到 D 盘：与本机既有缓存一致，避免重复下载 GB 级依赖。
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                              https://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <localRepository>D:\UserCache\mavenRepository</localRepository>
+
+  <mirrors>
+    <mirror>
+      <id>aliyun-public</id>
+      <name>Aliyun Public Mirror</name>
+      <url>https://maven.aliyun.com/repository/public</url>
+      <mirrorOf>*,!papermc</mirrorOf>
+    </mirror>
+  </mirrors>
+
+</settings>
