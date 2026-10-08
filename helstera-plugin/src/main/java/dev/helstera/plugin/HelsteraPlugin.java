@@ -74,6 +74,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -873,16 +874,43 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (entitySec != null) {
             String typeName = entitySec.getString("type", "ZOMBIE").toUpperCase(java.util.Locale.ROOT);
             org.bukkit.entity.EntityType et;
+            String fallbackNote = null;
             try {
                 et = org.bukkit.entity.EntityType.valueOf(typeName);
             } catch (IllegalArgumentException e) {
                 et = org.bukkit.entity.EntityType.ZOMBIE;
+                // 此前静默回落：作者写 entity.type: NOT_A_MOB（少个下划线、写成
+                // MINECRAFT_ZOMBIE 之类）时生成照常成功，实例里是一只普通僵尸，
+                // 而配置里写的到底是什么永远看不出来。回落必须留痕。
+                fallbackNote = "entity.type \"" + typeName + "\" 不是有效的实体类型，"
+                        + "已回落到 ZOMBIE；可用的拼写见 EntityType（ZOMBIE / WITHER_SKELETON / IRON_GOLEM …）";
+            }
+            if (fallbackNote != null) {
+                getLogger().warning("[生物] " + fallbackNote);
+                mobWarnings.add(fallbackNote);
             }
             org.bukkit.entity.LivingEntity ent = (org.bukkit.entity.LivingEntity) loc.getWorld().spawnEntity(loc, et);
             ent.setInvisible(entitySec.getBoolean("invisible", true));
             ent.setSilent(entitySec.getBoolean("silent", true));
             ent.setAI(!entitySec.getBoolean("no-ai", true));
-            double hp = clampHealth(entitySec.getDouble("health", 20.0));
+            double rawHp = entitySec.getDouble("health", 20.0);
+            double hp = clampHealth(rawHp);
+            // clampHealth 对 <=0 返回 0，而 LivingEntity.setMaxHealth 要求严格大于 0
+            // （否则抛 IllegalArgumentException: Max health amount must be greater than 0）。
+            // 此前把 0 直接传下去，异常一路冒泡出命令处理器：控制台/玩家看到的是
+            // 「命令没反应」，服务端日志里只有一段 Paper 堆栈，没有任何指向配置的提示。
+            //
+            // 注意这里必须**兜住并告警**，而不是静默换成 20 血：作者写 health: 0
+            // 通常是「想要无敌」或「想配 0 血秒杀怪」这类本就不成立的想法，
+            // 静默给 20 血会让他以为配置生效了。
+            if (hp <= 0) {
+                String msg = "entity.health \"" + rawHp + "\" 不是正数（生物必须有正血量），"
+                        + "已回落到默认 20；想表达「打不死」请用 entity.type: ZOMBIE + invulnerable 之类，"
+                        + "「秒杀」请在技能里用 damage-target";
+                getLogger().warning("[血量] " + msg);
+                mobWarnings.add(msg);
+                hp = 20.0;
+            }
             ent.setMaxHealth(hp);
             ent.setHealth(hp);
             // 装备：items 节，支持 material:amount 和带附魔的写法
@@ -1227,6 +1255,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     new java.io.File(getDataFolder(), "dialogs.yml")).getConfigurationSection("dialogues"), probs);
             for (String w : probs) getLogger().warning("[对话] " + w);
         }
+        // 生物配置的交叉引用校验：mobs/*.yml 启动时不解析，只在这里查一次。
+        // 不查的话，drops.table / ai.profile 指向不存在的东西时没有任何提示，
+        // 而症状是「生物正常生成但不掉落」——最难自己想到原因的那种。
+        var mobCfgWarn = mobConfigWarnings();
+        for (String w : mobCfgWarn) {
+            getLogger().warning("[生物配置] " + w);
+        }
     }
 
     /** 刷怪点服务（spawners.yml），未启用时为 null。 */
@@ -1265,6 +1300,89 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return out;
     }
 
+    /**
+     * 交叉校验 mobs/*.yml 里的引用是否指向真实存在的东西。
+     *
+     * <p><b>为什么必须做</b>：{@code mobs/<id>.yml} 每个文件一条定义，插件启动时
+     * <b>不解析</b>它们——模型、掉落表、行为档案都要等真的 spawn 才知道结果。
+     * 于是一个指向不存在掉落表的生物会「正常生成」，玩家看着它活蹦乱跳，
+     * 打死却什么都没掉；而现场没有任何提示。</p>
+     *
+     * <p>真服实测的三条静默项都归这里：{@code drops.table} 不存在、
+     * {@code ai.profile} 不存在、{@code model} 字段拼错。</p>
+     *
+     * <p>与 {@link #mobWarnings()} 的分工：那个记的是「生成时才发现的运行期问题」
+     * （非法实体类型、非正血量），这个记的是「静态引用完整性」——
+     * 后者不必生成就能查，所以能进 /helstera check。</p>
+     */
+    public List<String> mobConfigWarnings() {
+        List<String> out = new ArrayList<>();
+        java.nio.file.Path mobsDir = getDataFolder().toPath().resolve("mobs");
+        if (!java.nio.file.Files.isDirectory(mobsDir)) return out;
+
+        if (!java.nio.file.Files.isReadable(mobsDir)) return out;
+
+        var ai = ai();
+        Set<String> profiles = ai == null ? Set.of() : ai.profileNames().stream()
+                .map(name -> name.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toUnmodifiableSet());
+        Set<String> lootTables = loot() == null ? Set.of() : loot().tableNames().stream()
+                .map(name -> name.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toUnmodifiableSet());
+
+        try (var st = java.nio.file.Files.list(mobsDir)) {
+            for (java.nio.file.Path p : st.filter(x -> x.toString().endsWith(".yml")).toList()) {
+                org.bukkit.configuration.file.YamlConfiguration cfg =
+                        org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(p.toFile());
+                if (cfg == null) continue;
+
+                // 一个文件只应有一条定义：顶层是 mobs.<id> 的结构。
+                // 此前把多条塞进一个文件时，整个文件不生效，而命令报的却是
+                // 「模型未加载: <文件名>」——把文件名当成了模型 ID，作者会被引向
+                // 完全错误的方向（去查模型加载问题）。
+                if (!cfg.isConfigurationSection("entity") && cfg.get("name") == null
+                        && cfg.get("model") == null) {
+                    out.add("mobs/" + p.getFileName() + " 顶层既没有 name/model 也没有 entity 节，"
+                            + "它很可能写了多条定义——请注意 mobs/ 下**每个文件只能放一条**，"
+                            + "文件名即生物 ID");
+                }
+
+                String model = cfg.getString("model");
+                if (model == null || model.isBlank()) {
+                    out.add("mobs/" + p.getFileName() + " 缺少 model 字段，生成时无法确定显示模型");
+                }
+
+                org.bukkit.configuration.ConfigurationSection drops = cfg.getConfigurationSection("drops");
+                if (drops != null) {
+                    String table = drops.getString("table");
+                    if (table != null && !table.isBlank() && !lootTables.contains(table.toLowerCase(Locale.ROOT))) {
+                        out.add("mobs/" + p.getFileName() + " 的 drops.table \"" + table
+                                + "\" 在 loot.yml 里不存在——生物能正常生成，但死亡时掉不出东西。"
+                                + "现有表：" + lootTables);
+                    }
+                }
+
+                org.bukkit.configuration.ConfigurationSection aiSec = cfg.getConfigurationSection("ai");
+                if (aiSec != null) {
+                    String prof = aiSec.getString("profile");
+                    if (prof != null && !prof.isBlank() && !profiles.contains(prof.toLowerCase(Locale.ROOT))) {
+                        out.add("mobs/" + p.getFileName() + " 的 ai.profile \"" + prof
+                                + "\" 未定义——生成成功但行为退化为默认。现有档案：" + profiles);
+                    }
+                    String fac = aiSec.getString("faction");
+                    if (fac != null && !fac.isBlank() && ai != null
+                            && !ai.factions().names().contains(fac.toLowerCase(Locale.ROOT))) {
+                        out.add("mobs/" + p.getFileName() + " 的 ai.faction \"" + fac
+                                + "\" 未在 ai.factions 中定义——打起来仍与所有人敌对");
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // 读不动就跳过体检，不影响服务器运行
+        }
+        return out;
+    }
+
     /** 用 mobs/*.yml 的 ai 节就地覆盖行为档案（不污染缓存的档案）。 */
     private AiProfile overrideProfile(AiProfile base, org.bukkit.configuration.ConfigurationSection s) {
         // 从 base 复制，再叠加本节的覆盖。复制而非直接改 base，是避免污染共享缓存档案：
@@ -1298,10 +1416,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     // ------------------------------------------------------------------
 
     public ConfigurationSection mobConfig(String id) {
-        Path f = getDataFolder().toPath().resolve("mobs/" + id + ".yml");
-        if (!Files.isRegularFile(f)) return null;
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(f.toFile());
-        return y;
+        if (!isMobId(id)) return null;
+        Path mobsDir = getDataFolder().toPath().resolve("mobs").normalize();
+        Path file = mobsDir.resolve(id + ".yml").normalize();
+        if (!file.startsWith(mobsDir) || !Files.isRegularFile(file)) return null;
+        return YamlConfiguration.loadConfiguration(file.toFile());
+    }
+
+    private static boolean isMobId(String id) {
+        return id != null && id.matches("[A-Za-z0-9][A-Za-z0-9_-]{0,63}");
     }
 
     /**
@@ -1460,6 +1583,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     public List<String> skillWarnings() {
         return skillService instanceof SkillService s ? s.warnings() : List.of();
     }
+
+    /**
+     * 生物配置在**生成时**才暴露的问题（非法实体类型回落到 ZOMBIE、
+     * health 非正数回落到 20 等）。
+     *
+     * <p>为什么是「生成时」而不是「装载时」：{@code mobs/*.yml} 每个文件一条
+     * 定义，插件启动时并不解析它们——模型、实体类型这些都要等真的 spawn 才
+     * 知道结果。所以告警只能在那里产生。</p>
+     *
+     * <p>代价是「配置写错」与「还没生成过」无法区分：作者跑一次
+     * {@code /helstera check} 看到的是空列表，不是因为配置没问题，而是因为
+     * 还没生成过。这一点在 {@code /helstera check} 的提示里写明了。</p>
+     *
+     * <p>去重：同一份配置反复 spawn 会重复告警，这里按文本去重。</p>
+     */
+    public List<String> mobWarnings() {
+        synchronized (mobWarnings) {
+            return List.copyOf(mobWarnings);
+        }
+    }
+
+    private final Set<String> mobWarnings = new java.util.concurrent.CopyOnWriteArraySet<>();
     /** 事件触发器累计执行次数；用于确认触发链路是否真的跑通。 */
     public long triggerFiredCount() {
         return skillTriggers instanceof SkillTriggers t ? t.firedCount() : 0L;
