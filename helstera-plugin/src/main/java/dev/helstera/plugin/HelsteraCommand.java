@@ -111,6 +111,11 @@ public final class HelsteraCommand implements TabExecutor {
                 return;
             }
         }
+        // switch 之后的公共收尾。这里刻意不加 return 到各 case：
+        // 每个 case 只做自己的动作，统一在这里报耗时与耗时统计，
+        // 比在 6 个 case 里各写一遍更不容易漏改。
+        // 代价是必须保证 default 已 return（上面已做），否则未知目标会
+        // 穿透 default 再打印一次「重载完成」。
         s.sendMessage("§a重载完成（" + what + "），耗时 " + (System.currentTimeMillis() - start) + "ms，"
                 + "已加载模型 " + plugin.registry().count() + " 个。");
     }
@@ -133,6 +138,7 @@ public final class HelsteraCommand implements TabExecutor {
                     s.sendMessage("§c加载失败/校验错误:");
                     errors.forEach((k, v) -> s.sendMessage("§c- " + k + ": " + v));
                 }
+                return;
             }
             case "info" -> {
                 ModelDefinition m = args.length > 2 ? plugin.registry().get(args[2]).orElse(null) : null;
@@ -145,6 +151,7 @@ public final class HelsteraCommand implements TabExecutor {
                 s.sendMessage("§7挂接点:");
                 m.attachPoints().forEach((bone, pts) ->
                         s.sendMessage("  §e" + bone + "§7 -> " + pts.keySet()));
+                return;
             }
             case "validate" -> {
                 if (args.length < 3) {
@@ -159,6 +166,10 @@ public final class HelsteraCommand implements TabExecutor {
                             if (errors.isEmpty()) s.sendMessage("§a校验通过");
                             else errors.forEach(e -> s.sendMessage("§c- " + e));
                         })));
+                // 必须显式 return：validate 落进 unload 会真的卸载模型并销毁
+                // 全部实例 —— 一个纯只读命令变成破坏性操作，且校验「通过」后
+                // 模型就消失了，症状与「插件随机删模型」无法区分。
+                return;
             }
             case "unload" -> {
                 if (args.length < 3) {
@@ -168,6 +179,7 @@ public final class HelsteraCommand implements TabExecutor {
                 int despawned = plugin.instances().despawnAll(args[2]);
                 boolean ok = plugin.registry().unload(args[2]);
                 s.sendMessage(ok ? "§a已卸载（并销毁 " + despawned + " 个实例）" : "§c模型不存在");
+                return;
             }
             default -> s.sendMessage("§c未知子命令");
         }
@@ -218,6 +230,7 @@ public final class HelsteraCommand implements TabExecutor {
                     }
                 }
                 s.sendMessage(result == null ? "§c生物配置不存在: mobs/" + a + ".yml" : result);
+                return;
             }
             case "remove" -> {
                 if (args.length < 3) {
@@ -238,6 +251,7 @@ public final class HelsteraCommand implements TabExecutor {
                         s.sendMessage("§c实例 ID 必须是数字");
                     }
                 }
+                return;
             }
             case "info" -> {
                 if (args.length < 3) {
@@ -258,6 +272,7 @@ public final class HelsteraCommand implements TabExecutor {
                 } catch (NumberFormatException e) {
                     s.sendMessage("§c实例 ID 必须是数字");
                 }
+                return;
             }
             default -> s.sendMessage("§c未知子命令");
         }
@@ -289,18 +304,25 @@ public final class HelsteraCommand implements TabExecutor {
                 }
                 boolean ok = i.animation().play(args[3], AnimationOptions.defaults().priority(7));
                 s.sendMessage(ok ? "§a播放 " + args[3] : "§c动画不存在或被更高优先级打断规则拒绝");
+                return;
             }
             case "stop" -> {
                 i.animation().stopAll();
                 s.sendMessage("§a已停止");
+                // 必须显式 return：漏掉会依次执行 pause 与 resume，
+                // 表现为「停止后动画又自己动起来了」——停止功能完全失效，
+                // 且日志无任何异常，极易被当成动画系统的 bug 上报。
+                return;
             }
             case "pause" -> {
                 i.animation().pause();
                 s.sendMessage("§a已暂停");
+                return;
             }
             case "resume" -> {
                 i.animation().resume();
                 s.sendMessage("§a已恢复");
+                return;
             }
             default -> s.sendMessage("§c未知子命令");
         }
@@ -319,6 +341,7 @@ public final class HelsteraCommand implements TabExecutor {
                 case "scan" -> {
                     MigrationReport r = plugin.migration().scan(source);
                     s.sendMessage("§a" + r.summary());
+                    return;
                 }
                 case "preview" -> {
                     MigrationReport r = plugin.migration().preview(source);
@@ -326,11 +349,16 @@ public final class HelsteraCommand implements TabExecutor {
                     r.entries().stream().limit(20).forEach(e ->
                             s.sendMessage("§7- §f" + e.get("source-key") + " §7→ §f" + e.get("target-key")
                                     + " §7[" + e.get("status") + "] " + e.getOrDefault("note", "")));
+                    return;
                 }
                 case "apply" -> {
                     MigrationReport r = plugin.migration().apply(source, false);
                     s.sendMessage("§a应用完成: " + r.summary());
                     s.sendMessage("§7可用 /helstera migrate rollback " + source + " 回滚");
+                    // 必须显式 return：漏掉会贯穿到 rollback 分支执行真正的回滚，
+                    // 表现为「刚应用完立刻被自己撤销」——参数恰好够时会静默生效，
+                    // 且迁移记录里看不出异常，是本文件里最危险的一处 fall-through。
+                    return;
                 }
                 case "rollback" -> {
                     if (args.length < 4) {
@@ -339,6 +367,7 @@ public final class HelsteraCommand implements TabExecutor {
                     }
                     boolean ok = plugin.migration().rollback(source, args[3]);
                     s.sendMessage(ok ? "§a回滚成功" : "§c备份不存在");
+                    return;
                 }
                 case "report" -> s.sendMessage("§7最近报告: §f" + plugin.migration().lastReportJson());
                 default -> s.sendMessage("§c未知子命令");
@@ -368,18 +397,25 @@ public final class HelsteraCommand implements TabExecutor {
                 } catch (Exception e) {
                     s.sendMessage("§c启动失败: " + e.getMessage());
                 }
+                // 必须显式 return：漏掉会紧接着执行 web stop，
+                // 表现为「/helstera web start 毫无反应」——刚启动就被自己停掉，
+                // 且日志只显示启动成功，完全看不出随后发生过停止。
+                return;
             }
             case "stop" -> {
                 ws.webStop();
                 s.sendMessage("§a已停止");
+                return;
             }
             case "doctor", "check", "diag" -> {
                 s.sendMessage("§b== 网页开发器自检 ==");
                 for (String line : ws.webDoctor()) s.sendMessage("§7" + line);
+                return;
             }
             case "firewall", "fix" -> {
                 s.sendMessage("§7正在尝试添加入站放行规则（TCP " + ws.webPort() + "）…");
                 s.sendMessage("§7" + ws.webAllowFirewall());
+                return;
             }
             default -> {
                 s.sendMessage("§7网页开发器: " + (ws.webRunning() ? "§a运行中" : "§c已停止")
@@ -893,6 +929,9 @@ var ai = plugin.ai();
                 s.sendMessage("§b对话列表（" + names.size() + " 条）:");
                 for (String name : names) s.sendMessage("§7- §f" + name);
                 s.sendMessage("§7- 活跃 cinematic: §f" + ds.activeCount());
+                // 空列表分支已有 return，非空分支也必须显式终止，
+                // 否则会贯穿到 start 打印用法提示
+                return;
             }
             case "start" -> {
                 if (args.length < 3) {
@@ -916,6 +955,7 @@ var ai = plugin.ai();
                 boolean ok = ds.start(instId, dialogueId, plugin);
                 if (ok) s.sendMessage("§a已启动对话 \"" + dialogueId + "\" 在实例 #" + instId);
                 else s.sendMessage("§c对话不存在: " + dialogueId);
+                return;
             }
             default -> s.sendMessage("§c用法: /helstera dialog list|start <对话ID> [实例ID]");
         }
@@ -947,6 +987,10 @@ var ai = plugin.ai();
                         }
                     }
                 }
+                // 必须显式 return 终止：漏掉会贯穿到 apply 打印用法提示。
+                // disguise list 是排查伪装问题的首选命令，每次都看到
+                // 「用法: disguise apply <实例ID> <模型ID>」会被当成 bug 报告。
+                return;
             }
             case "apply" -> {
                 if (args.length < 4) {
@@ -964,6 +1008,7 @@ var ai = plugin.ai();
                 String err = dev.helstera.ai.DisguiseService.apply(inst, modelId);
                 if (err != null) s.sendMessage("§c伪装失败: " + err);
                 else s.sendMessage("§a已伪装实例 #" + instId + " → " + modelId);
+                return;
             }
             case "remove" -> {
                 if (args.length < 3) {
@@ -980,6 +1025,7 @@ var ai = plugin.ai();
                 String err = dev.helstera.ai.DisguiseService.remove(inst);
                 if (err != null) s.sendMessage("§c移除伪装失败: " + err);
                 else s.sendMessage("§a已移除实例 #" + instId + " 的伪装");
+                return;
             }
             default -> s.sendMessage("§c用法: /helstera disguise list|apply <实例ID> <模型ID>|remove <实例ID>");
         }
@@ -1068,6 +1114,10 @@ var ai = plugin.ai();
                         s.sendMessage("§8  - §7" + warn.get(i));
                     }
                 }
+                // 必须显式 return 终止：箭头语法下漏掉会贯穿到下面的 info 分支，
+                // 表现为「执行完 list 却打印 info 的用法提示」。
+                // list 是纯诊断命令，管理员敲得最多，因此这个 bug 尤其刺眼。
+                return;
             }
             case "info" -> {
                 if (args.length < 3) {
@@ -1094,6 +1144,7 @@ var ai = plugin.ai();
                         s.sendMessage("§7档案 §f" + e.getKey() + " §7属于此阵营");
                     }
                 }
+                return;
             }
             default -> s.sendMessage("§7用法: §f/helstera faction list|info <名称>");
         }
@@ -1103,8 +1154,11 @@ var ai = plugin.ai();
         if (!s.hasPermission("helstera.pack")) { deny(s); return; }
         String action = args.length > 1 ? args[1] : "build";
         switch (action) {
-            case "build" -> plugin.buildResourcePack(true).thenRun(() ->
-                    s.sendMessage("§a资源包已构建: " + plugin.resourcePack().packFile()));
+            case "build" -> {
+                plugin.buildResourcePack(true).thenRun(() ->
+                        s.sendMessage("§a资源包已构建: " + plugin.resourcePack().packFile()));
+                return;
+            }
             case "apply" -> {
                 if (!(s instanceof Player p)) {
                     s.sendMessage("§c仅玩家可接受资源包下发（控制台用 /helstera pack apply-all）");
@@ -1112,10 +1166,12 @@ var ai = plugin.ai();
                 }
                 plugin.resourcePack().apply(p);
                 s.sendMessage("§a已下发资源包（接受后重进可见模型贴图）");
+                return;
             }
             case "apply-all" -> {
                 plugin.resourcePack().applyAll();
                 s.sendMessage("§a已向全体在线玩家下发");
+                return;
             }
             default -> s.sendMessage("§c用法: /helstera pack build|apply|apply-all");
         }
@@ -1143,6 +1199,7 @@ var ai = plugin.ai();
                     s.sendMessage("§c告警 " + service.warnings().size() + " 条:");
                     service.warnings().forEach(w -> s.sendMessage("§c- " + w));
                 }
+                return;
             }
             case "roll" -> {
                 if (args.length < 3) {
@@ -1172,6 +1229,7 @@ var ai = plugin.ai();
                     for (var it : items) p.getInventory().addItem(it);
                     s.sendMessage("§a已放入背包（仅调试用，不计实际掉落）");
                 }
+                return;
             }
             default -> s.sendMessage("§c用法: /helstera loot list|roll <表名> [luck]");
         }
@@ -1197,6 +1255,7 @@ var ai = plugin.ai();
                 s.sendMessage("§b命名技能（" + names.size() + " 条）:");
                 for (String n : names) s.sendMessage("§7- §f" + n);
                 if (names.isEmpty()) s.sendMessage("§7（skills.yml 的 skills 为空）");
+                return;
             }
             case "info" -> {
                 if (args.length < 3) { s.sendMessage("§c用法: /helstera skill info <技能名>"); return; }
@@ -1207,6 +1266,7 @@ var ai = plugin.ai();
                         + (p.trace().isEmpty() ? "§a无（无条件即恒触发）"
                         : (p.wouldRun() ? "§a全部满足" : "§c有 " + countFailed(p) + " 条不满足")));
                 s.sendMessage("§7动作 " + p.actions().size() + " 条: " + p.actions());
+                return;
             }
             case "preview" -> {
                 if (args.length < 3) { s.sendMessage("§c用法: /helstera skill preview <技能名> [血量%]"); return; }
@@ -1229,6 +1289,7 @@ var ai = plugin.ai();
                     s.sendMessage("§c结论: §f不会触发 §7— 未满足 §f" + p.firstFailing());
                     s.sendMessage("§7提示: 调高 /helstera skill preview 的血量% 参数试试哪一档开始满足");
                 }
+                return;
             }
             default -> s.sendMessage("§c用法: /helstera skill list|info <名>|preview <名> [血量%]");
         }
@@ -1300,6 +1361,7 @@ var ai = plugin.ai();
                     s.sendMessage("§c告警 " + service.warnings().size() + " 条:");
                     service.warnings().forEach(w -> s.sendMessage("§c- " + w));
                 }
+                return;
             }
             case "toggle" -> {
                 if (args.length < 3) {
@@ -1324,6 +1386,7 @@ var ai = plugin.ai();
                     s.sendMessage("§e已停用刷怪点 §f" + args[2]
                             + "§e（已产出的生物不受影响；reload 后恢复 YAML 设置）");
                 }
+                return;
             }
             case "force" -> {
                 if (args.length < 3) {
@@ -1346,10 +1409,12 @@ var ai = plugin.ai();
                     if (service.forceSpawn(id, at)) made++;
                 }
                 s.sendMessage("§a强制生成 " + made + " 只（" + id + "）");
+                return;
             }
             case "reload" -> {
                 plugin.reloadLootAndSpawners();
                 s.sendMessage("§a已重载 spawners.yml，当前 " + service.size() + " 个刷怪点");
+                return;
             }
             default -> s.sendMessage("§c用法: /helstera spawner list|force <id> [数量]|toggle <id>|reload");
         }
