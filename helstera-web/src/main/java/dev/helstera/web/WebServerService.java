@@ -978,6 +978,10 @@ public final class WebServerService {
 
     /** 请求方的问题（非法 JSON / 越界路径），对应 HTTP 400 而非 500。 */
     private static final class BadRequestException extends RuntimeException {
+        // 显式声明：本异常只在进程内传递、从不被序列化，加固定 id 只是为了让
+        // 序列化分析器闭嘴。版本号不承载任何兼容含义。
+        private static final long serialVersionUID = 1L;
+
         BadRequestException(String m) {
             super(m);
         }

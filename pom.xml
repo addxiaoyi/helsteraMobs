@@ -130,6 +130,45 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.13.0</version>
+                    <configuration>
+                        <!--
+                            开启编译器自带的全部 lint。
+
+                            本项目此前**没有任何**静态分析环节：无 SpotBugs / Checkstyle /
+                            PMD / ErrorProne，编译器也未开 -Xlint。javac 不检查的
+                            那一类（未使用 import、未使用变量、冗余类型、潜在空指针）
+                            只有 IDEA 的 inspection 看得见，CI 与本地构建全都漏掉——
+                            IDEA 面板里长期挂着 160+ 个问题就是这么来的。
+
+                            为什么选 -Xlint 而不是 SpotBugs：
+                            -Xlint 随 JDK 自带，零依赖、零下载。本机 JDK 的网络栈
+                            连不上 repo.maven.apache.org（PowerShell 能通、java.exe
+                            超时），引入外部插件需要先解决这个环境问题。
+                            SpotBugs 能力强得多（能做数据流与空指针分析），
+                            等网络可用后建议再叠加一层。
+
+                            刻意**不加** -Werror：本项目大量使用 Bukkit API 与
+                            反射，JDK 升级时可能冒出新警告。让警告可见但不阻断
+                            构建，比因为一条 deprecation 就卡住发布更实际。
+
+                            当前基线（2026-10-08，Paper 1.21.1-133）：
+                            源码警告 73 条，其中
+                              68 条是 Paper 标记的 removal API
+                                  （Damageable.getMaxHealth / ChatColor /
+                                   Plugin.getConfig / Player.setResourcePack 等）
+                              4 条是文本块在参数位置的 javac 误报
+                              1 条是 whenComplete 的签名（正常 API 用法）
+                            本项目自身的告警已清零。这 68 条**刻意不清**：
+                            替换成新 API 需要反射 + 版本分支，风险远大于收益；
+                            而 Paper 的 removal 清单在 1.21 仍是「将来」，
+                            真要移除时集中迁移一次即可。若将来看到
+                            「警告数突然远超 73」，说明引入了新问题。
+                        -->
+                        <compilerArgs>
+                            <arg>-Xlint:all</arg>
+                        </compilerArgs>
+                        <showWarnings>true</showWarnings>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
