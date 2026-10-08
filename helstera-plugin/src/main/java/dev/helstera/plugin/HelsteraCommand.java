@@ -92,7 +92,12 @@ public final class HelsteraCommand implements TabExecutor {
         String what = args.length > 1 ? args[1] : "all";
         long start = System.currentTimeMillis();
         switch (what) {
-            case "models" -> plugin.reloadModels();
+            case "models" -> {
+                if (!plugin.reloadModels()) {
+                    s.sendMessage("§c模型重载未启动，请检查模型目录和注册器状态");
+                    return;
+                }
+            }
             case "config" -> plugin.reloadConfig();
             case "packs" -> plugin.buildResourcePack(true);
             case "loot" -> plugin.reloadLootAndSpawners();
@@ -137,7 +142,8 @@ public final class HelsteraCommand implements TabExecutor {
             s.sendMessage("§c用法: /helstera model list|info|validate|unload <id>");
             return;
         }
-        switch (args[1]) {
+        String action = args[1].toLowerCase(Locale.ROOT);
+        switch (action) {
             case "list" -> {
                 s.sendMessage("§b已加载模型（" + plugin.registry().count() + "）:");
                 for (ModelDefinition m : plugin.registry().all()) {
@@ -646,7 +652,40 @@ var ai = plugin.ai();
             s.sendMessage("§8  §7" + String.join("§7§8, §7", unwired));
         }
 
-        // 4.2 阵营配置：两个方向的错配都要报出来
+        // 4.2 生物配置：
+        //     a) 静态引用完整性（model / drops.table / ai.profile / faction）
+        //        —— 不生成也能查，所以这部分才是「体检」的主要价值；
+        //     b) 生成时才发现的运行期问题（非法实体类型、非正血量）
+        //        —— 空列表必须写明「尚未生成过」，否则会被读成「配置没问题」。
+        var mobCfgWarn = plugin.mobConfigWarnings();
+        var mobRunWarn = plugin.mobWarnings();
+        int mobTotal = mobCfgWarn.size() + mobRunWarn.size();
+        if (mobTotal == 0) {
+            s.sendMessage("§a✓ §7生物配置无问题 §8(引用完整；"
+                    + "entity.type / health 这类要生成后才知，spawn 一次再跑本命令)");
+        } else {
+            problems += mobTotal;
+            s.sendMessage("§e✗ §7生物配置 §f" + mobTotal + " §7处问题 §8(引用完整性 + 生成时发现的兜底)");
+            int shown = 0;
+            for (int i = 0; i < Math.min(mobCfgWarn.size(), 8); i++) {
+                s.sendMessage("§8  - §7" + mobCfgWarn.get(i));
+                shown++;
+            }
+            for (int i = 0; i < Math.min(mobRunWarn.size(), Math.max(0, 8 - shown)); i++) {
+                s.sendMessage("§8  - §7" + mobRunWarn.get(i));
+            }
+            if (mobTotal > 8) {
+                s.sendMessage("§8  … 还有 " + (mobTotal - 8) + " 条");
+            }
+            if (!mobRunWarn.isEmpty()) {
+                // 这些告警记录的是「生成时发生过什么」，改好配置后不会自动消失，
+                // 重启服务器才清。不说明的话，作者会反复 reload 试图消掉它们。
+                s.sendMessage("§8  §7后几条来自生成时的兜底记录，重启服务器后清空"
+                        + "（改对了但仍在列是正常的）");
+            }
+        }
+
+        // 4.3 阵营配置：两个方向的错配都要报出来
         if (ai != null) {
             var fs = ai.factions();
             var factionWarn = new java.util.ArrayList<String>(fs.warnings());
@@ -1459,8 +1498,8 @@ var ai = plugin.ai();
         if (args.length == 1) {
             SUBS.stream().filter(x -> x.startsWith(args[0].toLowerCase())).forEach(out::add);
         } else if (args.length == 2) {
-            switch (args[0]) {
-                case "reload" -> out.addAll(List.of("models", "config", "packs", "loot", "spawners", "all"));
+            switch (args[0].toLowerCase(Locale.ROOT)) {
+                case "reload" -> out.addAll(List.of("models", "config", "packs", "loot", "spawners", "skills", "all"));
                 case "model" -> out.addAll(List.of("list", "info", "validate", "unload"));
                 case "mob" -> out.addAll(List.of("spawn", "remove", "info"));
                 case "animation" -> out.addAll(List.of("play", "stop", "pause", "resume"));
@@ -1474,7 +1513,7 @@ var ai = plugin.ai();
                 case "pack" -> out.addAll(List.of("build", "apply", "apply-all"));
             }
         } else if (args.length == 3) {
-            switch (args[0] + " " + args[1]) {
+            switch (args[0].toLowerCase(Locale.ROOT) + " " + args[1].toLowerCase(Locale.ROOT)) {
                 case "model info", "model validate", "model unload" ->
                         plugin.registry().all().forEach(m -> out.add(m.id()));
                 case "mob remove" -> out.add("all");

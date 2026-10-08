@@ -1,5 +1,6 @@
 package dev.helstera.ai.loot;
 
+import dev.helstera.ai.YamlNums;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.ArrayList;
@@ -100,7 +101,8 @@ public final class DropTable {
     public static DropTable parse(String name, ConfigurationSection sec, List<String> problems) {
         // 先判空再读字段：此前先读 luck-factor 才判 null，
         // 调用方传 null 节（如 tables.<name> 是空节点）会直接 NPE。
-        double luckFactor = sec == null ? 0.05 : clamp(sec.getDouble("luck-factor", 0.05), 0, 1);
+        // luck-factor 同样走严格读取：写成 "很高" 时此前按默认 0.05 静默执行。
+        double luckFactor = YamlNums.chance(sec, "luck-factor", 0.05, problems, "掉落表 " + name);
         List<Entry> entries = new ArrayList<>();
         if (sec != null) {
             int idx = 0;
@@ -123,28 +125,43 @@ public final class DropTable {
                     problems.add("掉落表 " + name + " 第 " + idx + " 条缺少 item，已跳过");
                     continue;
                 }
-                int min = Math.max(1, es.getInt("amount-min", 1));
-                int max = Math.max(1, es.getInt("amount-max", min));
+                // 这里以前是裸 getInt/getDouble：Bukkit 对「值无法解析」与「键不存在」
+                // 返回同一个默认值，于是 chance: "很多" 与 chance: 0.5 结果完全相同
+                // （都是默认的 1.0，即 100% 必掉），amount_chance 拼错也同样变成必掉。
+                // 真服实测这两项都完全静默。
+                String where = "掉落表 " + name + " 第 " + idx + " 条";
+                int min = Math.max(1, YamlNums.i(es, "amount-min", 1, problems, where));
+                int max = Math.max(1, YamlNums.i(es, "amount-max", min, problems, where));
                 if (max < min) {
-                    problems.add("掉落表 " + name + " 第 " + idx + " 条 amount-max < amount-min，已交换");
+                    problems.add(where + " amount-max < amount-min，已交换");
                     int t = min;
                     min = max;
                     max = t;
                 }
-                double chance = clamp(es.getDouble("chance", 1.0), 0, 1);
+                double chance = YamlNums.chance(es, "chance", 1.0, problems, where);
                 Map<String, Integer> ench = new LinkedHashMap<>();
                 // 嵌套的 enchantments 同样是「列表项里的映射」，形态跟着父节点走
                 Object encRaw = es.get("enchantments");
                 if (encRaw instanceof ConfigurationSection encSec) {
                     for (String k : encSec.getKeys(false)) {
-                        int lvl = encSec.getInt(k, 1);
+                        // 严格读取：SHARPNESS: "很强" 此前按默认等级 1 静默执行
+                        int lvl = YamlNums.i(encSec, k, 1, problems, where + " 的 enchantments." + k);
                         if (lvl > 0) ench.put(k.toUpperCase(Locale.ROOT), lvl);
+                        else problems.add(where + " 的 enchantments." + k + " = " + lvl
+                                + " 不是正数等级，已忽略该附魔");
                     }
                 } else if (encRaw instanceof Map<?, ?> encMap) {
+                    // 这是 Bukkit 里「列表项中的嵌套映射」的实际形态——比
+                    // ConfigurationSection 分支更常见。此前这里用 toInt 静默兜底，
+                    // 所以 SHARPNESS: "很强" 在实际配置里根本没被报出来。
                     for (Map.Entry<?, ?> en : encMap.entrySet()) {
                         if (en.getKey() == null) continue;
-                        int lvl = toInt(en.getValue(), 1);
-                        if (lvl > 0) ench.put(String.valueOf(en.getKey()).toUpperCase(Locale.ROOT), lvl);
+                        String key = String.valueOf(en.getKey());
+                        int lvl = YamlNums.ofObject(en.getValue(), 1, problems,
+                                where + " 的 enchantments." + key);
+                        if (lvl > 0) ench.put(key.toUpperCase(Locale.ROOT), lvl);
+                        else problems.add(where + " 的 enchantments." + key + " = " + lvl
+                                + " 不是正数等级，已忽略该附魔");
                     }
                 }
                 Integer cmd = es.contains("custom-model-data") ? es.getInt("custom-model-data") : null;
@@ -186,11 +203,6 @@ public final class DropTable {
             }
         }
         return new DropTable(name, luckFactor, entries);
-    }
-
-    static double clamp(double v, double lo, double hi) {
-        if (Double.isNaN(v)) return lo;
-        return Math.max(lo, Math.min(hi, v));
     }
 
     /**

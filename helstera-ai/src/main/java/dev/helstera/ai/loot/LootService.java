@@ -69,9 +69,30 @@ public final class LootService {
         this.customItemResolver = resolver;
     }
 
+    /**
+     * 运行期的概率钳制。
+     *
+     * <p>与装载期 {@code YamlNums.chance} 的分工：那里校验<b>作者写的配置</b>
+     * （越界要告警），这里保证<b>投掷时</b>概率合法——幸运加成后不能超过 1，
+     * 否则 {@code rnd.nextDouble() >= chance} 恒不成立，掉落率会静默变成 100%。
+     * 两者都需要，只是一个该告警、一个不该。</p>
+     */
+    private static double clampChance(double v, double lo, double hi) {
+        if (Double.isNaN(v)) return lo;
+        return Math.max(lo, Math.min(hi, v));
+    }
+
     /** 装载 {@code loot.yml} 的 {@code tables} 节。 */
-    public void load(ConfigurationSection tablesSec) {
-        tables.clear();
+    public void load(ConfigurationSection tablesSec) {        tables.clear();
+        // problems 必须清，否则每次 reload 都把上一轮的告警叠加上去。
+        //
+        // 真服验证：把 loot.yml 换成完全合法的内容再 reload，/helstera check 仍报
+        // 上一轮的「amount-max < amount-min」——而且每 reload 一次多一条。
+        // 作者看到自己已经改对的配置仍在报错，会以为修复没生效，转去反复检查
+        // 那份其实正确的文件。比不报错更误导。
+        //
+        // （SpawnerService.load 就清对了，SkillService.loadSkills 也已修；这里漏了。）
+        problems.clear();
         if (tablesSec == null) return;
         for (String key : tablesSec.getKeys(false)) {
             ConfigurationSection sec = tablesSec.getConfigurationSection(key);
@@ -137,7 +158,7 @@ public final class LootService {
             double chance = e.chance();
             if (e.luckScaling()) {
                 // 幸运值只往上加成，永不把 chance 推到 1 以外
-                chance = DropTable.clamp(chance + Math.max(0, luck) * t.luckFactor(), 0, 1);
+                chance = clampChance(chance + Math.max(0, luck) * t.luckFactor(), 0, 1);
             }
             if (rnd.nextDouble() >= chance) continue;
             hits.add(new Hit(e, pickAmount(e, rnd)));

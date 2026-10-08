@@ -1,5 +1,6 @@
 package dev.helstera.ai.spawner;
 
+import dev.helstera.ai.YamlNums;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
@@ -152,18 +153,63 @@ public final class SpawnerService {
                 problems.add("刷怪点 " + id + " 缺少坐标 x/z，已跳过");
                 continue;
             }
+            // 世界存在性在**装载期**查，而不是等到每次 spawn 才试。
+            // resolveWorld 一直会告警，但那是运行期的：刷怪点能正常装载、
+            // /helstera check 全绿，作者直到玩家踩过去才发现那个点从不出怪。
+            //
+            // 只校验 world，不在这里校验 mob/model——SpawnerService 拿到的只是
+            // org.bukkit.plugin.Plugin，没有模型注册表；硬要查就得把 AI 模块耦合到
+            // 模型层。模型侧的校验放在 HelsteraPlugin.reloadLootAndSpawners 里，
+            // 那里才有 mobs/ 与 registry。
+            String worldName = s.getString("world", "");
+            if (worldName != null && !worldName.isBlank()) {
+                try {
+                    if (plugin.getServer().getWorld(worldName) == null) {
+                        problems.add("刷怪点 " + id + " 的 world \"" + worldName
+                                + "\" 不存在，该点将永远不出怪。可用世界："
+                                + plugin.getServer().getWorlds().stream()
+                                        .map(w -> w.getName()).toList());
+                    }
+                } catch (Throwable ignored) {
+                    // 服务端未就绪时不必拦——加载期拿不到世界列表是正常的
+                }
+            }
+            // 以下原先全是裸 getDouble/getInt：Bukkit 对「值无法解析」与「键不存在」
+            // 返回同一个默认值，于是 interval: "很快" 与不写 interval 完全同效、
+            // x: "中间" 会静默变成坐标 0。真服实测这类写法零告警。
+            String where = "刷怪点 " + id;
+            int interval = YamlNums.positive(s, "interval", 200, problems, where);
+            // max-alive <= 0 会让刷怪点永远刷不出（上限 0）。钳到 1 而不是回落到
+            // 默认值：作者写 0 本意多半是「别限制」，钳到 1 既让它活着又给出告警，
+            // 比悄悄给 3 只更贴近本意。SpawnerServiceTest.clampsMaxAliveToAtLeastOne
+            // 守的就是这条。
+            int maxAlive = YamlNums.i(s, "max-alive", 3, problems, where);
+            if (maxAlive < 1) {
+                problems.add(where + " 的 max-alive = " + maxAlive
+                        + " 不是正数，已夹到 1（写 0 会让该点永远刷不出）。"
+                        + "想表示「不限」可以省略该字段");
+                maxAlive = 1;
+            }
+            if (maxAlive > 1000) {
+                problems.add(where + " 的 max-alive = " + maxAlive + " 大得离谱（>1000），"
+                        + "通常是少写了一位。同一刷怪点会同时存在这么多只，建议确认后主动降低");
+            }
             Spawner sp = new Spawner(
                     id, mobId,
                     s.getString("world", ""),
-                    s.getDouble("x"), s.getDouble("y"), s.getDouble("z"),
-                    s.getDouble("radius", 6.0),
-                    s.getInt("interval", 200),
-                    s.getInt("max-alive", 3),
-                    s.getInt("max-spawns", 0),
-                    s.getInt("min-players", 0),
-                    s.getDouble("players-radius", 24.0),
+                    YamlNums.d(s, "x", 0, problems, where),
+                    YamlNums.d(s, "y", 0, problems, where),
+                    YamlNums.d(s, "z", 0, problems, where),
+                    // radius 为 0 会让「附近玩家」判定恒不成立；负数更是无意义
+                    YamlNums.positiveDouble(s, "radius", 6.0, problems, where),
+                    interval,
+                    maxAlive,
+                    // 这两个默认 0 是合法语义（不限 / 不需要人），故用非负版
+                    YamlNums.nonNegative(s, "max-spawns", 0, problems, where),
+                    YamlNums.nonNegative(s, "min-players", 0, problems, where),
+                    YamlNums.d(s, "players-radius", 24.0, problems, where),
                     s.getBoolean("enabled", true),
-                    s.getDouble("y-range", 0),
+                    YamlNums.d(s, "y-range", 0, problems, where),
                     s.getString("ai-profile"));
             spawners.put(id, sp);
             alive.put(id, Collections.synchronizedList(new ArrayList<>()));
