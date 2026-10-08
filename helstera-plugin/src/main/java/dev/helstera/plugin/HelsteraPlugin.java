@@ -600,7 +600,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return sourceDir.getFileName() == null ? "" : sourceDir.getFileName().toString();
     }
 
+    /**
+     * 重新加载模型；加载完成后自动构建资源包。
+     *
+     * <p>{@code applyPackToPlayers} 只影响构建完成后<b>是否立刻向在线玩家下发</b>。
+     * {@code /helstera reload models} 传 false（模型在变，下发会打断当前显示）；
+     * {@code /helstera reload all} 传 true（希望玩家立刻拿到新资源包）。</p>
+     *
+     * <p>命令层不应在调用本方法后再额外调 buildResourcePack：模型加载是异步的，
+     * 那时构建得到的是「模型还没注册完」的空包，且与本方法内部的构建重复。</p>
+     */
     public boolean reloadModels() {
+        return reloadModels(false);
+    }
+
+    public boolean reloadModels(boolean applyPackToPlayers) {
         long start = System.currentTimeMillis();
         // 判空必须覆盖整个方法：此前只有 clearErrors() 前面挡了一次，
         // 紧接着的 registry.unloadAll() 仍会 NPE。调用方（WebBridgeAdapter）
@@ -660,7 +674,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " 成功，耗时 " + (System.currentTimeMillis() - start) + "ms");
                     // 即使部分失败也要构建：已加载的模型仍需要进资源包，
                     // 否则它们会一直显示为紫黑方块。
-                    buildResourcePack(false);
+                    buildResourcePack(applyPackToPlayers);
                 }));
         return true;
     }

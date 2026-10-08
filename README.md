@@ -595,6 +595,20 @@ mvn -s tools/settings-ci.xml clean verify
 
 `tools/spotbugs-exclude.xml` 每条都写了理由，并由 `SpotbugsExcludeAuditTest` 守住：条目必须有注释理由、数量不超过 12 条、禁止 `<Match/>` 屏蔽全部、以及**已修复的 bug 类型不得重新出现在清单里**。
 
+### 资源包构建的原子性
+
+真服日志里每次 `reload` 都会出现**两次**「资源包构建完成」—— 一次 12 个文件、一次 2 个文件。根因是 `/helstera reload all` 里 `buildResourcePack(true)` 与 `reloadModels()` 内部的构建重复，而模型加载是异步的，于是命令那一行执行时模型还没注册完，构建出的是空包。
+
+**危害**：`buildSync` 的 `cleanGenerated -> buildAssets -> zip` 三步没有互斥，`zip` 又是用 `newOutputStream` **截断写** `pack.zip` —— 而那正是玩家通过 web 的 `/pack.zip` 下载的文件。构建中途下载会拿到半成品，客户端解析失败，模型变紫黑方块，而构建本身「成功」，日志里没有任何错误。
+
+三层修复：
+
+1. `reload all` 不再额外调 `buildResourcePack`。下发时机改由 `reloadModels(true)` 在模型加载完成时决定 —— 这样既消除了重复，也修正了顺序（原先是在模型就绪**前**下发）。
+2. `buildSync` 加 `synchronized(buildLock)`，并用 `inFlight` 让并发调用复用同一次构建而不是排队重做。
+3. `zip()` 改为**先写 `.building` 临时文件再 `ATOMIC_MOVE` 改名**。任何时刻打开 `pack.zip` 看到的都是上一次完整构建的产物；文件系统不支持原子改名时降级为普通替换并告警。
+
+`ResourcePackConcurrencyTest` 覆盖产物完整性与无残留。**该测试是回归防护而非精确竞态检测器** —— 两个线程恰好不重叠时删掉锁也能通过；真正的确认来自真服日志（修复后每次 reload 只剩一次构建，且均为 12 文件）。
+
 ## Boss 血条渐变配色
 
 `bossbar.gradient: true` 让血量在相邻档位之间线性插值，而不是到点跳变。
