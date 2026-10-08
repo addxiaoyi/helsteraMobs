@@ -28,5 +28,19 @@
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
         </dependency>
+        <!--
+          测试依赖此前完全缺失，导致本模块没有任何测试。
+          buildSync 的原子改名 / 并发互斥是必须测的：它决定玩家下载到的
+          pack.zip 是完整包还是半成品，而半成品的症状（模型变紫黑方块）
+          在真服日志里没有任何线索。
+        -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+        </dependency>
     </dependencies>
 </project>

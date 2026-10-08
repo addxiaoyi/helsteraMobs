@@ -99,9 +99,15 @@ public final class HelsteraCommand implements TabExecutor {
             case "spawners" -> plugin.reloadLootAndSpawners();
             case "all" -> {
                 plugin.reloadConfig();
-                plugin.reloadModels();
+                // reloadModels() 内部会在模型加载完成（whenComplete）时构建资源包，
+                //
+                // 此处**不能**再调 buildResourcePack(true)：一是重复（每次 reload 都会
+                // 在日志里看到两次「资源包构建完成」），二是顺序错了——模型加载是异步的，
+                // 命令那一行执行时模型还没注册完，构建出来的是「2 个文件」的空包。
+                // 真服日志里能直接看到这个现象：12 文件与 2 文件各构建一次。
+                // 下发给在线玩家由 reloadModels(true) 在正确的时机做。
+                plugin.reloadModels(true);
                 plugin.reloadLootAndSpawners();
-                plugin.buildResourcePack(true);
             }
             default -> {
                 s.sendMessage("§c未知重载目标: " + what + "（models|config|packs|loot|spawners|all）");
