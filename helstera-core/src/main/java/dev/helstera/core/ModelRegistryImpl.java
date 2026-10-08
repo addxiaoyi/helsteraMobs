@@ -7,7 +7,6 @@ import dev.helstera.api.model.ModelRegistry;
 import dev.helstera.core.model.ModelDefinitionImpl;
 import dev.helstera.core.parse.ModelParser;
 import dev.helstera.core.validate.ModelValidator;
-import org.bukkit.Bukkit;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,7 +14,6 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;

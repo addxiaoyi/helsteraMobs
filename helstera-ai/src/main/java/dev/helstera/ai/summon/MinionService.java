@@ -1,8 +1,6 @@
 package dev.helstera.ai.summon;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -98,7 +96,10 @@ public final class MinionService {
         Integer parent = parentOf.remove(minionId);
         if (parent != null) {
             List<Integer> kids = childrenOf.get(parent);
-            if (kids != null) kids.removeIf(k -> k == minionId);
+            // 显式 null 检查：childrenOf 的 List 由 computeIfAbsent 创建，
+            // 理论不会含 null，但 register 是 public，外部若传入就会让
+            // removeIf 的谓词在 k 上 NPE，把「清理失败」变成「清理时崩溃」。
+            if (kids != null) kids.removeIf(k -> k != null && k == minionId);
         }
         // 自身若是召唤主，也清掉它的孩子列表
         childrenOf.remove(minionId);

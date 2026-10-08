@@ -72,6 +72,64 @@ class MinionServiceTest {
         assertEquals(0, s.depthOf(10), "已移除的召唤物深度归零");
     }
 
+    /**
+     * 实例 id 超出 Integer 缓存范围时，{@code forget} 仍要真正移除。
+     *
+     * <p><b>本测试的来历</b>：曾怀疑 {@code removeIf(k -> k == minionId)} 是装箱比较
+     * 陷阱（{@code Integer} 与 {@code int} 用 {@code ==} 比引用），并打算改写成
+     * 值比较。写了本测试后<b>没能复现</b>该问题——JDK 21 下无论 id 取 5000 还是
+     * 900000、甚至从 {@code Integer.parseInt} 动态取值，{@code removeIf} 都能正确删除。</p>
+     *
+     * <p>因此本测试不锁定「曾存在的 bug」，而是作为<b>行为契约</b>存在：
+     * 无论底层装箱如何实现，{@code forget} 对任意 id 都必须让计数正确回落。
+     * 若将来有人把谓词改成真正会失效的形态（例如改成 {@code k == Integer.valueOf(id)}
+     * 这种每次都新建对象的写法），本测试会立刻失败。</p>
+     *
+     * <p>此前已有的 {@code forgetRemovesFromParent} 用 id 10 和 11，
+     * 落在 {@code Integer.valueOf} 的缓存内，覆盖不到这个区间。</p>
+     */
+    @Test
+    @DisplayName("实例 id 超过 Integer 缓存范围（127）时 forget 仍生效")
+    void forgetWorksBeyondIntegerCache() {
+        MinionService s = new MinionService();
+        s.limits(5, 10);
+        int minionA = 5000;   // 远超 Integer.valueOf 的缓存上界
+        int minionB = 5001;
+        s.register(1, minionA, 1);
+        s.register(1, minionB, 1);
+        assertEquals(2, s.minionCount(1));
+
+        s.forget(minionA);
+
+        assertEquals(1, s.minionCount(1),
+                "id 超出 Integer 缓存范围时 forget 必须仍然生效");
+        assertEquals(0, s.depthOf(minionA), "已移除的召唤物深度归零");
+        assertEquals(1, s.depthOf(minionB), "同一召唤主下的其它召唤物不受影响");
+    }
+
+    /**
+     * 反复召唤/移除不应让名额单调增长。
+     *
+     * <p>比单次 forget 更贴近真实症状：缓存比较的问题在单次调用里不易察觉，
+     * 但循环几十次后 {@code minionCount} 明显回不到 0。</p>
+     */
+    @Test
+    @DisplayName("反复召唤移除后计数回到 0（覆盖缓存比较的累积效应）")
+    void repeatedRegisterForgetReturnsToZero() {
+        MinionService s = new MinionService();
+        s.limits(5, 64);
+        for (int i = 0; i < 40; i++) {
+            int id = 3000 + i;   // 全部在缓存范围外
+            s.register(1, id, 1);
+        }
+        assertEquals(40, s.minionCount(1));
+        for (int i = 0; i < 40; i++) {
+            s.forget(3000 + i);
+        }
+        assertEquals(0, s.minionCount(1),
+                "40 个召唤物全部死亡后计数应归零；否则说明 forget 存在静默失效");
+    }
+
     @Test
     @DisplayName("多级链条深度累加")
     void depthAccumulatesAlongChain() {

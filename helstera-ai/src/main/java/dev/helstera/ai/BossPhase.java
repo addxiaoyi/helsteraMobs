@@ -5,7 +5,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Boss 血量阶段（{@code profiles.<name>.phases}）。

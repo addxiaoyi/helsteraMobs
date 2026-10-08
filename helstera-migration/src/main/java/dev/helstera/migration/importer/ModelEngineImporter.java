@@ -1,8 +1,6 @@
 package dev.helstera.migration.importer;
 
 import dev.helstera.api.migration.MigrationImporter;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

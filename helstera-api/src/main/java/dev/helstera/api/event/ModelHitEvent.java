@@ -2,7 +2,6 @@ package dev.helstera.api.event;
 
 import dev.helstera.api.instance.ModelInstance;
 import dev.helstera.api.Vec3;
-import org.bukkit.entity.Player;
 
 import java.util.UUID;
 

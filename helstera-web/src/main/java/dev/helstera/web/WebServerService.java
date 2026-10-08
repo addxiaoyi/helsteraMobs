@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
@@ -228,7 +227,9 @@ public final class WebServerService {
         sseClients.clear();
         Javalin a = app;
         if (a != null) {
-            try { a.stop(); } catch (Throwable ignored) {}
+            // 收窄到 Exception：关闭期 Javalin 抛异常属正常，但吞掉 Error
+            // （OOM/StackOverflow）只会让崩溃现场更难查。
+            try { a.stop(); } catch (Exception ignored) { }
             app = null;
         }
     }

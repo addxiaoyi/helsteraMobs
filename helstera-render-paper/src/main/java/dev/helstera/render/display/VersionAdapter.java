@@ -2,8 +2,6 @@ package dev.helstera.render.display;
 
 import org.bukkit.Bukkit;
 
-import java.lang.reflect.Method;
-import java.util.Locale;
 import java.util.logging.Logger;
 
 /**

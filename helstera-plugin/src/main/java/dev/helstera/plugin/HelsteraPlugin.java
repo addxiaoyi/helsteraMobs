@@ -5,8 +5,6 @@ import dev.helstera.api.HelsteraApi;
 import dev.helstera.api.behavior.BehaviorRegistry;
 import dev.helstera.api.event.AnimationMarkerEvent;
 import dev.helstera.api.event.HelsteraEventBus;
-import dev.helstera.api.event.ModelRegionEnterEvent;
-import dev.helstera.api.event.ModelRegionLeaveEvent;
 import dev.helstera.api.integration.IntegrationRegistry;
 import dev.helstera.api.migration.MigrationService;
 import dev.helstera.api.model.ModelRegistry;
@@ -17,7 +15,6 @@ import dev.helstera.ai.BehaviorRegistryImpl;
 import dev.helstera.ai.skill.SkillService;
 import dev.helstera.ai.skill.SkillTriggers;
 import dev.helstera.core.ModelRegistryImpl;
-import dev.helstera.core.parse.ModelParser;
 import dev.helstera.core.parse.ModelScanner;
 import dev.helstera.core.model.ModelDefinitionImpl;
 import dev.helstera.core.validate.ModelValidator;
@@ -57,7 +54,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
-import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -1031,7 +1027,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     case "boots": slot = org.bukkit.inventory.EquipmentSlot.FEET; break;
                     default: continue;
                 }
-                try { ent.getEquipment().setItem(slot, stack); } catch (Throwable ignored) {}
+                // 装备写不进去的两种真实原因：实体类型没有 Equipment（如部分生物）、
+                // 物品材质在当前 MC 版本不存在。两者都是「配置写了没效果」，
+                // 静默吞掉会让作者反复检查 yml 语法。Throwable 收窄为 Exception：
+                // 吞掉 Error（OOM/StackOverflow）只会让崩溃现场更难查。
+                try {
+                    var eq = ent.getEquipment();
+                    if (eq == null) {
+                        getLogger().warning("[装备] 实体 " + ent.getType().name() + " 没有装备槽，"
+                                + "mobs 配置的 " + slot + " 已跳过");
+                    } else {
+                        eq.setItem(slot, stack);
+                    }
+                } catch (Exception e) {
+                    getLogger().warning("[装备] 写入 " + slot + " 失败（"
+                            + (stack == null ? "物品无效" : stack.getType().name()) + "）: " + e.getMessage());
+                }
             }
         }
         // ---- 药水效果 ----
@@ -1050,7 +1061,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean particles = pSec.getBoolean("particles", true);
                 boolean showIcon = pSec.getBoolean("icon", true);
                 try { ent.addPotionEffect(new org.bukkit.potion.PotionEffect(type, duration, amplifier, ambient, particles, showIcon)); }
-                catch (Throwable ignored) {}
+                catch (Exception e) {
+                    // 效果加不上通常是 duration 过大（超过 int 范围或配置写了单位）。
+                    // 静默吞掉的表现是「配置写了没效果」，与拼错效果名（已 continue）无法区分。
+                    getLogger().warning("[药水] 添加 " + effectName + " 失败（duration=" + duration
+                            + ", amplifier=" + amplifier + "）: " + e.getMessage());
+                }
             }
         }
     }
@@ -1525,9 +1541,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         @Override public List<String> players() {
             List<String> out = new ArrayList<>();
+            // 服务器关闭过程中 getOnlinePlayers 可能抛异常；此处静默返回空列表是
+            // 可接受的（网页即将断开），但只吞 Exception——连 Error 一起吞会让
+            // 崩溃现场彻底消失。
             try {
                 for (org.bukkit.entity.Player p : org.bukkit.Bukkit.getOnlinePlayers()) out.add(p.getName());
-            } catch (Throwable ignored) { }
+            } catch (Exception ignored) { }
             return out;
         }
         @Override public boolean reloadModels() {

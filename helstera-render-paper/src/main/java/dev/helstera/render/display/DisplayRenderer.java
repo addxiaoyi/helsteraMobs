@@ -2,18 +2,15 @@ package dev.helstera.render.display;
 
 import dev.helstera.api.Vec3;
 import dev.helstera.api.instance.SpawnOptions;
-import dev.helstera.core.animation.AnimationClip;
 import dev.helstera.core.model.ModelDefinitionImpl;
 import dev.helstera.runtime.animation.BonePose;
 import dev.helstera.runtime.instance.InstanceRenderer;
 import dev.helstera.runtime.instance.ModelInstanceImpl;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.TextDisplay;
@@ -24,7 +21,6 @@ import org.bukkit.util.Transformation;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import net.kyori.adventure.text.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;

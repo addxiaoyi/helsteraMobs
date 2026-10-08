@@ -1,11 +1,9 @@
 package dev.helstera.plugin;
 
-import dev.helstera.api.Helstera;
 import dev.helstera.api.animation.AnimationOptions;
 import dev.helstera.api.instance.ModelInstance;
 import dev.helstera.api.migration.MigrationReport;
 import dev.helstera.api.model.ModelDefinition;
-import dev.helstera.runtime.instance.InstanceManagerImpl;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -17,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * /helstera 命令（别名 /hmobs）：reload / model / mob / animation / migrate / web / debug / stats / pack。

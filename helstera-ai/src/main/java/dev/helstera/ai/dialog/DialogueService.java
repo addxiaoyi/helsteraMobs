@@ -3,7 +3,6 @@ package dev.helstera.ai.dialog;
 import dev.helstera.api.instance.ModelInstance;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
