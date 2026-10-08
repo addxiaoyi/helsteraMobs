@@ -30,6 +30,13 @@ public final class ModelRegistryImpl implements ModelRegistry {
 
     private final Map<String, ModelDefinition> models = new ConcurrentHashMap<>();
     private final Map<String, String> errors = new ConcurrentHashMap<>();
+    /**
+     * 缓存写入告警：模型 id -> 失败原因。
+     *
+     * <p>与 {@link #errors} 分开：缓存写失败不影响模型加载，
+     * 混进去会让「模型列表」把好模型显示成失败。</p>
+     */
+    private final Map<String, String> cacheWarnings = new ConcurrentHashMap<>();
     private final ModelValidator validator;
     private final HelsteraEventBus eventBus;
     private final Path cacheDirectory;
@@ -112,8 +119,15 @@ public final class ModelRegistryImpl implements ModelRegistry {
             Path meta = cacheDirectory.resolve(model.id().replace('/', '_') + ".cache.json");
             String json = "{\"hash\":\"" + hash + "\",\"id\":\"" + model.id() + "\",\"format\":\"" + model.sourceFormat() + "\"}";
             Files.writeString(meta, json);
-        } catch (Exception ignored) {
-            // 缓存失败不影响功能
+            cacheWarnings.remove(model.id());
+        } catch (Exception e) {
+            // 缓存写失败不影响功能（只是下次要重新解析），但绝不能静默：
+            // 此前是 catch(Exception ignored){}，于是「缓存一直没生效」
+            // 这件事没有任何排查入口，作者只能怀疑配置或版本。
+            // 记进独立的 cacheWarnings 而非 errors —— 模型本身是好的，
+            // 混进 errors 会让 /helstera model list 把它显示成加载失败。
+            cacheWarnings.put(model.id(), e.getClass().getSimpleName()
+                    + (e.getMessage() == null ? "" : ": " + e.getMessage()));
         }
     }
 
@@ -131,7 +145,12 @@ public final class ModelRegistryImpl implements ModelRegistry {
             }
             return HexFormat.of().formatHex(md.digest());
         } catch (Exception e) {
-            return "unknown";
+            // 此前所有失败都返回固定的 "unknown"，导致**所有**哈希失败的模型
+            // 共享同一指纹：改了其中一个的模型资源，另一个仍被判定为「未变更」
+            // 而命中旧缓存，且日志里没有任何痕迹。
+            // 改为把目录路径混进结果：至少不同模型不会互相碰撞，
+            // 且路径本身变化时指纹也会变。
+            return "unhashed-" + Integer.toHexString(dir.toAbsolutePath().normalize().toString().hashCode());
         }
     }
 
@@ -193,5 +212,10 @@ public final class ModelRegistryImpl implements ModelRegistry {
 
     public Map<String, String> currentErrors() {
         return Map.copyOf(errors);
+    }
+
+    /** 缓存写入告警；正常情况下为空。供 /helstera model list 展示。 */
+    public Map<String, String> currentCacheWarnings() {
+        return Map.copyOf(cacheWarnings);
     }
 }

@@ -5,6 +5,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -466,7 +467,13 @@ public final class AiProfile {
         }
         for (Object item : items) {
             if (!(item instanceof Map<?, ?> map)) continue;
-            String property = map.get("property") == null ? null : String.valueOf(map.get("property")).trim().toLowerCase();
+            // property 可能整体缺失（作者写了 levels 却忘了 property），
+            // 此时上面算出的值是 null，直接 property.isEmpty() 会 NPE ——
+            // 而 NPE 发生在生物级覆盖的加载路径上，症状是「这个 mob 一加载就炸」，
+            // 错误信息里还看不到是哪个字段。
+            Object propRaw = map.get("property");
+            if (propRaw == null) continue;
+            String property = String.valueOf(propRaw).trim().toLowerCase(Locale.ROOT);
             double base = map.get("base") instanceof Number n ? n.doubleValue() : 0;
             double growth = map.get("growthPerLevel") instanceof Number n ? n.doubleValue() : 1.0;
             if (property.isEmpty()) continue;

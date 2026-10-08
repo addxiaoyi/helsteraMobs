@@ -170,6 +170,49 @@
                         <showWarnings>true</showWarnings>
                     </configuration>
                 </plugin>
+                <!--
+                    SpotBugs：第二层静态分析。
+
+                    -Xlint 只做语法/类型层面的检查，SpotBugs 能做数据流与
+                    并发分析——本项目 4 个真实缺陷（NPE ×2、缓存指纹碰撞、
+                    静默吞异常）都是它发现的，javac 一个都看不出。
+
+                    为什么不默认阻断：全项目基线 283 个实例 / 27 类，
+                    其中绝大多数无法在不引入反射与版本分支的前提下修复
+                    （Bukkit 反射适配、record 封装风格），硬挡只会逼人加
+                    excludeFilter 把工具关掉——那等于没加。
+
+                    现状：只让 threshold=High 阻断，即 rank 1-9 的高置信度
+                    问题（CORRECTNESS / SECURITY 类）。实测这类原本有 4 个
+                    真实缺陷，现已全部修掉。
+
+                    运行需要能访问 Maven 仓库。本机 JDK 连不上
+                    repo.maven.apache.org，须用 tools/settings-ci.xml
+                    指向的镜像（见该文件内注释）。离线构建（mvn -o）
+                    不会执行 spotbugs:check。
+
+                    exclude 列表逐条都有理由，见下方注释。
+                -->
+                <plugin>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>4.10.4.1</version>
+                    <configuration>
+                        <threshold>High</threshold>
+                        <effort>Max</effort>
+                        <failOnError>true</failOnError>
+                        <excludeFilterFile>${maven.multiModuleProjectDirectory}/tools/spotbugs-exclude.xml</excludeFilterFile>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>spotbugs-check</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
@@ -177,5 +220,20 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+
+        <plugins>
+            <!--
+              SpotBugs 必须在这里也声明一次。
+
+              只写在 pluginManagement 里，它只是「版本与配置的默认值」，
+              不会绑定到任何生命周期——上一轮就因此出现了
+              「mvn verify 通过，但日志里一行 spotbugs 都没有」的假绿。
+              pluginManagement 负责版本/配置，plugins 负责启用。
+            -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
     </build>
 </project>

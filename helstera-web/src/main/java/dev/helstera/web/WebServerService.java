@@ -229,7 +229,13 @@ public final class WebServerService {
         if (a != null) {
             // 收窄到 Exception：关闭期 Javalin 抛异常属正常，但吞掉 Error
             // （OOM/StackOverflow）只会让崩溃现场更难查。
-            try { a.stop(); } catch (Exception ignored) { }
+            // 捕获后仍要记一条：完全静默会让「网页服务关不掉 / 端口未释放」
+            // 这类问题完全没有排查入口，而它恰好发生在 /helstera web 重启时。
+            try {
+                a.stop();
+            } catch (Exception e) {
+                System.err.println("[helstera.web] 停止 HTTP 服务时异常（端口可能未释放）: " + e);
+            }
             app = null;
         }
     }

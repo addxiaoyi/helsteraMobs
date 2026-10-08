@@ -602,7 +602,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     public boolean reloadModels() {
         long start = System.currentTimeMillis();
-        if (registry != null) registry.clearErrors();
+        // 判空必须覆盖整个方法：此前只有 clearErrors() 前面挡了一次，
+        // 紧接着的 registry.unloadAll() 仍会 NPE。调用方（WebBridgeAdapter）
+        // 虽然也判了，但方法自身不自洽——换个调用路径就会炸。
+        if (registry == null) {
+            getLogger().warning("模型注册表尚未初始化，跳过 reload");
+            return false;
+        }
+        registry.clearErrors();
         registry.unloadAll();
         List<Path> dirs = new ArrayList<>();
         for (Path root : modelRoots()) {
@@ -1058,6 +1065,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         eq.setItem(slot, stack);
                     }
                 } catch (Exception e) {
+                    // 这里对 stack 的判空在 SpotBugs 看来是冗余（上面已判过），
+                    // 但刻意保留：catch 块的首要职责是**不自己先崩**。
+                    // 若为消除告警而直接 stack.getType()，那么当异常源头
+                    // 恰是 stack 为 null 时，诊断信息本身会抛 NPE，
+                    // 把「装备写不进去」变成一段莫名其妙的崩溃栈。
                     getLogger().warning("[装备] 写入 " + slot + " 失败（"
                             + (stack == null ? "物品无效" : stack.getType().name()) + "）: " + e.getMessage());
                 }
@@ -1190,8 +1202,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         else return out;
         for (Object item : items) {
             if (!(item instanceof Map<?, ?> map)) continue;
-            String property = map.get("property") == null ? null
-                    : String.valueOf(map.get("property")).trim().toLowerCase(Locale.ROOT);
+            // 与 AiProfile.parseLevels 同源的问题：property 整体缺失时上面算出 null，
+            // 紧接着 property.isEmpty() 就是 NPE。这条路径在 spawnMobCore 里，
+            // 作者写一个漏了 property 的 level 配置就会让整个 mob 生成失败。
+            Object propRaw = map.get("property");
+            if (propRaw == null) continue;
+            String property = String.valueOf(propRaw).trim().toLowerCase(Locale.ROOT);
             double base = map.get("base") instanceof Number n ? n.doubleValue() : 0;
             double growth = map.get("growthPerLevel") instanceof Number n ? n.doubleValue() : 1.0;
             if (property.isEmpty()) continue;
@@ -1559,12 +1575,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         @Override public List<String> players() {
             List<String> out = new ArrayList<>();
-            // 服务器关闭过程中 getOnlinePlayers 可能抛异常；此处静默返回空列表是
-            // 可接受的（网页即将断开），但只吞 Exception——连 Error 一起吞会让
-            // 崩溃现场彻底消失。
+            // 服务器关闭过程中 getOnlinePlayers 可能抛异常；此处降级为空列表是
+            // 可接受的（网页即将断开），但不能完全静默——否则网页会显示
+            // 「0 个在线玩家」却没有任何异常，看起来像真的一样。
+            // 只吞 Exception：连 Error 一起吞会让崩溃现场彻底消失。
             try {
                 for (org.bukkit.entity.Player p : org.bukkit.Bukkit.getOnlinePlayers()) out.add(p.getName());
-            } catch (Exception ignored) { }
+            } catch (Exception e) {
+                System.err.println("[helstera.web] 读取在线玩家失败（服务器可能正在关闭）: " + e);
+            }
             return out;
         }
         @Override public boolean reloadModels() {
