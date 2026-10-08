@@ -515,6 +515,31 @@ skills:
 
 排查「技能写了却永不触发」时最有用的一条命令。真服上验证一条技能只能等 Boss 挨打到那个血量——被动且慢，于是配置作者改错条件后继续等待，形成死循环。预览把判定链路走一遍并输出轨迹。
 
+### 参数写错会在装载期报出来
+
+`skills.yml` 里的**参数格式错误**（不是技能名写错，而是参数本身不合法）会直接显示在 `/helstera check` 与启动日志里：
+
+```
+✗ 技能定义 1 处问题 (改 skills.yml 后 /helstera reload skills)
+  - 动作 "set-scale:abc" 参数非法: 第 1 个参数 "abc" 不是合法数值（应为 1 / 0.5 / -2 之类）
+  - 动作 "heal-percent:百分比" 参数非法: 第 1 个参数 "百分比" 不是合法数值（...）
+```
+
+此前这些是**完全静默**的：参数解析失败会回退到默认值，技能照常执行、`/helstera check` 全绿、日志零警告。现场表现是「技能有时没效果」，且无法与「阈值设得本来就高」区分——这是本项目最常见的缺陷形态。
+
+布尔参数另有一处更隐蔽的旧行为：`loop yes` / `loop 1` / `loop on` 曾被静默当成 `false`（`Boolean.parseBoolean` 对一切非 `true` 的输入都返回 false）。现在这些写法都接受，其余拼法会报「不是合法布尔值」。
+
+**参数非法时该动作不会被注册**，因此不会以默认值悄悄执行。
+
+### 重载技能配置
+
+`skills.yml` 是独立文件，`reload config` 与 `reload loot` 都不覆盖它，必须单独重载：
+
+```
+/helstera reload skills      # 只重载 skills.yml
+/helstera reload all         # 含 models / config / loot / spawners / skills
+```
+
 ```
 /helstera skill list                      # 列出所有命名技能
 /helstera skill info <技能名>               # 看条件条数、优先级、动作列表

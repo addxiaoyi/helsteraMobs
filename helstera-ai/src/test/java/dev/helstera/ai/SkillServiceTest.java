@@ -143,15 +143,30 @@ class SkillServiceTest {
         assertTrue(registry.testCondition(everyThree, ctx(1, 9)));
     }
 
+    /**
+     * 非法数字参数：装载期拒绝注册，并在 warnings 里说明原因。
+     *
+     * <p><b>这个测试的行为期望被反转过。</b>原名是
+     * {@code malformedNumberFallsBack}，断言「非法数字回落到默认值，不抛异常」——
+     * 那正是本轮要修掉的缺陷。</p>
+     *
+     * <p>旧行为的问题：{@code health-below abc} 会注册成一个阈值 0.0 的条件，
+     * 于是「血量低于 abc」实际变成「血量低于 0」，永远不成立。技能安静地
+     * 永不触发，{@code /helstera check} 与日志都没有任何提示——
+     * 现场无法与「阈值设得本来就高」区分。</p>
+     *
+     * <p>现在参数非法时 {@code bindCondition} 返回 null（不注册）并记 warning，
+     * 作者能在体检里直接看到「参数非法」与原始字面量。</p>
+     */
     @Test
-    @DisplayName("非法数字参数回落到默认值，不抛异常")
-    void malformedNumberFallsBack() {
+    @DisplayName("非法数字参数在装载期被拒绝，并记入 warnings")
+    void malformedNumberIsRejectedWithWarning() {
         var svc = service();
         String key = svc.bindCondition("health-below abc");
 
-        assertNotNull(key);
-        assertFalse(registry.testCondition(key, ctx(1.0, 0)), "阈值回落为 0.0，血量 1.0 不满足 <=0");
-        assertTrue(registry.testCondition(key, ctx(0.0, 0)), "血量 0.0 满足 <=0.0");
+        assertNull(key, "参数非法的条件不应被注册成阈值 0.0 的怪条件");
+        assertTrue(svc.warnings().stream().anyMatch(w -> w.contains("abc")),
+                "warnings 应包含原始字面量，便于定位：实际 = " + svc.warnings());
     }
 
     @Test

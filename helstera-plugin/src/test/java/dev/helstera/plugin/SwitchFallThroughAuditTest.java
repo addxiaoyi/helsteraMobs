@@ -223,4 +223,46 @@ class SwitchFallThroughAuditTest {
         return t.startsWith("return") || t.startsWith("throw")
                 || t.startsWith("continue") || t.startsWith("break");
     }
+
+    // ------------------------------------------------------------------
+    // /helstera reload 的目标清单
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code reload} 必须能处理 {@code skills.yml}。
+     *
+     * <p><b>这个测试来自真服观察</b>：改完 skills.yml 后执行
+     * {@code /helstera reload skills}，得到的是「未知重载目标」——
+     * 该分支根本不存在。而 {@code /helstera check} 的提示恰恰写着
+     * 「改 skills 配置后 /helstera reload」，那句话是错的。
+     * 症状是：作者改了技能配置后 reload 半天没反应，只能重启服务器。</p>
+     *
+     * <p>skills.yml 是独立文件，{@code reload config} 与 {@code reload loot}
+     * 都不覆盖它，因此必须有专属分支；{@code all} 也必须包含它。</p>
+     */
+    @Test
+    @DisplayName("/helstera reload 支持 skills 目标，且 all 也包含它")
+    void reloadCoversSkillsFile() throws IOException {
+        String src = Files.readString(
+                Path.of("src", "main", "java", "dev", "helstera", "plugin", "HelsteraCommand.java"),
+                StandardCharsets.UTF_8);
+
+        assertTrue(src.contains("case \"skills\""),
+                "/helstera reload 缺少 skills 分支：skills.yml 是独立文件，"
+                        + "reload config 与 reload loot 都不覆盖它，"
+                        + "作者改完技能配置只能重启服务器");
+
+        int allStart = src.indexOf("case \"all\" -> {");
+        assertTrue(allStart > 0, "未找到 reload 的 all 分支");
+        int allEnd = src.indexOf("default -> {", allStart);
+        assertTrue(allEnd > allStart, "all 分支结构异常");
+        assertTrue(src.substring(allStart, allEnd).contains("reloadSkills("),
+                "reload all 必须包含 skills：否则「一条命令重载全部」名不副实，"
+                        + "而 all 是作者最常用的那条");
+
+        // 提示文本必须与实际支持的目标一致，否则又是一次「文档说能、实际不能」
+        assertTrue(src.contains("models|config|packs|loot|spawners|skills|all"),
+                "reload 的帮助文本与「未知重载目标」提示都应列出 skills，"
+                        + "否则作者照着提示输入仍然会得到未知目标");
+    }
 }
