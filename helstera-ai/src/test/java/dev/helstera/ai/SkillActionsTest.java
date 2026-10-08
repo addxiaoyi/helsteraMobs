@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -47,13 +48,31 @@ class SkillActionsTest {
         factory("knockback-self").create(List.of("1.0", "0.4")).accept(ctx());
     }
 
+    /**
+     * 非数值参数在<b>装载期</b>抛异常，而不是静默回落默认值。
+     *
+     * <p><b>行为期望被反转过。</b>原名 {@code movementBadArgs}，断言
+     * 「参数非法时回退到默认值，不产生零位移或异常」——那正是本轮修掉的缺陷。
+     * 静默回落让 {@code dash abc} 变成「冲刺默认距离」，技能照常执行，
+     * {@code /helstera check} 与日志都无提示，现场只表现为「位移距离不对」。</p>
+     *
+     * <p>注意保留本测试原本真正想守的东西：<b>缺参与合法值不该被误伤</b>。
+     * {@code dash} 不带参数、{@code dash -3}（负数合法）、{@code blink} 空参数
+     * 都必须正常工作——只有真正无法解析的字面量才抛。</p>
+     */
     @Test
-    @DisplayName("距离参数非法时回退到默认值，不产生零位移或异常")
+    @DisplayName("非数值参数抛异常；缺参与合法值不受影响")
     void movementBadArgs() {
-        factory("dash").create(List.of("abc")).accept(ctx());
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> factory("dash").create(List.of("abc")),
+                "dash abc 应在装载期抛异常，让 /helstera check 能报出来");
+        assertTrue(e.getMessage().contains("abc"),
+                "异常信息应含原始字面量，便于定位：实际 = " + e.getMessage());
+
+        // 以下三种都必须正常建出动作——参数校验不该误伤它们
         factory("dash").create(List.of("-3")).accept(ctx());
         factory("blink").create(List.of()).accept(ctx());
-        factory("knockback-self").create(List.of("x", "y")).accept(ctx());
+        factory("knockback-self").create(List.of("1.0", "0.4")).accept(ctx());
     }
 
     @Test

@@ -169,21 +169,42 @@ public final class SkillExtras {
     // 参数解析辅助（与 SkillCatalog 私有同名方法语义一致）
     // ------------------------------------------------------------------
 
+    /**
+     * 解析数值参数。
+     *
+     * <p>参数存在但不是合法数值时<b>抛异常</b>，由 {@code bindAction} 在装载期
+     * 接住并记入 warnings，最终显示在 {@code /helstera check} 里。
+     *
+     * <p>原先静默返回默认值：作者写 {@code set-scale abc} 时技能照常执行但用
+     * 默认值，日志与体检全无提示。</p>
+     */
     private static double num(List<String> a, int i, double def) {
-        if (a == null || a.size() <= i) return def;
-        try {
-            return Double.parseDouble(a.get(i).trim());
-        } catch (NumberFormatException e) {
-            return def;
-        }
+        return SpecArgs.num(a, i, def);
     }
 
     private static String str(List<String> a, int i, String def) {
         return a != null && a.size() > i && !a.get(i).isBlank() ? a.get(i).trim() : def;
     }
 
+    /**
+     * 解析布尔参数。
+     *
+     * <p><b>修掉两个既有问题</b>：</p>
+     * <ol>
+     *   <li>原先写作
+     *       {@code a != null && a.size() > i && Boolean.parseBoolean(a.get(i).trim())}，
+     *       参数缺失时短路返回 {@code false}，<b>无视传入的 def</b>。
+     *       而本文件里有 3 处声明默认值 {@code true}（invisible / glowing 等）——
+     *       作者写 {@code invisible} 不带参数，本意是「隐身」，实际却让它
+     *       <b>显形</b>了。同场景在 {@code SkillCatalog} 里行为还相反
+     *       （那边正确返回 def=true），两个目录类语义不一致。</li>
+     *   <li>{@link Boolean#parseBoolean} 对除 "true" 外的任何输入都返回
+     *       false，于是 {@code loop yes} / {@code loop 1} / {@code loop on}
+     *       全被当成「没开」，毫无提示。</li>
+     * </ol>
+     */
     private static boolean bool(List<String> a, int i, boolean def) {
-        return a != null && a.size() > i && Boolean.parseBoolean(a.get(i).trim());
+        return SpecArgs.bool(a, i, def);
     }
 
     // ------------------------------------------------------------------

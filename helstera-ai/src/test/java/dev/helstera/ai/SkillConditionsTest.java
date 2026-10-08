@@ -9,6 +9,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -101,11 +102,28 @@ class SkillConditionsTest {
         assertTrue(p.test(ctx()));
     }
 
+    /**
+     * cooldown-ready 的非数字参数在装载期抛异常。
+     *
+     * <p><b>行为期望被反转过。</b>原名 {@code cooldownNonNumericArg}，断言
+     * 「非数字参数回退为 0，不抛异常」，理由是「不应该中断技能加载」。</p>
+     *
+     * <p>这个理由当时成立，但它同时带来一个更糟的后果：
+     * {@code cooldown-ready abc} 被静默当成「无冷却」，于是技能<b>每次都能放</b>，
+     * 而作者以为设了冷却。冷却失效在实战里表现为「Boss 技能无缝连放」，
+     * 现场没有任何提示。</p>
+     *
+     * <p>「不中断加载」这个目标其实一直达成——抛出的异常由
+     * {@code SkillService.bindCondition} 的 try-catch 接住，转成一条 warning，
+     * 加载照常完成，体检里能看到原因。既不中断加载，又能看见问题。</p>
+     */
     @Test
-    @DisplayName("cooldown-ready：非数字参数回退为 0，不抛异常")
+    @DisplayName("cooldown-ready：非数字参数抛异常，由 bindCondition 转成告警")
     void cooldownNonNumericArg() {
-        var p = factory("cooldown-ready").create(List.of("abc"));
-        assertTrue(p.test(ctx()), "解析失败应回退默认值，而不是中断技能加载");
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> factory("cooldown-ready").create(List.of("abc")));
+        assertTrue(e.getMessage().contains("abc"),
+                "异常信息应含原始字面量：实际 = " + e.getMessage());
     }
 
     // ---- 回归：既有条件不受影响 ----

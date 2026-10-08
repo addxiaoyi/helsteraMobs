@@ -173,7 +173,6 @@ public final class SkillService {
         var out = new ArrayList<String>(warnings.size() + runtime.size());
         out.addAll(warnings);
         out.addAll(runtime);
-        warnings.clear();
         return List.copyOf(out);
     }
 
@@ -316,6 +315,15 @@ public final class SkillService {
         activeCasts.clear();
         skillQueue.clear();
         queueProcessing.clear();
+        // warnings 必须清，否则每次 reload 都把上一轮的告警**叠加**上去：
+        // 作者改对了 skills.yml 并 reload 后，/helstera check 仍显示旧的「参数非法」，
+        // 像是修复没生效——会让人反复去检查那份其实已经正确的配置。
+        // （真服验证：写入合法配置后 reload，告警仍在。）
+        // bound 一并清掉，保持「每次 loadSkills 从零开始」的语义。
+        // 它只用于「同一键不重复注册」这个去重；不清也不会让动作注册失败
+        // ——registerAction 是覆盖式 put，闭包本来就会被新值替换。
+        warnings.clear();
+        bound.clear();
         if (root == null) return;
 
         // 1) 解析原始定义

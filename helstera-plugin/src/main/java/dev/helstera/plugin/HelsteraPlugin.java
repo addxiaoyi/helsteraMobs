@@ -1175,6 +1175,41 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
      * 名单必须保留，否则每次 reload 都会让所有刷怪点的 max-alive 名额归零，
      * 瞬间在同一位置堆出一群生物。</p>
      */
+    /**
+     * 重载 skills.yml。
+     *
+     * <p>skills.yml 是独立文件，{@code reloadConfig} 与 {@code reloadLootAndSpawners}
+     * 都不覆盖它，因此必须单独处理——此前 {@code /helstera reload} 连
+     * {@code skills} 目标都没有，作者改完技能配置只能重启服务器，
+     * 而 {@code /helstera check} 的提示却写着「改 skills 配置后 /helstera reload」。</p>
+     *
+     * <p>放在本方法里而不是命令分支里，是为了让网页端与命令行共用同一份实现：
+     * 两边都是「改了文件要生效」，不该有两条会各自漂移的路径。</p>
+     *
+     * @param source 调用来源，仅用于日志措辞
+     * @return 是否成功重载（技能系统未启用时返回 false）
+     */
+    public boolean reloadSkills(String source) {
+        SkillService sk = skillService instanceof SkillService s ? s : null;
+        if (sk == null) return false;
+        var cfg = YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "skills.yml"));
+        try {
+            sk.loadSkills(cfg.getConfigurationSection("skills"));
+            var sec = cfg.getConfigurationSection("skills");
+            int count = sec == null ? 0 : sec.getKeys(false).size();
+            getLogger().info(source + "重载了 skills.yml（技能 " + count + " 个）");
+            // 装载期告警在这里打出来而不是只留在 warnings()：
+            // 刚 reload 完，作者往往正在看控制台。
+            for (String w : sk.warnings()) {
+                getLogger().warning("[技能] " + w);
+            }
+            return true;
+        } catch (Throwable t) {
+            getLogger().warning(source + "重载 skills.yml 失败: " + t);
+            return false;
+        }
+    }
+
     public void reloadLootAndSpawners() {
         if (loot() != null) {
             loot().load(YamlConfiguration.loadConfiguration(
@@ -1651,19 +1686,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
 
         @Override public boolean reloadSkills() {
-            SkillService sk = skillService instanceof SkillService s ? s : null;
-            if (sk == null) return false;
-            var cfg = YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "skills.yml"));
-            try {
-                sk.loadSkills(cfg.getConfigurationSection("skills"));
-                var sec = cfg.getConfigurationSection("skills");
-                int count = sec == null ? 0 : sec.getKeys(false).size();
-                getLogger().info("网页端重载了 skills.yml（技能 " + count + " 个）");
-                return true;
-            } catch (Throwable t) {
-                getLogger().warning("网页端重载 skills.yml 失败: " + t);
-                return false;
-            }
+            return HelsteraPlugin.this.reloadSkills("网页端");
         }
 
         @Override public java.util.List<String> skillNames() {

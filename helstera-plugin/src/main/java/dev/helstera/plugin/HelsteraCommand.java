@@ -67,7 +67,7 @@ public final class HelsteraCommand implements TabExecutor {
 
     private void help(CommandSender s) {
         s.sendMessage("§b§lhelsteraMobs §r§7v" + plugin.getDescription().getVersion());
-        s.sendMessage("§b/helstera reload [models|config|packs|loot|all] §7- 重载");
+        s.sendMessage("§b/helstera reload [models|config|packs|loot|spawners|skills|all] §7- 重载");
         s.sendMessage("§b/helstera model list|info|validate|unload <id> §7- 模型管理");
         s.sendMessage("§b/helstera mob spawn|remove|info <id> [model] §7- 生物实例");
         s.sendMessage("§b/helstera animation play|stop|pause|resume <实例> <动画> §7- 动画");
@@ -97,6 +97,11 @@ public final class HelsteraCommand implements TabExecutor {
             case "packs" -> plugin.buildResourcePack(true);
             case "loot" -> plugin.reloadLootAndSpawners();
             case "spawners" -> plugin.reloadLootAndSpawners();
+            // skills.yml 是独立文件，此前**没有**对应分支：写 /helstera reload skills
+            // 只会得到「未知重载目标」，作者改完技能配置只能重启服务器。
+            // 而 /helstera check 的提示恰恰写着「改 skills 配置后 /helstera reload」，
+            // 那句话是错的——reload 既没有 skills 分支，all 里也不含它。
+            case "skills" -> plugin.reloadSkills("命令行");
             case "all" -> {
                 plugin.reloadConfig();
                 // reloadModels() 内部会在模型加载完成（whenComplete）时构建资源包，
@@ -108,9 +113,12 @@ public final class HelsteraCommand implements TabExecutor {
                 // 下发给在线玩家由 reloadModels(true) 在正确的时机做。
                 plugin.reloadModels(true);
                 plugin.reloadLootAndSpawners();
+                // skills.yml 同样要进 all：它是独立文件，前面的 reload config
+                // 与 reloadLootAndSpawners 都不覆盖它。
+                plugin.reloadSkills("命令行");
             }
             default -> {
-                s.sendMessage("§c未知重载目标: " + what + "（models|config|packs|loot|spawners|all）");
+                s.sendMessage("§c未知重载目标: " + what + "（models|config|packs|loot|spawners|skills|all）");
                 return;
             }
         }
@@ -572,7 +580,7 @@ public final class HelsteraCommand implements TabExecutor {
             s.sendMessage("§a✓ §7技能定义无问题");
         } else {
             problems += skillWarn.size();
-            s.sendMessage("§e✗ §7技能定义 §f" + skillWarn.size() + " §7处问题 §8(改 skills 配置后 /helstera reload)");
+            s.sendMessage("§e✗ §7技能定义 §f" + skillWarn.size() + " §7处问题 §8(改 skills.yml 后 /helstera reload skills)");
             for (int i = 0; i < Math.min(skillWarn.size(), 8); i++) {
                 s.sendMessage("§8  - §7" + skillWarn.get(i));
             }

@@ -140,22 +140,34 @@ public final class SkillCatalog {
     private SkillCatalog() {
     }
 
+/**
+     * 解析数值参数。
+     *
+     * <p>参数存在但不是合法数值时<b>抛异常</b>，由 {@code bindAction} /
+     * {@code bindCondition} 在装载期接住并记入 warnings，最终显示在
+     * {@code /helstera check} 里。
+     *
+     * <p>原先是静默返回默认值：作者写 {@code set-scale abc} 时技能照常执行
+     * 但用默认值 1.0，日志与体检全无提示，症状是「技能有时没效果」——
+     * 现场无法与「配置没错但条件没满足」区分。这是本项目最常见的缺陷形态。</p>
+     */
     private static double num(List<String> args, int i, double def) {
-        if (args.size() <= i) return def;
-        try {
-            return Double.parseDouble(args.get(i).trim());
-        } catch (NumberFormatException e) {
-            return def;
-        }
+        return SpecArgs.num(args, i, def);
     }
 
     private static String str(List<String> args, int i, String def) {
         return args.size() > i && !args.get(i).isBlank() ? args.get(i).trim() : def;
     }
 
+    /**
+     * 解析布尔参数。
+     *
+     * <p>非法值抛异常而非静默 false。原先用 {@link Boolean#parseBoolean}，
+     * 它对除 "true" 外的任何输入都返回 false——于是 {@code loop yes}、
+     * {@code loop 1}、{@code loop on} 全被当成「没开循环」，毫无提示。</p>
+     */
     private static boolean bool(List<String> args, int i, boolean def) {
-        if (args.size() <= i) return def;
-        return Boolean.parseBoolean(args.get(i).trim());
+        return SpecArgs.bool(args, i, def);
     }
 
     /**
