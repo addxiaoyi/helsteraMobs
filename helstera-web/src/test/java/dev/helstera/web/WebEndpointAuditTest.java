@@ -176,4 +176,51 @@ class WebEndpointAuditTest {
                 "frontend/index.html 与 helstera-web 资源目录下的副本已漂移："
                         + "发布用的是后者，前者会让人以为改过了但实际没生效");
     }
+
+    /**
+     * sync-back.cjs 必须按修改时间判断同步方向。
+     *
+     * <p><b>为什么这条规则重要</b>：脚本的旧实现无条件用
+     * {@code frontend/index.html} 覆盖正式源文件。而正式源才是插件
+     * 打包时真正读进 jar 的那份。于是只要有人直接改了正式源
+     * （这才是正确的改动位置），下次谁跑一次脚本，改动就被旧副本
+     * 静默覆盖——构建照样通过，只是改动没了，且没有任何提示。</p>
+     *
+     * <p>这不是假想：本轮就踩过一次反向的坑（改了正式源忘了改副本，
+     * 被上面的双副本校验抓到），顺手把这个脚本也加固了。</p>
+     */
+    @Test
+    @DisplayName("sync-back.cjs 按时间戳判断方向，方向不明时拒绝执行")
+    void syncScriptRefusesBlindOverwrite() throws IOException {
+        Path sync = Path.of("..", "frontend", "sync-back.cjs");
+        if (!Files.exists(sync)) return;   // 单模块构建时脚本不在，跳过
+
+        String src = Files.readString(sync, StandardCharsets.UTF_8);
+
+        // 1. 必须有方向判断的依据
+        assertTrue(src.contains("mtimeMs"),
+                "sync-back.cjs 未读取 mtime：无条件覆盖会静默丢失正式源的改动");
+        assertTrue(src.contains("to-real") && src.contains("to-edit"),
+                "sync-back.cjs 缺少 --to-real / --to-edit 强制方向开关，"
+                        + "方向判断出错时无处可退");
+
+        // 2. 方向不明时必须中止，而不是随便挑一个方向
+        assertTrue(src.contains("process.exit(3)"),
+                "sync-back.cjs 在时间戳接近（无法判断方向）时应以非 0 退出码中止，"
+                        + "当前实现可能仍会选一个方向执行，从而覆盖掉另一份的改动");
+
+        // 3. 写入必须在方向判断之后，不能是无条件覆盖。
+        // 注意不能简单断言「不存在 writeFileSync(REAL, a)」——那正是
+        // --to-real 分支里该有的写法；真正要禁的是「没有前置判断就写」。
+        int guard = src.indexOf("if (dir === 'to-real')");
+        int writeReal = src.indexOf("writeFileSync(REAL");
+        int writeEdit = src.indexOf("writeFileSync(EDIT");
+        assertTrue(guard >= 0,
+                "sync-back.cjs 写入正式源前必须先判断同步方向（if (dir === 'to-real')）");
+        assertTrue(writeReal > guard,
+                "writeFileSync(REAL) 出现在方向判断之前，等同于无条件覆盖："
+                        + "会静默丢掉正式源里的改动");
+        assertTrue(writeEdit > guard,
+                "writeFileSync(EDIT) 出现在方向判断之前，同上");
+    }
 }
