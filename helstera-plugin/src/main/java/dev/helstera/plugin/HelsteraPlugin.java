@@ -638,13 +638,31 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             })));
         }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(() ->
+        // 用 whenComplete 而非 thenRun：thenRun 在上游异常完成时既不执行回调、
+        // 也不把异常传给任何人——registry.load() 一旦失败，这条链就静默断掉，
+        // 日志里既没有「加载完成」也没有任何错误，表现为「资源包一直不出现」。
+        // whenComplete 无论成功失败都会执行，并且能拿到异常去记日志。
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).whenComplete((ok, err) ->
                 getServer().getScheduler().runTask(this, () -> {
+                    if (err != null) {
+                        getLogger().warning("模型加载过程中断（至少一个模型包失败）: "
+                                + rootCause(err).getMessage()
+                                + "。已完成 " + registry.count() + "/" + dirs.size() + " 个。");
+                    }
                     getLogger().info("模型加载完成: " + registry.count() + "/" + dirs.size()
                             + " 成功，耗时 " + (System.currentTimeMillis() - start) + "ms");
+                    // 即使部分失败也要构建：已加载的模型仍需要进资源包，
+                    // 否则它们会一直显示为紫黑方块。
                     buildResourcePack(false);
                 }));
         return true;
+    }
+
+    /** 取异常链最内层的根因；{@code CompletionException} 层层包裹时用它才看得到根因。 */
+    private static Throwable rootCause(Throwable t) {
+        Throwable cur = t;
+        while (cur.getCause() != null && cur.getCause() != cur) cur = cur.getCause();
+        return cur;
     }
 
     /**
