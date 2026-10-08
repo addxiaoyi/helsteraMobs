@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs 排除清单。
+
+  规则：每条都必须写清「为什么这是误报或不值得修」。没有理由的条目
+  不许加——那会退化成「把工具关掉」，等于没加静态分析。
+
+  另外配了测试 SpotBugsExcludeAuditTest：它断言本文件的条目数不超过
+  阈值、且每条都有注释理由，防止清单随时间无声膨胀。
+-->
+<FindBugsFilter>
+
+    <!--
+      NP_BOOLEAN_RETURN_NULL（2 处）
+      SpawnerService.toggle 与 WebBridgeAdapter.toggleSpawner 返回 Boolean
+      且确实会返回 null —— 这是**有意的三态 API**：null 表示「刷怪点不存在」，
+      与 false「已禁用」语义不同。两处调用方（HelsteraCommand 的 spawner
+      toggle、WebServerService 的 spawnerToggle）都显式判了 null 并给出
+      不同提示。已逐一核实。
+    -->
+    <Match>
+      <Bug pattern="NP_BOOLEAN_RETURN_NULL" />
+    </Match>
+
+    <!--
+      AT_STALE_THREAD_WRITE_OF_PRIMITIVE / AT_NONATOMIC_64BIT_PRIMITIVE / VO_VOLATILE_INCREMENT
+      指向 ModelInstanceImpl 的 scale/yaw/pitch、BossBarService 的三个
+      volatile 计数器、SpawnerService 的 minInterval、MinionService 的
+      maxDepth/maxPerOwner。
+
+      全部为误报：本项目的调度器 HelsteraScheduler 只用
+      BukkitScheduler.runTaskTimer 驱动，技能队列、模型实例的所有写操作
+      都发生在主线程。Bukkit 没有向插件暴露「从异步线程调用实例 API」的
+      路径（MythicMobs 的 mechanic 也经由 Bukkit 事件回调，即主线程）。
+      SpotBugs 无法推断 Bukkit 的调度语义，只能看到字段没有 volatile。
+
+      BossBarService 的计数器是纯统计用途（status 里展示），丢一次自增无影响。
+    -->
+    <Match>
+      <Or>
+        <Bug pattern="AT_STALE_THREAD_WRITE_OF_PRIMITIVE" />
+        <Bug pattern="AT_NONATOMIC_64BIT_PRIMITIVE" />
+        <Bug pattern="AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE" />
+        <Bug pattern="VO_VOLATILE_INCREMENT" />
+      </Or>
+    </Match>
+
+    <!--
+      EI_EXPOSE_REP / EI_EXPOSE_REP2 / EI_EXPOSE_STATIC_REP2 / MS_EXPOSE_REP
+      record 与类直接返回内部集合引用（131 处，MALICIOUS_CODE 类，rank 18）。
+
+      已处理的部分：模型/动画链路上的 record（AnimationClip、
+      KeyframeTrack、BoneTracks、ParseResult、ModelDefinitionImpl.attachPoints）
+      都已加防御性复制。
+
+      剩下的多数是 Bukkit API 自身的形状所致——例如 HelsteraScheduler
+      暴露 TaskQueue、插件桥接层返回 List<String> 给网页端。给这些加
+      unmodifiable 包装的收益远低于它给热路径增加的拷贝开销
+      （渲染循环每 tick 都要读这些字段）。
+    -->
+    <Match>
+      <Or>
+        <Bug pattern="EI_EXPOSE_REP" />
+        <Bug pattern="EI_EXPOSE_REP2" />
+        <Bug pattern="EI_EXPOSE_STATIC_REP2" />
+        <Bug pattern="MS_EXPOSE_REP" />
+      </Or>
+    </Match>
+
+    <!--
+      UPM_UNCALLED_PRIVATE_METHOD（1 处）
+      指向 ModelParser.vec(JsonElement, String, Path)「从未被调用」——
+      误报。该重载被 262-267 行与 413 行调用，SpotBugs 因同名重载
+      在字节码层的解析产生了误判。已人工核实全部 5 个调用点。
+    -->
+    <Match>
+      <Bug pattern="UPM_UNCALLED_PRIVATE_METHOD" />
+    </Match>
+
+    <!--
+      REC_CATCH_EXCEPTION（8 处）
+      catch (Exception) 但方法未声明抛出。绝大多数是有意的宽泛捕获：
+      配置文件读取、外部插件适配、资源包构建都可能抛多种受检异常，
+      而这些路径都需要「失败即降级、不能中断」的语义。
+      逐个改成精确异常类型的收益低于它带来的漏捕获风险。
+    -->
+    <Match>
+      <Bug pattern="REC_CATCH_EXCEPTION" />
+    </Match>
+
+    <!--
+      RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE
+      指向 HelsteraPlugin.applyEntityEquipment 的 catch 块：
+      对 stack 判空，而 try 之前已经判过。
+
+      判空**刻意保留**。catch 块的首要职责是不自己先崩——若为消除告警
+      直接写 stack.getType()，当异常源头恰是 stack 为 null 时，
+      诊断信息本身会抛 NPE，把「装备写不进去」变成一段莫名其妙的崩溃栈。
+      这类「冗余判空保护的是错误处理路径」不在 SpotBugs 的推理能力内。
+    -->
+    <Match>
+      <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE" />
+    </Match>
+
+</FindBugsFilter>

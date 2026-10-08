@@ -31,12 +31,12 @@ Thumbs.db
 *.tmp
 *.bak
 
-# Local test servers (downloaded jars, worlds, logs — hundreds of MB)
+# 本地测试服务器（下载的 jar、世界、日志 —— 数百 MB）
 srv-*/
 test-server*/
-tools/
+test-server-*/
 
-# Local sweep/probe scripts and their output
+# 构建期临时脚本（历史遗留的一次性排查脚本）
 sweep*.ps1
 sweep*.out
 sweep*.err
@@ -46,3 +46,26 @@ analyze.ps1
 cdp*.ps1
 probe.js
 shots/
+
+# 根目录的一次性产物。历史上 1.21.4.jar（28MB 的 Paper jar）被误提交过，
+# 后来从工作区删了却没 git rm --cached，导致它一直挂在索引上。
+# 通配规则让这类东西不会再被 add 进来。
+# 注意用 /* 前缀而非 *.jar —— 只挡根目录，src/ 下的同名文件不受影响。
+/*.jar
+/*.zip
+/msg*.txt
+
+# 注意：**不要**忽略整个 tools/。
+# 该目录下是构建必需的配置——tools/settings-ci.xml（镜像源，本机 JDK
+# 连不上 Maven Central）与 tools/spotbugs-exclude.xml（SpotBugs 排除清单，
+# pom.xml 用 ${maven.multiModuleProjectDirectory} 引用它）。
+# 之前整目录被 ignore，导致这两个文件从未进仓库：本地能构建、
+# clone 下来直接失败，而 git 不会给出任何提示。
+#
+# 但也不能整个放开——tools/ 下有 380MB 的本地 JDK（zulu25 解压目录 +
+# 压缩包），是当初为跨版本测试下的。因此逐项排除：
+tools/jdk25/
+tools/*.zip
+tools/*.jar
+tools/**/*.zip
+tools/**/*.jar
