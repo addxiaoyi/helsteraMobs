@@ -30,6 +30,14 @@ public final class ResourcePackServiceImpl implements ResourcePackService {
     /** 1.21.1 资源包格式号。 */
     public static final int DEFAULT_PACK_FORMAT = 34;
 
+    /**
+     * 等待主线程执行 sync task 的上限（秒）。
+     *
+     * <p>正常情况下是一两 tick；给到 10 秒是为了容忍 GC 停顿与区块加载。
+     * 超过就宁可构建失败，也不让异步线程无限期占住线程池。</p>
+     */
+    private static final long SYNC_TIMEOUT_SECONDS = 10;
+
     private final Plugin plugin;
     private final BoneCommandMapping mapping;
     private final Path rpRoot;
@@ -68,10 +76,21 @@ public final class ResourcePackServiceImpl implements ResourcePackService {
     public CompletableFuture<String> build() {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                // 在主线程快照模型列表，避免并发读写注册表
+                // 在主线程快照模型列表，避免并发读写注册表。
+                //
+                // 超时是必需的：主线程只要因为任何原因（插件被禁用、服务器正在关闭、
+                // 前一个 tick 卡住）没能执行这个 sync task，异步线程就会永远阻塞在
+                // get() 上。commonPool 的线程数有限，几个并发构建就能把池子占满，
+                // 之后所有 supplyAsync 的功能（模型加载、资源包、网页保存）一起卡死。
+                // 超时后抛出，调用方的 thenAccept 会走异常路径并留下日志，
+                // 症状是「资源包构建失败」而不是「整服卡住且无任何异常」。
                 List<ModelDefinition> models = Bukkit.getScheduler()
-                        .callSyncMethod(plugin, modelSupplier::get).get();
+                        .callSyncMethod(plugin, modelSupplier::get)
+                        .get(SYNC_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
                 return buildSync(models);
+            } catch (java.util.concurrent.TimeoutException e) {
+                throw new RuntimeException("资源包构建失败: 等待主线程快照模型列表超时（"
+                        + SYNC_TIMEOUT_SECONDS + "s），主线程可能已被阻塞或插件正在关闭", e);
             } catch (Exception e) {
                 throw new RuntimeException("资源包构建失败: " + e.getMessage(), e);
             }
