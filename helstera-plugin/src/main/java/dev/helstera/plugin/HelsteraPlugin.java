@@ -847,7 +847,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             ent.setInvisible(entitySec.getBoolean("invisible", true));
             ent.setSilent(entitySec.getBoolean("silent", true));
             ent.setAI(!entitySec.getBoolean("no-ai", true));
-            double hp = entitySec.getDouble("health", 20.0);
+            double hp = clampHealth(entitySec.getDouble("health", 20.0));
             ent.setMaxHealth(hp);
             ent.setHealth(hp);
             // 装备：items 节，支持 material:amount 和带附魔的写法
@@ -880,7 +880,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var lvlResult = MobLevel.compute(effectiveLevel,
                         loadLevelConfigs(aiSecForLevel).toArray(new MobLevel.ScalingConfig[0]));
                 if (inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity le) {
-                    double scaledHp = lvlResult.health();
+                    double scaledHp = clampHealth(lvlResult.health());
                     if (scaledHp > 0) {
                         le.setMaxHealth(scaledHp);
                         le.setHealth(scaledHp);
@@ -1203,6 +1203,50 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (!Files.isRegularFile(f)) return null;
         YamlConfiguration y = YamlConfiguration.loadConfiguration(f.toFile());
         return y;
+    }
+
+    /**
+     * Bukkit 属性硬上限：{@code Attribute.GENERIC_MAX_HEALTH} 的合法区间上界。
+     *
+     * <p>Paper 在 {@code CraftLivingEntity#setHealth} 里用 Guava Preconditions 强制
+     * 0..2048，超出直接抛 {@code IllegalArgumentException}。这不是可以绕过的软限制。</p>
+     */
+    public static final double BUKKIT_MAX_HEALTH = 2048.0;
+
+    /**
+     * 把配置里的血量夹进 Bukkit 允许的区间。
+     *
+     * <p><b>为什么必须有这个方法</b>：等级系统按 {@code growth^(level-1)} 指数缩放 HP，
+     * 很容易算出远超 2048 的值；而 {@code entity.health} 也允许作者直接写大数。
+     * 未经夹紧时 {@code setMaxHealth} 会抛异常，而异常冒泡到命令层会让
+     * {@code /helstera mob spawn} <b>整条命令失败</b>——日志里表现为
+     * {@code CommandException} 而没有任何指向配置的提示，作者只能靠猜。</p>
+     *
+     * <p>实测记录：{@code test_boss} 在等级缩放下算出 12155 血，
+     * 超出上限近 6 倍，生成直接抛异常。</p>
+     *
+     * <p>超出时告警而非静默夹紧：静默改成 2048 会让作者以为配置生效了，
+     * 表现为「等级加成好像没生效」——这正是本方法要消除的困惑。</p>
+     */
+    double clampHealth(double raw) {
+        double clamped = clampToBukkitRange(raw);
+        if (clamped > 0 && clamped != raw) {
+            getLogger().warning("[血量] " + raw + " 超出 Bukkit 属性上限 " + BUKKIT_MAX_HEALTH
+                    + "，已夹紧。等级增长系数过大或 entity.health 写得过高；"
+                    + "此时 /helstera mob spawn 本会因 IllegalArgumentException 整条失败。");
+        }
+        return clamped;
+    }
+
+    /**
+     * 纯函数版：夹进 Bukkit 属性区间，0 表示「不改动」。
+     *
+     * <p>与 {@link #clampHealth} 分开是为了能脱离插件实例单测——
+     * 告警路径需要 {@code getLogger()}，而夹紧逻辑本身不需要。</p>
+     */
+    public static double clampToBukkitRange(double raw) {
+        if (Double.isNaN(raw) || raw <= 0) return 0;
+        return Math.min(raw, BUKKIT_MAX_HEALTH);
     }
 
     public List<String> mobIds() {

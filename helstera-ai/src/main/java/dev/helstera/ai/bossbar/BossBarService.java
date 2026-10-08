@@ -42,10 +42,17 @@ public final class BossBarService {
         bar.setProgress(render.ratio());
         bar.setColor(toBarColor(render.color()));
         bar.removeAll();
+
+        // 实体位置只取一次：原实现在玩家循环里反复调 Bukkit.getEntity()，
+        // 人数为 N 就查 N 次。更糟的是实体已卸载时 getEntity 返回 null，
+        // 范围判断直接 NPE——而这恰恰发生在「Boss 刚死/刚被卸载」的瞬间，
+        // 也就是最可能发生的时候。NPE 会冒泡出去，onModelSpawn 整个失败。
+        org.bukkit.Location anchor = locOf(entityUuid);
         int visible = 0;
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (range > 0 && p.getLocation().distance(
-                    Bukkit.getEntity(entityUuid).getLocation()) > range) continue;
+            // anchor 为 null（实体已卸载）时不做距离过滤：宁可让所有人看到，
+            // 也不要因为取不到实体位置而抛 NPE。条目会在 update/hide 时被清理。
+            if (range > 0 && anchor != null && p.getLocation().distance(anchor) > range) continue;
             bar.addPlayer(p);
             visible++;
         }
@@ -56,10 +63,23 @@ public final class BossBarService {
         } catch (Throwable ignored) {
         }
         if (plugin != null) {
-            plugin.getLogger().info("[BossBar] show # 实例=" + entityUuid +
+            // 字段名刻意用「实体」而非「实例」：这里拿到的是 Bukkit 实体 UUID，
+            // 不是 instanceId。项目其它日志一律写「实例 #N」，
+            // 这里若也写「实例」会让管理员按 instanceId 检索时完全找不到对应记录。
+            plugin.getLogger().info("[BossBar] show 实体=" + entityUuid +
                     " 标题=" + render.title() +
                     " 血量比例=" + String.format("%.2f", render.ratio()) +
                     " 可见玩家=" + visible);
+        }
+    }
+
+    /** 实体位置；实体已卸载或查询失败时返回 null，绝不抛异常。 */
+    private static org.bukkit.Location locOf(UUID entityUuid) {
+        try {
+            org.bukkit.entity.Entity e = Bukkit.getEntity(entityUuid);
+            return e == null ? null : e.getLocation();
+        } catch (Throwable ignored) {
+            return null;
         }
     }
 
