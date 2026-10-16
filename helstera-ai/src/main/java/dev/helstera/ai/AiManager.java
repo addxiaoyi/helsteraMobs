@@ -11,6 +11,8 @@ import dev.helstera.runtime.instance.InstanceManagerImpl;
 import dev.helstera.runtime.instance.ModelInstanceImpl;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -18,6 +20,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -388,6 +391,10 @@ public final class AiManager implements Listener {
         // 先取实体 UUID 再删档案：反了就得遍历全量实例才能找到那一个
         if (gone != null) {
             gone.boundEntityId().ifPresent(factions::unbindInstance);
+            gone.baseEntity().ifPresent(entity -> {
+                dev.helstera.api.behavior.VariableLocations.clearEntity(entity);
+                dev.helstera.ai.skill.SkillExtras.forgetEntity(entity);
+            });
         }
         var navSvc = nav;
         if (navSvc != null) navSvc.forget(instanceId);
@@ -395,16 +402,31 @@ public final class AiManager implements Listener {
         var ms = minions;
         if (ms != null) ms.forget(instanceId);
         controllers.remove(instanceId);
+        dev.helstera.ai.skill.SkillExtras.forget(instanceId);
         boundProfiles.remove(instanceId);
     }
 
     public void start(int decisionTicks) {
         stop();
         task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            for (AiController c : controllers.values()) {
+            if (skills != null) skills.tickCasts();
+            for (var entry : controllers.entrySet()) {
+                AiController c = entry.getValue();
                 try {
+                    ModelInstanceImpl inst = instances.impl(entry.getKey());
+                    if (shouldDespawn(inst)) {
+                        instances.despawn(entry.getKey());
+                        continue;
+                    }
+                    if (inst != null && !chunkLoaded(inst) && !tickInUnloadedChunk(inst.options().despawnMode())) {
+                        continue;
+                    }
                     c.tick();
-                } catch (Throwable ignored) {
+                } catch (Throwable failure) {
+                    if (plugin.getConfig().getBoolean("debug.trace-triggers", false)) {
+                        plugin.getLogger().warning("[ai] controller=" + entry.getKey()
+                                + " failed: " + failure);
+                    }
                 }
             }
         }, decisionTicks, Math.max(2, decisionTicks));
@@ -416,7 +438,7 @@ public final class AiManager implements Listener {
             if (!"attack_hit".equals(e.marker())) return;
             AiController c = controllers.get(e.instance().instanceId());
             if (c == null) return;
-            Player hit = c.hitTarget();
+            LivingEntity hit = c.hitTarget();
             var trig = this.triggers;
             if (hit != null && trig != null) trig.fireAttackHit(e.instance(), hit);
         });
@@ -427,6 +449,56 @@ public final class AiManager implements Listener {
         bus.register(ModelSpawnEvent.class, bossBarSpawnListener);
     }
 
+    public static boolean tickInUnloadedChunk(String mode) {
+        return mode == null || !"PERSISTENT".equalsIgnoreCase(mode.trim());
+    }
+
+    private static boolean chunkLoaded(ModelInstanceImpl inst) {
+        Entity entity = inst == null ? null : inst.entity();
+        if (entity == null || entity.getWorld() == null) return false;
+        Location location = entity.getLocation();
+        return entity.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4);
+    }
+
+    private static boolean shouldDespawn(ModelInstanceImpl inst) {
+        if (inst == null || !inst.isValid()) return false;
+        var options = inst.options();
+        if (options == null || !"NORMAL".equals(options.despawnMode())) return false;
+        Entity entity = inst.entity();
+        if (entity == null || entity.getWorld() == null) return false;
+        double radius = options.despawnDistance();
+        if (!Double.isFinite(radius) || radius <= 0) return false;
+        double radiusSquared = radius * radius;
+        for (Player player : entity.getWorld().getPlayers()) {
+            if (player.isOnline() && !player.isDead()
+                    && player.getGameMode() != org.bukkit.GameMode.SPECTATOR
+                    && player.getLocation().distanceSquared(entity.getLocation()) <= radiusSquared) {
+                return false;
+            }
+        }
+        return true;
+    }
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onChunkUnload(ChunkUnloadEvent event) {
+        for (var entry : controllers.entrySet()) {
+            ModelInstanceImpl inst = instances.impl(entry.getKey());
+            if (inst == null || !despawnOnChunkUnload(inst.options().despawnMode())) continue;
+            Entity entity = inst.entity();
+            if (entity != null && entity.getWorld().equals(event.getWorld())
+                    && entity.getChunk().getX() == event.getChunk().getX()
+                    && entity.getChunk().getZ() == event.getChunk().getZ()) {
+                instances.despawn(entry.getKey());
+            }
+        }
+    }
+
+    public static boolean despawnOnChunkUnload(String mode) {
+        if (mode == null) return false;
+        return switch (mode.trim().toUpperCase(java.util.Locale.ROOT)) {
+            case "NORMAL", "CHUNK", "NPC" -> true;
+            default -> false;
+        };
+    }
     public void stop() {
         if (task != null) {
             task.cancel();
@@ -536,6 +608,22 @@ public final class AiManager implements Listener {
         bossBarService.show(le.getUniqueId(), withConfiguredColor(render, cfg), cfg.range());
     }
 
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void enforceMaxCombatDistance(EntityDamageByEntityEvent e) {
+        ModelInstanceImpl inst = findByEntity(e.getEntity());
+        if (inst == null) return;
+        AiProfile profile = profileOf(inst.instanceId());
+        if (profile == null || !Double.isFinite(profile.maxCombatDistance)
+                || profile.maxCombatDistance <= 0) return;
+        Entity damager = e.getDamager();
+        Location victimLocation = e.getEntity().getLocation();
+        Location damagerLocation = damager.getLocation();
+        if (victimLocation.getWorld() == null || !victimLocation.getWorld().equals(damagerLocation.getWorld())) return;
+        if (victimLocation.distanceSquared(damagerLocation)
+                > profile.maxCombatDistance * profile.maxCombatDistance) {
+            e.setCancelled(true);
+        }
+    }
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDamage(EntityDamageByEntityEvent e) {
         ModelInstanceImpl inst = findByEntity(e.getEntity());

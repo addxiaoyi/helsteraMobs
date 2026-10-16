@@ -1,0 +1,7 @@
+name: Emberling Boss
+model: example/emberling
+entity:
+  type: ZOMBIE
+  health: 40
+  no-ai: true
+  silent: true

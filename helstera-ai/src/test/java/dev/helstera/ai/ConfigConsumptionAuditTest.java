@@ -70,6 +70,7 @@ class ConfigConsumptionAuditTest {
         EXEMPT.put("SpawnerService.minInterval", "装载期派生值，非配置键");
         EXEMPT.put("SpawnerService.aliveCheck", "插件层注入的回调，非配置键");
         EXEMPT.put("SpawnerService.problems", "装载期告警列表，供命令与网页开发器");
+        EXEMPT.put("SpawnerService.spawnWarningKeys", "Runtime warning deduplication avoids repeated tick log spam");
         EXEMPT.put("SpawnerService.alive", "实例追踪表，非配置");
         EXEMPT.put("SpawnerService.spawners", "装载表本身，非配置");
         EXEMPT.put("SpawnerService.runtimeDisabled", "运行期 toggle 覆盖集，非配置键");

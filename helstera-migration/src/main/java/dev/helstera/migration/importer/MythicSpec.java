@@ -166,8 +166,8 @@ public final class MythicSpec {
         int brace = spec == null ? -1 : spec.indexOf('{');
         if (brace < 0) return null;
         String body = spec.substring(brace + 1);
-        int close = body.lastIndexOf('}');
-        if (close >= 0) body = body.substring(0, close);
+        int close = matchingClose(spec, brace);
+        if (close > brace) body = spec.substring(brace + 1, close);
         for (String part : body.split("[;,]")) {
             String p = part.trim();
             int eq = p.indexOf('=');
@@ -177,5 +177,18 @@ public final class MythicSpec {
             }
         }
         return null;
+    }
+
+    private static int matchingClose(String value, int open) {
+        int depth = 0;
+        boolean quoted = false;
+        for (int i = open; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '"') quoted = !quoted;
+            if (quoted) continue;
+            if (c == '{') depth++;
+            else if (c == '}' && --depth == 0) return i;
+        }
+        return -1;
     }
 }

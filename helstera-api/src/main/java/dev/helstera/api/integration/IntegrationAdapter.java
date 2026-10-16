@@ -1,6 +1,7 @@
 package dev.helstera.api.integration;
 
 import java.util.Set;
+import org.bukkit.Location;
 
 /**
  * 外部插件适配器协议。适配器不得把外部插件内部实现类暴露给 helstera-api；
@@ -33,4 +34,7 @@ public interface IntegrationAdapter {
     default boolean hasCapability(Capability c) {
         return capabilities().contains(c);
     }
+
+    /** Optional region lookup used by menus and spawners. Null means unknown. */
+    default Boolean containsRegion(String region, Location location) { return null; }
 }

@@ -49,6 +49,10 @@ public final class ModelInstanceImpl implements ModelInstance {
 /** 掉落是否计入击杀者的幸运值（mobs/*.yml 的 drops.luck），默认 true。 */
     public volatile boolean lootUsesLuck = true;
 
+    /** Optional mob-level experience override from mobs/*.yml drops.experience-*. */
+    public volatile int lootExperienceMin = -1;
+    public volatile int lootExperienceMax = -1;
+
     /**
      * 是否显示血条；由 {@code SpawnOptions.showHealthBar()} 在生成时写入。
      *

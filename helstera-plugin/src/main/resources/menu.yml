@@ -1,0 +1,10 @@
+menus:
+  example:
+    title: '&8Example Menu'
+    rows: 3
+    buttons:
+      '13':
+        material: DIAMOND
+        name: '&bExample'
+        lore: '&7Click to run example'
+        command: 'say %player% clicked example'

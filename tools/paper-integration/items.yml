@@ -1,0 +1,5 @@
+items:
+  integration_test_item:
+    id: GOLD_INGOT
+    amount: 1
+    display-name: '&6Resolver Probe'

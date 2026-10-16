@@ -106,6 +106,15 @@ public final class Placeholders {
             return loc(ctx).map(Location::getWorld).filter(java.util.Objects::nonNull)
                     .map(org.bukkit.World::getName).orElse(null);
         }
+        if (field.equals("faction")) {
+            var entity = ctx.instanceValid() ? ctx.instance().baseEntity().orElse(null) : null;
+            var table = dev.helstera.api.behavior.Factions.table();
+            return table == null ? null : table.factionOf(entity);
+        }
+        if (field.equals("uuid")) {
+            return ctx.instanceValid() && ctx.instance().baseEntity().isPresent()
+                    ? ctx.instance().baseEntity().get().getUniqueId().toString() : null;
+        }
         if (field.equals("name")) {
             // 自定义名优先；没有则退回实体类型，最后退回实例 ID
             return living(ctx.instance()).map(le -> le.getCustomName())
@@ -119,6 +128,8 @@ public final class Placeholders {
                     ? ctx.instance().baseEntity().get().getType().name().toLowerCase(Locale.ROOT)
                     : null;
         }
+        String entityState = entityState(ctx.instanceValid() ? ctx.instance().baseEntity().orElse(null) : null, field);
+        if (entityState != null) return entityState;
         if (field.equals("id")) {
             return ctx.instance() == null ? null : String.valueOf(ctx.instance().instanceId());
         }
@@ -135,21 +146,31 @@ public final class Placeholders {
     }
 
     private static String target(BehaviorContext ctx, String field) {
-        Player p = ctx.target().orElse(null);
-        if (p == null) return null;
-        if (field.equals("name")) return p.getName();
+        LivingEntity target = ctx.targetEntity().orElse(null);
+        if (target == null) return null;
+        if (field.equals("name")) return target instanceof Player p ? p.getName()
+                : target.getCustomName() == null ? target.getType().name().toLowerCase(Locale.ROOT) : target.getCustomName();
         if (field.equals("hp") || field.equals("hp.percent")) {
-            return fmt(p.getMaxHealth() > 0 ? p.getHealth() / p.getMaxHealth() * 100.0 : 0.0);
+            return fmt(target.getMaxHealth() > 0 ? target.getHealth() / target.getMaxHealth() * 100.0 : 0.0);
         }
-        if (field.equals("hp.raw") || field.equals("health")) return fmt(p.getHealth());
-        if (field.equals("hp.max") || field.equals("maxhealth")) return fmt(p.getMaxHealth());
+        if (field.equals("hp.raw") || field.equals("health")) return fmt(target.getHealth());
+        if (field.equals("hp.max") || field.equals("maxhealth")) return fmt(target.getMaxHealth());
         if (field.startsWith("loc.")) {
-            return locationField(java.util.Optional.ofNullable(p.getLocation()), field.substring(4));
+            return locationField(java.util.Optional.ofNullable(target.getLocation()), field.substring(4));
         }
         if (field.equals("world")) {
-            return p.getWorld() == null ? null : p.getWorld().getName();
+            return target.getWorld() == null ? null : target.getWorld().getName();
         }
-        if (field.equals("type")) return "player";
+        if (field.equals("faction")) {
+            var table = dev.helstera.api.behavior.Factions.table();
+            return table == null ? null : table.factionOf(target);
+        }
+        if (field.equals("uuid")) return target.getUniqueId().toString();
+        if (field.equals("is-player")) return target instanceof Player ? "true" : "false";
+        if (field.equals("is-living")) return "true";
+        String entityState = entityState(target, field);
+        if (entityState != null) return entityState;
+        if (field.equals("type")) return target.getType().name().toLowerCase(Locale.ROOT);
         if (field.equals("distance")) {
             return ctx.distanceToTarget() < 0 ? null : fmt(ctx.distanceToTarget());
         }
@@ -262,7 +283,9 @@ public final class Placeholders {
         List<String> out = new ArrayList<>();
         for (String scope : List.of("caster", "target", "skill")) {
             for (String f : List.of("hp", "hp.percent", "hp.raw", "hp.max", "health", "maxhealth",
-                    "name", "type", "world", "loc.x", "loc.y", "loc.z", "distance")) {
+                    "name", "type", "world", "loc.x", "loc.y", "loc.z", "distance",
+                    "is-baby", "is-tamed", "is-sneaking", "is-on-ground", "is-in-water",
+                    "is-invisible", "is-glowing", "is-on-fire", "game-mode")) {
                 out.add(scope + "." + f);
             }
         }
@@ -298,6 +321,29 @@ public final class Placeholders {
         if (inst == null || !inst.isValid()) return java.util.Optional.empty();
         Entity e = inst.baseEntity().orElse(null);
         return e instanceof LivingEntity le ? java.util.Optional.of(le) : java.util.Optional.empty();
+    }
+
+    private static String entityState(Entity entity, String field) {
+        if (!(entity instanceof LivingEntity living)) return null;
+        return switch (field) {
+            case "is-baby" -> living instanceof org.bukkit.entity.Ageable age
+                    ? String.valueOf(!age.isAdult()) : "false";
+            case "is-tamed" -> living instanceof org.bukkit.entity.Tameable tameable
+                    ? String.valueOf(tameable.isTamed()) : "false";
+            case "is-sneaking" -> String.valueOf(living.isSneaking());
+            case "is-on-ground" -> String.valueOf(living.isOnGround());
+            case "is-in-water" -> String.valueOf(living.isInWater());
+            case "is-invisible" -> String.valueOf(living.isInvisible());
+            case "is-glowing" -> String.valueOf(living.isGlowing());
+            case "is-on-fire" -> String.valueOf(living.getFireTicks() > 0);
+            case "game-mode" -> living instanceof Player player ? player.getGameMode().name().toLowerCase(Locale.ROOT) : null;
+            default -> {
+                if (field.startsWith("permission.") && living instanceof Player player) {
+                    yield String.valueOf(player.hasPermission(field.substring("permission.".length())));
+                }
+                yield null;
+            }
+        };
     }
 
     /** 统一保留一位小数，避免出现 12.300000000000001 这类文本。 */

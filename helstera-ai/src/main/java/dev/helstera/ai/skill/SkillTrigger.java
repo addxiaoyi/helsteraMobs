@@ -25,11 +25,20 @@ public enum SkillTrigger {
     REMOVE("on-remove", true),
     STATE("on-state", true),
     INTERACT("on-interact", true),
+    TELEPORT("on-teleport", true),
+    BLOCK_BREAK("on-block-break", true),
+    BLOCK_PLACE("on-block-place", true),
+    ITEM_PICKUP("on-item-pickup", true),
+    ENTITY_TARGET("on-entity-target", true),
+    VEHICLE_ENTER("on-vehicle-enter", true),
+    VEHICLE_EXIT("on-vehicle-exit", true),
+    VEHICLE_DESTROY("on-vehicle-destroy", true),
     KILL_PLAYER("on-kill-player", true),
     // 由 EntityShootBowEvent 驱动。此前误判为「模型实例不会自己发射弹丸」而标 false，
     // 但载体的 entity.type 可以是 player —— 这类载体确实能射箭，事件可达，
     // 标 false 会让 /helstera check 劝退用户不要用一个可用机制。
     ENTITY_SHOOT("on-entity-shoot", true),
+    PROJECTILE_HIT("on-projectile-hit", true),
     // 由 ModelSpawnEvent 驱动，按档案 boss 字段判定（不按血量猜）
     SPAWN_BOSS("on-spawn-boss", true),
     CONDITION_MET("on-condition-met", true),

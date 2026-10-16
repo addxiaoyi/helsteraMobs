@@ -32,6 +32,7 @@ permissions:
       helstera.skill: true
       helstera.bossbar: true
       helstera.spawner: true
+      helstera.menu: true
       helstera.check: true
       helstera.faction: true
       helstera.codex: true
@@ -40,6 +41,9 @@ permissions:
       helstera.immunity: true
       helstera.dialog: true
       helstera.disguise: true
+  helstera.menu:
+    description: 查看 Custom Menu 状态
+    default: op
   helstera.view:
     description: 可见模型（默认所有人）
     default: true

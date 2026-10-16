@@ -3,6 +3,7 @@ package dev.helstera.ai;
 import dev.helstera.api.event.HelsteraEventBus;
 import dev.helstera.api.event.MobStateChangedEvent;
 import dev.helstera.api.event.ModelPreTargetEvent;
+import dev.helstera.api.event.ModelTargetChangedEvent;
 import dev.helstera.ai.nav.NavNode;
 import dev.helstera.ai.nav.PathFollower;
 import dev.helstera.api.model.ModelHitbox;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 有限状态机 AI 控制器（每实例一个，由 AiManager 统一节拍驱动，不建独立任务）。
@@ -46,6 +49,9 @@ public final class AiController {
 
     private State state = State.IDLE;
     private Player target;
+    private LivingEntity lastAttackerEntity;
+    private LivingEntity combatTarget;
+    private Player lastAttacker;
     /**
      * 仇恨表；档案未启用 {@code threat-enabled} 时为 null，
      * 此时退回「最近者」的单目标行为以保持旧配置表现不变。
@@ -94,17 +100,49 @@ public final class AiController {
         this.behaviors = behaviors;
         this.threat = profile.threatEnabled
                 ? new ThreatTable(profile.threatDecayPerSecond, profile.threatDistanceWeight,
-                        System::currentTimeMillis, id -> Bukkit.getPlayer(id))
+                        System::currentTimeMillis, id -> Bukkit.getEntity(id))
                 : null;
         this.home = inst.location() != null ? inst.location().clone() : null;
+        applySelectorProfile(inst.entity(), inst.location());
     }
 
     public State state() {
         return state;
     }
 
+    public LivingEntity targetEntity() {
+        return combatTarget != null ? combatTarget : target;
+    }
+
+    /** Updates the combat target from a skill mechanic or an external integration. */
+    public void setCombatTarget(LivingEntity entity) {
+        LivingEntity previous = targetEntity();
+        combatTarget = entity;
+        target = entity instanceof Player player ? player : null;
+        syncNativeTarget(entity);
+        if (entity instanceof Player player && threat != null) threat.focus(player.getUniqueId());
+        if (previous != entity) bus.post(new ModelTargetChangedEvent(inst, previous, entity));
+    }
+
+    public void clearCombatTarget() {
+        LivingEntity previous = targetEntity();
+        combatTarget = null;
+        target = null;
+        syncNativeTarget(null);
+        if (previous != null) bus.post(new ModelTargetChangedEvent(inst, previous, null));
+    }
+
     public Player target() {
         return target;
+    }
+
+    public String selectorDiagnostic() {
+        return "mode=" + selectorTargetMode
+                + " can-attack=" + selectorCanAttack
+                + " can-chase=" + selectorCanChase
+                + " can-flee=" + selectorCanFlee
+                + " target-matches=" + selectorTargetMatches(combatTarget)
+                + " combat-target=" + (combatTarget == null ? null : combatTarget.getUniqueId());
     }
 
     /**
@@ -116,14 +154,16 @@ public final class AiController {
      */
     public void onDamaged(org.bukkit.entity.Entity attacker, double damage) {
         transition(State.HURT);
-        if (attacker instanceof Player p && profile.canChase) {
+        if (attacker instanceof LivingEntity living) lastAttackerEntity = living;
+        if (attacker instanceof Player player) lastAttacker = player;
+        if (attacker instanceof LivingEntity living && profile.canChase) {
             if (threat != null) {
                 Location loc = inst.location();
-                threat.addThreat(p.getUniqueId(), damage, loc == null ? 0 : safeDistance(loc, p));
-                target = p;
-            } else {
-                target = p;
+                threat.addThreat(living.getUniqueId(), damage,
+                        loc == null ? 0 : safeDistance(loc, living.getLocation()));
             }
+            if (living instanceof Player p) target = p;
+            combatTarget = living;
         }
         if (anim != null) anim.intent(EntityAnimationStateMachine.AnimState.HURT);
     }
@@ -133,9 +173,23 @@ public final class AiController {
         if (threat != null && player != null) threat.addThreat(player.getUniqueId(), amount);
     }
 
+    public void addThreat(LivingEntity entity, double amount) {
+        if (threat != null && entity != null) threat.addThreat(entity.getUniqueId(), amount);
+    }
+
     /** 当前仇恨表；未启用时为 null。 */
     public ThreatTable threatTable() {
         return threat;
+    }
+
+    private double safeDistance(Location from, Location targetLocation) {
+        try {
+            if (from == null || targetLocation == null || from.getWorld() == null
+                    || !from.getWorld().equals(targetLocation.getWorld())) return -1;
+            return from.distance(targetLocation);
+        } catch (RuntimeException ignored) {
+            return -1;
+        }
     }
 
     private double safeDistance(Location from, Player p) {
@@ -169,13 +223,13 @@ public final class AiController {
         }
 
         // 感知：最近可视线玩家
-        Player sensed = sense(loc);
-
+        applySelectorProfile(base, loc);
+        LivingEntity sensed = sense(loc);
         decisions++;
         dev.helstera.api.behavior.BehaviorContext ctx = behaviors == null ? null
                 : dev.helstera.api.behavior.BehaviorContext.of(
-                        inst, target != null ? target : sensed, healthRatio,
-                        sensed == null ? -1 : sensed.getLocation().distance(loc), decisions, state.name());
+                         inst, combatTarget != null ? combatTarget : sensed, healthRatio,
+                         sensed == null ? -1 : sensed.getLocation().distance(loc), decisions, state.name());
 
         // 扩展点一：自定义前置条件，任一不通过则本节拍不做内置决策
         if (behaviors != null && ctx != null) {
@@ -193,56 +247,298 @@ public final class AiController {
     }
 
     /** 内置状态机决策（优先级从高到低）。 */
-    private void decide(Location loc, Player sensed, double healthRatio) {
+    private final Set<String> reportedSelectorWarnings = ConcurrentHashMap.newKeySet();
+    private boolean selectorCanChase = true;
+    private boolean selectorCanAttack = true;
+    private boolean selectorCanPatrol = true;
+    private boolean selectorCanFlee;
+    private boolean selectorRangedAttack;
+    private boolean selectorLeapAtTarget;
+    private boolean selectorAllowsPlayerTargets = true;
+    private AiProfile.TargetMode selectorTargetMode = AiProfile.TargetMode.PLAYERS;
+    private boolean selectorLooksAtPlayers;
+    private boolean selectorAvoidsEntities;
+    private boolean selectorAttackerFirst;
+    private boolean selectorHurtByFirst;
+    private boolean selectorThreatPriority;
+    private String selectorTargetFaction;
+    private boolean selectorFactionHostile;
+    private boolean selectorFactionAllied;
+    private String selectorTemptItem;
+    private double selectorTemptRange;
+    private boolean selectorCanSwim = true;
+    private boolean selectorCanOpenDoors;
+    private boolean selectorAvoidSun;
+    private boolean selectorHasExplicitGoalPriority;
+    private int selectorFleePriority = Integer.MAX_VALUE;
+    private int selectorAttackPriority = Integer.MAX_VALUE;
+    private int nativePathStopCalls;
+
+    public int nativePathStopCalls() {
+        return nativePathStopCalls;
+    }
+
+    private void applySelectorProfile(Entity base, Location loc) {
+        AiProfile.SelectorPolicy policy = profile.selectorPolicy();
+        selectorCanChase = policy.chase();
+        selectorCanAttack = policy.attack();
+        selectorCanPatrol = policy.patrol();
+        selectorCanFlee = policy.flee();
+        selectorRangedAttack = policy.rangedAttack() || profile.rangedAttack;
+        selectorLeapAtTarget = policy.leapAtTarget() || profile.leapAtTarget;
+        selectorCanSwim = policy.swim();
+        selectorCanOpenDoors = policy.openDoors();
+        selectorAvoidSun = policy.avoidSun();
+        selectorAllowsPlayerTargets = policy.playerTargets();
+        selectorTargetMode = policy.targetMode();
+        selectorLooksAtPlayers = policy.lookAtPlayers();
+        selectorAvoidsEntities = policy.avoidEntities();
+        selectorAttackerFirst = policy.attackerFirst();
+        selectorHurtByFirst = policy.hurtByTargetFirst();
+        selectorThreatPriority = policy.targetMode() == AiProfile.TargetMode.THREAT;
+        selectorTargetFaction = policy.targetFaction();
+        selectorFactionHostile = policy.factionHostile();
+        selectorTemptItem = policy.temptItem();
+        if (selectorTemptItem == null) selectorTemptItem = temptItemFromGoals(profile.goals);
+        selectorTemptRange = policy.temptRange();
+        selectorHasExplicitGoalPriority = !profile.goals.isEmpty();
+        selectorFleePriority = policy.goalPriority(profile.goals, "flee");
+        selectorAttackPriority = policy.goalPriority(profile.goals, "attack");
+        applySelectorAdapters(base, loc);
+        for (String unsupported : policy.unsupported()) {
+            int separator = unsupported.indexOf(':');
+            warnSelector(separator < 0 ? "selector" : unsupported.substring(0, separator),
+                    separator < 0 ? unsupported : unsupported.substring(separator + 1));
+        }
+        if (selectorTargetMode != AiProfile.TargetMode.PLAYERS) target = null;
+        if (!selectorTargetMatches(combatTarget)) combatTarget = null;
+    }
+
+    private void applySelectorAdapters(Entity base, Location loc) {
+        try {
+            if (base instanceof org.bukkit.entity.Mob mob) {
+                com.destroystokyo.paper.entity.Pathfinder pathfinder = mob.getPathfinder();
+                if (pathfinder != null) {
+                    pathfinder.setCanFloat(selectorCanSwim);
+                    pathfinder.setCanOpenDoors(selectorCanOpenDoors);
+                    pathfinder.setCanPassDoors(selectorCanOpenDoors);
+                    if (selectorTargetMode == AiProfile.TargetMode.NONE && !selectorCanPatrol) {
+                        pathfinder.stopPathfinding();
+                    }
+                }
+            }
+            if (base instanceof LivingEntity living) living.setSwimming(selectorCanSwim && base.isInWater());
+            if (selectorAvoidSun && base instanceof org.bukkit.entity.Mob mob && mob.isInDaylight()) moveToShade(mob, loc);
+            if (selectorLooksAtPlayers) { Player player = nearestVisiblePlayer(loc); if (player != null) faceToward(player.getLocation()); }
+        } catch (RuntimeException ex) {
+            warnSelector("adapter", ex.getClass().getSimpleName());
+        }
+    }
+
+    private void moveToShade(org.bukkit.entity.Mob mob, Location origin) {
+        if (origin == null || origin.getWorld() == null) return;
+        com.destroystokyo.paper.entity.Pathfinder pathfinder = mob.getPathfinder();
+        if (pathfinder == null) return;
+        Location best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (int dx = -8; dx <= 8; dx++) {
+            for (int dz = -8; dz <= 8; dz++) {
+                if (dx * dx + dz * dz < 4) continue;
+                Location candidate = origin.clone().add(dx, 0, dz);
+                if (candidate.getBlock().getLightFromSky() >= 15) continue;
+                double distance = candidate.distanceSquared(origin);
+                if (distance < bestDistance) { best = candidate; bestDistance = distance; }
+            }
+        }
+        if (best != null) pathfinder.moveTo(best, Math.max(0.05, profile.moveSpeed));
+    }
+    private void warnSelector(String kind, String token) {
+        if (reportedSelectorWarnings.add(kind + ":" + token)) {
+            org.bukkit.Bukkit.getLogger().warning("Unsupported AI " + kind + " selector token: " + token);
+        }
+    }
+
+    private void decide(Location loc, LivingEntity sensed, double healthRatio) {
         // 决策（优先级从高到低）
         if (state == State.DEAD) return;
-        if (profile.canFlee && healthRatio <= profile.fleeHealthRatio) {
+        boolean fleeHasPriority = !selectorHasExplicitGoalPriority
+                || selectorFleePriority <= selectorAttackPriority;
+        if (selectorCanFlee && fleeHasPriority && healthRatio <= profile.fleeHealthRatio) {
             transition(State.FLEE);
             flee(loc);
             return;
         }
-
+        if (selectorAvoidsEntities && fleeHasPriority) {
+            LivingEntity danger = nearestDanger(loc);
+            if (danger != null) {
+                target = danger instanceof Player player ? player : null;
+                combatTarget = danger;
+                syncNativeTarget(danger);
+                transition(State.FLEE);
+                moveAwayFrom(loc, danger.getLocation());
+                return;
+            }
+        }
         // 目标来源：启用仇恨表时由威胁值决定，否则退回「最近可见者」。
         // 两者不能混用——sense() 每 tick 都可能把仇恨最低的人重新吸成目标，
         // 那等于仇恨表白建。
-        Player foe = threatTarget(loc) != null ? threatTarget(loc) : sensed;
-
+        LivingEntity foe = preferredCombatTarget(loc, sensed);
+        if (foe != null && (!foe.isValid() || foe.isDead())) foe = null;
+        syncNativeTarget(foe);
         if (foe != null) {
-            if (!foe.isOnline() || foe.isDead()) {
-                // 主目标失效：尝试切到仇恨次高的目标，而不是退回最近者
-                Player alt = threatTarget(loc);
-                if (alt != null && alt != foe) {
-                    foe = alt;
-                } else {
-                    foe = sensed;
-                }
-            }
-        }
-
-        if (foe != null) {
-            double dist = safeDistance(loc, foe);
-            if (profile.canAttack && dist >= 0 && dist <= profile.attackRadius) {
+            double dist = safeDistance(loc, foe.getLocation());
+            if (selectorCanAttack && selectorRangedAttack
+                    && dist > profile.attackRadius && dist <= profile.rangedAttackRange) {
                 transition(State.ATTACK);
-                attack(foe);
+                rangedAttack(foe);
                 return;
             }
-            if (profile.canChase) {
+            if (selectorCanAttack && selectorLeapAtTarget
+                    && dist > profile.attackRadius && dist <= profile.leapRange) {
+                transition(State.ATTACK);
+                leapAtTarget(foe, loc);
+                return;
+            }
+            if (selectorCanAttack && dist >= 0 && dist <= profile.attackRadius) {
+                transition(State.ATTACK);
+                attackEntity(foe);
+                return;
+            }
+            if (selectorCanChase) {
                 transition(State.CHASE);
-                target = foe;
+                combatTarget = foe;
+                target = foe instanceof Player player ? player : null;
                 moveToward(loc, foe.getLocation());
                 return;
             }
         }
-        // 无目标：巡逻/待机
-        if (profile.canPatrol) {
+        if (selectorCanPatrol) {
             transition(State.PATROL);
             patrol(loc);
         } else {
+            syncNativeTarget(null);
+            stopNativePathfinding();
             transition(State.IDLE);
         }
     }
 
+    private void stopNativePathfinding() {
+        Entity base = inst.entity();
+        if (!(base instanceof org.bukkit.entity.Mob mob)) return;
+        try {
+            com.destroystokyo.paper.entity.Pathfinder pathfinder = mob.getPathfinder();
+            if (pathfinder != null) {
+                nativePathStopCalls++;
+                pathfinder.stopPathfinding();
+            }
+        } catch (RuntimeException ex) {
+            warnSelector("pathfinder", ex.getClass().getSimpleName());
+        }
+    }
+
+    /** Mirrors the custom selector result into Bukkit's native Mob target slot. */
+    private void syncNativeTarget(LivingEntity entity) {
+        Entity base = inst.entity();
+        if (!(base instanceof org.bukkit.entity.Mob mob)) return;
+        try {
+            mob.setTarget(entity != null && entity.isValid() && !entity.isDead() ? entity : null);
+        } catch (RuntimeException ex) {
+            warnSelector("native-target", ex.getClass().getSimpleName());
+        }
+    }
+
     /** 按仇恨选出当前目标；未启用仇恨表或无有效仇恨时返回 null。 */
+    private LivingEntity nearestDanger(Location origin) {
+        if (origin == null || origin.getWorld() == null) return null;
+        Entity self = inst.entity();
+        LivingEntity nearest = null;
+        double best = profile.sightRadius * profile.sightRadius;
+        for (Entity entity : origin.getWorld().getNearbyEntities(origin, profile.sightRadius, profile.sightRadius, profile.sightRadius)) {
+            if (!(entity instanceof LivingEntity living) || living == self || !living.isValid() || living.isDead()) continue;
+            if (dev.helstera.api.behavior.Factions.allied(self, living)) continue;
+            double distance = living.getLocation().distanceSquared(origin);
+            if (distance < best) { nearest = living; best = distance; }
+        }
+        return nearest;
+    }
+
+    private void moveAwayFrom(Location origin, Location danger) {
+        if (origin == null || danger == null || origin.getWorld() == null || !origin.getWorld().equals(danger.getWorld())) return;
+        Vector away = origin.toVector().subtract(danger.toVector());
+        away.setY(0);
+        if (away.lengthSquared() < 0.001) away = new Vector(1, 0, 0);
+        moveBy(away.normalize().multiply(profile.moveSpeed), origin);
+        if (anim != null) anim.enterLocomotion();
+    }
+
+    private LivingEntity preferredCombatTarget(Location loc, LivingEntity sensed) {
+        if ((selectorAttackerFirst || selectorHurtByFirst) && lastAttackerEntity != null
+                && lastAttackerEntity.isValid() && !lastAttackerEntity.isDead()) return lastAttackerEntity;
+        if (selectorTargetMatches(combatTarget)) return combatTarget;
+        return preferredTarget(loc, sensed);
+    }
+
+    private LivingEntity preferredTarget(Location loc, LivingEntity sensed) {
+        if (selectorTargetMode == AiProfile.TargetMode.OWNER) return ownerTarget(loc);
+        if (selectorThreatPriority) return threatTargetEntity(loc);
+        if (selectorTargetMode == AiProfile.TargetMode.FACTION) return factionTarget(loc);
+        if ((selectorAttackerFirst || selectorHurtByFirst) && validTarget(lastAttackerEntity)) {
+            return lastAttackerEntity;
+        }
+        if (selectorTargetMode == AiProfile.TargetMode.PLAYERS) {
+            Player threatTarget = threatTarget(loc);
+            return threatTarget != null ? threatTarget : sensed;
+        }
+        return targetMatches(sensed, selectorTargetMode) ? sensed : null;
+    }
+
+    private static boolean validTarget(Player player) {
+        return player != null && player.isOnline() && !player.isDead();
+    }
+
+    private static boolean validTarget(LivingEntity entity) {
+        return entity != null && entity.isValid() && !entity.isDead();
+    }
+
+    private LivingEntity threatTargetEntity(Location loc) {
+        if (threat == null) return null;
+        for (UUID id : threat.ordered(uuid -> {
+            Entity entity = Bukkit.getEntity(uuid);
+            return entity instanceof LivingEntity living ? safeDistance(loc, living.getLocation()) : Double.MAX_VALUE;
+        })) {
+            Entity entity = Bukkit.getEntity(id);
+            if (entity instanceof LivingEntity living && validTarget(living)
+                    && !dev.helstera.api.behavior.Factions.allied(inst.entity(), living)) return living;
+        }
+        return null;
+    }
+
+    private LivingEntity factionTarget(Location loc) {
+        if (loc == null || loc.getWorld() == null || selectorTargetFaction == null) return null;
+        LivingEntity best = null;
+        double bestDistance = profile.sightRadius;
+        for (Entity entity : loc.getWorld().getNearbyEntities(loc, profile.sightRadius,
+                profile.sightRadius, profile.sightRadius)) {
+            if (!(entity instanceof LivingEntity living) || !validTarget(living)
+                    || entity == inst.entity()) continue;
+            String faction = dev.helstera.api.behavior.Factions.factionOf(entity);
+            boolean match = selectorFactionAllied
+                    ? dev.helstera.api.behavior.Factions.table() != null
+                    && dev.helstera.api.behavior.Factions.table().alliedFactions(faction, selectorTargetFaction)
+                    : selectorFactionHostile
+                    ? faction == null || !faction.equalsIgnoreCase(selectorTargetFaction)
+                    : faction != null && faction.equalsIgnoreCase(selectorTargetFaction);
+            if (!match || (!selectorFactionHostile
+                    && dev.helstera.api.behavior.Factions.allied(inst.entity(), living))) continue;
+            double distance = safeDistance(loc, living.getLocation());
+            if (distance >= 0 && distance <= bestDistance) {
+                best = living;
+                bestDistance = distance;
+            }
+        }
+        return best;
+    }
+
     private Player threatTarget(Location loc) {
         if (threat == null) return null;
         UUID id = threat.top(uuid -> {
@@ -260,35 +556,252 @@ public final class AiController {
      * 而这一行为在配置上完全看不出来（档案只写了 {@code faction}，
      * 没人预期它会改变感知范围）。</p>
      */
-    private Player sense(Location loc) {
-        Player best = null;
-        double bestD = profile.sightRadius;
-        if (loc.getWorld() == null) return null;
+    private Player nearestVisiblePlayer(Location loc) {
+        if (loc == null || loc.getWorld() == null) return null;
+        Player nearest = null;
+        double distance = profile.sightRadius;
+        for (Player player : loc.getWorld().getPlayers()) {
+            if (player.isDead() || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) continue;
+            double candidateDistance = safeDistance(loc, player);
+            if (candidateDistance <= distance) { nearest = player; distance = candidateDistance; }
+        }
+        return nearest;
+    }
+    private LivingEntity sense(Location loc) {
+        if (selectorTargetMode == AiProfile.TargetMode.OWNER) return ownerTarget(loc);
+        if (selectorThreatPriority || selectorTargetMode == AiProfile.TargetMode.FACTION) return preferredTarget(loc, null);
+        LivingEntity best = null;
+        double bestD = selectorTemptItem == null ? profile.sightRadius
+                : Math.min(profile.sightRadius, selectorTemptRange);
+        if (selectorTargetMode == AiProfile.TargetMode.NONE || loc.getWorld() == null) return null;
         Entity self = inst.entity();
-        for (Player p : loc.getWorld().getPlayers()) {
-            if (p.isDead() || p.getGameMode() == org.bukkit.GameMode.SPECTATOR
-                    || p.getGameMode() == org.bukkit.GameMode.CREATIVE) continue;
-            if (dev.helstera.api.behavior.Factions.allied(self, p)) continue;
-            Location pl = p.getLocation();
-            if (!pl.getWorld().equals(loc.getWorld())) continue;
-            double d = pl.distance(loc);
-            if (d > bestD) continue;
+        if (selectorTemptItem != null) {
+            for (Player player : loc.getWorld().getPlayers()) {
+                double distance = safeDistance(loc, player.getLocation());
+                boolean valid = validTarget(player);
+                boolean playable = player.getGameMode() != org.bukkit.GameMode.SPECTATOR
+                        && player.getGameMode() != org.bukkit.GameMode.CREATIVE;
+                boolean holds = holdsTemptItem(player, selectorTemptItem);
+                boolean allied = dev.helstera.api.behavior.Factions.allied(self, player);
+                if (!valid || !playable || !holds || allied) continue;
+                if (distance >= 0 && distance <= bestD) {
+                    best = player;
+                    bestD = distance;
+                }
+            }
+            if (best != null) return best;
+        }
+        for (Entity candidate : loc.getWorld().getNearbyEntities(
+                loc, profile.sightRadius, profile.sightRadius, profile.sightRadius)) {
+            if (!(candidate instanceof LivingEntity living) || !targetMatches(living, selectorTargetMode)) continue;
+            if (living == self || !living.isValid() || living.isDead()) continue;
+            if (living instanceof Player p && (p.getGameMode() == org.bukkit.GameMode.SPECTATOR
+                    || p.getGameMode() == org.bukkit.GameMode.CREATIVE)) continue;
+            if (selectorTemptItem != null && living instanceof Player player
+                    && !holdsTemptItem(player, selectorTemptItem)) continue;
+            if (dev.helstera.api.behavior.Factions.allied(self, living)) continue;
+            Location pl = living.getLocation();
+            if (pl.getWorld() == null || !pl.getWorld().equals(loc.getWorld())) continue;
+            double d = safeDistance(loc, pl);
+            if (d < 0 || d > bestD) continue;
             // 方块阻挡感知
             var ray = loc.getWorld().rayTraceBlocks(
                     loc.clone().add(0, 1.5, 0),
                     pl.clone().add(0, 1.2, 0).subtract(loc.clone().add(0, 1.5, 0)).toVector(),
-                    bestD, org.bukkit.FluidCollisionMode.NEVER);
+                    d, org.bukkit.FluidCollisionMode.NEVER);
             if (ray != null && ray.getHitBlock() != null) continue;
-            best = p;
+            best = living;
             bestD = d;
         }
         return best;
     }
 
+    static boolean holdsTemptItem(Player player, String configured) {
+        if (player == null || configured == null || configured.isBlank()) return false;
+        for (String raw : configured.split("[,|]")) {
+            org.bukkit.Material material = org.bukkit.Material.matchMaterial(raw.trim());
+            if (material == null) continue;
+            var inventory = player.getInventory();
+            if (inventory.getItemInMainHand().getType() == material
+                    || inventory.getItemInOffHand().getType() == material) return true;
+        }
+        return false;
+    }
+
+    private static String temptItemFromGoals(List<String> goals) {
+        if (goals == null) return null;
+        for (String raw : goals) {
+            if (raw == null) continue;
+            String[] parts = raw.trim().split("\\s+");
+            int index = parts.length > 0 && parts[0].matches("\\d+") ? 1 : 0;
+            if (index < parts.length && parts[index].equalsIgnoreCase("tempt")
+                    && index + 1 < parts.length && !parts[index + 1].isBlank()) {
+                return parts[index + 1].trim();
+            }
+        }
+        return null;
+    }
+
+    private LivingEntity ownerTarget(Location origin) {
+        Entity base = inst.entity();
+        if (!(base instanceof org.bukkit.entity.Tameable tameable) || !tameable.isTamed()) return null;
+        org.bukkit.entity.AnimalTamer owner = tameable.getOwner();
+        if (!(owner instanceof LivingEntity living) || !validTarget(living)) return null;
+        Location at = living.getLocation();
+        if (origin == null || at == null || origin.getWorld() == null
+                || !origin.getWorld().equals(at.getWorld())) return null;
+        return safeDistance(origin, at) <= profile.sightRadius ? living : null;
+    }
+
+    private boolean selectorTargetMatches(LivingEntity entity) {
+        if (entity == null || !validTarget(entity)) return false;
+        if (selectorTargetMode == AiProfile.TargetMode.THREAT) return threat != null && threat.contains(entity.getUniqueId());
+        if (selectorTargetMode == AiProfile.TargetMode.FACTION) {
+            String faction = dev.helstera.api.behavior.Factions.factionOf(entity);
+            if (selectorFactionAllied) {
+                return dev.helstera.api.behavior.Factions.table() != null
+                        && dev.helstera.api.behavior.Factions.table().alliedFactions(faction, selectorTargetFaction);
+            }
+            return selectorFactionHostile
+                    ? faction == null || selectorTargetFaction == null
+                    || !faction.equalsIgnoreCase(selectorTargetFaction)
+                    : faction != null && selectorTargetFaction != null
+                    && faction.equalsIgnoreCase(selectorTargetFaction);
+        }
+        return targetMatches(entity, selectorTargetMode);
+    }
+
+    private static boolean targetMatches(LivingEntity entity, AiProfile.TargetMode mode) {
+        if (entity == null || mode == null) return false;
+        return switch (mode) {
+            case NONE -> false;
+            case PLAYERS -> entity instanceof Player;
+            case LIVING -> true;
+            case MOBS -> entity instanceof org.bukkit.entity.Mob;
+            case MONSTERS -> entity instanceof org.bukkit.entity.Monster;
+            case ANIMALS -> entity instanceof org.bukkit.entity.Animals;
+            case VILLAGERS -> entity instanceof org.bukkit.entity.Villager;
+            case OWNER, THREAT, FACTION -> false;
+        };
+    }
+
+    private void attackEntity(LivingEntity entity) {
+        combatTarget = entity;
+        bus.post(new ModelPreTargetEvent(inst, entity));
+        if (entity instanceof Player player) { attack(player); return; }
+        long now = System.currentTimeMillis();
+        if (now - lastAttack < profile.attackCooldown * 1000L) { faceToward(entity.getLocation()); return; }
+        lastAttack = now;
+        if (anim != null) anim.intent(EntityAnimationStateMachine.AnimState.ATTACK);
+        faceToward(entity.getLocation());
+    }
+
+    private void rangedAttack(LivingEntity entity) {
+        if (!validTarget(entity)) return;
+        long now = System.currentTimeMillis();
+        if (now - lastAttack < profile.attackCooldown * 1000L) {
+            faceToward(entity.getLocation());
+            return;
+        }
+        Entity base = inst.entity();
+        if (!(base instanceof org.bukkit.projectiles.ProjectileSource source)) {
+            attackEntity(entity);
+            return;
+        }
+        Location origin = base.getLocation().clone().add(0, 1.5, 0);
+        Vector direction = entity.getLocation().clone().add(0, 1.0, 0)
+                .subtract(origin).toVector();
+        if (direction.lengthSquared() < 0.001) return;
+        lastAttack = now;
+        combatTarget = entity;
+        target = entity instanceof Player player ? player : null;
+        bus.post(new ModelPreTargetEvent(inst, entity));
+
+        org.bukkit.entity.Projectile projectile = launchConfiguredProjectile(source, profile.rangedProjectileType,
+                direction.normalize().multiply(profile.rangedProjectileSpeed));
+        if (projectile == null) {
+            attackEntity(entity);
+            return;
+        }
+        projectile.setGravity(profile.rangedProjectileGravity);
+        if (projectile instanceof org.bukkit.entity.AbstractArrow arrow) {
+            arrow.setDamage(profile.rangedProjectileDamage);
+            arrow.setPierceLevel(profile.rangedProjectilePierce);
+            arrow.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
+        }
+        org.bukkit.NamespacedKey key;
+        if (profile.rangedHitSkill != null
+                && (key = dev.helstera.ai.skill.SkillTriggers.projectileKey("projectile_skill")) != null) {
+            projectile.getPersistentDataContainer().set(key,
+                    org.bukkit.persistence.PersistentDataType.STRING, profile.rangedHitSkill);
+        }
+        if (profile.rangedProjectileFireTicks > 0
+                && (key = dev.helstera.ai.skill.SkillTriggers.projectileKey("projectile_fire")) != null) {
+            projectile.getPersistentDataContainer().set(key,
+                    org.bukkit.persistence.PersistentDataType.INTEGER, profile.rangedProjectileFireTicks);
+        }
+        if (profile.rangedProjectileExplosion > 0
+                && (key = dev.helstera.ai.skill.SkillTriggers.projectileKey("projectile_explosion")) != null) {
+            projectile.getPersistentDataContainer().set(key,
+                    org.bukkit.persistence.PersistentDataType.DOUBLE, profile.rangedProjectileExplosion);
+        }
+        if (profile.rangedProjectileMaxHits > 0
+                && (key = dev.helstera.ai.skill.SkillTriggers.projectileKey("projectile_max_hits")) != null) {
+            projectile.getPersistentDataContainer().set(key,
+                    org.bukkit.persistence.PersistentDataType.INTEGER, profile.rangedProjectileMaxHits);
+        }
+        if (profile.rangedProjectilePotion != null
+                && (key = dev.helstera.ai.skill.SkillTriggers.projectileKey("projectile_potion")) != null) {
+            projectile.getPersistentDataContainer().set(key,
+                    org.bukkit.persistence.PersistentDataType.STRING, profile.rangedProjectilePotion);
+        }
+        if (profile.rangedProjectileTracking && profile.rangedProjectileTrackingTicks > 0) {
+            dev.helstera.ai.skill.SkillCatalog.trackProjectile(projectile, entity,
+                    profile.rangedProjectileSpeed, profile.rangedProjectileTrackingTicks);
+        }
+        if (anim != null) anim.intent(EntityAnimationStateMachine.AnimState.ATTACK);
+        faceToward(entity.getLocation());
+    }
+
+    private static org.bukkit.entity.Projectile launchConfiguredProjectile(
+            org.bukkit.projectiles.ProjectileSource source, String rawType, Vector velocity) {
+        String type = rawType == null ? "ARROW" : rawType.trim().toUpperCase(java.util.Locale.ROOT);
+        try {
+            return switch (type) {
+                case "SNOWBALL" -> source.launchProjectile(org.bukkit.entity.Snowball.class, velocity);
+                case "EGG" -> source.launchProjectile(org.bukkit.entity.Egg.class, velocity);
+                case "FIREBALL" -> source.launchProjectile(org.bukkit.entity.Fireball.class, velocity);
+                case "SMALL_FIREBALL", "SMALLFIREBALL" -> source.launchProjectile(org.bukkit.entity.SmallFireball.class, velocity);
+                case "WITHER_SKULL", "WITHERSKULL" -> source.launchProjectile(org.bukkit.entity.WitherSkull.class, velocity);
+                case "DRAGON_FIREBALL", "DRAGONFIREBALL" -> source.launchProjectile(org.bukkit.entity.DragonFireball.class, velocity);
+                case "TRIDENT" -> source.launchProjectile(org.bukkit.entity.Trident.class, velocity);
+                default -> source.launchProjectile(org.bukkit.entity.Arrow.class, velocity);
+            };
+        } catch (IllegalArgumentException | IllegalStateException ignored) {
+            return null;
+        }
+    }
+
+    private void leapAtTarget(LivingEntity entity, Location origin) {
+        if (!validTarget(entity) || origin == null) return;
+        long now = System.currentTimeMillis();
+        if (now - lastAttack < profile.attackCooldown * 1000L) return;
+        Vector jump = entity.getLocation().toVector().subtract(origin.toVector());
+        jump.setY(Math.max(0.35, profile.leapStrength));
+        if (jump.lengthSquared() < 0.001) return;
+        lastAttack = now;
+        combatTarget = entity;
+        target = entity instanceof Player player ? player : null;
+        bus.post(new ModelPreTargetEvent(inst, entity));
+        moveBy(jump.normalize().multiply(Math.max(profile.moveSpeed, profile.leapStrength)), origin);
+        if (anim != null) anim.intent(EntityAnimationStateMachine.AnimState.ATTACK);
+        faceToward(entity.getLocation());
+    }
+
     private void attack(Player targetPlayer) {
         // 在设定目标前派发 on-pre-target：允许技能在此之前修改仇恨或施加效果
-        bus.post(new ModelPreTargetEvent(inst, targetPlayer));
         this.target = targetPlayer;
+        this.combatTarget = targetPlayer;
         long now = System.currentTimeMillis();
         if (now - lastAttack < profile.attackCooldown * 1000L) {
             faceToward(targetPlayer.getLocation());
@@ -305,22 +818,18 @@ public final class AiController {
      *
      * @return 本次真正命中的玩家；目标无效、跨世界或命中盒没扫到时返回 null
      */
-    public Player hitTarget() {
-        if (target == null || !target.isOnline() || target.isDead()) return null;
-        Location t = target.getLocation();
+    public LivingEntity hitTarget() {
+        LivingEntity victim = combatTarget != null ? combatTarget : target;
+        if (victim == null || !victim.isValid() || victim.isDead()) return null;
+        Location location = victim.getLocation();
         Location me = inst.location();
-        if (me == null || t.getWorld() == null || !t.getWorld().equals(me.getWorld())) return null;
-        if (!inHitbox(t)) return null;
-        // 应用等级缩放：damage() 直接返回 base * growth^(level-1)
-        // 无等级配置时 damage() = 1.0（identity），等价于不缩放
+        if (me == null || location.getWorld() == null || !location.getWorld().equals(me.getWorld())) return null;
+        if (!inHitbox(location)) return null;
         double damage = profile.attackDamage * scaledDamageFactor();
-        target.damage(damage, inst.entity());
-        return target;
+        victim.damage(damage, inst.entity());
+        return victim;
     }
 
-    /**
-     * 当前等级对应的伤害缩放倍数；未配置等级系统时返回 1.0。
-     */
     private double scaledDamageFactor() {
         int level = inst.level > 0 ? inst.level : profile.level;
         return dev.helstera.ai.level.MobLevel.compute(level,
@@ -384,8 +893,9 @@ public final class AiController {
     }
 
     private void flee(Location loc) {
-        if (target != null && target.isOnline()) {
-            Vector away = loc.toVector().subtract(target.getLocation().toVector()).normalize().multiply(profile.moveSpeed);
+        LivingEntity fleeTarget = combatTarget != null ? combatTarget : target;
+        if (validTarget(fleeTarget)) {
+            Vector away = loc.toVector().subtract(fleeTarget.getLocation().toVector()).normalize().multiply(profile.moveSpeed);
             moveBy(away, loc);
         }
         if (anim != null) anim.enterLocomotion();
@@ -479,8 +989,9 @@ public final class AiController {
     /** 侧移：朝垂直于目标方向的随机侧前方挪一格，用来脱离墙角。 */
     private Location sidestepFrom(Location from) {
         Vector toTarget = null;
-        if (target != null && target.getLocation() != null) {
-            toTarget = target.getLocation().toVector().subtract(from.toVector());
+        LivingEntity currentTarget = combatTarget != null ? combatTarget : target;
+        if (currentTarget != null && currentTarget.getLocation() != null) {
+            toTarget = currentTarget.getLocation().toVector().subtract(from.toVector());
             toTarget.setY(0);
         }
         double base = toTarget == null || toTarget.lengthSquared() < 0.001

@@ -72,6 +72,102 @@ class MmConditionsTest {
     }
 
     @Test
+    void cancelledConditionMapsToEventAwareRuntimeCondition() {
+        assertEquals("is-cancelled", t("?isCancelled"));
+        assertEquals("is-cancelled", t("?is-canceled"));
+        assertTrue(translated("?isCancelled"));
+    }
+
+    @Test
+    void foodLevelConditionMapsWithItsComparator() {
+        assertEquals("food-level <14", t("?foodLevel{<14}"));
+        assertEquals("food-level 14", t("?foodLevelIs{14}"));
+        assertTrue(translated("?foodLevel{<14}"));
+        assertFalse(translated("?foodLevel"));
+    }
+
+    @Test
+    void airLevelConditionMapsWithItsComparator() {
+        assertEquals("air-level <120", t("?airLevel{<120}"));
+        assertEquals("air-level 120", t("?remainingAir{120}"));
+        assertTrue(translated("?airLevel{<120}"));
+        assertFalse(translated("?airLevel"));
+    }
+
+    @Test
+    void damageCauseConditionMapsEventCause() {
+        assertEquals("damage-cause ENTITY_ATTACK", t("?damageCause{ENTITY_ATTACK}"));
+        assertTrue(translated("?damageCause{ENTITY_ATTACK}"));
+        assertFalse(translated("?damageCause"));
+    }
+
+    @Test
+    void hasItemConditionMapsItemAndAmountArguments() {
+        assertEquals("has-item DIAMOND >=2", t("?hasItem{item=DIAMOND;amount=>=2}"));
+        assertTrue(translated("?hasItem{item=DIAMOND;amount=>=2}"));
+        assertFalse(translated("?hasItem"));
+    }
+
+    @Test
+    void vehicleAndMotionConditionsMapToRuntimeConditions() {
+        assertEquals("mounted", t("?mounted"));
+        assertEquals("mounted", t("?isMounted"));
+        assertEquals("moving", t("?isMoving"));
+        assertEquals("has-passenger", t("?hasPassenger"));
+        assertEquals("has-passenger", t("?hasPassengers"));
+        assertEquals("is-leashed", t("?isLeashed"));
+        assertEquals("is-leashed", t("?leashed"));
+        assertEquals("has-owner", t("?hasOwner"));
+        assertEquals("has-parent", t("?hasParent"));
+        assertEquals("is-parent", t("?isParent"));
+        assertEquals("is-parent", t("?parent"));
+        assertEquals("is-child", t("?isChild"));
+        assertEquals("is-child", t("?child"));
+        assertEquals("is-parent-alive", t("?isParentAlive"));
+        assertEquals("is-sibling", t("?isSibling"));
+        assertTrue(translated("?hasPassenger"));
+    }
+
+    @Test
+    void scoreboardTagConditionMapsItsTagAttribute() {
+        assertEquals("has-tag tag=BossDefeated", t("?hasTag{t=BossDefeated}"));
+        assertEquals("has-tag tag=BossDefeated", t("?hasScoreboardTag{tag=BossDefeated}"));
+        assertTrue(translated("?hasTag{t=BossDefeated}"));
+        assertFalse(translated("?hasTag"));
+    }
+
+    @Test
+    @DisplayName("target entity state conditions map to runtime aliases")
+    void targetStateConditionsMap() {
+        assertEquals("target-is-undead", t("?targetIsUndead"));
+        assertEquals("target-is-creature", t("?targetIsCreature"));
+        assertEquals("target-is-baby", t("?targetIsChild"));
+        assertEquals("target-is-adult", t("?targetIsAdult"));
+        assertEquals("target-is-tamed", t("?targetIsTamed"));
+        assertEquals("target-is-sheared", t("?targetIsSheared"));
+        assertEquals("target-is-saddled", t("?targetIsSaddled"));
+        assertEquals("target-is-powered", t("?targetIsCharged"));
+        assertEquals("target-is-sneaking", t("?targetIsSneaking"));
+        assertEquals("target-is-sprinting", t("?targetIsSprinting"));
+        assertEquals("target-is-flying", t("?targetIsFlying"));
+        assertEquals("target-is-blocking", t("?targetIsBlocking"));
+        assertEquals("target-is-gliding", t("?targetIsGliding"));
+        assertEquals("target-is-swimming", t("?targetIsSwimming"));
+        assertEquals("target-on-fire", t("?targetOnFire"));
+        assertEquals("target-in-air", t("?targetAirborne"));
+        assertEquals("target-in-water", t("?targetInWater"));
+        assertEquals("target-in-lava", t("?targetInLava"));
+        assertEquals("target-is-invisible", t("?targetIsInvisible"));
+        assertEquals("target-is-climbing", t("?targetIsClimbing"));
+        assertEquals("target-is-blocked", t("?targetIsBlocked"));
+        assertEquals("target-dead", t("?targetIsDead"));
+        assertEquals("target-on-ground", t("?targetIsOnGround"));
+        assertEquals("target-airborne", t("?targetIsAirborne"));
+        assertTrue(translated("?targetIsUndead"));
+        assertTrue(translated("?targetIsBlocking"));
+    }
+
+    @Test
     @DisplayName("比较号带 = 时按同向处理，不改变方向")
     void nonStrictComparisons() {
         assertEquals("health-below 0.5", t("?health{<=50%}"));

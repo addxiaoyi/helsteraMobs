@@ -151,4 +151,14 @@ class SkillActionsTest {
             assertTrue(all.containsKey(n), "动作 " + n + " 缺失");
         }
     }
+
+    @Test
+    @DisplayName("disguise mechanics are registered and safe without an instance")
+    void disguiseActionsRegisteredAndSafe() {
+        assertTrue(SkillCatalog.actions().containsKey("disguise"));
+        assertTrue(SkillCatalog.actions().containsKey("remove-disguise"));
+        factory("disguise").create(List.of("example/alternate")).accept(ctx());
+        factory("disguise").create(List.of()).accept(ctx());
+        factory("remove-disguise").create(List.of()).accept(ctx());
+    }
 }

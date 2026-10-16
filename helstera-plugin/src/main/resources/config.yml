@@ -194,6 +194,15 @@ debug:
   # 用途：跨版本验证渲染层，无需人工进服或 RCON / 网页通道。
   # 代价：会在世界出生点生成一个模型。仅调试用，生产环境请保持 false。
   self-test: false
+  self-test-entity-options: false
+  self-test-item-effects: false
+  self-test-loot: false
+  self-test-death-loot: false
+  self-test-spawner: false
+  self-test-events: false
+  self-test-audience: false
+  self-test-skilltree-persistence: false
+  self-test-skilltree-stage: write
   self-test-model: "example/emberling"
   self-test-delay-ticks: 40
 

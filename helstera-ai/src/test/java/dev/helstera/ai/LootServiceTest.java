@@ -194,6 +194,91 @@ class LootServiceTest {
     }
 
     @Test
+    @DisplayName("nested drop tables expand into concrete hits and reject cycles")
+    void expandsNestedTablesWithoutRecursionLoop() {
+        LootService s = service("""
+                tables:
+                  root:
+                    entries:
+                      - table: common
+                  common:
+                    entries:
+                      - item: DIAMOND
+                        amount-min: 2
+                        amount-max: 2
+                      - table: root
+                """);
+
+        var hits = s.rollPlan("root", 0);
+        assertEquals(1, hits.size());
+        assertEquals("DIAMOND", hits.get(0).entry().itemId());
+        assertEquals(2, hits.get(0).amount());
+    }
+
+    @Test
+    @DisplayName("drop entry conditions are evaluated before rolling")
+    void filtersEntriesByInjectedConditionEvaluator() {
+        LootService s = service("""
+                tables:
+                  t:
+                    entries:
+                      - item: DIAMOND
+                        conditions:
+                          - permission loot.vip
+                      - item: BREAD
+                """);
+        s.setConditionEvaluator((condition, location, killer) -> "permission loot.vip".equals(condition));
+
+        var hits = s.rollPlan(s.table("t"), 0, new Random(3));
+        assertEquals(List.of("DIAMOND", "BREAD"),
+                hits.stream().map(hit -> hit.entry().itemId()).toList());
+
+        s.setConditionEvaluator((condition, location, killer) -> false);
+        hits = s.rollPlan(s.table("t"), 0, new Random(3));
+        assertEquals(List.of("BREAD"), hits.stream().map(hit -> hit.entry().itemId()).toList());
+    }
+
+    @Test
+    @DisplayName("table experience supports fixed and ranged values")
+    void rollsTableExperience() {
+        LootService fixed = service("""
+                tables:
+                  t:
+                    experience: 12
+                    entries: []
+                """);
+        assertEquals(12, fixed.experience("t", new Random(1)));
+
+        LootService ranged = service("""
+                tables:
+                  t:
+                    experience-min: 4
+                    experience-max: 8
+                    entries: []
+                """);
+        for (int i = 0; i < 20; i++) {
+            assertTrue(ranged.experience("t", new Random(i)) >= 4
+                    && ranged.experience("t", new Random(i)) <= 8);
+        }
+    }
+
+    @Test
+    @DisplayName("dynamic chance requires an evaluator and uses its resolved probability")
+    void evaluatesDynamicChanceExplicitly() {
+        LootService s = service("""
+                tables:
+                  t:
+                    entries:
+                      - item: DIAMOND
+                        dynamic-chance: luck-based
+                """);
+        assertTrue(s.rollPlan(s.table("t"), 0, new Random(1)).isEmpty());
+        s.setDynamicChanceEvaluator((expression, location, killer, luck) ->
+                "luck-based".equals(expression) ? 1.0 : 0.0);
+        assertEquals(1, s.rollPlan(s.table("t"), 0, new Random(1)).size());
+    }
+
+    @Test
     @DisplayName("表名大小写不敏感")
     void tableNamesAreCaseInsensitive() {
         LootService s = service("""

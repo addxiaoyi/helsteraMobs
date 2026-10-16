@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
@@ -43,6 +45,16 @@ public final class LootService {
         int tierOf(Player killer);
     }
 
+    @FunctionalInterface
+    public interface ConditionEvaluator {
+        boolean test(String condition, org.bukkit.Location location, Player killer);
+    }
+
+    @FunctionalInterface
+    public interface DynamicChanceEvaluator {
+        double evaluate(String expression, org.bukkit.Location location, Player killer, double luck);
+    }
+
     private final Map<String, DropTable> tables = new ConcurrentHashMap<>();
     private final Logger log;
     private final Random random = new Random();
@@ -51,6 +63,8 @@ public final class LootService {
     private volatile java.util.function.Function<String, ItemStack> customItemResolver;
     /** 击杀者档位解析；未注入时按「未知」处理，门槛型掉落照常参与掷骰。 */
     private volatile TierResolver tierResolver;
+    private volatile ConditionEvaluator conditionEvaluator;
+    private volatile DynamicChanceEvaluator dynamicChanceEvaluator;
 
     public LootService(Logger log) {
         this.log = log;
@@ -59,6 +73,14 @@ public final class LootService {
     /** 注入击杀者档位解析器，使 {@code min-tier-level} 在运行期生效。 */
     public void setTierResolver(TierResolver resolver) {
         this.tierResolver = resolver;
+    }
+
+    public void setConditionEvaluator(ConditionEvaluator evaluator) {
+        this.conditionEvaluator = evaluator;
+    }
+
+    public void setDynamicChanceEvaluator(DynamicChanceEvaluator evaluator) {
+        this.dynamicChanceEvaluator = evaluator;
     }
 
     /**
@@ -120,6 +142,19 @@ public final class LootService {
         return tables.size();
     }
 
+    /** Rolls table-level experience without affecting the item drop random stream. */
+    public int experience(String tableName, Random rnd) {
+        DropTable table = table(tableName);
+        if (table == null) return 0;
+        int min = table.experienceMin();
+        int max = table.experienceMax();
+        return min >= max ? min : min + rnd.nextInt(max - min + 1);
+    }
+
+    public int experience(String tableName) {
+        return experience(tableName, random);
+    }
+
     public List<String> warnings() {
         return List.copyOf(problems);
     }
@@ -138,7 +173,7 @@ public final class LootService {
 
     /** 可注入随机源的纯函数重载，供单元测试使用。 */
     public List<Hit> rollPlan(DropTable t, double luck, Random rnd) {
-        return rollPlan(t, luck, rnd, -1);
+        return rollPlan(t, luck, rnd, -1, null, null);
     }
 
     /**
@@ -148,22 +183,70 @@ public final class LootService {
      * 免得因为拿不到档位就把所有带门槛的掉落全吞掉。</p>
      */
     public List<Hit> rollPlan(DropTable t, double luck, Random rnd, int killerTier) {
+        return rollPlan(t, luck, rnd, killerTier, null, null);
+    }
+
+    private List<Hit> rollPlan(DropTable t, double luck, Random rnd, int killerTier,
+                               org.bukkit.Location location, Player killer) {
+        return rollPlan(t, luck, rnd, killerTier, new HashSet<>(), 0, location, killer);
+    }
+
+    private List<Hit> rollPlan(DropTable t, double luck, Random rnd, int killerTier,
+                               Set<String> stack, int depth,
+                               org.bukkit.Location location, Player killer) {
         if (t == null || t.isEmpty()) return List.of();
+        if (depth >= 32 || !stack.add(t.name())) return List.of();
         List<Hit> hits = new ArrayList<>(t.entries().size());
-        for (DropTable.Entry e : t.entries()) {
+        try {
+            for (DropTable.Entry e : t.entries()) {
+
             // 击杀者档位门槛：不满足时直接跳过，连 chance 都不掷
-            if (e.minTierLevel() != null && killerTier >= 0 && killerTier < e.minTierLevel()) {
-                continue;
-            }
-            double chance = e.chance();
-            if (e.luckScaling()) {
+                if (e.minTierLevel() != null && killerTier >= 0 && killerTier < e.minTierLevel()) {
+                    continue;
+                }
+                double chance = e.chance();
+                if (e.chanceExpression() != null) {
+                    DynamicChanceEvaluator evaluator = dynamicChanceEvaluator;
+                    if (evaluator == null) continue;
+                    try {
+                        chance = evaluator.evaluate(e.chanceExpression(), location, killer, luck);
+                    } catch (RuntimeException ignored) {
+                        continue;
+                    }
+                }
+                if (e.luckScaling()) {
                 // 幸运值只往上加成，永不把 chance 推到 1 以外
-                chance = clampChance(chance + Math.max(0, luck) * t.luckFactor(), 0, 1);
+                    chance = clampChance(chance + Math.max(0, luck) * t.luckFactor(), 0, 1);
+                }
+                if (rnd.nextDouble() >= chance) continue;
+                if (!conditionsPass(e, location, killer)) continue;
+                if (e.itemId().regionMatches(true, 0, "table:", 0, 6)) {
+                    DropTable child = table(e.itemId().substring(6).trim());
+                    if (child != null) {
+                        hits.addAll(rollPlan(child, luck, rnd, killerTier, stack, depth + 1, location, killer));
+                    }
+                } else {
+                    hits.add(new Hit(e, pickAmount(e, rnd)));
+                }
             }
-            if (rnd.nextDouble() >= chance) continue;
-            hits.add(new Hit(e, pickAmount(e, rnd)));
+            return hits;
+        } finally {
+            stack.remove(t.name());
         }
-        return hits;
+    }
+
+    private boolean conditionsPass(DropTable.Entry entry, org.bukkit.Location location, Player killer) {
+        if (entry.conditions() == null || entry.conditions().isEmpty()) return true;
+        ConditionEvaluator evaluator = conditionEvaluator;
+        if (evaluator == null) return false;
+        for (String condition : entry.conditions()) {
+            try {
+                if (!evaluator.test(condition, location, killer)) return false;
+            } catch (RuntimeException ignored) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -282,7 +365,7 @@ public final class LootService {
      */
     public int rollAndDrop(org.bukkit.Location loc, String tableName, double luck, Player killer) {
         DropTable t = table(tableName);
-        List<ItemStack> items = materialize(rollPlan(t, luck, random, tierOf(killer)));
+        List<ItemStack> items = materialize(rollPlan(t, luck, random, tierOf(killer), loc, killer));
         drop(loc, items);
         return items.size();
     }
@@ -309,7 +392,7 @@ public final class LootService {
         } else {
             effectiveTier = Math.max(playerTier, mobLevel);
         }
-        List<ItemStack> items = materialize(rollPlan(t, luck, random, effectiveTier));
+        List<ItemStack> items = materialize(rollPlan(t, luck, random, effectiveTier, loc, killer));
         drop(loc, items);
         return items.size();
     }

@@ -2,6 +2,7 @@ package dev.helstera.api.integration;
 
 import java.util.Collection;
 import java.util.Optional;
+import org.bukkit.Location;
 
 /**
  * 集成注册表：注册和查询 MythicMobs、ItemAdder、CraftEngine 等适配器。
@@ -22,4 +23,13 @@ public interface IntegrationRegistry {
 
     /** 生成缺失依赖报告。 */
     String dependencyReport();
+
+    default Boolean containsRegion(String region, Location location) {
+        for (IntegrationAdapter adapter : all()) {
+            if (!adapter.hasCapability(Capability.REGION_QUERY)) continue;
+            Boolean answer = adapter.containsRegion(region, location);
+            if (answer != null) return answer;
+        }
+        return null;
+    }
 }

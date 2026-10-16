@@ -13,5 +13,7 @@ public enum Capability {
     /** 自定义物品 ID 解析（ItemAdder/CraftEngine）。 */
     CUSTOM_ITEM_RESOLVE,
     /** 资源包合并。 */
-    RESOURCEPACK_MERGE
+    RESOURCEPACK_MERGE,
+    /** External region lookup such as WorldGuard. */
+    REGION_QUERY
 }

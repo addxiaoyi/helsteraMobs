@@ -1,0 +1,25 @@
+name: Trigger Probe
+model: example/emberling
+entity:
+  type: ZOMBIE
+  no-ai: false
+  silent: true
+ai:
+  triggers:
+    on-damage:
+      require:
+        - damage-cause ENTITY_ATTACK
+      do:
+        - set-item DIAMOND_SWORD main-hand 1
+        - cancel-event
+        - cast-skill cancelled_damage_probe
+    on-attacked:
+      do:
+        - set-name &bATTACKED_TRIGGER_OK
+    on-teleport:
+      do:
+        - set-name &dTELEPORT_TRIGGER_OK
+    on-potion-effect-end:
+      do:
+        - set-name &ePOTION_END_TRIGGER_OK
+        - set-item GOLD_INGOT off-hand 1

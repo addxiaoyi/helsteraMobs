@@ -1,0 +1,22 @@
+tables:
+  common:
+    entries:
+      - item: BREAD
+        amount-min: 1
+        amount-max: 1
+        chance: 1.0
+  integration_death:
+    experience-min: 9
+    experience-max: 11
+    entries:
+      - item: DIAMOND
+        amount-min: 2
+        amount-max: 2
+        chance-expression: "1.0"
+        conditions:
+          - world-is integration-world
+      - item: BREAD
+        amount-min: 1
+        chance: 1.0
+        conditions:
+          - world-is must-not-match

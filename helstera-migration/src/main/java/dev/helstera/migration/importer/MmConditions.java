@@ -70,10 +70,87 @@ public final class MmConditions {
 
         // ---- 无参等价 ----
         if ("hastarget".equals(name)) return new Mapped("has-target", true);
+        if ("iscancelled".equals(name) || "iscanceled".equals(name)
+                || "cancelled".equals(name) || "canceled".equals(name)) {
+            return new Mapped("is-cancelled", true);
+        }
+        if ("foodlevel".equals(name) || "foodlevelis".equals(name)) {
+            return body == null || body.isBlank()
+                    ? new Mapped(s, false) : new Mapped("food-level " + body, true);
+        }
+        if ("airlevel".equals(name) || "remainingair".equals(name) || "air".equals(name)) {
+            return body == null || body.isBlank()
+                    ? new Mapped(s, false) : new Mapped("air-level " + body, true);
+        }
+        if ("damagecause".equals(name) || "cause".equals(name)) {
+            return body == null || body.isBlank()
+                    ? new Mapped(s, false) : new Mapped("damage-cause " + body, true);
+        }
+        if ("hasitem".equals(name) || "itemcount".equals(name)) {
+            return body == null || body.isBlank()
+                    ? new Mapped(s, false) : new Mapped("has-item " + normalizeItemArgs(body), true);
+        }
+        if ("hastag".equals(name) || "hasscoreboardtag".equals(name)) {
+            if (body == null || body.isBlank()) return new Mapped(s, false);
+            String tag = body.trim().replaceFirst("(?i)^(tag|t)\\s*=\\s*", "");
+            return tag.isBlank() ? new Mapped(s, false) : new Mapped("has-tag tag=" + tag, true);
+        }
+        if ("mounted".equals(name) || "ismounted".equals(name)) {
+            return new Mapped("mounted", true);
+        }
+        if ("moving".equals(name) || "ismoving".equals(name)) {
+            return new Mapped("moving", true);
+        }
+        if ("haspassenger".equals(name) || "haspassengers".equals(name)) {
+            return new Mapped("has-passenger", true);
+        }
+        if ("isleashed".equals(name) || "leashed".equals(name)) {
+            return new Mapped("is-leashed", true);
+        }
+        if ("hasowner".equals(name)) return new Mapped("has-owner", true);
+        if ("hasparent".equals(name)) return new Mapped("has-parent", true);
+        if ("isparent".equals(name) || "parent".equals(name)) return new Mapped("is-parent", true);
+        if ("ischild".equals(name) || "child".equals(name)) return new Mapped("is-child", true);
+        if ("isparentalive".equals(name) || "parentalive".equals(name)) {
+            return new Mapped("is-parent-alive", true);
+        }
+        if ("issibling".equals(name) || "sibling".equals(name)) return new Mapped("is-sibling", true);
         if ("targetisplayer".equals(name)) return new Mapped("target-is player", true);
         if ("targetismob".equals(name) || "targetisliving".equals(name)) {
             return new Mapped("target-is minecraft", true);
         }
+        if ("targetisundead".equals(name)) return new Mapped("target-is-undead", true);
+        if ("targetiscreature".equals(name)) return new Mapped("target-is-creature", true);
+        if ("targetisbaby".equals(name) || "targetischild".equals(name)) {
+            return new Mapped("target-is-baby", true);
+        }
+        if ("targetisadult".equals(name)) return new Mapped("target-is-adult", true);
+        if ("targetistamed".equals(name)) return new Mapped("target-is-tamed", true);
+        if ("targetissheared".equals(name)) return new Mapped("target-is-sheared", true);
+        if ("targetissaddled".equals(name)) return new Mapped("target-is-saddled", true);
+        if ("targetispowered".equals(name) || "targetischarged".equals(name)) {
+            return new Mapped("target-is-powered", true);
+        }
+        if ("targetissneaking".equals(name)) return new Mapped("target-is-sneaking", true);
+        if ("targetissprinting".equals(name)) return new Mapped("target-is-sprinting", true);
+        if ("targetisflying".equals(name)) return new Mapped("target-is-flying", true);
+        if ("targetisblocking".equals(name)) return new Mapped("target-is-blocking", true);
+        if ("targetisgliding".equals(name)) return new Mapped("target-is-gliding", true);
+        if ("targetisswimming".equals(name)) return new Mapped("target-is-swimming", true);
+        if ("targetonfire".equals(name) || "targetburning".equals(name)) {
+            return new Mapped("target-on-fire", true);
+        }
+        if ("targetinair".equals(name) || "targetairborne".equals(name)) {
+            return new Mapped("target-in-air", true);
+        }
+        if ("targetinwater".equals(name)) return new Mapped("target-in-water", true);
+        if ("targetinlava".equals(name)) return new Mapped("target-in-lava", true);
+        if ("targetisinvisible".equals(name)) return new Mapped("target-is-invisible", true);
+        if ("targetisclimbing".equals(name)) return new Mapped("target-is-climbing", true);
+        if ("targetisblocked".equals(name)) return new Mapped("target-is-blocked", true);
+        if ("targetisdead".equals(name)) return new Mapped("target-dead", true);
+        if ("targetisonground".equals(name)) return new Mapped("target-on-ground", true);
+        if ("targetisairborne".equals(name)) return new Mapped("target-airborne", true);
 
         return new Mapped(s, false);
     }
@@ -128,6 +205,17 @@ public final class MmConditions {
     private static String fmt(double d) {
         if (d == Math.rint(d)) return String.valueOf((long) d);
         return String.valueOf(d);
+    }
+
+    private static String normalizeItemArgs(String body) {
+        List<String> args = new ArrayList<>();
+        for (String part : body.split("[;,]")) {
+            String value = part.trim();
+            int equals = value.indexOf('=');
+            if (equals > 0) value = value.substring(equals + 1).trim();
+            if (!value.isBlank()) args.add(value);
+        }
+        return String.join(" ", args);
     }
 
     /**
