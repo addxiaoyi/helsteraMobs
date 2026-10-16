@@ -3,6 +3,7 @@ package dev.helstera.ai;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -22,6 +23,8 @@ public final class AiProfile {
     public double attackRadius = 2.0;
     public double attackDamage = 3.0;
     public double attackCooldown = 1.2;
+    /** Maximum distance from which an entity may damage this mob. */
+    public double maxCombatDistance = 256.0;
     public double fleeHealthRatio = 0.3;
     public double patrolRadius = 8;
     public double patrolInterval = 4.0;
@@ -30,6 +33,31 @@ public final class AiProfile {
     public boolean canFlee = false;
     public boolean canPatrol = true;
     public boolean canAttack = true;
+    public boolean rangedAttack = false;
+    public double rangedAttackRange = 16.0;
+    public double rangedProjectileSpeed = 1.6;
+    public double rangedProjectileDamage = 3.0;
+    public String rangedProjectileType = "ARROW";
+    public String rangedHitSkill;
+    public boolean rangedProjectileGravity = true;
+    public int rangedProjectileFireTicks = 0;
+    public double rangedProjectileExplosion = 0;
+    public int rangedProjectileMaxHits = 0;
+    public String rangedProjectilePotion;
+    public int rangedProjectilePierce = 0;
+    public boolean rangedProjectileTracking = false;
+    public int rangedProjectileTrackingTicks = 100;
+    public boolean leapAtTarget = false;
+    public double leapRange = 8.0;
+    public double leapStrength = 0.7;
+    public boolean canSwim = true;
+    public boolean canOpenDoors = false;
+    public boolean avoidSun = false;
+    public String temptItem;
+    public double temptRange = 10.0;
+    /** Preserved goal/target selector strings from MythicMobs migration. */
+    public final List<String> goals = new ArrayList<>();
+    public final List<String> targets = new ArrayList<>();
 
     /**
      * 本档案所属阵营名；null 表示不归队（与所有阵营敌对）。
@@ -165,6 +193,7 @@ public final class AiProfile {
         this.attackRadius = base.attackRadius;
         this.attackDamage = base.attackDamage;
         this.attackCooldown = base.attackCooldown;
+        this.maxCombatDistance = base.maxCombatDistance;
         this.fleeHealthRatio = base.fleeHealthRatio;
         this.patrolRadius = base.patrolRadius;
         this.patrolInterval = base.patrolInterval;
@@ -173,6 +202,28 @@ public final class AiProfile {
         this.canFlee = base.canFlee;
         this.canPatrol = base.canPatrol;
         this.canAttack = base.canAttack;
+        this.rangedAttack = base.rangedAttack;
+        this.rangedAttackRange = base.rangedAttackRange;
+        this.rangedProjectileSpeed = base.rangedProjectileSpeed;
+        this.rangedProjectileDamage = base.rangedProjectileDamage;
+        this.rangedProjectileType = base.rangedProjectileType;
+        this.rangedHitSkill = base.rangedHitSkill;
+        this.rangedProjectileGravity = base.rangedProjectileGravity;
+        this.rangedProjectileFireTicks = base.rangedProjectileFireTicks;
+        this.rangedProjectileExplosion = base.rangedProjectileExplosion;
+        this.rangedProjectileMaxHits = base.rangedProjectileMaxHits;
+        this.rangedProjectilePotion = base.rangedProjectilePotion;
+        this.rangedProjectilePierce = base.rangedProjectilePierce;
+        this.rangedProjectileTracking = base.rangedProjectileTracking;
+        this.rangedProjectileTrackingTicks = base.rangedProjectileTrackingTicks;
+        this.leapAtTarget = base.leapAtTarget;
+        this.leapRange = base.leapRange;
+        this.leapStrength = base.leapStrength;
+        this.canSwim = base.canSwim;
+        this.canOpenDoors = base.canOpenDoors;
+        this.avoidSun = base.avoidSun;
+        this.temptItem = base.temptItem;
+        this.temptRange = base.temptRange;
         this.faction = base.faction;
         this.immunity = base.immunity;
         this.immunityTable = base.immunityTable;
@@ -183,6 +234,8 @@ public final class AiProfile {
         this.threatDistanceWeight = base.threatDistanceWeight;
         this.require.addAll(base.require);
         this.onDecision.addAll(base.onDecision);
+        this.goals.addAll(base.goals);
+        this.targets.addAll(base.targets);
         this.phases.addAll(base.phases);
         for (var e : base.triggers.entrySet()) {
             TriggerSpec src = e.getValue();
@@ -197,6 +250,257 @@ public final class AiProfile {
         }
     }
 
+    public enum TargetMode { NONE, PLAYERS, LIVING, MOBS, MONSTERS, ANIMALS, VILLAGERS, OWNER, THREAT, FACTION }
+
+    public record SelectorPolicy(boolean chase, boolean attack, boolean patrol, boolean flee,
+                                 boolean swim, boolean openDoors, boolean avoidSun,
+                                 boolean playerTargets, TargetMode targetMode,
+                                 boolean lookAtPlayers, boolean avoidEntities,
+                                 boolean attackerFirst, boolean hurtByTargetFirst,
+                                 boolean rangedAttack, boolean leapAtTarget,
+                                 String targetFaction, boolean factionHostile,
+                                 boolean factionAllied, String temptItem, double temptRange,
+                                 List<String> unsupported) {
+        /** Returns the source selectors in the exact priority order used by this policy. */
+        public List<String> orderedGoals(List<String> source) {
+            return List.copyOf(orderedSelectors(source));
+        }
+
+        /** Returns target selectors in the exact priority order used by this policy. */
+        public List<String> orderedTargets(List<String> source) {
+            return List.copyOf(orderedSelectors(source));
+        }
+
+        /** Returns the first numeric priority for a goal category, or MAX_VALUE when absent. */
+        public int goalPriority(List<String> source, String category) {
+            if (category == null || category.isBlank()) return Integer.MAX_VALUE;
+            int best = Integer.MAX_VALUE;
+            for (String selector : orderedSelectors(source)) {
+                String token = selectorToken(selector);
+                if (goalCategory(token).equals(category.toLowerCase(Locale.ROOT))) {
+                    best = Math.min(best, selectorPriority(selector));
+                }
+            }
+            return best;
+        }
+
+        /** Keeps source compatibility for callers that only understood player targets. */
+        public SelectorPolicy(boolean chase, boolean attack, boolean patrol, boolean flee,
+                              boolean swim, boolean openDoors, boolean avoidSun,
+                              boolean playerTargets, boolean lookAtPlayers, boolean avoidEntities,
+                              boolean attackerFirst, boolean hurtByTargetFirst, List<String> unsupported) {
+            this(chase, attack, patrol, flee, swim, openDoors, avoidSun, playerTargets,
+                    playerTargets ? TargetMode.PLAYERS : TargetMode.NONE, lookAtPlayers,
+                    avoidEntities, attackerFirst, hurtByTargetFirst, false, false,
+                    null, false, false, null, 10.0, unsupported);
+        }
+    }
+
+    /** Resolves the currently supported MythicMobs selector tokens in configured priority order. */
+    public SelectorPolicy selectorPolicy() {
+        boolean chase = canChase;
+        boolean attack = canAttack;
+        boolean patrol = canPatrol;
+        boolean flee = canFlee;
+        boolean playerTargets = true;
+        TargetMode targetMode = TargetMode.PLAYERS;
+        boolean lookAtPlayers = false;
+        boolean avoidEntities = false;
+        boolean attackerFirst = false;
+        boolean hurtByTargetFirst = false;
+        boolean rangedAttack = this.rangedAttack;
+        boolean leapAtTarget = this.leapAtTarget;
+        String targetFaction = null;
+        boolean factionHostile = false;
+        boolean factionAllied = false;
+        String temptItem = this.temptItem;
+        double temptRange = this.temptRange;
+        boolean swim = canSwim;
+        boolean openDoors = canOpenDoors;
+        boolean avoidSunPolicy = avoidSun;
+        List<String> unsupported = new ArrayList<>();
+        for (String entry : orderedSelectors(goals)) {
+            String token = selectorToken(entry);
+            if (token == null) continue;
+            switch (token) {
+                case "clear" -> {
+                    chase = false;
+                    attack = false;
+                    patrol = false;
+                    flee = false;
+                    rangedAttack = false;
+                    leapAtTarget = false;
+                }
+                case "meleeattack", "melee_attack" -> attack = true;
+                case "rangedattack", "ranged_attack" -> { attack = true; rangedAttack = true; }
+                case "leapattarget", "leap_at_target" -> { attack = true; leapAtTarget = true; }
+                case "randomstroll", "random_stroll" -> patrol = true;
+                case "avoidentity", "avoid_entity" -> { flee = true; avoidEntities = true; }
+                // Panic uses the same flee/pathfinding policy as avoid-entity;
+                // the native goal differs in trigger conditions, not movement.
+                case "panic" -> flee = true;
+                case "tempt" -> {
+                    String item = selectorArgument(entry);
+                    if (item == null || item.isBlank()) item = temptItem;
+                    if (item == null || item.isBlank()) {
+                        unsupported.add("goal:tempt (item required)");
+                    } else {
+                        playerTargets = true;
+                        targetMode = TargetMode.PLAYERS;
+                        temptItem = item;
+                    }
+                }
+                case "followowner", "follow_owner" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.OWNER;
+                }
+                case "float", "swim" -> swim = true;
+                case "opendoors", "open_doors" -> openDoors = true;
+                case "avoidsun", "avoid_sun" -> avoidSunPolicy = true;
+                case "lookatplayers", "look_at_players" -> lookAtPlayers = true;
+                default -> unsupported.add("goal:" + token);
+            }
+        }
+        for (String entry : orderedSelectors(targets)) {
+            String token = selectorToken(entry);
+            if (token == null) continue;
+            String rawTarget = entry.trim().toLowerCase(Locale.ROOT);
+            int rawOffset = rawTarget.matches("\\d+\\s+.*") ? rawTarget.indexOf(' ') + 1 : 0;
+            String targetSpec = rawOffset > 0 ? rawTarget.substring(rawOffset).trim() : rawTarget;
+            if (targetSpec.equals("threat") || targetSpec.equals("highest_threat")
+                    || targetSpec.equals("threat_table")) {
+                playerTargets = false;
+                targetMode = TargetMode.THREAT;
+                continue;
+            }
+            if (targetSpec.startsWith("faction:")) {
+                String id = targetSpec.substring("faction:".length()).trim();
+                if (!id.isBlank()) {
+                    playerTargets = false;
+                    targetMode = TargetMode.FACTION;
+                    targetFaction = id;
+                }
+                continue;
+            }
+            if (targetSpec.startsWith("hostile_to_faction:")) {
+                String id = targetSpec.substring("hostile_to_faction:".length()).trim();
+                if (!id.isBlank()) {
+                    playerTargets = false;
+                    targetMode = TargetMode.FACTION;
+                    targetFaction = id;
+                    factionHostile = true;
+                }
+                continue;
+            }
+            if (targetSpec.startsWith("allied_to_faction:")) {
+                String id = targetSpec.substring("allied_to_faction:".length()).trim();
+                if (!id.isBlank()) {
+                    playerTargets = false;
+                    targetMode = TargetMode.FACTION;
+                    targetFaction = id;
+                    factionAllied = true;
+                }
+                continue;
+            }
+            switch (token) {
+                case "clear" -> { playerTargets = false; targetMode = TargetMode.NONE; }
+                case "players", "nearestplayer", "nearest_player" -> {
+                    playerTargets = true;
+                    targetMode = TargetMode.PLAYERS;
+                }
+                case "living", "nearest_living", "nearestliving" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.LIVING;
+                }
+                case "mobs", "nearestmob", "nearest_mob" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.MOBS;
+                }
+                case "monsters", "nearestmonster", "nearest_monster" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.MONSTERS;
+                }
+                case "animals", "nearestanimal", "nearest_animal" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.ANIMALS;
+                }
+                case "villagers", "nearestvillager", "nearest_villager" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.VILLAGERS;
+                }
+                case "owner", "owner_target", "owner_targeter" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.OWNER;
+                }
+                case "attacker" -> { playerTargets = false; targetMode = TargetMode.LIVING; attackerFirst = true; }
+                case "hurtbytarget", "hurt_by_target" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.LIVING;
+                    hurtByTargetFirst = true;
+                }
+                default -> unsupported.add("target:" + token);
+            }
+        }
+        return new SelectorPolicy(chase, attack, patrol, flee, swim, openDoors, avoidSunPolicy,
+                playerTargets, targetMode, lookAtPlayers, avoidEntities,
+                attackerFirst, hurtByTargetFirst, rangedAttack, leapAtTarget,
+                targetFaction, factionHostile, factionAllied, temptItem, temptRange,
+                List.copyOf(unsupported));
+    }
+
+    private static String selectorArgument(String raw) {
+        if (raw == null) return null;
+        String value = raw.trim();
+        if (value.matches("^\\d+\\s+.*")) value = value.replaceFirst("^\\d+\\s+", "");
+        int colon = value.indexOf(':');
+        if (colon >= 0 && colon + 1 < value.length()) return value.substring(colon + 1).trim();
+        String[] parts = value.split("\\s+", 2);
+        return parts.length == 2 ? parts[1].trim() : null;
+    }
+
+    private static List<String> orderedSelectors(List<String> selectors) {
+        List<String> ordered = new ArrayList<>(selectors == null ? List.of() : selectors);
+        ordered.sort(Comparator.comparingInt(AiProfile::selectorPriority));
+        return ordered;
+    }
+
+    private static int selectorPriority(String raw) {
+        if (raw == null) return Integer.MAX_VALUE;
+        String value = raw.trim();
+        if (!value.matches("^\\d+\\s+.*")) return Integer.MAX_VALUE;
+        try {
+            return Integer.parseInt(value.substring(0, value.indexOf(' ')));
+        } catch (NumberFormatException ignored) {
+            return Integer.MAX_VALUE;
+        }
+    }
+
+    private static String selectorToken(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String[] parts = raw.trim().toLowerCase(Locale.ROOT).split("\\s+");
+        int tokenIndex = parts.length > 1 && parts[0].matches("\\d+") ? 1 : 0;
+        return tokenIndex < parts.length ? parts[tokenIndex].replace('-', '_') : null;
+    }
+
+    private static String goalCategory(String token) {
+        if (token == null) return "";
+        return switch (token) {
+            case "panic", "avoid_entity", "avoidentity" -> "flee";
+            case "meleeattack", "melee_attack", "rangedattack", "ranged_attack",
+                    "leapattarget", "leap_at_target" -> "attack";
+            case "randomstroll", "random_stroll" -> "patrol";
+            default -> token;
+        };
+    }
+
+    private static double positive(double value, double fallback) {
+        return Double.isFinite(value) && value > 0 ? value : fallback;
+    }
+
+    private static double nonNegative(double value, double fallback) {
+        return Double.isFinite(value) && value >= 0 ? value : fallback;
+    }
+
     public static AiProfile fromSection(String name, ConfigurationSection s) {
         AiProfile p = new AiProfile(name);
         if (s == null) return p;
@@ -204,6 +508,7 @@ public final class AiProfile {
         p.attackRadius = s.getDouble("attack-radius", p.attackRadius);
         p.attackDamage = s.getDouble("attack-damage", p.attackDamage);
         p.attackCooldown = s.getDouble("attack-cooldown", p.attackCooldown);
+        p.maxCombatDistance = s.getDouble("max-combat-distance", p.maxCombatDistance);
         p.fleeHealthRatio = s.getDouble("flee-health-ratio", p.fleeHealthRatio);
         p.patrolRadius = s.getDouble("patrol-radius", p.patrolRadius);
         p.patrolInterval = s.getDouble("patrol-interval", p.patrolInterval);
@@ -212,6 +517,32 @@ public final class AiProfile {
         p.canFlee = s.getBoolean("can-flee", p.canFlee);
         p.canPatrol = s.getBoolean("can-patrol", p.canPatrol);
         p.canAttack = s.getBoolean("can-attack", p.canAttack);
+        p.rangedAttack = s.getBoolean("ranged-attack", p.rangedAttack);
+        p.rangedAttackRange = positive(s.getDouble("ranged-attack-range", p.rangedAttackRange), p.rangedAttackRange);
+        p.rangedProjectileSpeed = positive(s.getDouble("ranged-projectile-speed", p.rangedProjectileSpeed), p.rangedProjectileSpeed);
+        p.rangedProjectileDamage = nonNegative(s.getDouble("ranged-projectile-damage", p.rangedProjectileDamage), p.rangedProjectileDamage);
+        p.rangedProjectileType = s.getString("ranged-projectile-type", p.rangedProjectileType).trim().toUpperCase(Locale.ROOT);
+        p.rangedHitSkill = trimToNull(s.getString("ranged-hit-skill", p.rangedHitSkill));
+        p.rangedProjectileGravity = s.getBoolean("ranged-projectile-gravity", p.rangedProjectileGravity);
+        p.rangedProjectileFireTicks = Math.max(0, s.getInt("ranged-projectile-fire-ticks", p.rangedProjectileFireTicks));
+        p.rangedProjectileExplosion = nonNegative(s.getDouble("ranged-projectile-explosion", p.rangedProjectileExplosion), p.rangedProjectileExplosion);
+        p.rangedProjectileMaxHits = Math.max(0, s.getInt("ranged-projectile-max-hits", p.rangedProjectileMaxHits));
+        p.rangedProjectilePotion = trimToNull(s.getString("ranged-projectile-potion", p.rangedProjectilePotion));
+        p.rangedProjectilePierce = Math.max(0, s.getInt("ranged-projectile-pierce", p.rangedProjectilePierce));
+        p.rangedProjectileTracking = s.getBoolean("ranged-projectile-tracking", p.rangedProjectileTracking);
+        p.rangedProjectileTrackingTicks = Math.max(1, s.getInt("ranged-projectile-tracking-ticks", p.rangedProjectileTrackingTicks));
+        p.leapAtTarget = s.getBoolean("leap-at-target", p.leapAtTarget);
+        p.leapRange = positive(s.getDouble("leap-range", p.leapRange), p.leapRange);
+        p.leapStrength = nonNegative(s.getDouble("leap-strength", p.leapStrength), p.leapStrength);
+        p.canSwim = s.getBoolean("can-swim", p.canSwim);
+        p.canOpenDoors = s.getBoolean("can-open-doors", p.canOpenDoors);
+        p.avoidSun = s.getBoolean("avoid-sun", p.avoidSun);
+        p.temptItem = trimToNull(s.getString("tempt-item", p.temptItem));
+        p.temptRange = positive(s.getDouble("tempt-range", p.temptRange), p.temptRange);
+        p.goals.clear();
+        p.goals.addAll(stringOrList(s, "goals"));
+        p.targets.clear();
+        p.targets.addAll(stringOrList(s, "targets"));
         p.faction = trimToNull(s.getString("faction"));
         p.immunity = dev.helstera.ai.immunity.ImmunityService.rowsFromSection(s);
         p.bossBar = dev.helstera.ai.bossbar.BossBarConfig.parse(
@@ -355,6 +686,7 @@ public final class AiProfile {
         attackRadius = s.getDouble("attack-radius", attackRadius);
         attackDamage = s.getDouble("attack-damage", attackDamage);
         attackCooldown = s.getDouble("attack-cooldown", attackCooldown);
+        maxCombatDistance = s.getDouble("max-combat-distance", maxCombatDistance);
         fleeHealthRatio = s.getDouble("flee-health-ratio", fleeHealthRatio);
         patrolRadius = s.getDouble("patrol-radius", patrolRadius);
         patrolInterval = s.getDouble("patrol-interval", patrolInterval);
@@ -363,6 +695,11 @@ public final class AiProfile {
         canFlee = s.getBoolean("can-flee", canFlee);
         canPatrol = s.getBoolean("can-patrol", canPatrol);
         canAttack = s.getBoolean("can-attack", canAttack);
+        canSwim = s.getBoolean("can-swim", canSwim);
+        canOpenDoors = s.getBoolean("can-open-doors", canOpenDoors);
+        avoidSun = s.getBoolean("avoid-sun", avoidSun);
+        temptItem = trimToNull(s.getString("tempt-item", temptItem));
+        temptRange = positive(s.getDouble("tempt-range", temptRange), temptRange);
         faction = trimToNull(s.getString("faction"));
         threatEnabled = s.getBoolean("threat-enabled", threatEnabled);
         canPathfind = s.getBoolean("can-pathfind", canPathfind);
@@ -381,6 +718,8 @@ public final class AiProfile {
             onDecision.clear();
             onDecision.addAll(stringOrList(s, "on-decision"));
         }
+        if (s.contains("goals")) { goals.clear(); goals.addAll(stringOrList(s, "goals")); }
+        if (s.contains("targets")) { targets.clear(); targets.addAll(stringOrList(s, "targets")); }
         if (s.isConfigurationSection("triggers")) {
             triggers.clear();
             applyTriggersFrom(s);

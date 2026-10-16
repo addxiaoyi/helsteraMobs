@@ -81,6 +81,19 @@ public final class ThreatTable {
         e.lastSeen = clock.getAsLong();
     }
 
+    /** Promotes a target above the current threat leader without replacing other entries. */
+    public void focus(UUID id) {
+        if (id == null) return;
+        decayTo(clock.getAsLong());
+        double highest = entries.values().stream()
+                .mapToDouble(entry -> entry.threat)
+                .max()
+                .orElse(0);
+        Entry entry = entries.computeIfAbsent(id, ignored -> new Entry());
+        entry.threat = Math.max(entry.threat, highest + 1000.0);
+        entry.lastSeen = clock.getAsLong();
+    }
+
     /**
      * 选出当前首要目标的 UUID。
      *

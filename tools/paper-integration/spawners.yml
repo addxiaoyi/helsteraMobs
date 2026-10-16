@@ -1,0 +1,358 @@
+spawners:
+  integration_test:
+    mob: emberling
+    world: ""
+    x: 0.5
+    y: 70
+    z: 0.5
+    radius: 2.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: true
+    random-mobs:
+      emberling: 1.0
+      emberling_boss: 1.0
+  condition_pass:
+    mob: emberling
+    world: ""
+    x: 2.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 4
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - world-is=integration-world
+      - y-above=0
+    enabled: true
+  condition_fail:
+    mob: emberling
+    world: ""
+    x: 4.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 4
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - world-is=not-the-integration-world
+    enabled: true
+  condition_combo_pass:
+    mob: emberling
+    world: ""
+    x: 6.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 4
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - "all{conditions=world-is integration-world;y-level-above 0}"
+    enabled: true
+  condition_combo_fail:
+    mob: emberling
+    world: ""
+    x: 8.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 4
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - "all{health-above 0.0;health-below 0.1}"
+    enabled: true
+  natural_ground_pass:
+    mob: emberling
+    world: ""
+    x: 0.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: true
+  border_fail:
+    mob: emberling
+    world: ""
+    x: 30000000
+    y: 70
+    z: 0
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: true
+  player_gate_fail:
+    mob: emberling
+    world: ""
+    x: 10.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 100
+    max-spawns: 0
+    min-players: 1
+    players-radius: 8.0
+    enabled: true
+  max_spawn_probe:
+    mob: emberling
+    world: ""
+    x: 0.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 100
+    max-spawns: 1
+    min-players: 0
+    players-radius: 0.0
+    enabled: false
+  scoped_limit_probe:
+    mob: emberling
+    world: ""
+    x: 12.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 100
+    max-spawns: 0
+    max-per-world: 1
+    max-per-player: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: true
+  player_limit_probe:
+    mob: emberling
+    world: ""
+    x: 14.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 100
+    max-spawns: 0
+    max-per-world: 0
+    max-per-player: 1
+    min-players: 0
+    players-radius: 32.0
+    enabled: true
+  cooldown_probe:
+    mob: emberling
+    world: ""
+    x: 16.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 40
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: true
+  lunar_probe:
+    mob: emberling
+    world: ""
+    x: 18.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - lunar-phase-is=FULL
+    enabled: true
+  random_distribution_probe:
+    mob: emberling
+    world: ""
+    x: 20.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 12000
+    max-alive: 150
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    random-mobs:
+      emberling: 1.0
+      emberling_boss: 1.0
+    enabled: false
+  weather_rain_pass:
+    mob: emberling
+    world: ""
+    x: 22.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - raining
+    enabled: false
+  weather_rain_fail:
+    mob: emberling
+    world: ""
+    x: 24.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - raining
+    enabled: false
+  time_window_pass:
+    mob: emberling
+    world: ""
+    x: 26.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - time-between=2000,10000
+    enabled: false
+  time_window_fail:
+    mob: emberling
+    world: ""
+    x: 28.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - time-between=13000,23000
+    enabled: false
+  biome_desert_pass:
+    mob: emberling
+    world: ""
+    x: 30.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - biome-is=DESERT
+    enabled: false
+  biome_plains_fail:
+    mob: emberling
+    world: ""
+    x: 32.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - biome-is=PLAINS
+    enabled: false
+  heightmap_ground_pass:
+    mob: emberling
+    world: ""
+    x: 34.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: false
+  ground_missing_fail:
+    mob: emberling
+    world: ""
+    x: 36.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: false
+  border_clipped_inside_pass:
+    mob: emberling
+    world: ""
+    x: 40.5
+    y: 70
+    z: 0.5
+    radius: 16.0
+    y-range: 0.0
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: false
+  border_outside_fail:
+    mob: emberling
+    world: ""
+    x: 1000.5
+    y: 70
+    z: 0.5
+    radius: 0.1
+    y-range: 0.0
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: false

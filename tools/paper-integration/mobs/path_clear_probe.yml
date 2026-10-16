@@ -1,0 +1,15 @@
+name: Pathfinder Clear Probe
+model: example/emberling
+entity:
+  type: ZOMBIE
+  silent: true
+mob:
+  despawn: PERSISTENT
+ai:
+  can-pathfind: true
+  can-chase: false
+  can-patrol: false
+  goals:
+    - "0 clear"
+  targets:
+    - "0 clear"

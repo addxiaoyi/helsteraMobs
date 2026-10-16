@@ -50,14 +50,16 @@ public final class DropTable {
                         boolean glow,
                         String note,
                         List<Tier> tiers,
-                        Integer minTierLevel) {
+                        Integer minTierLevel,
+                        List<String> conditions,
+                        String chanceExpression) {
 
         /** 兼容旧构造：单档均匀区间，无击杀者门槛。 */
         public Entry(String itemId, int amountMin, int amountMax, double chance, boolean luckScaling,
                      Map<String, Integer> enchantments, String displayName, Integer customModelData,
                      boolean glow, String note) {
             this(itemId, amountMin, amountMax, chance, luckScaling, enchantments, displayName,
-                    customModelData, glow, note, List.of(), null);
+                    customModelData, glow, note, List.of(), null, List.of(), null);
         }
 
         /** 是否配置了分层权重。 */
@@ -69,11 +71,16 @@ public final class DropTable {
     private final String name;
     private final double luckFactor;
     private final List<Entry> entries;
+    private final int experienceMin;
+    private final int experienceMax;
 
-    private DropTable(String name, double luckFactor, List<Entry> entries) {
+    private DropTable(String name, double luckFactor, List<Entry> entries,
+                      int experienceMin, int experienceMax) {
         this.name = name;
         this.luckFactor = luckFactor;
         this.entries = List.copyOf(entries);
+        this.experienceMin = experienceMin;
+        this.experienceMax = experienceMax;
     }
 
     public String name() {
@@ -87,6 +94,10 @@ public final class DropTable {
     public List<Entry> entries() {
         return entries;
     }
+
+    public int experienceMin() { return experienceMin; }
+
+    public int experienceMax() { return experienceMax; }
 
     public boolean isEmpty() {
         return entries.isEmpty();
@@ -104,6 +115,15 @@ public final class DropTable {
         // luck-factor 同样走严格读取：写成 "很高" 时此前按默认 0.05 静默执行。
         double luckFactor = YamlNums.chance(sec, "luck-factor", 0.05, problems, "掉落表 " + name);
         List<Entry> entries = new ArrayList<>();
+        int experienceMin = readExperience(sec, "experience-min", "exp-min", "experience", 0, problems, name);
+        int experienceMax = readExperience(sec, "experience-max", "exp-max", "experience", experienceMin,
+                problems, name);
+        if (experienceMax < experienceMin) {
+            problems.add("����� " + name + " experience-max < experience-min���ѽ���");
+            int swap = experienceMin;
+            experienceMin = experienceMax;
+            experienceMax = swap;
+        }
         if (sec != null) {
             int idx = 0;
             // Bukkit 的 YAML 里「列表中的映射」不是 ConfigurationSection，而是 List<Map>。
@@ -121,6 +141,10 @@ public final class DropTable {
                     continue;
                 }
                 String item = es.getString("item");
+                String nestedTable = es.getString("table");
+                if ((item == null || item.isBlank()) && nestedTable != null && !nestedTable.isBlank()) {
+                    item = "table:" + nestedTable.trim();
+                }
                 if (item == null || item.isBlank()) {
                     problems.add("掉落表 " + name + " 第 " + idx + " 条缺少 item，已跳过");
                     continue;
@@ -190,6 +214,17 @@ public final class DropTable {
                     if (v > 0) minTier = v;
                     else problems.add("掉落表 " + name + " 第 " + idx + " 条 min-tier-level 非正数，已忽略该门槛");
                 }
+                List<String> conditions = new ArrayList<>();
+                Object conditionRaw = es.get("conditions");
+                if (conditionRaw instanceof List<?> list) {
+                    for (Object condition : list) {
+                        if (condition != null && !String.valueOf(condition).isBlank()) {
+                            conditions.add(String.valueOf(condition).trim());
+                        }
+                    }
+                } else if (conditionRaw != null && !String.valueOf(conditionRaw).isBlank()) {
+                    conditions.add(String.valueOf(conditionRaw).trim());
+                }
                 entries.add(new Entry(
                         item.trim(), min, max, chance,
                         es.getBoolean("luck-scaling", true),
@@ -199,10 +234,25 @@ public final class DropTable {
                         es.getBoolean("glow", false),
                         es.getString("note"),
                         Collections.unmodifiableList(tiers),
-                        minTier));
+                        minTier, Collections.unmodifiableList(conditions),
+                        chanceExpression(es)));
             }
         }
-        return new DropTable(name, luckFactor, entries);
+        return new DropTable(name, luckFactor, entries, experienceMin, experienceMax);
+    }
+
+    private static String chanceExpression(ConfigurationSection sec) {
+        String expression = sec.getString("chance-expression");
+        if (expression == null || expression.isBlank()) expression = sec.getString("dynamic-chance");
+        return expression == null || expression.isBlank() ? null : expression.trim();
+    }
+
+    private static int readExperience(ConfigurationSection sec, String primary, String alias,
+                                      String single, int def, List<String> problems, String name) {
+        if (sec == null) return def;
+        String key = sec.contains(primary) ? primary : sec.contains(alias) ? alias : single;
+        if (!sec.contains(key)) return def;
+        return Math.max(0, YamlNums.i(sec, key, def, problems, "����� " + name));
     }
 
     /**

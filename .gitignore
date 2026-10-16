@@ -69,3 +69,4 @@ tools/*.zip
 tools/*.jar
 tools/**/*.zip
 tools/**/*.jar
+tools/paper-integration/node_modules/

@@ -175,6 +175,14 @@ public final class DerivedTriggerLatch {
         return edges;
     }
 
+    /** Seeds an explicit target change so the next polling pass does not fire it twice. */
+    public void primeTarget(String key, UUID target) {
+        Cell c = cells.computeIfAbsent(key, ignored -> new Cell());
+        c.armed = true;
+        c.inCombat = target != null;
+        c.lastTarget = target;
+    }
+
     /** 已建立基线的观测数。 */
     public int size() {
         return (int) cells.values().stream().filter(c -> c.armed).count();

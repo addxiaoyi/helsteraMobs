@@ -3,10 +3,13 @@ package dev.helstera.ai.skill;
 import dev.helstera.api.behavior.BehaviorContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.bukkit.entity.Player;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * 占位符解析测试。
@@ -187,5 +190,29 @@ class PlaceholdersTest {
     void exposesAiState() {
         assertEquals("CHASE", Placeholders.lookup("caster.state", ctx(1, -1, "CHASE")));
         assertEquals("7", Placeholders.lookup("caster.decisions", ctx(1, -1, "IDLE")));
+    }
+
+    @Test
+    @DisplayName("target entity state placeholders expose Bukkit flags")
+    void exposesTargetEntityState() {
+        Player player = mock(Player.class);
+        when(player.isSneaking()).thenReturn(true);
+        when(player.isOnGround()).thenReturn(true);
+        when(player.isInWater()).thenReturn(false);
+        when(player.isInvisible()).thenReturn(false);
+        when(player.isGlowing()).thenReturn(true);
+        when(player.getFireTicks()).thenReturn(20);
+        when(player.hasPermission("my.node")).thenReturn(true);
+        BehaviorContext context = BehaviorContext.of(null, player, 1.0, 3.0, 0, "CHASE");
+
+        assertEquals("true", Placeholders.lookup("target.is-sneaking", context));
+        assertEquals("true", Placeholders.lookup("target.is-on-ground", context));
+        assertEquals("false", Placeholders.lookup("target.is-in-water", context));
+        assertEquals("false", Placeholders.lookup("target.is-baby", context));
+        assertEquals("false", Placeholders.lookup("target.is-tamed", context));
+        assertEquals("false", Placeholders.lookup("target.is-invisible", context));
+        assertEquals("true", Placeholders.lookup("target.is-glowing", context));
+        assertEquals("true", Placeholders.lookup("target.is-on-fire", context));
+        assertEquals("true", Placeholders.lookup("target.permission.my.node", context));
     }
 }

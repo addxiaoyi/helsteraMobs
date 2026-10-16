@@ -1,5 +1,4 @@
 package dev.helstera.plugin;
-
 import dev.helstera.api.Helstera;
 import dev.helstera.api.HelsteraApi;
 import dev.helstera.api.behavior.BehaviorRegistry;
@@ -21,6 +20,7 @@ import dev.helstera.core.validate.ModelValidator;
 import dev.helstera.integrations.IntegrationRegistryImpl;
 import dev.helstera.integrations.items.CraftEngineAdapter;
 import dev.helstera.integrations.items.ItemAdderAdapter;
+import dev.helstera.integrations.region.WorldGuardAdapter;
 import dev.helstera.integrations.mythicmobs.MythicMobsAdapter;
 import dev.helstera.migration.MigrationServiceImpl;
 import dev.helstera.migration.importer.CraftEngineImporter;
@@ -110,12 +110,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private Object lootService;                 // dev.helstera.ai.loot.LootService
     private Object spawnerService;              // dev.helstera.ai.spawner.SpawnerService
     private dev.helstera.ai.dialog.DialogueService dialogueService;
+    private volatile ConfigurationSection customItems;
     private Object migration;                    // MigrationServiceImpl
     private Object webServer;                    // WebServerService
     private Object integrations;                 // IntegrationRegistryImpl
 
     private HelsteraImpl helstera;
     private HelsteraCommand command;
+    private CustomMenuService customMenuService;
+    private boolean itemEffectsWaitedForPlayer;
 
     private YamlConfiguration integrationsCfg;
 
@@ -145,6 +148,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
 
         long start = System.currentTimeMillis();
+        dev.helstera.ai.skill.SkillTriggers.configureProjectilePlugin(this);
         bus = new HelsteraEventBus();
         validator = new ModelValidator(
                 getConfig().getLong("resourcepack.max-texture-size-bytes", 1048576),
@@ -261,6 +265,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " 处告警（/helstera debug skills 查看）");
                 }
                 this.skillService = skills;
+                int restoredSkillTrees = skills.loadPersistedSkillTrees(
+                        new java.io.File(getDataFolder(), "skill-trees"));
+                if (restoredSkillTrees > 0) {
+                    getLogger().info("Restored " + restoredSkillTrees + " SkillTree snapshots.");
+                }
                 a.setSkills(skills);
                 // 阵营必须先于档案装载：档案里的 faction 会被登记进阵营表
                 a.loadFactions(getConfig().getConfigurationSection("ai.factions"));
@@ -291,6 +300,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     dev.helstera.ai.skill.SkillCatalog.skillService(skills);
                 }
                 a.loadProfiles(getConfig().getConfigurationSection("ai.profiles"));
+                dev.helstera.ai.skill.SkillExtras.damageCause((ctx, target) ->
+                        ctx != null && "on-projectile-hit".equalsIgnoreCase(ctx.state()) ? "PROJECTILE" : "MAGIC");
+                dev.helstera.ai.skill.SkillExtras.damagePolicy((ctx, target, amount, cause) -> {
+                    if (ctx == null || !ctx.instanceValid()) return amount;
+                    var profile = a.profileOf(ctx.instance().instanceId());
+                    if (profile == null || profile.immunityTable() == null) return amount;
+                    var conditionContext = ctx;
+                    var rule = profile.immunityTable().evaluate(cause, amount,
+                            condition -> br.testCondition(condition, conditionContext));
+                    return rule.damage();
+                });
                 SkillTriggers trig = new SkillTriggers(this, a, br, bus, getLogger(), skills);
                 // 必须在 a.start() 之前注入：attack_hit 桥接在 start 时就捕获了
                 // SkillTriggers 的引用，晚注入会让攻击命中静默不派发
@@ -353,13 +373,30 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             // 而权限是服务端唯一现成的、不引入依赖的等级载体。
             // 未持有任何节点时返回 -1（未知），门槛型掉落照常参与掷骰。
             loot.setTierResolver(p -> permissionTier(p));
+            if (skillService instanceof dev.helstera.ai.skill.SkillService skills
+                    && behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+                loot.setConditionEvaluator((condition, location, killer) -> {
+                    String key = skills.bindCondition(condition);
+                    if (key == null) return false;
+                    double distance = location == null || killer == null
+                            || killer.getWorld() == null || !killer.getWorld().equals(location.getWorld())
+                            ? -1 : location.distance(killer.getLocation());
+                    var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                            null, killer, 1.0, distance, 0, "loot", null, killer,
+                            killer == null ? java.util.List.of() : java.util.List.of(killer), location);
+                    return behaviors.testCondition(key, context);
+                });
+            }
+            loot.setDynamicChanceEvaluator((expression, location, killer, luck) -> {
+                return resolveDropChance(expression, location, killer);
+            });
             this.lootService = loot;
         } catch (Throwable t) {
             getLogger().warning("掉落表不可用: " + t);
         }
         try {
             dev.helstera.ai.spawner.SpawnerService sp = new dev.helstera.ai.spawner.SpawnerService(
-                    this, getLogger(), this::spawnMobAt);
+                    this, getLogger(), this::spawnMobAt, name -> getServer().getWorld(name));
             // 实例存活判定交给实例管理器，刷怪点才能正确回收名额
             sp.setAliveCheck(id -> {
                 var im = instances();
@@ -367,11 +404,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var inst = im.impl(id);
                 return inst != null && inst.isValid();
             });
+            if (skillService instanceof dev.helstera.ai.skill.SkillService skills
+                    && behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+                sp.setConditionTester((condition, location) -> {
+                    String key = skills.bindCondition(condition);
+                    if (key == null) return false;
+                    org.bukkit.entity.Player player = nearestSpawnerPlayer(location, 32.0);
+                    double distance = player == null || location == null
+                            ? -1 : location.distance(player.getLocation());
+                    var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                            null, player, 1.0, distance, 0, "spawner", null, player,
+                            player == null ? java.util.List.of() : java.util.List.of(player), location);
+                    return behaviors.testCondition(key, context);
+                });
+            }
+            sp.setRegionTester((region, location) -> integrations == null ? null
+                    : ((dev.helstera.api.integration.IntegrationRegistry) integrations).containsRegion(region, location));
             if (!new java.io.File(getDataFolder(), "spawners.yml").exists()) {
                 saveResource("spawners.yml", false);
             }
             sp.load(YamlConfiguration.loadConfiguration(
-                    new java.io.File(getDataFolder(), "spawners.yml")).getConfigurationSection("spawners"));
+                    new java.io.File(getDataFolder(), "spawners.yml")));
+            sp.loadState(new java.io.File(getDataFolder(), "spawner-state.yml"));
             this.spawnerService = sp;
         } catch (Throwable t) {
             getLogger().warning("刷怪点不可用: " + t);
@@ -420,6 +474,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (getConfig().getBoolean("compatibility.craftengine", true)) {
                 ir.register(new CraftEngineAdapter());
             }
+            ir.register(new WorldGuardAdapter());
             int connected = ir.enableAll(this);
             getLogger().info("外部插件适配器: " + connected + "/" + ir.all().size() + " 已连接");
             this.integrations = ir;
@@ -468,6 +523,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
 
         // 命令与监听
+        reloadCustomItems();
+        dev.helstera.ai.skill.SkillExtras.itemResolver(id -> resolveCustomItem(
+                (dev.helstera.api.integration.IntegrationRegistry) integrations, id));
+
+        customMenuService = new CustomMenuService();
+        customMenuService.setItemResolver(id -> resolveCustomItem(
+                (dev.helstera.api.integration.IntegrationRegistry) integrations, id));
+        customMenuService.setRegionResolver((region, location) -> integrations == null ? null
+                : ((dev.helstera.api.integration.IntegrationRegistry) integrations).containsRegion(region, location));
+        java.io.File menuFile = new java.io.File(getDataFolder(), "menu.yml");
+        if (!menuFile.exists()) saveResource("menu.yml", false);
+        customMenuService.load(menuFile);
+        getServer().getPluginManager().registerEvents(customMenuService, this);
         command = new HelsteraCommand(this);
         Optional.ofNullable(getCommand("helstera")).ifPresent(c -> {
             c.setExecutor(command);
@@ -521,6 +589,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (getConfig().getBoolean("debug.self-test", false)) {
             runSelfTest();
         }
+        if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
+            runEntityOptionsSelfTest();
+        }
+        if (getConfig().getBoolean("debug.self-test-item-effects", false)) {
+            runItemEffectsSelfTest();
+        }
+        if (getConfig().getBoolean("debug.self-test-loot", false)) {
+            runLootSelfTest();
+        }
+        if (getConfig().getBoolean("debug.self-test-death-loot", false)) {
+            runDeathLootSelfTest();
+        }
+        if (getConfig().getBoolean("debug.self-test-spawner", false)) {
+            runSpawnerSelfTest();
+        }
+        if (getConfig().getBoolean("debug.self-test-events", false)) {
+            runEventSelfTest();
+        }
+        if (getConfig().getBoolean("debug.self-test-audience", false)) {
+            runAudienceSelfTest();
+        }
 
         boot.append("模型根目录: ").append(modelRoots()).append('\n');
         getLogger().info(boot.toString());
@@ -535,8 +624,35 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    static double resolveDropChance(String expression, Location location,
+                                    org.bukkit.entity.Player killer) {
+        if (expression == null || expression.isBlank()) return Double.NaN;
+        double distance = location == null || killer == null
+                || killer.getWorld() == null || !killer.getWorld().equals(location.getWorld())
+                ? -1 : location.distance(killer.getLocation());
+        var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                null, killer, 1.0, distance, 0, "loot", null, killer,
+                killer == null ? java.util.List.of() : java.util.List.of(killer), location);
+        String resolved = dev.helstera.ai.skill.Placeholders.resolve(expression, context);
+        if (resolved == null || (resolved.equals(expression) && expression.contains("<"))) {
+            return Double.NaN;
+        }
+        try {
+            double chance = Double.parseDouble(resolved.trim());
+            return Double.isFinite(chance) ? chance : Double.NaN;
+        } catch (NumberFormatException ignored) {
+            return Double.NaN;
+        }
+    }
+
     @Override
     public void onDisable() {
+        dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        if (skillService instanceof dev.helstera.ai.skill.SkillService skills) {
+            int saved = skills.savePersistedSkillTrees(new java.io.File(getDataFolder(), "skill-trees"));
+            if (saved > 0) getLogger().info("Saved " + saved + " SkillTree snapshots.");
+            savePersistentMobSkillTrees(skills);
+        }
         HelsteraApi.unregister();
         if (scheduler != null) ((HelsteraScheduler) scheduler).stop();
         if (refresher != null) ((VisibilityRefresher) refresher).stop();
@@ -546,7 +662,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             immunityListener = null;
         }
         if (ai != null) ((AiManager) ai).stop();
-        if (spawnerService instanceof dev.helstera.ai.spawner.SpawnerService sp) sp.stop();
+        if (spawnerService instanceof dev.helstera.ai.spawner.SpawnerService sp) {
+            sp.saveState(new java.io.File(getDataFolder(), "spawner-state.yml"));
+            sp.stop();
+        }
         if (webServer != null) ((WebServerService) webServer).stop();
         if (integrations != null) ((IntegrationRegistryImpl) integrations).disableAll();
         if (instances != null) {
@@ -676,6 +795,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     // 即使部分失败也要构建：已加载的模型仍需要进资源包，
                     // 否则它们会一直显示为紫黑方块。
                     buildResourcePack(applyPackToPlayers);
+                     restorePersistentMobs();
+                     if (getConfig().getBoolean("debug.self-test-skilltree-persistence", false)) {
+                         runPersistentSkillTreeSelfTest();
+                     }
                 }));
         return true;
     }
@@ -790,6 +913,1752 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }, Math.max(1, delay));
     }
 
+    private void runEntityOptionsSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null) {
+                getLogger().warning("[自检] entity-options 失败: 没有可用世界");
+                return;
+            }
+            Location origin = world.getSpawnLocation().clone().add(0, 4, 0);
+            var entities = new java.util.ArrayList<org.bukkit.entity.Entity>();
+            try {
+                var horse = world.spawn(origin, org.bukkit.entity.Horse.class);
+                horse.setColor(org.bukkit.entity.Horse.Color.WHITE);
+                horse.setStyle(org.bukkit.entity.Horse.Style.WHITE_DOTS);
+                horse.setMaxDomestication(20);
+                horse.setDomestication(5);
+                horse.setJumpStrength(0.8);
+                entities.add(horse);
+                getLogger().info("[自检] horse-options result="
+                        + (horse.getColor() == org.bukkit.entity.Horse.Color.WHITE
+                        && horse.getStyle() == org.bukkit.entity.Horse.Style.WHITE_DOTS
+                        && horse.getMaxDomestication() == 20
+                        && horse.getDomestication() == 5
+                        && Math.abs(horse.getJumpStrength() - 0.8) < 1.0e-9));
+
+                var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
+                sheep.setColor(org.bukkit.DyeColor.RED);
+                sheep.setSheared(true);
+                entities.add(sheep);
+                getLogger().info("[自检] sheep-options result="
+                        + (sheep.getColor() == org.bukkit.DyeColor.RED && sheep.isSheared()));
+
+                var stand = world.spawn(origin.clone().add(4, 0, 0), org.bukkit.entity.ArmorStand.class);
+                stand.setArms(true);
+                stand.setBasePlate(false);
+                stand.setMarker(true);
+                stand.setSmall(true);
+                entities.add(stand);
+                getLogger().info("[自检] armor-stand-options result="
+                        + (stand.hasArms() && !stand.hasBasePlate() && stand.isMarker() && stand.isSmall()));
+
+                var cat = world.spawn(origin.clone().add(6, 0, 0), org.bukkit.entity.Cat.class);
+                cat.setCatType(org.bukkit.entity.Cat.Type.SIAMESE);
+                cat.setSitting(true);
+                cat.setCollarColor(org.bukkit.DyeColor.BLUE);
+                entities.add(cat);
+                getLogger().info("[自检] cat-options result="
+                        + (cat.getCatType() == org.bukkit.entity.Cat.Type.SIAMESE
+                        && cat.isSitting() && cat.getCollarColor() == org.bukkit.DyeColor.BLUE));
+
+                var falling = world.spawnFallingBlock(origin.clone().add(8, 0, 0),
+                        org.bukkit.Material.SAND.createBlockData());
+                falling.setDropItem(false);
+                falling.setHurtEntities(true);
+                falling.setCancelDrop(true);
+                entities.add(falling);
+                getLogger().info("[自检] falling-block-options result="
+                        + (!falling.getDropItem() && falling.canHurtEntities() && falling.getCancelDrop()));
+
+                var creeper = world.spawn(origin.clone().add(10, 0, 0), org.bukkit.entity.Creeper.class);
+                creeper.setExplosionRadius(5);
+                creeper.setMaxFuseTicks(60);
+                creeper.setPowered(true);
+                entities.add(creeper);
+                getLogger().info("[自检] creeper-options result="
+                        + (creeper.getExplosionRadius() == 5 && creeper.getMaxFuseTicks() == 60
+                        && creeper.isPowered()));
+
+                var bee = world.spawn(origin.clone().add(12, 0, 0), org.bukkit.entity.Bee.class);
+                bee.setHasNectar(true);
+                bee.setHasStung(false);
+                entities.add(bee);
+                getLogger().info("[自检] bee-options result="
+                        + (bee.hasNectar() && !bee.hasStung()));
+
+                var zombie = world.spawn(origin.clone().add(14, 0, 0), org.bukkit.entity.Zombie.class);
+                zombie.setBaby(false);
+                entities.add(zombie);
+                var attributeConfig = new org.bukkit.configuration.file.YamlConfiguration();
+                attributeConfig.set("attributes.main-hand.attack.attribute", "ATTACK_DAMAGE");
+                attributeConfig.set("attributes.main-hand.attack.amount", "10%");
+                attributeConfig.set("attributes.main-hand.attack.operation", "ADD");
+                attributeConfig.set("attributes.main-hand.attack.slot", "HAND");
+                var attributeSection = attributeConfig.getConfigurationSection("attributes");
+                getLogger().info("attribute-probe config-keys="
+                        + (attributeSection == null ? null : attributeSection.getKeys(false))
+                        + " node-keys=" + (attributeSection == null
+                        || attributeSection.getConfigurationSection("main-hand") == null ? null
+                        : attributeSection.getConfigurationSection("main-hand").getKeys(false)));
+                var probeAttribute = zombie.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ATTACK_DAMAGE);
+                double probeBase = probeAttribute == null ? Double.NaN : probeAttribute.getBaseValue();
+                double probeBefore = probeAttribute == null ? Double.NaN : probeAttribute.getValue();
+                applyEntityAttributes(zombie, attributeSection);
+                applyEntityAttributes(zombie, attributeSection);
+                var attackAttribute = zombie.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ATTACK_DAMAGE);
+                var attackModifiers = attackAttribute == null
+                        ? java.util.List.<org.bukkit.attribute.AttributeModifier>of()
+                        : attackAttribute.getModifiers().stream().toList();
+                boolean attributes = attackModifiers.size() == 1
+                        && attackModifiers.get(0).getOperation()
+                        == org.bukkit.attribute.AttributeModifier.Operation.ADD_SCALAR
+                        && Math.abs(attackModifiers.get(0).getAmount() - 0.10) < 1.0e-9;
+                getLogger().info("attribute-options result=" + attributes
+                        + " modifiers=" + attackModifiers.size()
+                        + " attribute-present=" + (attackAttribute != null)
+                        + " base=" + probeBase + " before=" + probeBefore
+                        + " after=" + (attackAttribute == null ? Double.NaN : attackAttribute.getValue())
+                        + " all=" + (attackAttribute == null ? java.util.List.of()
+                        : attackAttribute.getModifiers().stream()
+                        .map(modifier -> modifier.getName() + "/" + modifier.getUniqueId()).toList()));
+
+                var itemAttributeConfig = new org.bukkit.configuration.file.YamlConfiguration();
+                itemAttributeConfig.set("attributes.attack.attribute", "ATTACK_DAMAGE");
+                itemAttributeConfig.set("attributes.attack.amount", "10%");
+                itemAttributeConfig.set("attributes.attack.operation", "ADD");
+                itemAttributeConfig.set("attributes.attack.slot", "HAND");
+                var item = new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_SWORD);
+                applyItemAttributes(item, itemAttributeConfig.getConfigurationSection("attributes"));
+                var itemMeta = item.getItemMeta();
+                var itemModifiers = itemMeta == null
+                        ? java.util.List.<org.bukkit.attribute.AttributeModifier>of()
+                        : java.util.Optional.ofNullable(itemMeta.getAttributeModifiers(
+                                org.bukkit.attribute.Attribute.GENERIC_ATTACK_DAMAGE))
+                        .map(java.util.ArrayList::new).orElseGet(java.util.ArrayList::new);
+                boolean itemAttributes = itemModifiers.size() == 1
+                        && itemModifiers.get(0).getOperation()
+                        == org.bukkit.attribute.AttributeModifier.Operation.ADD_SCALAR;
+                getLogger().info("item-attribute-options result=" + itemAttributes
+                        + " modifiers=" + itemModifiers.size());
+                getLogger().info("[自检] zombie-age-options result=" + zombie.isAdult());
+            } catch (Throwable t) {
+                getLogger().warning("[自检] entity-options 异常: " + t);
+            } finally {
+                for (var entity : entities) {
+                    try { entity.remove(); } catch (RuntimeException ignored) { }
+                }
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 20L);
+    }
+
+    private void runItemEffectsSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null) {
+                getLogger().warning("[自检] item-effects 失败: 没有可用世界");
+                return;
+            }
+            if (getServer().getOnlinePlayers().isEmpty()) {
+                getServer().getScheduler().runTaskLater(this, this::runItemEffectsSelfTest, 20L);
+                return;
+            }
+            if (!itemEffectsWaitedForPlayer) {
+                itemEffectsWaitedForPlayer = true;
+                getServer().getScheduler().runTaskLater(this, this::runItemEffectsSelfTest, 20L);
+                return;
+            }
+            Location location = world.getSpawnLocation().clone().add(0, 3, 0);
+            org.bukkit.entity.Zombie zombie = null;
+            org.bukkit.entity.Zombie conditionTarget = null;
+            org.bukkit.block.BlockState conditionTargetBlockState = null;
+            org.bukkit.block.BlockState conditionTargetHeadBlockState = null;
+            var conditionCategoryEntities = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
+            dev.helstera.api.instance.ModelInstance modelInstance = null;
+            dev.helstera.api.instance.ModelInstance ownerInstance = null;
+            dev.helstera.api.instance.ModelInstance stateInstance = null;
+            var droppedItems = new java.util.ArrayList<org.bukkit.entity.Item>();
+            long originalWorldTime = world.getTime();
+            boolean originalStorm = world.hasStorm();
+            boolean originalThundering = world.isThundering();
+            try {
+                zombie = world.spawn(location, org.bukkit.entity.Zombie.class);
+                modelInstance = instances().bind("example/emberling", zombie,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                if (!(skillService instanceof dev.helstera.ai.skill.SkillService skills)
+                        || !(behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors)) {
+                    throw new IllegalStateException("SkillService/BehaviorRegistry unavailable");
+                }
+                var context = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, zombie, 1.0, -1, 0, "integration");
+                Location beforeTeleport = zombie.getLocation().clone();
+                boolean equipped = runIntegrationAction(skills, behaviors, "equip DIAMOND_SWORD off-hand 2", context)
+                        && runIntegrationAction(skills, behaviors, "equip integration_test_item main-hand 1", context);
+                var resolvedItem = zombie.getEquipment() == null ? null : zombie.getEquipment().getItemInMainHand();
+                boolean customItemResolved = resolvedItem != null
+                        && resolvedItem.getType() == org.bukkit.Material.GOLD_INGOT
+                        && resolvedItem.getItemMeta() != null
+                        && resolvedItem.getItemMeta().hasDisplayName();
+                equipped = equipped && runIntegrationAction(skills, behaviors,
+                        "set-item SHIELD main-hand 1", context);
+                boolean potion = runIntegrationAction(skills, behaviors,
+                        "effect-targets SPEED 100 1 true false false", context);
+                boolean dropAction = runIntegrationAction(skills, behaviors,
+                        "drop-item DIAMOND 3", context);
+                boolean moved = runIntegrationAction(skills, behaviors,
+                        "teleport-self 1 0 0", context);
+                double offsetDistance = beforeTeleport.distance(zombie.getLocation());
+                boolean returned = runIntegrationAction(skills, behaviors,
+                        "teleport", context);
+                boolean teleport = moved && returned
+                        && zombie.getLocation().distance(beforeTeleport) < 0.2;
+                var speed = zombie.getPotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
+                potion = potion && speed != null && speed.getDuration() == 100 && speed.getAmplifier() == 1
+                        && speed.isAmbient() && !speed.hasParticles() && !speed.hasIcon();
+                conditionTarget = world.spawn(location.clone().add(3, 0, 0), org.bukkit.entity.Zombie.class);
+                conditionTarget.setHealth(10.0);
+                var conditionContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, conditionTarget, 1.0, 3.0, 0, "integration");
+                String healthCondition = skills.bindCondition("health{h=<15}");
+                String healthPercentCondition = skills.bindCondition("health-percent{p=<=50}");
+                String distanceCondition = skills.bindCondition("distance{d=<4}");
+                String targetMonsterCondition = skills.bindCondition("target-is monster");
+                String targetLivingCondition = skills.bindCondition("target-is living");
+                String targetRawHealthCondition = skills.bindCondition("target-health{h=<15}");
+                String targetHealthPercentCondition = skills.bindCondition("target-health-percent{p=>=50}");
+                boolean targetHealthComparators = behaviors.testCondition(targetRawHealthCondition, conditionContext)
+                        && behaviors.testCondition(targetHealthPercentCondition, conditionContext);
+                conditionTarget.setFireTicks(40);
+                conditionTarget.setInvisible(true);
+                boolean targetEnvironmentalConditions = behaviors.testCondition(
+                        skills.bindCondition("target-on-fire"), conditionContext)
+                        && behaviors.testCondition(skills.bindCondition("target-is-invisible"), conditionContext);
+                conditionTarget.setFireTicks(0);
+                conditionTarget.setInvisible(false);
+                boolean targetFluidConditions = false;
+                var targetBlock = conditionTarget.getLocation().getBlock();
+                conditionTargetBlockState = targetBlock.getState();
+                targetBlock.setType(org.bukkit.Material.WATER, false);
+                boolean targetWater = behaviors.testCondition(
+                        skills.bindCondition("target-in-water"), conditionContext);
+                targetBlock.setType(org.bukkit.Material.LAVA, false);
+                boolean targetLava = behaviors.testCondition(
+                        skills.bindCondition("target-in-lava"), conditionContext);
+                targetFluidConditions = targetWater && targetLava;
+                conditionTargetBlockState.update(true, false);
+                var targetHeadBlock = conditionTarget.getLocation().clone().add(0, 1, 0).getBlock();
+                conditionTargetHeadBlockState = targetHeadBlock.getState();
+                targetHeadBlock.setType(org.bukkit.Material.STONE, false);
+                boolean targetBlockedCondition = behaviors.testCondition(
+                        skills.bindCondition("target-is-blocked"), conditionContext);
+                conditionTargetHeadBlockState.update(true, false);
+                conditionTarget.setInvulnerable(true);
+                boolean targetInvulnerable = behaviors.testCondition(
+                        skills.bindCondition("target-invulnerable"), conditionContext);
+                conditionTarget.setInvulnerable(false);
+                boolean tagAbsent = !behaviors.testCondition(
+                        skills.bindCondition("has-tag tag=HelsteraConditionProbe"), conditionContext);
+                conditionTarget.addScoreboardTag("HelsteraConditionProbe");
+                boolean tagPresent = behaviors.testCondition(
+                        skills.bindCondition("has-tag tag=HelsteraConditionProbe"), conditionContext);
+                conditionTarget.removeScoreboardTag("HelsteraConditionProbe");
+                boolean hasTagCondition = tagAbsent && tagPresent && !behaviors.testCondition(
+                        skills.bindCondition("has-tag tag=HelsteraConditionProbe"), conditionContext);
+                String nestedCondition = skills.bindCondition(
+                        "all{conditions=health{h=<15};any{distance{d=<4};health{h=<1}}}");
+                String negatedCondition = skills.bindCondition("not{health{h=>20}}");
+                boolean conditions = behaviors.testCondition(healthCondition, conditionContext)
+                        && behaviors.testCondition(healthPercentCondition, conditionContext)
+                        && behaviors.testCondition(distanceCondition, conditionContext);
+                String worldName = conditionTarget.getWorld().getName();
+                String biomeName = conditionTarget.getLocation().getBlock().getBiome()
+                        .getKey().getKey();
+                boolean worldBiome = behaviors.testCondition(
+                        skills.bindCondition("world-is " + worldName), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("biome-is " + biomeName), conditionContext);
+                boolean worldBiomeReject = !behaviors.testCondition(
+                        skills.bindCondition("world-is __missing_world__"), conditionContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("biome-is __missing_biome__"), conditionContext);
+                boolean targetCategories = behaviors.testCondition(targetMonsterCondition, conditionContext)
+                        && behaviors.testCondition(targetLivingCondition, conditionContext);
+                zombie.setInvulnerable(true);
+                boolean invulnerableCondition = behaviors.testCondition(
+                        skills.bindCondition("invulnerable"), context);
+                zombie.setInvulnerable(false);
+                var wolf = world.spawn(location.clone().add(5, 0, 0), org.bukkit.entity.Wolf.class);
+                var pillager = world.spawn(location.clone().add(7, 0, 0), org.bukkit.entity.Pillager.class);
+                var sheep = world.spawn(location.clone().add(9, 0, 0), org.bukkit.entity.Sheep.class);
+                var villager = world.spawn(location.clone().add(11, 0, 0), org.bukkit.entity.Villager.class);
+                var horse = world.spawn(location.clone().add(13, 0, 0), org.bukkit.entity.Horse.class);
+                var poweredCreeper = world.spawn(location.clone().add(15, 0, 0), org.bukkit.entity.Creeper.class);
+                wolf.setTamed(true);
+                sheep.setSheared(true);
+                horse.getInventory().setSaddle(new org.bukkit.inventory.ItemStack(org.bukkit.Material.SADDLE));
+                poweredCreeper.setPowered(true);
+                conditionCategoryEntities.addAll(java.util.List.of(
+                        wolf, pillager, sheep, villager, horse, poweredCreeper));
+                var wolfContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, wolf, 1.0, 5.0, 0, "integration");
+                var sheepContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, sheep, 1.0, 9.0, 0, "integration");
+                var horseContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, horse, 1.0, 13.0, 0, "integration");
+                var poweredCreeperContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, poweredCreeper, 1.0, 15.0, 0, "integration");
+                boolean entityStateConditions = behaviors.testCondition(
+                        skills.bindCondition("is-tamed"), wolfContext)
+                        && behaviors.testCondition(skills.bindCondition("is-sheared"), sheepContext)
+                        && behaviors.testCondition(skills.bindCondition("is-saddled"), horseContext)
+                        && behaviors.testCondition(skills.bindCondition("is-powered"), poweredCreeperContext);
+                var spatialTarget = world.spawn(location.clone().add(3, 0, 0), org.bukkit.entity.Zombie.class);
+                var facing = zombie.getLocation().getDirection().setY(0).normalize();
+                if (facing.lengthSquared() == 0) facing = new org.bukkit.util.Vector(0, 0, 1);
+                var coneTarget = world.spawn(zombie.getLocation().clone().add(facing.clone().multiply(3)),
+                        org.bukkit.entity.Zombie.class);
+                var behindTarget = world.spawn(zombie.getLocation().clone().subtract(facing.clone().multiply(3)),
+                        org.bukkit.entity.Zombie.class);
+                var side = new org.bukkit.util.Vector(-facing.getZ(), 0, facing.getX()).normalize();
+                var widthTarget = world.spawn(zombie.getLocation().clone()
+                                .add(facing.clone().multiply(3)).add(side.clone().multiply(0.5)),
+                        org.bukkit.entity.Zombie.class);
+                conditionCategoryEntities.add(spatialTarget);
+                conditionCategoryEntities.add(coneTarget);
+                conditionCategoryEntities.add(behindTarget);
+                conditionCategoryEntities.add(widthTarget);
+                boolean sphereTargeter = !dev.helstera.api.behavior.Targeters.select(
+                        "@sphere{radius=4}", modelInstance, java.util.List.of(spatialTarget), java.util.List.of()).isEmpty();
+                boolean ringTargeter = !dev.helstera.api.behavior.Targeters.select(
+                        "@ring{min=2;max=4}", modelInstance, java.util.List.of(spatialTarget), java.util.List.of()).isEmpty();
+                boolean coneTargeter = !dev.helstera.api.behavior.Targeters.select(
+                        "@cone{angle=90;length=4}", modelInstance, java.util.List.of(coneTarget), java.util.List.of()).isEmpty();
+                boolean lineOfSightTargeter = !dev.helstera.api.behavior.Targeters.select(
+                        "@lineofsight{max=4}", modelInstance, java.util.List.of(coneTarget), java.util.List.of()).isEmpty();
+                boolean lineTargeter = !dev.helstera.api.behavior.Targeters.select(
+                        "@livinginline", modelInstance, java.util.List.of(spatialTarget), java.util.List.of()).isEmpty();
+                boolean lineNamedTargeter = !dev.helstera.api.behavior.Targeters.select(
+                        "@livinginline{length=4;width=1}", modelInstance,
+                        java.util.List.of(spatialTarget), java.util.List.of()).isEmpty();
+                boolean lineWidthBoundary = dev.helstera.api.behavior.Targeters.select(
+                        "@livinginline{length=4;width=0.01}", modelInstance,
+                        java.util.List.of(widthTarget), java.util.List.of()).isEmpty();
+                boolean lineLengthBoundary = dev.helstera.api.behavior.Targeters.select(
+                        "@livinginline{length=2;width=1}", modelInstance,
+                        java.util.List.of(spatialTarget), java.util.List.of()).isEmpty();
+                var nearTarget = world.spawn(zombie.getLocation().clone().add(1, 0, 0),
+                        org.bukkit.entity.Zombie.class);
+                var farTarget = world.spawn(zombie.getLocation().clone().add(3, 0, 0),
+                        org.bukkit.entity.Zombie.class);
+                conditionCategoryEntities.add(nearTarget);
+                conditionCategoryEntities.add(farTarget);
+                var chainTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{filter=mob} > @nearest{count=1}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of());
+                var sortedTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{filter=mob;limit=1;sort=farthest}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of());
+                boolean targeterControls = chainTargets.size() == 1
+                        && chainTargets.get(0).equals(nearTarget)
+                        && sortedTargets.size() == 1
+                        && sortedTargets.get(0).equals(farTarget);
+                boolean targeterLimitZero = dev.helstera.api.behavior.Targeters.select(
+                        "@living{limit=0}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of()).isEmpty();
+                boolean targeterNegativeFilter = dev.helstera.api.behavior.Targeters.select(
+                        "@living{filter=!mob}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of()).isEmpty();
+                boolean spatialTargeters = sphereTargeter && ringTargeter && coneTargeter
+                        && lineOfSightTargeter && lineTargeter && lineNamedTargeter;
+                var obstructionLocation = zombie.getLocation().clone().add(facing.clone().multiply(1.5));
+                var obstruction = obstructionLocation.getBlock();
+                var originalObstructionData = obstruction.getBlockData().clone();
+                obstruction.setType(org.bukkit.Material.STONE, false);
+                boolean lineOfSightBlocked = dev.helstera.api.behavior.Targeters.select(
+                        "@lineofsight{max=4}", modelInstance, java.util.List.of(coneTarget), java.util.List.of()).isEmpty();
+                obstruction.setBlockData(originalObstructionData, false);
+                boolean sphereBoundary = dev.helstera.api.behavior.Targeters.select(
+                        "@sphere{radius=2}", modelInstance, java.util.List.of(spatialTarget), java.util.List.of()).isEmpty();
+                boolean ringBoundary = dev.helstera.api.behavior.Targeters.select(
+                        "@ring{min=4;max=5}", modelInstance, java.util.List.of(spatialTarget), java.util.List.of()).isEmpty();
+                boolean coneBoundary = dev.helstera.api.behavior.Targeters.select(
+                        "@cone{angle=30;length=4}", modelInstance, java.util.List.of(behindTarget), java.util.List.of()).isEmpty();
+                getLogger().info("spatial-targeter-details sphere=" + sphereTargeter
+                        + " ring=" + ringTargeter + " cone=" + coneTargeter
+                        + " lineofsight=" + lineOfSightTargeter
+                        + " line=" + lineTargeter
+                        + " line-named=" + lineNamedTargeter
+                        + " line-width-boundary=" + lineWidthBoundary
+                        + " line-length-boundary=" + lineLengthBoundary
+                        + " targeter-controls=" + targeterControls
+                        + " targeter-limit-zero=" + targeterLimitZero
+                        + " targeter-negative-filter=" + targeterNegativeFilter
+                        + " lineofsight-blocked=" + lineOfSightBlocked
+                        + " sphere-boundary=" + sphereBoundary
+                        + " ring-boundary=" + ringBoundary
+                        + " cone-boundary=" + coneBoundary);
+                boolean ownerTargeter = false;
+                boolean leashedCondition = false;
+                boolean hasOwnerCondition = false;
+                boolean customOwnerRelation = false;
+                boolean parentRelation = false;
+                boolean isChildCondition = false;
+                boolean parentDerivedConditions = false;
+                var ownerProbe = getServer().getOnlinePlayers().stream().findFirst().orElse(null);
+                if (ownerProbe != null) {
+                    wolf.setTamed(true);
+                    wolf.setOwner(ownerProbe);
+                    hasOwnerCondition = behaviors.testCondition(
+                            skills.bindCondition("has-owner"), wolfContext);
+                    ownerInstance = instances().bind("example/emberling", wolf,
+                            dev.helstera.api.instance.SpawnOptions.defaults());
+                    var ownerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            ownerInstance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+                    var ownerTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@owner", ownerContext, java.util.List.of(), java.util.List.of());
+                    ownerTargeter = ownerTargets.size() == 1 && ownerTargets.get(0).equals(ownerProbe);
+                    var originalLeashHolder = wolf.isLeashed() ? wolf.getLeashHolder() : null;
+                    try {
+                        boolean leashApplied = wolf.setLeashHolder(ownerProbe);
+                        leashedCondition = leashApplied
+                                && behaviors.testCondition(skills.bindCondition("is-leashed"), wolfContext);
+                    } finally {
+                        if (wolf.isLeashed()) wolf.setLeashHolder(originalLeashHolder);
+                    }
+                    var customOwnerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            modelInstance, ownerProbe, 1.0, 1.0, 0, "integration");
+                    boolean ownerSet = runIntegrationAction(skills, behaviors,
+                            "set-owner", customOwnerContext);
+                    var customOwnerSelfContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            modelInstance, (org.bukkit.entity.LivingEntity) null,
+                            1.0, 0.0, 0, "integration");
+                    boolean customOwnerCondition = behaviors.testCondition(
+                            skills.bindCondition("has-owner"), customOwnerSelfContext);
+                    var storedOwnerTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@owner", context, java.util.List.of(), java.util.List.of());
+                    boolean storedOwnerTarget = storedOwnerTargets.size() == 1
+                            && storedOwnerTargets.get(0).equals(ownerProbe);
+                    boolean ownerRemoved = runIntegrationAction(skills, behaviors,
+                            "remove-owner", context);
+                    boolean ownerCleared = !behaviors.testCondition(
+                            skills.bindCondition("has-owner"), customOwnerSelfContext)
+                            && dev.helstera.api.behavior.Targeters.select(
+                            "@owner", context, java.util.List.of(), java.util.List.of()).isEmpty();
+                    customOwnerRelation = ownerSet && customOwnerCondition
+                            && storedOwnerTarget && ownerRemoved && ownerCleared;
+                    boolean parentSet = runIntegrationAction(skills, behaviors,
+                            "set-parent", customOwnerContext);
+                    boolean hasParent = behaviors.testCondition(
+                            skills.bindCondition("has-parent"), customOwnerSelfContext);
+                    boolean isParent = behaviors.testCondition(
+                            skills.bindCondition("is-parent"), customOwnerContext);
+                    var parentTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@parent", context, java.util.List.of(), java.util.List.of());
+                    boolean parentTarget = parentTargets.size() == 1
+                            && parentTargets.get(0).equals(ownerProbe);
+                    dev.helstera.api.behavior.MobRelations.clearPlayerParents(ownerProbe.getUniqueId());
+                    boolean parentClearedOnQuit = !behaviors.testCondition(
+                            skills.bindCondition("has-parent"), customOwnerSelfContext);
+                    boolean parentSetAgain = runIntegrationAction(skills, behaviors,
+                            "set-parent", customOwnerContext);
+                    boolean parentRemoved = runIntegrationAction(skills, behaviors,
+                            "remove-parent", context);
+                    boolean parentCleared = !behaviors.testCondition(
+                            skills.bindCondition("has-parent"), customOwnerSelfContext)
+                            && dev.helstera.api.behavior.Targeters.select(
+                            "@parent", context, java.util.List.of(), java.util.List.of()).isEmpty();
+                    parentRelation = parentSet && hasParent && isParent && parentTarget
+                            && parentClearedOnQuit && parentSetAgain && parentRemoved && parentCleared;
+                    var childProbe = world.spawn(wolf.getLocation(), org.bukkit.entity.Pig.class);
+                    conditionCategoryEntities.add(childProbe);
+                    boolean childRelationSet = dev.helstera.api.behavior.MobRelations.setParent(childProbe, wolf);
+                    var childContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            ownerInstance, childProbe, 1.0, 0.0, 0, "integration");
+                    isChildCondition = childRelationSet && behaviors.testCondition(
+                            skills.bindCondition("is-child"), childContext);
+                    dev.helstera.api.behavior.MobRelations.clearParent(childProbe);
+                    var modelMob = modelInstance.baseEntity().orElse(null);
+                    boolean casterParentSet = dev.helstera.api.behavior.MobRelations.setParent(modelMob, wolf);
+                    boolean siblingParentSet = dev.helstera.api.behavior.MobRelations.setParent(childProbe, wolf);
+                    var siblingContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            modelInstance, childProbe, 1.0, 0.0, 0, "integration");
+                    boolean siblingCondition = behaviors.testCondition(
+                            skills.bindCondition("is-sibling"), siblingContext);
+                    boolean parentAliveCondition = behaviors.testCondition(
+                            skills.bindCondition("is-parent-alive"), childContext);
+                    dev.helstera.api.behavior.MobRelations.clearParent(modelMob);
+                    dev.helstera.api.behavior.MobRelations.clearParent(childProbe);
+                    var removedParent = world.spawn(wolf.getLocation(), org.bukkit.entity.Zombie.class);
+                    var orphanProbe = world.spawn(wolf.getLocation(), org.bukkit.entity.Pig.class);
+                    conditionCategoryEntities.addAll(java.util.List.of(removedParent, orphanProbe));
+                    dev.helstera.api.behavior.MobRelations.setParent(orphanProbe, removedParent);
+                    var orphanContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            modelInstance, orphanProbe, 1.0, 0.0, 0, "integration");
+                    boolean parentAliveBeforeRemoval = behaviors.testCondition(
+                            skills.bindCondition("is-parent-alive"), orphanContext);
+                    removedParent.remove();
+                    boolean parentAliveAfterRemoval = behaviors.testCondition(
+                            skills.bindCondition("is-parent-alive"), orphanContext);
+                    parentDerivedConditions = casterParentSet && siblingParentSet
+                            && siblingCondition && parentAliveCondition
+                            && parentAliveBeforeRemoval && !parentAliveAfterRemoval;
+                    dev.helstera.api.behavior.MobRelations.clearParent(orphanProbe);
+                }
+                targetCategories = targetCategories
+                        && testTargetCategory(skills, behaviors, modelInstance, wolf, "tameable")
+                        && testTargetCategory(skills, behaviors, modelInstance, pillager, "raider")
+                        && testTargetCategory(skills, behaviors, modelInstance, sheep, "animal")
+                        && testTargetCategory(skills, behaviors, modelInstance, villager, "villager");
+                var passengerProbe = world.spawn(conditionTarget.getLocation(), org.bukkit.entity.Pig.class);
+                conditionCategoryEntities.add(passengerProbe);
+                var passengerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, passengerProbe, 1.0, 0.0, 0, "integration");
+                boolean unmountedBefore = !behaviors.testCondition(
+                        skills.bindCondition("mounted"), passengerContext);
+                boolean noPassengerBefore = !behaviors.testCondition(
+                        skills.bindCondition("has-passenger"), conditionContext);
+                boolean mountedNow = conditionTarget.addPassenger(passengerProbe)
+                        && behaviors.testCondition(skills.bindCondition("mounted"), passengerContext);
+                boolean hasPassengerNow = behaviors.testCondition(
+                        skills.bindCondition("has-passenger"), conditionContext);
+                conditionTarget.removePassenger(passengerProbe);
+                var originalConditionVelocity = conditionTarget.getVelocity().clone();
+                conditionTarget.setVelocity(new org.bukkit.util.Vector(0.25, 0.0, 0.0));
+                boolean movingNow = behaviors.testCondition(skills.bindCondition("moving"), conditionContext);
+                conditionTarget.setVelocity(originalConditionVelocity);
+                boolean conditionMobility = unmountedBefore && noPassengerBefore
+                        && mountedNow && hasPassengerNow && movingNow;
+                boolean conditionComposition = behaviors.testCondition(nestedCondition, conditionContext)
+                        && behaviors.testCondition(negatedCondition, conditionContext);
+                world.setTime(6_000L);
+                world.setStorm(false);
+                world.setThundering(false);
+                boolean dayTimeWeather = behaviors.testCondition(
+                        skills.bindCondition("time-is day"), conditionContext)
+                        && behaviors.testCondition(skills.bindCondition("time-is noon"), conditionContext)
+                        && behaviors.testCondition(skills.bindCondition("time-is >=6000"), conditionContext)
+                        && behaviors.testCondition(skills.bindCondition("weather-is clear"), conditionContext);
+                world.setStorm(true);
+                world.setThundering(true);
+                boolean stormWeather = behaviors.testCondition(
+                        skills.bindCondition("weather-is thunderstorm"), conditionContext);
+                boolean timeWeather = dayTimeWeather && stormWeather;
+                org.bukkit.entity.Player permissionProbe = getServer().getOnlinePlayers().stream()
+                        .findFirst().orElse(null);
+                boolean casterPermission = false;
+                boolean stateConditions = false;
+                boolean stateFlying = false;
+                boolean stateSneaking = false;
+                boolean stateGliding = false;
+                boolean stateBlocking = false;
+                boolean playerPotionEvents = false;
+                boolean foodLevelCondition = false;
+                boolean hasItemCondition = false;
+                boolean airLevelCondition = false;
+                org.bukkit.permissions.PermissionAttachment permissionAttachment = null;
+                if (permissionProbe != null) {
+                    stateInstance = instances().bind("example/emberling", permissionProbe,
+                            dev.helstera.api.instance.SpawnOptions.defaults());
+                    boolean oldAllowFlight = permissionProbe.getAllowFlight();
+                    boolean oldFlying = permissionProbe.isFlying();
+                    boolean oldSneaking = permissionProbe.isSneaking();
+                    boolean oldGliding = permissionProbe.isGliding();
+                    var oldGameMode = permissionProbe.getGameMode();
+                    int oldFoodLevel = permissionProbe.getFoodLevel();
+                    var oldMainHand = permissionProbe.getInventory().getItemInMainHand().clone();
+                    permissionProbe.setAllowFlight(true);
+                    permissionProbe.setFlying(true);
+                    permissionProbe.setSneaking(true);
+                    permissionProbe.setGliding(true);
+                    permissionProbe.getInventory().setItemInMainHand(
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+                    var stateContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                            stateInstance, permissionProbe, 1.0, -1, 0, "integration", null,
+                            permissionProbe, java.util.List.of(permissionProbe), permissionProbe.getLocation());
+                    boolean hasItemBefore = behaviors.testCondition(
+                            skills.bindCondition("has-item SHIELD >=1"), stateContext);
+                    permissionProbe.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(
+                            org.bukkit.Material.AIR));
+                    boolean hasItemAfter = !behaviors.testCondition(
+                            skills.bindCondition("has-item SHIELD >=1"), stateContext);
+                    hasItemCondition = hasItemBefore && hasItemAfter;
+                    permissionProbe.getInventory().setItemInMainHand(oldMainHand);
+                    int oldRemainingAir = permissionProbe.getRemainingAir();
+                    permissionProbe.setRemainingAir(100);
+                    boolean airAtThreshold = behaviors.testCondition(
+                            skills.bindCondition("air-level <= 100"), stateContext);
+                    permissionProbe.setRemainingAir(101);
+                    boolean airAboveThreshold = !behaviors.testCondition(
+                            skills.bindCondition("air-level <= 100"), stateContext);
+                    airLevelCondition = airAtThreshold && airAboveThreshold;
+                    permissionProbe.setRemainingAir(oldRemainingAir);
+                    stateFlying = behaviors.testCondition(skills.bindCondition("is-flying"), stateContext);
+                    stateSneaking = behaviors.testCondition(skills.bindCondition("issneaking"), stateContext);
+                    stateGliding = behaviors.testCondition(skills.bindCondition("is-gliding"), stateContext);
+                    permissionProbe.setGameMode(org.bukkit.GameMode.SURVIVAL);
+                    stateBlocking = behaviors.testCondition(skills.bindCondition("is-blocking"), stateContext);
+                    permissionProbe.setGameMode(oldGameMode);
+                    stateConditions = stateFlying && stateSneaking && stateGliding;
+                    permissionProbe.setFlying(oldFlying);
+                    permissionProbe.setAllowFlight(oldAllowFlight);
+                    permissionProbe.setSneaking(oldSneaking);
+                    permissionProbe.setGliding(oldGliding);
+                    permissionProbe.getInventory().setItemInMainHand(oldMainHand);
+                    permissionAttachment = permissionProbe.addAttachment(this, "integration.probe", true);
+                    permissionProbe.recalculatePermissions();
+                    var permissionContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                            null, permissionProbe, 1.0, -1, 0, "integration", null,
+                            permissionProbe, java.util.List.of(permissionProbe), permissionProbe.getLocation());
+                    String permissionCondition = skills.bindCondition("caster-has-permission integration.probe");
+                    casterPermission = behaviors.testCondition(permissionCondition, permissionContext);
+                    permissionProbe.setFoodLevel(14);
+                    boolean foodAtOrBelow = behaviors.testCondition(
+                            skills.bindCondition("food-level <= 14"), permissionContext);
+                    permissionProbe.setFoodLevel(15);
+                    boolean foodAbove = !behaviors.testCondition(
+                            skills.bindCondition("food-level <= 14"), permissionContext);
+                    foodLevelCondition = foodAtOrBelow && foodAbove;
+                    permissionProbe.setFoodLevel(oldFoodLevel);
+                    if (!"true".equalsIgnoreCase(System.getenv("PAPER_SKIP_PLAYER_POTION"))) {
+                        long playerPotionBefore = potionEventCount();
+                        permissionProbe.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                                org.bukkit.potion.PotionEffectType.SPEED, 20, 0));
+                        permissionProbe.removePotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
+                        playerPotionEvents = potionEventCount() > playerPotionBefore;
+                        org.bukkit.inventory.ItemStack drinkProbe = new org.bukkit.inventory.ItemStack(
+                                org.bukkit.Material.POTION);
+                        if (drinkProbe.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta potionMeta) {
+                            potionMeta.setBasePotionType(org.bukkit.potion.PotionType.SWIFTNESS);
+                            drinkProbe.setItemMeta(potionMeta);
+                        }
+                        permissionProbe.getInventory().addItem(drinkProbe);
+                        permissionProbe.updateInventory();
+                    }
+                    if (permissionAttachment != null) permissionProbe.removeAttachment(permissionAttachment);
+                }
+                boolean equipmentState = zombie.getEquipment() != null
+                        && zombie.getEquipment().getItemInOffHand().getType() == org.bukkit.Material.DIAMOND_SWORD
+                        && zombie.getEquipment().getItemInMainHand().getType() == org.bukkit.Material.SHIELD;
+                for (var item : world.getEntitiesByClass(org.bukkit.entity.Item.class)) {
+                    if (item.getItemStack().getType() == org.bukkit.Material.DIAMOND
+                            && item.getItemStack().getAmount() == 3) droppedItems.add(item);
+                }
+                getLogger().info("[自检] skill-actions equipment=" + (equipped && equipmentState)
+                        + " potion=" + potion + " drop-item=" + (dropAction && !droppedItems.isEmpty())
+                        + " teleport=" + teleport
+                        + " conditions=" + conditions
+                        + " condition-mobility=" + conditionMobility
+                        + " leashed-condition=" + leashedCondition
+                        + " has-owner-condition=" + hasOwnerCondition
+                        + " has-tag-condition=" + hasTagCondition
+                        + " custom-owner-relation=" + customOwnerRelation
+                        + " parent-relation=" + parentRelation
+                        + " is-child-condition=" + isChildCondition
+                        + " parent-derived-conditions=" + parentDerivedConditions
+                        + " world-biome=" + worldBiome
+                        + " world-biome-reject=" + worldBiomeReject
+                        + " target-categories=" + targetCategories
+                        + " target-health=" + targetHealthComparators
+                        + " target-environment=" + targetEnvironmentalConditions
+                        + " target-fluids=" + targetFluidConditions
+                        + " target-blocked=" + targetBlockedCondition
+                        + " condition-composition=" + conditionComposition
+                        + " time-weather=" + timeWeather
+                        + " caster-permission=" + casterPermission
+                        + " food-level=" + foodLevelCondition
+                        + " has-item=" + hasItemCondition
+                        + " air-level=" + airLevelCondition
+                        + " player-potion-events=" + playerPotionEvents
+                        + " state-conditions=" + stateConditions
+                        + " state-flying=" + stateFlying
+                        + " state-sneaking=" + stateSneaking
+                        + " state-gliding=" + stateGliding
+                        + " state-blocking=" + stateBlocking
+                        + " entity-state-conditions=" + entityStateConditions
+                        + " invulnerable-condition=" + invulnerableCondition
+                        + " target-invulnerable=" + targetInvulnerable
+                        + " owner-targeter=" + ownerTargeter
+                        + " spatial-targeters=" + spatialTargeters
+                        + " custom-item=" + customItemResolved
+                        + " before=" + formatProbeLocation(beforeTeleport)
+                        + " after=" + formatProbeLocation(zombie.getLocation())
+                        + " offset-distance=" + String.format(java.util.Locale.ROOT, "%.3f", offsetDistance)
+                        + " moved-distance=" + String.format(java.util.Locale.ROOT, "%.3f",
+                        beforeTeleport.distance(zombie.getLocation())));
+            } catch (Throwable t) {
+                getLogger().warning("[自检] skill-actions 异常: " + t);
+            } finally {
+                world.setTime(originalWorldTime);
+                world.setStorm(originalStorm);
+                world.setThundering(originalThundering);
+                if (zombie != null) zombie.remove();
+                if (conditionTarget != null) conditionTarget.remove();
+                if (conditionTargetBlockState != null) conditionTargetBlockState.update(true, false);
+                if (conditionTargetHeadBlockState != null) conditionTargetHeadBlockState.update(true, false);
+                for (var entity : conditionCategoryEntities) entity.remove();
+                for (var item : droppedItems) item.remove();
+                if (ownerInstance != null && instances() != null) {
+                    instances().despawn(ownerInstance.instanceId());
+                }
+                if (stateInstance != null && instances() != null) {
+                    instances().despawn(stateInstance.instanceId());
+                }
+                if (modelInstance != null && instances() != null) {
+                    instances().despawn(modelInstance.instanceId());
+                }
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 30L);
+    }
+
+    private static boolean testTargetCategory(dev.helstera.ai.skill.SkillService skills,
+                                              dev.helstera.api.behavior.BehaviorRegistry behaviors,
+                                              dev.helstera.api.instance.ModelInstance instance,
+                                              org.bukkit.entity.LivingEntity target,
+                                              String category) {
+        String condition = skills.bindCondition("target-is " + category);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, target, 1.0, 1.0, 0, "integration");
+        return condition != null && behaviors.testCondition(condition, context);
+    }
+
+    private static boolean runIntegrationAction(dev.helstera.ai.skill.SkillService skills,
+                                                 dev.helstera.api.behavior.BehaviorRegistry behaviors,
+                                                 String spec,
+                                                 dev.helstera.api.behavior.BehaviorContext context) {
+        String key = skills.bindAction(spec);
+        return key != null && behaviors.runAction(key, context);
+    }
+
+    private static String formatProbeLocation(Location location) {
+        if (location == null) return "null";
+        return String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f",
+                location.getX(), location.getY(), location.getZ());
+    }
+
+    private void runLootSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null || loot() == null) {
+                getLogger().warning("[自检] loot 失败: LootService 或世界不可用");
+                return;
+            }
+            Location location = world.getSpawnLocation().clone().add(0, 3, 0);
+            var spawned = new java.util.ArrayList<org.bukkit.entity.Item>();
+            try {
+                var table = loot().table("common");
+                if (table == null) throw new IllegalStateException("loot table common missing");
+                var dynamicConfig = new YamlConfiguration();
+                dynamicConfig.set("probe.entries", java.util.List.of(java.util.Map.of(
+                        "item", "DIAMOND", "chance-expression", "<random.percent>")));
+                var dynamicTable = dev.helstera.ai.loot.DropTable.parse(
+                        "integration_dynamic", dynamicConfig.getConfigurationSection("probe"), new java.util.ArrayList<>());
+                var dynamicHits = loot().rollPlan(dynamicTable, 0, new java.util.Random(7), -1);
+                boolean dynamicChance = dynamicHits.size() == 1
+                        && dynamicHits.get(0).entry().itemId().equals("DIAMOND");
+                var hits = java.util.List.<dev.helstera.ai.loot.LootService.Hit>of();
+                for (int attempt = 0; attempt < 40 && hits.isEmpty(); attempt++) {
+                    hits = loot().rollPlan(table, 0, new java.util.Random(attempt));
+                }
+                var stacks = loot().materialize(hits);
+                for (var stack : stacks) spawned.add(world.dropItemNaturally(location, stack));
+                boolean amountsValid = stacks.stream().allMatch(stack -> stack.getAmount() >= 1 && stack.getAmount() <= 3);
+                int experience = loot().experience("common", new java.util.Random(1));
+                getLogger().info("[自检] loot table=common hits=" + hits.size()
+                        + " materialized=" + stacks.size() + " entities=" + spawned.size()
+                        + " amounts=" + amountsValid + " experience=" + experience
+                        + " dynamic-chance=" + dynamicChance);
+            } catch (Throwable t) {
+                getLogger().warning("[自检] loot 异常: " + t);
+            } finally {
+                for (var item : spawned) item.remove();
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 40L);
+    }
+
+    private void runDeathLootSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null || instances == null || registry.get("example/emberling").isEmpty()) {
+                getLogger().warning("[自检] death-loot 失败: 实例系统、模型或世界不可用");
+                return;
+            }
+            Location location = world.getSpawnLocation().clone().add(0, 3, 0);
+            org.bukkit.entity.Zombie zombie = null;
+            dev.helstera.api.instance.ModelInstance modelInstance = null;
+            try {
+                zombie = world.spawn(location, org.bukkit.entity.Zombie.class);
+                modelInstance = instances().bind("example/emberling", zombie,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                if (!(modelInstance instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl)) {
+                    throw new IllegalStateException("model instance implementation unavailable");
+                }
+                impl.lootTable = "integration_death";
+                impl.lootUsesLuck = false;
+                zombie.setMaxHealth(1.0);
+                zombie.setHealth(1.0);
+                zombie.damage(1000.0);
+                var tracked = modelInstance;
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    try {
+                        int itemEntities = (int) world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .filter(item -> item.getLocation().distanceSquared(location) < 36)
+                                .count();
+                        var drops = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .filter(item -> item.getLocation().distanceSquared(location) < 36)
+                                .toList();
+                        boolean conditionalDrop = drops.stream().anyMatch(item ->
+                                item.getItemStack().getType() == org.bukkit.Material.DIAMOND
+                                        && item.getItemStack().getAmount() == 2);
+                        boolean rejectedDropAbsent = drops.stream().noneMatch(item ->
+                                item.getItemStack().getType() == org.bukkit.Material.BREAD);
+                        int experience = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                                .filter(orb -> orb.getLocation().distanceSquared(location) < 36)
+                                .mapToInt(org.bukkit.entity.ExperienceOrb::getExperience).sum();
+                        getLogger().info("[自检] death-loot items=" + itemEntities
+                                + " conditional-drop=" + conditionalDrop
+                                + " rejected-drop-absent=" + rejectedDropAbsent
+                                + " dynamic-chance-drop=" + conditionalDrop
+                                + " experience=" + experience);
+                    } finally {
+                        if (tracked != null && instances() != null) instances().despawn(tracked.instanceId());
+                        for (var item : world.getEntitiesByClass(org.bukkit.entity.Item.class)) {
+                            if (item.getLocation().distanceSquared(location) < 36) item.remove();
+                        }
+                        for (var orb : world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class)) {
+                            if (orb.getLocation().distanceSquared(location) < 36) orb.remove();
+                        }
+                    }
+                }, 10L);
+            } catch (Throwable t) {
+                getLogger().warning("[自检] death-loot 异常: " + t);
+                if (modelInstance != null) instances().despawn(modelInstance.instanceId());
+                else if (zombie != null) zombie.remove();
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 50L);
+    }
+
+    private boolean probeEntityControlled(dev.helstera.api.instance.ModelInstance instance) {
+        if (instance == null || ai == null) return false;
+        var entityId = instance.boundEntityId().orElse(null);
+        return entityId != null && ((dev.helstera.ai.AiManager) ai).allInstances().stream()
+                .anyMatch(candidate -> entityId.equals(candidate.boundEntityId().orElse(null)));
+    }
+
+    private void runSpawnerSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            if (!(spawnerService instanceof dev.helstera.ai.spawner.SpawnerService sp) || sp.ids().isEmpty()) {
+                getLogger().warning("[自检] spawner 失败: 没有可用 SpawnerService/ID");
+                return;
+            }
+            String id = sp.ids().stream()
+                    .filter(candidate -> sp.get(candidate) != null && sp.get(candidate).enabled())
+                    .findFirst().orElse(sp.ids().iterator().next());
+            Location safeLocation = getServer().getWorlds().get(0).getSpawnLocation().clone().add(0, 2, 0);
+            var cooldownProbe = sp.get("cooldown_probe");
+            if (cooldownProbe != null) {
+                int before = cooldownProbe.totalSpawned();
+                sp.tickOnce();
+                int afterFirst = cooldownProbe.totalSpawned();
+                int remainingAfterFirst = sp.nextSpawnInTicks("cooldown_probe");
+                sp.tickOnce();
+                int afterSecond = cooldownProbe.totalSpawned();
+                int remainingAfterSecond = sp.nextSpawnInTicks("cooldown_probe");
+                getLogger().info("spawner-cooldown id=cooldown_probe before=" + before
+                        + " after-first=" + afterFirst + " after-second=" + afterSecond
+                        + " remaining-first=" + remainingAfterFirst
+                        + " remaining-second=" + remainingAfterSecond);
+            }
+            boolean requested = sp.forceSpawn(id, safeLocation);
+            int direct = spawnMobAt("emberling", safeLocation, null);
+            var targetSpawner = sp.get(id);
+            var randomSpawner = sp.ids().stream().map(sp::get)
+                    .filter(candidate -> candidate != null && candidate.randomPool() != null)
+                    .sorted(java.util.Comparator.comparing(candidate ->
+                            !candidate.id().equals("random_distribution_probe")))
+                    .findFirst().orElse(null);
+            int randomSamplesAccepted = 0;
+            if (randomSpawner != null) {
+                for (int i = 0; i < 100; i++) {
+                    if (sp.forceSpawn(randomSpawner.id(), safeLocation)) randomSamplesAccepted++;
+                }
+            }
+            int acceptedRandomSamples = randomSamplesAccepted;
+            getServer().getScheduler().runTaskLater(this, () -> {
+                int alive = sp.aliveCount(id);
+                getLogger().info("[自检] spawner id=" + id + " requested=" + requested
+                        + " alive=" + alive + " next=" + sp.nextSpawnInTicks(id)
+                        + " direct-spawn=" + direct + " failure=" + sp.forceSpawnFailure(id));
+                if (targetSpawner != null && targetSpawner.randomPool() != null) {
+                    getLogger().info("[自检] random-spawn expected=" + targetSpawner.expectedDistribution()
+                            + " observed=" + targetSpawner.observedDistribution()
+                            + " deviation=" + targetSpawner.distributionDeviation()
+                            + " total=" + targetSpawner.totalSpawned());
+                }
+                if (randomSpawner != null) {
+                    double maxRandomDeviation = randomSpawner.distributionDeviation().values().stream()
+                            .mapToDouble(Math::abs).max().orElse(0.0);
+                    getLogger().info("random-spawn id=" + randomSpawner.id()
+                            + " expected=" + randomSpawner.expectedDistribution()
+                            + " observed=" + randomSpawner.observedDistribution()
+                            + " deviation=" + randomSpawner.distributionDeviation()
+                            + " max-abs-deviation=" + String.format(java.util.Locale.ROOT, "%.6f", maxRandomDeviation)
+                            + " total=" + acceptedRandomSamples
+                            + " cumulative=" + randomSpawner.totalSpawned());
+                } else {
+                    getLogger().warning("random-spawn probe missing: no configured random-mobs pool");
+                }
+                for (String candidate : sp.ids()) {
+                    if (candidate.equals(id)) continue;
+                    boolean naturalLocationProbe = candidate.equals("natural_ground_pass")
+                            || candidate.equals("border_fail")
+                            || candidate.equals("heightmap_ground_pass")
+                            || candidate.equals("ground_missing_fail")
+                            || candidate.equals("border_clipped_inside_pass")
+                            || candidate.equals("border_outside_fail");
+                    Location scopedLocation = getServer().getWorlds().stream()
+                            .filter(world -> {
+                                String name = world.getName().toLowerCase(java.util.Locale.ROOT);
+                                return name.endsWith("_nether") || name.endsWith("_the_end");
+                            })
+                            .findFirst()
+                            .map(world -> world.getSpawnLocation().clone().add(0, 2, 0))
+                            .orElse(safeLocation);
+                    boolean lunarProbe = candidate.equals("lunar_probe");
+                    boolean weatherRainPass = candidate.equals("weather_rain_pass");
+                    boolean weatherRainFail = candidate.equals("weather_rain_fail");
+                    boolean timeWindowProbe = candidate.equals("time_window_pass")
+                            || candidate.equals("time_window_fail");
+                    boolean biomeProbe = candidate.equals("biome_desert_pass")
+                            || candidate.equals("biome_plains_fail");
+                    boolean heightmapProbe = candidate.equals("heightmap_ground_pass");
+                    boolean missingGroundProbe = candidate.equals("ground_missing_fail");
+                    boolean borderInsideProbe = candidate.equals("border_clipped_inside_pass");
+                    boolean borderOutsideProbe = candidate.equals("border_outside_fail");
+                    boolean borderProbe = borderInsideProbe || borderOutsideProbe;
+                    org.bukkit.World probeWorld = safeLocation.getWorld();
+                    long originalFullTime = probeWorld == null ? 0L : probeWorld.getFullTime();
+                    boolean originalStorm = probeWorld != null && probeWorld.hasStorm();
+                    boolean originalThundering = probeWorld != null && probeWorld.isThundering();
+                    org.bukkit.block.Biome originalBiome = probeWorld == null
+                            ? null : probeWorld.getBiome(safeLocation.getBlockX(), safeLocation.getBlockZ());
+                    var worldBorder = probeWorld == null ? null : probeWorld.getWorldBorder();
+                    var originalBorderCenter = worldBorder == null ? null : worldBorder.getCenter().clone();
+                    double originalBorderSize = worldBorder == null ? 0.0 : worldBorder.getSize();
+                    var clippedBorderSpawner = sp.get("border_clipped_inside_pass");
+                    double testBorderCenterX = clippedBorderSpawner == null ? 0.0 : clippedBorderSpawner.x();
+                    double testBorderCenterZ = clippedBorderSpawner == null ? 0.0 : clippedBorderSpawner.z();
+                    double testBorderSize = 20.0;
+                    var missingGroundStates = new java.util.ArrayList<org.bukkit.block.BlockState>();
+                    var missingGroundLocation = (Location) null;
+                    if ((heightmapProbe || missingGroundProbe) && probeWorld != null) {
+                        var configured = sp.get(candidate);
+                        if (configured != null) {
+                            missingGroundLocation = new Location(probeWorld,
+                                    configured.x(), configured.y(), configured.z());
+                            probeWorld.getChunkAt(missingGroundLocation.getBlockX() >> 4,
+                                    missingGroundLocation.getBlockZ() >> 4);
+                        }
+                    }
+                    if (missingGroundProbe && probeWorld != null && missingGroundLocation != null) {
+                        int x = missingGroundLocation.getBlockX();
+                        int z = missingGroundLocation.getBlockZ();
+                        for (int y = probeWorld.getMinHeight(); y < probeWorld.getMaxHeight(); y++) {
+                            var block = probeWorld.getBlockAt(x, y, z);
+                            missingGroundStates.add(block.getState());
+                            if (!block.getType().isAir()) block.setType(org.bukkit.Material.AIR, false);
+                        }
+                    }
+                    if (lunarProbe && probeWorld != null) probeWorld.setFullTime(0L);
+                    if (weatherRainPass && probeWorld != null) probeWorld.setStorm(true);
+                    if (weatherRainFail && probeWorld != null) probeWorld.setStorm(false);
+                    if (timeWindowProbe && probeWorld != null) probeWorld.setTime(6_000L);
+                    if (biomeProbe && probeWorld != null) {
+                        probeWorld.setBiome(safeLocation.getBlockX(), safeLocation.getBlockZ(),
+                                org.bukkit.block.Biome.DESERT);
+                    }
+                    if (borderProbe && worldBorder != null && clippedBorderSpawner != null) {
+                        worldBorder.setCenter(testBorderCenterX, testBorderCenterZ);
+                        worldBorder.setSize(testBorderSize);
+                        if (borderInsideProbe) {
+                            double radius = clippedBorderSpawner.radius();
+                            for (int chunkX = ((int) Math.floor(testBorderCenterX - radius)) >> 4;
+                                 chunkX <= (((int) Math.floor(testBorderCenterX + radius)) >> 4); chunkX++) {
+                                for (int chunkZ = ((int) Math.floor(testBorderCenterZ - radius)) >> 4;
+                                     chunkZ <= (((int) Math.floor(testBorderCenterZ + radius)) >> 4); chunkZ++) {
+                                    probeWorld.getChunkAt(chunkX, chunkZ);
+                                }
+                            }
+                        }
+                    }
+                    boolean accepted = naturalLocationProbe
+                            ? sp.forceSpawn(candidate)
+                            : sp.forceSpawn(candidate,
+                            candidate.equals("scoped_limit_probe") ? scopedLocation : safeLocation);
+                    if (probeWorld != null) {
+                        if (lunarProbe || timeWindowProbe) probeWorld.setFullTime(originalFullTime);
+                        probeWorld.setStorm(originalStorm);
+                        probeWorld.setThundering(originalThundering);
+                        if (biomeProbe && originalBiome != null) {
+                            probeWorld.setBiome(safeLocation.getBlockX(), safeLocation.getBlockZ(), originalBiome);
+                        }
+                        if (borderProbe && worldBorder != null && originalBorderCenter != null) {
+                            worldBorder.setCenter(originalBorderCenter);
+                            worldBorder.setSize(originalBorderSize);
+                        }
+                    }
+                    boolean groundColumnRestored = true;
+                    for (var state : missingGroundStates) {
+                        groundColumnRestored &= state.update(true, false);
+                    }
+                    if (heightmapProbe && probeWorld != null && missingGroundLocation != null) {
+                        var surface = probeWorld.getHighestBlockAt(missingGroundLocation.getBlockX(),
+                                missingGroundLocation.getBlockZ(), org.bukkit.HeightMap.OCEAN_FLOOR);
+                        getLogger().info("spawner-heightmap id=" + candidate
+                                + " requested=" + accepted + " surface=" + surface.getType()
+                                + " surface-y=" + surface.getY() + " failure=" + sp.forceSpawnFailure(candidate));
+                    }
+                    if (missingGroundProbe) {
+                        getLogger().info("spawner-ground id=" + candidate
+                                + " requested=" + accepted + " failure=" + sp.forceSpawnFailure(candidate)
+                                + " restored=" + groundColumnRestored
+                                + " saved-blocks=" + missingGroundStates.size());
+                    }
+                    if (borderProbe && clippedBorderSpawner != null) {
+                        var currentBorderSpawner = sp.get(candidate);
+                        double effectiveRadius = dev.helstera.ai.spawner.SpawnerService.safeRadiusWithinBorder(
+                                currentBorderSpawner.radius(), currentBorderSpawner.x(), currentBorderSpawner.z(),
+                                testBorderCenterX, testBorderCenterZ, testBorderSize);
+                        getLogger().info("spawner-border id=" + candidate
+                                + " requested=" + accepted + " configured-radius=" + currentBorderSpawner.radius()
+                                + " effective-radius=" + effectiveRadius + " border-size=" + testBorderSize
+                                + " restored=" + (worldBorder != null && originalBorderCenter != null
+                                && worldBorder.getCenter().equals(originalBorderCenter)
+                                && worldBorder.getSize() == originalBorderSize)
+                                + " failure=" + sp.forceSpawnFailure(candidate));
+                    }
+                    if (candidate.equals("max_spawn_probe")) {
+                        boolean second = sp.forceSpawn(candidate, safeLocation);
+                        getLogger().info("spawner-max-spawns id=" + candidate
+                                + " first=" + accepted + " second=" + second
+                                + " total=" + sp.get(candidate).totalSpawned()
+                                + " failure=" + sp.forceSpawnFailure(candidate));
+                    }
+                    if (candidate.equals("scoped_limit_probe")) {
+                        boolean second = sp.forceSpawn(candidate, scopedLocation);
+                        getLogger().info("spawner-scoped-limits id=" + candidate
+                                + " first=" + accepted + " second=" + second
+                                + " total=" + sp.get(candidate).totalSpawned()
+                                + " world-limit=" + sp.get(candidate).maxPerWorld()
+                                + " failure=" + sp.forceSpawnFailure(candidate));
+                    }
+                    if (candidate.equals("player_limit_probe")) {
+                        boolean second = sp.forceSpawn(candidate, safeLocation);
+                        getLogger().info("spawner-player-limits id=" + candidate
+                                + " first=" + accepted + " second=" + second
+                                + " total=" + sp.get(candidate).totalSpawned()
+                                + " player-limit=" + sp.get(candidate).maxPerPlayer()
+                                + " failure=" + sp.forceSpawnFailure(candidate));
+                    }
+                    if (lunarProbe) {
+                        getLogger().info("spawner-lunar id=" + candidate
+                                + " requested=" + accepted
+                                + " phase=FULL failure=" + sp.forceSpawnFailure(candidate));
+                    }
+                    getLogger().info("[自检] spawner-probe id=" + candidate
+                            + " mode=" + (naturalLocationProbe ? "natural-location" : "safe-override")
+                            + " requested=" + accepted + " failure=" + sp.forceSpawnFailure(candidate));
+                }
+            }, 10L);
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 60L);
+    }
+
+    private void runEventSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null || instances == null || registry.get("example/emberling").isEmpty()) {
+                getLogger().warning("[自检] events 失败: 世界/模型/实例系统不可用");
+                return;
+            }
+            Location location = world.getSpawnLocation().clone().add(0, 3, 0);
+            var tracked = new java.util.ArrayList<dev.helstera.api.instance.ModelInstance>();
+            dev.helstera.api.instance.ModelInstance triggerProbe = null;
+            dev.helstera.api.instance.ModelInstance blockProbe = null;
+            try {
+                int naturalPotionId = spawnMobAt("trigger_probe", location.clone().add(24, 0, 24), null);
+                var naturalPotionProbe = naturalPotionId > 0 ? instances().impl(naturalPotionId) : null;
+                var naturalPotionEntity = naturalPotionProbe == null ? null
+                        : naturalPotionProbe.baseEntity().orElse(null);
+                if (naturalPotionEntity instanceof org.bukkit.entity.LivingEntity naturalLiving) {
+                    naturalLiving.setInvulnerable(true);
+                    naturalLiving.setFireTicks(0);
+                    naturalLiving.setCollidable(false);
+                    if (naturalLiving instanceof org.bukkit.entity.Mob naturalMob) {
+                        naturalMob.setAI(false);
+                    }
+                    long naturalPotionEventsBefore = potionEventCount();
+                    naturalLiving.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                            org.bukkit.potion.PotionEffectType.SPEED, 40, 0));
+                    getServer().getScheduler().runTaskLater(this, () -> {
+                        boolean expired = !naturalLiving.hasPotionEffect(
+                                org.bukkit.potion.PotionEffectType.SPEED);
+                        boolean eventObserved = potionEventCount() > naturalPotionEventsBefore;
+                        boolean actionObserved = "\u00a7ePOTION_END_TRIGGER_OK"
+                                .equals(naturalLiving.getCustomName());
+                        boolean itemMarkerObserved = naturalLiving.getEquipment() != null
+                                && naturalLiving.getEquipment().getItemInOffHand().getType()
+                                == org.bukkit.Material.GOLD_INGOT;
+                        getLogger().info("potion-natural-expiry="
+                                + (expired && (actionObserved || itemMarkerObserved))
+                                + " expired=" + expired
+                                + " event-observed=" + eventObserved
+                                + " action-observed=" + actionObserved
+                                + " item-marker-observed=" + itemMarkerObserved);
+                        if (instances() != null) instances().despawn(naturalPotionId);
+                    }, 70L);
+                } else if (naturalPotionId > 0) {
+                    getServer().getScheduler().runTaskLater(this, () -> {
+                        if (instances() != null) instances().despawn(naturalPotionId);
+                    }, 1L);
+                }
+                java.util.List<org.bukkit.entity.Player> onlinePlayers = new java.util.ArrayList<>(getServer().getOnlinePlayers());
+                if (!onlinePlayers.isEmpty()) {
+                    var holder = onlinePlayers.stream()
+                            .filter(player -> player.getName().equalsIgnoreCase("HelsteraTester"))
+                            .findFirst().orElse(onlinePlayers.get(0));
+                    holder.setGameMode(org.bukkit.GameMode.SURVIVAL);
+                    holder.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.WHEAT));
+                    if (skillService instanceof dev.helstera.ai.skill.SkillService skills
+                            && behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors
+                            && ai instanceof dev.helstera.ai.AiManager aiManager) {
+                        blockProbe = instances().bind("example/emberling", holder,
+                                dev.helstera.api.instance.SpawnOptions.defaults());
+                        var blockProfile = new dev.helstera.ai.AiProfile("paper-block-player");
+                        var breakSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        breakSpec.actions.add(skills.bindAction("equip DIAMOND off-hand 1"));
+                        var placeSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        placeSpec.actions.add(skills.bindAction("set-name &eBLOCK_PLACE_OK"));
+                        var pickupSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        pickupSpec.actions.add(skills.bindAction("set-name &aITEM_PICKUP_OK"));
+                        var vehicleEnterSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        vehicleEnterSpec.actions.add(skills.bindAction("set-name &bVEHICLE_ENTER_OK"));
+                        var vehicleExitSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        vehicleExitSpec.actions.add(skills.bindAction("set-name &9VEHICLE_EXIT_OK"));
+                        var vehicleDestroySpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        vehicleDestroySpec.actions.add(skills.bindAction("set-name &cVEHICLE_DESTROY_OK"));
+                        blockProfile.triggers.put("on-block-break", breakSpec);
+                        blockProfile.triggers.put("on-block-place", placeSpec);
+                        blockProfile.triggers.put("on-item-pickup", pickupSpec);
+                        blockProfile.triggers.put("on-vehicle-enter", vehicleEnterSpec);
+                        blockProfile.triggers.put("on-vehicle-exit", vehicleExitSpec);
+                        blockProfile.triggers.put("on-vehicle-destroy", vehicleDestroySpec);
+                        aiManager.attach((dev.helstera.runtime.instance.ModelInstanceImpl) blockProbe, blockProfile);
+                        holder.getInventory().addItem(new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE, 8));
+                        var blockOrigin = holder.getLocation().getBlock().getLocation();
+                        for (int dx = -3; dx <= 3; dx++) {
+                            for (int dz = -3; dz <= 3; dz++) {
+                                blockOrigin.clone().add(dx, 1, dz).getBlock().setType(org.bukkit.Material.STONE);
+                            }
+                        }
+                        getLogger().info("block-events setup=" + blockOrigin.getBlockX()
+                                + "," + blockOrigin.getBlockY() + "," + blockOrigin.getBlockZ());
+                        getServer().getScheduler().runTaskLater(this, () ->
+                                world.dropItem(holder.getLocation(),
+                                        new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLD_NUGGET, 1)), 10L);
+                        var blockProbeForDismount = blockProbe;
+                        getServer().getScheduler().runTaskLater(this, () -> {
+                            boolean itemPickup = "\u00a7aITEM_PICKUP_OK".equals(holder.getCustomName());
+                            getLogger().info("item-pickup trigger=" + itemPickup
+                                    + " player=" + holder.getName());
+                        }, 80L);
+                        getServer().getScheduler().runTaskLater(this, () -> {
+                            var boat = world.spawn(holder.getLocation().clone().add(0, 0, 2),
+                                    org.bukkit.entity.Boat.class);
+                            boat.addPassenger(holder);
+                            boolean vehicleEnter = "\u00a7bVEHICLE_ENTER_OK".equals(holder.getCustomName());
+                            var dismountContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                    blockProbeForDismount, holder, 1.0, 1.0, 0, "integration");
+                            boolean dismountAction = runIntegrationAction(skills, behaviors,
+                                    "dismount", dismountContext);
+                            boolean dismounted = dismountAction && !boat.getPassengers().contains(holder);
+                            boolean vehicleExit = "\u00a79VEHICLE_EXIT_OK".equals(holder.getCustomName());
+                            getServer().getScheduler().runTaskLater(this, () -> {
+                                boolean vehicleDestroy = "\u00a7cVEHICLE_DESTROY_OK".equals(holder.getCustomName());
+                                getLogger().info("vehicle-events enter=" + vehicleEnter
+                                    + " exit=" + vehicleExit + " dismount=" + dismounted
+                                    + " destroy=" + vehicleDestroy
+                                        + " player=" + holder.getName());
+                                if (boat.isValid()) boat.remove();
+                                if (instances() != null && blockProbeForDismount != null) {
+                                    instances().despawn(blockProbeForDismount.instanceId());
+                                }
+                        }, 240L);
+                        }, 160L);
+                        getServer().getScheduler().runTaskLater(this, () -> {
+                            var equipment = holder.getInventory().getItemInOffHand();
+                            boolean blockBreak = equipment != null && equipment.getType() == org.bukkit.Material.DIAMOND;
+                            boolean blockPlace = "\u00a7eBLOCK_PLACE_OK".equals(holder.getCustomName());
+                            getLogger().info("block-events break=" + blockBreak
+                                    + " place=" + blockPlace
+                                    + " player=" + holder.getName());
+                        }, 240L);
+                    }
+                    var attackState = priorityProbe(holder, "priority_attack_probe", 0.5);
+                    var fleeState = priorityProbe(holder, "priority_flee_probe", 0.5);
+                    boolean priorityAttackWon = attackState == dev.helstera.ai.AiController.State.ATTACK;
+                    boolean priorityFleeWon = fleeState == dev.helstera.ai.AiController.State.FLEE;
+                    getLogger().info("ai-priority-probe attack-first=" + priorityAttackWon
+                            + " flee-first=" + priorityFleeWon
+                            + " attack-state=" + attackState
+                            + " flee-state=" + fleeState);
+                    int environmentalId = spawnMobAt("trigger_probe",
+                            holder.getLocation().clone().add(0, 0, 4), null);
+                    var environmentalInstance = environmentalId > 0 ? instances().impl(environmentalId) : null;
+                    var environmentalEntity = environmentalInstance == null ? null
+                            : environmentalInstance.baseEntity().orElse(null);
+                    if (environmentalEntity instanceof org.bukkit.entity.LivingEntity living) {
+                        var hazardLocation = world.getHighestBlockAt(
+                                living.getLocation().getBlockX() + 2,
+                                living.getLocation().getBlockZ()).getLocation()
+                                .add(0.5, 1.01, 0.5);
+                        var hazardBlock = hazardLocation.getBlock();
+                        var originalHazardData = hazardBlock.getBlockData().clone();
+                        hazardBlock.setType(org.bukkit.Material.LAVA, false);
+                        living.teleport(hazardLocation);
+                        living.setNoDamageTicks(0);
+                        living.setFireTicks(80);
+                        // Paper's no-AI test entity does not reliably receive lava ticks;
+                        // this still exercises the real Bukkit damage event without an attacker.
+                        living.damage(1.0);
+                        getServer().getScheduler().runTaskLater(this, () -> {
+                            boolean environmentalDamage = living.getEquipment() != null
+                                    && living.getEquipment().getItemInMainHand().getType()
+                                    == org.bukkit.Material.DIAMOND_SWORD;
+                            getLogger().info("environmental-damage trigger=" + environmentalDamage
+                                    + " fire-ticks=" + living.getFireTicks()
+                                    + " lava=" + (hazardBlock.getType() == org.bukkit.Material.LAVA));
+                            hazardBlock.setBlockData(originalHazardData, false);
+                            if (instances() != null) instances().despawn(environmentalId);
+                        }, 80L);
+                    }
+                    int temptId = spawnMobAt("tempt_probe", holder.getLocation().clone().add(0, 0, 3), null);
+                    long targetEventsBefore = entityTargetEventCount();
+                    long targetFindMissesBefore = entityTargetFindMissCount();
+                    var temptInstance = temptId > 0 ? instances().impl(temptId) : null;
+                    var temptProfile = ai == null || temptId <= 0 ? null
+                            : ((dev.helstera.ai.AiManager) ai).profileOf(temptId);
+                    var temptPolicy = temptProfile == null ? null : temptProfile.selectorPolicy();
+                    getLogger().info("tempt-probe setup id=" + temptId
+                            + " goals=" + (temptProfile == null ? null : temptProfile.goals)
+                            + " mode=" + (temptPolicy == null ? null : temptPolicy.targetMode())
+                            + " item=" + (temptPolicy == null ? null : temptPolicy.temptItem())
+                            + " range=" + (temptPolicy == null ? null : temptPolicy.temptRange())
+                            + " holder=" + holder.getName()
+                            + " hand=" + holder.getInventory().getItemInMainHand().getType());
+                    getServer().getScheduler().runTaskLater(this, () -> {
+                        var controller = ai == null || temptId <= 0
+                                ? null : ((dev.helstera.ai.AiManager) ai).controllerById(temptId);
+                        var base = temptInstance == null ? null : temptInstance.baseEntity().orElse(null);
+                        var nativeTarget = base instanceof org.bukkit.entity.Mob mob ? mob.getTarget() : null;
+                        var target = controller == null ? null : controller.targetEntity();
+                        boolean passed = target != null && target.getUniqueId().equals(holder.getUniqueId());
+                        boolean nativeTargetPassed = nativeTarget != null
+                                && nativeTarget.getUniqueId().equals(holder.getUniqueId());
+                        boolean syntheticBefore = base != null
+                                && "\u00a7dENTITY_TARGET_EVENT_OK".equals(base.getCustomName());
+                        boolean bukkitTargetBefore = base != null
+                                && "\u00a7dENTITY_TARGET_EVENT_OK".equals(base.getCustomName());
+                        if (base instanceof org.bukkit.entity.Mob targetMob) {
+                            targetMob.setTarget(holder);
+                        }
+                        boolean bukkitTarget = base != null
+                                && "\u00a7dENTITY_TARGET_EVENT_OK".equals(base.getCustomName());
+                        if (base instanceof org.bukkit.entity.Mob targetMob) {
+                            var targetEvent = new org.bukkit.event.entity.EntityTargetEvent(
+                                    targetMob, holder,
+                                    org.bukkit.event.entity.EntityTargetEvent.TargetReason.CLOSEST_PLAYER);
+                            getServer().getPluginManager().callEvent(targetEvent);
+                        }
+                        boolean syntheticTarget = base != null
+                                && "\u00a7dENTITY_TARGET_EVENT_OK".equals(base.getCustomName());
+                        getLogger().info("tempt-probe holder=" + holder.getName()
+                                + " target=" + (target == null ? null : target.getUniqueId())
+                                + " native-target=" + nativeTargetPassed
+                                + " entity-target-trigger=" + bukkitTarget
+                                + " bukkit-target-before=" + bukkitTargetBefore
+                                + " synthetic-entity-target=" + syntheticTarget
+                                + " synthetic-before=" + syntheticBefore
+                                + " target-events=" + (entityTargetEventCount() - targetEventsBefore)
+                                + " target-find-misses=" + (entityTargetFindMissCount() - targetFindMissesBefore)
+                                + " passed=" + passed);
+                        getServer().getScheduler().runTaskLater(this, () -> {
+                            boolean delayedTarget = base != null
+                                    && "\u00a7dENTITY_TARGET_EVENT_OK".equals(base.getCustomName());
+                            getLogger().info("tempt-probe-delayed entity-target-trigger=" + delayedTarget
+                                    + " target-events=" + (entityTargetEventCount() - targetEventsBefore)
+                                    + " target-find-misses=" + (entityTargetFindMissCount() - targetFindMissesBefore)
+                                    + " target-reason=" + lastEntityTargetReason()
+                                    + " target-cancelled=" + lastEntityTargetCancelled());
+                            if (temptInstance != null) instances().despawn(temptId);
+                        }, 2L);
+                    }, 20L);
+                }
+                int pathFloorY = world.getSpawnLocation().getBlockY();
+                var pathBlocks = new java.util.ArrayList<org.bukkit.block.BlockState>();
+                Location pathOrigin = world.getSpawnLocation().clone().add(12, 0, 0);
+                for (int dx = -12; dx <= 12; dx++) {
+                    for (int dz = -12; dz <= 12; dz++) {
+                        for (int dy = -1; dy <= 2; dy++) {
+                            var block = world.getBlockAt(pathOrigin.getBlockX() + dx,
+                                    pathFloorY + dy, pathOrigin.getBlockZ() + dz);
+                            pathBlocks.add(block.getState());
+                            block.setType(dy == 0 ? org.bukkit.Material.STONE : org.bukkit.Material.AIR, false);
+                        }
+                    }
+                }
+                Location pathProbeLocation = new Location(world, pathOrigin.getBlockX() + 0.5,
+                        pathFloorY + 1, pathOrigin.getBlockZ() + 0.5);
+                var nativePathProbe = world.spawn(new Location(world,
+                        pathOrigin.getBlockX() - 6.5, pathFloorY + 2, pathOrigin.getBlockZ() + 0.5),
+                        org.bukkit.entity.Zombie.class);
+                nativePathProbe.setGravity(true);
+                nativePathProbe.setVelocity(new org.bukkit.util.Vector());
+                var nativePathTarget = new Location(world, pathOrigin.getBlockX() + 6.5,
+                        pathFloorY + 1, pathOrigin.getBlockZ() + 0.5);
+                var nativePathResult = nativePathProbe.getPathfinder().findPath(nativePathTarget);
+                getLogger().info("pathfinder-native-comparison found=" + (nativePathResult != null)
+                        + " reachable=" + (nativePathResult != null && nativePathResult.canReachFinalPoint())
+                        + " on-ground=" + nativePathProbe.isOnGround()
+                        + " has-ai=" + nativePathProbe.hasAI()
+                        + " start=" + nativePathProbe.getLocation().getBlockX() + ","
+                        + nativePathProbe.getLocation().getBlockY() + ","
+                        + nativePathProbe.getLocation().getBlockZ()
+                        + " target=" + nativePathTarget.getBlockX() + ","
+                        + nativePathTarget.getBlockY() + "," + nativePathTarget.getBlockZ()
+                        + " start-block=" + nativePathProbe.getLocation().getBlock().getType()
+                        + " below-block=" + nativePathProbe.getLocation().clone().add(0, -1, 0)
+                        .getBlock().getType()
+                        + " target-block=" + nativePathTarget.getBlock().getType());
+                if (nativePathResult == null) {
+                    getServer().getScheduler().runTaskLater(this, () -> {
+                        nativePathProbe.setVelocity(new org.bukkit.util.Vector());
+                        int actualX = nativePathProbe.getLocation().getBlockX();
+                        int actualZ = nativePathProbe.getLocation().getBlockZ();
+                        int actualFloorY = nativePathProbe.getLocation().getBlockY() - 1;
+                        var actualFloor = world.getBlockAt(actualX, actualFloorY, actualZ);
+                        if (!actualFloor.getType().isSolid()) {
+                            pathBlocks.add(actualFloor.getState());
+                            actualFloor.setType(org.bukkit.Material.STONE, false);
+                        }
+                        nativePathProbe.teleport(new Location(world,
+                                actualX + 0.5, actualFloorY + 1, actualZ + 0.5));
+                        nativePathProbe.setGravity(true);
+                        getServer().getScheduler().runTaskLater(this, () -> {
+                            var delayedPath = nativePathProbe.getPathfinder().findPath(nativePathTarget);
+                            getLogger().info("pathfinder-native-delayed found=" + (delayedPath != null)
+                                    + " reachable=" + (delayedPath != null && delayedPath.canReachFinalPoint())
+                                    + " on-ground=" + nativePathProbe.isOnGround()
+                                    + " valid=" + nativePathProbe.isValid()
+                                    + " gravity=" + nativePathProbe.hasGravity()
+                                    + " location=" + nativePathProbe.getLocation().getX() + ","
+                                    + nativePathProbe.getLocation().getY() + ","
+                                    + nativePathProbe.getLocation().getZ());
+                            nativePathProbe.remove();
+                            for (var state : pathBlocks) state.update(true, false);
+                        }, 10L);
+                    }, 5L);
+                } else {
+                    nativePathProbe.remove();
+                    for (var state : pathBlocks) state.update(true, false);
+                }
+                int pathProbeId = spawnMobAt("path_clear_probe", pathProbeLocation, null);
+                var pathProbe = pathProbeId > 0 ? instances().impl(pathProbeId) : null;
+                var pathProbeController = ai == null || pathProbeId <= 0 ? null
+                        : ((dev.helstera.ai.AiManager) ai).controllerById(pathProbeId);
+                var pathProbeEntity = pathProbe == null ? null : pathProbe.baseEntity().orElse(null);
+                if (pathProbeEntity instanceof org.bukkit.entity.Mob mob && pathProbeController != null
+                        && mob.getPathfinder() != null) {
+                    getServer().getScheduler().runTaskLater(this, () -> {
+                        int floorY = mob.getLocation().getBlockY() - 1;
+                        int centerX = mob.getLocation().getBlockX();
+                        int centerZ = mob.getLocation().getBlockZ();
+                        for (int dx = -12; dx <= 12; dx++) {
+                            for (int dz = -12; dz <= 12; dz++) {
+                                for (int dy = 0; dy <= 2; dy++) {
+                                    var block = world.getBlockAt(centerX + dx, floorY + dy, centerZ + dz);
+                                    pathBlocks.add(block.getState());
+                                    block.setType(dy == 0 ? org.bukkit.Material.STONE : org.bukkit.Material.AIR, false);
+                                }
+                            }
+                        }
+                        mob.teleport(new Location(world, centerX + 0.5, floorY + 1, centerZ + 0.5));
+                        mob.setVelocity(new org.bukkit.util.Vector());
+                        mob.setAI(true);
+                        mob.setAware(true);
+                        getServer().getScheduler().runTaskLater(this, () -> {
+                            Location pathDestination = new Location(world, centerX + 8.5, floorY + 1, centerZ + 0.5);
+                            var pathTarget = world.spawn(pathDestination, org.bukkit.entity.Zombie.class);
+                            pathTarget.setAI(true);
+                            pathTarget.setAware(true);
+                            pathTarget.setGravity(false);
+                            var path = mob.getPathfinder().findPath(pathTarget);
+                            boolean pathFound = path != null;
+                            boolean pathReachable = path != null && path.canReachFinalPoint();
+                            boolean pathStarted = pathReachable && mob.getPathfinder().moveTo(path, 1.0);
+                            boolean pathActiveBeforeClear = mob.getPathfinder().hasPath();
+                            boolean pathAccepted = pathStarted && pathActiveBeforeClear;
+                            if (!pathAccepted) {
+                                pathStarted = mob.getPathfinder().moveTo(pathTarget, 1.0);
+                                pathFound |= pathStarted;
+                                pathReachable |= pathStarted;
+                                pathActiveBeforeClear = mob.getPathfinder().hasPath();
+                                pathAccepted = pathStarted && pathActiveBeforeClear;
+                            }
+                            pathProbeController.tick();
+                            boolean pathCleared = pathAccepted && !mob.getPathfinder().hasPath();
+                            getLogger().info("pathfinder-clear probe=path_clear_probe found=" + pathFound
+                                    + " reachable=" + pathReachable + " started=" + pathStarted
+                                    + " active-before=" + pathActiveBeforeClear + " accepted=" + pathAccepted
+                                    + " on-ground=" + mob.isOnGround() + " valid=" + mob.isValid()
+                                    + " has-ai=" + mob.hasAI() + " aware=" + mob.isAware()
+                                    + " location=" + mob.getLocation().getX() + ","
+                                    + mob.getLocation().getY() + "," + mob.getLocation().getZ()
+                                    + " below=" + mob.getLocation().clone().subtract(0, 1, 0).getBlock().getType()
+                                    + " destination=" + pathDestination.getBlockX() + ","
+                                    + pathDestination.getBlockY() + "," + pathDestination.getBlockZ()
+                                    + " cleared=" + pathCleared + " stop-calls="
+                                    + pathProbeController.nativePathStopCalls()
+                                    + " passed=" + (pathAccepted && pathCleared));
+                            pathTarget.remove();
+                            instances().despawn(pathProbeId);
+                        }, 10L);
+                    }, 20L);
+                } else {
+                    getLogger().warning("pathfinder-clear probe=path_clear_probe unavailable=true passed=false");
+                    if (pathProbe != null) instances().despawn(pathProbeId);
+                }
+                int triggerProbeId = spawnMobAt("trigger_probe", location.clone().add(6, 0, 0), null);
+                if (triggerProbeId > 0) {
+                    triggerProbe = instances().impl(triggerProbeId);
+                    var probeProfile = ai == null ? null
+                            : ((dev.helstera.ai.AiManager) ai).profileOf(triggerProbeId);
+                    getLogger().info("[�Լ�] skill-trigger setup id=" + triggerProbeId
+                            + " entity=" + (triggerProbe == null ? null
+                            : triggerProbe.baseEntity().map(org.bukkit.entity.Entity::getUniqueId).orElse(null))
+                            + " profile=" + (probeProfile == null ? null : probeProfile.name)
+                            + " triggers=" + (probeProfile == null ? null : probeProfile.triggers.keySet())
+                            + " actions=" + (probeProfile == null ? null : probeProfile.triggers.values().stream()
+                            .map(spec -> spec.actions.toString()).toList())
+                            + " instance-valid=" + (triggerProbe != null && triggerProbe.isValid())
+                            + " fired-before=" + triggerFiredCount()
+                            + " controlled=" + probeEntityControlled(triggerProbe));
+                    tracked.add(triggerProbe);
+                    if (triggerProbe == null) {
+                        throw new IllegalStateException("trigger probe instance was not created");
+                    }
+                    var probeEntity = triggerProbe.baseEntity().orElseThrow(
+                            () -> new IllegalStateException("trigger probe entity was not created"));
+                    if (!(probeEntity instanceof org.bukkit.entity.LivingEntity probeLiving)) {
+                        throw new IllegalStateException("trigger probe entity is not living");
+                    }
+                    var probeAttacker = java.util.Objects.requireNonNull(
+                            world.spawn(location.clone().add(6, 0, 1), org.bukkit.entity.Zombie.class),
+                            "trigger probe attacker was not created");
+                    var probeDamage = new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                            probeAttacker, probeEntity,
+                            org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 2.0);
+                    boolean cancelledBefore = probeDamage.isCancelled();
+                    getServer().getPluginManager().callEvent(probeDamage);
+                    boolean bukkitDamage = probeEntity instanceof org.bukkit.entity.LivingEntity living
+                            && living.getEquipment() != null
+                            && living.getEquipment().getItemInMainHand().getType()
+                            == org.bukkit.Material.DIAMOND_SWORD;
+                    boolean damageCauseCondition = bukkitDamage;
+                    boolean bukkitAttacked = probeEntity != null
+                            && "§bATTACKED_TRIGGER_OK".equals(probeEntity.getCustomName());
+                    if (!(bukkitDamage && bukkitAttacked)
+                            && skillTriggers instanceof dev.helstera.ai.skill.SkillTriggers skillTriggerListener) {
+                        skillTriggerListener.onDamage(probeDamage);
+                    }
+                    boolean damageTrigger = probeEntity instanceof org.bukkit.entity.LivingEntity living
+                            && living.getEquipment() != null
+                            && living.getEquipment().getItemInMainHand().getType()
+                            == org.bukkit.Material.DIAMOND_SWORD;
+                    boolean cancelledCondition = probeEntity instanceof org.bukkit.entity.LivingEntity living
+                            && living.getEquipment() != null
+                            && living.getEquipment().getItemInOffHand().getType()
+                            == org.bukkit.Material.GOLD_INGOT;
+                    boolean teleportBefore = "\u00a7dTELEPORT_TRIGGER_OK".equals(probeEntity.getCustomName());
+                    boolean attackerTargeter = false;
+                    {
+                        var attackerContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                                triggerProbe, probeAttacker, 1.0, -1, 0, "integration", null,
+                                probeAttacker, java.util.List.of(probeAttacker), probeAttacker.getLocation(), null);
+                        var attackerTargets = dev.helstera.api.behavior.Targeters.select(
+                                "@attacker", attackerContext, java.util.List.of(), java.util.List.of());
+                        attackerTargeter = attackerTargets.size() == 1
+                                && attackerTargets.get(0).equals(probeAttacker);
+                    }
+                    var teleportEvent = new org.bukkit.event.entity.EntityTeleportEvent(
+                            probeEntity, probeEntity.getLocation(), probeEntity.getLocation().clone().add(1, 0, 0));
+                    getServer().getPluginManager().callEvent(teleportEvent);
+                    boolean teleportTrigger = "\u00a7dTELEPORT_TRIGGER_OK".equals(probeEntity.getCustomName());
+                    long potionTriggerBefore = triggerFiredCount();
+                    long potionEventsBefore = potionEventCount();
+                    probeLiving.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                            org.bukkit.potion.PotionEffectType.POISON, 20, 0));
+                    probeLiving.removePotionEffect(org.bukkit.potion.PotionEffectType.POISON);
+                    boolean potionEffectEndAction = "\u00a7ePOTION_END_TRIGGER_OK"
+                            .equals(probeEntity.getCustomName());
+                    boolean potionEffectEndTrigger = triggerFiredCount() > potionTriggerBefore;
+                    long potionEventsAfter = potionEventCount();
+                    boolean attackedTrigger = probeEntity != null
+                            && "§bATTACKED_TRIGGER_OK".equals(probeEntity.getCustomName());
+                    getLogger().info("[�Լ�] skill-trigger damage=" + damageTrigger
+                            + " attacked=" + attackedTrigger
+                             + " teleport=" + teleportTrigger
+                             + " potion-effect-end=" + potionEffectEndTrigger
+                             + " potion-effect-action=" + potionEffectEndAction
+                             + " potion-events=" + (potionEventsAfter - potionEventsBefore)
+                             + " attacker-targeter=" + attackerTargeter
+                            + " teleport-before=" + teleportBefore
+                            + " bukkit-damage=" + bukkitDamage
+                            + " damage-cause-condition=" + damageCauseCondition
+                            + " bukkit-attacked=" + bukkitAttacked
+                            + " cancelled-condition=" + cancelledCondition
+                            + " cancelled-before=" + cancelledBefore
+                            + " cancelled-after=" + probeDamage.isCancelled()
+                            + " entity-valid=" + probeEntity.isValid()
+                            + " fired-after=" + triggerFiredCount());
+                    probeAttacker.remove();
+                }
+                int threatProbeId = spawnMobAt("trigger_probe", location.clone().add(10, 0, 0), null);
+                var threatProbe = threatProbeId > 0 ? instances().impl(threatProbeId) : null;
+                var threatLow = world.spawn(location.clone().add(11, 0, 0), org.bukkit.entity.Zombie.class);
+                var threatHigh = world.spawn(location.clone().add(12, 0, 0), org.bukkit.entity.Zombie.class);
+                if (threatProbe != null && ai instanceof dev.helstera.ai.AiManager aiManager) {
+                    tracked.add(threatProbe);
+                    tracked.add(instances().bind("example/emberling", threatLow,
+                            dev.helstera.api.instance.SpawnOptions.defaults()));
+                    tracked.add(instances().bind("example/emberling", threatHigh,
+                            dev.helstera.api.instance.SpawnOptions.defaults()));
+                    var threatProfile = new dev.helstera.ai.AiProfile("paper-threat-probe");
+                    threatProfile.threatEnabled = true;
+                    threatProfile.canChase = true;
+                    aiManager.attach(threatProbe, threatProfile);
+                    dev.helstera.api.behavior.Factions.install(new dev.helstera.api.behavior.FactionTable() {
+                        @Override public String factionOf(org.bukkit.entity.Entity entity) {
+                            return entity == threatLow || entity == threatHigh ? "guards" : null;
+                        }
+                        @Override public boolean allied(org.bukkit.entity.Entity a, org.bukkit.entity.Entity b) {
+                            return alliedFactions(factionOf(a), factionOf(b));
+                        }
+                        @Override public boolean alliedFactions(String a, String b) {
+                            return a != null && b != null && a.equalsIgnoreCase(b);
+                        }
+                        @Override public java.util.Collection<String> names() {
+                            return java.util.List.of("guards", "undead");
+                        }
+                    });
+                    var threatEntity = threatProbe.baseEntity().orElse(null);
+                    if (threatEntity != null) {
+                        var lowDamage = new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                                threatLow, threatEntity,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 5.0);
+                        var highDamage = new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                                threatHigh, threatEntity,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 20.0);
+                        getServer().getPluginManager().callEvent(lowDamage);
+                        getServer().getPluginManager().callEvent(highDamage);
+                    }
+                    var threatContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            threatProbe, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+                    var threatTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@threat", threatContext, java.util.List.of(threatLow, threatHigh), java.util.List.of());
+                    boolean threatTargeter = threatTargets.size() == 2
+                            && threatTargets.get(0).equals(threatHigh)
+                            && threatTargets.get(1).equals(threatLow);
+                    var hostileTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@threat{filter=hostile:guards}", threatContext,
+                            java.util.List.of(threatLow, threatHigh), java.util.List.of());
+                    var factionTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@threat{filter=faction:guards}", threatContext,
+                            java.util.List.of(threatLow, threatHigh), java.util.List.of());
+                    boolean factionThreatFilters = hostileTargets.isEmpty()
+                            && factionTargets.size() == 2 && factionTargets.get(0).equals(threatHigh);
+                    getLogger().info("skill-targeter threat-targeter=" + threatTargeter
+                            + " source=damage-events"
+                            + " faction-filters=" + factionThreatFilters
+                            + " first=" + (threatTargets.isEmpty() ? null : threatTargets.get(0).getUniqueId())
+                            + " expected=" + threatHigh.getUniqueId());
+                }
+                threatLow.remove();
+                threatHigh.remove();
+                dev.helstera.api.behavior.Factions.install(null);
+                var creeper = world.spawn(location, org.bukkit.entity.Creeper.class);
+                var creeperInstance = instances().bind("example/emberling", creeper,
+                        dev.helstera.api.instance.SpawnOptions.defaults().preventSuicide(true));
+                tracked.add(creeperInstance);
+                var explode = new org.bukkit.event.entity.EntityExplodeEvent(creeper, location,
+                        new java.util.ArrayList<org.bukkit.block.Block>(), 0.0f,
+                        org.bukkit.ExplosionResult.KEEP);
+                getServer().getPluginManager().callEvent(explode);
+
+                var bee = world.spawn(location.clone().add(2, 0, 0), org.bukkit.entity.Bee.class);
+                var beeInstance = instances().bind("example/emberling", bee,
+                        dev.helstera.api.instance.SpawnOptions.defaults().preventAttack(true));
+                tracked.add(beeInstance);
+                var attacker = world.spawn(location.clone().add(2, 0, 1), org.bukkit.entity.Zombie.class);
+                var attack = new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                        bee, attacker, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 4.0);
+                getServer().getPluginManager().callEvent(attack);
+
+                var zombie = world.spawn(location.clone().add(4, 0, 0), org.bukkit.entity.Zombie.class);
+                var zombieInstance = instances().bind("example/emberling", zombie,
+                        dev.helstera.api.instance.SpawnOptions.defaults().preventTransformation(true));
+                tracked.add(zombieInstance);
+                var transform = new org.bukkit.event.entity.EntityTransformEvent(
+                        zombie, java.util.List.of(zombie), org.bukkit.event.entity.EntityTransformEvent.TransformReason.DROWNED);
+                getServer().getPluginManager().callEvent(transform);
+
+                getLogger().info("[自检] events creeper-explode-cancelled=" + explode.isCancelled()
+                        + " bee-attack-cancelled=" + attack.isCancelled()
+                        + " zombie-transform-cancelled=" + transform.isCancelled());
+                attacker.remove();
+            } catch (Throwable t) {
+                getLogger().warning("[自检] events 异常: " + t);
+            } finally {
+                for (var instance : tracked) {
+                    try { instances().despawn(instance.instanceId()); } catch (RuntimeException ignored) { }
+                }
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 70L);
+    }
+
+    private dev.helstera.ai.AiController.State priorityProbe(org.bukkit.entity.Player player,
+                                                              String mobId, double healthRatio) {
+        if (player == null || ai == null || instances == null
+                || !Double.isFinite(healthRatio) || healthRatio <= 0 || healthRatio > 1) return null;
+        int instanceId = spawnMobAt(mobId, player.getLocation().clone().add(1, 0, 0), null);
+        var instance = instanceId > 0 ? instances().impl(instanceId) : null;
+        if (instance == null) return null;
+        var base = instance.baseEntity().orElse(null);
+        if (!(base instanceof org.bukkit.entity.LivingEntity living)) {
+            instances().despawn(instanceId);
+            return null;
+        }
+        var health = living.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH);
+        if (health != null && health.getValue() > 0) living.setHealth(Math.max(1.0, health.getValue() * healthRatio));
+        var controller = ((dev.helstera.ai.AiManager) ai).controllerById(instanceId);
+        if (controller == null) {
+            instances().despawn(instanceId);
+            return null;
+        }
+        controller.setCombatTarget(player);
+        controller.tick();
+        var state = controller.state();
+        var selectedProfile = ((dev.helstera.ai.AiManager) ai).profileOf(instanceId);
+        var policy = selectedProfile == null ? null : selectedProfile.selectorPolicy();
+        getLogger().info("ai-priority-detail probe=" + mobId
+                + " target-assigned=" + (controller.targetEntity() == player)
+                + " target-valid=" + player.isOnline() + " health-ratio=" + healthRatio
+                + " attack-priority=" + (selectedProfile == null || policy == null ? -1
+                : policy.goalPriority(selectedProfile.goals, "attack"))
+                + " flee-priority=" + (selectedProfile == null || policy == null ? -1
+                : policy.goalPriority(selectedProfile.goals, "flee"))
+                + " selector=" + controller.selectorDiagnostic());
+        instances().despawn(instanceId);
+        return state;
+    }
+
+    private void runAudienceSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            org.bukkit.entity.Player player = getServer().getOnlinePlayers().stream()
+                    .filter(candidate -> candidate.getName().equals("HelsteraTester"))
+                    .findFirst().orElse(null);
+            if (player == null) {
+                for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
+                    if (candidate.isOp()) {
+                        player = candidate;
+                        break;
+                    }
+                }
+            }
+            if (player == null) {
+                for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
+                    player = candidate;
+                    break;
+                }
+            }
+            var instance = instances().allImpl().stream().findFirst().orElse(null);
+            var skills = skillService();
+            if (player == null || instance == null || skills == null) {
+                getLogger().warning("[自检] audience 未执行: online player, model instance, or SkillService missing");
+                return;
+            }
+            var permissionAttachment = player.addAttachment(this, "helstera.menu", true);
+            var factionService = ai instanceof dev.helstera.ai.AiManager aiManager
+                    ? aiManager.factions() : null;
+            try {
+                player.recalculatePermissions();
+                if (factionService != null) {
+                    dev.helstera.api.behavior.Factions.install(factionService);
+                    factionService.bindInstance(player.getUniqueId(), "guards");
+                    for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
+                        if (candidate != player) factionService.bindInstance(candidate.getUniqueId(), "guards");
+                    }
+                    getLogger().info("audience-faction-setup tester=" + factionService.factionOf(player)
+                            + " registry=" + (dev.helstera.api.behavior.Factions.table() == factionService));
+                }
+                dev.helstera.ai.skill.SkillExtras.audienceDiagnostic(
+                        detail -> getLogger().info("audience-recipients " + detail));
+                // Keep the origin on the tester so a tiny radius includes the
+                // source player and excludes the distant guest deterministically.
+                var audienceOrigin = player.getLocation().clone();
+                var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                        instance, player, 1.0, 0.0, 0, "IDLE", null, player,
+                        java.util.List.of(player), audienceOrigin);
+                var message = skills.bindAction("audience-message target &aAUDIENCE_MESSAGE_OK");
+                var title = skills.bindAction("audience-title target &bAUDIENCE_TITLE_OK 0 20 0");
+                var actionbar = skills.bindAction("audience-actionbar target &eAUDIENCE_ACTIONBAR_OK");
+                var particle = skills.bindAction("audience-particle target FLAME 4 32");
+                var radiusIncluded = skills.bindAction("audience-message radius &dAUDIENCE_RADIUS_INCLUDED 4096");
+                var radiusExcluded = skills.bindAction("audience-message radius &dAUDIENCE_RADIUS_EXCLUDED 0.1");
+                var permissionIncluded = skills.bindAction("audience-message permission:helstera.menu &dAUDIENCE_PERMISSION_INCLUDED");
+                var factionIncluded = skills.bindAction("audience-message faction:guards &dAUDIENCE_FACTION_INCLUDED");
+                var factionExcluded = skills.bindAction("audience-message faction:undead &dAUDIENCE_FACTION_EXCLUDED");
+                boolean messageSent = message != null && skills.runAction(message, context);
+                boolean titleSent = title != null && skills.runAction(title, context);
+                boolean actionbarSent = actionbar != null && skills.runAction(actionbar, context);
+                boolean particleSent = particle != null && skills.runAction(particle, context);
+                boolean radiusIncludedSent = radiusIncluded != null && skills.runAction(radiusIncluded, context);
+                boolean radiusExcludedSent = radiusExcluded != null && skills.runAction(radiusExcluded, context);
+                boolean permissionIncludedSent = permissionIncluded != null && skills.runAction(permissionIncluded, context);
+                boolean factionIncludedSent = factionIncluded != null && skills.runAction(factionIncluded, context);
+                boolean factionExcludedSent = factionExcluded != null && skills.runAction(factionExcluded, context);
+                getLogger().info("[自检] audience player=" + player.getName()
+                        + " message-dispatched=" + messageSent
+                        + " title-dispatched=" + titleSent
+                        + " actionbar-dispatched=" + actionbarSent
+                        + " particle-dispatched=" + particleSent
+                        + " radius-included-dispatched=" + radiusIncludedSent
+                        + " radius-excluded-dispatched=" + radiusExcludedSent
+                        + " permission-included-dispatched=" + permissionIncludedSent
+                        + " faction-included-dispatched=" + factionIncludedSent
+                        + " faction-excluded-dispatched=" + factionExcludedSent);
+                player.removeAttachment(permissionAttachment);
+                player.recalculatePermissions();
+                if (factionService != null) {
+                    for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
+                        factionService.unbindInstance(candidate.getUniqueId());
+                    }
+                }
+                dev.helstera.ai.skill.SkillExtras.audienceDiagnostic(null);
+            } catch (Throwable t) {
+                getLogger().warning("[自检] audience 异常: " + t);
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
+    }
+
     // vecList 供内部及 WebBridgeAdapter.modelDetail 复用
     private static List<Double> vecList(Vec3 v) {
         return List.of(v.x(), v.y(), v.z());
@@ -844,18 +2713,77 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     private MobSpawn spawnMobCore(String mobId, String modelOverride, org.bukkit.Location base,
                                    boolean forwardOffset, String aiProfileOverride) {
+        return spawnMobCore(mobId, modelOverride, base, forwardOffset, aiProfileOverride, null);
+    }
+
+    /** Restores an already serialized persistent mob instead of creating a second base entity. */
+    private MobSpawn spawnMobCore(String mobId, String modelOverride, org.bukkit.Location base,
+                                   boolean forwardOffset, String aiProfileOverride,
+                                   org.bukkit.entity.LivingEntity existingEntity) {
         org.bukkit.configuration.ConfigurationSection cfg = mobConfig(mobId);
         if (cfg == null) return null;
         if (instances == null) return new MobSpawn(-1, "实例系统未启用（需 2.0+ 版本）");
         String model = modelOverride != null ? modelOverride : cfg.getString("model", "example/crystal_golem");
+        org.bukkit.configuration.ConfigurationSection mobOptions = cfg.getConfigurationSection("mob");
         if (registry.get(model).isEmpty()) return new MobSpawn(-1, "模型未加载: " + model + "（/helstera reload models）");
 
         SpawnOptions opts = SpawnOptions.defaults()
-                .displayName(cfg.getString("display-name", mobId))
+                .displayName(cfg.getString("display-name", mobOptions == null ? mobId : mobOptions.getString("display-name", mobId)))
                 .showName(cfg.getBoolean("show-name", true))
                 .glowing(cfg.getBoolean("glowing", false))
+                .invisible(cfg.getBoolean("entity.invisible", false))
                 .scale(cfg.getDouble("scale", 1.0))
                 .persistent(cfg.getBoolean("persistent", true))
+                .despawnMode(cfg.getString("mob.despawn", cfg.getString("despawn", "NORMAL")))
+                .despawnDistance(configuredDespawnDistance(cfg))
+                .knockbackResistance(cfg.getDouble("mob.knockback-resistance", cfg.getDouble("knockback-resistance", 0.0)))
+                .preventLeashing(cfg.getBoolean("mob.prevent-leashing", cfg.getBoolean("prevent-leashing", false)))
+                .preventRenaming(cfg.getBoolean("mob.prevent-renaming", cfg.getBoolean("prevent-renaming", true)))
+                .preventTransformation(cfg.getBoolean("mob.prevent-transformation", cfg.getBoolean("prevent-transformation", false)))
+                .preventTransformationReasons(cfg.getStringList("mob.prevent-transformation-reasons").isEmpty()
+                        ? cfg.getStringList("prevent-transformation-reasons")
+                        : cfg.getStringList("mob.prevent-transformation-reasons"))
+                .preventMount(cfg.getBoolean("mob.prevent-mount", cfg.getBoolean("prevent-mount", false)))
+                .preventJockeyMounts(cfg.getBoolean("mob.prevent-jockey-mounts",
+                        cfg.getBoolean("prevent-jockey-mounts", false)))
+                .preventTarget(cfg.getBoolean("mob.prevent-target", cfg.getBoolean("prevent-target", false)))
+                .preventTargetReasons(cfg.getStringList("mob.prevent-target-reasons").isEmpty()
+                        ? cfg.getStringList("prevent-target-reasons")
+                        : cfg.getStringList("mob.prevent-target-reasons"))
+                .preventAttack(cfg.getBoolean("mob.prevent-attack", cfg.getBoolean("prevent-attack", false)))
+                .preventVanillaDamage(cfg.getBoolean("mob.prevent-vanilla-damage",
+                        cfg.getBoolean("prevent-vanilla-damage", false)))
+                .preventSlimeSplit(cfg.getBoolean("mob.prevent-slime-split",
+                        cfg.getBoolean("prevent-slime-split", false)))
+                .preventStingerLoss(cfg.getBoolean("mob.prevent-stinger-loss",
+                        cfg.getBoolean("prevent-stinger-loss", false)))
+                .preventTeleport(cfg.getBoolean("mob.prevent-teleport", cfg.getBoolean("prevent-teleport", false)))
+                .preventPickup(cfg.getBoolean("mob.prevent-pickup", cfg.getBoolean("prevent-pickup", false)))
+                .preventItemUse(cfg.getBoolean("mob.prevent-item-use", cfg.getBoolean("prevent-item-use", false)))
+                .preventDrowning(cfg.getBoolean("mob.prevent-drowning", cfg.getBoolean("prevent-drowning", false)))
+                .preventFallDamage(cfg.getBoolean("mob.prevent-fall-damage", cfg.getBoolean("prevent-fall-damage", false)))
+                .preventFire(cfg.getBoolean("mob.prevent-fire", cfg.getBoolean("prevent-fire", false)))
+                .preventFireCauses(cfg.getStringList("mob.prevent-fire-causes").isEmpty()
+                        ? cfg.getStringList("prevent-fire-causes")
+                        : cfg.getStringList("mob.prevent-fire-causes"))
+                .preventProjectiles(cfg.getBoolean("mob.prevent-projectiles", cfg.getBoolean("prevent-projectiles", false)))
+                .preventExplosions(cfg.getBoolean("mob.prevent-explosions", cfg.getBoolean("prevent-explosions", false)))
+                .preventSuicide(cfg.getBoolean("mob.prevent-suicide", cfg.getBoolean("prevent-suicide", false)))
+                .preventBlockExplosions(cfg.getBoolean("mob.prevent-block-explosions", cfg.getBoolean("prevent-block-explosions", false)))
+                .preventEntityExplosions(cfg.getBoolean("mob.prevent-entity-explosions", cfg.getBoolean("prevent-entity-explosions", false)))
+                .healOnReload(cfg.getBoolean("mob.heal-on-reload", cfg.getBoolean("heal-on-reload", false)))
+                .digOutOfGround(cfg.getBoolean("mob.dig-out-of-ground", cfg.getBoolean("dig-out-of-ground", false)))
+                .silent(cfg.getBoolean("entity.silent", false))
+                .noAi(cfg.getBoolean("entity.no-ai", false))
+                .invulnerable(cfg.getBoolean("entity.invulnerable", false))
+                .gravity(cfg.getBoolean("entity.gravity", true))
+                .collidable(cfg.getBoolean("entity.collidable", true))
+                .preventItemPickup(cfg.getBoolean("entity.prevent-item-pickup", false))
+                .preventOtherDrops(cfg.getBoolean("entity.prevent-other-drops", false))
+                .preventMobKillDrops(cfg.getBoolean("mob.prevent-mob-kill-drops", cfg.getBoolean("prevent-mob-kill-drops", false)))
+                .preventSunburn(cfg.getBoolean("entity.prevent-sunburn", false))
+                .preventRandomEquipment(cfg.getBoolean("entity.prevent-random-equipment", false))
+                .noDamageTicks(cfg.getInt("entity.no-damage-ticks", 0))
                 // 血条快捷开关：开启等价于 bossbar.enabled=true（无需写整个 bossbar 节）。
                 // 两个键都写时以 bossbar.enabled 为准——它更具体，能表达「不要血条」。
                 .showHealthBar(cfg.getBoolean("show-health-bar", false)
@@ -871,8 +2799,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
         ModelInstance inst;
         org.bukkit.configuration.ConfigurationSection entitySec = cfg.getConfigurationSection("entity");
+        if (entitySec == null && mobOptions != null && mobOptions.contains("entity-type")) {
+            entitySec = cfg.createSection("entity");
+            entitySec.set("type", mobOptions.getString("entity-type", "ZOMBIE"));
+        }
         if (entitySec != null) {
-            String typeName = entitySec.getString("type", "ZOMBIE").toUpperCase(java.util.Locale.ROOT);
+            String typeName = configuredEntityType(entitySec, mobOptions).toUpperCase(java.util.Locale.ROOT);
             org.bukkit.entity.EntityType et;
             String fallbackNote = null;
             try {
@@ -889,11 +2821,32 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().warning("[生物] " + fallbackNote);
                 mobWarnings.add(fallbackNote);
             }
-            org.bukkit.entity.LivingEntity ent = (org.bukkit.entity.LivingEntity) loc.getWorld().spawnEntity(loc, et);
-            ent.setInvisible(entitySec.getBoolean("invisible", true));
-            ent.setSilent(entitySec.getBoolean("silent", true));
-            ent.setAI(!entitySec.getBoolean("no-ai", true));
-            double rawHp = entitySec.getDouble("health", 20.0);
+            org.bukkit.entity.Entity spawnedEntity = existingEntity != null ? existingEntity
+                    : loc.getWorld().spawnEntity(loc, et);
+            if (!(spawnedEntity instanceof org.bukkit.entity.LivingEntity ent)) {
+                applyNonLivingEntityOptions(spawnedEntity, entitySec);
+                inst = instances().bind(model, spawnedEntity, opts);
+            } else {
+            ent.setVisibleByDefault(entitySec.getBoolean("visible-by-default", true));
+            ent.setInvisible(entitySec.getBoolean("invisible", opts.invisible()));
+            ent.setGlowing(entitySec.getBoolean("glowing", opts.glowing()));
+            ent.setPersistent(entitySec.getBoolean("persistent", opts.persistent()));
+            ent.setSilent(entitySec.getBoolean("silent", opts.silent()));
+            ent.setAI(!entitySec.getBoolean("no-ai", opts.noAi()));
+            ent.setInvulnerable(entitySec.getBoolean("invulnerable", opts.invulnerable()));
+            ent.setGravity(entitySec.getBoolean("gravity", opts.gravity()));
+            ent.setCollidable(entitySec.getBoolean("collidable", opts.collidable()));
+            ent.setCustomName(opts.displayName());
+            applyKnockbackResistance(ent, opts.knockbackResistance());
+            applyBaseAttribute(ent, "ATTACK_SPEED", cfg.getDouble("entity.attack-speed", cfg.getDouble("attack-speed", Double.NaN)));
+            ent.setCustomNameVisible(opts.showName());
+            if (ent instanceof org.bukkit.entity.Mob mobEntity) {
+                mobEntity.setAware(!entitySec.getBoolean("no-ai", opts.noAi()));
+                mobEntity.setCanPickupItems(entitySec.getBoolean("can-pickup-items", !opts.preventItemPickup()));
+            }
+            applyAgeOptions(ent, entitySec);
+            applyEntitySpecificOptions(ent, entitySec);
+            double rawHp = entitySec.getDouble("health", mobOptions == null ? 20.0 : mobOptions.getDouble("health", 20.0));
             double hp = clampHealth(rawHp);
             // clampHealth 对 <=0 返回 0，而 LivingEntity.setMaxHealth 要求严格大于 0
             // （否则抛 IllegalArgumentException: Max health amount must be greater than 0）。
@@ -911,13 +2864,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 mobWarnings.add(msg);
                 hp = 20.0;
             }
+            double previousMaxHealth = existingEntity == null ? hp : ent.getMaxHealth();
+            double previousHealth = existingEntity == null ? hp : ent.getHealth();
+            double healthRatio = previousMaxHealth > 0 ? previousHealth / previousMaxHealth : 1.0;
             ent.setMaxHealth(hp);
-            ent.setHealth(hp);
+            ent.setHealth(existingEntity == null
+                    ? hp
+                    : Math.max(0.1, Math.min(hp, hp * Math.max(0, Math.min(1, healthRatio)))));
+            applyEntityAttributes(ent, entitySec.getConfigurationSection("attributes"));
             // 装备：items 节，支持 material:amount 和带附魔的写法
+            if (opts.preventRandomEquipment() && ent.getEquipment() != null) {
+                ent.getEquipment().clear();
+            }
             applyEntityEquipment(ent, entitySec);
+            ent.setNoDamageTicks(opts.noDamageTicks());
+            markPersistentMob(ent, mobId, opts);
             inst = instances().bind(model, ent, opts);
+            }
         } else {
             inst = instances().spawn(model, loc, opts);
+        }
+        if (inst != null && inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity living) {
+            markPersistentMob(living, mobId, opts);
         }
 
         // 掉落表挂到实例上：死亡事件靠它找到该投哪张表，避免按模型 ID 反查 mobs 配置
@@ -927,6 +2895,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (table != null && !table.isBlank()) {
                 impl.lootTable = table.trim().toLowerCase(java.util.Locale.ROOT);
                 impl.lootUsesLuck = dropsSec.getBoolean("luck", true);
+            }
+            if (dropsSec.contains("experience") || dropsSec.contains("exp")) {
+                int value = dropsSec.contains("experience")
+                        ? dropsSec.getInt("experience") : dropsSec.getInt("exp");
+                impl.lootExperienceMin = Math.max(0, value);
+                impl.lootExperienceMax = Math.max(0, value);
+            } else if (dropsSec.contains("experience-min") || dropsSec.contains("experience-max")) {
+                impl.lootExperienceMin = Math.max(0, dropsSec.getInt("experience-min", 0));
+                impl.lootExperienceMax = Math.max(impl.lootExperienceMin,
+                        dropsSec.getInt("experience-max", impl.lootExperienceMin));
             }
         }
 
@@ -953,24 +2931,59 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
 
         org.bukkit.configuration.ConfigurationSection aiSec = cfg.getConfigurationSection("ai");
-        if (aiSec != null && ai() != null) {
+        org.bukkit.configuration.ConfigurationSection behaviorSec = aiSec != null ? aiSec : mobOptions;
+        if (behaviorSec != null && ai() != null) {
             // ai-profile 覆盖：刷怪点指定档案时优先使用，否则沿用 mob 自身配置
             String profileName = (aiProfileOverride != null && !aiProfileOverride.isBlank())
                     ? aiProfileOverride.trim()
-                    : aiSec.getString("profile", "default");
+                    : aiSec == null ? "default" : aiSec.getString("profile", "default");
             AiProfile profile = ai().profile(profileName);
-            profile = overrideProfile(profile, aiSec);
+            profile = overrideProfile(profile, behaviorSec);
+            applyMobOptions(profile, mobOptions);
             // 生物级技能引用：与档案级 skills 同样经 SkillService 展开为已绑定键
             if (skillService instanceof SkillService sk) {
-                sk.expand(profile, aiSec.getStringList("skills"));
+                sk.expand(profile, behaviorSec.getStringList("skills"));
             }
+            profile.goals.addAll(behaviorSec.getStringList("goals"));
+            profile.targets.addAll(behaviorSec.getStringList("targets"));
             ai().attach((dev.helstera.runtime.instance.ModelInstanceImpl) inst, profile);
         }
         // 实例就绪后派发生成事件：SkillTriggers 的 on-spawn 依赖它。
         // 此前全工程没有任何地方 post 该事件，触发器链路完全未接通。
-        bus.post(new dev.helstera.api.event.ModelSpawnEvent(inst, inst.baseEntity()
-                .map(org.bukkit.entity.Entity::getLocation).orElse(loc)));
+        if (existingEntity == null) {
+            bus.post(new dev.helstera.api.event.ModelSpawnEvent(inst, inst.baseEntity()
+                    .map(org.bukkit.entity.Entity::getLocation).orElse(loc)));
+        }
         return new MobSpawn(inst.instanceId(), "已生成 " + mobId + "（模型 " + model + ", 实例 #" + inst.instanceId() + "）");
+    }
+
+    static void applyNonLivingEntityOptions(org.bukkit.entity.Entity entity,
+                                             org.bukkit.configuration.ConfigurationSection options) {
+        if (entity == null || options == null) return;
+        entity.setPersistent(options.getBoolean("persistent", true));
+        entity.setGravity(options.getBoolean("gravity", true));
+        entity.setSilent(options.getBoolean("silent", false));
+        if (options.contains("display-name")) {
+            entity.setCustomName(options.getString("display-name"));
+            entity.setCustomNameVisible(options.getBoolean("show-name", true));
+        }
+        if (!(entity instanceof org.bukkit.entity.FallingBlock falling)) return;
+        String blockData = options.getString("falling-block-data", options.getString("block-data"));
+        if (blockData != null && !blockData.isBlank()) {
+            try {
+                falling.setBlockData(org.bukkit.Bukkit.createBlockData(blockData));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        if (options.contains("falling-block-drop-item")) {
+            falling.setDropItem(options.getBoolean("falling-block-drop-item"));
+        }
+        if (options.contains("falling-block-hurt-entities")) {
+            falling.setHurtEntities(options.getBoolean("falling-block-hurt-entities"));
+        }
+        if (options.contains("falling-block-cancel-drop")) {
+            falling.setCancelDrop(options.getBoolean("falling-block-cancel-drop"));
+        }
     }
 
     /**
@@ -979,10 +2992,212 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
      * <p>在 LOWEST 优先级且 ignoreCancelled：先把原版掉落清空，再放 helstera 的掉落，
      * 保证"配置了掉落表就不重复掉原版战利品"。若该生物没有配置掉落表则完全不干预。</p>
      */
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onSuffocation(org.bukkit.event.entity.EntityDamageEvent event) {
+        if (event.getCause() != org.bukkit.event.entity.EntityDamageEvent.DamageCause.SUFFOCATION
+                || instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        if (instance == null || !instance.options().digOutOfGround()) return;
+        event.setCancelled(true);
+        org.bukkit.Location lifted = event.getEntity().getLocation().clone().add(0, 2, 0);
+        event.getEntity().teleport(lifted);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onPlayerLeash(org.bukkit.event.entity.PlayerLeashEntityEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        if (instance != null && instance.options().preventLeashing()) event.setCancelled(true);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onNameTagUse(org.bukkit.event.player.PlayerInteractEntityEvent event) {
+        if (instances == null) return;
+        org.bukkit.inventory.ItemStack item = event.getPlayer().getInventory().getItem(event.getHand());
+        if (item == null || item.getType() != org.bukkit.Material.NAME_TAG) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getRightClicked());
+        if (instance != null && instance.options().preventRenaming()) event.setCancelled(true);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = false)
+    public void onProjectileHit(org.bukkit.event.entity.ProjectileHitEvent event) {
+        if (instances == null || !(event.getHitEntity() instanceof org.bukkit.entity.LivingEntity hit)) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(hit);
+        if (instance != null && instance.options().preventProjectiles()) event.setCancelled(true);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityTarget(org.bukkit.event.entity.EntityTargetLivingEntityEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        if (instance != null && instance.options().blocksTargetReason(event.getReason().name())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityTransform(org.bukkit.event.entity.EntityTransformEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        if (instance != null && instance.options().blocksTransformationReason(event.getTransformReason().name())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onSlimeSplit(org.bukkit.event.entity.SlimeSplitEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        applySlimeSplitPolicy(event, instance == null ? null : instance.options());
+    }
+
+    static void applySlimeSplitPolicy(org.bukkit.event.entity.SlimeSplitEvent event, SpawnOptions options) {
+        if (event != null && options != null && options.preventSlimeSplit()) event.setCancelled(true);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityMount(org.bukkit.event.entity.EntityMountEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        if (instance != null && preventsEntityMount(instance.options(), event.getEntity().getType())) {
+            event.setCancelled(true);
+        }
+    }
+
+    static boolean preventsEntityMount(SpawnOptions options, org.bukkit.entity.EntityType type) {
+        if (options == null || type == null) return false;
+        return options.preventMount()
+                || (options.preventJockeyMounts() && type == org.bukkit.entity.EntityType.ZOMBIE);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityAttack(org.bukkit.event.entity.EntityDamageByEntityEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getDamager());
+        if (instance == null && event.getDamager() instanceof org.bukkit.entity.Projectile projectile
+                && projectile.getShooter() instanceof org.bukkit.entity.Entity shooter) {
+            instance = findInstance(shooter);
+        }
+        if (instance == null) return;
+        if (instance.options().preventAttack()) {
+            event.setCancelled(true);
+            return;
+        }
+        if (instance.options().preventStingerLoss()
+                && event.getDamager() instanceof org.bukkit.entity.Bee bee) {
+            getServer().getScheduler().runTask(this, () -> {
+                if (bee.isValid()) bee.setHasStung(false);
+            });
+        }
+        if (instance.options().preventVanillaDamage()) {
+            event.setDamage(vanillaAttackDamage(instance.options(), event.getDamage()));
+        }
+    }
+
+    static double vanillaAttackDamage(SpawnOptions options, double damage) {
+        return options != null && options.preventVanillaDamage() ? 0.0 : damage;
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityTeleport(org.bukkit.event.entity.EntityTeleportEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        if (instance != null && instance.options().preventTeleport()) event.setCancelled(true);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityPickup(org.bukkit.event.entity.EntityPickupItemEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        if (instance != null && instance.options().preventPickup()) event.setCancelled(true);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onPlayerPickupArrow(org.bukkit.event.player.PlayerPickupArrowEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getPlayer());
+        if (instance != null && instance.options().preventPickup()) event.setCancelled(true);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityInteract(org.bukkit.event.player.PlayerInteractEntityEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getRightClicked());
+        if (instance != null && instance.options().preventItemUse()) event.setCancelled(true);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+    public void onChunkLoad(org.bukkit.event.world.ChunkLoadEvent event) {
+        if (instances == null) return;
+        for (org.bukkit.entity.Entity entity : event.getChunk().getEntities()) {
+            restorePersistentMob(entity);
+        }
+        for (var instance : instances().allImpl()) {
+            if (!instance.options().healOnReload()) continue;
+            var entity = instance.baseEntity().orElse(null);
+            if (!(entity instanceof org.bukkit.entity.LivingEntity living)
+                    || !entity.getWorld().equals(event.getWorld())
+                    || entity.getLocation().getChunk().getX() != event.getChunk().getX()
+                    || entity.getLocation().getChunk().getZ() != event.getChunk().getZ()) continue;
+            double max = living.getMaxHealth();
+            if (max > 0) living.setHealth(max);
+        }
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityCombust(org.bukkit.event.entity.EntityCombustEvent e) {
+        if (instances == null) return;
+        for (var instance : instances().allImpl()) {
+            if (!e.getEntity().getUniqueId().equals(instance.boundEntityId().orElse(null))) continue;
+            var options = instance.options();
+            if ((options.preventSunburn() && e.getEntity().getFireTicks() <= 0) || options.preventFire()) e.setCancelled(true);
+            return;
+        }
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityExplode(org.bukkit.event.entity.EntityExplodeEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        if (instance == null) return;
+        var options = instance.options();
+        if (options.preventSuicide() && event.getEntity() instanceof org.bukkit.entity.Creeper) {
+            event.setCancelled(true);
+        }
+        if (options.preventExplosions() || options.preventEntityExplosions()) event.setCancelled(true);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEnvironmentalDamage(org.bukkit.event.entity.EntityDamageEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        if (instance == null) return;
+        var options = instance.options();
+        var cause = event.getCause();
+        if (options.preventDrowning() && cause == org.bukkit.event.entity.EntityDamageEvent.DamageCause.DROWNING) event.setCancelled(true);
+        if (options.preventFallDamage() && cause == org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL) event.setCancelled(true);
+        if (options.blocksFireCause(cause.name()) && (cause == org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE
+                || cause == org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE_TICK
+                || cause == org.bukkit.event.entity.EntityDamageEvent.DamageCause.HOT_FLOOR
+                || options.preventFireCauses().contains(cause.name()))) event.setCancelled(true);
+        if (options.preventProjectiles() && cause == org.bukkit.event.entity.EntityDamageEvent.DamageCause.PROJECTILE) event.setCancelled(true);
+        if ((options.preventExplosions() || options.preventBlockExplosions())
+                && cause == org.bukkit.event.entity.EntityDamageEvent.DamageCause.BLOCK_EXPLOSION) event.setCancelled(true);
+        if ((options.preventExplosions() || options.preventEntityExplosions())
+                && cause == org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) event.setCancelled(true);
+    }
+
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
     public void onEntityDeathForLoot(org.bukkit.event.entity.EntityDeathEvent e) {
         if (lootService == null || instances == null) return;
         org.bukkit.entity.Entity ent = e.getEntity();
+        org.bukkit.entity.Player killer = e.getEntity().getKiller();
+        dev.helstera.runtime.instance.ModelInstanceImpl killerInstance = null;
+        if (killer != null) killerInstance = findInstance(killer);
+        if (killerInstance != null && killerInstance.options().preventMobKillDrops()) {
+            e.getDrops().clear();
+            e.setDroppedExp(0);
+        }
         dev.helstera.runtime.instance.ModelInstanceImpl inst = null;
         for (var i : instances().allImpl()) {
             if (ent.getUniqueId().equals(i.boundEntityId().orElse(null))) {
@@ -990,7 +3205,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 break;
             }
         }
-        if (inst == null || inst.lootTable == null || inst.lootTable.isBlank()) return;
+        if (inst == null) return;
+        // PreventOtherDrops is meaningful even when no custom loot table is configured.
+        if (inst.options().preventOtherDrops()) {
+            e.getDrops().clear();
+            e.setDroppedExp(0);
+        }
+        if (inst.lootTable == null || inst.lootTable.isBlank()) return;
 
         var loot = (dev.helstera.ai.loot.LootService) lootService;
         if (loot.table(inst.lootTable) == null) {
@@ -1018,6 +3239,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             int mobLevel = (inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl)
                     && impl.level > 0 ? impl.level : 0;
             loot.rollAndDrop(ent.getLocation(), inst.lootTable, luck, e.getEntity().getKiller(), mobLevel);
+            int experience = inst.lootExperienceMin >= 0
+                    ? inst.lootExperienceMin == inst.lootExperienceMax
+                    ? inst.lootExperienceMin
+                    : java.util.concurrent.ThreadLocalRandom.current().nextInt(
+                            inst.lootExperienceMin, inst.lootExperienceMax + 1)
+                    : loot.experience(inst.lootTable);
+            e.setDroppedExp(experience);
         } catch (Throwable t) {
             getLogger().warning("掉落投掷失败: " + t);
         }
@@ -1041,6 +3269,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return best;
     }
 
+    private org.bukkit.entity.Player nearestSpawnerPlayer(org.bukkit.Location location, double radius) {
+        if (location == null || location.getWorld() == null || radius <= 0) return null;
+        org.bukkit.entity.Player nearest = null;
+        double best = radius * radius;
+        for (org.bukkit.entity.Player player : location.getWorld().getPlayers()) {
+            if (player.isDead() || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) continue;
+            double distance = location.distanceSquared(player.getLocation());
+            if (distance <= best) {
+                best = distance;
+                nearest = player;
+            }
+        }
+        return nearest;
+    }
+
     /**
      * 借适配器解析自定义命名空间物品 ID（如 {@code mineitems:ember_claw}）。
      *
@@ -1048,9 +3291,79 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
      * 它只存在于具体适配器实现里。返回 null 表示"没有适配器认领这个 ID"，
      * 掉落服务会继续回落到原版材质匹配。</p>
      */
+    public boolean reloadCustomItems() {
+        java.io.File file = new java.io.File(getDataFolder(), "items.yml");
+        if (!file.isFile()) {
+            customItems = null;
+            return false;
+        }
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        customItems = config.getConfigurationSection("items");
+        return customItems != null;
+    }
+
+    private org.bukkit.inventory.ItemStack resolveConfiguredItem(String id) {
+        return resolveConfiguredItem(id, new java.util.HashSet<>());
+    }
+
+    private org.bukkit.inventory.ItemStack resolveConfiguredItem(String id, java.util.Set<String> resolving) {
+        ConfigurationSection items = customItems;
+        if (items == null || id == null || id.isBlank()) return null;
+        String identity = id.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!resolving.add(identity)) {
+            getLogger().warning("[Items] template cycle detected at " + id);
+            return null;
+        }
+        ConfigurationSection section = items.getConfigurationSection(id.trim());
+        if (resolving.size() > 32) {
+            resolving.remove(identity);
+            getLogger().warning("[Items] template chain exceeds 32 levels at " + id);
+            return null;
+        }
+        if (section == null) section = items.getConfigurationSection(id.trim().replace(':', '_').replace('.', '_'));
+        if (section == null) {
+            for (String key : items.getKeys(false)) {
+                ConfigurationSection candidate = items.getConfigurationSection(key);
+                if (candidate != null && id.equalsIgnoreCase(candidate.getString("id", key))) {
+                    section = candidate;
+                    break;
+                }
+            }
+        }
+        if (section == null) { resolving.remove(identity); return null; }
+        String template = section.getString("template");
+        if (template != null && !template.isBlank()) {
+            org.bukkit.inventory.ItemStack inherited = resolveConfiguredItem(template, resolving);
+            if (inherited != null) {
+                inherited = inherited.clone();
+                applyItemMeta(inherited, section);
+                applyConfiguredEnchantments(inherited, section.getConfigurationSection("enchantments"));
+                ConfigurationSection inheritedAttributes = section.getConfigurationSection("attributes");
+                if (inheritedAttributes != null) for (String slot : inheritedAttributes.getKeys(false)) {
+                    applyItemAttributes(inherited, inheritedAttributes.getConfigurationSection(slot));
+                }
+                inherited.setAmount(Math.max(1, section.getInt("amount", inherited.getAmount())));
+                resolving.remove(identity);
+                return inherited;
+            }
+        }
+        org.bukkit.inventory.ItemStack stack = parseItemStack(section.getString("id", section.getString("material")));
+        if (stack == null) { resolving.remove(identity); return null; }
+        applyItemMeta(stack, section);
+        applyConfiguredEnchantments(stack, section.getConfigurationSection("enchantments"));
+        ConfigurationSection attributes = section.getConfigurationSection("attributes");
+        if (attributes != null) for (String slot : attributes.getKeys(false)) {
+            applyItemAttributes(stack, attributes.getConfigurationSection(slot));
+        }
+        stack.setAmount(Math.max(1, section.getInt("amount", stack.getAmount())));
+        resolving.remove(identity);
+        return stack;
+    }
     private org.bukkit.inventory.ItemStack resolveCustomItem(
             dev.helstera.api.integration.IntegrationRegistry reg, String id) {
-        if (reg == null || id == null) return null;
+        if (reg == null || id == null) return resolveConfiguredItem(id);
+        org.bukkit.inventory.ItemStack configured = resolveConfiguredItem(id);
+        if (configured != null) return configured;
         for (var a : reg.all()) {
             try {
                 if (!a.hasCapability(dev.helstera.api.integration.Capability.CUSTOM_ITEM_RESOLVE)) continue;
@@ -1080,10 +3393,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         org.bukkit.configuration.ConfigurationSection itemsSec = sec.getConfigurationSection("items");
         if (itemsSec != null) {
             for (String slotKey : itemsSec.getKeys(false)) {
-                String raw = itemsSec.getString(slotKey, "");
+                org.bukkit.configuration.ConfigurationSection itemNode = itemsSec.getConfigurationSection(slotKey);
+                String raw = itemNode == null ? itemsSec.getString(slotKey, "")
+                        : itemNode.getString("item", itemNode.getString("material", itemNode.getString("spec", "")));
                 if (raw == null || raw.isBlank()) continue;
                 org.bukkit.inventory.ItemStack stack = parseItemStack(raw);
+                if (stack == null) {
+                    stack = resolveCustomItem((dev.helstera.api.integration.IntegrationRegistry) integrations, raw.trim());
+                }
                 if (stack == null || stack.getType() == org.bukkit.Material.AIR) continue;
+                applyConfiguredEnchantments(stack, sec.getConfigurationSection("item-enchantments." + slotKey));
+                applyItemMeta(stack, itemNode);
+                if (itemNode != null && itemNode.contains("amount")) {
+                    stack.setAmount(Math.max(1, itemNode.getInt("amount", stack.getAmount())));
+                }
                 org.bukkit.inventory.EquipmentSlot slot;
                 switch (slotKey.toLowerCase(java.util.Locale.ROOT)) {
                     case "main-hand": slot = org.bukkit.inventory.EquipmentSlot.HAND; break;
@@ -1105,6 +3428,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 + "mobs 配置的 " + slot + " 已跳过");
                     } else {
                         eq.setItem(slot, stack);
+                        double dropChance = sec.getDouble("equipment-drop-chances." + slotKey, Double.NaN);
+                        if (!Double.isNaN(dropChance) && !applyEquipmentDropChance(eq, slot, dropChance)) {
+                            getLogger().warning("[Equipment] drop chance for " + slotKey
+                                    + " must be between 0 and 1: " + dropChance);
+                        }
+                        applyItemAttributes(stack, sec.getConfigurationSection("attributes." + slotKey));
                     }
                 } catch (Exception e) {
                     // 这里对 stack 的判空在 SpotBugs 看来是冗余（上面已判过），
@@ -1147,6 +3476,880 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
      * 解析单个物品字符串为 ItemStack。
      * 格式：<b>材质</b> | <b>材质:数量</b> | <b>材质:数量:附魔:等级</b>
      */
+    /** Applies optional attribute modifiers under entity.attributes.<slot>. */
+    /** Applies optional attribute modifiers under entity.attributes.<slot>. */
+    private void markPersistentMob(org.bukkit.entity.LivingEntity entity, String mobId,
+                                   dev.helstera.api.instance.SpawnOptions options) {
+        if (entity == null || mobId == null || options == null
+                || !"PERSISTENT".equalsIgnoreCase(options.despawnMode())) return;
+        entity.setPersistent(true);
+        var container = entity.getPersistentDataContainer();
+        container.set(persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING, mobId);
+        container.set(persistentMobVersionKey(), org.bukkit.persistence.PersistentDataType.INTEGER, 1);
+    }
+
+    private org.bukkit.NamespacedKey persistentMobIdKey() {
+        return new org.bukkit.NamespacedKey(this, "persistent_mob_id");
+    }
+
+    private org.bukkit.NamespacedKey persistentMobVersionKey() {
+        return new org.bukkit.NamespacedKey(this, "persistent_mob_version");
+    }
+
+    private void restorePersistentMobs() {
+        if (instances == null || registry == null) return;
+        int restored = 0;
+        for (org.bukkit.World world : getServer().getWorlds()) {
+            for (org.bukkit.entity.Entity entity : world.getEntities()) {
+                if (restorePersistentMob(entity)) restored++;
+            }
+        }
+        if (restored > 0) getLogger().info("[Persistent] restored " + restored + " saved mobs.");
+    }
+
+    private boolean restorePersistentMob(org.bukkit.entity.Entity entity) {
+        if (!(entity instanceof org.bukkit.entity.LivingEntity living)
+                || !living.isValid() || living.isDead() || findInstance(entity) != null) return false;
+        String mobId = living.getPersistentDataContainer().get(
+                persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING);
+        if (mobId == null || mobId.isBlank()) return false;
+        var cfg = mobConfig(mobId);
+        if (cfg == null) {
+            getLogger().warning("[Persistent] mob config not found for saved entity: " + mobId);
+            return false;
+        }
+        String mode = cfg.getString("mob.despawn", cfg.getString("despawn", "NORMAL"));
+        if (!"PERSISTENT".equalsIgnoreCase(mode.trim())) return false;
+        MobSpawn result = spawnMobCore(mobId, null, living.getLocation(), false, null, living);
+        if (result != null && result.instanceId() > 0
+                && skillService instanceof dev.helstera.ai.skill.SkillService skills) {
+            java.io.File snapshot = persistentMobSkillTreeFile(mobId);
+            if (snapshot.isFile()) {
+                try {
+                    skills.restoreSkillTreeSnapshot(result.instanceId(),
+                            dev.helstera.api.behavior.SkillTreeSnapshotStore.load(snapshot));
+                } catch (java.io.IOException ex) {
+                    getLogger().warning("[Persistent] SkillTree snapshot load failed for " + mobId + ": " + ex.getMessage());
+                }
+            }
+        }
+        return result != null && result.instanceId() > 0;
+    }
+
+    private void runPersistentSkillTreeSelfTest() {
+        String stage = getConfig().getString("debug.self-test-skilltree-stage", "write");
+        var skills = skillService();
+        if (skills == null || instances == null) {
+            getLogger().warning("[SelfTest] skilltree-restart stage=" + stage + " result=failed reason=service-missing");
+            return;
+        }
+        if ("write".equalsIgnoreCase(stage)) {
+            Location at = getServer().getWorlds().get(0).getSpawnLocation().clone().add(0, 3, 0);
+            int instanceId = spawnMobAt("skilltree_probe", at, null);
+            var instance = instances().impl(instanceId);
+            var entity = instance == null ? null : instance.baseEntity().orElse(null);
+            if (instanceId <= 0 || !(entity instanceof org.bukkit.entity.LivingEntity living)) {
+                getLogger().warning("[SelfTest] skilltree-restart stage=write result=failed reason=spawn-failed");
+                return;
+            }
+            String mobId = living.getPersistentDataContainer().get(
+                    persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING);
+            var tree = new dev.helstera.api.behavior.SkillTreeContext(living, java.util.List.of(living), at);
+            tree.setVariable("restart-marker", "saved-on-first-boot");
+            var snapshot = tree.snapshot();
+            skills.restoreSkillTreeSnapshot(instanceId, snapshot);
+            if (mobId != null) {
+                try {
+                    dev.helstera.api.behavior.SkillTreeSnapshotStore.save(
+                            persistentMobSkillTreeFile(mobId), snapshot);
+                } catch (java.io.IOException ex) {
+                    getLogger().warning("[SelfTest] SkillTree stable snapshot write failed: " + ex.getMessage());
+                }
+            }
+            getLogger().info("[SelfTest] skilltree-restart stage=write result="
+                    + (mobId == null ? "failed" : "passed") + " mob-id=" + mobId
+                    + " instance=" + instanceId + " marker=saved-on-first-boot");
+            return;
+        }
+        String expectedMobId = "skilltree_probe";
+        var restored = instances().allImpl().stream()
+                .filter(instance -> instance.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity living
+                        && expectedMobId.equals(living.getPersistentDataContainer().get(
+                        persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING)))
+                .findFirst().orElse(null);
+        if (restored == null) {
+            getLogger().warning("[SelfTest] skilltree-restart stage=verify result=failed reason=mob-not-restored");
+            return;
+        }
+        String marker = skills.snapshotOf(restored.instanceId())
+                .flatMap(snapshot -> java.util.Optional.ofNullable(snapshot.variables().get("restart-marker")))
+                .map(String::valueOf).orElse("missing");
+        boolean passed = marker.equals("saved-on-first-boot");
+        getLogger().info("[SelfTest] skilltree-restart stage=verify result=" + (passed ? "passed" : "failed")
+                + " mob-id=" + expectedMobId + " instance=" + restored.instanceId() + " marker=" + marker);
+    }
+
+    private java.io.File persistentMobSkillTreeFile(String mobId) {
+        String safe = mobId == null ? "" : mobId.replaceAll("[^A-Za-z0-9_.-]", "_");
+        return new java.io.File(new java.io.File(getDataFolder(), "skill-trees"), "mob-" + safe + ".yml");
+    }
+
+    private void savePersistentMobSkillTrees(dev.helstera.ai.skill.SkillService skills) {
+        if (instances == null) return;
+        for (var instance : instances().allImpl()) {
+            var entity = instance.baseEntity().orElse(null);
+            if (!(entity instanceof org.bukkit.entity.LivingEntity living)) continue;
+            String mobId = living.getPersistentDataContainer().get(
+                    persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING);
+            if (mobId == null || mobId.isBlank()) continue;
+            skills.snapshotOf(instance.instanceId()).ifPresent(snapshot -> {
+                try {
+                    dev.helstera.api.behavior.SkillTreeSnapshotStore.save(
+                            persistentMobSkillTreeFile(mobId), snapshot);
+                } catch (java.io.IOException ex) {
+                    getLogger().warning("[Persistent] SkillTree snapshot save failed for " + mobId + ": " + ex.getMessage());
+                }
+            });
+        }
+    }
+
+    private dev.helstera.runtime.instance.ModelInstanceImpl findInstance(org.bukkit.entity.Entity entity) {
+        if (entity == null || instances == null) return null;
+        for (var instance : instances().allImpl()) {
+            if (entity.getUniqueId().equals(instance.boundEntityId().orElse(null))) return instance;
+        }
+        return null;
+    }
+
+    private void applyBaseAttribute(org.bukkit.entity.LivingEntity entity, String attributeName, double value) {
+        if (entity == null || !Double.isFinite(value)) return;
+        try {
+            var instance = entity.getAttribute(resolveAttribute(attributeName));
+            if (instance != null) instance.setBaseValue(value);
+        } catch (IllegalArgumentException ex) {
+            getLogger().warning("[属性] 无法设置 " + attributeName + ": " + ex.getMessage());
+        }
+    }
+    private void applyKnockbackResistance(org.bukkit.entity.LivingEntity entity, double resistance) {
+        if (entity == null || resistance <= 0) return;
+        try {
+            var attribute = resolveAttribute("KNOCKBACK_RESISTANCE");
+            var instance = entity.getAttribute(attribute);
+            if (instance != null) instance.setBaseValue(Math.max(instance.getBaseValue(), Math.min(1.0, resistance)));
+        } catch (IllegalArgumentException ex) {
+            getLogger().warning("[属性] 无法设置击退抗性: " + ex.getMessage());
+        }
+    }
+
+    /** Applies imported entity attribute modifiers without replacing Bukkit's base values. */
+    private void applyEntityAttributes(org.bukkit.entity.LivingEntity entity,
+                                       org.bukkit.configuration.ConfigurationSection attributes) {
+        if (entity == null || attributes == null) return;
+        for (String slotKey : attributes.getKeys(false)) {
+            Object rawSlot = attributes.get(slotKey);
+            if (rawSlot instanceof Number number) {
+                applyBaseAttribute(entity, slotKey, number.doubleValue());
+                continue;
+            }
+            org.bukkit.configuration.ConfigurationSection slot = attributes.getConfigurationSection(slotKey);
+            if (slot == null) continue;
+            for (String id : slot.getKeys(false)) {
+                org.bukkit.configuration.ConfigurationSection node = slot.getConfigurationSection(id);
+                if (node == null) continue;
+                String attributeName = node.getString("attribute", id);
+                String rawAmount = node.getString("amount");
+                if (rawAmount == null) rawAmount = String.valueOf(node.getDouble("amount", Double.NaN));
+                double amount = parseAttributeAmount(rawAmount);
+                if (!Double.isFinite(amount)) {
+                    getLogger().warning("[Attributes] invalid amount for " + slotKey + "." + id + ": " + rawAmount);
+                    continue;
+                }
+                String operationName = normalizeAttributeOperation(node.getString("operation", "ADD_NUMBER"));
+                if (rawAmount.trim().endsWith("%") && operationName.equals("ADD_NUMBER")) {
+                    operationName = "ADD_SCALAR";
+                }
+                String modifierSlot = node.getString("slot", slotKey);
+                try {
+                    var attribute = resolveAttribute(attributeName);
+                    var operation = org.bukkit.attribute.AttributeModifier.Operation.valueOf(operationName);
+                    var slotGroup = resolveEquipmentSlotGroup(modifierSlot);
+                    var modifierId = java.util.UUID.nameUUIDFromBytes(
+                            (entity.getUniqueId() + "|" + slotKey + "|" + id)
+                                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    var instance = entity.getAttribute(attribute);
+                    if (instance == null) {
+                        if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
+                            getLogger().info("attribute-probe missing-instance slot=" + slotKey
+                                    + " id=" + id + " attribute=" + attributeName);
+                        }
+                        continue;
+                    }
+                    if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
+                        getLogger().info("attribute-probe resolved slot=" + slotKey
+                                + " id=" + id + " attribute=" + attribute
+                                + " operation=" + operation + " modifier-slot=" + modifierSlot);
+                    }
+                    instance.getModifiers().stream()
+                            .filter(existing -> modifierId.equals(existing.getUniqueId()))
+                            .toList()
+                            .forEach(instance::removeModifier);
+                    instance.addModifier(new org.bukkit.attribute.AttributeModifier(
+                            modifierId, id, amount, operation, slotGroup));
+                    boolean retained = instance.getModifiers().stream()
+                            .anyMatch(existing -> modifierId.equals(existing.getUniqueId()));
+                    if (!retained) {
+                        // Some Paper entity implementations reject an equipment
+                        // group on a native attribute while accepting the same
+                        // modifier without an item slot. Preserve the modifier
+                        // rather than silently losing the imported value.
+                        instance.addModifier(new org.bukkit.attribute.AttributeModifier(
+                                modifierId, id, amount, operation));
+                    }
+                } catch (IllegalArgumentException ex) {
+                    getLogger().warning("[Attributes] cannot apply " + slotKey + "." + id + ": " + ex.getMessage());
+                }
+            }
+        }
+    }
+
+    private static double parseAttributeAmount(String raw) {
+        if (raw == null || raw.isBlank()) return Double.NaN;
+        String value = raw.trim();
+        boolean percent = value.endsWith("%");
+        if (percent) value = value.substring(0, value.length() - 1).trim();
+        try {
+            double amount = Double.parseDouble(value);
+            return percent ? amount / 100.0 : amount;
+        } catch (NumberFormatException ignored) {
+            return Double.NaN;
+        }
+    }
+
+    static boolean applyEquipmentDropChance(org.bukkit.inventory.EntityEquipment equipment,
+                                            org.bukkit.inventory.EquipmentSlot slot,
+                                            double chance) {
+        if (equipment == null || slot == null || !Double.isFinite(chance) || chance < 0 || chance > 1) {
+            return false;
+        }
+        equipment.setDropChance(slot, (float) chance);
+        return true;
+    }
+
+    private void applyItemAttributes(org.bukkit.inventory.ItemStack stack,
+                                     org.bukkit.configuration.ConfigurationSection section) {
+        if (stack == null || section == null) return;
+        var meta = stack.getItemMeta();
+        if (meta == null) return;
+        for (String key : section.getKeys(false)) {
+            var node = section.getConfigurationSection(key);
+            if (node == null) continue;
+            String attributeName = node.getString("attribute", key);
+            String rawAmount = node.getString("amount");
+            if (rawAmount == null) rawAmount = String.valueOf(node.getDouble("amount", 0));
+            String operationName = normalizeAttributeOperation(node.getString("operation", "ADD_NUMBER"));
+            String slotName = node.getString("slot", "ANY");
+            try {
+                boolean percent = rawAmount.trim().endsWith("%");
+                double amount = Double.parseDouble(percent
+                        ? rawAmount.trim().substring(0, rawAmount.trim().length() - 1).trim()
+                        : rawAmount.trim());
+                if (percent) {
+                    amount /= 100.0;
+                    if (operationName.equals("ADD_NUMBER")) operationName = "ADD_SCALAR";
+                }
+                var attribute = resolveAttribute(attributeName);
+                var operation = org.bukkit.attribute.AttributeModifier.Operation.valueOf(operationName);
+                var slotGroup = resolveEquipmentSlotGroup(slotName);
+                var modifier = new org.bukkit.attribute.AttributeModifier(
+                        java.util.UUID.nameUUIDFromBytes((key + "|" + slotGroup).getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                        key, amount, operation, slotGroup);
+                meta.addAttributeModifier(attribute, modifier);
+            } catch (IllegalArgumentException ex) {
+                getLogger().warning("[属性] 无法应用装备属性 " + key + ": " + ex.getMessage());
+            }
+        }
+        stack.setItemMeta(meta);
+    }
+
+    private static String normalizeAttributeOperation(String raw) {
+        String operation = raw == null ? "ADD_NUMBER" : raw.trim().toUpperCase(java.util.Locale.ROOT);
+        return switch (operation) {
+            case "ADD", "0" -> "ADD_NUMBER";
+            case "MULTIPLY_BASE", "ADD_SCALAR", "1" -> "ADD_SCALAR";
+            case "MULTIPLY", "MULTIPLY_TOTAL", "MULTIPLY_SCALAR", "2" -> "MULTIPLY_SCALAR_1";
+            default -> operation;
+        };
+    }
+
+    private static org.bukkit.inventory.EquipmentSlotGroup resolveEquipmentSlotGroup(String raw) {
+        String slot = raw == null ? "any" : raw.trim().toLowerCase(java.util.Locale.ROOT);
+        slot = switch (slot) {
+            case "all" -> "any";
+            case "main-hand", "main_hand" -> "mainhand";
+            case "off-hand", "off_hand" -> "offhand";
+            case "helmet" -> "head";
+            case "chestplate" -> "chest";
+            case "leggings" -> "legs";
+            case "boots" -> "feet";
+            default -> slot;
+        };
+        var group = org.bukkit.inventory.EquipmentSlotGroup.getByName(slot);
+        if (group == null) throw new IllegalArgumentException("unknown equipment slot " + raw);
+        return group;
+    }
+
+    private static org.bukkit.attribute.Attribute resolveAttribute(String raw) {
+        String name = raw == null ? "" : raw.trim().toUpperCase(java.util.Locale.ROOT);
+        if (!name.startsWith("GENERIC_")) {
+            try {
+                return org.bukkit.attribute.Attribute.valueOf("GENERIC_" + name);
+            } catch (IllegalArgumentException ignored) {
+                // Paper versions with flattened attribute names are handled below.
+            }
+        }
+        try {
+            return org.bukkit.attribute.Attribute.valueOf(name);
+        } catch (IllegalArgumentException first) {
+            if (name.startsWith("GENERIC_")) {
+                return org.bukkit.attribute.Attribute.valueOf(name.substring("GENERIC_".length()));
+            }
+            return org.bukkit.attribute.Attribute.valueOf("GENERIC_" + name);
+        }
+    }
+    private void applyItemMeta(org.bukkit.inventory.ItemStack stack,
+                                         org.bukkit.configuration.ConfigurationSection section) {
+        if (stack == null || section == null) return;
+        org.bukkit.inventory.meta.ItemMeta meta = stack.getItemMeta();
+        if (meta == null) return;
+        String displayName = section.getString("display-name", section.getString("name"));
+        String itemName = section.getString("item-name");
+        if (itemName != null && !itemName.isBlank()) meta.setItemName(org.bukkit.ChatColor.translateAlternateColorCodes('&', itemName));
+        if (displayName != null && !displayName.isBlank()) {
+            meta.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', displayName));
+        }
+        if (section.isList("lore") || section.contains("lore")) {
+            java.util.List<String> lore = section.getStringList("lore").stream()
+                    .map(line -> org.bukkit.ChatColor.translateAlternateColorCodes('&', line))
+                    .toList();
+            meta.setLore(lore);
+        }
+        if (section.contains("custom-model-data")) {
+            int data = section.getInt("custom-model-data", 0);
+            if (data > 0) meta.setCustomModelData(data);
+        }
+        if (section.contains("unbreakable")) meta.setUnbreakable(section.getBoolean("unbreakable"));
+        if (section.contains("hide-tooltip")) meta.setHideTooltip(section.getBoolean("hide-tooltip"));
+        if (section.getBoolean("clear-item-flags", false)) meta.removeItemFlags(org.bukkit.inventory.ItemFlag.values());
+        if (section.getBoolean("clear-can-place-on", false)) meta.setCanPlaceOn(java.util.Set.of());
+        if (section.getBoolean("clear-can-break", false)) meta.setCanDestroy(java.util.Set.of());
+        if (section.contains("can-place-on")) meta.setCanPlaceOn(materialSet(section.getStringList("can-place-on")));
+        if (section.contains("can-break")) meta.setCanDestroy(materialSet(section.getStringList("can-break")));
+        if (section.contains("durability") && meta instanceof org.bukkit.inventory.meta.Damageable damageable) damageable.setDamage(Math.max(0, section.getInt("durability")));
+        if (section.contains("max-durability") && meta instanceof org.bukkit.inventory.meta.Damageable damageable) damageable.setMaxDamage(Math.max(1, section.getInt("max-durability")));
+        applyPotionItemEffects(meta, section);
+        applyItemColor(meta, section);
+        applySkullMeta(meta, section);
+        applyBannerPatterns(meta, section);
+        applyFireworkEffects(meta, section);
+        applyBlockData(stack, meta, section);
+        for (String flag : section.getStringList("item-flags")) {
+            try {
+                meta.addItemFlags(org.bukkit.inventory.ItemFlag.valueOf(flag.toUpperCase(java.util.Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        var container = meta.getPersistentDataContainer();
+        if (section.getBoolean("clear-persistent-data", false)) {
+            for (var key : new java.util.ArrayList<>(container.getKeys())) container.remove(key);
+        }
+        for (String rawKey : section.getStringList("remove-persistent-data")) {
+            removePersistentPath(container, rawKey);
+        }
+        org.bukkit.configuration.ConfigurationSection persistent = section.getConfigurationSection("persistent-data");
+        if (persistent != null) {
+            for (String rawKey : persistent.getKeys(false)) {
+                String key = rawKey.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9._/-]", "_");
+                if (key.isBlank()) continue;
+                Object rawValue = persistent.get(rawKey);
+                org.bukkit.NamespacedKey persistentKey = persistentKey(rawKey, key);
+                if (persistentKey != null) setPersistentValue(container, persistentKey, rawValue);
+            }
+        }
+        applyMythicItemOptions(meta, section, container,
+                message -> getLogger().warning("[ItemMeta] " + message));
+        stack.setItemMeta(meta);
+    }
+
+    static void applyMythicItemOptions(org.bukkit.inventory.meta.ItemMeta meta,
+                                       org.bukkit.configuration.ConfigurationSection section,
+                                       org.bukkit.persistence.PersistentDataContainer container,
+                                       java.util.function.Consumer<String> warning) {
+        if (meta == null || section == null) return;
+        java.util.Objects.requireNonNull(warning, "warning");
+        if (!section.getBoolean("repairable", true)
+                && meta instanceof org.bukkit.inventory.meta.Repairable repairable) {
+            repairable.setRepairCost(Integer.MAX_VALUE);
+        } else if (section.contains("repair-cost")
+                && meta instanceof org.bukkit.inventory.meta.Repairable repairable) {
+            int repairCost = section.getInt("repair-cost", -1);
+            if (repairCost != -1) {
+                try {
+                    repairable.setRepairCost(repairCost);
+                } catch (IllegalArgumentException ex) {
+                    warning.accept("invalid repair-cost " + repairCost + ": " + ex.getMessage());
+                }
+            }
+        }
+        if (section.contains("glint")) meta.setEnchantmentGlintOverride(section.getBoolean("glint"));
+        if (section.contains("stack-size")) {
+            int stackSize = section.getInt("stack-size");
+            if (stackSize < 1 || stackSize > 99) {
+                warning.accept("stack-size must be between 1 and 99: " + stackSize);
+            } else {
+                meta.setMaxStackSize(stackSize);
+            }
+        }
+        if (section.contains("fire-resistant")) meta.setFireResistant(section.getBoolean("fire-resistant"));
+        if (container == null) return;
+        if (section.getBoolean("generate-uuid", false)) {
+            container.set(new org.bukkit.NamespacedKey("helstera", "mythic_generated_uuid"),
+                    org.bukkit.persistence.PersistentDataType.STRING, java.util.UUID.randomUUID().toString());
+        }
+        if (section.getBoolean("prevent-stacking", false)) {
+            container.set(new org.bukkit.NamespacedKey("helstera", "mythic_prevent_stacking"),
+                    org.bukkit.persistence.PersistentDataType.STRING, java.util.UUID.randomUUID().toString());
+        }
+        if (section.getBoolean("generate-timestamp", false)) {
+            container.set(new org.bukkit.NamespacedKey("helstera", "mythic_generated_timestamp"),
+                    org.bukkit.persistence.PersistentDataType.LONG, java.time.Instant.now().getEpochSecond());
+        }
+    }
+
+    private void applySkullMeta(org.bukkit.inventory.meta.ItemMeta meta,
+                                org.bukkit.configuration.ConfigurationSection section) {
+        if (!(meta instanceof org.bukkit.inventory.meta.SkullMeta skull)) return;
+        try {
+            String owner = section.getString("skull-owner");
+            if (owner != null && !owner.isBlank()) skull.setOwner(owner);
+            String texture = section.getString("skull-texture");
+            if (texture == null || texture.isBlank()) return;
+            java.net.URL skin = skullSkinUrl(texture);
+            var profile = org.bukkit.Bukkit.createPlayerProfile(java.util.UUID.randomUUID());
+            var textures = profile.getTextures();
+            textures.setSkin(skin);
+            profile.setTextures(textures);
+            skull.setOwnerProfile(profile);
+        } catch (RuntimeException | java.net.MalformedURLException ex) {
+            getLogger().warning("[ItemMeta] invalid skull texture: " + ex.getMessage());
+        }
+    }
+
+    private static java.net.URL skullSkinUrl(String raw) throws java.net.MalformedURLException {
+        String value = raw.trim();
+        if (!value.startsWith("http://") && !value.startsWith("https://")) {
+            String json;
+            try {
+                json = new String(java.util.Base64.getDecoder().decode(value),
+                        java.nio.charset.StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException standardEncodingError) {
+                json = new String(java.util.Base64.getUrlDecoder().decode(value),
+                        java.nio.charset.StandardCharsets.UTF_8);
+            }
+            var root = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+            value = root.getAsJsonObject("textures").getAsJsonObject("SKIN")
+                    .get("url").getAsString();
+        }
+        java.net.URI uri = java.net.URI.create(value);
+        if (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme())) {
+            throw new IllegalArgumentException("skull texture URL must use HTTP or HTTPS");
+        }
+        return uri.toURL();
+    }
+
+    private static java.util.Set<org.bukkit.Material> materialSet(java.util.List<String> names) {
+        java.util.Set<org.bukkit.Material> materials = new java.util.LinkedHashSet<>();
+        for (String raw : names) {
+            org.bukkit.Material material = org.bukkit.Material.matchMaterial(raw);
+            if (material != null) materials.add(material);
+        }
+        return materials;
+    }
+
+    private static void applyPotionItemEffects(org.bukkit.inventory.meta.ItemMeta meta, org.bukkit.configuration.ConfigurationSection section) {
+        if (!(meta instanceof org.bukkit.inventory.meta.PotionMeta potionMeta)) return;
+        if (section.getBoolean("clear-potion-effects", false)
+                || (section.contains("potion-effects")
+                && !section.getString("potion-effects-mode", "replace").equalsIgnoreCase("append"))) {
+            potionMeta.clearCustomEffects();
+        }
+        for (String rawName : section.getStringList("remove-potion-effects")) {
+            var type = org.bukkit.potion.PotionEffectType.getByName(rawName.toUpperCase(java.util.Locale.ROOT));
+            if (type != null) potionMeta.removeCustomEffect(type);
+        }
+        Object raw = section.get("potion-effects");
+        if (!(raw instanceof java.util.List<?> list)) return;
+        for (Object entry : list) {
+            if (entry == null) continue;
+            String effectName;
+            int duration;
+            int amplifier;
+            boolean ambient = false;
+            boolean particles = true;
+            boolean icon = true;
+            if (entry instanceof java.util.Map<?, ?> map) {
+                Object rawType = map.containsKey("type") ? map.get("type") : map.get("effect");
+                effectName = rawType == null ? "" : String.valueOf(rawType);
+                duration = parsePositive(String.valueOf(valueOr(map, "duration", 60)), 60);
+                amplifier = parseNonNegative(String.valueOf(valueOr(map, "amplifier", 0)), 0);
+                ambient = Boolean.parseBoolean(String.valueOf(valueOr(map, "ambient", false)));
+                particles = Boolean.parseBoolean(String.valueOf(valueOr(map, "particles", true)));
+                icon = Boolean.parseBoolean(String.valueOf(valueOr(map, "icon", true)));
+            } else {
+                String[] parts = String.valueOf(entry).trim().split("\\s+");
+                effectName = parts.length == 0 ? "" : parts[0];
+                duration = parts.length > 1 ? parsePositive(parts[1], 60) : 60;
+                amplifier = parts.length > 2 ? parseNonNegative(parts[2], 0) : 0;
+            }
+            var type = org.bukkit.potion.PotionEffectType.getByName(effectName.toUpperCase(java.util.Locale.ROOT));
+            if (type == null) continue;
+            potionMeta.addCustomEffect(new org.bukkit.potion.PotionEffect(type, duration, amplifier,
+                    ambient, particles, icon), true);
+        }
+    }
+
+    private static Object valueOr(java.util.Map<?, ?> map, String key, Object fallback) {
+        return map.containsKey(key) && map.get(key) != null ? map.get(key) : fallback;
+    }
+
+    private static void applyBannerPatterns(org.bukkit.inventory.meta.ItemMeta meta,
+                                          org.bukkit.configuration.ConfigurationSection section) {
+        if (!(meta instanceof org.bukkit.inventory.meta.BannerMeta bannerMeta)) return;
+        if (section.getBoolean("clear-banner-layers", false)
+                || (section.contains("banner-layers")
+                && !section.getString("banner-layers-mode", "replace").equalsIgnoreCase("append"))) {
+            bannerMeta.setPatterns(java.util.List.of());
+        }
+        java.util.List<String> rawPatterns = section.getStringList("banner-layers");
+        if (rawPatterns.isEmpty()) rawPatterns = section.getStringList("banner-patterns");
+        for (String raw : rawPatterns) {
+            String[] parts = raw.trim().split("\\s+");
+            if (parts.length < 2) continue;
+            try {
+                org.bukkit.DyeColor color = org.bukkit.DyeColor.valueOf(parts[0].toUpperCase(java.util.Locale.ROOT));
+                org.bukkit.block.banner.PatternType type = org.bukkit.block.banner.PatternType.getByIdentifier(parts[1].toLowerCase(java.util.Locale.ROOT));
+                if (type == null) type = org.bukkit.block.banner.PatternType.valueOf(parts[1].toUpperCase(java.util.Locale.ROOT));
+                bannerMeta.addPattern(new org.bukkit.block.banner.Pattern(color, type));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        Object structured = section.get("banner-layers");
+        if (structured instanceof java.util.List<?> list) {
+            for (Object entry : list) {
+                if (!(entry instanceof java.util.Map<?, ?> map)) continue;
+                Object rawColor = valueOr(map, "color", null);
+                Object rawType = map.containsKey("pattern") ? map.get("pattern") : map.get("type");
+                if (rawColor == null || rawType == null) continue;
+                try {
+                    org.bukkit.DyeColor color = org.bukkit.DyeColor.valueOf(
+                            String.valueOf(rawColor).toUpperCase(java.util.Locale.ROOT));
+                    String name = String.valueOf(rawType);
+                    org.bukkit.block.banner.PatternType type = org.bukkit.block.banner.PatternType.getByIdentifier(
+                            name.toLowerCase(java.util.Locale.ROOT));
+                    if (type == null) type = org.bukkit.block.banner.PatternType.valueOf(name.toUpperCase(java.util.Locale.ROOT));
+                    bannerMeta.addPattern(new org.bukkit.block.banner.Pattern(color, type));
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+        }
+    }
+
+    private static void applyFireworkEffects(org.bukkit.inventory.meta.ItemMeta meta,
+                                           org.bukkit.configuration.ConfigurationSection section) {
+        if (!(meta instanceof org.bukkit.inventory.meta.FireworkMeta fireworkMeta)) return;
+        if (section.contains("firework-power")) fireworkMeta.setPower(Math.max(0, Math.min(127, section.getInt("firework-power"))));
+        if (section.getBoolean("clear-firework-effects", false)
+                || (section.contains("firework-effects")
+                && !section.getString("firework-effects-mode", "replace").equalsIgnoreCase("append"))) {
+            fireworkMeta.clearEffects();
+        }
+        Object raw = section.get("firework-effects");
+        if (!(raw instanceof java.util.List<?> effects)) return;
+        for (Object entry : effects) {
+            if (!(entry instanceof java.util.Map<?, ?> map)) continue;
+            try {
+                org.bukkit.FireworkEffect.Builder builder = org.bukkit.FireworkEffect.builder();
+                String typeName = map.get("type") == null ? "BALL" : String.valueOf(map.get("type"));
+                builder.with(org.bukkit.FireworkEffect.Type.valueOf(typeName.toUpperCase(java.util.Locale.ROOT)));
+                if (Boolean.parseBoolean(String.valueOf(map.get("flicker")))) builder.withFlicker();
+                if (Boolean.parseBoolean(String.valueOf(map.get("trail")))) builder.withTrail();
+                addFireworkColors(builder, map.get("colors"), false);
+                addFireworkColors(builder, map.get("fade-colors"), true);
+                fireworkMeta.addEffect(builder.build());
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+    }
+
+    private static void addFireworkColors(org.bukkit.FireworkEffect.Builder builder, Object raw, boolean fade) {
+        if (!(raw instanceof java.util.List<?> colors)) return;
+        for (Object color : colors) {
+            String text = String.valueOf(color).trim();
+            if (text.startsWith("#")) {
+                try {
+                    org.bukkit.Color parsed = org.bukkit.Color.fromRGB(Integer.parseInt(text.substring(1), 16));
+                    if (fade) builder.withFade(parsed); else builder.withColor(parsed);
+                } catch (IllegalArgumentException ignored) {
+                }
+                continue;
+            }
+            String[] rgb = text.split(",");
+            if (rgb.length != 3) continue;
+            try {
+                org.bukkit.Color parsed = org.bukkit.Color.fromRGB(Integer.parseInt(rgb[0].trim()),
+                        Integer.parseInt(rgb[1].trim()), Integer.parseInt(rgb[2].trim()));
+                if (fade) builder.withFade(parsed); else builder.withColor(parsed);
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+    }
+
+    private static void applyBlockData(org.bukkit.inventory.ItemStack stack,
+                                     org.bukkit.inventory.meta.ItemMeta meta,
+                                     org.bukkit.configuration.ConfigurationSection section) {
+        if (!(meta instanceof org.bukkit.inventory.meta.BlockDataMeta blockMeta) || stack == null) return;
+        String raw = section.getString("block-states", section.getString("block-data"));
+        if (raw == null || raw.isBlank()) return;
+        org.bukkit.Material material = stack.getType();
+        if (material == null || !material.isBlock()) return;
+        try {
+            org.bukkit.block.data.BlockData data = org.bukkit.Bukkit.createBlockData(material, raw);
+            blockMeta.setBlockData(data);
+        } catch (IllegalArgumentException | LinkageError ignored) {
+        }
+    }
+
+    private static void applyItemColor(org.bukkit.inventory.meta.ItemMeta meta, org.bukkit.configuration.ConfigurationSection section) {
+        if (!(meta instanceof org.bukkit.inventory.meta.PotionMeta potionMeta)) return;
+        String raw = section.getString("color");
+        if (raw == null) return;
+        if (raw.trim().startsWith("#")) {
+            try {
+                potionMeta.setColor(org.bukkit.Color.fromRGB(Integer.parseInt(raw.trim().substring(1), 16)));
+            } catch (IllegalArgumentException ignored) {
+            }
+            return;
+        }
+        String[] parts = raw.split(",");
+        if (parts.length != 3) return;
+        try { potionMeta.setColor(org.bukkit.Color.fromRGB(Integer.parseInt(parts[0].trim()), Integer.parseInt(parts[1].trim()), Integer.parseInt(parts[2].trim()))); }
+        catch (IllegalArgumentException ignored) { }
+    }
+
+    private static int parsePositive(String value, int fallback) {
+        try { return Math.max(1, Integer.parseInt(value)); } catch (NumberFormatException ignored) { return fallback; }
+    }
+
+    private static int parseNonNegative(String value, int fallback) {
+        try { return Math.max(0, Integer.parseInt(value)); } catch (NumberFormatException ignored) { return fallback; }
+    }
+    private org.bukkit.NamespacedKey persistentKey(String raw, String fallback) {
+        try {
+            if (raw != null && raw.contains(":")) return org.bukkit.NamespacedKey.fromString(raw);
+            return new org.bukkit.NamespacedKey(this, fallback);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    private static void setPersistentValue(org.bukkit.persistence.PersistentDataContainer container,
+                                              org.bukkit.NamespacedKey key, Object value) {
+        setPersistentValue(container, key, value, container.getAdapterContext());
+    }
+
+    private static void setPersistentValue(org.bukkit.persistence.PersistentDataContainer container,
+                                           org.bukkit.NamespacedKey key, Object value,
+                                           org.bukkit.persistence.PersistentDataAdapterContext adapter) {
+        if (value instanceof org.bukkit.configuration.ConfigurationSection section) {
+            value = section.getValues(false);
+        }
+        if (value instanceof java.util.Map<?, ?> typed
+                && typed.get("type") != null
+                && "TAG_CONTAINER_ARRAY".equalsIgnoreCase(String.valueOf(typed.get("type")))) {
+            Object rawValues = typed.get("values");
+            if (adapter != null && rawValues instanceof java.util.List<?> values) {
+                var containers = new org.bukkit.persistence.PersistentDataContainer[values.size()];
+                for (int i = 0; i < values.size(); i++) {
+                    var child = adapter.newPersistentDataContainer();
+                    Object raw = values.get(i);
+                    if (raw instanceof org.bukkit.configuration.ConfigurationSection section) raw = section.getValues(false);
+                    if (raw instanceof java.util.Map<?, ?> map) {
+                        for (var entry : map.entrySet()) {
+                            var childKey = nestedKey(String.valueOf(entry.getKey()));
+                            if (childKey != null) setPersistentValue(child, childKey, entry.getValue(), adapter);
+                        }
+                    }
+                    containers[i] = child;
+                }
+                container.set(key, org.bukkit.persistence.PersistentDataType.TAG_CONTAINER_ARRAY, containers);
+            }
+            return;
+        }
+        if (value instanceof Integer number) container.set(key, org.bukkit.persistence.PersistentDataType.INTEGER, number);
+        else if (value instanceof Long number) container.set(key, org.bukkit.persistence.PersistentDataType.LONG, number);
+        else if (value instanceof Double number) container.set(key, org.bukkit.persistence.PersistentDataType.DOUBLE, number);
+        else if (value instanceof Float number) container.set(key, org.bukkit.persistence.PersistentDataType.FLOAT, number);
+        else if (value instanceof Short number) container.set(key, org.bukkit.persistence.PersistentDataType.SHORT, number);
+        else if (value instanceof Byte number) container.set(key, org.bukkit.persistence.PersistentDataType.BYTE, number);
+        else if (value instanceof Boolean bool) container.set(key, org.bukkit.persistence.PersistentDataType.BOOLEAN, bool);
+        else if (value instanceof java.util.List<?> values && values.stream().allMatch(v -> v instanceof Integer)) {
+            int[] array = values.stream().mapToInt(v -> (Integer) v).toArray();
+            container.set(key, org.bukkit.persistence.PersistentDataType.INTEGER_ARRAY, array);
+        } else if (value instanceof java.util.List<?> values && values.stream().allMatch(v -> v instanceof Long)) {
+            long[] array = values.stream().mapToLong(v -> (Long) v).toArray();
+            container.set(key, org.bukkit.persistence.PersistentDataType.LONG_ARRAY, array);
+        } else if (value instanceof java.util.List<?> values && values.stream().allMatch(v -> v instanceof Double)) {
+            container.set(key, org.bukkit.persistence.PersistentDataType.LIST.doubles(),
+                    values.stream().map(v -> (Double) v).toList());
+        } else if (value instanceof java.util.List<?> values && values.stream().allMatch(v -> v instanceof Float)) {
+            container.set(key, org.bukkit.persistence.PersistentDataType.LIST.floats(),
+                    values.stream().map(v -> (Float) v).toList());
+        } else if (value instanceof java.util.List<?> values && values.stream().allMatch(v -> v instanceof String)) {
+            container.set(key, org.bukkit.persistence.PersistentDataType.LIST.strings(),
+                    values.stream().map(v -> (String) v).toList());
+        } else if (value instanceof java.util.List<?> values && adapter != null
+                && values.stream().allMatch(v -> v instanceof java.util.Map<?, ?>
+                || v instanceof org.bukkit.configuration.ConfigurationSection)) {
+            var nested = new java.util.ArrayList<org.bukkit.persistence.PersistentDataContainer>();
+            for (Object entry : values) {
+                Object raw = entry instanceof org.bukkit.configuration.ConfigurationSection section
+                        ? section.getValues(false) : entry;
+                var child = adapter.newPersistentDataContainer();
+                if (raw instanceof java.util.Map<?, ?> map) {
+                    for (var childEntry : map.entrySet()) {
+                        org.bukkit.NamespacedKey childKey = nestedKey(String.valueOf(childEntry.getKey()));
+                        if (childKey != null) setPersistentValue(child, childKey, childEntry.getValue(), adapter);
+                    }
+                }
+                nested.add(child);
+            }
+            container.set(key, org.bukkit.persistence.PersistentDataType.LIST.dataContainers(), nested);
+        } else if (value instanceof java.util.Map<?, ?> map && adapter != null) {
+            var nested = adapter.newPersistentDataContainer();
+            var existing = container.get(key, org.bukkit.persistence.PersistentDataType.TAG_CONTAINER);
+            if (existing != null) copyPersistentContainer(existing, nested, adapter);
+            for (var entry : map.entrySet()) {
+                org.bukkit.NamespacedKey nestedKey = nestedKey(String.valueOf(entry.getKey()));
+                if (nestedKey == null) continue;
+                if (entry.getValue() == null) nested.remove(nestedKey);
+                else setPersistentValue(nested, nestedKey, entry.getValue(), adapter);
+            }
+            container.set(key, org.bukkit.persistence.PersistentDataType.TAG_CONTAINER, nested);
+        } else if (value instanceof byte[] bytes) container.set(key, org.bukkit.persistence.PersistentDataType.BYTE_ARRAY, bytes);
+        else if (value != null) container.set(key, org.bukkit.persistence.PersistentDataType.STRING, String.valueOf(value));
+    }
+
+    private void removePersistentPath(
+            org.bukkit.persistence.PersistentDataContainer container, String rawPath) {
+        if (container == null || rawPath == null || rawPath.isBlank()) return;
+        String normalized = rawPath.trim();
+        String[] parts = normalized.split("/", -1);
+        if (parts.length == 1) {
+            String key = normalized.toLowerCase(java.util.Locale.ROOT)
+                    .replaceAll("[^a-z0-9._-]", "_");
+            org.bukkit.NamespacedKey persistentKey = persistentKey(normalized, key);
+            if (persistentKey != null) container.remove(persistentKey);
+            return;
+        }
+        org.bukkit.NamespacedKey rootKey = nestedKey(parts[0]);
+        if (rootKey == null) return;
+        org.bukkit.persistence.PersistentDataContainer current =
+                container.get(rootKey, org.bukkit.persistence.PersistentDataType.TAG_CONTAINER);
+        if (current == null) return;
+        for (int i = 1; i < parts.length - 1; i++) {
+            org.bukkit.NamespacedKey childKey = nestedKey(parts[i]);
+            if (childKey == null) return;
+            current = current.get(childKey, org.bukkit.persistence.PersistentDataType.TAG_CONTAINER);
+            if (current == null) return;
+        }
+        org.bukkit.NamespacedKey leaf = nestedKey(parts[parts.length - 1]);
+        if (leaf != null) current.remove(leaf);
+    }
+
+    private static void copyPersistentContainer(
+            org.bukkit.persistence.PersistentDataContainer source,
+            org.bukkit.persistence.PersistentDataContainer target,
+            org.bukkit.persistence.PersistentDataAdapterContext adapter) {
+        for (org.bukkit.NamespacedKey key : source.getKeys()) {
+            if (source.has(key, org.bukkit.persistence.PersistentDataType.TAG_CONTAINER_ARRAY)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.TAG_CONTAINER_ARRAY,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.TAG_CONTAINER_ARRAY));
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.TAG_CONTAINER)) {
+                var nested = source.get(key, org.bukkit.persistence.PersistentDataType.TAG_CONTAINER);
+                var copy = adapter.newPersistentDataContainer();
+                if (nested != null) copyPersistentContainer(nested, copy, adapter);
+                target.set(key, org.bukkit.persistence.PersistentDataType.TAG_CONTAINER, copy);
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.STRING)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.STRING,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.STRING));
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.INTEGER)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.INTEGER,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.INTEGER));
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.LONG)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.LONG,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.LONG));
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.DOUBLE)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.DOUBLE,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.DOUBLE));
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.FLOAT)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.FLOAT,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.FLOAT));
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.SHORT)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.SHORT,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.SHORT));
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.BYTE)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.BYTE,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.BYTE));
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.BOOLEAN)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.BOOLEAN,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.BOOLEAN));
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.BYTE_ARRAY)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.BYTE_ARRAY,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.BYTE_ARRAY));
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.INTEGER_ARRAY)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.INTEGER_ARRAY,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.INTEGER_ARRAY));
+            } else if (source.has(key, org.bukkit.persistence.PersistentDataType.LONG_ARRAY)) {
+                target.set(key, org.bukkit.persistence.PersistentDataType.LONG_ARRAY,
+                        source.get(key, org.bukkit.persistence.PersistentDataType.LONG_ARRAY));
+            }
+        }
+    }
+
+    private static org.bukkit.NamespacedKey nestedKey(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            if (raw.contains(":")) return org.bukkit.NamespacedKey.fromString(raw);
+            String key = raw.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9._/-]", "_");
+            return key.isBlank() ? null : new org.bukkit.NamespacedKey("helstera", key);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    private void applyConfiguredEnchantments(org.bukkit.inventory.ItemStack stack,
+                                             org.bukkit.configuration.ConfigurationSection section) {
+        if (stack == null || section == null) return;
+        for (String name : section.getKeys(false)) {
+            var enchantment = org.bukkit.enchantments.Enchantment.getByName(name.toUpperCase(java.util.Locale.ROOT));
+            if (enchantment == null) {
+                getLogger().warning("[装备] 未知附魔: " + name);
+                continue;
+            }
+            int level = Math.max(1, section.getInt(name, 1));
+            stack.addUnsafeEnchantment(enchantment, level);
+        }
+    }
+
     private org.bukkit.inventory.ItemStack parseItemStack(String raw) {
         if (raw == null || raw.isBlank()) return null;
         String[] parts = raw.trim().split(":");
@@ -1238,14 +4441,33 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    public boolean reloadCustomMenus() {
+        if (customMenuService == null) return false;
+        java.io.File file = new java.io.File(getDataFolder(), "menu.yml");
+        if (!file.exists()) {
+            getLogger().warning("Custom Menu config missing: " + file.getName());
+            return false;
+        }
+        try {
+            customMenuService.reload(file);
+            getLogger().info("Loaded " + customMenuService.size() + " custom menus from " + file.getName());
+            return true;
+        } catch (RuntimeException ex) {
+            getLogger().warning("Custom Menu reload failed: " + ex.getMessage());
+            return false;
+        }
+    }
+
     public void reloadLootAndSpawners() {
         if (loot() != null) {
             loot().load(YamlConfiguration.loadConfiguration(
                     new java.io.File(getDataFolder(), "loot.yml")).getConfigurationSection("tables"));
         }
         if (spawners() != null) {
+            spawners().saveState(new java.io.File(getDataFolder(), "spawner-state.yml"));
             spawners().load(YamlConfiguration.loadConfiguration(
-                    new java.io.File(getDataFolder(), "spawners.yml")).getConfigurationSection("spawners"));
+                    new java.io.File(getDataFolder(), "spawners.yml")));
+            spawners().loadState(new java.io.File(getDataFolder(), "spawner-state.yml"));
             spawners().start();
         }
         // 对话系统就地重载：不打断正在运行的 cinematic
@@ -1384,6 +4606,138 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     /** 用 mobs/*.yml 的 ai 节就地覆盖行为档案（不污染缓存的档案）。 */
+    static double configuredDespawnDistance(org.bukkit.configuration.ConfigurationSection cfg) {
+        if (cfg == null) return 32.0;
+        double direct = cfg.getDouble("mob.despawn-distance", Double.NaN);
+        if (Double.isFinite(direct) && direct >= 0) return direct;
+        double legacy = cfg.getDouble("mob.spawning-distance", Double.NaN);
+        return Double.isFinite(legacy) && legacy >= 0 ? legacy : 32.0;
+    }
+
+    static String configuredEntityType(org.bukkit.configuration.ConfigurationSection entity,
+                                       org.bukkit.configuration.ConfigurationSection mob) {
+        String fallback = mob == null ? "ZOMBIE" : mob.getString("entity-type", "ZOMBIE");
+        return entity == null ? fallback : entity.getString("type", fallback);
+    }
+
+    static void applyMobOptions(AiProfile profile,
+                                        org.bukkit.configuration.ConfigurationSection mob) {
+        if (profile == null || mob == null) return;
+        if (mob.contains("sight-radius")) profile.sightRadius = mob.getDouble("sight-radius", profile.sightRadius);
+        if (mob.contains("follow-range")) profile.sightRadius = mob.getDouble("follow-range", profile.sightRadius);
+        if (mob.contains("attack-damage")) profile.attackDamage = mob.getDouble("attack-damage", profile.attackDamage);
+        if (mob.contains("attack-cooldown")) profile.attackCooldown = mob.getDouble("attack-cooldown", profile.attackCooldown);
+        if (mob.contains("max-combat-distance")) profile.maxCombatDistance = mob.getDouble("max-combat-distance", profile.maxCombatDistance);
+        if (mob.contains("move-speed")) profile.moveSpeed = mob.getDouble("move-speed", profile.moveSpeed);
+        if (mob.contains("threat-weight")) profile.threatDistanceWeight = mob.getDouble("threat-weight", profile.threatDistanceWeight);
+        if (mob.contains("threat-enabled")) profile.threatEnabled = mob.getBoolean("threat-enabled", profile.threatEnabled);
+    }
+
+    static void applyAgeOptions(org.bukkit.entity.LivingEntity entity,
+                                org.bukkit.configuration.ConfigurationSection options) {
+        if (!(entity instanceof org.bukkit.entity.Ageable ageable) || options == null) return;
+        if (options.contains("age")) ageable.setAge(options.getInt("age"));
+        if (options.contains("baby")) {
+            if (options.getBoolean("baby")) ageable.setBaby();
+            else ageable.setAdult();
+        }
+        if (options.contains("age-lock")) ageable.setAgeLock(options.getBoolean("age-lock"));
+    }
+
+    static void applyEntitySpecificOptions(org.bukkit.entity.LivingEntity entity,
+                                           org.bukkit.configuration.ConfigurationSection options) {
+        if (entity == null || options == null) return;
+        if (entity instanceof org.bukkit.entity.Raider raider) {
+            if (options.contains("can-join-raid")) {
+                raider.setCanJoinRaid(options.getBoolean("can-join-raid"));
+            }
+            if (options.contains("patrol-leader")) {
+                raider.setPatrolLeader(options.getBoolean("patrol-leader"));
+            }
+        }
+        if (entity instanceof org.bukkit.entity.Tameable tameable && options.contains("tamed")) {
+            tameable.setTamed(options.getBoolean("tamed"));
+        }
+        if (options.contains("angry")) {
+            boolean angry = options.getBoolean("angry");
+            if (entity instanceof org.bukkit.entity.Wolf wolf) wolf.setAngry(angry);
+            else if (entity instanceof org.bukkit.entity.PigZombie pigZombie) pigZombie.setAngry(angry);
+        }
+        if (entity instanceof org.bukkit.entity.Bee bee) {
+            if (options.contains("has-nectar")) bee.setHasNectar(options.getBoolean("has-nectar"));
+            if (options.contains("has-stung")) bee.setHasStung(options.getBoolean("has-stung"));
+        }
+        if (entity instanceof org.bukkit.entity.Creeper creeper) {
+            if (options.contains("creeper-explosion-radius")) {
+                int radius = options.getInt("creeper-explosion-radius", -1);
+                if (radius >= 0) creeper.setExplosionRadius(radius);
+            }
+            if (options.contains("creeper-fuse-ticks")) {
+                int fuseTicks = options.getInt("creeper-fuse-ticks", -1);
+                if (fuseTicks >= 0) creeper.setMaxFuseTicks(fuseTicks);
+            }
+            if (options.contains("creeper-super-charged")) {
+                creeper.setPowered(options.getBoolean("creeper-super-charged"));
+            }
+        }
+        if (options.contains("size")) {
+            int size = options.getInt("size");
+            if (size > 0 && entity instanceof org.bukkit.entity.Slime slime) slime.setSize(size);
+            else if (size > 0 && entity instanceof org.bukkit.entity.Phantom phantom) phantom.setSize(size);
+        }
+        if (entity instanceof org.bukkit.entity.Horse horse) {
+            applyHorseOptions(horse, options);
+        }
+        if (entity instanceof org.bukkit.entity.Cat cat) {
+            applyCatOptions(cat, options);
+        }
+        if (entity instanceof org.bukkit.entity.Sheep sheep) {
+            applySheepOptions(sheep, options);
+        }
+        if (entity instanceof org.bukkit.entity.ArmorStand armorStand) {
+            if (options.contains("armor-stand-arms")) armorStand.setArms(options.getBoolean("armor-stand-arms"));
+            if (options.contains("armor-stand-baseplate")) armorStand.setBasePlate(options.getBoolean("armor-stand-baseplate"));
+            if (options.contains("armor-stand-marker")) armorStand.setMarker(options.getBoolean("armor-stand-marker"));
+            if (options.contains("armor-stand-small")) armorStand.setSmall(options.getBoolean("armor-stand-small"));
+        }
+    }
+
+    private static void applyHorseOptions(org.bukkit.entity.Horse horse,
+                                          org.bukkit.configuration.ConfigurationSection options) {
+        try {
+            if (options.contains("horse-color")) horse.setColor(org.bukkit.entity.Horse.Color.valueOf(
+                    options.getString("horse-color", "BROWN").toUpperCase(java.util.Locale.ROOT)));
+            if (options.contains("horse-style")) horse.setStyle(org.bukkit.entity.Horse.Style.valueOf(
+                    options.getString("horse-style", "NONE").toUpperCase(java.util.Locale.ROOT)));
+            if (options.contains("horse-max-domestication")) horse.setMaxDomestication(options.getInt("horse-max-domestication"));
+            if (options.contains("horse-domestication")) horse.setDomestication(options.getInt("horse-domestication"));
+            if (options.contains("horse-jump-strength")) horse.setJumpStrength(options.getDouble("horse-jump-strength"));
+        } catch (IllegalArgumentException ignored) {
+        }
+    }
+
+    private static void applyCatOptions(org.bukkit.entity.Cat cat,
+                                        org.bukkit.configuration.ConfigurationSection options) {
+        try {
+            if (options.contains("cat-type")) cat.setCatType(org.bukkit.entity.Cat.Type.valueOf(
+                    options.getString("cat-type", "TABBY").toUpperCase(java.util.Locale.ROOT)));
+            if (options.contains("cat-sitting")) cat.setSitting(options.getBoolean("cat-sitting"));
+            if (options.contains("cat-collar-color")) cat.setCollarColor(org.bukkit.DyeColor.valueOf(
+                    options.getString("cat-collar-color", "RED").toUpperCase(java.util.Locale.ROOT)));
+        } catch (IllegalArgumentException | LinkageError ignored) {
+        }
+    }
+
+    private static void applySheepOptions(org.bukkit.entity.Sheep sheep,
+                                          org.bukkit.configuration.ConfigurationSection options) {
+        try {
+            if (options.contains("sheep-color")) sheep.setColor(org.bukkit.DyeColor.valueOf(
+                    options.getString("sheep-color", "WHITE").toUpperCase(java.util.Locale.ROOT)));
+            if (options.contains("sheep-sheared")) sheep.setSheared(options.getBoolean("sheep-sheared"));
+        } catch (IllegalArgumentException ignored) {
+        }
+    }
+
     private AiProfile overrideProfile(AiProfile base, org.bukkit.configuration.ConfigurationSection s) {
         // 从 base 复制，再叠加本节的覆盖。复制而非直接改 base，是避免污染共享缓存档案：
         // 同一档案被多个生物引用，就地修改会让其它生物的行为被连带改掉。
@@ -1487,6 +4841,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
+        if (getConfig().getBoolean("debug.self-test", false)
+                && getConfig().getBoolean("debug.self-test-item-effects", false)) {
+            e.getPlayer().setGameMode(org.bukkit.GameMode.SURVIVAL);
+            getServer().getScheduler().runTaskLater(this, () -> {
+                if (e.getPlayer().isOnline()) {
+                    e.getPlayer().getInventory().addItem(
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+                }
+            }, 5L);
+        }
         if (resourcePack == null) return;
         String url = ((ResourcePackService) resourcePack).url();
         if (url == null) {
@@ -1522,11 +4886,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
+        dev.helstera.api.behavior.MobRelations.clearPlayerParents(e.getPlayer().getUniqueId());
         if (visibility != null) ((PlayerVisibilityServiceImpl) visibility).handleQuit(e.getPlayer());
     }
 
     @EventHandler
     public void onWorldUnload(WorldUnloadEvent e) {
+        dev.helstera.api.behavior.VariableLocations.clearWorld(e.getWorld());
         if (instances != null) ((InstanceManagerImpl) instances).despawnWorld(e.getWorld());
     }
 
@@ -1535,6 +4901,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     // ------------------------------------------------------------------
 
     public ModelRegistryImpl registry() { return registry; }
+    public CustomMenuService customMenus() { return customMenuService; }
 
     /** 模型校验器；供 /helstera check 汇总结构性问题。 */
     public ModelValidator validator() { return validator; }
@@ -1608,6 +4975,26 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     /** 事件触发器累计执行次数；用于确认触发链路是否真的跑通。 */
     public long triggerFiredCount() {
         return skillTriggers instanceof SkillTriggers t ? t.firedCount() : 0L;
+    }
+
+    public long potionEventCount() {
+        return skillTriggers instanceof SkillTriggers t ? t.potionEventCount() : 0L;
+    }
+
+    public long entityTargetEventCount() {
+        return skillTriggers instanceof SkillTriggers t ? t.entityTargetEventCount() : 0L;
+    }
+
+    public long entityTargetFindMissCount() {
+        return skillTriggers instanceof SkillTriggers t ? t.entityTargetFindMissCount() : 0L;
+    }
+
+    public String lastEntityTargetReason() {
+        return skillTriggers instanceof SkillTriggers t ? t.lastEntityTargetReason() : null;
+    }
+
+    public boolean lastEntityTargetCancelled() {
+        return skillTriggers instanceof SkillTriggers t && t.lastEntityTargetCancelled();
     }
     public WebServerService webServer() { return webServer == null ? null : (WebServerService) webServer; }
     /** 外部插件适配器注册表（/helstera debug integrations 用）。 */

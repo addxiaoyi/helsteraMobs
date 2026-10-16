@@ -3,6 +3,14 @@ package dev.helstera.ai;
 import dev.helstera.ai.skill.SkillCatalog;
 import dev.helstera.ai.skill.SkillService;
 import dev.helstera.api.behavior.BehaviorContext;
+import dev.helstera.api.instance.ModelInstance;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,12 +18,20 @@ import org.junit.jupiter.api.Test;
 import java.io.StringReader;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyDouble;
 
 /**
  * 技能装载与条件求值的契约测试。
@@ -37,6 +53,121 @@ class SkillServiceTest {
 
     private static BehaviorContext ctxWithState(String state) {
         return BehaviorContext.of(null, null, 1.0, -1, 0, state);
+    }
+
+    @Test
+    @DisplayName("player state conditions read Bukkit blocking state")
+    void playerBlockingConditionReadsEntityState() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        var player = mock(Player.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(player));
+        when(player.isBlocking()).thenReturn(true);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+
+        String key = svc.bindCondition("is-blocking");
+        assertTrue(registry.testCondition(key, context));
+        when(player.isBlocking()).thenReturn(false);
+        assertFalse(registry.testCondition(key, context));
+    }
+
+    @Test
+    @DisplayName("food-level compares the active player target and fails closed without one")
+    void foodLevelConditionComparesPlayerFood() {
+        var svc = service();
+        var player = mock(Player.class);
+        when(player.getFoodLevel()).thenReturn(14);
+        var context = BehaviorContext.of(null, (LivingEntity) player, 1.0, -1, 0, "IDLE");
+
+        String key = svc.bindCondition("food-level <= 14");
+        assertNotNull(key, svc.warnings().toString());
+        assertTrue(registry.testCondition(key, context));
+        when(player.getFoodLevel()).thenReturn(15);
+        assertFalse(registry.testCondition(key, context));
+        assertFalse(registry.testCondition(key, ctx(1.0, 0)));
+    }
+
+    @Test
+    @DisplayName("air-level compares remaining air and fails closed without an entity")
+    void airLevelConditionComparesRemainingAir() {
+        var svc = service();
+        var living = mock(LivingEntity.class);
+        when(living.getRemainingAir()).thenReturn(120, 121);
+        var context = BehaviorContext.of(null, living, 1.0, -1, 0, "IDLE");
+
+        String key = svc.bindCondition("air-level <= 120");
+        assertNotNull(key, svc.warnings().toString());
+        assertTrue(registry.testCondition(key, context));
+        assertFalse(registry.testCondition(key, context));
+        assertFalse(registry.testCondition(key, ctx(1.0, 0)));
+    }
+
+    @Test
+    @DisplayName("damage-cause reads the original Bukkit damage event cause")
+    void damageCauseConditionReadsEventContext() {
+        var svc = service();
+        var context = BehaviorContext.continueExecution(null, (Player) null,
+                1.0, -1, 0, "damage", null, null, List.of(), null,
+                new dev.helstera.api.behavior.SkillTreeContext(null, List.of(), null),
+                null, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK);
+        String key = svc.bindCondition("damage-cause ENTITY_ATTACK");
+
+        assertNotNull(key, svc.warnings().toString());
+        assertTrue(registry.testCondition(key, context));
+        assertFalse(registry.testCondition(svc.bindCondition("damage-cause FIRE"), context));
+        assertFalse(registry.testCondition(key, ctx(1.0, 0)));
+    }
+
+    @Test
+    @DisplayName("has-item counts player inventory stacks and supports slot filtering")
+    void hasItemConditionCountsInventory() {
+        var svc = service();
+        var player = mock(Player.class);
+        var inventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        var expected = mock(org.bukkit.inventory.ItemStack.class);
+        var diamonds = mock(org.bukkit.inventory.ItemStack.class);
+        when(expected.getType()).thenReturn(org.bukkit.Material.DIAMOND);
+        when(diamonds.getType()).thenReturn(org.bukkit.Material.DIAMOND);
+        when(diamonds.getAmount()).thenReturn(2);
+        when(diamonds.isSimilar(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        when(player.getInventory()).thenReturn(inventory);
+        when(inventory.getContents()).thenReturn(new org.bukkit.inventory.ItemStack[]{diamonds});
+        var instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(player));
+        var context = BehaviorContext.execution(instance, null, 1.0, -1, 0,
+                "IDLE", null, player, List.of(player), null);
+
+        dev.helstera.ai.skill.SkillExtras.itemResolver(name -> expected);
+        try {
+            String key = svc.bindCondition("hasItem{item=DIAMOND;amount=>=2}");
+            assertNotNull(key, svc.warnings().toString());
+            assertTrue(registry.testCondition(key, context));
+            when(diamonds.getAmount()).thenReturn(1);
+            assertFalse(registry.testCondition(key, context));
+            assertFalse(registry.testCondition(svc.bindCondition("has-item DIAMOND >=1"),
+                    BehaviorContext.of(null, (Player) null, 1.0, -1, 0, "IDLE")));
+        } finally {
+            dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("entity invulnerability condition reads Bukkit state")
+    void invulnerableConditionReadsEntityState() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        var entity = mock(Entity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(entity));
+        when(entity.isInvulnerable()).thenReturn(true);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+
+        String key = svc.bindCondition("invulnerable");
+        assertTrue(registry.testCondition(key, context));
+        when(entity.isInvulnerable()).thenReturn(false);
+        assertFalse(registry.testCondition(key, context));
     }
 
     @Test
@@ -121,6 +252,35 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("Mythic health, health-percent, and distance comparators evaluate keyed syntax")
+    void mythicComparatorsEvaluateKeyedSyntax() {
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getHealth()).thenReturn(8.0);
+        when(target.getMaxHealth()).thenReturn(20.0);
+        var context = BehaviorContext.of(null, target, 1.0, 7.5, 0, "IDLE");
+        var svc = service();
+
+        String healthBelow = svc.bindCondition("health{h=<10}");
+        String healthPercent = svc.bindCondition("health-percent{p=>=40}");
+        String distanceBelow = svc.bindCondition("distance{d=<8}");
+        String distanceAbove = svc.bindCondition("distance{d=>8}");
+        String targetHealth = svc.bindCondition("target-health{h=<10}");
+        String targetHealthPercent = svc.bindCondition("target-health-percent{p=>=40}");
+        String targetHealthBelow = svc.bindCondition("target-health-below{p=>=50}");
+        String targetHealthAbove = svc.bindCondition("target-health-above{p=>=40}");
+
+        assertTrue(registry.testCondition(healthBelow, context));
+        assertTrue(registry.testCondition(healthPercent, context));
+        assertTrue(registry.testCondition(distanceBelow, context));
+        assertFalse(registry.testCondition(distanceAbove, context));
+        assertTrue(registry.testCondition(targetHealth, context));
+        assertTrue(registry.testCondition(targetHealthPercent, context));
+        assertFalse(registry.testCondition(targetHealthBelow, context));
+        assertTrue(registry.testCondition(targetHealthAbove, context));
+        assertFalse(registry.testCondition(svc.bindCondition("health{h=invalid}"), context));
+    }
+
+    @Test
     @DisplayName("state-is 大小写不敏感")
     void stateConditionIsCaseInsensitive() {
         var svc = service();
@@ -129,6 +289,52 @@ class SkillServiceTest {
         assertTrue(registry.testCondition(key, ctxWithState("CHASE")));
         assertTrue(registry.testCondition(key, ctxWithState("chase")));
         assertFalse(registry.testCondition(key, ctxWithState("IDLE")));
+    }
+
+    @Test
+    @DisplayName("condition composition supports all, any, not, and boolean operators")
+    void composesConditions() {
+        var svc = service();
+        String all = svc.bindCondition("all{health-above 0.5;state-is idle}");
+        String any = svc.bindCondition("health-below 0.2 || state-is idle");
+        String not = svc.bindCondition("not health-below 0.2");
+
+        assertTrue(registry.testCondition(all, ctxWithState("IDLE")));
+        assertTrue(registry.testCondition(any, ctxWithState("IDLE")));
+        assertTrue(registry.testCondition(not, ctx(0.8, 0)));
+        assertFalse(registry.testCondition(all, ctxWithState("CHASE")));
+    }
+
+    @Test
+    @DisplayName("location conditions use an origin when no model instance exists")
+    void locationConditionsUseOriginContext() {
+        var svc = service();
+        var world = org.mockito.Mockito.mock(org.bukkit.World.class);
+        when(world.getName()).thenReturn("integration-world");
+        var location = org.mockito.Mockito.mock(org.bukkit.Location.class);
+        when(location.getWorld()).thenReturn(world);
+        when(location.clone()).thenReturn(location);
+        var context = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "spawner", null, mock(org.bukkit.entity.Entity.class), List.of(), location);
+
+        String worldCondition = svc.bindCondition("world-is integration-world");
+        assertTrue(registry.testCondition(worldCondition, context));
+    }
+
+    @Test
+    @DisplayName("entity-type-is checks the active target and stance-is checks execution state")
+    void entityTypeAndStanceConditions() {
+        var svc = service();
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
+        var execution = BehaviorContext.of(null, target, 1.0, -1, 0, " enraged ");
+
+        String type = svc.bindCondition("entity-type-is zombie");
+        String stance = svc.bindCondition("stance-is enraged");
+
+        assertTrue(registry.testCondition(type, execution));
+        assertTrue(registry.testCondition(stance, execution));
+        assertFalse(registry.testCondition(svc.bindCondition("entity-type-is creeper"), execution));
     }
 
     @Test
@@ -482,4 +688,1354 @@ class SkillServiceTest {
         assertEquals("health-above:0.9", p.trace().get(0).key());
         assertEquals("state-is:idle", p.trace().get(1).key());
     }
+    @Test
+    @DisplayName("Mythic action metadata gates custom actions")
+    void mythicActionMetadataGatesAction() {
+        var svc = service();
+        var fired = new AtomicInteger();
+        var allowed = new AtomicBoolean(false);
+        registry.registerCondition("allow", ctx -> allowed.get());
+        registry.registerAction("probe", ctx -> fired.incrementAndGet());
+
+        String gated = svc.bindAction("probe ?allow");
+        assertNotNull(gated);
+        assertFalse(gated.equals("probe"));
+        assertTrue(registry.runAction(gated, ctx(1, 0)));
+        assertEquals(0, fired.get());
+
+        allowed.set(true);
+        assertTrue(registry.runAction(gated, ctx(1, 0)));
+        assertEquals(1, fired.get());
+
+        String skipped = svc.bindAction("probe 0%");
+        assertNotNull(skipped);
+        assertTrue(registry.runAction(skipped, ctx(1, 0)));
+        assertEquals(1, fired.get());
+    }
+
+    @Test
+    @DisplayName("skill variables survive without an instance in one skill tree")
+    void skillTreeVariablesWorkWithoutInstance() {
+        var svc = service();
+        var ctx = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+        String set = svc.bindAction("var-set score 2");
+        String add = svc.bindAction("var-add score 3");
+        assertNotNull(set);
+        assertNotNull(add);
+        assertTrue(registry.runAction(set, ctx));
+        assertTrue(registry.runAction(add, ctx));
+        assertEquals(5.0, ((Number) ctx.skillTree().orElseThrow()
+                .variable("score").orElseThrow()).doubleValue());
+    }
+
+    @Test
+    @DisplayName("unset removes skill-tree and instance-scoped values")
+    void variableUnsetRemovesStoredValue() {
+        var svc = service();
+        var ctx = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+        String set = svc.bindAction("var-set marker 7");
+        String unset = svc.bindAction("variable-unset marker");
+        assertTrue(registry.runAction(set, ctx));
+        assertTrue(ctx.skillTree().orElseThrow().variable("marker").isPresent());
+        assertTrue(registry.runAction(unset, ctx));
+        assertTrue(ctx.skillTree().orElseThrow().variable("marker").isEmpty());
+    }
+
+    @Test
+    @DisplayName("variable-unset supports explicit skill and tree scopes")
+    void variableUnsetScopesAreExplicit() {
+        var svc = service();
+        var ctx = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+        String set = svc.bindAction("var-set marker 7");
+        assertTrue(registry.runAction(set, ctx));
+        assertTrue(registry.runAction(svc.bindAction("variable-unset skill marker"), ctx));
+        assertTrue(ctx.skillTree().orElseThrow().variable("marker").isEmpty());
+    }
+
+    @Test
+    @DisplayName("remove-self removes only the caster entity")
+    void removeSelfDoesNotRemoveTarget() {
+        var svc = service();
+        ModelInstance instance = mock(ModelInstance.class);
+        Entity caster = mock(Entity.class);
+        Entity target = mock(Entity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.isValid()).thenReturn(true);
+
+        var ctx = BehaviorContext.execution(instance, null, 1.0, -1, 0,
+                "skill", null, target, List.of(), null);
+        String action = svc.bindAction("remove-self");
+
+        assertNotNull(action);
+        assertTrue(registry.runAction(action, ctx));
+        verify(caster).remove();
+        verifyNoInteractions(target);
+    }
+
+    @Test
+    @DisplayName("equip applies the requested material, slot, and amount")
+    void equipAppliesMaterialSlotAndAmount() {
+        var svc = service();
+        registry.logger(java.util.logging.Logger.getLogger("SkillServiceTest"));
+        var item = mock(org.bukkit.inventory.ItemStack.class);
+        dev.helstera.ai.skill.SkillExtras.itemResolver(name -> item);
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        EntityEquipment equipment = mock(EntityEquipment.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.isValid()).thenReturn(true);
+        when(caster.getEquipment()).thenReturn(equipment);
+
+        var ctx = BehaviorContext.execution(instance, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+        String action = svc.bindAction("equip DIAMOND_SWORD off-hand 2");
+
+        assertNotNull(action);
+        try {
+            assertTrue(registry.runAction(action, ctx));
+            verify(item).setAmount(2);
+            verify(equipment).setItem(EquipmentSlot.OFF_HAND, item);
+        } finally {
+            dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("set-name applies translated name and visibility")
+    void setNameAppliesDisplayName() {
+        var svc = service();
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.isValid()).thenReturn(true);
+
+        var ctx = BehaviorContext.execution(instance, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+        String action = svc.bindAction("set-name &cBoss false");
+
+        assertNotNull(action);
+        assertTrue(registry.runAction(action, ctx));
+        verify(caster).setCustomName("\u00a7cBoss");
+        verify(caster).setCustomNameVisible(false);
+    }
+
+    @Test
+    @DisplayName("set-item replaces the requested equipment slot")
+    void setItemReplacesEquipmentSlot() {
+        var svc = service();
+        var item = mock(org.bukkit.inventory.ItemStack.class);
+        dev.helstera.ai.skill.SkillExtras.itemResolver(name -> item);
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        EntityEquipment equipment = mock(EntityEquipment.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.isValid()).thenReturn(true);
+        when(caster.getEquipment()).thenReturn(equipment);
+
+        var ctx = BehaviorContext.execution(instance, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+        String action = svc.bindAction("setitem{item=SHIELD;slot=main-hand;amount=1}");
+
+        try {
+            assertNotNull(action, svc.warnings().toString());
+            assertTrue(registry.runAction(action, ctx));
+            verify(item).setAmount(1);
+            verify(equipment).setItem(EquipmentSlot.HAND, item);
+        } finally {
+            dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("drop-item uses the caster location and item resolver")
+    void dropItemDropsResolvedStack() {
+        var svc = service();
+        var item = mock(org.bukkit.inventory.ItemStack.class);
+        var world = mock(World.class);
+        var location = mock(Location.class);
+        dev.helstera.ai.skill.SkillExtras.itemResolver(name -> item);
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(location);
+        when(location.getWorld()).thenReturn(world);
+
+        var ctx = BehaviorContext.of(instance, null, 1.0, -1, 0, "IDLE");
+        String action = svc.bindAction("drop-item DIAMOND 3");
+
+        try {
+            assertNotNull(action);
+            assertTrue(registry.runAction(action, ctx));
+            verify(item).setAmount(3);
+            verify(world).dropItemNaturally(location, item);
+        } finally {
+            dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("mount makes the active target a passenger of the caster")
+    void mountAddsTargetAsPassenger() {
+        var svc = service();
+        ModelInstance instance = mock(ModelInstance.class);
+        Entity caster = mock(Entity.class);
+        LivingEntity target = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+
+        var ctx = BehaviorContext.of(instance, target, 1.0, -1, 0, "IDLE");
+        String action = svc.bindAction("mount");
+
+        assertNotNull(action);
+        assertTrue(registry.runAction(action, ctx));
+        verify(caster).addPassenger(target);
+    }
+
+    @Test
+    @DisplayName("dismount leaves the caster vehicle when present")
+    void dismountLeavesVehicle() {
+        var svc = service();
+        ModelInstance instance = mock(ModelInstance.class);
+        Entity caster = mock(Entity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.isInsideVehicle()).thenReturn(true);
+
+        String action = svc.bindAction("dismount");
+        assertNotNull(action);
+        assertTrue(registry.runAction(action, BehaviorContext.of(instance, (org.bukkit.entity.Player) null,
+                1.0, -1, 0, "IDLE")));
+        verify(caster).leaveVehicle();
+    }
+
+    @Test
+    @DisplayName("cancel-event cancels only when a cancellable event is present")
+    void cancelEventUsesContextEvent() {
+        var svc = service();
+        var cancellable = mock(org.bukkit.event.Cancellable.class);
+        var ctx = BehaviorContext.continueExecution(null, (org.bukkit.entity.Player) null,
+                1.0, -1, 0, "damage", null, null, List.of(), null,
+                new dev.helstera.api.behavior.SkillTreeContext(null, List.of(), null), cancellable);
+        String action = svc.bindAction("cancel-event");
+
+        assertNotNull(action);
+        assertTrue(registry.runAction(action, ctx));
+        verify(cancellable).setCancelled(true);
+        assertTrue(registry.runAction(action, ctx(1.0, 0)));
+    }
+
+    @Test
+    @DisplayName("is-cancelled reads the same cancellable event context")
+    void isCancelledReadsContextEvent() {
+        var svc = service();
+        var cancellable = mock(org.bukkit.event.Cancellable.class);
+        when(cancellable.isCancelled()).thenReturn(false, true);
+        var context = BehaviorContext.continueExecution(null, (org.bukkit.entity.Player) null,
+                1.0, -1, 0, "damage", null, null, List.of(), null,
+                new dev.helstera.api.behavior.SkillTreeContext(null, List.of(), null), cancellable);
+        String condition = svc.bindCondition("isCancelled");
+
+        assertNotNull(condition, svc.warnings().toString());
+        assertFalse(registry.testCondition(condition, context));
+        assertTrue(registry.testCondition(condition, context));
+        verify(cancellable, org.mockito.Mockito.times(2)).isCancelled();
+    }
+
+    @Test
+    void parsesPreboundCastSkillAction() {
+        assertEquals("cancelled_damage_probe", SkillService.parseSkillRef(
+                "cast-skill:cancelled_damage_probe"));
+    }
+
+    @Test
+    void nestedSkillRetainsCancelledEventContext() {
+        var svc = service();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  cancelled:
+                    require:
+                      - is-cancelled
+                    on-decision:
+                      - set-name &aCANCELLED
+                """));
+        svc.loadSkills(yaml.getConfigurationSection("skills"));
+        var event = mock(org.bukkit.event.Cancellable.class);
+        when(event.isCancelled()).thenReturn(true);
+        var instance = mock(ModelInstance.class);
+        var caster = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        var context = BehaviorContext.continueExecution(instance, caster, 1.0, -1, 0,
+                "damage", null, caster, List.of(caster), null,
+                new dev.helstera.api.behavior.SkillTreeContext(caster, List.of(caster), null), event);
+
+        assertTrue(svc.castSkill("cancelled", context));
+        verify(caster).setCustomName("\u00a7aCANCELLED");
+    }
+
+    @Test
+    @DisplayName("AiProfile loads preserved goal and target selector lists")
+    void aiProfileLoadsSelectorFields() {
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                goals:
+                  - 0 clear
+                  - 1 meleeattack
+                targets:
+                  - 0 clear
+                  - 1 players
+                """));
+        AiProfile profile = AiProfile.fromSection("guard", yaml);
+        assertEquals(List.of("0 clear", "1 meleeattack"), profile.goals);
+        assertEquals(List.of("0 clear", "1 players"), profile.targets);
+    }
+
+    @Test
+    @DisplayName("selector modifiers do not leak into the shared profile")
+    void profileCopyDoesNotMutateBaseSelectorBehavior() {
+        AiProfile base = new AiProfile("base");
+        base.canChase = true;
+        base.goals.addAll(List.of("0 clear", "1 meleeattack"));
+        base.targets.addAll(List.of("0 clear", "1 players"));
+        AiProfile copy = new AiProfile(base);
+        copy.canChase = false;
+        copy.goals.clear();
+        assertTrue(base.canChase);
+        assertEquals(List.of("0 clear", "1 meleeattack"), base.goals);
+    }
+
+    @Test
+    @DisplayName("selector policy applies ordered clear and enables native goals")
+    void selectorPolicyAppliesPriorityOrder() {
+        AiProfile profile = new AiProfile("selector");
+        profile.goals.addAll(List.of("0 clear", "1 meleeattack", "2 randomstroll"));
+        profile.targets.addAll(List.of("0 clear", "1 players"));
+        var policy = profile.selectorPolicy();
+        assertTrue(policy.attack());
+        assertTrue(policy.patrol());
+        assertFalse(policy.chase());
+        assertFalse(policy.flee());
+        assertTrue(policy.playerTargets());
+    }
+
+    @Test
+    @DisplayName("selector policy sorts numeric priorities before applying clear")
+    void selectorPolicySortsNumericPriorities() {
+        AiProfile profile = new AiProfile("selector");
+        profile.goals.addAll(List.of("2 clear", "0 meleeattack"));
+        profile.targets.addAll(List.of("1 clear", "0 players"));
+
+        var policy = profile.selectorPolicy();
+
+        assertFalse(policy.attack());
+        assertFalse(policy.chase());
+        assertFalse(policy.playerTargets());
+        assertEquals(AiProfile.TargetMode.NONE, policy.targetMode());
+        assertEquals(List.of("0 meleeattack", "2 clear"), policy.orderedGoals(profile.goals));
+        assertEquals(List.of("0 players", "1 clear"), policy.orderedTargets(profile.targets));
+        assertEquals(0, policy.goalPriority(profile.goals, "attack"));
+        assertEquals(Integer.MAX_VALUE, policy.goalPriority(profile.goals, "flee"));
+        assertEquals(Integer.MAX_VALUE, policy.goalPriority(profile.goals, "patrol"));
+    }
+
+    @Test
+    @DisplayName("selector policy reports unsupported entries without dropping their token")
+    void selectorPolicyReportsUnsupportedTokens() {
+        AiProfile profile = new AiProfile("selector");
+        profile.goals.add("2 customvendorpathfinder");
+        var policy = profile.selectorPolicy();
+        assertEquals(List.of("goal:customvendorpathfinder"), policy.unsupported());
+    }
+
+    @Test
+    @DisplayName("panic goal enables the existing flee runtime policy")
+    void selectorPolicyRecognizesPanicGoal() {
+        AiProfile profile = new AiProfile("panic");
+        profile.goals.add("0 panic");
+
+        var policy = profile.selectorPolicy();
+
+        assertTrue(policy.flee());
+        assertTrue(policy.unsupported().isEmpty());
+    }
+
+    @Test
+    @DisplayName("follow-owner goal selects the existing owner target runtime")
+    void selectorPolicyRecognizesFollowOwnerGoal() {
+        AiProfile profile = new AiProfile("follow-owner");
+        profile.goals.add("0 follow_owner");
+
+        var policy = profile.selectorPolicy();
+
+        assertEquals(AiProfile.TargetMode.OWNER, policy.targetMode());
+        assertFalse(policy.playerTargets());
+        assertTrue(policy.unsupported().isEmpty());
+    }
+
+    @Test
+    @DisplayName("tempt goal preserves the configured item and range")
+    void selectorPolicyRecognizesTemptGoal() {
+        AiProfile profile = new AiProfile("tempt");
+        profile.goals.add("0 tempt WHEAT");
+        profile.temptRange = 12.0;
+
+        var policy = profile.selectorPolicy();
+
+        assertEquals(AiProfile.TargetMode.PLAYERS, policy.targetMode());
+        assertEquals("WHEAT", policy.temptItem());
+        assertEquals(12.0, policy.temptRange(), 1e-9);
+        assertTrue(policy.unsupported().isEmpty());
+    }
+
+    @Test
+    @DisplayName("tempt matching accepts either hand and multiple configured materials")
+    void temptMatchingChecksBothHands() {
+        var player = mock(org.bukkit.entity.Player.class);
+        var inventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        when(player.getInventory()).thenReturn(inventory);
+        var mainHand = mock(org.bukkit.inventory.ItemStack.class);
+        var offHand = mock(org.bukkit.inventory.ItemStack.class);
+        when(mainHand.getType()).thenReturn(org.bukkit.Material.AIR);
+        when(offHand.getType()).thenReturn(org.bukkit.Material.WHEAT);
+        when(inventory.getItemInMainHand()).thenReturn(mainHand);
+        when(inventory.getItemInOffHand()).thenReturn(offHand);
+
+        assertTrue(AiController.holdsTemptItem(player, "CARROT|WHEAT"));
+        assertFalse(AiController.holdsTemptItem(player, "CARROT,POTATO"));
+    }
+
+
+    @Test
+    @DisplayName("location variables honor global scope and VariableLocation resolution")
+    void globalLocationVariableRoundTrip() {
+        var svc = service();
+        var origin = new org.bukkit.Location(null, 12, 64, -4);
+        var ctx = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), origin);
+
+        String set = svc.bindAction("variable-location-set{scope=global;var=mark}");
+        String unset = svc.bindAction("variable-unset{var=global.mark}");
+        assertNotNull(set);
+        assertNotNull(unset);
+        assertTrue(registry.runAction(set, ctx));
+        var resolved = dev.helstera.api.behavior.Targeters.resolveLocation(
+                "@VariableLocation{var=global.mark}", ctx);
+        assertTrue(resolved.isPresent());
+        assertEquals(12, resolved.orElseThrow().getX());
+        assertEquals(64, resolved.orElseThrow().getY());
+        assertTrue(registry.runAction(unset, ctx));
+        assertTrue(dev.helstera.api.behavior.Targeters.resolveLocation(
+                "@VariableLocation{var=global.mark}", ctx).isEmpty());
+    }
+
+
+    @Test
+    @DisplayName("typed LOCATION variables resolve through VariableLocation and unset")
+    void typedLocationVariableRoundTrip() {
+        var svc = service();
+        var ctx = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), new org.bukkit.Location(null, 1, 2, 3));
+        String set = svc.bindAction("setvariable{var=skill.mark;type=LOCATION;value=20,70,-5}");
+        String check = svc.bindCondition("variable-is-set{var=skill.mark}");
+        String unset = svc.bindAction("variable-unset{var=skill.mark}");
+
+        assertNotNull(set);
+        assertNotNull(check);
+        assertNotNull(unset);
+        assertTrue(registry.runAction(set, ctx));
+        assertTrue(registry.testCondition(check, ctx));
+        var resolved = dev.helstera.api.behavior.Targeters.resolveLocation(
+                "@VariableLocation{var=skill.mark}", ctx).orElseThrow();
+        assertEquals(20, resolved.getX());
+        assertEquals(70, resolved.getY());
+        assertEquals(-5, resolved.getZ());
+        assertTrue(registry.runAction(unset, ctx));
+        assertFalse(registry.testCondition(check, ctx));
+        assertTrue(dev.helstera.api.behavior.Targeters.resolveLocation(
+                "@VariableLocation{var=skill.mark}", ctx).isEmpty());
+    }
+    @Test
+    @DisplayName("numeric variables honor global scope across actions and conditions")
+    void numericGlobalVariableRoundTrip() {
+        var svc = service();
+        var ctx = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+        String set = svc.bindAction("setvariable{var=global.counter;value=2}");
+        String check = svc.bindCondition("variable-gte{var=global.counter;value=2}");
+        String unset = svc.bindAction("variable-unset{var=global.counter}");
+        assertNotNull(set);
+        assertNotNull(check);
+        assertNotNull(unset);
+        assertTrue(registry.runAction(set, ctx));
+        assertTrue(registry.testCondition(check, ctx));
+        assertTrue(registry.runAction(unset, ctx));
+        assertFalse(registry.testCondition(check, ctx));
+    }
+    @Test
+    @DisplayName("variable conditions support equality, range, and is-set aliases")
+    void variableConditionAliasesWork() {
+        var svc = service();
+        var ctx = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+        assertTrue(registry.runAction(svc.bindAction("setvariable{var=global.answer;value=42}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition("variable-is-set{var=global.answer}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition("variableequals{var=global.answer;value=42}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition("variable-in-range{var=global.answer;min=40;max=45}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition("variableequals{var=global.answer;value=7}"), ctx));
+        assertTrue(registry.runAction(svc.bindAction("variable-unset{var=global.answer}"), ctx));
+    }
+    @Test
+    @DisplayName("typed variables support strings and lists")
+    void typedVariablesRoundTrip() {
+        var svc = service();
+        var ctx = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+        assertTrue(registry.runAction(svc.bindAction(
+                "setvariable{var=skill.label;type=STRING;val=hello-world}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-equals{var=skill.label;value=hello-world}"), ctx));
+        assertTrue(registry.runAction(svc.bindAction(
+                "setvariable{var=skill.tags;type=LIST;val=red,blue}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-contains{var=skill.tags;value=blue}"), ctx));
+        assertTrue(registry.runAction(svc.bindAction(
+                "setvariable{var=skill.map;type=MAP;value=color:blue,size:large}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-index-equals{var=skill.tags;index=1;value=blue}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-index-equals{var=skill.tags;index=9;value=blue}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-key-exists{var=skill.map;key=color}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-key-exists{var=skill.map;key=missing}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-map-value-equals{var=skill.map;key=color;value=blue}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-map-value-equals{var=skill.map;key=color;value=red}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-index-gte{var=skill.tags;index=1;value=1}"), ctx));
+        assertTrue(registry.runAction(svc.bindAction(
+                "setvariable{var=skill.numbers;type=LIST;value=2,7}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-index-gte{var=skill.numbers;index=1;value=7}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-index-lte{var=skill.numbers;index=0;value=2}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-index-in-range{var=skill.numbers;index=1;min=6;max=8}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-index-in-range{var=skill.numbers;index=9;min=0;max=10}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-index-lte{var=skill.numbers;index=9;value=2}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-key-not-exists{var=skill.map;key=missing}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-key-not-exists{var=skill.map;key=color}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-map-value-not-equals{var=skill.map;key=color;value=red}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-map-value-not-equals{var=skill.map;key=color;value=blue}"), ctx));
+        assertTrue(registry.runAction(svc.bindAction(
+                "setvariable{var=skill.numericMap;type=MAP;value=low:2,high:7}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-map-value-gte{var=skill.numericMap;key=high;value=7}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-map-value-lte{var=skill.numericMap;key=low;value=2}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-map-value-in-range{var=skill.numericMap;key=high;min=7;max=8}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-map-value-in-range{var=skill.map;key=color;min=0;max=10}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-map-value-not-in-range{var=skill.numericMap;key=high;min=0;max=6}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-map-value-not-in-range{var=skill.numericMap;key=high;min=0;max=7}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-map-value-gte{var=skill.map;key=color;value=1}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-not-equals{var=skill.label;value=goodbye}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-not-contains{var=skill.tags;value=green}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-not-contains{var=skill.tags;value=blue}"), ctx));
+        assertTrue(registry.runAction(svc.bindAction("variable-unset{var=skill.label}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-not-equals{var=skill.label;value=goodbye}"), ctx));
+    }
+
+    @Test
+    @DisplayName("negative string variable conditions honor each persistent scope")
+    void negativeVariableConditionsHonorPersistentScopes() {
+        var svc = service();
+        String suffix = java.util.UUID.randomUUID().toString().replace("-", "");
+        var world = mock(World.class);
+        when(world.getUID()).thenReturn(java.util.UUID.randomUUID());
+        when(world.getName()).thenReturn("variable-scope-test");
+        var caster = mock(org.bukkit.entity.Player.class);
+        when(caster.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        var target = mock(org.bukkit.entity.Player.class);
+        when(target.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        var origin = new org.bukkit.Location(world, 0, 64, 0);
+        var ctx = BehaviorContext.execution(instance, target, 1.0, 2, 0,
+                "skill", null, caster, List.of(target), origin);
+
+        for (String scope : List.of("caster", "target", "world", "global")) {
+            String variable = scope + suffix;
+            String reference = scope + "." + variable;
+            assertTrue(registry.runAction(svc.bindAction(
+                    "setvariable{var=" + reference + ";type=STRING;value=blue}"), ctx));
+            assertTrue(registry.testCondition(svc.bindCondition(
+                    "variable-not-equals{var=" + reference + ";value=red}"), ctx), scope);
+            assertTrue(registry.testCondition(svc.bindCondition(
+                    "variable-not-contains{var=" + reference + ";value=green}"), ctx), scope);
+            assertFalse(registry.testCondition(svc.bindCondition(
+                    "variable-not-contains{var=" + reference + ";value=blue}"), ctx), scope);
+        }
+
+        String casterRef = "caster." + "caster" + suffix;
+        String targetRef = "target." + "target" + suffix;
+        assertTrue(registry.runAction(svc.bindAction(
+                "variable-unset{var=" + casterRef + "}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-not-equals{var=" + casterRef + ";value=anything}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-not-contains{var=" + casterRef + ";value=anything}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-not-equals{var=" + targetRef + ";value=red}"), ctx));
+    }
+
+    @Test
+    @DisplayName("AI profile loads MaxCombatDistance from mob options")
+    void loadsMaxCombatDistance() {
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("max-combat-distance: 18"));
+        AiProfile profile = AiProfile.fromSection("guard", yaml);
+        assertEquals(18, profile.maxCombatDistance, 1e-9);
+    }    @Test
+    @DisplayName("despawn modes distinguish chunk unload behavior")
+    void despawnModeChunkPolicy() {
+        assertTrue(AiManager.despawnOnChunkUnload("NORMAL"));
+        assertTrue(AiManager.despawnOnChunkUnload("CHUNK"));
+        assertTrue(AiManager.despawnOnChunkUnload("NPC"));
+        assertFalse(AiManager.despawnOnChunkUnload("PERSISTENT"));
+        assertFalse(AiManager.despawnOnChunkUnload("NEVER"));
+    }    @Test
+    @DisplayName("selector policy exposes look-at and entity avoidance adapters")
+    void selectorPolicyExposesAdvancedGoalFlags() {
+        AiProfile profile = new AiProfile("selector");
+        profile.goals.addAll(List.of("0 look_at_players", "1 avoid_entity", "2 open_doors", "3 avoid_sun",
+                "4 rangedattack", "5 leapattarget"));
+        var policy = profile.selectorPolicy();
+        assertTrue(policy.lookAtPlayers());
+        assertTrue(policy.avoidEntities());
+        assertTrue(policy.openDoors());
+        assertTrue(policy.avoidSun());
+        assertTrue(policy.rangedAttack());
+        assertTrue(policy.leapAtTarget());
+    }    @Test
+    @DisplayName("selector policy marks attacker and hurt-by-target priorities")
+    void selectorPolicyMarksTargetPriorities() {
+        AiProfile profile = new AiProfile("selector");
+        profile.targets.addAll(List.of("0 attacker", "1 hurtbytarget"));
+        var policy = profile.selectorPolicy();
+        assertTrue(policy.attackerFirst());
+        assertTrue(policy.hurtByTargetFirst());
+    }
+
+    @Test
+    @DisplayName("selector policy recognizes threat and faction target priority")
+    void selectorPolicyRecognizesThreatAndFactionTarget() {
+        AiProfile threat = new AiProfile("threat");
+        threat.targets.add("0 threat");
+        assertEquals(AiProfile.TargetMode.THREAT, threat.selectorPolicy().targetMode());
+
+        AiProfile faction = new AiProfile("faction");
+        faction.targets.add("0 hostile_to_faction:undead");
+        var policy = faction.selectorPolicy();
+        assertEquals(AiProfile.TargetMode.FACTION, policy.targetMode());
+        assertEquals("undead", policy.targetFaction());
+        assertTrue(policy.factionHostile());
+    }
+
+    @Test
+    @DisplayName("selector policy recognizes allied faction target priority")
+    void selectorPolicyRecognizesAlliedFactionTarget() {
+        AiProfile profile = new AiProfile("selector");
+        profile.targets.add("0 allied_to_faction:guards");
+        var policy = profile.selectorPolicy();
+        assertEquals(AiProfile.TargetMode.FACTION, policy.targetMode());
+        assertEquals("guards", policy.targetFaction());
+        assertTrue(policy.factionAllied());
+        assertFalse(policy.factionHostile());
+    }
+
+    @Test
+    @DisplayName("selector policy recognizes owner target priority")
+    void selectorPolicyRecognizesOwnerTarget() {
+        AiProfile profile = new AiProfile("selector");
+        profile.targets.add("0 owner");
+        var policy = profile.selectorPolicy();
+        assertFalse(policy.playerTargets());
+        assertEquals(AiProfile.TargetMode.OWNER, policy.targetMode());
+    }
+
+    @Test
+    @DisplayName("selector policy exposes non-player living target categories")
+    void selectorPolicyExposesLivingTargetCategories() {
+        AiProfile profile = new AiProfile("selector");
+        profile.targets.addAll(List.of("0 clear", "1 monsters"));
+        var policy = profile.selectorPolicy();
+        assertFalse(policy.playerTargets());
+        assertEquals(AiProfile.TargetMode.MONSTERS, policy.targetMode());
+
+        profile.targets.clear();
+        profile.targets.add("living");
+        assertEquals(AiProfile.TargetMode.LIVING, profile.selectorPolicy().targetMode());
+    }
+
+    @Test
+    @DisplayName("caster faction conditions bind alongside target faction conditions")
+    void factionConditionsBind() {
+        var svc = service();
+        assertNotNull(svc.bindCondition("caster-faction-is guards"));
+        assertNotNull(svc.bindCondition("caster-faction-allied-to guards"));
+        assertNotNull(svc.bindCondition("caster-faction-hostile-to undead"));
+        assertNotNull(svc.bindCondition("target-faction-is undead"));
+    }
+
+    @Test
+    @DisplayName("common Mythic condition aliases bind to canonical factories")
+    void commonConditionAliasesBind() {
+        var svc = service();
+        assertNotNull(svc.bindCondition("permission vip.node"));
+        assertNotNull(svc.bindCondition("entity-type ZOMBIE"));
+        assertNotNull(svc.bindCondition("stance combat"));
+        assertNotNull(svc.bindCondition("healthbelow 0.5"));
+        assertNotNull(svc.bindCondition("distanceabove 4"));
+        assertNotNull(svc.bindCondition("worldis integration-world"));
+    }
+
+    @Test
+    @DisplayName("world condition catalog binds high-frequency environment and target aliases")
+    void environmentConditionCatalogBinds() {
+        var svc = service();
+        for (String spec : List.of(
+                "biome-is plains", "weather-is clear", "time-is day",
+                "has-permission vip.node", "entity-type-is ZOMBIE", "stance-is combat",
+                "health-above 0.5", "distance-below 8", "onground", "lineofsight",
+                "playersinradius 1 8", "entitiesinradius 1 8", "randomchance 100",
+                "targethealthbelow 50", "gamemode survival", "potionactive speed")) {
+            assertNotNull(svc.bindCondition(spec), spec);
+        }
+        for (String alias : List.of("sneaking", "issneaking", "sprinting", "issprinting",
+                "glowing", "isglowing", "swimming", "isswimming", "climbing", "isclimbing",
+                "inair", "airborne", "gliding", "isgliding", "flying", "isflying",
+                "blocking", "isblocking", "facingtarget", "targetinlineofsight",
+                "target-line-of-sight", "invulnerable", "isinvulnerable")) {
+            assertNotNull(svc.bindCondition(alias), alias);
+        }
+        assertNotNull(svc.bindCondition("caster-has-permission vip.node"));
+        assertNotNull(svc.bindCondition("casterpermission vip.node"));
+        assertNotNull(svc.bindCondition("targettype player"));
+        for (String targetType : List.of("mob", "monster", "animal", "villager", "tameable", "raider")) {
+            assertNotNull(svc.bindCondition("target-is " + targetType));
+        }
+        for (String alias : List.of("target-invulnerable", "targetinvulnerable", "target-is-invulnerable")) {
+            assertNotNull(svc.bindCondition(alias), alias);
+        }
+    }
+
+    @Test
+    @DisplayName("nested composite conditions preserve braces and support negation")
+    void nestedCompositeConditionsBind() {
+        var svc = service();
+        registry.registerCondition("first", context -> true);
+        registry.registerCondition("second", context -> false);
+        registry.registerCondition("third", context -> true);
+        registry.registerCondition("never", context -> false);
+
+        String nested = svc.bindCondition(
+                "all{conditions=first;any{second;third}}" );
+        String negated = svc.bindCondition("not{any{never;never}}");
+
+        assertNotNull(nested);
+        assertNotNull(negated);
+        assertTrue(registry.hasCondition(nested));
+        assertTrue(registry.hasCondition(negated));
+        assertTrue(registry.testCondition(nested, ctx(1.0, 0)));
+        assertTrue(registry.testCondition(negated, ctx(1.0, 0)));
+    }
+
+    @Test
+    @DisplayName("condition composition honors unary not and boolean precedence")
+    void conditionCompositionHonorsPrecedence() {
+        var svc = service();
+        String negated = svc.bindCondition("!has-target");
+        assertNotNull(negated);
+        assertTrue(registry.testCondition(negated, BehaviorContext.of(null, null, 1.0, -1, 0, "IDLE")));
+
+        String mixed = svc.bindCondition("has-target true && state-is IDLE || has-target false");
+        assertNotNull(mixed);
+        assertTrue(registry.testCondition(mixed, BehaviorContext.of(null, null, 1.0, -1, 0, "IDLE")));
+
+        String grouped = svc.bindCondition("(has-target false && state-is IDLE)");
+        assertNotNull(grouped);
+        assertTrue(registry.testCondition(grouped, BehaviorContext.of(null, null, 1.0, -1, 0, "IDLE")));
+    }
+
+    @Test
+    @DisplayName("audience-message binds a reusable audience-aware action")
+    void audienceMessageIsRegistered() {
+        var svc = service();
+        String key = svc.bindAction("audience-message target hello");
+        assertNotNull(key);
+        assertTrue(registry.hasAction(key));
+    }    @Test
+    @DisplayName("projectile mechanics bind with Mythic shoot aliases")
+    void projectileMechanicsBind() {
+        var svc = service();
+        String direct = svc.bindAction("shoot-projectile ARROW 1.6 3");
+        String alias = svc.bindAction("shoot ARROW 1.6 3");
+        String hitSkill = svc.bindAction("shoot-projectile ARROW 1.6 3 impact-skill 2 40 SPEED 1 false true 3 20");
+        assertNotNull(direct);
+        assertNotNull(alias);
+        assertNotNull(hitSkill);
+        assertTrue(registry.hasAction(direct));
+        assertTrue(registry.hasAction(alias));
+    }    @Test
+    @DisplayName("combat and movement mechanics bind with Mythic aliases")
+    void combatMechanicsBind() {
+        var svc = service();
+        assertTrue(registry.hasAction(svc.bindAction("explosion 2 false false")));
+        assertTrue(registry.hasAction(svc.bindAction("velocity 0 0.5 0")));
+        assertTrue(registry.hasAction(svc.bindAction("set-target")));
+        assertTrue(registry.hasAction(svc.bindAction("clear-target")));
+        assertTrue(registry.hasAction(svc.bindAction("stop")));
+    }    @Test
+    @DisplayName("common Mythic mechanic aliases bind to native actions")
+    void commonMythicAliasesBind() {
+        var svc = service();
+        assertTrue(registry.hasAction(svc.bindAction("settarget")));
+        assertTrue(registry.hasAction(svc.bindAction("cleartarget")));
+        assertTrue(registry.hasAction(svc.bindAction("aoedamage players 8 2 4")));
+        assertTrue(registry.hasAction(svc.bindAction("playanimation attack false 3")));
+        assertTrue(registry.hasAction(svc.bindAction("stopanimation")));
+        assertTrue(registry.hasAction(svc.bindAction("command say <target.name>")));
+        assertTrue(registry.hasAction(svc.bindAction("command-self help")));
+        assertTrue(registry.hasAction(svc.bindAction("command-target help")));
+    }    @Test
+    @DisplayName("audience title aliases bind successfully")
+    void audienceTitleAliasesBind() {
+        var svc = service();
+        assertTrue(registry.hasAction(svc.bindAction("audience-title target Hello")));
+        assertTrue(registry.hasAction(svc.bindAction("title-audience target Hello")));
+    }    @Test
+    @DisplayName("audience particle aliases bind successfully")
+    void audienceParticleAliasesBind() {
+        var svc = service();
+        assertTrue(registry.hasAction(svc.bindAction("audience-particle target FLAME 4")));
+        assertTrue(registry.hasAction(svc.bindAction("particle-audience target FLAME 4")));
+    }    @Test
+    @DisplayName("audience specification accepts permission and faction filters")
+    void audienceSpecActionBindsWithFilters() {
+        var svc = service();
+        assertNotNull(svc.bindAction("audience-message nearby hello"));
+    }    @Test
+    @DisplayName("audience actionbar aliases bind successfully")
+    void audienceActionbarAliasesBind() {
+        var svc = service();
+        assertNotNull(svc.bindAction("audience-actionbar target hello"));
+        assertNotNull(svc.bindAction("actionbar-audience target hello"));
+    }
+
+    @Test
+    @DisplayName("branch-unlock is available as a SkillTree action")
+    void branchUnlockActionBinds() {
+        var svc = service();
+        String key = svc.bindAction("branch-unlock advanced");
+        assertNotNull(key);
+        assertTrue(registry.hasAction(key));
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        tree.defineBranch("advanced", java.util.Set.of());
+        var context = BehaviorContext.continueExecution(null, (org.bukkit.entity.Player) null,
+                1.0, -1, 0, "IDLE", null, null, List.of(), null, tree);
+        assertTrue(svc.runAction(key, context));
+        assertTrue(tree.branchUnlocked("advanced"));
+    }
+
+    @Test
+    @DisplayName("branch unlock accepts an inline condition argument")
+    void branchUnlockConditionBinds() {
+        var svc = service();
+        assertNotNull(svc.bindAction("branch-unlock{branch=combat;condition=health-above 0.5}"));
+    }
+
+    @Test
+    void branchUnlockConditionRuns() {
+        var svc = service();
+        String key = svc.bindAction("branch-unlock{branch=combat;condition=health-above 0.5}");
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        tree.defineBranch("combat", java.util.Set.of());
+        var context = BehaviorContext.continueExecution(null, (org.bukkit.entity.Player) null,
+                0.8, -1, 0, "IDLE", null, null, List.of(), null, tree);
+        assertTrue(svc.runAction(key, context));
+        assertTrue(tree.branchUnlocked("combat"));
+    }
+
+    @Test
+    void branchUnlockMultipleConditionsRun() {
+        var svc = service();
+        String key = svc.bindAction("branch-unlock{branch=elite;conditions=health-above 0.5|has-target false}");
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        tree.defineBranch("elite", java.util.Set.of());
+        var context = BehaviorContext.continueExecution(null, (org.bukkit.entity.Player) null,
+                0.8, -1, 0, "IDLE", null, null, List.of(), null, tree);
+        assertTrue(svc.runAction(key, context));
+        assertTrue(tree.branchUnlocked("elite"));
+    }
+
+    @Test
+    @DisplayName("branch gated skills block before unlock and run after persisted unlock")
+    void branchGatedSkillCastFlow() {
+        var fired = new AtomicInteger();
+        registry.registerAction("probe", context -> fired.incrementAndGet());
+        var svc = service();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  unlock:
+                    on-decision:
+                      - 'branch-unlock{branch=combat}'
+                  gated:
+                    branch: combat
+                    on-decision:
+                      - probe
+                """));
+        svc.loadSkills(yaml.getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(42);
+        when(instance.isValid()).thenReturn(true);
+        var context = BehaviorContext.of(instance, (org.bukkit.entity.Player) null, 1.0, -1, 0, "IDLE");
+
+        assertFalse(svc.castSkill("gated", context));
+        assertEquals(0, fired.get());
+        assertTrue(svc.castSkill("unlock", context));
+        assertTrue(svc.castSkill("gated", context));
+        assertEquals(1, fired.get());
+    }
+
+    @Test
+    void branchUnlockAnyAndNotConditionsRun() {
+        var svc = service();
+        String anyKey = svc.bindAction(
+                "branch-unlock{branch=any-branch;condition=any{health-below 0.1;has-target false}}");
+        String notKey = svc.bindAction(
+                "branch-unlock{branch=not-branch;condition=not{health-below 0.1}}");
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        tree.defineBranch("any-branch", java.util.Set.of());
+        tree.defineBranch("not-branch", java.util.Set.of());
+        var context = BehaviorContext.continueExecution(null, (org.bukkit.entity.Player) null,
+                0.8, -1, 0, "IDLE", null, null, List.of(), null, tree);
+
+        assertTrue(svc.runAction(anyKey, context));
+        assertTrue(svc.runAction(notKey, context));
+        assertTrue(tree.branchUnlocked("any-branch"));
+        assertTrue(tree.branchUnlocked("not-branch"));
+    }
+
+    @Test
+    @DisplayName("teleport mechanics bind location and caster aliases")
+    void teleportMechanicsBind() {
+        var svc = service();
+        assertTrue(registry.hasAction(svc.bindAction("teleport @targetlocation")));
+        assertTrue(registry.hasAction(svc.bindAction("teleport @triggerlocation")));
+        assertTrue(registry.hasAction(svc.bindAction("teleport @VariableLocation{var=skill.mark}")));
+        assertTrue(registry.hasAction(svc.bindAction("teleport-caster @origin")));
+        assertTrue(registry.hasAction(svc.bindAction("teleport-self 1 2 3")));
+    }
+    @Test
+    @DisplayName("delay and repeat metadata wrap registered actions instead of bypassing them")
+    void timingMetadataWrapsRegisteredAction() {
+        registry.registerAction("probe", ctx -> { });
+        var svc = service();
+        String key = svc.bindAction("probe{delay=2;repeat=3;repeat-interval=1}");
+        assertNotNull(key);
+        assertTrue(key.contains("delay=2"), key);
+        assertFalse("probe".equals(key), "execution metadata must not bypass the wrapper");
+    }
+
+    @Test
+    @DisplayName("repeat scheduling executes every repetition with the configured delays")
+    void repeatSchedulingRunsAllExecutions() {
+        var fired = new AtomicInteger();
+        var delays = new java.util.ArrayList<Long>();
+        registry.registerAction("probe", ctx -> fired.incrementAndGet());
+        var svc = service();
+        dev.helstera.ai.skill.SkillCatalog.taskScheduler((task, delay) -> {
+            delays.add(delay);
+            task.run();
+            return true;
+        });
+        try {
+            String key = svc.bindAction("probe{delay=2;repeat=3;repeatinterval=1}");
+            assertTrue(registry.runAction(key, ctx(1, 0)));
+            assertEquals(4, fired.get());
+            assertEquals(List.of(2L, 1L, 1L, 1L), delays);
+        } finally {
+            dev.helstera.ai.skill.SkillCatalog.taskScheduler(null);
+        }
+    }
+
+    @Test
+    @DisplayName("repeat re-evaluates chance and inline conditions for every execution")
+    void repeatReevaluatesGuards() {
+        var fired = new AtomicInteger();
+        var checks = new AtomicInteger();
+        registry.registerAction("probe", ctx -> fired.incrementAndGet());
+        registry.registerCondition("gate", ctx -> checks.incrementAndGet() % 2 == 1);
+        var svc = service();
+        dev.helstera.ai.skill.SkillCatalog.taskScheduler((task, delay) -> {
+            task.run();
+            return true;
+        });
+        try {
+            String key = svc.bindAction("probe{repeat=3;repeatinterval=1} ?gate");
+            assertTrue(registry.runAction(key, ctx(1, 0)));
+            assertEquals(4, checks.get());
+            assertEquals(2, fired.get());
+        } finally {
+            dev.helstera.ai.skill.SkillCatalog.taskScheduler(null);
+        }
+    }
+
+    @Test
+    @DisplayName("cast-duration defers actions until tickCasts completes the cast")
+    void castDurationDefersActions() throws Exception {
+        var fired = new AtomicInteger();
+        registry.registerAction("probe", ctx -> fired.incrementAndGet());
+        var svc = service();
+        svc.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  charged:
+                    cast-duration: 10ms
+                    on-decision: [probe]
+                """)).getConfigurationSection("skills"));
+
+        assertTrue(svc.castSkill("charged", ctx(1, 0)));
+        assertEquals(0, fired.get());
+        assertEquals(1, svc.activeCastCount());
+        Thread.sleep(30);
+        svc.tickCasts();
+        assertEquals(1, fired.get());
+        assertEquals(0, svc.activeCastCount());
+    }
+
+    @Test
+    @DisplayName("cancel-cast removes the active cast without executing deferred actions")
+    void cancelCastDropsDeferredAction() throws Exception {
+        var fired = new AtomicInteger();
+        registry.registerAction("probe", ctx -> fired.incrementAndGet());
+        var svc = service();
+        svc.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  charged:
+                    cast-duration: 20ms
+                    on-decision: [probe]
+                """)).getConfigurationSection("skills"));
+
+        assertTrue(svc.castSkill("charged", ctx(1, 0)));
+        assertTrue(svc.cancelCast(-1));
+        Thread.sleep(30);
+        svc.tickCasts();
+        assertEquals(0, fired.get());
+        assertEquals(0, svc.activeCastCount());
+    }
+
+    @Test
+    @DisplayName("persistent mode skips AI ticks in unloaded chunks")
+    void persistentModeTickPolicy() {
+        assertFalse(AiManager.tickInUnloadedChunk("PERSISTENT"));
+        assertTrue(AiManager.tickInUnloadedChunk("NORMAL"));
+        assertTrue(AiManager.tickInUnloadedChunk("CHUNK"));
+    }
+
+    @Test
+    @DisplayName("AI profile loads ranged projectile configuration")
+    void loadsRangedProjectileConfiguration() {
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                ranged-attack: true
+                ranged-projectile-type: FIREBALL
+                ranged-hit-skill: burn_target
+                ranged-projectile-gravity: false
+                ranged-projectile-fire-ticks: 60
+                ranged-projectile-explosion: 2.5
+                ranged-projectile-max-hits: 3
+                ranged-projectile-potion: POISON:60:1
+                ranged-projectile-pierce: 2
+                ranged-projectile-tracking: true
+                ranged-projectile-tracking-ticks: 40
+                """));
+        AiProfile profile = AiProfile.fromSection("ranged", yaml);
+        assertTrue(profile.rangedAttack);
+        assertEquals("FIREBALL", profile.rangedProjectileType);
+        assertEquals("burn_target", profile.rangedHitSkill);
+        assertFalse(profile.rangedProjectileGravity);
+        assertEquals(60, profile.rangedProjectileFireTicks);
+        assertEquals(2.5, profile.rangedProjectileExplosion, 1e-9);
+        assertEquals(3, profile.rangedProjectileMaxHits);
+        assertEquals("POISON:60:1", profile.rangedProjectilePotion);
+        assertEquals(2, profile.rangedProjectilePierce);
+        assertTrue(profile.rangedProjectileTracking);
+        assertEquals(40, profile.rangedProjectileTrackingTicks);
+    }
+
+    @Test
+    @DisplayName("Mythic entity category conditions resolve aliases against the active target")
+    void entityCategoryConditionsUseTargetContext() {
+        SkillService service = service();
+        Player player = mock(Player.class);
+        BehaviorContext playerContext = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        for (String alias : List.of("isLiving", "isPlayer", "player")) {
+            String key = service.bindCondition(alias);
+            assertNotNull(key, alias);
+            assertTrue(registry.testCondition(key, playerContext), alias);
+        }
+        for (String alias : List.of("isMob", "isMonster", "isAnimal", "isVillager",
+                "isTameable", "isRaider")) {
+            String key = service.bindCondition(alias);
+            assertNotNull(key, alias);
+            assertFalse(registry.testCondition(key, playerContext), alias);
+        }
+
+        org.bukkit.entity.Zombie zombie = mock(org.bukkit.entity.Zombie.class);
+        BehaviorContext monsterContext = BehaviorContext.of(null, zombie, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("isLiving"), monsterContext));
+        assertTrue(registry.testCondition(service.bindCondition("isMob"), monsterContext));
+        assertTrue(registry.testCondition(service.bindCondition("isMonster"), monsterContext));
+        assertFalse(registry.testCondition(service.bindCondition("isPlayer"), monsterContext));
+    }
+
+    @Test
+    @DisplayName("Mythic undead, creature and age conditions use Bukkit type capabilities")
+    void entityCapabilityConditionsUseBukkitTypes() {
+        SkillService service = service();
+        org.bukkit.entity.Zombie zombie = mock(org.bukkit.entity.Zombie.class);
+        when(zombie.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
+        BehaviorContext zombieContext = BehaviorContext.of(null, zombie, 1.0, -1, 0, "IDLE");
+
+        assertTrue(registry.testCondition(service.bindCondition("isUndead"), zombieContext));
+        assertTrue(registry.testCondition(service.bindCondition("isCreature"), zombieContext));
+
+        org.bukkit.entity.Ageable baby = mock(org.bukkit.entity.Ageable.class);
+        when(baby.isAdult()).thenReturn(false);
+        BehaviorContext babyContext = BehaviorContext.of(null, baby, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("baby"), babyContext));
+        assertTrue(registry.testCondition(service.bindCondition("isChild"), babyContext));
+        assertFalse(registry.testCondition(service.bindCondition("adult"), babyContext));
+
+        when(baby.isAdult()).thenReturn(true);
+        assertTrue(registry.testCondition(service.bindCondition("isAdult"), babyContext));
+        assertFalse(registry.testCondition(service.bindCondition("isBaby"), babyContext));
+    }
+
+    @Test
+    @DisplayName("Mythic tame, shear, saddle and powered conditions read entity state")
+    void entityStateConditionsReadBukkitState() {
+        SkillService service = service();
+
+        org.bukkit.entity.Wolf wolf = mock(org.bukkit.entity.Wolf.class);
+        when(wolf.isTamed()).thenReturn(true);
+        BehaviorContext wolfContext = BehaviorContext.of(null, wolf, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("isTamed"), wolfContext));
+
+        org.bukkit.entity.Sheep sheep = mock(org.bukkit.entity.Sheep.class);
+        when(sheep.isSheared()).thenReturn(true);
+        BehaviorContext sheepContext = BehaviorContext.of(null, sheep, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("sheared"), sheepContext));
+
+        org.bukkit.entity.Horse horse = mock(org.bukkit.entity.Horse.class);
+        org.bukkit.inventory.HorseInventory horseInventory =
+                mock(org.bukkit.inventory.HorseInventory.class);
+        org.bukkit.inventory.ItemStack saddle = mock(org.bukkit.inventory.ItemStack.class);
+        org.bukkit.Material saddleType = mock(org.bukkit.Material.class);
+        when(horse.getInventory()).thenReturn(horseInventory);
+        when(horseInventory.getSaddle()).thenReturn(saddle);
+        when(saddle.getType()).thenReturn(saddleType);
+        when(saddleType.isAir()).thenReturn(false);
+        BehaviorContext horseContext = BehaviorContext.of(null, horse, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("isSaddled"), horseContext));
+
+        org.bukkit.entity.Creeper creeper = mock(org.bukkit.entity.Creeper.class);
+        when(creeper.isPowered()).thenReturn(true);
+        BehaviorContext creeperContext = BehaviorContext.of(null, creeper, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("charged"), creeperContext));
+    }
+
+    @Test
+    @DisplayName("target entity state aliases bind to the shared state evaluators")
+    void targetEntityStateAliasesBind() {
+        SkillService service = service();
+        for (String alias : List.of("target-is-undead", "target-is-creature", "target-is-baby",
+                "target-is-child", "target-is-adult", "target-is-tamed", "target-is-sheared",
+                "target-is-saddled", "target-is-powered", "target-is-charged")) {
+            assertNotNull(service.bindCondition(alias), alias);
+        }
+    }
+
+    @Test
+    @DisplayName("target entity state aliases evaluate against the target, not the caster")
+    void targetEntityStateAliasesEvaluateTarget() {
+        SkillService service = service();
+        org.bukkit.entity.Zombie zombie = mock(org.bukkit.entity.Zombie.class);
+        when(zombie.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
+        BehaviorContext context = BehaviorContext.of(null, zombie, 1.0, -1, 0, "IDLE");
+
+        assertTrue(registry.testCondition(service.bindCondition("target-is-undead"), context));
+        assertTrue(registry.testCondition(service.bindCondition("target-is-creature"), context));
+        assertFalse(registry.testCondition(service.bindCondition("target-is player"), context));
+
+        org.bukkit.entity.Ageable baby = mock(org.bukkit.entity.Ageable.class);
+        when(baby.isAdult()).thenReturn(false);
+        BehaviorContext babyContext = BehaviorContext.of(null, baby, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("target-is-baby"), babyContext));
+        assertFalse(registry.testCondition(service.bindCondition("target-is-adult"), babyContext));
+    }
+
+    @Test
+    @DisplayName("target tame, shear, saddle and powered aliases evaluate target state")
+    void targetEntityStateAliasesEvaluateBukkitState() {
+        SkillService service = service();
+
+        org.bukkit.entity.Wolf wolf = mock(org.bukkit.entity.Wolf.class);
+        when(wolf.isTamed()).thenReturn(true);
+        BehaviorContext wolfContext = BehaviorContext.of(null, wolf, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("target-is-tamed"), wolfContext));
+
+        org.bukkit.entity.Sheep sheep = mock(org.bukkit.entity.Sheep.class);
+        when(sheep.isSheared()).thenReturn(true);
+        BehaviorContext sheepContext = BehaviorContext.of(null, sheep, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("target-is-sheared"), sheepContext));
+
+        org.bukkit.entity.Horse horse = mock(org.bukkit.entity.Horse.class);
+        org.bukkit.inventory.HorseInventory inventory = mock(org.bukkit.inventory.HorseInventory.class);
+        org.bukkit.inventory.ItemStack saddle = mock(org.bukkit.inventory.ItemStack.class);
+        org.bukkit.Material saddleType = mock(org.bukkit.Material.class);
+        when(horse.getInventory()).thenReturn(inventory);
+        when(inventory.getSaddle()).thenReturn(saddle);
+        when(saddle.getType()).thenReturn(saddleType);
+        when(saddleType.isAir()).thenReturn(false);
+        BehaviorContext horseContext = BehaviorContext.of(null, horse, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("target-is-saddled"), horseContext));
+
+        org.bukkit.entity.Creeper creeper = mock(org.bukkit.entity.Creeper.class);
+        when(creeper.isPowered()).thenReturn(true);
+        BehaviorContext creeperContext = BehaviorContext.of(null, creeper, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("target-is-powered"), creeperContext));
+        assertTrue(registry.testCondition(service.bindCondition("target-is-charged"), creeperContext));
+    }
+
+    @Test
+    @DisplayName("target player state conditions read Bukkit player flags")
+    void targetPlayerStateConditionsReadFlags() {
+        SkillService service = service();
+        Player player = mock(Player.class);
+        when(player.isSneaking()).thenReturn(true);
+        when(player.isSprinting()).thenReturn(true);
+        when(player.isFlying()).thenReturn(true);
+        when(player.isBlocking()).thenReturn(true);
+        BehaviorContext context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        assertTrue(registry.testCondition(service.bindCondition("target-is-sneaking"), context));
+        assertTrue(registry.testCondition(service.bindCondition("target-is-sprinting"), context));
+        assertTrue(registry.testCondition(service.bindCondition("target-is-flying"), context));
+        assertTrue(registry.testCondition(service.bindCondition("target-is-blocking"), context));
+    }
+
+    @Test
+    @DisplayName("target environmental state aliases bind to runtime evaluators")
+    void targetEnvironmentalStateAliasesBind() {
+        SkillService service = service();
+        for (String alias : List.of("target-on-fire", "target-in-air", "target-in-water", "target-in-lava")) {
+            assertNotNull(service.bindCondition(alias), alias);
+        }
+    }
+
+    @Test
+    @DisplayName("target environmental conditions evaluate the target entity state")
+    void targetEnvironmentalConditionsEvaluateState() {
+        SkillService service = service();
+        org.bukkit.entity.Zombie target = mock(org.bukkit.entity.Zombie.class);
+        org.bukkit.Location location = mock(org.bukkit.Location.class);
+        org.bukkit.World world = mock(org.bukkit.World.class);
+        org.bukkit.block.Block block = mock(org.bukkit.block.Block.class);
+        when(target.getFireTicks()).thenReturn(20);
+        when(target.isOnGround()).thenReturn(false);
+        when(target.getLocation()).thenReturn(location);
+        when(location.getWorld()).thenReturn(world);
+        when(location.getBlock()).thenReturn(block);
+        when(block.getType()).thenReturn(org.bukkit.Material.WATER);
+        BehaviorContext waterContext = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        assertTrue(registry.testCondition(service.bindCondition("target-on-fire"), waterContext));
+        assertTrue(registry.testCondition(service.bindCondition("target-in-air"), waterContext));
+        assertTrue(registry.testCondition(service.bindCondition("target-in-water"), waterContext));
+        assertFalse(registry.testCondition(service.bindCondition("target-in-lava"), waterContext));
+
+        when(block.getType()).thenReturn(org.bukkit.Material.LAVA);
+        assertTrue(registry.testCondition(service.bindCondition("target-in-lava"), waterContext));
+    }
+
+    @Test
+    @DisplayName("target invisible condition reads the target entity")
+    void targetInvisibleConditionReadsTarget() {
+        SkillService service = service();
+        org.bukkit.entity.Zombie target = mock(org.bukkit.entity.Zombie.class);
+        when(target.isInvisible()).thenReturn(true);
+        BehaviorContext context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("target-is-invisible"), context));
+    }
+
+    @Test
+    @DisplayName("target dead and ground-state aliases bind to runtime conditions")
+    void targetBasicStateAliasesBind() {
+        SkillService service = service();
+        for (String alias : List.of("target-is-dead", "target-is-on-ground", "target-is-airborne")) {
+            assertNotNull(service.bindCondition(alias), alias);
+        }
+
+        org.bukkit.entity.Zombie target = mock(org.bukkit.entity.Zombie.class);
+        when(target.isOnGround()).thenReturn(false);
+        BehaviorContext context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+        assertFalse(registry.testCondition(service.bindCondition("target-is-dead"), context));
+        assertTrue(registry.testCondition(service.bindCondition("target-is-airborne"), context));
+
+        when(target.isOnGround()).thenReturn(true);
+        assertTrue(registry.testCondition(service.bindCondition("target-is-on-ground"), context));
+        assertFalse(registry.testCondition(service.bindCondition("target-is-airborne"), context));
+    }
+
+    @Test
+    @DisplayName("target climbing and blocked conditions read target state")
+    void targetClimbingAndBlockedConditionsReadTarget() {
+        SkillService service = service();
+        org.bukkit.entity.Zombie target = mock(org.bukkit.entity.Zombie.class);
+        org.bukkit.Location location = mock(org.bukkit.Location.class);
+        org.bukkit.block.Block block = mock(org.bukkit.block.Block.class);
+        when(target.isClimbing()).thenReturn(true);
+        when(target.getLocation()).thenReturn(location);
+        when(location.getBlock()).thenReturn(block);
+        when(location.clone()).thenReturn(location);
+        when(location.add(anyDouble(), anyDouble(), anyDouble())).thenReturn(location);
+        when(block.getType()).thenReturn(org.bukkit.Material.STONE);
+        BehaviorContext context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        assertTrue(registry.testCondition(service.bindCondition("target-is-climbing"), context));
+        assertNotNull(service.bindCondition("target-is-blocked"));
+    }
+
 }

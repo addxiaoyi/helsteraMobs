@@ -6,11 +6,14 @@ import dev.helstera.api.migration.MigrationImporter;
 import dev.helstera.api.migration.MigrationReport;
 import dev.helstera.api.migration.MigrationService;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.io.StringReader;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -144,26 +147,41 @@ public final class MigrationServiceImpl implements MigrationService {
         List<Path> written = new ArrayList<>();
         Map<String, Object> result = new LinkedHashMap<>();
         try {
+            Map<String, YamlConfiguration> merged = new LinkedHashMap<>();
+            Map<String, Path> targetPaths = new LinkedHashMap<>();
             for (Map<String, Object> e : preview.entries()) {
                 if (!"mapped".equals(e.get("status"))) continue;
                 String targetRel = String.valueOf(e.get("target-file"));
                 if (targetRel == null || "null".equals(targetRel)) continue;
                 Path target = targetRoot.resolve(targetRel).normalize();
                 if (!target.startsWith(targetRoot)) {
+                    throw new IllegalStateException("Migration target escapes root: " + targetRel);
+                }
+                YamlConfiguration destination = merged.computeIfAbsent(targetRel, ignored ->
+                        Files.isRegularFile(target) ? YamlConfiguration.loadConfiguration(target.toFile())
+                                : new YamlConfiguration());
+                YamlConfiguration incoming = YamlConfiguration.loadConfiguration(
+                        new StringReader(String.valueOf(e.get("content"))));
+                mergeYaml(incoming, destination, "");
+                targetPaths.put(targetRel, target);
+                if (!target.startsWith(targetRoot)) {
                     throw new IllegalStateException("迁移目标路径越界: " + targetRel);
                 }
                 // 备份原文件（如存在）
+                // 原子写入
+            }
+            for (Map.Entry<String, YamlConfiguration> item : merged.entrySet()) {
+                Path target = targetPaths.get(item.getKey());
                 if (Files.exists(target)) {
-                    Path backup = backupRoot.resolve(source + "/" + backupId + "/" + targetRel);
+                    Path backup = backupRoot.resolve(source + "/" + backupId + "/" + item.getKey());
                     Files.createDirectories(backup.getParent());
                     Files.copy(target, backup, StandardCopyOption.REPLACE_EXISTING);
                     backups.computeIfAbsent(backupId, k -> new HashMap<>())
                             .computeIfAbsent(source, k -> new ArrayList<>()).add(backup);
                 }
-                // 原子写入
                 Files.createDirectories(target.getParent());
                 Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
-                Files.writeString(tmp, String.valueOf(e.get("content")), StandardCharsets.UTF_8);
+                Files.writeString(tmp, item.getValue().saveToString(), StandardCharsets.UTF_8);
                 Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
                 written.add(target);
             }
@@ -185,6 +203,9 @@ public final class MigrationServiceImpl implements MigrationService {
         boolean all = true;
         for (Path p : written) {
             try {
+                if (restoreWrittenFile(p, plugin.getDataFolder().toPath(), backupRoot, source, backupId)) {
+                    continue;
+                }
                 Files.deleteIfExists(p); // 新写入的文件删除即可（原文件在备份中未被动过）
             } catch (Exception e) {
                 all = false;
@@ -192,6 +213,29 @@ public final class MigrationServiceImpl implements MigrationService {
         }
         audit("apply-rollback", source, backupId);
         return all;
+    }
+
+    static void mergeYaml(ConfigurationSection source, YamlConfiguration target, String prefix) {
+        for (String key : source.getKeys(false)) {
+            String path = prefix.isEmpty() ? key : prefix + "." + key;
+            ConfigurationSection nested = source.getConfigurationSection(key);
+            if (nested != null) {
+                mergeYaml(nested, target, path);
+            } else {
+                target.set(path, source.get(key));
+            }
+        }
+    }
+
+    static boolean restoreWrittenFile(Path target, Path dataRoot, Path backupRoot,
+                                      String source, String backupId) throws java.io.IOException {
+        Path relative = dataRoot.relativize(target);
+        Path backup = backupRoot.resolve(source).resolve(backupId).resolve(relative);
+        if (!Files.isRegularFile(backup)) return false;
+        Files.createDirectories(target.getParent());
+        Files.copy(backup, target, StandardCopyOption.REPLACE_EXISTING);
+        Files.deleteIfExists(target.resolveSibling(target.getFileName() + ".tmp"));
+        return true;
     }
 
     @Override

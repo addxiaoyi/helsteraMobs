@@ -1,0 +1,29 @@
+debug:
+  self-test: true
+  self-test-model: example/emberling
+  self-test-delay-ticks: 40
+  self-test-entity-options: true
+  self-test-item-effects: true
+  self-test-loot: true
+  self-test-death-loot: true
+  self-test-spawner: true
+  self-test-events: true
+  trace-triggers: true
+  self-test-audience: true
+  self-test-skilltree-persistence: false
+  self-test-skilltree-stage: write
+web:
+  enabled: false
+compatibility:
+  mythicmobs: false
+  itemadder: false
+  craftengine: false
+ai:
+  factions:
+    players: guards
+    block-friendly-fire: true
+    factions:
+      guards:
+        display: Guards
+      undead:
+        display: Undead

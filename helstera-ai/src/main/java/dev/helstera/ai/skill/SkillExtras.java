@@ -1,20 +1,27 @@
 package dev.helstera.ai.skill;
 
 import dev.helstera.api.behavior.BehaviorContext;
+import dev.helstera.api.behavior.VariableLocations;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -68,6 +75,40 @@ public final class SkillExtras {
 
     private static volatile ThreatLookup threatLookup;
 
+    @FunctionalInterface
+    public interface DamagePolicy {
+        double apply(BehaviorContext context, LivingEntity target, double amount, String cause);
+    }
+
+    private static volatile DamagePolicy damagePolicy;
+    private static volatile java.util.function.BiFunction<BehaviorContext, LivingEntity, String> damageCause;
+    private static volatile java.util.function.Function<String, ItemStack> itemResolver;
+    private static volatile java.util.function.Consumer<String> audienceDiagnostic;
+    private static volatile java.util.function.BiFunction<BehaviorContext, List<String>, Boolean> branchConditionEvaluator;
+
+    /** Optional integration-only recipient diagnostics; null in normal runtime. */
+    public static void audienceDiagnostic(java.util.function.Consumer<String> diagnostic) {
+        audienceDiagnostic = diagnostic;
+    }
+
+    public static void branchConditionEvaluator(
+            java.util.function.BiFunction<BehaviorContext, List<String>, Boolean> evaluator) {
+        branchConditionEvaluator = evaluator;
+    }
+
+    public static void damagePolicy(DamagePolicy policy) {
+        damagePolicy = policy;
+    }
+
+    public static void damageCause(java.util.function.BiFunction<BehaviorContext, LivingEntity, String> resolver) {
+        damageCause = resolver;
+    }
+
+    /** Overrides item lookup for integrations and Paper-free unit tests. */
+    public static void itemResolver(java.util.function.Function<String, ItemStack> resolver) {
+        itemResolver = resolver;
+    }
+
     public static void threatLookup(ThreatLookup l) {
         threatLookup = l;
     }
@@ -88,7 +129,7 @@ public final class SkillExtras {
      */
     private static double targetThreat(BehaviorContext ctx) {
         var t = threatOf(ctx);
-        var tgt = ctx.target();
+        var tgt = ctx.targetEntity();
         if (t == null || tgt.isEmpty()) return Double.NaN;
         return t.threatOf(tgt.get().getUniqueId());
     }
@@ -149,6 +190,9 @@ public final class SkillExtras {
      */
     private static final Map<Integer, Map<String, Double>> VARS = new ConcurrentHashMap<>();
 
+    /** Numeric variables stored in caster, target, world, or global scope. */
+    private static final Map<String, Map<String, Object>> SCOPED_VALUES = new ConcurrentHashMap<>();
+
     private static final Map<Integer, Map<String, Integer>> SCORES = new ConcurrentHashMap<>();
 
     /** 全局冷却：名称 -> 解除冷却的时刻。 */
@@ -158,6 +202,16 @@ public final class SkillExtras {
     public static void forget(int instanceId) {
         VARS.remove(instanceId);
         SCORES.remove(instanceId);
+    }
+
+    /** Clears persistent scoped values associated with an entity identity. */
+    public static void forgetEntity(org.bukkit.entity.Entity entity) {
+        if (entity == null) return;
+        String identity;
+        try { identity = entity.getUniqueId().toString(); }
+        catch (RuntimeException ignored) { identity = Integer.toString(entity.getEntityId()); }
+        SCOPED_VALUES.remove("caster:" + identity);
+        SCOPED_VALUES.remove("target:" + identity);
     }
 
     /** 变量表快照，供 /helstera debug 查看。 */
@@ -207,6 +261,55 @@ public final class SkillExtras {
         return SpecArgs.bool(a, i, def);
     }
 
+    private static Comparison comparison(List<String> args, int index, String defaultOperator) {
+        String raw = str(args, index, "");
+        if (raw.equals(">") || raw.equals(">=") || raw.equals("<")
+                || raw.equals("<=") || raw.equals("=") || raw.equals("==")
+                || raw.equals("!=")) {
+            raw += str(args, index + 1, "");
+        }
+        String operator = defaultOperator;
+        for (String candidate : List.of(">=", "<=", "!=", "==", ">", "<", "=")) {
+            if (raw.startsWith(candidate)) {
+                operator = candidate;
+                raw = raw.substring(candidate.length()).trim();
+                break;
+            }
+        }
+        try {
+            double value = Double.parseDouble(raw.trim());
+            return new Comparison(operator, value);
+        } catch (NumberFormatException ignored) {
+            return new Comparison(operator, Double.NaN);
+        }
+    }
+
+    private static boolean compare(double actual, Comparison comparison) {
+        if (comparison == null || !Double.isFinite(actual) || !Double.isFinite(comparison.value())) {
+            return false;
+        }
+        return switch (comparison.operator()) {
+            case ">" -> actual > comparison.value();
+            case ">=" -> actual >= comparison.value();
+            case "<" -> actual < comparison.value();
+            case "!=" -> Math.abs(actual - comparison.value()) > 1.0e-9;
+            case "=", "==" -> Math.abs(actual - comparison.value()) <= 1.0e-9;
+            default -> actual <= comparison.value();
+        };
+    }
+
+    private static LivingEntity conditionEntity(BehaviorContext ctx) {
+        if (ctx == null) return null;
+        LivingEntity target = ctx.targetEntity().orElse(null);
+        if (target != null) return target;
+        if (!ctx.instanceValid()) return null;
+        Entity entity = ctx.instance().baseEntity().orElse(null);
+        return entity instanceof LivingEntity living ? living : null;
+    }
+
+    private record Comparison(String operator, double value) {
+    }
+
     // ------------------------------------------------------------------
     // 条件
     // ------------------------------------------------------------------
@@ -214,6 +317,28 @@ public final class SkillExtras {
     public static Map<String, SkillCatalog.ConditionFactory> conditions() {
         return Map.ofEntries(
                 // ---- 环境 / 姿态 ----
+
+                Map.entry("health", (SkillCatalog.ConditionFactory) a -> {
+                    Comparison comparison = comparison(a, 0, "<=");
+                    return ctx -> {
+                        LivingEntity entity = conditionEntity(ctx);
+                        return entity != null && compare(entity.getHealth(), comparison);
+                    };
+                }),
+                Map.entry("health-percent", (SkillCatalog.ConditionFactory) a -> {
+                    Comparison comparison = comparison(a, 0, "<=");
+                    return ctx -> {
+                        LivingEntity entity = conditionEntity(ctx);
+                        if (entity == null || entity.getMaxHealth() <= 0) return false;
+                        double percent = entity.getHealth() / entity.getMaxHealth() * 100.0;
+                        return compare(percent, comparison);
+                    };
+                }),
+                Map.entry("distance", (SkillCatalog.ConditionFactory) a -> {
+                    Comparison comparison = comparison(a, 0, "<=");
+                    return ctx -> ctx != null && ctx.distanceToTarget() >= 0
+                            && compare(ctx.distanceToTarget(), comparison);
+                }),
 
                 Map.entry("on-ground", (SkillCatalog.ConditionFactory) a -> ctx -> {
                     Location l = selfLoc(ctx);
@@ -299,10 +424,7 @@ public final class SkillExtras {
                         Location l = selfLoc(ctx);
                         if (l == null) return false;
                         try {
-                            long t = l.getWorld().getTime();
-                            boolean day = t < 12300 || t > 23850;
-                            return want.equalsIgnoreCase("day") ? day
-                                    : want.equalsIgnoreCase("night") && !day;
+                            return matchesTime(want, l.getWorld().getTime());
                         } catch (Throwable t) {
                             return false;
                         }
@@ -314,9 +436,7 @@ public final class SkillExtras {
                         Location l = selfLoc(ctx);
                         if (l == null) return false;
                         try {
-                            if (l.getWorld().isThundering()) return want.equalsIgnoreCase("storm");
-                            return l.getWorld().hasStorm() ? want.equalsIgnoreCase("rain")
-                                    : want.equalsIgnoreCase("clear");
+                            return matchesWeather(want, l.getWorld().hasStorm(), l.getWorld().isThundering());
                         } catch (Throwable t) {
                             return false;
                         }
@@ -325,23 +445,297 @@ public final class SkillExtras {
 
                 // ---- 目标状态 ----
 
-                Map.entry("target-dead", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx.target().map(Player::isDead).orElse(false)),
-                Map.entry("target-on-ground", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx.target()
-                                .map(p -> p.getLocation().getBlock().getType().isSolid())
+                Map.entry("is-cancelled", (SkillCatalog.ConditionFactory) a -> ctx ->
+                        ctx != null && ctx.cancellableEvent()
+                                .map(org.bukkit.event.Cancellable::isCancelled)
                                 .orElse(false)),
+                Map.entry("target-dead", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> ctx.targetEntity().map(LivingEntity::isDead).orElse(false)),
+                Map.entry("target-on-ground", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> ctx.targetEntity().map(LivingEntity::isOnGround).orElse(false)),
                 Map.entry("target-airborne", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx.target().map(p -> !p.isOnGround()).orElse(false)),
+                        ctx -> ctx.targetEntity().map(e -> !e.isOnGround()).orElse(false)),
+                Map.entry("target-invulnerable", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> ctx.targetEntity().map(Entity::isInvulnerable).orElse(false)),
                 Map.entry("target-health-below", (SkillCatalog.ConditionFactory) a -> {
-                    double pct = num(a, 0, 50);
-                    return ctx -> ctx.target()
-                            .map(p -> p.getMaxHealth() > 0
-                                    && p.getHealth() / p.getMaxHealth() * 100 <= pct)
+                    Comparison comparison = comparison(a, 0, "<=");
+                    return ctx -> ctx.targetEntity()
+                            .map(e -> e.getMaxHealth() > 0
+                                    && compare(e.getHealth() / e.getMaxHealth() * 100.0, comparison))
                             .orElse(false);
                 }),
+                Map.entry("target-health-above", (SkillCatalog.ConditionFactory) a -> {
+                    Comparison comparison = comparison(a, 0, ">=");
+                    return ctx -> ctx.targetEntity()
+                            .map(e -> e.getMaxHealth() > 0
+                                    && compare(e.getHealth() / e.getMaxHealth() * 100.0, comparison))
+                            .orElse(false);
+                }),
+                Map.entry("target-health", (SkillCatalog.ConditionFactory) a -> {
+                    Comparison comparison = comparison(a, 0, "<=");
+                    return ctx -> ctx.targetEntity().map(e -> compare(e.getHealth(), comparison)).orElse(false);
+                }),
+                Map.entry("target-health-percent", (SkillCatalog.ConditionFactory) a -> {
+                    Comparison comparison = comparison(a, 0, "<=");
+                    return ctx -> ctx.targetEntity()
+                            .map(e -> e.getMaxHealth() > 0
+                                    && compare(e.getHealth() / e.getMaxHealth() * 100.0, comparison))
+                            .orElse(false);
+                }),
+                Map.entry("entity-type-is", (SkillCatalog.ConditionFactory) a -> {
+                    String wanted = str(a, 0, "");
+                    return ctx -> {
+                        Entity entity = ctx == null ? null : ctx.targetEntity().orElse(null);
+                        if (entity == null && ctx != null && ctx.instanceValid()) {
+                            entity = ctx.instance().baseEntity().orElse(null);
+                        }
+                        return entity != null && !wanted.isBlank()
+                                && entity.getType().name().equalsIgnoreCase(wanted);
+                    };
+                }),
+                Map.entry("is-living", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) != null),
+                Map.entry("is-player", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof Player),
+                Map.entry("is-mob", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Mob),
+                Map.entry("is-monster", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Monster),
+                Map.entry("is-animal", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Animals),
+                Map.entry("is-villager", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Villager),
+                Map.entry("is-tameable", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Tameable),
+                Map.entry("is-raider", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Raider),
+                Map.entry("is-undead", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> {
+                            LivingEntity entity = conditionEntity(ctx);
+                            if (entity == null || entity.getType() == null) return false;
+                            return Set.of("ZOMBIE", "HUSK", "DROWNED", "ZOMBIFIED_PIGLIN",
+                                    "SKELETON", "STRAY", "WITHER_SKELETON", "WITHER",
+                                    "PHANTOM", "ZOGLIN", "PIGLIN", "PIGLIN_BRUTE",
+                                    "ZOMBIE_VILLAGER", "GIANT").contains(entity.getType().name());
+                        }),
+                Map.entry("is-creature", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Creature),
+                Map.entry("is-baby", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Ageable age
+                                && !age.isAdult()),
+                Map.entry("is-adult", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Ageable age
+                                && age.isAdult()),
+                Map.entry("is-tamed", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Tameable tameable
+                                && tameable.isTamed()),
+                Map.entry("is-sheared", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Sheep sheep
+                                && sheep.isSheared()),
+                Map.entry("is-saddled", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> {
+                            if (!(conditionEntity(ctx) instanceof org.bukkit.entity.AbstractHorse horse)
+                                    || horse.getInventory() == null) return false;
+                            ItemStack saddle = horse.getInventory().getSaddle();
+                            return saddle != null && !saddle.getType().isAir();
+                        }),
+                Map.entry("is-powered", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Creeper creeper
+                                && creeper.isPowered()),
+                Map.entry("has-owner", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> {
+                            LivingEntity entity = conditionEntity(ctx);
+                            return entity != null && (dev.helstera.api.behavior.MobRelations.hasOwner(entity)
+                                    || entity instanceof org.bukkit.entity.Tameable tameable
+                                    && tameable.getOwner() != null);
+                        }),
+                Map.entry("has-tag", (SkillCatalog.ConditionFactory) a -> {
+                    String tag = str(a, 0, "");
+                    if (tag.startsWith("tag=")) tag = tag.substring(4);
+                    else if (tag.startsWith("t=")) tag = tag.substring(2);
+                    String expected = tag.trim();
+                    return ctx -> !expected.isBlank() && conditionEntity(ctx) != null
+                            && conditionEntity(ctx).getScoreboardTags().contains(expected);
+                }),
+                Map.entry("has-parent", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> dev.helstera.api.behavior.MobRelations.hasParent(conditionEntity(ctx))),
+                Map.entry("is-parent", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                    if (ctx == null || !ctx.instanceValid()) return false;
+                    Entity parent = ctx.targetEntity().orElse(null);
+                    Entity caster = ctx.instance().baseEntity().orElse(null);
+                    return parent != null && caster != null
+                            && parent.getUniqueId().equals(dev.helstera.api.behavior.MobRelations.parentId(caster))
+                            && parent.isValid() && !parent.isDead();
+                }),
+                Map.entry("is-child", (SkillCatalog.ConditionFactory) a -> {
+                    return ctx -> {
+                        if (ctx == null || !ctx.instanceValid()) return false;
+                        Entity parent = ctx.instance().baseEntity().orElse(null);
+                        Entity child = ctx.targetEntity().orElse(null);
+                        return dev.helstera.api.behavior.MobRelations.isChild(parent, child);
+                    };
+                }),
+                Map.entry("is-parent-alive", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> dev.helstera.api.behavior.MobRelations.hasParent(conditionEntity(ctx))),
+                Map.entry("is-sibling", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                    if (ctx == null || !ctx.instanceValid()) return false;
+                    Entity caster = ctx.instance().baseEntity().orElse(null);
+                    Entity target = ctx.targetEntity().orElse(null);
+                    return dev.helstera.api.behavior.MobRelations.areSiblings(caster, target);
+                }),
+                Map.entry("target-is-sneaking", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof Player player && player.isSneaking()),
+                Map.entry("mounted", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof LivingEntity living && living.isInsideVehicle()),
+                Map.entry("moving", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof LivingEntity living
+                                && Double.isFinite(living.getVelocity().lengthSquared())
+                                && living.getVelocity().lengthSquared() > 0.0),
+                Map.entry("has-passenger", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof LivingEntity living
+                                && !living.getPassengers().isEmpty()),
+                Map.entry("is-leashed", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof LivingEntity living && living.isLeashed()),
+                Map.entry("target-is-sprinting", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof Player player && player.isSprinting()),
+                Map.entry("target-is-flying", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof Player player && player.isFlying()),
+                Map.entry("target-is-blocking", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof Player player && player.isBlocking()),
+                Map.entry("target-is-gliding", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof LivingEntity living && living.isGliding()),
+                Map.entry("target-is-swimming", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof LivingEntity living && living.isSwimming()),
+                Map.entry("target-on-fire", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) != null && conditionEntity(ctx).getFireTicks() > 0),
+                Map.entry("target-in-air", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof LivingEntity living && !living.isOnGround()),
+                Map.entry("target-in-water", (SkillCatalog.ConditionFactory) a -> {
+                    return ctx -> {
+                        LivingEntity target = conditionEntity(ctx);
+                        if (target == null) return false;
+                        try {
+                            org.bukkit.Material type = target.getLocation().getBlock().getType();
+                            return type == org.bukkit.Material.WATER || type == org.bukkit.Material.BUBBLE_COLUMN;
+                        } catch (RuntimeException ignored) {
+                            return false;
+                        }
+                    };
+                }),
+                Map.entry("target-in-lava", (SkillCatalog.ConditionFactory) a -> {
+                    return ctx -> {
+                        LivingEntity target = conditionEntity(ctx);
+                        if (target == null) return false;
+                        try {
+                            return target.getLocation() != null
+                                    && target.getLocation().getWorld() != null
+                                    && target.getLocation().getBlock().getType() == org.bukkit.Material.LAVA;
+                        } catch (RuntimeException ignored) {
+                            return false;
+                        }
+                    };
+                }),
+                Map.entry("target-is-invisible", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) != null && conditionEntity(ctx).isInvisible()),
+                Map.entry("target-is-climbing", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> conditionEntity(ctx) instanceof LivingEntity living && living.isClimbing()),
+                Map.entry("target-is-blocked", (SkillCatalog.ConditionFactory) a -> {
+                    double above = num(a, 0, 1.0);
+                    return ctx -> {
+                        LivingEntity target = conditionEntity(ctx);
+                        if (target == null) return false;
+                        try {
+                            org.bukkit.Location location = target.getLocation();
+                            if (location == null || location.getWorld() == null) return false;
+                            org.bukkit.Location head = location.clone().add(0, above, 0);
+                            return head.getWorld().getBlockAt(head).getType() != org.bukkit.Material.AIR;
+                        } catch (RuntimeException ignored) {
+                            return false;
+                        }
+                    };
+                }),
+                Map.entry("stance-is", (SkillCatalog.ConditionFactory) a -> {
+                    String wanted = str(a, 0, "");
+                    return ctx -> ctx != null && !wanted.isBlank()
+                            && ctx.state() != null && wanted.equalsIgnoreCase(ctx.state().trim());
+                }),
                 Map.entry("in-combat", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx.target().isPresent()),
+                        ctx -> ctx.targetEntity().isPresent()),
+                Map.entry("target-faction-is", (SkillCatalog.ConditionFactory) a -> {
+                    String wanted = str(a, 0, "");
+                    return ctx -> {
+                        var entity = ctx.targetEntity().orElse(null);
+                        var table = dev.helstera.api.behavior.Factions.table();
+                        return entity != null && table != null && !wanted.isBlank()
+                                && wanted.equalsIgnoreCase(table.factionOf(entity));
+                    };
+                }),
+                Map.entry("target-faction-allied-to", (SkillCatalog.ConditionFactory) a -> {
+                    String wanted = str(a, 0, "");
+                    return ctx -> {
+                        var entity = ctx.targetEntity().orElse(null);
+                        var table = dev.helstera.api.behavior.Factions.table();
+                        if (entity == null || table == null || wanted.isBlank()) return false;
+                        return table.alliedFactions(table.factionOf(entity), wanted);
+                    };
+                }),
+                Map.entry("target-faction-hostile-to", (SkillCatalog.ConditionFactory) a -> {
+                    String wanted = str(a, 0, "");
+                    return ctx -> {
+                        var entity = ctx.targetEntity().orElse(null);
+                        var table = dev.helstera.api.behavior.Factions.table();
+                        if (entity == null || table == null || wanted.isBlank()) return false;
+                        String actual = table.factionOf(entity);
+                        return actual != null && !table.alliedFactions(actual, wanted);
+                    };
+                }),
+                Map.entry("caster-faction-is", (SkillCatalog.ConditionFactory) a -> {
+                    String wanted = str(a, 0, "");
+                    return ctx -> {
+                        var caster = ctx == null || !ctx.instanceValid()
+                                ? null : ctx.instance().baseEntity().orElse(null);
+                        String actual = dev.helstera.api.behavior.Factions.factionOf(caster);
+                        return actual != null && !wanted.isBlank() && actual.equalsIgnoreCase(wanted);
+                    };
+                }),
+                Map.entry("caster-faction-allied-to", (SkillCatalog.ConditionFactory) a -> {
+                    String wanted = str(a, 0, "");
+                    return ctx -> {
+                        var caster = ctx == null || !ctx.instanceValid()
+                                ? null : ctx.instance().baseEntity().orElse(null);
+                        var table = dev.helstera.api.behavior.Factions.table();
+                        return caster != null && table != null && !wanted.isBlank()
+                                && table.alliedFactions(table.factionOf(caster), wanted);
+                    };
+                }),
+                Map.entry("caster-faction-hostile-to", (SkillCatalog.ConditionFactory) a -> {
+                    String wanted = str(a, 0, "");
+                    return ctx -> {
+                        var caster = ctx == null || !ctx.instanceValid()
+                                ? null : ctx.instance().baseEntity().orElse(null);
+                        var table = dev.helstera.api.behavior.Factions.table();
+                        if (caster == null || table == null || wanted.isBlank()) return false;
+                        String actual = table.factionOf(caster);
+                        return actual != null && !table.alliedFactions(actual, wanted);
+                    };
+                }),
+                Map.entry("target-in-region", (SkillCatalog.ConditionFactory) a -> {
+                    RegionBox region = regionArgs(a);
+                    return ctx -> {
+                        var target = ctx.targetEntity().orElse(null);
+                        return target != null && region != null && region.contains(
+                                target.getWorld() == null ? null : target.getWorld().getName(),
+                                target.getLocation().getX(), target.getLocation().getY(), target.getLocation().getZ());
+                    };
+                }),
+                Map.entry("caster-in-region", (SkillCatalog.ConditionFactory) a -> {
+                    RegionBox region = regionArgs(a);
+                    return ctx -> {
+                        Location location = selfLoc(ctx);
+                        return location != null && region != null && region.contains(
+                                location.getWorld().getName(), location.getX(), location.getY(), location.getZ());
+                    };
+                }),
 
                 // ---- 权限 / 持握 / 状态 ----
 
@@ -349,38 +743,79 @@ public final class SkillExtras {
                     String perm = str(a, 0, "");
                     return ctx -> ctx.target().map(p -> p.hasPermission(perm)).orElse(false);
                 }),
+                Map.entry("caster-has-permission", (SkillCatalog.ConditionFactory) a -> {
+                    String perm = str(a, 0, "");
+                    return ctx -> {
+                        if (ctx == null || perm.isBlank()) return false;
+                        Entity caster = ctx.instanceValid()
+                                ? ctx.instance().baseEntity().orElse(null)
+                                : ctx.trigger().orElse(null);
+                        return caster instanceof Player player && player.hasPermission(perm);
+                    };
+                }),
                 Map.entry("holding", (SkillCatalog.ConditionFactory) a -> {
                     String mat = str(a, 0, "");
                     return ctx -> {
-                        Player p = ctx.target().orElse(null);
-                        if (p == null || mat.isEmpty()) return false;
+                        LivingEntity target = ctx.targetEntity().orElse(null);
+                        if (target == null || mat.isEmpty()) return false;
                         try {
-                            return p.getInventory().getItemInMainHand().getType()
-                                    .name().equalsIgnoreCase(mat);
+                            return target.getEquipment() != null
+                                    && target.getEquipment().getItemInMainHand() != null
+                                    && target.getEquipment().getItemInMainHand().getType().name().equalsIgnoreCase(mat);
                         } catch (Throwable t) {
                             return false;
                         }
                     };
                 }),
+                Map.entry("has-item", (SkillCatalog.ConditionFactory) a -> {
+                    String itemName = str(a, 0, "");
+                    Comparison amount = comparison(a, 1, ">=");
+                    String slot = str(a, 2, "all");
+                    ItemStack expected = resolveItem(itemName, 1);
+                    return ctx -> {
+                        LivingEntity target = ctx == null ? null : ctx.targetEntity().orElse(null);
+                        if (target == null && ctx != null) target = ctx.target().orElse(null);
+                        if (target == null) target = conditionEntity(ctx);
+                        if (target == null || expected == null) return false;
+                        return compare(countMatchingItems(target, expected, slot), amount);
+                    };
+                }),
                 Map.entry("wearing", (SkillCatalog.ConditionFactory) a -> {
                     String mat = str(a, 0, "");
                     return ctx -> {
-                        Player p = ctx.target().orElse(null);
-                        if (p == null || mat.isEmpty()) return false;
+                        LivingEntity target = ctx.targetEntity().orElse(null);
+                        if (target == null || mat.isEmpty()) return false;
                         try {
-                            var helm = p.getInventory().getHelmet();
+                            var helm = target.getEquipment() == null ? null : target.getEquipment().getHelmet();
                             return helm != null && helm.getType().name().equalsIgnoreCase(mat);
                         } catch (Throwable t) {
                             return false;
                         }
                     };
                 }),
+                Map.entry("food-level", (SkillCatalog.ConditionFactory) a -> {
+                    Comparison comparison = comparison(a, 0, ">=");
+                    return ctx -> ctx.target().map(player ->
+                            compare(player.getFoodLevel(), comparison)).orElse(false);
+                }),
+                Map.entry("air-level", (SkillCatalog.ConditionFactory) a -> {
+                    Comparison comparison = comparison(a, 0, "<=");
+                    return ctx -> {
+                        LivingEntity target = conditionEntity(ctx);
+                        return target != null && compare(target.getRemainingAir(), comparison);
+                    };
+                }),
+                Map.entry("damage-cause", (SkillCatalog.ConditionFactory) a -> {
+                    String wanted = str(a, 0, "");
+                    return ctx -> ctx != null && !wanted.isBlank()
+                            && ctx.damageCause().map(cause -> cause.name().equalsIgnoreCase(wanted)).orElse(false);
+                }),
                 Map.entry("potion-effect-active", (SkillCatalog.ConditionFactory) a -> {
                     String name = str(a, 0, "");
                     return ctx -> {
-                        Player p = ctx.target().orElse(null);
-                        if (p == null || name.isEmpty()) return false;
-                        return p.getActivePotionEffects().stream()
+                        LivingEntity target = ctx.targetEntity().orElse(null);
+                        if (target == null || name.isEmpty()) return false;
+                        return target.getActivePotionEffects().stream()
                                 .anyMatch(e -> e.getType().getKey().getKey()
                                         .equalsIgnoreCase(name.toLowerCase(Locale.ROOT)));
                     };
@@ -441,19 +876,179 @@ public final class SkillExtras {
 
                 // ---- 变量 / 分数 / 冷却 ----
 
+                Map.entry("trigger-is-living", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> ctx != null && ctx.trigger().filter(org.bukkit.entity.LivingEntity.class::isInstance).isPresent()),
+                Map.entry("trigger-is-player", (SkillCatalog.ConditionFactory) a ->
+                        ctx -> ctx != null && ctx.trigger().filter(org.bukkit.entity.Player.class::isInstance).isPresent()),
+                Map.entry("target-count-at-least", (SkillCatalog.ConditionFactory) a -> {
+                    int minimum = (int) num(a, 0, 1);
+                    return ctx -> ctx != null && ctx.targets().size() >= Math.max(0, minimum);
+                }),
+                Map.entry("trigger-is", (SkillCatalog.ConditionFactory) a -> {
+                    String type = str(a, 0, "");
+                    return ctx -> ctx != null && ctx.trigger().map(e ->
+                            e.getType().name().equalsIgnoreCase(type)).orElse(false);
+                }),
                 Map.entry("has-var", (SkillCatalog.ConditionFactory) a -> {
-                    String name = str(a, 0, "");
-                    return ctx -> hasVar(ctx, name);
+                    VariableRef ref = variableRef(a);
+                    return ctx -> hasVariable(ctx, ref);
+                }),
+                Map.entry("variable-is-set", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    return ctx -> hasVariable(ctx, ref);
                 }),
                 Map.entry("variable-gte", (SkillCatalog.ConditionFactory) a -> {
-                    String name = str(a, 0, "");
-                    double threshold = num(a, 1, 0);
-                    return ctx -> varOf(ctx, name) >= threshold;
+                    VariableRef ref = variableRef(a);
+                    double threshold = variableNumber(a, 1, 0, "value", "val", "amount", "threshold");
+                    return ctx -> varOf(ctx, ref) >= threshold;
                 }),
                 Map.entry("variable-lte", (SkillCatalog.ConditionFactory) a -> {
-                    String name = str(a, 0, "");
-                    double threshold = num(a, 1, Double.MAX_VALUE);
-                    return ctx -> varOf(ctx, name) <= threshold;
+                    VariableRef ref = variableRef(a);
+                    double threshold = variableNumber(a, 1, Double.MAX_VALUE,
+                            "value", "val", "amount", "threshold");
+                    return ctx -> varOf(ctx, ref) <= threshold;
+                }),
+                Map.entry("variable-equals", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String expected = keyedArg(a, "value", "val", "equals", "expected");
+                    if (expected == null) expected = str(a, 1, "");
+                    String wanted = expected;
+                    return ctx -> variableEquals(ctx, ref, wanted);
+                }),
+                Map.entry("variable-not-equals", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String expected = keyedArg(a, "value", "val", "equals", "expected");
+                    if (expected == null) expected = str(a, 1, "");
+                    String wanted = expected;
+                    return ctx -> hasVariable(ctx, ref) && !variableEquals(ctx, ref, wanted);
+                }),
+                Map.entry("variable-in-range", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    double minimum = variableNumber(a, 1, Double.NEGATIVE_INFINITY, "min", "minimum", "from");
+                    double maximum = variableNumber(a, 2, Double.POSITIVE_INFINITY, "max", "maximum", "to");
+                    return ctx -> {
+                        double current = varOf(ctx, ref);
+                        return current >= minimum && current <= maximum;
+                    };
+                }),
+                Map.entry("variable-contains", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String expected = keyedArg(a, "value", "val", "contains");
+                    if (expected == null) expected = str(a, 1, "");
+                    String wanted = expected;
+                    return ctx -> variableContains(ctx, ref, wanted);
+                }),
+                Map.entry("variable-not-contains", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String expected = keyedArg(a, "value", "val", "contains");
+                    if (expected == null) expected = str(a, 1, "");
+                    String wanted = expected;
+                    return ctx -> hasVariable(ctx, ref) && !variableContains(ctx, ref, wanted);
+                }),
+                Map.entry("variable-index-equals", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    int index = integerArg(a, 0, "index", "i");
+                    String expected = keyedArg(a, "value", "val", "equals", "expected");
+                    if (expected == null) expected = str(a, 2, "");
+                    String wanted = expected;
+                    return ctx -> variableEqualsValue(indexedVariable(ctx, ref, index), wanted);
+                }),
+                Map.entry("variable-index-gte", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    int index = integerArg(a, 0, "index", "i");
+                    double threshold = variableNumber(a, 2, Double.NaN, "value", "val", "threshold");
+                    return ctx -> numericValue(indexedVariable(ctx, ref, index)) >= threshold;
+                }),
+                Map.entry("variable-index-lte", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    int index = integerArg(a, 0, "index", "i");
+                    double threshold = variableNumber(a, 2, Double.NaN, "value", "val", "threshold");
+                    return ctx -> numericValue(indexedVariable(ctx, ref, index)) <= threshold;
+                }),
+                Map.entry("variable-index-in-range", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    int index = integerArg(a, 0, "index", "i");
+                    double minimum = variableNumber(a, 2, Double.NaN, "min", "minimum", "from");
+                    double maximum = variableNumber(a, 3, Double.NaN, "max", "maximum", "to");
+                    return ctx -> {
+                        double value = numericValue(indexedVariable(ctx, ref, index));
+                        return Double.isFinite(value) && value >= minimum && value <= maximum;
+                    };
+                }),
+                Map.entry("variable-key-exists", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String key = keyedArg(a, "key", "k");
+                    if (key == null) key = str(a, 1, "");
+                    String wanted = key;
+                    return ctx -> mapKeyExists(rawVariable(ctx, ref), wanted);
+                }),
+                Map.entry("variable-key-not-exists", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String key = keyedArg(a, "key", "k");
+                    if (key == null) key = str(a, 1, "");
+                    String wanted = key;
+                    return ctx -> hasVariable(ctx, ref) && !mapKeyExists(rawVariable(ctx, ref), wanted);
+                }),
+                Map.entry("variable-map-value-equals", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String key = keyedArg(a, "key", "k");
+                    if (key == null) key = str(a, 1, "");
+                    String expected = keyedArg(a, "value", "val", "equals", "expected");
+                    if (expected == null) expected = str(a, 2, "");
+                    String wantedKey = key;
+                    String wantedValue = expected;
+                    return ctx -> mapValueEquals(rawVariable(ctx, ref), wantedKey, wantedValue);
+                }),
+                Map.entry("variable-map-value-not-equals", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String key = keyedArg(a, "key", "k");
+                    if (key == null) key = str(a, 1, "");
+                    String expected = keyedArg(a, "value", "val", "equals", "expected");
+                    if (expected == null) expected = str(a, 2, "");
+                    String wantedKey = key;
+                    String wantedValue = expected;
+                    return ctx -> hasVariable(ctx, ref)
+                            && !mapValueEquals(rawVariable(ctx, ref), wantedKey, wantedValue);
+                }),
+                Map.entry("variable-map-value-gte", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String key = keyedArg(a, "key", "k");
+                    if (key == null) key = str(a, 1, "");
+                    double threshold = variableNumber(a, 2, Double.NaN, "value", "val", "threshold");
+                    String wantedKey = key;
+                    return ctx -> mapNumericValue(rawVariable(ctx, ref), wantedKey) >= threshold;
+                }),
+                Map.entry("variable-map-value-lte", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String key = keyedArg(a, "key", "k");
+                    if (key == null) key = str(a, 1, "");
+                    double threshold = variableNumber(a, 2, Double.NaN, "value", "val", "threshold");
+                    String wantedKey = key;
+                    return ctx -> mapNumericValue(rawVariable(ctx, ref), wantedKey) <= threshold;
+                }),
+                Map.entry("variable-map-value-in-range", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String key = keyedArg(a, "key", "k");
+                    if (key == null) key = str(a, 1, "");
+                    double minimum = variableNumber(a, 2, Double.NaN, "min", "minimum", "from");
+                    double maximum = variableNumber(a, 3, Double.NaN, "max", "maximum", "to");
+                    String wantedKey = key;
+                    return ctx -> {
+                        double value = mapNumericValue(rawVariable(ctx, ref), wantedKey);
+                        return Double.isFinite(value) && value >= minimum && value <= maximum;
+                    };
+                }),
+                Map.entry("variable-map-value-not-in-range", (SkillCatalog.ConditionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    String key = keyedArg(a, "key", "k");
+                    if (key == null) key = str(a, 1, "");
+                    double minimum = variableNumber(a, 2, Double.NaN, "min", "minimum", "from");
+                    double maximum = variableNumber(a, 3, Double.NaN, "max", "maximum", "to");
+                    String wantedKey = key;
+                    return ctx -> {
+                        double value = mapNumericValue(rawVariable(ctx, ref), wantedKey);
+                        return Double.isFinite(value) && (value < minimum || value > maximum);
+                    };
                 }),
                 Map.entry("has-score", (SkillCatalog.ConditionFactory) a -> {
                     String name = str(a, 0, "");
@@ -517,6 +1112,40 @@ public final class SkillExtras {
         );
     }
 
+    static boolean matchesTime(String raw, long worldTime) {
+        String spec = raw == null ? "day" : raw.trim().toLowerCase(Locale.ROOT);
+        long time = Math.floorMod(worldTime, 24_000L);
+        if (spec.equals("day") || spec.equals("daytime")) return time < 12_000L;
+        if (spec.equals("night") || spec.equals("nighttime")) return time >= 13_000L;
+        if (spec.equals("dawn")) return time < 1_000L;
+        if (spec.equals("morning")) return time >= 1_000L && time < 6_000L;
+        if (spec.equals("noon")) return time >= 6_000L && time < 12_000L;
+        if (spec.equals("dusk") || spec.equals("sunset")) return time >= 12_000L && time < 13_000L;
+        if (spec.equals("midnight")) return time >= 18_000L && time < 19_000L;
+        int dash = spec.indexOf('-');
+        if (dash > 0 && dash < spec.length() - 1) {
+            try {
+                long from = Math.floorMod(Long.parseLong(spec.substring(0, dash).trim()), 24_000L);
+                long to = Math.floorMod(Long.parseLong(spec.substring(dash + 1).trim()), 24_000L);
+                return from <= to ? time >= from && time <= to : time >= from || time <= to;
+            } catch (NumberFormatException ignored) {
+                return false;
+            }
+        }
+        Comparison comparison = comparison(List.of(spec), 0, "=");
+        return compare(time, comparison);
+    }
+
+    static boolean matchesWeather(String raw, boolean raining, boolean thundering) {
+        String spec = raw == null ? "clear" : raw.trim().toLowerCase(Locale.ROOT);
+        return switch (spec) {
+            case "clear", "sun", "sunny" -> !raining && !thundering;
+            case "rain", "raining" -> raining && !thundering;
+            case "storm", "thunder", "thunderstorm", "thundering" -> thundering;
+            default -> false;
+        };
+    }
+
     // ------------------------------------------------------------------
     // 动作
     // ------------------------------------------------------------------
@@ -525,6 +1154,61 @@ public final class SkillExtras {
         return Map.ofEntries(
                 // ---- 跨技能信号 ----
 
+                Map.entry("remove-self", (SkillCatalog.ActionFactory) a -> ctx -> {
+                    if (ctx == null || !ctx.instanceValid()) return;
+                    Entity caster = ctx.instance().baseEntity().orElse(null);
+                    if (caster != null && caster.isValid()) caster.remove();
+                }),
+                Map.entry("set-owner", (SkillCatalog.ActionFactory) a -> ctx -> {
+                    if (ctx == null || !ctx.instanceValid()) return;
+                    Entity mob = ctx.instance().baseEntity().orElse(null);
+                    Entity owner = ctx.targetEntity().orElse(null);
+                    if (!(mob instanceof LivingEntity) || !(owner instanceof LivingEntity)) return;
+                    dev.helstera.api.behavior.MobRelations.setOwner(mob, owner);
+                }),
+                Map.entry("remove-owner", (SkillCatalog.ActionFactory) a -> ctx -> {
+                    if (ctx == null || !ctx.instanceValid()) return;
+                    Entity mob = ctx.instance().baseEntity().orElse(null);
+                    dev.helstera.api.behavior.MobRelations.clearOwner(mob);
+                }),
+                Map.entry("set-parent", (SkillCatalog.ActionFactory) a -> ctx -> {
+                    if (ctx == null || !ctx.instanceValid()) return;
+                    Entity child = ctx.instance().baseEntity().orElse(null);
+                    Entity parent = ctx.targetEntity().orElse(null);
+                    if (!(child instanceof LivingEntity) || !(parent instanceof LivingEntity)) return;
+                    dev.helstera.api.behavior.MobRelations.setParent(child, parent);
+                }),
+                Map.entry("remove-parent", (SkillCatalog.ActionFactory) a -> ctx -> {
+                    if (ctx == null || !ctx.instanceValid()) return;
+                    dev.helstera.api.behavior.MobRelations.clearParent(
+                            ctx.instance().baseEntity().orElse(null));
+                }),
+                Map.entry("equip", (SkillCatalog.ActionFactory) SkillExtras::equipmentAction),
+                Map.entry("set-item", (SkillCatalog.ActionFactory) SkillExtras::equipmentAction),
+                Map.entry("drop-item", (SkillCatalog.ActionFactory) SkillExtras::dropItemAction),
+                Map.entry("mount", (SkillCatalog.ActionFactory) a -> ctx -> {
+                    if (ctx == null || !ctx.instanceValid()) return;
+                    Entity caster = ctx.instance().baseEntity().orElse(null);
+                    Entity target = ctx.targetEntity().orElse(null);
+                    if (caster == null || target == null || caster == target) return;
+                    try {
+                        caster.addPassenger(target);
+                    } catch (RuntimeException ignored) {
+                        SkillFaults.swallow("SkillExtras#1410");
+                    }
+                }),
+                Map.entry("dismount", (SkillCatalog.ActionFactory) a -> ctx -> {
+                    if (ctx == null || !ctx.instanceValid()) return;
+                    Entity caster = ctx.instance().baseEntity().orElse(null);
+                    if (caster == null || !caster.isInsideVehicle()) return;
+                    try {
+                        caster.leaveVehicle();
+                    } catch (RuntimeException ignored) {
+                        SkillFaults.swallow("SkillExtras#1415");
+                    }
+                }),
+                Map.entry("cancel-event", (SkillCatalog.ActionFactory) a -> ctx ->
+                        ctx.cancellableEvent().ifPresent(event -> event.setCancelled(true))),
                 Map.entry("signal", (SkillCatalog.ActionFactory) a -> {
                     String name = str(a, 0, "");
                     String payload = a.size() > 1 ? str(a, 1, "") : null;
@@ -661,20 +1345,38 @@ public final class SkillExtras {
                         }
                     };
                 }),
+                Map.entry("teleport", (SkillCatalog.ActionFactory) a -> {
+                    String destination = str(a, 0, "@origin");
+                    return ctx -> {
+                        var self = ctx != null && ctx.instanceValid()
+                                ? ctx.instance().baseEntity().orElse(null) : null;
+                        if (self == null) return;
+                        var location = dev.helstera.api.behavior.Targeters.resolveLocation(destination, ctx).orElse(null);
+                        if (location == null) return;
+                        try { self.teleport(location); }
+                        catch (Throwable ignored) { SkillFaults.swallow("SkillExtras#530"); }
+                    };
+                }),
+                Map.entry("teleport-caster", (SkillCatalog.ActionFactory) a -> {
+                    String destination = str(a, 0, "@origin");
+                    return ctx -> {
+                        var self = ctx != null && ctx.instanceValid()
+                                ? ctx.instance().baseEntity().orElse(null) : null;
+                        var location = dev.helstera.api.behavior.Targeters.resolveLocation(destination, ctx).orElse(null);
+                        if (self == null || location == null) return;
+                        try { self.teleport(location); }
+                        catch (Throwable ignored) { SkillFaults.swallow("SkillExtras#531"); }
+                    };
+                }),
 
                 // ---- 伤害变体 ----
 
                 Map.entry("damage-percent", (SkillCatalog.ActionFactory) a -> {
                     double pct = num(a, 0, 10);
                     return ctx -> {
-                        Player t = ctx.target().orElse(null);
+                        LivingEntity t = ctx.targetEntity().orElse(null);
                         if (t == null || pct <= 0) return;
-                        try {
-                            t.damage(t.getMaxHealth() * pct / 100.0,
-                                    ctx.instanceValid() ? ctx.instance().baseEntity().orElse(null) : null);
-                        } catch (Throwable ignored) {
-                            SkillFaults.swallow("SkillExtras#526");
-                        }
+                        applyDamage(ctx, t, t.getMaxHealth() * pct / 100.0, "MAGIC");
                     };
                 }),
                 Map.entry("damage-melee", (SkillCatalog.ActionFactory) a -> {
@@ -685,9 +1387,8 @@ public final class SkillExtras {
                         if (me == null || dmg <= 0) return;
                         var src = ctx.instanceValid() ? ctx.instance().baseEntity().orElse(null) : null;
                         for (LivingEntity e : nearby(me, radius)) {
-                            if (!(e instanceof Player p)) continue;
                             try {
-                                p.damage(dmg, src);
+                                applyDamage(ctx, e, dmg, "ENTITY_ATTACK");
                             } catch (Throwable ignored) {
                                 SkillFaults.swallow("SkillExtras#541");
                             }
@@ -699,17 +1400,17 @@ public final class SkillExtras {
                     int ticks = (int) num(a, 1, 20);
                     return ctx -> {
                         Plugin h = host;
-                        Player t = ctx.target().orElse(null);
+                        LivingEntity t = ctx.targetEntity().orElse(null);
                         var src = ctx.instanceValid() ? ctx.instance().baseEntity().orElse(null) : null;
                         if (h == null || t == null || perTick <= 0) return;
                         try {
                             org.bukkit.Bukkit.getScheduler().runTaskTimer(h, r -> {
                                 try {
-                                    if (!t.isOnline() || t.isDead()) {
+                                    if (!t.isValid() || t.isDead()) {
                                         r.cancel();
                                         return;
                                     }
-                                    t.damage(perTick, src);
+                                    applyDamage(ctx, t, perTick, "MAGIC");
                                 } catch (Throwable ignored) {
                                     r.cancel();
                                 }
@@ -769,41 +1470,115 @@ public final class SkillExtras {
 
                 // ---- 变量 / 分数 ----
 
-                Map.entry("var-set", (SkillCatalog.ActionFactory) a -> {
+                Map.entry("variable-unset", (SkillCatalog.ActionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    return ctx -> unsetVariable(ctx, ref);
+                }),
+                Map.entry("var-unset", (SkillCatalog.ActionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    return ctx -> unsetVariable(ctx, ref);
+                }),
+                Map.entry("location-set", (SkillCatalog.ActionFactory) a -> {
                     String name = str(a, 0, "");
-                    double v = num(a, 1, 0);
+                    double x = num(a, 1, Double.NaN);
+                    double y = num(a, 2, Double.NaN);
+                    double z = num(a, 3, Double.NaN);
                     return ctx -> {
-                        if (!hasInstance(ctx) || name.isEmpty()) return;
-                        varsOf(id(ctx)).put(name, v);
+                        if (name.isEmpty() || !Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) return;
+                        Location base = ctx == null ? null : ctx.origin().orElse(null);
+                        if (base == null && hasInstance(ctx)) base = ctx.instance().location();
+                        if (base == null || base.getWorld() == null) return;
+                        Location finalBase = base;
+                        ctx.skillTree().ifPresent(tree -> tree.setLocation(name, finalBase.clone().add(x, y, z)));
                     };
                 }),
-                Map.entry("var-add", (SkillCatalog.ActionFactory) a -> {
-                    String name = str(a, 0, "");
-                    double v = num(a, 1, 0);
+                Map.entry("location-copy", (SkillCatalog.ActionFactory) a -> {
+                    String destination = str(a, 0, "");
+                    String source = str(a, 1, "origin");
                     return ctx -> {
-                        if (!hasInstance(ctx) || name.isEmpty()) return;
-                        varsOf(id(ctx)).merge(name, v, Double::sum);
+                        if (ctx == null || destination.isEmpty()) return;
+                        var tree = ctx.skillTree().orElse(null);
+                        if (tree == null) return;
+                        Location location = source.equalsIgnoreCase("origin")
+                                ? ctx.origin().orElse(null) : tree.location(source).orElse(null);
+                        if (location != null) tree.setLocation(destination, location);
+                    };
+                }),
+                Map.entry("location-unset", (SkillCatalog.ActionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    return ctx -> unsetLocation(ctx, ref);
+                }),
+                Map.entry("branch-unlock", (SkillCatalog.ActionFactory) a -> {
+                    String branch = str(a, 0, "");
+                    String conditionText = a.size() <= 1 ? "" : String.join(" ", a.subList(1, a.size()));
+                    if (branch.startsWith("branch=")) branch = branch.substring("branch=".length()).trim();
+                    conditionText = conditionText.replaceFirst("^(?:condition|conditions)=", "").trim();
+                    final String branchName = branch;
+                    final String conditionValue = conditionText;
+                    List<String> conditions = conditionValue.isBlank() ? List.of()
+                            : conditionValue.contains("||") ? List.of(conditionValue)
+                            : java.util.Arrays.stream(conditionValue.split("\\|"))
+                            .map(String::trim).filter(value -> !value.isBlank()).toList();
+                    return ctx -> {
+                        if (ctx == null || branchName.isBlank()) return;
+                        var evaluator = branchConditionEvaluator;
+                        if (evaluator != null && !Boolean.TRUE.equals(evaluator.apply(ctx, conditions))) return;
+                        ctx.skillTree().ifPresent(tree -> tree.unlockBranch(branchName));
+                    };
+                }),
+                Map.entry("variable-location-set", (SkillCatalog.ActionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    return ctx -> {
+                        if (ctx == null || ref.name().isEmpty()) return;
+                        Location location = ctx.targetEntity().map(org.bukkit.entity.Entity::getLocation)
+                                .orElseGet(() -> ctx.origin().orElse(null));
+                        if (location == null) return;
+                        if (ref.scope().equals("skill")) {
+                            ctx.skillTree().ifPresent(tree -> tree.setLocation(ref.name(), location));
+                        } else {
+                            VariableLocations.set(ref.scope(), ref.name(), ctx, location);
+                        }
+                    };
+                }),
+                Map.entry("set-variable", (SkillCatalog.ActionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    Object value = parseVariableValue(a);
+                    return ctx -> setRawVariable(ctx, ref, value);
+                }),                Map.entry("var-set", (SkillCatalog.ActionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    double value = variableNumber(a, 1, 0, "value", "val", "amount");
+                    return ctx -> setVariable(ctx, ref, value);
+                }),
+                Map.entry("var-add", (SkillCatalog.ActionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    double amount = variableNumber(a, 1, 0, "value", "val", "amount");
+                    return ctx -> {
+                        if (ctx == null || ref.name().isEmpty()) return;
+                        double current = varOf(ctx, ref);
+                        if (current == Double.NEGATIVE_INFINITY) current = 0;
+                        setVariable(ctx, ref, current + amount);
                     };
                 }),
                 Map.entry("var-math", (SkillCatalog.ActionFactory) a -> {
-                    String name = str(a, 0, "");
-                    String op = str(a, 1, "+");
-                    double v = num(a, 2, 0);
+                    VariableRef ref = variableRef(a);
+                    String operation = keyedArg(a, "op", "operation");
+                    if (operation == null) operation = str(a, 1, "+");
+                    double value = variableNumber(a, 2, 0, "value", "val", "amount");
+                    String op = operation;
                     return ctx -> {
-                        if (!hasInstance(ctx) || name.isEmpty()) return;
-                        var vars = varsOf(id(ctx));
-                        double cur = vars.getOrDefault(name, 0.0);
-                        double r = switch (op) {
-                            case "+" -> cur + v;
-                            case "-" -> cur - v;
-                            case "*" -> cur * v;
-                            case "/" -> v == 0 ? cur : cur / v;
-                            default -> cur;
+                        if (ctx == null || ref.name().isEmpty()) return;
+                        double current = varOf(ctx, ref);
+                        if (current == Double.NEGATIVE_INFINITY) current = 0;
+                        double next = switch (op) {
+                            case "+" -> current + value;
+                            case "-" -> current - value;
+                            case "*" -> current * value;
+                            case "/" -> value == 0 ? current : current / value;
+                            default -> current;
                         };
-                        vars.put(name, r);
+                        setVariable(ctx, ref, next);
                     };
-                }),
-                Map.entry("score-set", (SkillCatalog.ActionFactory) a -> {
+                }),                Map.entry("score-set", (SkillCatalog.ActionFactory) a -> {
                     String name = str(a, 0, "");
                     int v = (int) num(a, 1, 0);
                     return ctx -> {
@@ -837,7 +1612,7 @@ public final class SkillExtras {
                         var t = threatOf(ctx);
                         // 无目标时静默跳过：MM 的 threat 动作同样需要一个作用对象，
                         // 找不到对象却仍加仇恨只会凭空造出一个不存在的目标
-                        var tgt = ctx.target();
+                        var tgt = ctx.targetEntity();
                         if (t == null || tgt.isEmpty() || amount <= 0) return;
                         t.addThreat(tgt.get().getUniqueId(), amount);
                     };
@@ -852,7 +1627,7 @@ public final class SkillExtras {
                             return;
                         }
                         // threat-clear true：只清当前目标，保留其余人的仇恨
-                        var tgt = ctx.target();
+                        var tgt = ctx.targetEntity();
                         if (tgt.isPresent()) t.remove(tgt.get().getUniqueId());
                     };
                 }),
@@ -862,7 +1637,7 @@ public final class SkillExtras {
                 Map.entry("threat-focus", (SkillCatalog.ActionFactory) a ->
                         ctx -> {
                             var t = threatOf(ctx);
-                            var tgt = ctx.target();
+                            var tgt = ctx.targetEntity();
                             if (t == null || tgt.isEmpty()) return;
                             var id2 = tgt.get().getUniqueId();
                             t.addThreat(id2, t.threatOf(id2) + Math.max(1, t.size()) * 1000.0);
@@ -893,33 +1668,103 @@ public final class SkillExtras {
                         }
                     };
                 }),
-                Map.entry("title", (SkillCatalog.ActionFactory) a -> {
-                    String raw = str(a, 0, "");
-                    int in = (int) num(a, 1, 10);
-                    int stay = (int) num(a, 2, 40);
-                    int out = (int) num(a, 3, 10);
+                Map.entry("title-audience", (SkillCatalog.ActionFactory) a -> {
+                    String audience = str(a, 0, "target");
+                    String title = str(a, 1, "");
+                    int in = (int) num(a, 2, 10);
+                    int stay = (int) num(a, 3, 40);
+                    int out = (int) num(a, 4, 10);
                     return ctx -> {
-                        Player t = ctx.target().orElse(null);
-                        if (t == null || raw.isBlank()) return;
-                        try {
-                            t.sendTitle(org.bukkit.ChatColor.translateAlternateColorCodes('&',
-                                    Placeholders.resolve(raw, ctx)), "", in, stay, out);
-                        } catch (Throwable ignored) {
-                            SkillFaults.swallow("SkillExtras#702");
+                        if (title.isBlank()) return;
+                        String rendered = org.bukkit.ChatColor.translateAlternateColorCodes('&', Placeholders.resolve(title, ctx));
+                        for (Player player : audiencePlayers(ctx, audience, num(a, 5, 32))) {
+                            player.sendTitle(rendered, "", in, stay, out);
                         }
                     };
                 }),
-                Map.entry("actionbar", (SkillCatalog.ActionFactory) a -> {
-                    String raw = str(a, 0, "");
+                Map.entry("audience-title", (SkillCatalog.ActionFactory) a -> {
+                    String audience = str(a, 0, "target");
+                    String title = str(a, 1, "");
+                    int in = (int) num(a, 2, 10);
+                    int stay = (int) num(a, 3, 40);
+                    int out = (int) num(a, 4, 10);
                     return ctx -> {
-                        Player t = ctx.target().orElse(null);
-                        if (t == null || raw.isBlank()) return;
-                        try {
-                            t.sendActionBar(org.bukkit.ChatColor.translateAlternateColorCodes('&',
-                                    Placeholders.resolve(raw, ctx)));
-                        } catch (Throwable ignored) {
-                            SkillFaults.swallow("SkillExtras#714");
+                        if (title.isBlank()) return;
+                        String rendered = org.bukkit.ChatColor.translateAlternateColorCodes('&', Placeholders.resolve(title, ctx));
+                        for (Player player : audiencePlayers(ctx, audience, num(a, 5, 32))) player.sendTitle(rendered, "", in, stay, out);
+                    };
+                }),                Map.entry("particle-audience", (SkillCatalog.ActionFactory) a -> {
+                    String audience = str(a, 0, "target");
+                    String particleName = str(a, 1, "");
+                    int count = (int) num(a, 2, 8);
+                    double radius = num(a, 3, 32);
+                    return ctx -> {
+                        if (particleName.isBlank()) return;
+                        org.bukkit.Particle particle;
+                        try { particle = org.bukkit.Particle.valueOf(particleName.toUpperCase(Locale.ROOT)); }
+                        catch (IllegalArgumentException ignored) { return; }
+                        for (Player player : audiencePlayers(ctx, audience, radius)) {
+                            player.spawnParticle(particle, player.getLocation(), Math.max(0, count), 0, 0, 0, 0);
                         }
+                    };
+                }),
+                Map.entry("audience-particle", (SkillCatalog.ActionFactory) a -> {
+                    String audience = str(a, 0, "target");
+                    String particleName = str(a, 1, "");
+                    int count = (int) num(a, 2, 8);
+                    double radius = num(a, 3, 32);
+                    return ctx -> {
+                        if (particleName.isBlank()) return;
+                        org.bukkit.Particle particle;
+                        try { particle = org.bukkit.Particle.valueOf(particleName.toUpperCase(Locale.ROOT)); }
+                        catch (IllegalArgumentException ignored) { return; }
+                        for (Player player : audiencePlayers(ctx, audience, radius)) player.spawnParticle(particle, player.getLocation(), Math.max(0, count), 0, 0, 0, 0);
+                    };
+                }),
+                Map.entry("actionbar-audience", (SkillCatalog.ActionFactory) a -> {
+                    String audience = str(a, 0, "target");
+                    String raw = str(a, 1, "");
+                    double radius = num(a, 2, 32);
+                    return ctx -> {
+                        if (raw.isBlank()) return;
+                        String out = org.bukkit.ChatColor.translateAlternateColorCodes('&', Placeholders.resolve(raw, ctx));
+                        var components = net.md_5.bungee.api.chat.TextComponent.fromLegacyText(out);
+                        for (Player player : audiencePlayers(ctx, audience, radius)) {
+                            player.spigot().sendMessage(net.md_5.bungee.api.ChatMessageType.ACTION_BAR, components);
+                        }
+                    };
+                }),
+                Map.entry("audience-actionbar", (SkillCatalog.ActionFactory) a -> {
+                    String audience = str(a, 0, "target");
+                    String raw = str(a, 1, "");
+                    double radius = num(a, 2, 32);
+                    return ctx -> {
+                        if (raw.isBlank()) return;
+                        String out = org.bukkit.ChatColor.translateAlternateColorCodes('&', Placeholders.resolve(raw, ctx));
+                        var components = net.md_5.bungee.api.chat.TextComponent.fromLegacyText(out);
+                        for (Player player : audiencePlayers(ctx, audience, radius)) {
+                            player.spigot().sendMessage(net.md_5.bungee.api.ChatMessageType.ACTION_BAR, components);
+                        }
+                    };
+                }),
+                Map.entry("message-audience", (SkillCatalog.ActionFactory) a -> {
+                    String audience = str(a, 0, "target");
+                    String raw = str(a, 1, "");
+                    double radius = num(a, 2, 32);
+                    return ctx -> {
+                        if (raw.isBlank()) return;
+                        String out = org.bukkit.ChatColor.translateAlternateColorCodes('&', Placeholders.resolve(raw, ctx));
+                        for (Player player : audiencePlayers(ctx, audience, radius)) player.sendMessage(out);
+                    };
+                }),
+                Map.entry("audience-message", (SkillCatalog.ActionFactory) a -> {
+                    String audience = str(a, 0, "target");
+                    String raw = str(a, 1, "");
+                    double radius = num(a, 2, 32);
+                    return ctx -> {
+                        if (raw.isBlank()) return;
+                        String out = org.bukkit.ChatColor.translateAlternateColorCodes('&', Placeholders.resolve(raw, ctx));
+                        for (Player player : audiencePlayers(ctx, audience, radius)) player.sendMessage(out);
                     };
                 }),
                 Map.entry("message-all", (SkillCatalog.ActionFactory) a -> {
@@ -967,6 +1812,21 @@ public final class SkillExtras {
                         }
                     });
                 }),
+                Map.entry("set-name", (SkillCatalog.ActionFactory) a -> {
+                    String raw = str(a, 0, "");
+                    boolean visible = bool(a, 1, true);
+                    return ctx -> selfLiving(ctx).ifPresent(e -> {
+                        try {
+                            String name = raw.isEmpty() ? null
+                                    : org.bukkit.ChatColor.translateAlternateColorCodes('&',
+                                    Placeholders.resolve(raw, ctx));
+                            e.setCustomName(name);
+                            e.setCustomNameVisible(name != null && visible);
+                        } catch (Throwable ignored) {
+                            SkillFaults.swallow("SkillExtras#770");
+                        }
+                    });
+                }),
                 Map.entry("random-message", (SkillCatalog.ActionFactory) a -> {
                     String pool = str(a, 0, "");
                     return ctx -> {
@@ -986,6 +1846,7 @@ public final class SkillExtras {
                 Map.entry("play-sound-at", (SkillCatalog.ActionFactory) a -> {
                     String name = str(a, 0, "");
                     String where = str(a, 1, "self");
+                    String audience = str(a, 2, "target");
                     return ctx -> {
                         if (name.isEmpty()) return;
                         org.bukkit.Sound sound;
@@ -995,12 +1856,8 @@ public final class SkillExtras {
                             return;
                         }
                         if (where.equalsIgnoreCase("target")) {
-                            Player t = ctx.target().orElse(null);
-                            if (t == null) return;
-                            try {
-                                t.getWorld().playSound(t.getLocation(), sound, 1f, 1f);
-                            } catch (Throwable ignored) {
-                                SkillFaults.swallow("SkillExtras#791");
+                            for (Player player : audiencePlayers(ctx, audience, 32)) {
+                                player.playSound(player.getLocation(), sound, 1f, 1f);
                             }
                             return;
                         }
@@ -1028,13 +1885,270 @@ public final class SkillExtras {
         );
     }
 
+    private static EquipmentSlot equipmentSlot(String raw) {
+        return switch (raw.toLowerCase(Locale.ROOT).replace('_', '-')) {
+            case "offhand", "off-hand" -> EquipmentSlot.OFF_HAND;
+            case "helmet", "head" -> EquipmentSlot.HEAD;
+            case "chest", "chestplate" -> EquipmentSlot.CHEST;
+            case "legs", "leggings" -> EquipmentSlot.LEGS;
+            case "feet", "boots" -> EquipmentSlot.FEET;
+            default -> EquipmentSlot.HAND;
+        };
+    }
+
+    private static java.util.function.Consumer<BehaviorContext> equipmentAction(List<String> args) {
+        String first = str(args, 0, "");
+        String slotName = str(args, 1, "hand");
+        String third = str(args, 2, "1");
+        String materialName = first;
+        String amountToken = third;
+        if (isNumber(first) && !isNumber(third)) {
+            amountToken = first;
+            materialName = third;
+        }
+        EquipmentSlot slot = equipmentSlot(slotName);
+        int amount = Math.max(1, parseAmount(amountToken));
+        String itemName = materialName;
+        int itemAmount = amount;
+        return ctx -> selfLiving(ctx).ifPresent(entity -> {
+            EntityEquipment equipment = entity.getEquipment();
+            ItemStack item = resolveItem(itemName, itemAmount);
+            if (equipment == null || item == null) return;
+            item.setAmount(itemAmount);
+            equipment.setItem(slot, item);
+        });
+    }
+
+    private static java.util.function.Consumer<BehaviorContext> dropItemAction(List<String> args) {
+        String itemName = str(args, 0, "");
+        int amount = Math.max(1, (int) num(args, 1, 1));
+        return ctx -> {
+            Location location = selfLoc(ctx);
+            ItemStack item = resolveItem(itemName, amount);
+            if (location == null || item == null) return;
+            item.setAmount(amount);
+            try {
+                location.getWorld().dropItemNaturally(location, item);
+            } catch (RuntimeException ignored) {
+                SkillFaults.swallow("SkillExtras#1384");
+            }
+        };
+    }
+
+    private static boolean isNumber(String value) {
+        return value != null && value.trim().matches("[-+]?\\d+(?:\\.\\d+)?");
+    }
+
+    private static int parseAmount(String value) {
+        try {
+            return (int) Double.parseDouble(value.trim());
+        } catch (RuntimeException ignored) {
+            return 1;
+        }
+    }
+
+    private static ItemStack resolveItem(String raw, int amount) {
+        var resolver = itemResolver;
+        if (resolver != null) {
+            try {
+                ItemStack resolved = resolver.apply(raw);
+                if (resolved != null && resolved.getType() != Material.AIR) return resolved;
+            } catch (RuntimeException ignored) {
+                SkillFaults.swallow("SkillExtras#1362");
+            }
+        }
+        Material material = Material.matchMaterial(raw);
+        return material == null || material.isAir() ? null : new ItemStack(material, amount);
+    }
+
+    private static int countMatchingItems(LivingEntity entity, ItemStack expected, String slotName) {
+        if (entity instanceof Player player && "all".equalsIgnoreCase(slotName)) {
+            return countMatching(player.getInventory().getContents(), expected);
+        }
+        if (entity.getEquipment() == null) return 0;
+        String slot = slotName == null ? "all" : slotName.trim().toLowerCase(Locale.ROOT);
+        if (!"all".equals(slot)) {
+            EquipmentSlot equipmentSlot = equipmentSlot(slot);
+            return countMatching(new ItemStack[]{entity.getEquipment().getItem(equipmentSlot)}, expected);
+        }
+        int total = countMatching(new ItemStack[]{
+                entity.getEquipment().getItem(EquipmentSlot.HAND),
+                entity.getEquipment().getItem(EquipmentSlot.OFF_HAND),
+                entity.getEquipment().getItem(EquipmentSlot.HEAD),
+                entity.getEquipment().getItem(EquipmentSlot.CHEST),
+                entity.getEquipment().getItem(EquipmentSlot.LEGS),
+                entity.getEquipment().getItem(EquipmentSlot.FEET)
+        }, expected);
+        return total;
+    }
+
+    private static int countMatching(ItemStack[] contents, ItemStack expected) {
+        int total = 0;
+        if (contents == null) return total;
+        for (ItemStack stack : contents) {
+            boolean sameItem = stack != null && stack.getType() != Material.AIR
+                    && (stack.isSimilar(expected) || stack.getType() == expected.getType());
+            if (sameItem) {
+                total += stack.getAmount();
+            }
+        }
+        return total;
+    }
+
     // ------------------------------------------------------------------
     // 辅助
     // ------------------------------------------------------------------
 
+    private static java.util.List<Player> audiencePlayers(BehaviorContext ctx, String audience, double radius) {
+        AudienceSpec spec = AudienceSpec.parse(audience, radius);
+        String kind = spec.kind();
+        java.util.LinkedHashSet<Player> players = new java.util.LinkedHashSet<>();
+        if (ctx == null) return new ArrayList<>();
+        if (kind.equals("target")) ctx.target().ifPresent(players::add);
+        else if (kind.equals("targets")) {
+            for (LivingEntity living : ctx.targets()) {
+                if (living instanceof Player player) players.add(player);
+            }
+        }
+        else if (kind.equals("self")) ctx.instance().baseEntity().ifPresent(entity -> { if (entity instanceof Player player) players.add(player); });
+        else if (kind.equals("all")) {
+            players.addAll(org.bukkit.Bukkit.getOnlinePlayers());
+            ctx.target().ifPresent(players::add);
+        }
+        else {
+            Location origin = ctx.origin().orElse(null);
+            if (origin == null && (kind.equals("nearby") || kind.equals("radius"))) {
+                origin = ctx.target().map(Entity::getLocation).orElse(null);
+            }
+            final Location queryOrigin = origin;
+            if (origin != null && origin.getWorld() != null) {
+                if (kind.equals("world")) {
+                    players.addAll(origin.getWorld().getPlayers());
+                    ctx.target().ifPresent(players::add);
+                }
+                else if (kind.equals("nearby") || kind.equals("radius")) {
+                    // Bukkit's spatial query only considers loaded chunks and can
+                    // omit the context target during a same-tick skill dispatch.
+                    // Audience semantics are online-player based, so filter the
+                    // authoritative online set with the same world/distance rule.
+                    for (Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
+                        if (withinRadius(queryOrigin, player.getLocation(), spec.radius())) {
+                            players.add(player);
+                        }
+                    }
+                }
+            }
+        }
+        int candidateCount = players.size();
+        players.removeIf(player -> !audiencePermissionAllowed(player, spec.permission()));
+        if (spec.faction() != null) {
+            var table = dev.helstera.api.behavior.Factions.table();
+            players.removeIf(player -> table == null || !audienceFactionAllowed(
+                    spec.faction(), table.factionOf(player)));
+        }
+        var diagnostic = audienceDiagnostic;
+        if (diagnostic != null) {
+            Location diagnosticOrigin = ctx.origin().orElse(null);
+            Location diagnosticTarget = ctx.target().map(Entity::getLocation).orElse(null);
+            Entity diagnosticSource = ctx.instanceValid()
+                    ? ctx.instance().baseEntity().orElse(null) : null;
+            var factionTable = dev.helstera.api.behavior.Factions.table();
+            String sourceFaction = factionTable == null ? null : factionTable.factionOf(diagnosticSource);
+            String targetFaction = factionTable == null
+                    ? null : ctx.target().map(factionTable::factionOf).orElse(null);
+            boolean allied = factionTable != null && diagnosticSource != null
+                    && ctx.target().map(target -> factionTable.allied(diagnosticSource, target)).orElse(false);
+            diagnostic.accept("kind=" + kind + " radius=" + spec.radius()
+                    + " permission=" + spec.permission() + " faction=" + spec.faction()
+                    + " candidates=" + candidateCount + " recipients=" + players.size()
+                    + " source-faction=" + sourceFaction + " target-faction=" + targetFaction
+                    + " allied=" + allied
+                    + " origin-world=" + worldName(diagnosticOrigin)
+                    + " target-world=" + worldName(diagnosticTarget)
+                    + " origin=" + xyz(diagnosticOrigin)
+                    + " target=" + xyz(diagnosticTarget));
+        }
+        return List.copyOf(players);
+    }
+
+    private static String worldName(Location location) {
+        return location == null || location.getWorld() == null ? "null" : location.getWorld().getName();
+    }
+
+    private static String xyz(Location location) {
+        return location == null ? "null" : String.format(Locale.ROOT, "%.1f,%.1f,%.1f",
+                location.getX(), location.getY(), location.getZ());
+    }
+
+    static boolean withinRadius(Location origin, Location target, double radius) {
+        if (origin == null || target == null || origin.getWorld() == null || target.getWorld() == null
+                || !origin.getWorld().getName().equals(target.getWorld().getName())
+                || !Double.isFinite(radius) || radius < 0) return false;
+        double dx = target.getX() - origin.getX();
+        double dy = target.getY() - origin.getY();
+        double dz = target.getZ() - origin.getZ();
+        return dx * dx + dy * dy + dz * dz <= radius * radius;
+    }
+
+    static boolean audiencePermissionAllowed(Player player, String permission) {
+        return player != null && (permission == null || permission.isBlank() || player.hasPermission(permission));
+    }
+
+    static boolean audienceFactionAllowed(String expected, String actual) {
+        // An explicit faction selector filters recipients by faction. Alliance
+        // relation is a separate targeting concern and must not depend on the
+        // caster having a faction binding.
+        return expected == null || expected.isBlank()
+                || (actual != null && expected.equalsIgnoreCase(actual));
+    }
+
+    static record AudienceSpec(String kind, double radius, String permission, String faction) {
+        static AudienceSpec parse(String raw, double fallbackRadius) {
+            String value = raw == null ? "target" : raw.trim();
+            if (value.startsWith("@")) value = value.substring(1);
+            String permission = null;
+            String faction = null;
+            int open = value.indexOf('{');
+            if (open >= 0 && value.endsWith("}")) {
+                String body = value.substring(open + 1, value.length() - 1);
+                for (String part : body.split("[;,]")) {
+                    int eq = part.indexOf('=');
+                    if (eq <= 0) continue;
+                    String key = part.substring(0, eq).trim().toLowerCase(Locale.ROOT);
+                    String val = part.substring(eq + 1).trim();
+                    if (key.equals("permission") || key.equals("perm")) permission = val;
+                    else if (key.equals("faction")) faction = val;
+                    else if (key.equals("radius") || key.equals("r")) {
+                        try { fallbackRadius = Double.parseDouble(val); } catch (NumberFormatException ignored) { }
+                    }
+                }
+                value = value.substring(0, open);
+            }
+            if (open < 0) {
+                int colon = value.indexOf(':');
+                if (colon > 0) {
+                    String prefix = value.substring(0, colon).trim().toLowerCase(Locale.ROOT);
+                    String suffix = value.substring(colon + 1).trim();
+                    if (prefix.equals("permission") || prefix.equals("perm")) {
+                        permission = suffix;
+                        value = "all";
+                    } else if (prefix.equals("faction")) {
+                        faction = suffix;
+                        value = "world";
+                    }
+                }
+            }
+            String normalized = value.toLowerCase(Locale.ROOT);
+            if (normalized.equals("pir") || normalized.equals("playersinradius") || normalized.equals("players-in-radius")) normalized = "nearby";
+            if (normalized.equals("p") || normalized.equals("players")) normalized = "world";
+            return new AudienceSpec(normalized, Math.max(0, fallbackRadius), permission, faction);
+        }
+    }
+
     private static Location selfLoc(BehaviorContext ctx) {
-        if (ctx == null || !ctx.instanceValid()) return null;
-        Location l = ctx.instance().location();
+        if (ctx == null) return null;
+        Location l = ctx.origin().orElse(null);
+        if (l == null && ctx.instanceValid()) l = ctx.instance().location();
         return l == null || l.getWorld() == null ? null : l;
     }
 
@@ -1044,6 +2158,229 @@ public final class SkillExtras {
         return e instanceof LivingEntity le ? java.util.Optional.of(le) : java.util.Optional.empty();
     }
 
+    private record VariableRef(String name, String scope) {
+    }
+
+    private record LocationValue(String reference, String world, double x, double y, double z) {
+        boolean isReference() {
+            return reference != null;
+        }
+    }
+
+    private static VariableRef variableRef(List<String> args) {
+        String name = null;
+        String scope = null;
+        List<String> positional = new ArrayList<>();
+        if (args != null) {
+            for (String raw : args) {
+                if (raw == null || raw.isBlank()) continue;
+                int equals = raw.indexOf('=');
+                if (equals > 0) {
+                    String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                    String value = raw.substring(equals + 1).trim();
+                    if (key.equals("var") || key.equals("variable") || key.equals("name")) name = value;
+                    else if (key.equals("scope")) scope = value;
+                    else { }
+                } else {
+                    positional.add(raw.trim());
+                }
+            }
+        }
+        if (scope == null && positional.size() > 1
+                && VariableLocations.normalizeScope(positional.get(0)) != null) {
+            scope = positional.get(0);
+            if (name == null) name = positional.get(1);
+        } else {
+            if (name == null && !positional.isEmpty()) name = positional.get(0);
+            if (scope == null && positional.size() > 1) scope = positional.get(1);
+        }
+        if (name == null) name = "";
+        if (scope == null && name.indexOf('.') > 0) {
+            int dot = name.indexOf('.');
+            scope = name.substring(0, dot);
+            name = name.substring(dot + 1);
+        }
+        String normalized = VariableLocations.normalizeScope(scope);
+        return new VariableRef(name == null ? "" : name.trim(), normalized == null ? "skill" : normalized);
+    }
+
+    private static String keyedArg(List<String> args, String... names) {
+        if (args == null) return null;
+        for (String raw : args) {
+            if (raw == null) continue;
+            int equals = raw.indexOf('=');
+            if (equals <= 0) continue;
+            String key = raw.substring(0, equals).trim();
+            for (String wanted : names) {
+                if (key.equalsIgnoreCase(wanted)) return raw.substring(equals + 1).trim();
+            }
+        }
+        return null;
+    }
+
+    private static double variableNumber(List<String> args, int positionalIndex, double fallback,
+                                         String... names) {
+        String keyed = keyedArg(args, names);
+        if (keyed == null || keyed.isBlank()) return num(args, positionalIndex, fallback);
+        try {
+            return Double.parseDouble(keyed);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("variable value is not numeric: " + keyed, e);
+        }
+    }
+
+    private static Object parseVariableValue(List<String> args) {
+        String type = keyedArg(args, "type");
+        if (type == null) type = "DOUBLE";
+        String raw = keyedArg(args, "value", "val");
+        if (raw == null) raw = str(args, 1, "");
+        return switch (type.trim().toUpperCase(Locale.ROOT)) {
+            case "INTEGER", "INT" -> Integer.valueOf(raw.trim());
+            case "LONG" -> Long.valueOf(raw.trim());
+            case "FLOAT" -> Float.valueOf(raw.trim());
+            case "DOUBLE", "NUMBER", "DECIMAL" -> Double.valueOf(raw.trim());
+            case "BOOLEAN", "BOOL" -> Boolean.parseBoolean(raw.trim());
+            case "LIST" -> List.of(raw.split("\\s*[,|]\\s*"));
+            case "SET" -> java.util.Set.copyOf(List.of(raw.split("\\s*[,|]\\s*")));
+            case "MAP" -> parseVariableMap(raw);
+            case "LOCATION", "LOC" -> parseLocationValue(raw);
+            case "STRING", "TEXT" -> raw;
+            default -> throw new IllegalArgumentException("unsupported variable type: " + type);
+        };
+    }
+
+    private static LocationValue parseLocationValue(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        if (value.isEmpty()) throw new IllegalArgumentException("location value is empty");
+        if (value.startsWith("@")) return new LocationValue(value, null, 0, 0, 0);
+        String[] parts = value.split("\\s*,\\s*");
+        String world = null;
+        int offset = 0;
+        if (parts.length == 4) {
+            world = parts[0].isBlank() ? null : parts[0].trim();
+            offset = 1;
+        } else if (parts.length != 3) {
+            throw new IllegalArgumentException("location must be x,y,z or world,x,y,z");
+        }
+        try {
+            return new LocationValue(null, world,
+                    Double.parseDouble(parts[offset].trim()),
+                    Double.parseDouble(parts[offset + 1].trim()),
+                    Double.parseDouble(parts[offset + 2].trim()));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("location coordinates must be numeric", e);
+        }
+    }
+
+    private static Map<String, String> parseVariableMap(String raw) {
+        Map<String, String> values = new LinkedHashMap<>();
+        for (String entry : raw.split("[,|]")) {
+            int separator = entry.indexOf(':');
+            if (separator <= 0) continue;
+            values.put(entry.substring(0, separator).trim(), entry.substring(separator + 1).trim());
+        }
+        return Map.copyOf(values);
+    }
+
+    private static void setRawVariable(BehaviorContext ctx, VariableRef ref, Object value) {
+        if (ctx == null || ref == null || ref.name().isEmpty() || value == null) return;
+        if (value instanceof LocationValue locationValue) {
+            Location location = resolveLocationValue(ctx, locationValue);
+            if (location == null) return;
+            if (ref.scope().equals("skill")) {
+                ctx.skillTree().ifPresent(tree -> tree.setLocation(ref.name(), location));
+            } else {
+                VariableLocations.set(ref.scope(), ref.name(), ctx, location);
+            }
+            return;
+        }
+        if (ref.scope().equals("skill")) {
+            if (ctx.skillTree().isPresent()) ctx.skillTree().orElseThrow().setVariable(ref.name(), value);
+            else if (hasInstance(ctx) && value instanceof Number number) varsOf(id(ctx)).put(ref.name(), number.doubleValue());
+            return;
+        }
+        String key = VariableLocations.scopeKey(ref.scope(), ctx);
+        if (key != null) scopedValuesOf(key).put(ref.name(), value);
+    }
+
+    private static Location resolveLocationValue(BehaviorContext ctx, LocationValue value) {
+        if (value.isReference()) {
+            String reference = value.reference().substring(1).trim().toLowerCase(Locale.ROOT);
+            return switch (reference) {
+                case "origin" -> ctx.origin().orElseGet(() -> hasInstance(ctx) ? ctx.instance().location() : null);
+                case "selflocation", "casterlocation" -> ctx.instanceValid()
+                        ? ctx.instance().baseEntity().map(Entity::getLocation).orElse(ctx.instance().location()) : null;
+                case "targetlocation" -> ctx.targetEntity().map(Entity::getLocation).orElse(null);
+                case "triggerlocation" -> ctx.trigger().map(Entity::getLocation).orElse(null);
+                default -> null;
+            };
+        }
+        org.bukkit.World world = null;
+        if (value.world() != null && !value.world().isBlank()) {
+            world = org.bukkit.Bukkit.getWorld(value.world());
+            if (world == null) {
+                world = ctx.origin().map(Location::getWorld)
+                        .filter(candidate -> candidate != null
+                                && candidate.getName().equalsIgnoreCase(value.world()))
+                        .orElse(null);
+            }
+        }
+        if (world == null) world = ctx.origin().map(Location::getWorld).orElse(null);
+        return new Location(world, value.x(), value.y(), value.z());
+    }
+
+    private static void setVariable(BehaviorContext ctx, VariableRef ref, double value) {
+        setRawVariable(ctx, ref, value);
+    }
+    private static double varOf(BehaviorContext ctx, VariableRef ref) {
+        if (ctx == null || ref == null || ref.name().isEmpty()) return Double.NEGATIVE_INFINITY;
+        Object raw = rawVariable(ctx, ref);
+        return raw instanceof Number number ? number.doubleValue() : Double.NEGATIVE_INFINITY;
+    }
+    private static boolean hasVariable(BehaviorContext ctx, VariableRef ref) {
+        if (ctx == null || ref == null || ref.name().isEmpty()) return false;
+        if (ref.scope().equals("skill")) {
+            return hasVar(ctx, ref.name())
+                    || ctx.skillTree().flatMap(tree -> tree.location(ref.name())).isPresent();
+        }
+        String key = VariableLocations.scopeKey(ref.scope(), ctx);
+        return key != null && (scopedValuesOf(key).containsKey(ref.name())
+                || VariableLocations.get(ref.scope(), ref.name(), ctx).isPresent());
+    }
+
+    private static void unsetScopedVariable(BehaviorContext ctx, VariableRef ref) {
+        if (ctx == null || ref == null || ref.name().isEmpty()) return;
+        if (ref.scope().equals("skill")) {
+            if (ctx.skillTree().isPresent()) {
+                ctx.skillTree().orElseThrow().unsetVariable(ref.name());
+                ctx.skillTree().orElseThrow().unsetLocation(ref.name());
+            } else if (hasInstance(ctx)) {
+                varsOf(id(ctx)).remove(ref.name());
+            }
+            return;
+        }
+        String key = VariableLocations.scopeKey(ref.scope(), ctx);
+        if (key != null) {
+            Map<String, Object> values = scopedValuesOf(key);
+            values.remove(ref.name());
+            if (values.isEmpty()) SCOPED_VALUES.remove(key, values);
+            VariableLocations.unset(ref.scope(), ref.name(), ctx);
+        }
+    }
+    private static void unsetVariable(BehaviorContext ctx, VariableRef ref) {
+        unsetScopedVariable(ctx, ref);
+        if (ctx == null || ref == null || ref.name().isEmpty()) return;
+        VariableLocations.unset(ref.scope(), ref.name(), ctx);
+    }
+
+    private static void unsetLocation(BehaviorContext ctx, VariableRef ref) {
+        if (ctx == null || ref == null || ref.name().isEmpty()) return;
+        if (ref.scope().equals("skill")) {
+            ctx.skillTree().ifPresent(tree -> tree.unsetLocation(ref.name()));
+        } else {
+            VariableLocations.unset(ref.scope(), ref.name(), ctx);
+        }
+    }
     private static boolean hasInstance(BehaviorContext ctx) {
         return ctx != null && ctx.instanceValid();
     }
@@ -1055,18 +2392,146 @@ public final class SkillExtras {
     private static Map<String, Double> varsOf(int id) {
         return VARS.computeIfAbsent(id, k -> new HashMap<>());
     }
+    private static Map<String, Object> scopedValuesOf(String key) {
+        return SCOPED_VALUES.computeIfAbsent(key, ignored -> new ConcurrentHashMap<>());
+    }
 
     private static Map<String, Integer> scoresOf(int id) {
         return SCORES.computeIfAbsent(id, k -> new HashMap<>());
     }
 
+    private static Object rawVariable(BehaviorContext ctx, VariableRef ref) {
+        if (ctx == null || ref == null || ref.name().isEmpty()) return null;
+        if (ref.scope().equals("skill")) {
+            Object value = ctx.skillTree().flatMap(tree -> tree.variable(ref.name())).orElse(null);
+            if (value != null) return value;
+            Location location = ctx.skillTree().flatMap(tree -> tree.location(ref.name())).orElse(null);
+            if (location != null) return location;
+            if (hasInstance(ctx)) return varsOf(id(ctx)).get(ref.name());
+            return null;
+        }
+        String key = VariableLocations.scopeKey(ref.scope(), ctx);
+        if (key == null) return null;
+        Object value = scopedValuesOf(key).get(ref.name());
+        return value != null ? value : VariableLocations.get(ref.scope(), ref.name(), ctx).orElse(null);
+    }
+
+    private static boolean variableEquals(BehaviorContext ctx, VariableRef ref, String expected) {
+        Object actual = rawVariable(ctx, ref);
+        if (actual == null) return false;
+        if (actual instanceof Number number) {
+            try {
+                return Double.compare(number.doubleValue(), Double.parseDouble(expected)) == 0;
+            } catch (NumberFormatException ignored) {
+                return false;
+            }
+        }
+        if (actual instanceof Boolean bool) return bool.toString().equalsIgnoreCase(expected);
+        return String.valueOf(actual).equals(expected);
+    }
+
+    private static boolean variableContains(BehaviorContext ctx, VariableRef ref, String expected) {
+        Object actual = rawVariable(ctx, ref);
+        if (actual instanceof CharSequence text) return text.toString().contains(expected);
+        if (actual instanceof java.util.Collection<?> values) {
+            return values.stream().anyMatch(value -> variableEqualsValue(value, expected));
+        }
+        if (actual instanceof java.util.Map<?, ?> values) {
+            return values.keySet().stream().anyMatch(value -> variableEqualsValue(value, expected))
+                    || values.values().stream().anyMatch(value -> variableEqualsValue(value, expected));
+        }
+        return false;
+    }
+
+    private static int integerArg(List<String> args, int positionalIndex, String... names) {
+        String raw = keyedArg(args, names);
+        if (raw == null) raw = str(args, positionalIndex, "-1");
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
+    }
+
+    private static Object indexedVariable(BehaviorContext ctx, VariableRef ref, int index) {
+        if (index < 0) return null;
+        Object actual = rawVariable(ctx, ref);
+        if (actual instanceof List<?> values) {
+            return index < values.size() ? values.get(index) : null;
+        }
+        if (actual != null && actual.getClass().isArray()) {
+            return index < java.lang.reflect.Array.getLength(actual)
+                    ? java.lang.reflect.Array.get(actual, index) : null;
+        }
+        return null;
+    }
+
+    private static boolean mapKeyExists(Object actual, String key) {
+        return actual instanceof Map<?, ?> values && key != null && values.containsKey(key);
+    }
+
+    private static boolean mapValueEquals(Object actual, String key, String expected) {
+        if (!(actual instanceof Map<?, ?> values) || key == null || !values.containsKey(key)) return false;
+        return variableEqualsValue(values.get(key), expected);
+    }
+
+    private static boolean variableEqualsValue(Object actual, String expected) {
+        if (actual == null || expected == null) return false;
+        if (actual instanceof Number number) {
+            try {
+                return Double.compare(number.doubleValue(), Double.parseDouble(expected)) == 0;
+            } catch (NumberFormatException ignored) {
+                return false;
+            }
+        }
+        if (actual instanceof Boolean bool) return bool.toString().equalsIgnoreCase(expected);
+        return String.valueOf(actual).equals(expected);
+    }
+
+    private static double numericValue(Object actual) {
+        if (actual instanceof Number number) return number.doubleValue();
+        if (actual instanceof String text) {
+            try { return Double.parseDouble(text.trim()); }
+            catch (NumberFormatException ignored) { }
+        }
+        return Double.NaN;
+    }
+
+    private static double mapNumericValue(Object actual, String key) {
+        if (!(actual instanceof Map<?, ?> values) || !values.containsKey(key)) return Double.NaN;
+        return numericValue(values.get(key));
+    }
     private static double varOf(BehaviorContext ctx, String name) {
-        if (!hasInstance(ctx) || name.isEmpty()) return Double.NEGATIVE_INFINITY;
+        if (ctx == null || name.isEmpty()) return Double.NEGATIVE_INFINITY;
+        Object scoped = ctx.skillTree().flatMap(tree -> tree.variable(name)).orElse(null);
+        if (scoped instanceof Number number) return number.doubleValue();
+        if (!hasInstance(ctx)) return Double.NEGATIVE_INFINITY;
         return varsOf(id(ctx)).getOrDefault(name, Double.NEGATIVE_INFINITY);
     }
 
     private static boolean hasVar(BehaviorContext ctx, String name) {
-        return hasInstance(ctx) && !name.isEmpty() && varsOf(id(ctx)).containsKey(name);
+        if (ctx == null || name.isEmpty()) return false;
+        return ctx.skillTree().flatMap(tree -> tree.variable(name)).isPresent()
+                || (hasInstance(ctx) && varsOf(id(ctx)).containsKey(name));
+    }
+
+    private static void applyDamage(BehaviorContext ctx, LivingEntity target, double amount) {
+        String cause = damageCause == null ? "MAGIC" : damageCause.apply(ctx, target);
+        applyDamage(ctx, target, amount, cause);
+    }
+
+    private static void applyDamage(BehaviorContext ctx, LivingEntity target, double amount, String cause) {
+        if (target == null || amount <= 0) return;
+        try {
+            DamagePolicy policy = damagePolicy;
+            if (cause == null || cause.isBlank()) cause = "MAGIC";
+            if (policy != null) amount = policy.apply(ctx, target, amount, cause);
+            if (amount <= 0) return;
+            target.damage(amount, ctx != null && ctx.instanceValid()
+                    ? ctx.instance().baseEntity().orElse(null) : null);
+        } catch (Throwable ignored) {
+            SkillFaults.swallow("SkillExtras#damage");
+        }
     }
 
     private static int scoreOf(BehaviorContext ctx, String name) {
@@ -1127,6 +2592,23 @@ public final class SkillExtras {
             }
         } catch (Throwable ignored) {
             SkillFaults.swallow("SkillExtras#912");
+        }
+    }
+
+    private static RegionBox regionArgs(List<String> args) {
+        if (args == null || args.size() < 6) return null;
+        int offset = args.size() >= 7 ? 1 : 0;
+        try {
+            String world = offset == 1 ? args.get(0) : null;
+            double x1 = Double.parseDouble(args.get(offset));
+            double y1 = Double.parseDouble(args.get(offset + 1));
+            double z1 = Double.parseDouble(args.get(offset + 2));
+            double x2 = Double.parseDouble(args.get(offset + 3));
+            double y2 = Double.parseDouble(args.get(offset + 4));
+            double z2 = Double.parseDouble(args.get(offset + 5));
+            return RegionBox.of(world, x1, y1, z1, x2, y2, z2);
+        } catch (RuntimeException ignored) {
+            return null;
         }
     }
 

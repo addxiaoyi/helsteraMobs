@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helstera.dev/schemas/paper-integration-report-v1.json",
+  "title": "Helstera Paper Integration Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generatedAtUtc",
+    "fixtureDirectory",
+    "paperVersion",
+    "paperApiVersion",
+    "pluginEnabled",
+    "log",
+    "probes"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "generatedAtUtc": { "type": "string", "format": "date-time" },
+    "fixtureDirectory": { "type": "string", "minLength": 1 },
+    "paperVersion": { "type": ["string", "null"] },
+    "paperApiVersion": { "type": ["string", "null"] },
+    "pluginEnabled": { "type": "boolean" },
+    "log": { "type": "string", "minLength": 1 },
+    "probes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "observations"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "observed-rejected",
+              "observed",
+              "insufficient-sample",
+              "not-observed"
+            ]
+          },
+          "observations": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "sampleCount": { "type": "integer", "minimum": 0 },
+          "expected": { "type": "string" },
+          "observed": { "type": "string" },
+          "deviation": { "type": "string" }
+          ,"maxDeviation": { "type": "number", "minimum": 0, "maximum": 1 }
+          ,"tolerance": { "type": "number", "minimum": 0, "maximum": 1 }
+          ,"before": { "type": "string" }
+          ,"after": { "type": "string" }
+          ,"offsetDistance": { "type": "number", "minimum": 0 }
+          ,"movedDistance": { "type": "number", "minimum": 0 }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "id": { "const": "random-spawn-distribution" } },
+              "required": ["id"]
+            },
+            "then": {
+              "required": ["sampleCount", "expected", "observed", "deviation",
+                "maxDeviation", "tolerance"]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

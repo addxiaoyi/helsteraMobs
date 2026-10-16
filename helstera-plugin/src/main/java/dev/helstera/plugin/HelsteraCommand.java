@@ -29,7 +29,7 @@ public final class HelsteraCommand implements TabExecutor {
 
     private static final List<String> SUBS = List.of(
             "reload", "model", "mob", "animation", "migrate", "web", "debug", "stats", "pack",
-            "loot", "skill", "bossbar", "spawner", "check", "faction", "codex", "nav", "lever", "immunity", "dialog", "disguise", "help");
+            "loot", "skill", "bossbar", "spawner", "menu", "check", "faction", "codex", "nav", "lever", "immunity", "dialog", "disguise", "help");
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -52,6 +52,7 @@ public final class HelsteraCommand implements TabExecutor {
             case "skill" -> skill(sender, args);
             case "bossbar" -> bossbar(sender, args);
             case "spawner" -> spawner(sender, args);
+            case "menu" -> menu(sender, args);
             case "check" -> check(sender);
             case "faction" -> faction(sender, args);
             case "codex" -> codex(sender, args);
@@ -102,6 +103,13 @@ public final class HelsteraCommand implements TabExecutor {
             case "packs" -> plugin.buildResourcePack(true);
             case "loot" -> plugin.reloadLootAndSpawners();
             case "spawners" -> plugin.reloadLootAndSpawners();
+            case "items" -> plugin.reloadCustomItems();
+            case "menus" -> {
+                if (!plugin.reloadCustomMenus()) {
+                    s.sendMessage("§c菜单配置重载失败，请检查 menu.yml。");
+                    return;
+                }
+            }
             // skills.yml 是独立文件，此前**没有**对应分支：写 /helstera reload skills
             // 只会得到「未知重载目标」，作者改完技能配置只能重启服务器。
             // 而 /helstera check 的提示恰恰写着「改 skills 配置后 /helstera reload」，
@@ -118,6 +126,8 @@ public final class HelsteraCommand implements TabExecutor {
                 // 下发给在线玩家由 reloadModels(true) 在正确的时机做。
                 plugin.reloadModels(true);
                 plugin.reloadLootAndSpawners();
+                plugin.reloadCustomMenus();
+                plugin.reloadCustomItems();
                 // skills.yml 同样要进 all：它是独立文件，前面的 reload config
                 // 与 reloadLootAndSpawners 都不覆盖它。
                 plugin.reloadSkills("命令行");
@@ -1377,24 +1387,39 @@ var ai = plugin.ai();
     private void bossbar(CommandSender s, String[] args) {
         if (!s.hasPermission("helstera.bossbar")) { deny(s); return; }
         var service = plugin.bossBarService();
-        if (service == null) {
-            s.sendMessage("§c血条系统未启用");
-            return;
-        }
-        s.sendMessage("§b== Boss 血条诊断 ==");
-        s.sendMessage("§7- 挂条次数: §f" + service.showCount());
-        s.sendMessage("§7- 更新次数: §f" + service.updateCount());
-        s.sendMessage("§7- 隐藏次数: §f" + service.hideCount());
-        s.sendMessage("§7- 活跃血条: §f" + service.barCount());
-        if (service.showCount() == 0) {
-            s.sendMessage("§c注意: 从未挂过血条——检查 mobs/*.yml 的 bossbar.enabled 是否为 true");
-        }
-        if (service.barCount() > 0 && service.updateCount() == 0) {
-            s.sendMessage("§e提示: 血条已挂但未更新——可能没有玩家在线（在线玩家数为 0 时 onDamage 不触发）");
-        }
+        if (service == null) { s.sendMessage("§cBoss bar service unavailable."); return; }
+        s.sendMessage("§b== Boss Bar ==");
+        s.sendMessage("§7- shown: §f" + service.showCount());
+        s.sendMessage("§7- updated: §f" + service.updateCount());
+        s.sendMessage("§7- hidden: §f" + service.hideCount());
+        s.sendMessage("§7- active: §f" + service.barCount());
+        if (service.showCount() == 0) s.sendMessage("§cNo boss bars shown. Check mob bossbar.enabled settings.");
     }
 
-    /** /helstera spawner list|force <id> [数量]|toggle <id>|reload */
+    /** Custom menu status/open command. */
+    private void menu(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("helstera.menu")) { deny(sender); return; }
+        String action = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "status";
+        var menus = plugin.customMenus();
+        if (menus == null) { sender.sendMessage("§cCustom Menu service unavailable."); return; }
+        if (action.equals("status")) {
+            sender.sendMessage("§bCustom Menus (§f" + menus.size() + "§b): §f" + String.join(", ", menus.menuIds()));
+            var permissionsByMenu = menus.permissionsByMenu();
+            if (!permissionsByMenu.isEmpty()) {
+                sender.sendMessage("§7Button visibility permissions by menu:");
+                permissionsByMenu.forEach((menuId, permissions) ->
+                        sender.sendMessage("§7- §f" + menuId + "§8: §f" + String.join(", ", permissions)));
+            }
+            return;
+        }
+        if (action.equals("open")) {
+            if (!(sender instanceof Player player)) { sender.sendMessage("§cOnly players can open a menu."); return; }
+            if (args.length < 3 || !menus.open(player, args[2])) { sender.sendMessage("§cUnknown menu: " + (args.length < 3 ? "" : args[2])); }
+            return;
+        }
+        sender.sendMessage("§cUsage: /helstera menu status|open <menu-id>");
+    }
+
     private void spawner(CommandSender s, String[] args) {
         if (!s.hasPermission("helstera.spawner")) { deny(s); return; }
         var service = plugin.spawners();
@@ -1413,6 +1438,7 @@ var ai = plugin.ai();
                             + " §7| 间隔 " + sp.intervalTicks() + "t"
                             + " §7| 存活 " + service.aliveCount(id) + "/" + sp.maxAlive()
                             + " §7| 累计 " + sp.totalSpawned()
+                            + " §7| 下次 " + service.nextSpawnInTicks(id) + "t"
                             + (sp.aiProfile() == null ? "" : " §7| AI " + sp.aiProfile())
                             + (active ? " §a[启用]" : " §c[停用]"));
                 }
@@ -1488,8 +1514,8 @@ var ai = plugin.ai();
         }
     }
 
-    private void deny(CommandSender s) {
-        s.sendMessage("§c没有权限");
+    private void deny(CommandSender sender) {
+        sender.sendMessage("§cPermission denied.");
     }
 
     @Override
@@ -1499,7 +1525,7 @@ var ai = plugin.ai();
             SUBS.stream().filter(x -> x.startsWith(args[0].toLowerCase())).forEach(out::add);
         } else if (args.length == 2) {
             switch (args[0].toLowerCase(Locale.ROOT)) {
-                case "reload" -> out.addAll(List.of("models", "config", "packs", "loot", "spawners", "skills", "all"));
+                case "reload" -> out.addAll(List.of("models", "config", "packs", "loot", "spawners", "menus", "skills", "all"));
                 case "model" -> out.addAll(List.of("list", "info", "validate", "unload"));
                 case "mob" -> out.addAll(List.of("spawn", "remove", "info"));
                 case "animation" -> out.addAll(List.of("play", "stop", "pause", "resume"));
@@ -1508,6 +1534,7 @@ var ai = plugin.ai();
                 case "skill" -> out.addAll(List.of("list", "info", "preview"));
                 case "bossbar" -> out.addAll(List.of());
                 case "spawner" -> out.addAll(List.of("list", "force", "toggle", "reload"));
+                case "menu" -> out.addAll(List.of("status", "open"));
                 case "web" -> out.addAll(List.of("start", "stop", "status", "doctor", "firewall"));
                 case "debug" -> out.addAll(List.of("render", "animation", "network", "ai", "skills", "integrations"));
                 case "pack" -> out.addAll(List.of("build", "apply", "apply-all"));
@@ -1527,6 +1554,7 @@ var ai = plugin.ai();
                 case "loot roll" -> {
                     if (plugin.loot() != null) plugin.loot().tableNames().forEach(out::add);
                 }
+                case "menu open" -> out.add("<menu-id>");
                 case "skill info", "skill preview" -> {
                     if (plugin.skillService() != null) plugin.skillService().skillNames().forEach(out::add);
                 }

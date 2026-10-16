@@ -1,5 +1,49 @@
 # helsteraMobs
 
+## MythicMobs Parity Development Status (2026-10-17)
+
+This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
+
+### Verified Progress
+
+- Skills: separate `TargetConditions` and `TriggerConditions`, nested `cast-skill`, delay/repeat/cast duration, scoped variables, `variable-unset`, location variables, and `@VariableLocation`.
+- Mechanics: `remove`, `equip`, `set-name`, `set-item`, `drop-item`, potion effects, teleport, mount/dismount, `cancel-event`, and custom item resolver integration.
+- Conditions: world/biome/time/weather, health/distance/permission/entity state, variables, composition, `food-level`, `has-item`, `air-level`, `damage-cause`, and `is-cancelled`.
+- Drops: amount ranges, conditions, nested tables, cycle protection, dynamic chance, experience, and external drop classification.
+- Mob Options, Spawners, Random Spawn, Audience, Custom Menu, SkillTree, and AI have focused Paper or unit evidence recorded in the parity matrix.
+
+### Remaining Work
+
+Many rows remain `mapped-unverified`; the project is not complete:
+
+1. Natural potion expiry and real potion drinking. Paper 1.21.1 has no `EXPIRED` action; expiry needs managed-entity tick-state evidence.
+2. Mineflayer player workflow still has a `PartialReadError`; server-side probes pass independently, but the full strict player/menu workflow is not restored.
+3. Complete official Conditions, Mechanics, placeholders, comparator edge cases, and grammar coverage.
+4. Complete `AIGoalSelectors`/`AITargetSelectors`, native Pathfinder goal mutation, malus handling, and goal composition.
+5. Complete legacy numeric ID/data migration and document the version-gated `ItemModel`/`DamageType` unsupported boundary.
+6. Finish natural Mob Option timing for fuse, conversion, bee stinger loss, jockey mounts, and universal option ordering.
+7. Add remaining Bukkit event, Audience version, and SkillTree lifecycle/restart evidence.
+8. The full Paper strict release gate has not passed.
+
+### Continue On Another Device
+
+```powershell
+git clone https://github.com/addxiaoyi/helsteraMobs.git
+cd helsteraMobs
+mvn -o -q test
+mvn -o -q -Ppaper-integration -pl helstera-plugin -am verify
+```
+
+Useful Paper checks:
+
+```powershell
+mvn -o -q -pl helstera-plugin -am package
+powershell -ExecutionPolicy Bypass -File tools/paper-integration/test-report.ps1
+powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75 -Strict
+```
+
+Preserve the dirty worktree and generated Paper evidence directories. Do not use `git reset`, `git checkout`, or cleanup commands while continuing this work.
+
 Minecraft（Paper / Spigot）模型引擎插件。采用「资源包 + Display 实体（ItemDisplay / TextDisplay）」渲染方案，纯 Bukkit/Paper API，无 NMS 依赖。
 
 ## 功能

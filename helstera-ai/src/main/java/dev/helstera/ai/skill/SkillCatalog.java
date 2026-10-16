@@ -5,6 +5,7 @@ import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
@@ -124,8 +125,31 @@ public final class SkillCatalog {
      */
     private static volatile org.bukkit.plugin.java.JavaPlugin pluginRef;
 
+    @FunctionalInterface
+    public interface TaskScheduler {
+        boolean schedule(Runnable task, long delayTicks);
+    }
+
+    private static volatile TaskScheduler taskScheduler;
+
     public static void pluginRef(org.bukkit.plugin.java.JavaPlugin p) {
         pluginRef = p;
+    }
+
+    /** Test/integration hook; null restores Bukkit scheduling. */
+    public static void taskScheduler(TaskScheduler scheduler) {
+        taskScheduler = scheduler;
+    }
+
+    /** Schedule a delayed mechanic continuation on Bukkit's main thread. */
+    public static boolean schedule(Runnable task, long delayTicks) {
+        if (task == null) return false;
+        TaskScheduler override = taskScheduler;
+        if (override != null) return override.schedule(task, Math.max(0, delayTicks));
+        var plugin = pluginRef;
+        if (plugin == null || !plugin.isEnabled()) return false;
+        org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, task, Math.max(0, delayTicks));
+        return true;
     }
 
     /**
@@ -181,7 +205,7 @@ public final class SkillCatalog {
                 java.util.Map.entry("has-target", (ConditionFactory) a -> {
                     // 参数可选：省略视为 true；显式 false 表示「无目标时满足」
                     boolean expect = bool(a, 0, true);
-                    return ctx -> ctx.target().isPresent() == expect;
+                    return ctx -> ctx.targetEntity().isPresent() == expect;
                 }),
                 java.util.Map.entry("health-below", (ConditionFactory) a -> {
                     double t = num(a, 0, 0.0);
@@ -198,7 +222,7 @@ public final class SkillCatalog {
                 }),
                 java.util.Map.entry("distance-above", (ConditionFactory) a -> {
                     double t = num(a, 0, 0.0);
-                    return ctx -> ctx.target().isPresent() && ctx.distanceToTarget() >= t;
+                    return ctx -> ctx.targetEntity().isPresent() && ctx.distanceToTarget() >= t;
                 }),
                 java.util.Map.entry("state-is", (ConditionFactory) a -> {
                     String t = str(a, 0, "").toUpperCase(Locale.ROOT);
@@ -234,7 +258,7 @@ public final class SkillCatalog {
                     return ctx -> {
                         if (!ctx.instanceValid()) return false;
                         var self = ctx.instance().baseEntity().orElse(null);
-                        var tgt = ctx.target().orElse(null);
+                        var tgt = ctx.targetEntity().orElse(null);
                         if (self == null || tgt == null) return false;
                         if (self.getWorld() != tgt.getWorld()) return false;
                         return self instanceof LivingEntity le && le.hasLineOfSight(tgt);
@@ -246,10 +270,23 @@ public final class SkillCatalog {
                 java.util.Map.entry("target-is", (ConditionFactory) a -> {
                     String kind = str(a, 0, "player").toLowerCase(Locale.ROOT);
                     return switch (kind) {
-                        case "player" -> ctx -> ctx.target().isPresent();
+                        case "player" -> ctx -> ctx.targetEntity().filter(Player.class::isInstance).isPresent();
                         case "minecraft", "living", "entity" ->
-                                ctx -> ctx.target().orElse(null) != null;
-                        case "survival", "creative", "adventure", "spectator" -> ctx -> ctx.target()
+                                ctx -> ctx.targetEntity().isPresent();
+                        case "mob" -> ctx -> ctx.targetEntity()
+                                .filter(org.bukkit.entity.Mob.class::isInstance).isPresent();
+                        case "monster" -> ctx -> ctx.targetEntity()
+                                .filter(org.bukkit.entity.Monster.class::isInstance).isPresent();
+                        case "animal" -> ctx -> ctx.targetEntity()
+                                .filter(org.bukkit.entity.Animals.class::isInstance).isPresent();
+                        case "villager" -> ctx -> ctx.targetEntity()
+                                .filter(org.bukkit.entity.Villager.class::isInstance).isPresent();
+                        case "tameable" -> ctx -> ctx.targetEntity()
+                                .filter(org.bukkit.entity.Tameable.class::isInstance).isPresent();
+                        case "raider" -> ctx -> ctx.targetEntity()
+                                .filter(org.bukkit.entity.Raider.class::isInstance).isPresent();
+                        case "survival", "creative", "adventure", "spectator" -> ctx -> ctx.targetEntity()
+                                .filter(Player.class::isInstance).map(Player.class::cast)
                                 .map(p -> p.getGameMode().name().equalsIgnoreCase(kind)).orElse(false);
                         default -> ctx -> false;
                     };
@@ -322,13 +359,16 @@ public final class SkillCatalog {
                     };
                 }),
 
+                java.util.Map.entry("is-invulnerable", (ConditionFactory) a -> ctx ->
+                        ctx.instance().baseEntity().map(Entity::isInvulnerable).orElse(false)),
+
                 // facing-target：实体当前朝向目标（允许 ±45° 偏差）。
                 // 用于「只在面对目标时才触发」的场合。
                 java.util.Map.entry("facing-target", (ConditionFactory) a -> {
                     double tolerance = Math.toRadians(num(a, 0, 45));
                     return ctx -> {
                         var base = ctx.instance().baseEntity().orElse(null);
-                        var tgt = ctx.target().orElse(null);
+                        var tgt = ctx.targetEntity().orElse(null);
                         if (base == null || tgt == null) return false;
                         if (base.getWorld() != tgt.getWorld()) return false;
                         try {
@@ -366,6 +406,17 @@ public final class SkillCatalog {
                         try { return p.isSprinting(); } catch (Throwable ignored) { return false; }
                     };
                 }),
+
+                java.util.Map.entry("is-gliding", (ConditionFactory) a -> ctx -> {
+                    var base = ctx.instance().baseEntity().orElse(null);
+                    return base instanceof LivingEntity living && living.isGliding();
+                }),
+                java.util.Map.entry("is-flying", (ConditionFactory) a -> ctx ->
+                        ctx.instance().baseEntity().filter(Player.class::isInstance)
+                                .map(Player.class::cast).map(Player::isFlying).orElse(false)),
+                java.util.Map.entry("is-blocking", (ConditionFactory) a -> ctx ->
+                        ctx.instance().baseEntity().filter(Player.class::isInstance)
+                                .map(Player.class::cast).map(Player::isBlocking).orElse(false)),
 
                 // in-air：实体是否离开地面。与 on-ground 严格互补——
                 // 两者同时为 false 的状态不存在（实体或在空中或在地）。
@@ -549,18 +600,164 @@ public final class SkillCatalog {
                     double dmg = num(a, 0, 0.0);
                     return ctx -> {
                         if (dmg <= 0) return;
-                        Player t = ctx.target().orElse(null);
-                        Location me = ctx.instanceValid() ? ctx.instance().location() : null;
-                        if (t == null || me == null || me.getWorld() == null
-                                || !me.getWorld().equals(t.getWorld())) return;
-                        t.damage(dmg, ctx.instance().baseEntity().orElse(null));
+                        LivingEntity target = ctx.targetEntity().orElse(null);
+                        Location origin = ctx.origin().orElse(ctx.instanceValid() ? ctx.instance().location() : null);
+                        if (target == null || origin == null || origin.getWorld() == null
+                                || !origin.getWorld().equals(target.getWorld())) return;
+                        target.damage(dmg, ctx.instanceValid()
+                                ? ctx.instance().baseEntity().orElse(null) : ctx.trigger().orElse(null));
                     };
+                }),
+                 java.util.Map.entry("explode", (ActionFactory) a -> {
+                     float power = (float) Math.max(0, num(a, 0, 2.0));
+                     boolean fire = bool(a, 1, false);
+                     boolean breakBlocks = bool(a, 2, false);
+                     return ctx -> {
+                         Location origin = ctx.targetEntity().map(LivingEntity::getLocation)
+                                 .orElseGet(() -> ctx.origin().orElse(
+                                         ctx.instanceValid() ? ctx.instance().location() : null));
+                         if (origin == null || origin.getWorld() == null || power <= 0) return;
+                         origin.getWorld().createExplosion(origin, power, fire, breakBlocks);
+                     };
+                 }),
+                 java.util.Map.entry("set-target", (ActionFactory) a -> ctx -> {
+                     if (!ctx.instanceValid()) return;
+                     ctx.targetEntity().ifPresent(target -> {
+                         if (ctx.instance() instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl
+                                 && impl.aiController instanceof dev.helstera.ai.AiController controller) {
+                             controller.setCombatTarget(target);
+                         }
+                     });
+                 }),
+                 java.util.Map.entry("clear-target", (ActionFactory) a -> ctx -> {
+                     if (ctx.instanceValid()
+                             && ctx.instance() instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl
+                             && impl.aiController instanceof dev.helstera.ai.AiController controller) {
+                         controller.clearCombatTarget();
+                     }
+                 }),
+                 java.util.Map.entry("stop", (ActionFactory) a -> ctx -> {
+                     if (!ctx.instanceValid()) return;
+                     ctx.instance().baseEntity().ifPresent(entity -> entity.setVelocity(new Vector()));
+                     ctx.instance().animation().stopAll();
+                 }),
+                 java.util.Map.entry("velocity-targets", (ActionFactory) a -> {
+                     double x = num(a, 0, 0);
+                     double y = num(a, 1, 0);
+                     double z = num(a, 2, 0);
+                     Vector velocity = new Vector(x, y, z);
+                     return ctx -> {
+                         List<LivingEntity> targets = ctx.targets().isEmpty()
+                                 ? ctx.targetEntity().map(List::of).orElse(List.of()) : ctx.targets();
+                         targets.forEach(target -> target.setVelocity(velocity.clone()));
+                     };
+                 }),
+                 java.util.Map.entry("shoot-projectile", (ActionFactory) a -> {
+                     String type = str(a, 0, "ARROW");
+                     double speed = Math.max(0.05, num(a, 1, 1.6));
+                     double damage = Math.max(0, num(a, 2, 3.0));
+                     String hitSkill = str(a, 3, "");
+                     double explosion = Math.max(0, num(a, 4, 0));
+                     int fireTicks = Math.max(0, (int) num(a, 5, 0));
+                     String potion = str(a, 6, "");
+                     int pierce = Math.max(0, (int) num(a, 7, 0));
+                     boolean gravity = bool(a, 8, true);
+                     boolean tracking = bool(a, 9, false);
+                     int maxHits = Math.max(0, (int) num(a, 10, 0));
+                     int trackingTicks = Math.max(1, (int) num(a, 11, 100));
+                     return ctx -> {
+                         if (!ctx.instanceValid()) return;
+                         var source = ctx.instance().baseEntity().orElse(null);
+                         if (!(source instanceof org.bukkit.projectiles.ProjectileSource projectileSource)) return;
+                         Location origin = source.getLocation().clone().add(0, 1.5, 0);
+                         LivingEntity target = ctx.targetEntity().orElse(null);
+                         Vector direction = target == null
+                                 ? origin.getDirection()
+                                 : target.getLocation().clone().add(0, 1, 0).subtract(origin).toVector();
+                         if (direction.lengthSquared() < 1.0e-8) return;
+                         org.bukkit.entity.Projectile projectile = launchProjectile(
+                                 projectileSource, type, direction.normalize().multiply(speed));
+                         if (!hitSkill.isBlank() && pluginRef != null) {
+                             projectile.getPersistentDataContainer().set(
+                                     new org.bukkit.NamespacedKey(pluginRef, "projectile_skill"),
+                                     org.bukkit.persistence.PersistentDataType.STRING, hitSkill);
+                         }
+                         if (pluginRef != null) {
+                             var pdc = projectile.getPersistentDataContainer();
+                             if (explosion > 0) pdc.set(new org.bukkit.NamespacedKey(pluginRef, "projectile_explosion"),
+                                     org.bukkit.persistence.PersistentDataType.DOUBLE, explosion);
+                             if (fireTicks > 0) pdc.set(new org.bukkit.NamespacedKey(pluginRef, "projectile_fire"),
+                                     org.bukkit.persistence.PersistentDataType.INTEGER, fireTicks);
+                             if (!potion.isBlank()) pdc.set(new org.bukkit.NamespacedKey(pluginRef, "projectile_potion"),
+                                     org.bukkit.persistence.PersistentDataType.STRING, potion);
+                             if (maxHits > 0) pdc.set(new org.bukkit.NamespacedKey(pluginRef, "projectile_max_hits"),
+                                     org.bukkit.persistence.PersistentDataType.INTEGER, maxHits);
+                         }
+                         projectile.setGravity(gravity);
+                         if (tracking && target != null && pluginRef != null) {
+                             trackProjectile(projectile, target, speed, trackingTicks);
+                         }
+                         if (projectile instanceof org.bukkit.entity.AbstractArrow arrow) {
+                             arrow.setDamage(damage);
+                             arrow.setPierceLevel(pierce);
+                             arrow.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
+                         }
+                     };
+                 }),
+                java.util.Map.entry("heal-targets", (ActionFactory) a -> {
+                    double amount = num(a, 0, 0);
+                    return ctx -> {
+                        if (amount <= 0) return;
+                        for (LivingEntity target : ctx.targets()) {
+                            double max = target.getMaxHealth();
+                            if (max > 0) target.setHealth(Math.min(max, target.getHealth() + amount));
+                        }
+                    };
+                }),
+                java.util.Map.entry("ignite-targets", (ActionFactory) a -> {
+                    int ticks = (int) num(a, 0, 40);
+                    return ctx -> { if (ticks > 0) ctx.targets().forEach(target -> target.setFireTicks(ticks)); };
+                }),
+                java.util.Map.entry("knockback-targets", (ActionFactory) a -> {
+                    double power = num(a, 0, 1);
+                    double up = num(a, 1, 0.4);
+                    return ctx -> {
+                        Location origin = ctx.origin().orElse(ctx.instanceValid() ? ctx.instance().location() : null);
+                        if (origin == null || origin.getWorld() == null) return;
+                        for (LivingEntity target : ctx.targets()) {
+                            if (!origin.getWorld().equals(target.getWorld())) continue;
+                            org.bukkit.util.Vector direction = target.getLocation().toVector().subtract(origin.toVector());
+                            if (direction.lengthSquared() > 1.0e-8) target.setVelocity(direction.normalize().multiply(power).setY(up));
+                        }
+                    };
+                }),
+                java.util.Map.entry("effect-targets", (ActionFactory) a -> {
+                    String potion = str(a, 0, "");
+                    int ticks = (int) num(a, 1, 60);
+                    int amplifier = (int) num(a, 2, 0);
+                    boolean ambient = bool(a, 3, false);
+                    boolean particles = bool(a, 4, true);
+                    boolean icon = bool(a, 5, true);
+                    return ctx -> {
+                        var type = potionType(potion);
+                        if (type == null || ticks <= 0) return;
+                        for (LivingEntity target : ctx.targets()) {
+                            target.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                                    type, ticks, amplifier, ambient, particles, icon));
+                        }
+                    };
+                }),
+                java.util.Map.entry("teleport-targets", (ActionFactory) a -> {
+                    String location = str(a, 0, "@origin");
+                    return ctx -> dev.helstera.api.behavior.Targeters.resolveLocation(location, ctx)
+                            .ifPresent(destination -> ctx.targets().forEach(target -> target.teleport(destination)));
                 }),
                 java.util.Map.entry("message-target", (ActionFactory) a -> {
                     String text = str(a, 0, "");
-                    return ctx -> ctx.target().ifPresent(p -> {
-                        if (!text.isBlank()) p.sendMessage(text);
-                    });
+                    return ctx -> ctx.targetEntity().filter(Player.class::isInstance)
+                            .map(Player.class::cast).ifPresent(p -> {
+                                if (!text.isBlank()) p.sendMessage(text);
+                            });
                 }),
                 java.util.Map.entry("sound", (ActionFactory) a -> {
                     String name = str(a, 0, "");
@@ -573,6 +770,39 @@ public final class SkillCatalog {
                         }
                     };
                 }),
+                 java.util.Map.entry("command", (ActionFactory) a -> {
+                     String command = String.join(" ", a);
+                     return ctx -> {
+                         if (command.isBlank()) return;
+                         String rendered = Placeholders.resolve(command, ctx).trim();
+                         if (rendered.startsWith("/")) rendered = rendered.substring(1);
+                         if (rendered.isBlank()) return;
+                         try { org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), rendered); }
+                         catch (RuntimeException ignored) { }
+                     };
+                 }),
+                 java.util.Map.entry("command-self", (ActionFactory) a -> {
+                     String command = String.join(" ", a);
+                     return ctx -> {
+                         if (command.isBlank() || ctx == null) return;
+                         var entity = ctx.instanceValid() ? ctx.instance().baseEntity().orElse(null) : null;
+                         if (!(entity instanceof Player player)) return;
+                         String rendered = Placeholders.resolve(command, ctx).trim();
+                         if (rendered.startsWith("/")) rendered = rendered.substring(1);
+                         if (!rendered.isBlank()) player.performCommand(rendered);
+                     };
+                 }),
+                 java.util.Map.entry("command-target", (ActionFactory) a -> {
+                     String command = String.join(" ", a);
+                     return ctx -> {
+                         if (command.isBlank() || ctx == null) return;
+                         var target = ctx.targetEntity().orElse(null);
+                         if (!(target instanceof Player player)) return;
+                         String rendered = Placeholders.resolve(command, ctx).trim();
+                         if (rendered.startsWith("/")) rendered = rendered.substring(1);
+                         if (!rendered.isBlank()) player.performCommand(rendered);
+                     };
+                 }),
                 java.util.Map.entry("particle", (ActionFactory) a -> {
                     String name = str(a, 0, "");
                     return ctx -> {
@@ -621,70 +851,6 @@ public final class SkillCatalog {
                         if (text.isBlank()) return;
                         for (LivingEntity e : pick(ctx, tn, radius, count)) {
                             if (e instanceof Player p) p.sendMessage(text);
-                        }
-                    };
-                }),
-                java.util.Map.entry("teleport-targets", (ActionFactory) a -> {
-                    String tn = str(a, 0, "players");
-                    double radius = num(a, 1, 8);
-                    int count = (int) num(a, 2, 1);
-                    double dy = num(a, 3, 0);
-                    return ctx -> {
-                        Location me = ctx.instanceValid() ? ctx.instance().location() : null;
-                        if (me == null || me.getWorld() == null) return;
-                        for (LivingEntity e : pick(ctx, tn, radius, count)) {
-                            try {
-                                e.teleport(me.clone().add(0, dy, 0));
-                            } catch (Throwable ignored) {
-                            }
-                        }
-                    };
-                }),
-                java.util.Map.entry("effect-targets", (ActionFactory) a -> {
-                    String tn = str(a, 0, "players");
-                    double radius = num(a, 1, 6);
-                    int count = (int) num(a, 2, 1);
-                    String potion = str(a, 3, "");
-                    int ticks = (int) num(a, 4, 60);
-                    int amp = (int) num(a, 5, 0);
-                    return ctx -> {
-                        if (potion.isBlank() || ticks <= 0) return;
-                        org.bukkit.potion.PotionEffectType type = potionType(potion);
-                        if (type == null) return;
-                        for (LivingEntity e : pick(ctx, tn, radius, count)) {
-                            try {
-                                e.addPotionEffect(new org.bukkit.potion.PotionEffect(type, ticks, amp));
-                            } catch (Throwable ignored) {
-                            }
-                        }
-                    };
-                }),
-                java.util.Map.entry("ignite-targets", (ActionFactory) a -> {
-                    String tn = str(a, 0, "players");
-                    double radius = num(a, 1, 6);
-                    int count = (int) num(a, 2, 1);
-                    int ticks = (int) num(a, 3, 40);
-                    return ctx -> {
-                        if (ticks <= 0) return;
-                        for (LivingEntity e : pick(ctx, tn, radius, count)) e.setFireTicks(ticks);
-                    };
-                }),
-                java.util.Map.entry("knockback-targets", (ActionFactory) a -> {
-                    String tn = str(a, 0, "players");
-                    double radius = num(a, 1, 6);
-                    int count = (int) num(a, 2, 1);
-                    double power = num(a, 3, 1.0);
-                    double up = num(a, 4, 0.4);
-                    return ctx -> {
-                        Location me = ctx.instanceValid() ? ctx.instance().location() : null;
-                        if (me == null || me.getWorld() == null) return;
-                        for (LivingEntity e : pick(ctx, tn, radius, count)) {
-                            try {
-                                org.bukkit.util.Vector v = e.getLocation().toVector()
-                                        .subtract(me.toVector()).normalize().multiply(power);
-                                e.setVelocity(v.setY(up));
-                            } catch (Throwable ignored) {
-                            }
                         }
                     };
                 }),
@@ -902,7 +1068,13 @@ public final class SkillCatalog {
         if (t == null) return List.of();
         Location me = ctx.instance().location();
         if (me == null || me.getWorld() == null) return List.of();
-        List<LivingEntity> cands = nearby(me, radius, ctx.instance().baseEntity().orElse(null));
+        List<LivingEntity> inherited = ctx.targets();
+        List<LivingEntity> cands = inherited.isEmpty()
+                ? nearby(me, radius, ctx.instance().baseEntity().orElse(null))
+                : new ArrayList<>(inherited);
+        if (radius >= 0) {
+            cands.removeIf(entity -> dev.helstera.api.behavior.Targeters.distance(me, entity) > radius);
+        }
         if (cands.isEmpty()) return List.of();
         List<LivingEntity> picked = t.select(ctx.instance(), cands, List.of());
         return picked.size() > count ? picked.subList(0, count) : picked;
@@ -931,7 +1103,7 @@ public final class SkillCatalog {
      * 方向退化（与目标重合）时同样退回朝向，避免归一化除零得到 NaN。</p>
      */
     private static org.bukkit.util.Vector dashDirection(BehaviorContext ctx, Location me, String mode) {
-        Location target = ctx.target().map(t -> t.getLocation()).orElse(null);
+        Location target = ctx.targetEntity().map(t -> t.getLocation()).orElse(null);
         if (target != null && me.getWorld() != null && target.getWorld() == me.getWorld()) {
             org.bukkit.util.Vector diff = target.toVector().subtract(me.toVector());
             // 用 multiply(-1) 而非 negate()：后者不在当前 Paper API 的 Vector 上
@@ -951,6 +1123,44 @@ public final class SkillCatalog {
             self.setVelocity(dir.multiply(distance));
         } catch (Throwable ignored) {
         }
+    }
+
+    private static org.bukkit.entity.Projectile launchProjectile(
+            org.bukkit.projectiles.ProjectileSource source, String rawType, Vector velocity) {
+        String type = rawType == null ? "ARROW" : rawType.trim().toUpperCase(Locale.ROOT);
+        return switch (type) {
+            case "SNOWBALL" -> source.launchProjectile(org.bukkit.entity.Snowball.class, velocity);
+            case "EGG" -> source.launchProjectile(org.bukkit.entity.Egg.class, velocity);
+            case "FIREBALL" -> source.launchProjectile(org.bukkit.entity.Fireball.class, velocity);
+            case "SMALL_FIREBALL", "SMALLFIREBALL" ->
+                    source.launchProjectile(org.bukkit.entity.SmallFireball.class, velocity);
+            case "WITHER_SKULL", "WITHERSKULL" ->
+                    source.launchProjectile(org.bukkit.entity.WitherSkull.class, velocity);
+            case "TRIDENT" -> source.launchProjectile(org.bukkit.entity.Trident.class, velocity);
+            case "SPECTRAL_ARROW", "SPECTRALARROW" ->
+                    source.launchProjectile(org.bukkit.entity.SpectralArrow.class, velocity);
+            default -> source.launchProjectile(org.bukkit.entity.Arrow.class, velocity);
+        };
+    }
+
+    public static void trackProjectile(org.bukkit.entity.Projectile projectile,
+                                        LivingEntity target, double speed, int maxTicks) {
+        if (pluginRef == null) return;
+        final org.bukkit.scheduler.BukkitTask[] task = new org.bukkit.scheduler.BukkitTask[1];
+        final int[] remaining = {maxTicks};
+        task[0] = pluginRef.getServer().getScheduler().runTaskTimer(pluginRef, () -> {
+            if (--remaining[0] < 0 || !projectile.isValid() || target.isDead() || !target.isValid()) {
+                task[0].cancel();
+                return;
+            }
+            Vector direction = target.getLocation().clone().add(0, 1, 0)
+                    .subtract(projectile.getLocation()).toVector();
+            if (direction.lengthSquared() > 1.0e-8) {
+                Vector desired = direction.normalize().multiply(speed);
+                Vector blended = projectile.getVelocity().multiply(0.65).add(desired.multiply(0.35));
+                projectile.setVelocity(blended);
+            }
+        }, 1L, 1L);
     }
 
     /**

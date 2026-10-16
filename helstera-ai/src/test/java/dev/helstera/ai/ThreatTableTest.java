@@ -59,6 +59,18 @@ class ThreatTableTest {
     }
 
     @Test
+    @DisplayName("focus promotes a target above the current threat leader")
+    void focusesTarget() {
+        var t = table(0, 0);
+        UUID a = uuid("a"), b = uuid("b");
+        t.addThreat(a, 100, 0);
+        t.addThreat(b, 1, 0);
+        t.focus(b);
+        assertEquals(b, t.top(null));
+        assertTrue(t.threatOf(b) > t.threatOf(a));
+    }
+
+    @Test
     @DisplayName("零与负伤害不记入仇恨")
     void ignoresNonPositiveDamage() {
         var t = table(0, 0);

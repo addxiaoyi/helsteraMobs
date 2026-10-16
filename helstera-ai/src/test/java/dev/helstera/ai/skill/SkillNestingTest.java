@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.StringReader;
+import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * 嵌套技能、环引用与冷却的测试。
@@ -477,4 +479,176 @@ class SkillNestingTest {
         assertFalse(svc.castSkill("old_skill", ctx()));
         assertTrue(svc.castSkill("new_skill", ctx()));
     }
+    @Test
+    @DisplayName("target-conditions and trigger-conditions gate skill casts")
+    void targetAndTriggerConditionsGateCasts() {
+        var fired = new AtomicInteger();
+        registry.registerAction("probe", ctx -> fired.incrementAndGet());
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  gated:
+                    target-conditions:
+                      - has-target
+                    trigger-conditions:
+                      - trigger-is-player
+                    on-decision:
+                      - probe
+                """).getConfigurationSection("skills"));
+
+        assertFalse(svc.castSkill("gated", ctx()));
+        assertEquals(0, fired.get());
+    }
+
+    @Test
+    @DisplayName("nested skills share and unset one tree variable")
+    void nestedSkillsShareAndUnsetTreeVariable() {
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  inner:
+                    on-decision:
+                      - var-add marker 1
+                      - variable-unset marker
+                  outer:
+                    on-decision:
+                      - var-set marker 4
+                      - cast-skill inner
+                """).getConfigurationSection("skills"));
+        var ctx = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+
+        assertTrue(svc.castSkill("outer", ctx));
+        assertTrue(ctx.skillTree().orElseThrow().variable("marker").isEmpty());
+    }
+
+    @Test
+    @DisplayName("target and trigger gates receive distinct contexts")
+    void conditionStagesUseSeparateContextValues() {
+        var seen = new java.util.ArrayList<BehaviorContext>();
+        registry.registerCondition("capture", context -> { seen.add(context); return true; });
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  gated:
+                    target-conditions: [capture]
+                    trigger-conditions: [capture]
+                    on-decision: [probe]
+                """).getConfigurationSection("skills"));
+        registry.registerAction("probe", context -> { });
+        var original = BehaviorContext.execution(null, null, 1.0, -1, 0, "skill",
+                null, null, List.of(), null);
+        assertTrue(svc.castSkill("gated", original));
+        assertEquals(2, seen.size());
+        assertSame(original, seen.get(0), "without a target, keep the neutral context");
+        assertSame(original, seen.get(1), "without a trigger entity, keep the neutral context");
+    }
+
+    @Test
+    @DisplayName("target and trigger conditions evaluate against their respective entities")
+    void targetAndTriggerConditionsUseDistinctEntityContexts() {
+        var target = livingPlayerProxy();
+        var trigger = livingPlayerProxy();
+        var observed = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
+        registry.registerCondition("capture-context", context -> {
+            observed.add(context.targetEntity().orElse(null));
+            return true;
+        });
+        registry.registerAction("probe", context -> { });
+
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  gated:
+                    target-conditions: [capture-context]
+                    trigger-conditions: [capture-context]
+                    on-decision: [probe]
+                """).getConfigurationSection("skills"));
+        var context = BehaviorContext.execution(null, (org.bukkit.entity.Player) target,
+                0.5, 4, 0, "skill", null, trigger, List.of(target), null);
+
+        assertTrue(svc.castSkill("gated", context));
+        assertEquals(2, observed.size());
+        assertSame(target, observed.get(0));
+        assertSame(trigger, observed.get(1));
+    }
+
+    @Test
+    @DisplayName("target conditions filter each selected target before nested actions")
+    void targetConditionsFilterSelectedTargets() {
+        var rejected = livingPlayerProxy();
+        var accepted = livingPlayerProxy();
+        var observed = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
+        var executed = new java.util.ArrayList<BehaviorContext>();
+        registry.registerCondition("accept-second-target", context -> {
+            var target = context.targetEntity().orElseThrow();
+            observed.add(target);
+            return target == accepted;
+        });
+        registry.registerAction("capture-targets", executed::add);
+
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  filtered:
+                    target-conditions: [accept-second-target]
+                    on-decision: [capture-targets]
+                """).getConfigurationSection("skills"));
+        var context = BehaviorContext.execution(null, (org.bukkit.entity.Player) rejected,
+                0.5, 4, 0, "skill", null, null, List.of(rejected, accepted), null);
+
+        assertTrue(svc.castSkill("filtered", context));
+        assertEquals(List.of(rejected, accepted), observed);
+        assertEquals(1, executed.size());
+        assertEquals(List.of(accepted), executed.get(0).targets());
+        assertSame(accepted, executed.get(0).targetEntity().orElseThrow());
+        assertEquals(List.of(accepted), context.skillTree().orElseThrow().targets());
+    }
+
+    private static org.bukkit.entity.Player livingPlayerProxy() {
+        return (org.bukkit.entity.Player) Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Player.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getHealth" -> 10.0;
+                    case "getMaxHealth" -> 20.0;
+                    case "isValid", "isOnline" -> true;
+                    case "getName", "getDisplayName" -> "test-player";
+                    case "toString" -> "test-player-proxy";
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "equals" -> proxy == (args == null ? null : args[0]);
+                    default -> {
+                        Class<?> type = method.getReturnType();
+                        if (!type.isPrimitive()) yield null;
+                        if (type == boolean.class) yield false;
+                        if (type == char.class) yield (char) 0;
+                        if (type == byte.class) yield (byte) 0;
+                        if (type == short.class) yield (short) 0;
+                        if (type == int.class) yield 0;
+                        if (type == long.class) yield 0L;
+                        if (type == float.class) yield 0f;
+                        if (type == double.class) yield 0d;
+                        yield null;
+                    }
+                });
+    }
+
+    @Test
+    @DisplayName("targeted damage mechanic routes into existing damage-target implementation")
+    void targeterBindingUsesRealMechanicImplementation() {
+        var svc = service();
+        String bound = svc.bindAction("damage{amount=3} @Target");
+        assertNotNull(bound);
+        assertTrue(bound.startsWith("damage-target:"), bound);
+        assertFalse(bound.contains("mythic-"), bound);
+    }
+
+    @Test
+    @DisplayName("targeter binding resolves mechanic aliases before validation")
+    void targeterBindingRoutesDamageAlias() {
+        String bound = service().bindAction("damage{amount=3} @Target");
+        assertNotNull(bound);
+        assertTrue(bound.startsWith("damage-target:"), bound);
+    }
+
 }

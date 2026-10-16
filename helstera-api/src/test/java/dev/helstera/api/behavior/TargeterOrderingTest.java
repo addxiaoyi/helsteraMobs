@@ -5,8 +5,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.lang.reflect.Proxy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * 目标排序内核的语义测试。
@@ -108,5 +111,178 @@ class TargeterOrderingTest {
         List<String> out = order(in);
         assertEquals(3, out.size(), "NaN 输入不得导致丢元素");
         assertEquals("ok", out.get(0), "正常分数应排在 NaN 之前");
+    }
+    @Test
+    @DisplayName("spatial targeters are registered and preserve named arguments")
+    void spatialTargetersAreRegistered() {
+        assertTrue(Targeters.names().containsAll(List.of(
+                "sphere", "ring", "cone", "lineofsight", "los")));
+        assertTrue(Targeters.byName("cone") != null);
+        assertTrue(Targeters.byName("ring") != null);
+    }
+
+    @Test
+    @DisplayName("context targeter recognizes parameterized VariableLocation and fails closed when absent")
+    void variableLocationTargeterFailsClosedWithoutStoredLocation() {
+        var ctx = BehaviorContext.execution(null, null, 1, -1, 0, "skill",
+                null, null, List.of(), null);
+        assertEquals(List.of(), Targeters.select("@VariableLocation{var=missing}", ctx,
+                List.of(), List.of()));
+    }
+
+    @Test
+    @DisplayName("VariableLocation resolves a stored SkillTree location, not an entity approximation")
+    void variableLocationResolvesStoredLocation() {
+        var tree = new SkillTreeContext(null, List.of());
+        tree.setLocation("mark", new org.bukkit.Location(null, 12, 64, -4));
+        var ctx = BehaviorContext.continueExecution(null, null, 1, -1, 0,
+                "skill", null, null, List.of(), null, tree);
+        var resolved = Targeters.resolveLocation("@VariableLocation{var=mark}", ctx);
+        assertTrue(resolved.isPresent());
+        assertEquals(12, resolved.orElseThrow().getX());
+        assertTrue(Targeters.resolveLocation("@VariableLocation{var=missing}", ctx).isEmpty());
+        assertEquals(List.of(), Targeters.select("@VariableLocation{var=mark}", ctx,
+                List.of(), List.of()), "Location targeter must not pretend a nearby entity is the saved location");
+    }
+
+
+    @Test
+    @DisplayName("targeter filter, count zero, and chain semantics are explicit")
+    void targeterFilterCountAndChain() {
+        var player = livingProxy(org.bukkit.entity.Player.class);
+        var mob = livingProxy(org.bukkit.entity.LivingEntity.class);
+        List<org.bukkit.entity.LivingEntity> candidates = List.of(player, mob);
+
+        assertEquals(List.of(player), Targeters.select(
+                "@living{filter=players}", (dev.helstera.api.instance.ModelInstance) null, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{count=0}", (dev.helstera.api.instance.ModelInstance) null, candidates, List.of()));
+        assertEquals(List.of(player), Targeters.select(
+                "@living{filter=players} > @nearest{count=1}", (dev.helstera.api.instance.ModelInstance) null, candidates, List.of()));
+    }
+
+    @Test
+    @DisplayName("targeter faction filters distinguish exact, allied, and hostile factions")
+    void targeterFactionFilters() {
+        var guards = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var undead = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var raiders = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var factions = new java.util.IdentityHashMap<org.bukkit.entity.Entity, String>();
+        factions.put(guards, "guards");
+        factions.put(undead, "undead");
+        factions.put(raiders, "raiders");
+        Factions.install(new FactionTable() {
+            @Override public String factionOf(org.bukkit.entity.Entity entity) { return factions.get(entity); }
+            @Override public boolean allied(org.bukkit.entity.Entity a, org.bukkit.entity.Entity b) {
+                return alliedFactions(factionOf(a), factionOf(b));
+            }
+            @Override public boolean alliedFactions(String a, String b) {
+                return a != null && b != null && (a.equalsIgnoreCase(b)
+                        || (a.equalsIgnoreCase("guards") && b.equalsIgnoreCase("raiders"))
+                        || (a.equalsIgnoreCase("raiders") && b.equalsIgnoreCase("guards")));
+            }
+            @Override public java.util.Collection<String> names() { return java.util.List.of("guards", "undead", "raiders"); }
+        });
+        try {
+            List<org.bukkit.entity.LivingEntity> candidates = List.of(guards, undead, raiders);
+            assertEquals(List.of(guards), Targeters.select("@living{filter=faction:guards}",
+                    (dev.helstera.api.instance.ModelInstance) null, candidates, List.of()));
+            assertEquals(List.of(guards, raiders), Targeters.select("@living{filter=allied:guards}",
+                    (dev.helstera.api.instance.ModelInstance) null, candidates, List.of()));
+            assertEquals(List.of(undead), Targeters.select("@living{filter=hostile:guards}",
+                    (dev.helstera.api.instance.ModelInstance) null, candidates, List.of()));
+        } finally {
+            Factions.install(null);
+        }
+    }
+
+    @Test
+    @DisplayName("threat targeter applies faction filtering before threat ordering")
+    void threatTargeterComposesWithFactionFilter() {
+        var guardsLow = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var guardsHigh = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var undeadHigh = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var factions = new java.util.IdentityHashMap<org.bukkit.entity.Entity, String>();
+        factions.put(guardsLow, "guards");
+        factions.put(guardsHigh, "guards");
+        factions.put(undeadHigh, "undead");
+        var threat = new java.util.IdentityHashMap<org.bukkit.entity.Entity, Double>();
+        threat.put(guardsLow, 5.0);
+        threat.put(guardsHigh, 20.0);
+        threat.put(undeadHigh, 100.0);
+        Factions.install(new FactionTable() {
+            @Override public String factionOf(org.bukkit.entity.Entity entity) { return factions.get(entity); }
+            @Override public boolean allied(org.bukkit.entity.Entity a, org.bukkit.entity.Entity b) {
+                return alliedFactions(factionOf(a), factionOf(b));
+            }
+            @Override public boolean alliedFactions(String a, String b) {
+                return a != null && b != null && a.equalsIgnoreCase(b);
+            }
+            @Override public java.util.Collection<String> names() { return java.util.List.of("guards", "undead"); }
+        });
+        Targeters.threatProvider((source, candidate) -> threat.getOrDefault(candidate, 0.0));
+        try {
+            assertEquals(List.of(guardsHigh, guardsLow), Targeters.select(
+                    "@threat{filter=faction:guards}", (dev.helstera.api.instance.ModelInstance) null,
+                    List.of(guardsLow, undeadHigh, guardsHigh), List.of()));
+            assertEquals(List.of(undeadHigh), Targeters.select(
+                    "@threat{filter=hostile:guards}", (dev.helstera.api.instance.ModelInstance) null,
+                    List.of(guardsLow, undeadHigh, guardsHigh), List.of()));
+        } finally {
+            Targeters.threatProvider(null);
+            Factions.install(null);
+        }
+    }
+
+    @Test
+    @DisplayName("target targeter keeps non-player LivingEntity targets")
+    void targetTargeterUsesLivingEntityContext() {
+        var target = (org.bukkit.entity.LivingEntity) Proxy.newProxyInstance(
+                org.bukkit.entity.LivingEntity.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.LivingEntity.class},
+                (proxy, method, args) -> method.getName().equals("getLocation")
+                        ? new org.bukkit.Location(null, 2, 3, 4) : defaultValue(method.getReturnType()));
+        var context = BehaviorContext.continueExecution(null, target, 1, 2, 0, "skill",
+                null, null, List.of(target), null, null);
+        assertSame(target, Targeters.select("@target", context, List.of(), List.of()).get(0));
+        assertEquals(2, Targeters.resolveLocation("@targetlocation", context).orElseThrow().getX());
+    }
+
+    @Test
+    @DisplayName("attacker targeter resolves a non-player trigger entity")
+    void attackerTargeterUsesTriggerEntity() {
+        var attacker = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var context = BehaviorContext.continueExecution(null, null, 1, 2, 0,
+                "skill", null, attacker, List.of(attacker), null, null);
+        assertSame(attacker, Targeters.select("@attacker", context, List.of(), List.of()).get(0));
+    }
+
+    @Test
+    @DisplayName("owner targeter fails closed when caster is not tameable")
+    void ownerTargeterWithoutOwnerIsEmpty() {
+        var context = BehaviorContext.continueExecution(null, null, 1, -1, 0,
+                "skill", null, null, List.of(), null, null);
+        assertEquals(List.of(), Targeters.select("@owner", context, List.of(), List.of()));
+    }
+
+    private static <T extends org.bukkit.entity.LivingEntity> T livingProxy(Class<T> type) {
+        return type.cast(Proxy.newProxyInstance(type.getClassLoader(),
+                new Class<?>[]{type}, (proxy, method, args) -> {
+                    if (method.getName().equals("getType")) return org.bukkit.entity.EntityType.ZOMBIE;
+                    if (method.getName().equals("getLocation")) return new org.bukkit.Location(null, 0, 0, 0);
+                    return defaultValue(method.getReturnType());
+                }));
+    }
+
+    private static Object defaultValue(Class<?> type) {
+        if (!type.isPrimitive()) return null;
+        if (type == boolean.class) return false;
+        if (type == char.class) return (char) 0;
+        if (type == byte.class) return (byte) 0;
+        if (type == short.class) return (short) 0;
+        if (type == int.class) return 0;
+        if (type == long.class) return 0L;
+        if (type == float.class) return 0f;
+        return 0d;
     }
 }

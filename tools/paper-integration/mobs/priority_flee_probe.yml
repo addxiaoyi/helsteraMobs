@@ -1,0 +1,18 @@
+name: Priority Flee Probe
+model: example/emberling
+entity:
+  type: PIG
+  silent: true
+  prevent-sunburn: true
+mob:
+  despawn: PERSISTENT
+ai:
+  can-chase: true
+  can-patrol: false
+  flee-health-ratio: 0.8
+  attack-radius: 8.0
+  goals:
+    - "0 panic"
+    - "1 meleeattack"
+  targets:
+    - "0 players"

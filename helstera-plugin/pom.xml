@@ -43,6 +43,7 @@
             <artifactId>junit-jupiter-engine</artifactId>
             <scope>test</scope>
         </dependency>
+
         <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId><scope>provided</scope></dependency>
         <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId><scope>provided</scope></dependency>
         <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId><scope>provided</scope></dependency>
@@ -105,6 +106,53 @@
         注意：一旦用 -P 显式指定任一 profile，activeByDefault 的 full 会自动关闭。
     -->
     <profiles>
+        <profile>
+            <id>paper-integration</id>
+            <properties>
+                <build.variant>full</build.variant>
+            </properties>
+            <dependencies>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-render-paper</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-resourcepack</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-ai</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-integrations</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-web</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-migration</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-platform</artifactId></dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <executions>
+                            <execution>
+                                <id>validate-paper-integration-report-contract</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>powershell</executable>
+                                    <arguments>
+                                        <argument>-NoProfile</argument>
+                                        <argument>-ExecutionPolicy</argument>
+                                        <argument>Bypass</argument>
+                                        <argument>-File</argument>
+                                        <argument>${maven.multiModuleProjectDirectory}/tools/paper-integration/test-report.ps1</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- full / 5.0：完整版（默认激活） -->
         <profile>
             <id>full</id>

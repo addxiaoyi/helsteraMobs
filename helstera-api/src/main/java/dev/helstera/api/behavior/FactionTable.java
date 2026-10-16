@@ -38,6 +38,11 @@ public interface FactionTable {
      */
     boolean allied(Entity a, Entity b);
 
+    /** Compares faction ids without requiring concrete faction-service access. */
+    default boolean alliedFactions(String a, String b) {
+        return a != null && b != null && a.equalsIgnoreCase(b);
+    }
+
     /**
      * 两个实体是否可互相攻击。等价于 {@code !allied}，单独给出是为了让调用点
      * 读起来是业务语言而不是双重否定。

@@ -1,0 +1,16 @@
+name: Tempt Probe
+model: example/emberling
+entity:
+  type: PIG
+  silent: true
+mob:
+  despawn: PERSISTENT
+ai:
+  can-chase: true
+  can-patrol: false
+  goals:
+    - "0 tempt WHEAT"
+  triggers:
+    on-entity-target:
+      do:
+        - set-name &dENTITY_TARGET_EVENT_OK

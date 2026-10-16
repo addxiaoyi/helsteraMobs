@@ -1,0 +1,33 @@
+menus:
+  parity-page-1:
+    title: '&8Parity Page 1'
+    rows: 3
+    page-group: parity
+    page: 1
+    buttons:
+      '10':
+        item: REDSTONE
+        name: '&cDenied action'
+        permission: integration.menu.denied
+        command: 'say MENU_DENIED_ACTION_RAN'
+    pagination:
+      enabled: true
+      previous-slot: 18
+      next-slot: 26
+      page-info-slot: 22
+  parity-page-2:
+    title: '&8Parity Page 2'
+    rows: 3
+    page-group: parity
+    page: 2
+    buttons:
+      '13':
+        item: EMERALD
+        name: '&aClose action'
+        command: 'say MENU_ALLOWED_ACTION_RAN'
+        close: true
+    pagination:
+      enabled: true
+      previous-slot: 18
+      next-slot: 26
+      page-info-slot: 22

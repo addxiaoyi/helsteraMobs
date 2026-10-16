@@ -2,6 +2,7 @@ package dev.helstera.ai.skill;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.bukkit.entity.LivingEntity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,6 +27,14 @@ class SkillTriggerTest {
         assertSame(SkillTrigger.DAMAGE, SkillTrigger.of("on-damage"));
         assertSame(SkillTrigger.DEATH, SkillTrigger.of("on-death"));
         assertSame(SkillTrigger.KILL_PLAYER, SkillTrigger.of("on-kill-player"));
+        assertSame(SkillTrigger.TELEPORT, SkillTrigger.of("on-teleport"));
+        assertSame(SkillTrigger.BLOCK_BREAK, SkillTrigger.of("on-block-break"));
+        assertSame(SkillTrigger.BLOCK_PLACE, SkillTrigger.of("on-block-place"));
+        assertSame(SkillTrigger.ITEM_PICKUP, SkillTrigger.of("on-item-pickup"));
+        assertSame(SkillTrigger.ENTITY_TARGET, SkillTrigger.of("on-entity-target"));
+        assertSame(SkillTrigger.VEHICLE_ENTER, SkillTrigger.of("on-vehicle-enter"));
+        assertSame(SkillTrigger.VEHICLE_EXIT, SkillTrigger.of("on-vehicle-exit"));
+        assertSame(SkillTrigger.VEHICLE_DESTROY, SkillTrigger.of("on-vehicle-destroy"));
     }
 
     @Test
@@ -37,6 +46,13 @@ class SkillTriggerTest {
         assertSame(SkillTrigger.SPAWN, SkillTrigger.of("  on-spawn  "));
         assertSame(SkillTrigger.KILL_PLAYER, SkillTrigger.of("onKillPlayer"));
         assertSame(SkillTrigger.ENTITY_SHOOT, SkillTrigger.of("on_entity_shoot"));
+        assertSame(SkillTrigger.PROJECTILE_HIT, SkillTrigger.of("on-projectile-hit"));
+        assertSame(SkillTrigger.TELEPORT, SkillTrigger.of("onTeleport"));
+        assertSame(SkillTrigger.BLOCK_BREAK, SkillTrigger.of("onBlockBreak"));
+        assertSame(SkillTrigger.ITEM_PICKUP, SkillTrigger.of("onItemPickup"));
+        assertSame(SkillTrigger.ENTITY_TARGET, SkillTrigger.of("onEntityTarget"));
+        assertSame(SkillTrigger.VEHICLE_ENTER, SkillTrigger.of("onVehicleEnter"));
+        assertSame(SkillTrigger.VEHICLE_DESTROY, SkillTrigger.of("onVehicleDestroy"));
     }
 
     @Test
@@ -149,4 +165,23 @@ class SkillTriggerTest {
         assertEquals(names.size(), new java.util.HashSet<>(names).size(), "不应有重复");
         assertTrue(names.contains("on-timer"));
     }
-}
+    @Test
+    @DisplayName("pre-target event accepts LivingEntity targets")
+    void preTargetEventAcceptsLivingEntity() {
+        LivingEntity target = (LivingEntity) java.lang.reflect.Proxy.newProxyInstance(
+                LivingEntity.class.getClassLoader(), new Class<?>[]{LivingEntity.class},
+                (proxy, method, args) -> method.getReturnType().isPrimitive() ? defaultPrimitive(method.getReturnType()) : null);
+        var event = new dev.helstera.api.event.ModelPreTargetEvent(null, target);
+        assertSame(target, event.potentialTarget());
+    }
+
+    private static Object defaultPrimitive(Class<?> type) {
+        if (type == boolean.class) return false;
+        if (type == char.class) return (char) 0;
+        if (type == byte.class) return (byte) 0;
+        if (type == short.class) return (short) 0;
+        if (type == int.class) return 0;
+        if (type == long.class) return 0L;
+        if (type == float.class) return 0f;
+        return 0d;
+    }}

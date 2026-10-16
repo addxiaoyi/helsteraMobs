@@ -51,4 +51,9 @@ public final class Factions {
         FactionTable t = current;
         return t != null && t.allied(a, b);
     }
+
+    public static String factionOf(org.bukkit.entity.Entity entity) {
+        FactionTable t = current;
+        return t == null || entity == null ? null : t.factionOf(entity);
+    }
 }

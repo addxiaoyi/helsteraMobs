@@ -184,6 +184,14 @@ public final class FactionService implements FactionTable {
     }
 
     @Override
+    public boolean alliedFactions(String a, String b) {
+        if (a == null || b == null) return false;
+        String left = a.toLowerCase(Locale.ROOT);
+        String right = b.toLowerCase(Locale.ROOT);
+        return alliesOf(left).contains(right) || alliesOf(right).contains(left);
+    }
+
+    @Override
     public Collection<String> names() {
         return java.util.List.copyOf(factions.keySet());
     }

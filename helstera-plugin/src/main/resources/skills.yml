@@ -40,3 +40,31 @@ skills:
       - distance-below 12
     on-decision:
       - set-intent ATTACK
+
+  # SkillTree branch example: unlock_branch must run before the gated branch.
+  unlock_branch:
+    on-decision:
+      - branch-unlock combat
+
+  unlock_healthy_branch:
+    on-decision:
+      - 'branch-unlock{branch=healthy-combat;condition=health-above 0.5}'
+
+  branch_attack:
+    branch: combat
+    branch-requires: []
+    on-decision:
+      - damage-target 2
+
+  branch_elite_attack:
+    branch: elite-combat
+    branch-requires:
+      - combat
+    on-decision:
+      - damage-target 5
+
+  cancelled_damage_probe:
+    require:
+      - is-cancelled
+    on-decision:
+      - set-item GOLD_INGOT off-hand 1

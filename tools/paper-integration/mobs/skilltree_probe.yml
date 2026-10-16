@@ -1,0 +1,9 @@
+name: SkillTree Persistence Probe
+model: example/emberling
+entity:
+  type: ARMOR_STAND
+  health: 20
+  silent: true
+mob:
+  despawn: PERSISTENT
+  persistent: true

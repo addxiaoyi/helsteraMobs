@@ -1,0 +1,12 @@
+{
+  "name": "helstera-paper-integration-client",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Disposable Minecraft client for Paper integration scenarios",
+  "scripts": {
+    "test:menu": "node menu-client-test.js 127.0.0.1 25731"
+  },
+  "devDependencies": {
+    "mineflayer": "^4.33.0"
+  }
+}

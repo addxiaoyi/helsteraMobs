@@ -2,6 +2,9 @@ package dev.helstera.plugin;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.bukkit.configuration.file.YamlConfiguration;
+import dev.helstera.ai.AiProfile;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -69,5 +72,38 @@ class HealthClampTest {
         assertEquals(2048.0, HelsteraPlugin.BUKKIT_MAX_HEALTH, 1e-9,
                 "上限必须与 Paper 的 GENERIC_MAX_HEALTH 实际限制一致；"
                         + "调大它会让防护形同虚设");
+    }
+    @Test
+    @DisplayName("imported mob options override AI runtime values")
+    void appliesImportedMobOptions() {
+        AiProfile profile = new AiProfile("test");
+        var yaml = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                sight-radius: 32
+                follow-range: 40
+                attack-damage: 9
+                attack-cooldown: 0.5
+                move-speed: 0.4
+                threat-weight: 12
+                """));
+        HelsteraPlugin.applyMobOptions(profile, yaml);
+        assertEquals(40, profile.sightRadius, 1e-9);
+        assertEquals(9, profile.attackDamage, 1e-9);
+        assertEquals(0.5, profile.attackCooldown, 1e-9);
+        assertEquals(0.4, profile.moveSpeed, 1e-9);
+        assertEquals(12, profile.threatDistanceWeight, 1e-9);
+    }    @Test
+    @DisplayName("despawn distance prefers explicit value then legacy spawning distance")
+    void configuredDespawnDistancePrefersNewField() {
+        var legacy = YamlConfiguration.loadConfiguration(new java.io.StringReader("mob:\n  spawning-distance: 44"));
+        assertEquals(44, HelsteraPlugin.configuredDespawnDistance(legacy), 1e-9);
+        var explicit = YamlConfiguration.loadConfiguration(new java.io.StringReader("mob:\n  despawn-distance: 18\n  spawning-distance: 44"));
+        assertEquals(18, HelsteraPlugin.configuredDespawnDistance(explicit), 1e-9);
+    }
+
+    @Test
+    void dynamicDropChanceResolvesNumbersAndFailsClosedOnUnknownPlaceholders() {
+        assertEquals(0.35, HelsteraPlugin.resolveDropChance("0.35", null, null), 1e-9);
+        assertTrue(Double.isNaN(HelsteraPlugin.resolveDropChance("<unknown.value>", null, null)));
+        assertTrue(Double.isNaN(HelsteraPlugin.resolveDropChance("not-a-number", null, null)));
     }
 }
