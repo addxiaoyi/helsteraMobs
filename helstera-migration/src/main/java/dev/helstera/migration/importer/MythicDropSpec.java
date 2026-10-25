@@ -1,5 +1,7 @@
 package dev.helstera.migration.importer;
 
+import dev.helstera.api.util.ConditionListParser;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -37,7 +39,7 @@ public record MythicDropSpec(
         if (chanceExpression != null && !chanceExpression.isBlank()) {
             out.put("chance-expression", chanceExpression);
         }
-        if (!conditions.isEmpty()) out.put("conditions", conditions);
+        if (!conditions.isEmpty()) out.put("conditions", MmConditions.translateOnly(conditions));
         return Map.copyOf(out);
     }
 
@@ -133,11 +135,6 @@ public record MythicDropSpec(
     }
 
     private static List<String> list(Object value) {
-        if (value instanceof List<?> values) {
-            List<String> out = new ArrayList<>();
-            for (Object entry : values) if (entry != null && !String.valueOf(entry).isBlank()) out.add(String.valueOf(entry));
-            return out;
-        }
-        return value == null ? List.of() : List.of(String.valueOf(value));
+        return ConditionListParser.parse(value);
     }
 }

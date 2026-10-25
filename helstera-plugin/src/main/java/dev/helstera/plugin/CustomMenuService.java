@@ -11,6 +11,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryAction;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -365,21 +366,95 @@ public final class CustomMenuService implements Listener {
     private boolean paginationVisible(Player player, String permission, String world,
                                       String faction, String region) {
         if (player == null) return false;
-        if (permission != null && !permission.isBlank() && !player.hasPermission(permission)) return false;
-        if (world != null && !world.isBlank()
-                && (player.getWorld() == null || !player.getWorld().getName().equalsIgnoreCase(world))) return false;
-        if (faction != null && !faction.isBlank()) {
-            var table = dev.helstera.api.behavior.Factions.table();
-            if (table == null || !faction.equalsIgnoreCase(table.factionOf(player))) return false;
+        if (!menuPermissionMatches(player, permission)) return false;
+        String worldName = player.getWorld() == null ? null : player.getWorld().getName();
+        if (!menuValueMatches(worldName, world)) return false;
+        String factionName = null;
+        if (dev.helstera.api.behavior.Factions.table() != null) {
+            factionName = dev.helstera.api.behavior.Factions.table().factionOf(player);
         }
-        if (region != null && !region.isBlank()) {
-            Boolean external = regionResolver == null ? null : regionResolver.apply(region, player.getLocation());
-            if (external != null) return external;
-            Region named = regions.get(region.toLowerCase(java.util.Locale.ROOT));
-            if (named != null) return named.contains(player.getLocation());
-            return Button.insideRegion(player.getLocation(), region);
+        if (!menuValueMatches(factionName, faction)) return false;
+        return menuRegionMatches(player, region, regions, regionResolver);
+    }
+
+    /** Evaluates comma/semicolon/pipe-separated values with !/- exclusions. */
+    static boolean menuValueMatches(String actual, String specification) {
+        return menuClausesMatch(specification, expected -> actual != null
+                && actual.equalsIgnoreCase(expected));
+    }
+
+    static boolean menuPermissionMatches(Player player, String specification) {
+        if (player == null) return false;
+        return menuClausesMatch(specification, permission -> {
+            try { return player.hasPermission(permission); }
+            catch (RuntimeException ignored) { return false; }
+        });
+    }
+
+    static boolean menuClausesMatch(String specification,
+                                    java.util.function.Predicate<String> matcher) {
+        if (specification == null || specification.isBlank()) return true;
+        boolean positive = false;
+        boolean positiveMatch = false;
+        String[] clauses = specification.contains(";") || specification.contains("|")
+                ? specification.split("[;|]")
+                : isCoordinateRegionSpecification(specification)
+                ? new String[]{specification}
+                : specification.split(",");
+        for (String raw : clauses) {
+            String clause = raw == null ? "" : raw.trim();
+            if (clause.isBlank()) continue;
+            boolean excluded = clause.startsWith("!") || isMenuExclusionClause(clause);
+            String value = excluded ? clause.substring(1).trim() : clause;
+            if (value.isBlank()) continue;
+            boolean matches = matcher.test(value);
+            if (excluded) {
+                if (matches) return false;
+            } else {
+                positive = true;
+                positiveMatch |= matches;
+            }
         }
-        return true;
+        return !positive || positiveMatch;
+    }
+
+    private static boolean isCoordinateRegionSpecification(String value) {
+        if (value == null) return false;
+        String[] parts = value.trim().split(",", -1);
+        int offset = parts.length == 7 ? 1 : 0;
+        if (parts.length != 6 && parts.length != 7) return false;
+        if (offset == 1 && parts[0].isBlank()) return false;
+        try {
+            for (int i = offset; i < parts.length; i++) Double.parseDouble(parts[i].trim());
+            return true;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isMenuExclusionClause(String clause) {
+        if (clause == null || !clause.startsWith("-")) return false;
+        // A coordinate region may legitimately start with a negative x value.
+        if (isCoordinateRegionSpecification(clause)) return false;
+        String coordinate = clause.substring(1);
+        return !coordinate.matches("\\d+(?:\\.\\d+)?,.*");
+    }
+
+    private static boolean menuRegionMatches(Player player, String specification,
+                                             Map<String, Region> regions,
+                                             java.util.function.BiFunction<String, org.bukkit.Location, Boolean> resolver) {
+        if (player == null) return false;
+        return menuClausesMatch(specification, expected -> {
+            try {
+                org.bukkit.Location location = player.getLocation();
+                Boolean external = resolver == null ? null : resolver.apply(expected, location);
+                if (external != null) return external;
+                Region named = regions == null ? null : regions.get(expected.toLowerCase(java.util.Locale.ROOT));
+                return named != null ? named.contains(location) : Button.insideRegion(location, expected);
+            } catch (RuntimeException ignored) {
+                return false;
+            }
+        });
     }
 
     private String paginationTarget(Menu menu, int rawSlot, Player player) {
@@ -463,6 +538,13 @@ public final class CustomMenuService implements Listener {
 
     @EventHandler public void onClose(InventoryCloseEvent event) { open.remove(event.getView().getTopInventory()); }
 
+    /** Drop per-player menu history when a client disconnects. */
+    @EventHandler public void onQuit(PlayerQuitEvent event) {
+        if (event != null && event.getPlayer() != null) {
+            navigation.remove(event.getPlayer().getUniqueId());
+        }
+    }
+
     static boolean shouldCloseAfterButton(boolean currentMenu, boolean permitted, boolean close) {
         return currentMenu && permitted && close;
     }
@@ -527,21 +609,16 @@ public final class CustomMenuService implements Listener {
                           String showIfRegion) {
         boolean visible(Player player, Map<String, Region> regions, java.util.function.BiFunction<String, org.bukkit.Location, Boolean> regionResolver) {
             if (player == null) return false;
-            if (!showIfPermission.isBlank() && !player.hasPermission(showIfPermission)) return false;
-            if (!showIfWorld.isBlank() && (player.getWorld() == null
-                    || !player.getWorld().getName().equalsIgnoreCase(showIfWorld))) return false;
+            if (!menuPermissionMatches(player, showIfPermission)) return false;
+            String worldName = player.getWorld() == null ? null : player.getWorld().getName();
+            if (!menuValueMatches(worldName, showIfWorld)) return false;
+            String factionName = null;
             if (!showIfFaction.isBlank()) {
                 var table = dev.helstera.api.behavior.Factions.table();
-                if (table == null || !showIfFaction.equalsIgnoreCase(table.factionOf(player))) return false;
+                if (table != null) factionName = table.factionOf(player);
             }
-            if (!showIfRegion.isBlank()) {
-                Boolean external = regionResolver == null ? null : regionResolver.apply(showIfRegion, player.getLocation());
-                if (external != null) return external;
-                Region named = regions.get(showIfRegion.toLowerCase(java.util.Locale.ROOT));
-                if (named != null ? !named.contains(player.getLocation())
-                        : !insideRegion(player.getLocation(), showIfRegion)) return false;
-            }
-            return true;
+            if (!menuValueMatches(factionName, showIfFaction)) return false;
+            return menuRegionMatches(player, showIfRegion, regions, regionResolver);
         }
 
         ItemStack item(ItemResolver resolver, Player player, String menuId) {

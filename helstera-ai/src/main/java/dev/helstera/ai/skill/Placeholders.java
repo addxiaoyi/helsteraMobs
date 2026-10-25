@@ -90,6 +90,7 @@ public final class Placeholders {
 
     private static String caster(BehaviorContext ctx, String field) {
         if (field.isEmpty()) return null;
+        field = normalizeField(field);
         if (field.equals("hp") || field.equals("hp.percent")) {
             return fmt(ctx.healthRatio() * 100.0);
         }
@@ -142,16 +143,21 @@ public final class Placeholders {
         if (field.equals("distance")) {
             return ctx.distanceToTarget() < 0 ? null : fmt(ctx.distanceToTarget());
         }
+        String gameplayField = gameplayField(living(ctx.instance()).orElse(null), field);
+        if (gameplayField != null) return gameplayField;
         return null;
     }
 
     private static String target(BehaviorContext ctx, String field) {
         LivingEntity target = ctx.targetEntity().orElse(null);
         if (target == null) return null;
+        field = normalizeField(field);
         if (field.equals("name")) return target instanceof Player p ? p.getName()
                 : target.getCustomName() == null ? target.getType().name().toLowerCase(Locale.ROOT) : target.getCustomName();
         if (field.equals("hp") || field.equals("hp.percent")) {
-            return fmt(target.getMaxHealth() > 0 ? target.getHealth() / target.getMaxHealth() * 100.0 : 0.0);
+            return fmt(target.getMaxHealth() > 0
+                    ? target.getHealth() / target.getMaxHealth() * 100.0
+                    : ctx.healthRatio() * 100.0);
         }
         if (field.equals("hp.raw") || field.equals("health")) return fmt(target.getHealth());
         if (field.equals("hp.max") || field.equals("maxhealth")) return fmt(target.getMaxHealth());
@@ -174,11 +180,14 @@ public final class Placeholders {
         if (field.equals("distance")) {
             return ctx.distanceToTarget() < 0 ? null : fmt(ctx.distanceToTarget());
         }
+        String gameplayField = gameplayField(target, field);
+        if (gameplayField != null) return gameplayField;
         return null;
     }
 
     /** skill.* 记录的是「当前技能上下文」，目前只有触发器名可用。 */
     private static String skill(BehaviorContext ctx, String field) {
+        field = normalizeField(field);
         if (field.equals("trigger") || field.equals("name")) return ctx.state();
         if (field.equals("health")) return fmt(ctx.healthRatio() * 100.0);
         if (field.equals("distance")) {
@@ -284,8 +293,15 @@ public final class Placeholders {
         for (String scope : List.of("caster", "target", "skill")) {
             for (String f : List.of("hp", "hp.percent", "hp.raw", "hp.max", "health", "maxhealth",
                     "name", "type", "world", "loc.x", "loc.y", "loc.z", "distance",
-                    "is-baby", "is-tamed", "is-sneaking", "is-on-ground", "is-in-water",
-                    "is-invisible", "is-glowing", "is-on-fire", "game-mode")) {
+                    "is-baby", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered",
+                    "has-ai", "has-gravity", "is-silent", "is-dead", "is-valid",
+                    "is-alive", "is_alive",
+                    "is-sneaking", "is-sprinting", "is-flying", "is-gliding", "is-blocking",
+                    "is-on-ground", "is-in-water", "is-in-lava", "is-swimming", "is-climbing",
+                    "is-invisible", "is-glowing", "is-on-fire", "is-collidable", "has-offhand",
+                    "offhand.type", "mainhand.type", "held.item", "food", "food.level",
+                    "saturation", "exhaustion", "air", "air.max", "luck", "armor",
+                    "is-op", "game-mode")) {
                 out.add(scope + "." + f);
             }
         }
@@ -324,18 +340,67 @@ public final class Placeholders {
     }
 
     private static String entityState(Entity entity, String field) {
+        if (entity == null) return null;
+        try {
+            switch (field) {
+                case "has-gravity" -> { return String.valueOf(entity.hasGravity()); }
+                case "is-silent" -> { return String.valueOf(entity.isSilent()); }
+                case "is-dead" -> { return String.valueOf(entity.isDead()); }
+                case "is-valid" -> { return String.valueOf(entity.isValid()); }
+                case "is-alive" -> { return String.valueOf(entity.isValid() && !entity.isDead()); }
+                default -> { }
+            }
+        } catch (Throwable ignored) {
+            return null;
+        }
         if (!(entity instanceof LivingEntity living)) return null;
         return switch (field) {
             case "is-baby" -> living instanceof org.bukkit.entity.Ageable age
                     ? String.valueOf(!age.isAdult()) : "false";
+            case "is-adult" -> living instanceof org.bukkit.entity.Ageable age
+                    ? String.valueOf(age.isAdult()) : "false";
             case "is-tamed" -> living instanceof org.bukkit.entity.Tameable tameable
                     ? String.valueOf(tameable.isTamed()) : "false";
+            case "is-sheared" -> living instanceof org.bukkit.entity.Sheep sheep
+                    ? String.valueOf(sheep.isSheared()) : "false";
+            case "is-saddled" -> living instanceof org.bukkit.entity.AbstractHorse horse
+                    && horse.getInventory() != null && horse.getInventory().getSaddle() != null
+                    && !"AIR".equalsIgnoreCase(horse.getInventory().getSaddle().getType().name())
+                    ? "true" : "false";
+            case "is-powered" -> living instanceof org.bukkit.entity.Creeper creeper
+                    ? String.valueOf(creeper.isPowered()) : "false";
+            case "has-ai" -> living instanceof org.bukkit.entity.Mob mob
+                    ? String.valueOf(mob.hasAI()) : "false";
             case "is-sneaking" -> String.valueOf(living.isSneaking());
+            case "is-sprinting" -> living instanceof Player player
+                    ? String.valueOf(player.isSprinting()) : "false";
+            case "is-flying" -> living instanceof Player player
+                    ? String.valueOf(player.isFlying()) : "false";
+            case "is-gliding" -> String.valueOf(living.isGliding());
+            case "is-blocking" -> living instanceof Player player
+                    ? String.valueOf(player.isBlocking()) : "false";
             case "is-on-ground" -> String.valueOf(living.isOnGround());
             case "is-in-water" -> String.valueOf(living.isInWater());
+            case "is-in-lava" -> String.valueOf(living.isInLava());
+            case "is-swimming" -> String.valueOf(living.isSwimming());
+            case "is-climbing" -> String.valueOf(living.isClimbing());
             case "is-invisible" -> String.valueOf(living.isInvisible());
             case "is-glowing" -> String.valueOf(living.isGlowing());
             case "is-on-fire" -> String.valueOf(living.getFireTicks() > 0);
+            case "is-collidable" -> String.valueOf(living.isCollidable());
+            case "has-offhand" -> {
+                var equipment = living.getEquipment();
+                var item = equipment == null ? null : equipment.getItemInOffHand();
+                yield String.valueOf(item != null && item.getType() != null && !item.getType().isAir());
+            }
+            case "offhand.type" -> {
+                var equipment = living.getEquipment();
+                var item = equipment == null ? null : equipment.getItemInOffHand();
+                yield item == null || item.getType() == null || item.getType().isAir()
+                        ? null : item.getType().name().toLowerCase(Locale.ROOT);
+            }
+            case "is-op" -> living instanceof Player player
+                    ? String.valueOf(player.isOp()) : "false";
             case "game-mode" -> living instanceof Player player ? player.getGameMode().name().toLowerCase(Locale.ROOT) : null;
             default -> {
                 if (field.startsWith("permission.") && living instanceof Player player) {
@@ -343,6 +408,62 @@ public final class Placeholders {
                 }
                 yield null;
             }
+        };
+    }
+
+    private static String gameplayField(LivingEntity living, String field) {
+        if (living == null) return null;
+        if (field.equals("food") || field.equals("food.level") || field.equals("food-level")) {
+            return living instanceof org.bukkit.entity.HumanEntity human
+                    ? String.valueOf(human.getFoodLevel()) : null;
+        }
+        if (field.equals("saturation")) {
+            return living instanceof org.bukkit.entity.HumanEntity human
+                    ? fmt(human.getSaturation()) : null;
+        }
+        if (field.equals("exhaustion")) {
+            return living instanceof org.bukkit.entity.HumanEntity human
+                    ? fmt(human.getExhaustion()) : null;
+        }
+        if (field.equals("air") || field.equals("air.level") || field.equals("air-level")) {
+            return String.valueOf(living.getRemainingAir());
+        }
+        if (field.equals("air.max") || field.equals("air-max")) return String.valueOf(living.getMaximumAir());
+        if (field.equals("luck")) return attributeValue(living, org.bukkit.attribute.Attribute.GENERIC_LUCK);
+        if (field.equals("armor")) return attributeValue(living, org.bukkit.attribute.Attribute.GENERIC_ARMOR);
+        if (field.equals("mainhand.type") || field.equals("held.item")) {
+            var equipment = living.getEquipment();
+            var item = equipment == null ? null : equipment.getItemInMainHand();
+            return item == null || item.getType() == null || item.getType().isAir()
+                    ? null : item.getType().name().toLowerCase(Locale.ROOT);
+        }
+        return null;
+    }
+
+    private static String attributeValue(LivingEntity living, org.bukkit.attribute.Attribute attribute) {
+        try {
+            var instance = living.getAttribute(attribute);
+            return instance == null ? null : fmt(instance.getValue());
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    /** Accept common Mythic underscore/percent spellings without mutating permission nodes. */
+    private static String normalizeField(String field) {
+        if (field == null || field.isBlank()) return field;
+        if (field.startsWith("permission.")) return field;
+        String lower = field.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("has-permission.") || lower.startsWith("has_permission.")) {
+            return "permission." + field.substring(field.indexOf('.') + 1);
+        }
+        return switch (lower) {
+            case "hp_percent", "hp-percent", "hppercentage", "health_percent",
+                    "health-percent", "health.percent" -> "hp.percent";
+            case "hp_raw", "hp-raw", "health_raw", "health-raw", "health.raw" -> "hp.raw";
+            case "hp_max", "hp-max", "max_health", "max-health", "health.max" -> "hp.max";
+            case "alive", "is_alive", "is-alive" -> "is-alive";
+            default -> field.replace('_', '-').toLowerCase(Locale.ROOT);
         };
     }
 

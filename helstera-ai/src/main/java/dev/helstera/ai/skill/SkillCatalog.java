@@ -144,12 +144,18 @@ public final class SkillCatalog {
     /** Schedule a delayed mechanic continuation on Bukkit's main thread. */
     public static boolean schedule(Runnable task, long delayTicks) {
         if (task == null) return false;
-        TaskScheduler override = taskScheduler;
-        if (override != null) return override.schedule(task, Math.max(0, delayTicks));
-        var plugin = pluginRef;
-        if (plugin == null || !plugin.isEnabled()) return false;
-        org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, task, Math.max(0, delayTicks));
-        return true;
+        try {
+            TaskScheduler override = taskScheduler;
+            if (override != null) return override.schedule(task, Math.max(0, delayTicks));
+            var plugin = pluginRef;
+            if (plugin == null || !plugin.isEnabled()) return false;
+            org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, task, Math.max(0, delayTicks));
+            return true;
+        } catch (RuntimeException ignored) {
+            // A disabled Bukkit scheduler must fail closed so SkillService can
+            // release the pending continuation and generation tombstone.
+            return false;
+        }
     }
 
     /**
@@ -159,6 +165,18 @@ public final class SkillCatalog {
 
     public static void skillService(dev.helstera.ai.skill.SkillService svc) {
         skillServiceRef = svc;
+    }
+
+    /** Clears plugin-owned catalog hooks so reloads cannot retain the old classloader. */
+    public static void resetRuntimeHooks() {
+        summoner = null;
+        summonGate = null;
+        transformer = null;
+        dialogueService = null;
+        pluginRef = null;
+        taskScheduler = null;
+        skillServiceRef = null;
+        RUNTIME_WARNINGS.clear();
     }
 
     private SkillCatalog() {
@@ -177,6 +195,19 @@ public final class SkillCatalog {
      */
     private static double num(List<String> args, int i, double def) {
         return SpecArgs.num(args, i, def);
+    }
+
+    /** Binds literals eagerly but resolves placeholder-backed numbers per execution. */
+    private static java.util.function.ToDoubleFunction<BehaviorContext> dynamicNum(
+            List<String> args, int index, double def) {
+        if (args == null || args.size() <= index || args.get(index) == null
+                || args.get(index).isBlank()) return ctx -> def;
+        String raw = args.get(index).trim();
+        if (raw.indexOf('<') >= 0) {
+            return ctx -> Placeholders.resolveNumber(raw, ctx, def);
+        }
+        double parsed = num(args, index, def);
+        return ctx -> parsed;
     }
 
     private static String str(List<String> args, int i, String def) {
@@ -361,6 +392,27 @@ public final class SkillCatalog {
 
                 java.util.Map.entry("is-invulnerable", (ConditionFactory) a -> ctx ->
                         ctx.instance().baseEntity().map(Entity::isInvulnerable).orElse(false)),
+                java.util.Map.entry("has-ai", (ConditionFactory) a -> ctx -> {
+                    if (ctx == null || !ctx.instanceValid()) return false;
+                    Entity base = ctx.instance().baseEntity().orElse(null);
+                    return base instanceof org.bukkit.entity.Mob mob && mob.hasAI();
+                }),
+                java.util.Map.entry("has-gravity", (ConditionFactory) a -> ctx ->
+                        ctx != null && ctx.instanceValid()
+                                && ctx.instance().baseEntity().map(Entity::hasGravity).orElse(false)),
+                java.util.Map.entry("is-silent", (ConditionFactory) a -> ctx ->
+                        ctx != null && ctx.instanceValid()
+                                && ctx.instance().baseEntity().map(Entity::isSilent).orElse(false)),
+                java.util.Map.entry("is-dead", (ConditionFactory) a -> ctx ->
+                        ctx != null && ctx.instanceValid()
+                                && ctx.instance().baseEntity().map(Entity::isDead).orElse(false)),
+                java.util.Map.entry("is-alive", (ConditionFactory) a -> ctx ->
+                        ctx != null && ctx.instanceValid()
+                                && ctx.instance().baseEntity()
+                                .map(entity -> entity.isValid() && !entity.isDead()).orElse(false)),
+                java.util.Map.entry("is-valid", (ConditionFactory) a -> ctx ->
+                        ctx != null && ctx.instanceValid()
+                                && ctx.instance().baseEntity().map(Entity::isValid).orElse(false)),
 
                 // facing-target：实体当前朝向目标（允许 ±45° 偏差）。
                 // 用于「只在面对目标时才触发」的场合。
@@ -504,13 +556,7 @@ public final class SkillCatalog {
                         Location at = ctx.instance().location();
                         if (at == null || at.getWorld() == null) return false;
                         try {
-                            long t = at.getWorld().getTime();
-                            // 0~11999 为白昼（不含雨天），12000~23999 为夜晚
-                            if (t < 12000 || t > 24000) return false;
-                            // 太阳高度换算：12000 时为正午，24000 时为地平线
-                            double frac = (t - 12000) / 12000.0;
-                            double light = Math.cos(frac * Math.PI);
-                            return light >= min;
+                            return daylightLevel(at.getWorld().getTime()) >= min;
                         } catch (Throwable ignored) { return false; }
                     };
                 }),
@@ -526,6 +572,13 @@ public final class SkillCatalog {
                     };
                 })
         );
+    }
+
+    /** Returns normalized daylight for the vanilla 0..23999 world-time cycle. */
+    public static double daylightLevel(long worldTime) {
+        long time = Math.floorMod(worldTime, 24_000L);
+        if (time >= 12_000L) return 0.0;
+        return Math.sin(Math.PI * time / 12_000.0);
     }
 
     /** 条件工厂内的运行期告警（仅用于参数非法等配置问题）。 */
@@ -597,27 +650,40 @@ public final class SkillCatalog {
                     };
                 }),
                 java.util.Map.entry("damage-target", (ActionFactory) a -> {
-                    double dmg = num(a, 0, 0.0);
+                    var dmg = dynamicNum(a, 0, 0.0);
                     return ctx -> {
-                        if (dmg <= 0) return;
-                        LivingEntity target = ctx.targetEntity().orElse(null);
+                        double amount = dmg.applyAsDouble(ctx);
+                        if (amount <= 0) return;
                         Location origin = ctx.origin().orElse(ctx.instanceValid() ? ctx.instance().location() : null);
-                        if (target == null || origin == null || origin.getWorld() == null
-                                || !origin.getWorld().equals(target.getWorld())) return;
-                        target.damage(dmg, ctx.instanceValid()
-                                ? ctx.instance().baseEntity().orElse(null) : ctx.trigger().orElse(null));
+                        if (origin == null || origin.getWorld() == null) return;
+                        Entity source = ctx.instanceValid()
+                                ? ctx.instance().baseEntity().orElse(null) : ctx.trigger().orElse(null);
+                        for (LivingEntity target : activeTargets(ctx)) {
+                            if (target == null || !origin.getWorld().equals(target.getWorld())) continue;
+                            target.damage(amount, source);
+                        }
                     };
                 }),
                  java.util.Map.entry("explode", (ActionFactory) a -> {
-                     float power = (float) Math.max(0, num(a, 0, 2.0));
+                     var power = dynamicNum(a, 0, 2.0);
                      boolean fire = bool(a, 1, false);
                      boolean breakBlocks = bool(a, 2, false);
                      return ctx -> {
-                         Location origin = ctx.targetEntity().map(LivingEntity::getLocation)
-                                 .orElseGet(() -> ctx.origin().orElse(
-                                         ctx.instanceValid() ? ctx.instance().location() : null));
-                         if (origin == null || origin.getWorld() == null || power <= 0) return;
-                         origin.getWorld().createExplosion(origin, power, fire, breakBlocks);
+                         float strength = (float) Math.max(0, power.applyAsDouble(ctx));
+                         if (strength <= 0) return;
+                         List<LivingEntity> targets = activeTargets(ctx);
+                         if (!targets.isEmpty()) {
+                             for (LivingEntity target : targets) {
+                                 Location targetLocation = target.getLocation();
+                                 if (targetLocation == null || targetLocation.getWorld() == null) continue;
+                                 targetLocation.getWorld().createExplosion(targetLocation, strength, fire, breakBlocks);
+                             }
+                             return;
+                         }
+                         Location origin = ctx.origin().orElseGet(() ->
+                                 ctx.instanceValid() ? ctx.instance().location() : null);
+                         if (origin == null || origin.getWorld() == null) return;
+                         origin.getWorld().createExplosion(origin, strength, fire, breakBlocks);
                      };
                  }),
                  java.util.Map.entry("set-target", (ActionFactory) a -> ctx -> {
@@ -642,11 +708,11 @@ public final class SkillCatalog {
                      ctx.instance().animation().stopAll();
                  }),
                  java.util.Map.entry("velocity-targets", (ActionFactory) a -> {
-                     double x = num(a, 0, 0);
-                     double y = num(a, 1, 0);
-                     double z = num(a, 2, 0);
-                     Vector velocity = new Vector(x, y, z);
+                     var x = dynamicNum(a, 0, 0);
+                     var y = dynamicNum(a, 1, 0);
+                     var z = dynamicNum(a, 2, 0);
                      return ctx -> {
+                         Vector velocity = new Vector(x.applyAsDouble(ctx), y.applyAsDouble(ctx), z.applyAsDouble(ctx));
                          List<LivingEntity> targets = ctx.targets().isEmpty()
                                  ? ctx.targetEntity().map(List::of).orElse(List.of()) : ctx.targets();
                          targets.forEach(target -> target.setVelocity(velocity.clone()));
@@ -654,8 +720,8 @@ public final class SkillCatalog {
                  }),
                  java.util.Map.entry("shoot-projectile", (ActionFactory) a -> {
                      String type = str(a, 0, "ARROW");
-                     double speed = Math.max(0.05, num(a, 1, 1.6));
-                     double damage = Math.max(0, num(a, 2, 3.0));
+                     var speed = dynamicNum(a, 1, 1.6);
+                     var damage = dynamicNum(a, 2, 3.0);
                      String hitSkill = str(a, 3, "");
                      double explosion = Math.max(0, num(a, 4, 0));
                      int fireTicks = Math.max(0, (int) num(a, 5, 0));
@@ -667,6 +733,8 @@ public final class SkillCatalog {
                      int trackingTicks = Math.max(1, (int) num(a, 11, 100));
                      return ctx -> {
                          if (!ctx.instanceValid()) return;
+                         double launchSpeed = Math.max(0.05, speed.applyAsDouble(ctx));
+                         double arrowDamage = Math.max(0, damage.applyAsDouble(ctx));
                          var source = ctx.instance().baseEntity().orElse(null);
                          if (!(source instanceof org.bukkit.projectiles.ProjectileSource projectileSource)) return;
                          Location origin = source.getLocation().clone().add(0, 1.5, 0);
@@ -676,7 +744,7 @@ public final class SkillCatalog {
                                  : target.getLocation().clone().add(0, 1, 0).subtract(origin).toVector();
                          if (direction.lengthSquared() < 1.0e-8) return;
                          org.bukkit.entity.Projectile projectile = launchProjectile(
-                                 projectileSource, type, direction.normalize().multiply(speed));
+                                 projectileSource, type, direction.normalize().multiply(launchSpeed));
                          if (!hitSkill.isBlank() && pluginRef != null) {
                              projectile.getPersistentDataContainer().set(
                                      new org.bukkit.NamespacedKey(pluginRef, "projectile_skill"),
@@ -695,69 +763,79 @@ public final class SkillCatalog {
                          }
                          projectile.setGravity(gravity);
                          if (tracking && target != null && pluginRef != null) {
-                             trackProjectile(projectile, target, speed, trackingTicks);
+                             trackProjectile(projectile, target, launchSpeed, trackingTicks);
                          }
                          if (projectile instanceof org.bukkit.entity.AbstractArrow arrow) {
-                             arrow.setDamage(damage);
+                             arrow.setDamage(arrowDamage);
                              arrow.setPierceLevel(pierce);
                              arrow.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
                          }
                      };
                  }),
                 java.util.Map.entry("heal-targets", (ActionFactory) a -> {
-                    double amount = num(a, 0, 0);
+                    var amount = dynamicNum(a, 0, 0);
                     return ctx -> {
-                        if (amount <= 0) return;
-                        for (LivingEntity target : ctx.targets()) {
+                        double value = amount.applyAsDouble(ctx);
+                        if (value <= 0) return;
+                        for (LivingEntity target : activeTargets(ctx)) {
                             double max = target.getMaxHealth();
-                            if (max > 0) target.setHealth(Math.min(max, target.getHealth() + amount));
+                            if (max > 0) target.setHealth(Math.min(max, target.getHealth() + value));
                         }
                     };
                 }),
                 java.util.Map.entry("ignite-targets", (ActionFactory) a -> {
-                    int ticks = (int) num(a, 0, 40);
-                    return ctx -> { if (ticks > 0) ctx.targets().forEach(target -> target.setFireTicks(ticks)); };
+                    var ticks = dynamicNum(a, 0, 40);
+                    return ctx -> {
+                        int value = (int) ticks.applyAsDouble(ctx);
+                        if (value > 0) activeTargets(ctx).forEach(target -> target.setFireTicks(value));
+                    };
                 }),
                 java.util.Map.entry("knockback-targets", (ActionFactory) a -> {
-                    double power = num(a, 0, 1);
-                    double up = num(a, 1, 0.4);
+                    var power = dynamicNum(a, 0, 1);
+                    var up = dynamicNum(a, 1, 0.4);
                     return ctx -> {
+                        double strength = power.applyAsDouble(ctx);
+                        double vertical = up.applyAsDouble(ctx);
                         Location origin = ctx.origin().orElse(ctx.instanceValid() ? ctx.instance().location() : null);
                         if (origin == null || origin.getWorld() == null) return;
-                        for (LivingEntity target : ctx.targets()) {
+                        for (LivingEntity target : activeTargets(ctx)) {
                             if (!origin.getWorld().equals(target.getWorld())) continue;
                             org.bukkit.util.Vector direction = target.getLocation().toVector().subtract(origin.toVector());
-                            if (direction.lengthSquared() > 1.0e-8) target.setVelocity(direction.normalize().multiply(power).setY(up));
+                            if (direction.lengthSquared() > 1.0e-8) target.setVelocity(direction.normalize().multiply(strength).setY(vertical));
                         }
                     };
                 }),
                 java.util.Map.entry("effect-targets", (ActionFactory) a -> {
                     String potion = str(a, 0, "");
-                    int ticks = (int) num(a, 1, 60);
-                    int amplifier = (int) num(a, 2, 0);
+                    var ticks = dynamicNum(a, 1, 60);
+                    var amplifier = dynamicNum(a, 2, 0);
                     boolean ambient = bool(a, 3, false);
                     boolean particles = bool(a, 4, true);
                     boolean icon = bool(a, 5, true);
                     return ctx -> {
                         var type = potionType(potion);
-                        if (type == null || ticks <= 0) return;
-                        for (LivingEntity target : ctx.targets()) {
+                        int duration = (int) ticks.applyAsDouble(ctx);
+                        int level = (int) amplifier.applyAsDouble(ctx);
+                        if (type == null || duration <= 0) return;
+                        for (LivingEntity target : activeTargets(ctx)) {
                             target.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                    type, ticks, amplifier, ambient, particles, icon));
+                                    type, duration, level, ambient, particles, icon));
                         }
                     };
                 }),
                 java.util.Map.entry("teleport-targets", (ActionFactory) a -> {
                     String location = str(a, 0, "@origin");
                     return ctx -> dev.helstera.api.behavior.Targeters.resolveLocation(location, ctx)
-                            .ifPresent(destination -> ctx.targets().forEach(target -> target.teleport(destination)));
+                            .ifPresent(destination -> activeTargets(ctx).forEach(target -> target.teleport(destination)));
                 }),
                 java.util.Map.entry("message-target", (ActionFactory) a -> {
                     String text = str(a, 0, "");
-                    return ctx -> ctx.targetEntity().filter(Player.class::isInstance)
-                            .map(Player.class::cast).ifPresent(p -> {
-                                if (!text.isBlank()) p.sendMessage(text);
-                            });
+                    return ctx -> {
+                        if (text.isBlank()) return;
+                        for (LivingEntity target : activeTargets(ctx)) {
+                            if (target instanceof Player player) player.sendMessage(text);
+                        }
+                    };
                 }),
                 java.util.Map.entry("sound", (ActionFactory) a -> {
                     String name = str(a, 0, "");
@@ -816,13 +894,14 @@ public final class SkillCatalog {
                     };
                 }),
                 java.util.Map.entry("heal-self", (ActionFactory) a -> {
-                    double amount = num(a, 0, 0.0);
+                    var amount = dynamicNum(a, 0, 0.0);
                     return ctx -> {
-                        if (amount <= 0 || !ctx.instanceValid()) return;
+                        double value = amount.applyAsDouble(ctx);
+                        if (value <= 0 || !ctx.instanceValid()) return;
                         if (ctx.instance().baseEntity().filter(e -> e instanceof LivingEntity).isPresent()) {
                             LivingEntity le = (LivingEntity) ctx.instance().baseEntity().orElse(null);
                             double max = le.getMaxHealth();
-                            le.setHealth(Math.min(max, le.getHealth() + amount));
+                            le.setHealth(Math.min(max, le.getHealth() + value));
                         }
                     };
                 }),
@@ -831,13 +910,16 @@ public final class SkillCatalog {
                 // 参数形如：<目标选择器> <半径> [数量] ...
                 java.util.Map.entry("aoe-damage", (ActionFactory) a -> {
                     String tn = str(a, 0, "players");
-                    double radius = num(a, 1, 5);
-                    int count = (int) num(a, 2, 1);
-                    double dmg = num(a, 3, 0);
+                    var radius = dynamicNum(a, 1, 5);
+                    var count = dynamicNum(a, 2, 1);
+                    var dmg = dynamicNum(a, 3, 0);
                     return ctx -> {
-                        if (dmg <= 0) return;
-                        for (LivingEntity e : pick(ctx, tn, radius, count)) {
-                            e.damage(dmg, ctx.instanceValid()
+                        double amount = dmg.applyAsDouble(ctx);
+                        double range = radius.applyAsDouble(ctx);
+                        int limit = (int) count.applyAsDouble(ctx);
+                        if (amount <= 0) return;
+                        for (LivingEntity e : pick(ctx, tn, range, limit)) {
+                            e.damage(amount, ctx.instanceValid()
                                     ? ctx.instance().baseEntity().orElse(null) : null);
                         }
                     };
@@ -857,12 +939,12 @@ public final class SkillCatalog {
 
                 // ---- 自身位移 ----
 
-                // dash <距离> [朝向]：以自身朝向为基准前冲，遇墙截断。
-                // blink <距离> [朝向]：朝目标方向瞬移，无目标时退回自身朝向。
-                // 朝向可选 target / forward——前者在无目标时同样退回 forward，
-                // 因此两个动作只在「有目标时朝谁」上有区别。
+                // dash <距离> [朝向]：推动施法者，遇墙截断由服务端碰撞处理。
+                // blink <距离> [朝向]：把施法者瞬移到可通行的位置。
+                // 目标器只提供方向目标；这两个 mechanic 仍然只移动施法者，
+                // 不应被路由成对目标执行的 action。forward 始终使用自身朝向。
                 java.util.Map.entry("dash", (ActionFactory) a -> {
-                    double distance = Math.max(0.5, num(a, 0, 5));
+                    var distance = dynamicNum(a, 0, 5);
                     String mode = str(a, 1, "target").toLowerCase(Locale.ROOT);
                     return ctx -> {
                         if (!ctx.instanceValid()) return;
@@ -870,11 +952,12 @@ public final class SkillCatalog {
                         if (me == null || me.getWorld() == null) return;
                         org.bukkit.util.Vector dir = dashDirection(ctx, me, mode);
                         if (dir == null) return;
-                        step(ctx.instance().baseEntity().orElse(null), dir, distance);
+                        step(ctx.instance().baseEntity().orElse(null), dir,
+                                Math.max(0.5, distance.applyAsDouble(ctx)));
                     };
                 }),
                 java.util.Map.entry("blink", (ActionFactory) a -> {
-                    double distance = Math.max(0.5, num(a, 0, 8));
+                    var distance = dynamicNum(a, 0, 8);
                     String mode = str(a, 1, "target").toLowerCase(Locale.ROOT);
                     return ctx -> {
                         if (!ctx.instanceValid()) return;
@@ -882,7 +965,8 @@ public final class SkillCatalog {
                         if (me == null || me.getWorld() == null) return;
                         org.bukkit.util.Vector dir = dashDirection(ctx, me, mode);
                         if (dir == null) return;
-                        Location dest = walkClear(me, dir, distance);
+                        Location dest = walkClear(me, dir,
+                                Math.max(0.5, distance.applyAsDouble(ctx)));
                         if (dest == null) return;
                         var self = ctx.instance().baseEntity().orElse(null);
                         if (self == null) return;
@@ -895,8 +979,8 @@ public final class SkillCatalog {
 
                 // knockback-self <水平力> [上抛力>：给自身一个冲量，配合位移做击退效果。
                 java.util.Map.entry("knockback-self", (ActionFactory) a -> {
-                    double power = num(a, 0, 1.0);
-                    double up = num(a, 1, 0.4);
+                    var power = dynamicNum(a, 0, 1.0);
+                    var up = dynamicNum(a, 1, 0.4);
                     return ctx -> {
                         if (!ctx.instanceValid()) return;
                         var self = ctx.instance().baseEntity().orElse(null);
@@ -904,7 +988,8 @@ public final class SkillCatalog {
                         if (self == null || me == null) return;
                         try {
                             org.bukkit.util.Vector dir = dashDirection(ctx, me, "forward");
-                            self.setVelocity(dir.multiply(power).setY(up));
+                            self.setVelocity(dir.multiply(power.applyAsDouble(ctx))
+                                    .setY(up.applyAsDouble(ctx)));
                         } catch (Throwable ignored) {
                         }
                     };
@@ -1055,6 +1140,13 @@ public final class SkillCatalog {
     // 目标选取辅助
     // ------------------------------------------------------------------
 
+    /** Uses the explicit target list, falling back to the active single target. */
+    private static List<LivingEntity> activeTargets(BehaviorContext ctx) {
+        if (ctx == null) return List.of();
+        if (!ctx.targets().isEmpty()) return ctx.targets();
+        return ctx.targetEntity().map(List::of).orElseGet(List::of);
+    }
+
     /**
      * 用目标选择器从半径内的候选里挑出目标。
      *
@@ -1103,17 +1195,30 @@ public final class SkillCatalog {
      * 方向退化（与目标重合）时同样退回朝向，避免归一化除零得到 NaN。</p>
      */
     private static org.bukkit.util.Vector dashDirection(BehaviorContext ctx, Location me, String mode) {
+        org.bukkit.util.Vector forward = me.getDirection();
+        if (forward == null || forward.lengthSquared() < 1.0e-8) return null;
+        String directionMode = mode == null ? "target" : mode;
+        if ("forward".equals(directionMode) || "look".equals(directionMode)
+                || "self".equals(directionMode)) {
+            return forward.normalize();
+        }
+
         Location target = ctx.targetEntity().map(t -> t.getLocation()).orElse(null);
         if (target != null && me.getWorld() != null && target.getWorld() == me.getWorld()) {
             org.bukkit.util.Vector diff = target.toVector().subtract(me.toVector());
             // 用 multiply(-1) 而非 negate()：后者不在当前 Paper API 的 Vector 上
-            if ("back".equals(mode)) diff = diff.multiply(-1);
-            else if ("near".equals(mode) || "away".equals(mode)) diff = diff.normalize().multiply(-1);
+            if ("back".equals(directionMode) || "away".equals(directionMode)) {
+                diff = diff.multiply(-1);
+            }
+            // near/target/toward all mean movement towards the active target.
             if (diff.lengthSquared() > 1e-6) {
                 return diff.normalize();
             }
         }
-        return me.getDirection();
+        // A missing target or a target at the same location falls back to the
+        // caster's facing direction; unknown modes retain the default target
+        // direction semantics for backwards-compatible configs.
+        return forward.normalize();
     }
 
     /** 按方向设置速度向量，实现前冲。速度按 1 tick 换算，故直接以位移量作速度。 */

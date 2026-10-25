@@ -44,6 +44,7 @@ public final class SpawnOptions {
     private boolean preventTeleport = false;
     private boolean preventPickup = false;
     private boolean preventItemUse = false;
+    private boolean interactable = true;
     private boolean preventDrowning = false;
     private boolean preventFallDamage = false;
     private boolean preventFire = false;
@@ -53,6 +54,8 @@ public final class SpawnOptions {
     private boolean preventSuicide = false;
     private boolean preventBlockExplosions = false;
     private boolean preventEntityExplosions = false;
+    private boolean preventBlockInfection = false;
+    private boolean preventSnowFormation = false;
     private boolean healOnReload = false;
     private boolean digOutOfGround = false;
 
@@ -190,6 +193,8 @@ public final class SpawnOptions {
     public SpawnOptions preventPickup(boolean value) { preventPickup = value; return this; }
     public boolean preventItemUse() { return preventItemUse; }
     public SpawnOptions preventItemUse(boolean value) { preventItemUse = value; return this; }
+    public boolean interactable() { return interactable; }
+    public SpawnOptions interactable(boolean value) { interactable = value; return this; }
     public boolean preventDrowning() { return preventDrowning; }
     public SpawnOptions preventDrowning(boolean value) { preventDrowning = value; return this; }
     public boolean preventFallDamage() { return preventFallDamage; }
@@ -214,6 +219,10 @@ public final class SpawnOptions {
     public SpawnOptions preventBlockExplosions(boolean value) { preventBlockExplosions = value; return this; }
     public boolean preventEntityExplosions() { return preventEntityExplosions; }
     public SpawnOptions preventEntityExplosions(boolean value) { preventEntityExplosions = value; return this; }
+    public boolean preventBlockInfection() { return preventBlockInfection; }
+    public SpawnOptions preventBlockInfection(boolean value) { preventBlockInfection = value; return this; }
+    public boolean preventSnowFormation() { return preventSnowFormation; }
+    public SpawnOptions preventSnowFormation(boolean value) { preventSnowFormation = value; return this; }
     public boolean healOnReload() { return healOnReload; }
     public SpawnOptions healOnReload(boolean value) { healOnReload = value; return this; }
     public boolean digOutOfGround() { return digOutOfGround; }

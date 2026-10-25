@@ -197,6 +197,10 @@ class PlaceholdersTest {
     void exposesTargetEntityState() {
         Player player = mock(Player.class);
         when(player.isSneaking()).thenReturn(true);
+        when(player.isSprinting()).thenReturn(true);
+        when(player.isFlying()).thenReturn(true);
+        when(player.isBlocking()).thenReturn(true);
+        when(player.isOp()).thenReturn(true);
         when(player.isOnGround()).thenReturn(true);
         when(player.isInWater()).thenReturn(false);
         when(player.isInvisible()).thenReturn(false);
@@ -206,6 +210,10 @@ class PlaceholdersTest {
         BehaviorContext context = BehaviorContext.of(null, player, 1.0, 3.0, 0, "CHASE");
 
         assertEquals("true", Placeholders.lookup("target.is-sneaking", context));
+        assertEquals("true", Placeholders.lookup("target.is-sprinting", context));
+        assertEquals("true", Placeholders.lookup("target.is-flying", context));
+        assertEquals("true", Placeholders.lookup("target.is-blocking", context));
+        assertEquals("true", Placeholders.lookup("target.is-op", context));
         assertEquals("true", Placeholders.lookup("target.is-on-ground", context));
         assertEquals("false", Placeholders.lookup("target.is-in-water", context));
         assertEquals("false", Placeholders.lookup("target.is-baby", context));
@@ -214,5 +222,114 @@ class PlaceholdersTest {
         assertEquals("true", Placeholders.lookup("target.is-glowing", context));
         assertEquals("true", Placeholders.lookup("target.is-on-fire", context));
         assertEquals("true", Placeholders.lookup("target.permission.my.node", context));
+    }
+
+    @Test
+    @DisplayName("placeholder field aliases accept Mythic underscore spellings")
+    void acceptsUnderscoreFieldAliases() {
+        Player player = mock(Player.class);
+        when(player.isSneaking()).thenReturn(true);
+        when(player.getFireTicks()).thenReturn(20);
+        BehaviorContext context = BehaviorContext.of(null, player, 0.5, -1, 0, "IDLE");
+
+        assertEquals("50.0", Placeholders.lookup("target.hp_percent", context));
+        assertEquals("true", Placeholders.lookup("target.is_sneaking", context));
+        assertEquals("true", Placeholders.lookup("target.is_on_fire", context));
+    }
+
+    @Test
+    @DisplayName("health, alive, and permission placeholder aliases follow Mythic spellings")
+    void acceptsCommonMythicFieldAliases() {
+        Player player = mock(Player.class);
+        when(player.getHealth()).thenReturn(6.0);
+        when(player.getMaxHealth()).thenReturn(20.0);
+        when(player.isDead()).thenReturn(false);
+        when(player.isValid()).thenReturn(true);
+        when(player.hasPermission("my.node")).thenReturn(true);
+        BehaviorContext context = BehaviorContext.of(null, player, 0.3, -1, 0, "IDLE");
+
+        assertEquals("30.0", Placeholders.lookup("target.health.percent", context));
+        assertEquals("6.0", Placeholders.lookup("target.health.raw", context));
+        assertEquals("20.0", Placeholders.lookup("target.health.max", context));
+        assertEquals("true", Placeholders.lookup("target.is_alive", context));
+        assertEquals("true", Placeholders.lookup("target.has_permission.my.node", context));
+        assertTrue(Placeholders.knownKeys().contains("target.is-alive"));
+    }
+
+    @Test
+    @DisplayName("entity state placeholders expose age, AI, gravity and powered flags")
+    void exposesEntityStateFlags() {
+        org.bukkit.entity.Zombie zombie = mock(org.bukkit.entity.Zombie.class);
+        when(zombie.isAdult()).thenReturn(true);
+        when(zombie.hasAI()).thenReturn(true);
+        when(zombie.hasGravity()).thenReturn(false);
+        BehaviorContext context = BehaviorContext.of(null, zombie, 1.0, -1, 0, "IDLE");
+
+        assertEquals("true", Placeholders.lookup("target.is-adult", context));
+        assertEquals("false", Placeholders.lookup("target.is-baby", context));
+        assertEquals("true", Placeholders.lookup("target.has-ai", context));
+        assertEquals("false", Placeholders.lookup("target.has-gravity", context));
+
+        org.bukkit.entity.Creeper creeper = mock(org.bukkit.entity.Creeper.class);
+        when(creeper.isPowered()).thenReturn(true);
+        BehaviorContext powered = BehaviorContext.of(null, creeper, 1.0, -1, 0, "IDLE");
+        assertEquals("true", Placeholders.lookup("target.is-powered", powered));
+    }
+
+    @Test
+    @DisplayName("placeholder entity state exposes collidable and offhand values")
+    void exposesCollidableAndOffhandState() {
+        Player player = mock(Player.class);
+        org.bukkit.inventory.EntityEquipment equipment = mock(org.bukkit.inventory.EntityEquipment.class);
+        org.bukkit.inventory.ItemStack shield = mock(org.bukkit.inventory.ItemStack.class);
+        org.bukkit.Material material = mock(org.bukkit.Material.class);
+        when(player.isCollidable()).thenReturn(true);
+        when(player.getEquipment()).thenReturn(equipment);
+        when(equipment.getItemInOffHand()).thenReturn(shield);
+        when(shield.getType()).thenReturn(material);
+        when(material.isAir()).thenReturn(false);
+        when(material.name()).thenReturn("SHIELD");
+        BehaviorContext context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        assertEquals("true", Placeholders.lookup("target.is-collidable", context));
+        assertEquals("true", Placeholders.lookup("target.has-offhand", context));
+        assertEquals("shield", Placeholders.lookup("target.offhand.type", context));
+    }
+
+    @Test
+    @DisplayName("placeholder exposes player gameplay and equipment values")
+    void exposesGameplayValues() {
+        Player player = mock(Player.class);
+        org.bukkit.inventory.EntityEquipment equipment = mock(org.bukkit.inventory.EntityEquipment.class);
+        org.bukkit.inventory.ItemStack sword = mock(org.bukkit.inventory.ItemStack.class);
+        org.bukkit.Material material = mock(org.bukkit.Material.class);
+        org.bukkit.attribute.AttributeInstance luck = mock(org.bukkit.attribute.AttributeInstance.class);
+        org.bukkit.attribute.AttributeInstance armor = mock(org.bukkit.attribute.AttributeInstance.class);
+        when(player.getFoodLevel()).thenReturn(14);
+        when(player.getSaturation()).thenReturn(3.5f);
+        when(player.getExhaustion()).thenReturn(1.25f);
+        when(player.getRemainingAir()).thenReturn(120);
+        when(player.getMaximumAir()).thenReturn(300);
+        when(player.getEquipment()).thenReturn(equipment);
+        when(equipment.getItemInMainHand()).thenReturn(sword);
+        when(sword.getType()).thenReturn(material);
+        when(material.isAir()).thenReturn(false);
+        when(material.name()).thenReturn("DIAMOND_SWORD");
+        when(player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_LUCK)).thenReturn(luck);
+        when(player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ARMOR)).thenReturn(armor);
+        when(luck.getValue()).thenReturn(2.0);
+        when(armor.getValue()).thenReturn(8.0);
+        BehaviorContext context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        assertEquals("14", Placeholders.lookup("target.food", context));
+        assertEquals("14", Placeholders.lookup("target.food_level", context));
+        assertEquals("3.5", Placeholders.lookup("target.saturation", context));
+        assertEquals("1.3", Placeholders.lookup("target.exhaustion", context));
+        assertEquals("120", Placeholders.lookup("target.air", context));
+        assertEquals("300", Placeholders.lookup("target.air.max", context));
+        assertEquals("2.0", Placeholders.lookup("target.luck", context));
+        assertEquals("8.0", Placeholders.lookup("target.armor", context));
+        assertEquals("diamond_sword", Placeholders.lookup("target.mainhand.type", context));
+        assertEquals("diamond_sword", Placeholders.lookup("target.held.item", context));
     }
 }

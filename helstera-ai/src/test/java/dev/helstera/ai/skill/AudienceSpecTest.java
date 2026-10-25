@@ -3,6 +3,7 @@ package dev.helstera.ai.skill;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AudienceSpecTest {
 
@@ -22,5 +23,18 @@ class AudienceSpecTest {
         assertEquals("radius", spec.kind());
         assertEquals(12, spec.radius());
         assertEquals("guards", spec.faction());
+    }
+
+    @Test
+    void parsesCombinedPermissionAndFactionExclusions() {
+        var spec = SkillExtras.AudienceSpec.parse(
+                "radius{r=12;permission=!helstera.menu;faction=-undead}", 32);
+
+        assertEquals("radius", spec.kind());
+        assertEquals(12, spec.radius());
+        assertEquals("helstera.menu", spec.permission());
+        assertEquals("undead", spec.faction());
+        assertTrue(spec.permissionExcluded());
+        assertTrue(spec.factionExcluded());
     }
 }

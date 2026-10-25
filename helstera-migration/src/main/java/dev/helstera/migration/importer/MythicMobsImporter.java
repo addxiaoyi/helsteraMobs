@@ -1,5 +1,6 @@
 package dev.helstera.migration.importer;
 
+import dev.helstera.api.util.ConditionListParser;
 import dev.helstera.api.migration.MigrationImporter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -11,6 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * MythicMobs 导入器：扫描 Mobs/*.yml 与 Skills/*.yml，转为 helstera 定义。
@@ -70,11 +73,181 @@ public final class MythicMobsImporter implements MigrationImporter {
             Map.entry(314, "GOLDEN_HELMET"), Map.entry(315, "GOLDEN_CHESTPLATE"),
             Map.entry(316, "GOLDEN_LEGGINGS"), Map.entry(317, "GOLDEN_BOOTS"));
 
+    /**
+     * Legacy item IDs with a stable modern Material when data is absent or
+     * explicitly zero. Data-bearing families (potions, spawn eggs, etc.) are
+     * handled by variants below or remain preserved instead of being guessed.
+     */
+    private static final Map<Integer, String> LEGACY_ITEM_MATERIALS = Map.ofEntries(
+            Map.entry(318, "FLINT"), Map.entry(319, "PORKCHOP"), Map.entry(320, "COOKED_PORKCHOP"),
+            Map.entry(321, "PAINTING"), Map.entry(322, "GOLDEN_APPLE"), Map.entry(323, "OAK_SIGN"),
+            Map.entry(324, "OAK_DOOR"), Map.entry(325, "BUCKET"), Map.entry(326, "WATER_BUCKET"),
+            Map.entry(327, "LAVA_BUCKET"), Map.entry(328, "MINECART"), Map.entry(329, "SADDLE"),
+            Map.entry(330, "IRON_DOOR"), Map.entry(331, "REDSTONE"), Map.entry(332, "SNOWBALL"),
+            Map.entry(333, "OAK_BOAT"), Map.entry(334, "LEATHER"), Map.entry(335, "MILK_BUCKET"),
+            Map.entry(336, "BRICK"), Map.entry(337, "CLAY_BALL"), Map.entry(338, "SUGAR"),
+            Map.entry(339, "PAPER"), Map.entry(340, "BOOK"), Map.entry(341, "SLIME_BALL"),
+            Map.entry(342, "CHEST_MINECART"), Map.entry(343, "FURNACE_MINECART"), Map.entry(344, "EGG"),
+            Map.entry(345, "COMPASS"), Map.entry(346, "FISHING_ROD"), Map.entry(347, "CLOCK"),
+            Map.entry(348, "GLOWSTONE_DUST"), Map.entry(349, "COD"), Map.entry(350, "COOKED_COD"),
+            Map.entry(352, "BONE"), Map.entry(353, "SUGAR"), Map.entry(354, "CAKE"),
+            Map.entry(355, "WHITE_BED"), Map.entry(356, "REPEATER"), Map.entry(357, "COOKIE"),
+            Map.entry(358, "FILLED_MAP"), Map.entry(359, "SHEARS"), Map.entry(360, "MELON_SLICE"),
+            Map.entry(361, "PUMPKIN_SEEDS"), Map.entry(362, "MELON_SEEDS"), Map.entry(363, "BEEF"),
+            Map.entry(364, "COOKED_BEEF"), Map.entry(365, "CHICKEN"), Map.entry(366, "COOKED_CHICKEN"),
+            Map.entry(367, "ROTTEN_FLESH"), Map.entry(368, "ENDER_PEARL"), Map.entry(369, "BLAZE_ROD"),
+            Map.entry(370, "GHAST_TEAR"), Map.entry(371, "GOLD_NUGGET"), Map.entry(372, "NETHER_WART"),
+            Map.entry(373, "POTION"), Map.entry(374, "GLASS_BOTTLE"), Map.entry(375, "SPIDER_EYE"),
+            Map.entry(376, "FERMENTED_SPIDER_EYE"), Map.entry(377, "BLAZE_POWDER"), Map.entry(378, "MAGMA_CREAM"),
+            Map.entry(379, "BREWING_STAND"), Map.entry(380, "CAULDRON"), Map.entry(381, "ENDER_EYE"),
+            Map.entry(382, "GLISTERING_MELON_SLICE"),
+            Map.entry(384, "EXPERIENCE_BOTTLE"), Map.entry(385, "FIRE_CHARGE"), Map.entry(386, "WRITTEN_BOOK"),
+            Map.entry(387, "WRITABLE_BOOK"), Map.entry(388, "EMERALD"), Map.entry(389, "ITEM_FRAME"),
+            Map.entry(390, "FLOWER_POT"), Map.entry(391, "CARROT"), Map.entry(392, "POTATO"),
+            Map.entry(393, "BAKED_POTATO"), Map.entry(394, "POISONOUS_POTATO"), Map.entry(395, "MAP"),
+            Map.entry(396, "GOLDEN_CARROT"), Map.entry(398, "CARROT_ON_A_STICK"), Map.entry(399, "NETHER_STAR"),
+            Map.entry(400, "PUMPKIN_PIE"), Map.entry(401, "FIREWORK_ROCKET"), Map.entry(402, "FIREWORK_STAR"),
+            Map.entry(403, "ENCHANTED_BOOK"), Map.entry(404, "COMPARATOR"), Map.entry(405, "NETHER_BRICK"),
+            Map.entry(406, "QUARTZ"), Map.entry(407, "TNT_MINECART"), Map.entry(408, "HOPPER_MINECART"),
+            Map.entry(409, "PRISMARINE_SHARD"), Map.entry(410, "PRISMARINE_CRYSTALS"), Map.entry(411, "RABBIT"),
+            Map.entry(412, "COOKED_RABBIT"), Map.entry(413, "RABBIT_STEW"), Map.entry(414, "RABBIT_FOOT"),
+            Map.entry(415, "RABBIT_HIDE"), Map.entry(416, "ARMOR_STAND"), Map.entry(417, "IRON_HORSE_ARMOR"),
+            Map.entry(418, "GOLDEN_HORSE_ARMOR"), Map.entry(419, "DIAMOND_HORSE_ARMOR"), Map.entry(420, "LEAD"),
+            Map.entry(421, "NAME_TAG"), Map.entry(422, "COMMAND_BLOCK_MINECART"), Map.entry(423, "MUTTON"),
+            Map.entry(424, "COOKED_MUTTON"), Map.entry(425, "WHITE_BANNER"), Map.entry(426, "END_CRYSTAL"),
+            Map.entry(427, "SPRUCE_DOOR"), Map.entry(428, "BIRCH_DOOR"), Map.entry(429, "JUNGLE_DOOR"),
+            Map.entry(430, "ACACIA_DOOR"), Map.entry(431, "DARK_OAK_DOOR"), Map.entry(432, "CHORUS_FRUIT"),
+            Map.entry(433, "POPPED_CHORUS_FRUIT"), Map.entry(434, "BEETROOT"), Map.entry(435, "BEETROOT_SEEDS"),
+            Map.entry(436, "BEETROOT_SOUP"), Map.entry(437, "DRAGON_BREATH"), Map.entry(438, "SPLASH_POTION"),
+            Map.entry(439, "SPECTRAL_ARROW"), Map.entry(440, "TIPPED_ARROW"), Map.entry(441, "LINGERING_POTION"),
+            Map.entry(442, "SHIELD"), Map.entry(443, "ELYTRA"), Map.entry(444, "SPRUCE_BOAT"),
+            Map.entry(445, "BIRCH_BOAT"), Map.entry(446, "JUNGLE_BOAT"), Map.entry(447, "ACACIA_BOAT"),
+            Map.entry(448, "DARK_OAK_BOAT"), Map.entry(449, "TOTEM_OF_UNDYING"),
+            Map.entry(450, "SHULKER_SHELL"), Map.entry(451, "IRON_NUGGET"), Map.entry(452, "KNOWLEDGE_BOOK"),
+            Map.entry(2256, "MUSIC_DISC_13"), Map.entry(2257, "MUSIC_DISC_CAT"),
+            Map.entry(2258, "MUSIC_DISC_BLOCKS"), Map.entry(2259, "MUSIC_DISC_CHIRP"),
+            Map.entry(2260, "MUSIC_DISC_FAR"), Map.entry(2261, "MUSIC_DISC_MALL"),
+            Map.entry(2262, "MUSIC_DISC_MELLOHI"), Map.entry(2263, "MUSIC_DISC_STAL"),
+            Map.entry(2264, "MUSIC_DISC_STRAD"), Map.entry(2265, "MUSIC_DISC_WARD"),
+            Map.entry(2266, "MUSIC_DISC_11"), Map.entry(2267, "MUSIC_DISC_WAIT"));
+
+    /**
+     * Legacy item 383 stores the entity type in its data value.  These are
+     * the stable vanilla entity ids; unknown values stay preserved instead of
+     * being guessed as a generic spawn egg.
+     */
+    private static final Map<Integer, String> LEGACY_SPAWN_EGGS = Map.ofEntries(
+            Map.entry(50, "CREEPER_SPAWN_EGG"), Map.entry(51, "SKELETON_SPAWN_EGG"),
+            Map.entry(52, "SPIDER_SPAWN_EGG"), Map.entry(54, "ZOMBIE_SPAWN_EGG"),
+            Map.entry(55, "SLIME_SPAWN_EGG"), Map.entry(56, "GHAST_SPAWN_EGG"),
+            Map.entry(57, "ZOMBIFIED_PIGLIN_SPAWN_EGG"), Map.entry(58, "ENDERMAN_SPAWN_EGG"),
+            Map.entry(59, "CAVE_SPIDER_SPAWN_EGG"), Map.entry(60, "SILVERFISH_SPAWN_EGG"),
+            Map.entry(61, "BLAZE_SPAWN_EGG"), Map.entry(62, "MAGMA_CUBE_SPAWN_EGG"),
+            Map.entry(65, "BAT_SPAWN_EGG"), Map.entry(66, "WITCH_SPAWN_EGG"),
+            Map.entry(67, "ENDERMITE_SPAWN_EGG"), Map.entry(68, "GUARDIAN_SPAWN_EGG"),
+            Map.entry(69, "SHULKER_SPAWN_EGG"), Map.entry(90, "PIG_SPAWN_EGG"),
+            Map.entry(91, "SHEEP_SPAWN_EGG"), Map.entry(92, "COW_SPAWN_EGG"),
+            Map.entry(93, "CHICKEN_SPAWN_EGG"), Map.entry(94, "SQUID_SPAWN_EGG"),
+            Map.entry(95, "WOLF_SPAWN_EGG"), Map.entry(96, "MOOSHROOM_SPAWN_EGG"),
+            Map.entry(98, "OCELOT_SPAWN_EGG"), Map.entry(100, "HORSE_SPAWN_EGG"),
+            Map.entry(101, "RABBIT_SPAWN_EGG"), Map.entry(120, "VILLAGER_SPAWN_EGG"));
+
     private static final java.util.Set<Integer> LEGACY_DURABILITY_IDS = java.util.Set.of(
             256, 257, 258, 259, 261, 267, 268, 269, 270, 271, 272, 273, 274, 275,
             276, 277, 278, 279, 283, 284, 285, 286, 290, 291, 292, 293, 294,
             298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309,
-            310, 311, 312, 313, 314, 315, 316, 317);
+            310, 311, 312, 313, 314, 315, 316, 317, 346, 359, 398, 442, 443);
+
+    /**
+     * Legacy block IDs whose data value is either absent or must be zero for a
+     * lossless material conversion. Directional/stateful IDs stay out of this
+     * table unless their data bits have a dedicated conversion below.
+     */
+    private static final Map<Integer, String> LEGACY_BLOCK_MATERIALS = Map.ofEntries(
+            Map.entry(0, "AIR"), Map.entry(2, "GRASS_BLOCK"), Map.entry(4, "COBBLESTONE"), Map.entry(7, "BEDROCK"),
+            Map.entry(13, "GRAVEL"), Map.entry(14, "GOLD_ORE"), Map.entry(15, "IRON_ORE"),
+            Map.entry(16, "COAL_ORE"), Map.entry(19, "SPONGE"), Map.entry(20, "GLASS"),
+            Map.entry(21, "LAPIS_ORE"), Map.entry(22, "LAPIS_BLOCK"), Map.entry(23, "DISPENSER"),
+            Map.entry(25, "NOTE_BLOCK"), Map.entry(26, "RED_BED"), Map.entry(27, "POWERED_RAIL"),
+            Map.entry(28, "DETECTOR_RAIL"), Map.entry(29, "STICKY_PISTON"), Map.entry(30, "COBWEB"),
+            Map.entry(8, "WATER"), Map.entry(9, "WATER"), Map.entry(10, "LAVA"), Map.entry(11, "LAVA"),
+            Map.entry(34, "PISTON_HEAD"), Map.entry(36, "MOVING_PISTON"),
+            Map.entry(32, "DEAD_BUSH"), Map.entry(33, "PISTON"), Map.entry(39, "BROWN_MUSHROOM"),
+            Map.entry(40, "RED_MUSHROOM"), Map.entry(41, "GOLD_BLOCK"), Map.entry(42, "IRON_BLOCK"),
+            Map.entry(45, "BRICKS"), Map.entry(46, "TNT"), Map.entry(47, "BOOKSHELF"),
+            Map.entry(48, "MOSSY_COBBLESTONE"), Map.entry(49, "OBSIDIAN"), Map.entry(50, "TORCH"),
+            Map.entry(51, "FIRE"), Map.entry(52, "SPAWNER"), Map.entry(54, "CHEST"),
+            Map.entry(55, "REDSTONE_WIRE"), Map.entry(56, "DIAMOND_ORE"),
+            Map.entry(57, "DIAMOND_BLOCK"), Map.entry(58, "CRAFTING_TABLE"), Map.entry(59, "WHEAT"),
+            Map.entry(60, "FARMLAND"), Map.entry(61, "FURNACE"), Map.entry(62, "FURNACE"),
+            Map.entry(63, "OAK_SIGN"),
+            Map.entry(64, "OAK_DOOR"), Map.entry(65, "LADDER"), Map.entry(66, "RAIL"),
+            Map.entry(68, "OAK_WALL_SIGN"), Map.entry(69, "LEVER"), Map.entry(70, "STONE_PRESSURE_PLATE"),
+            Map.entry(71, "IRON_DOOR"), Map.entry(72, "OAK_PRESSURE_PLATE"), Map.entry(73, "REDSTONE_ORE"),
+            Map.entry(74, "REDSTONE_ORE"), Map.entry(75, "REDSTONE_TORCH"), Map.entry(76, "REDSTONE_TORCH"),
+            Map.entry(77, "STONE_BUTTON"), Map.entry(78, "SNOW"), Map.entry(79, "ICE"),
+            Map.entry(80, "SNOW_BLOCK"), Map.entry(81, "CACTUS"), Map.entry(82, "CLAY"),
+            Map.entry(83, "SUGAR_CANE"), Map.entry(84, "JUKEBOX"), Map.entry(85, "OAK_FENCE"),
+            Map.entry(86, "PUMPKIN"), Map.entry(87, "NETHERRACK"), Map.entry(88, "SOUL_SAND"),
+            Map.entry(89, "GLOWSTONE"), Map.entry(90, "NETHER_PORTAL"), Map.entry(91, "JACK_O_LANTERN"),
+            Map.entry(92, "CAKE"),
+            Map.entry(93, "REPEATER"), Map.entry(94, "REPEATER"), Map.entry(96, "OAK_TRAPDOOR"),
+            Map.entry(99, "BROWN_MUSHROOM_BLOCK"), Map.entry(100, "RED_MUSHROOM_BLOCK"),
+            Map.entry(101, "IRON_BARS"), Map.entry(102, "GLASS_PANE"), Map.entry(103, "MELON"),
+            Map.entry(104, "PUMPKIN_STEM"), Map.entry(105, "MELON_STEM"), Map.entry(106, "VINE"),
+            Map.entry(107, "OAK_FENCE_GATE"), Map.entry(110, "MYCELIUM"), Map.entry(111, "LILY_PAD"),
+            Map.entry(112, "NETHER_BRICKS"), Map.entry(113, "NETHER_BRICK_FENCE"), Map.entry(115, "NETHER_WART"),
+            Map.entry(116, "ENCHANTING_TABLE"), Map.entry(117, "BREWING_STAND"), Map.entry(118, "CAULDRON"),
+            Map.entry(119, "END_PORTAL"), Map.entry(120, "END_PORTAL_FRAME"), Map.entry(121, "END_STONE"),
+            Map.entry(122, "DRAGON_EGG"),
+            Map.entry(123, "REDSTONE_LAMP"), Map.entry(124, "REDSTONE_LAMP"), Map.entry(127, "COCOA"),
+            Map.entry(129, "EMERALD_ORE"), Map.entry(130, "ENDER_CHEST"), Map.entry(131, "TRIPWIRE_HOOK"),
+            Map.entry(132, "TRIPWIRE"), Map.entry(133, "EMERALD_BLOCK"), Map.entry(137, "COMMAND_BLOCK"),
+            Map.entry(138, "BEACON"), Map.entry(139, "COBBLESTONE_WALL"), Map.entry(140, "FLOWER_POT"),
+            Map.entry(141, "CARROTS"), Map.entry(142, "POTATOES"), Map.entry(143, "OAK_BUTTON"),
+            Map.entry(145, "ANVIL"), Map.entry(146, "TRAPPED_CHEST"),
+            Map.entry(147, "LIGHT_WEIGHTED_PRESSURE_PLATE"), Map.entry(148, "HEAVY_WEIGHTED_PRESSURE_PLATE"),
+            Map.entry(149, "COMPARATOR"), Map.entry(150, "COMPARATOR"), Map.entry(151, "DAYLIGHT_DETECTOR"),
+            Map.entry(152, "REDSTONE_BLOCK"), Map.entry(153, "NETHER_QUARTZ_ORE"), Map.entry(154, "HOPPER"),
+            Map.entry(157, "ACTIVATOR_RAIL"), Map.entry(158, "DROPPER"), Map.entry(165, "SLIME_BLOCK"),
+            Map.entry(166, "BARRIER"), Map.entry(167, "IRON_TRAPDOOR"), Map.entry(169, "SEA_LANTERN"),
+            Map.entry(170, "HAY_BLOCK"), Map.entry(172, "TERRACOTTA"), Map.entry(173, "COAL_BLOCK"),
+            Map.entry(174, "PACKED_ICE"), Map.entry(179, "RED_SANDSTONE"), Map.entry(198, "END_ROD"),
+            Map.entry(178, "DAYLIGHT_DETECTOR"), Map.entry(183, "SPRUCE_FENCE_GATE"),
+            Map.entry(184, "BIRCH_FENCE_GATE"), Map.entry(185, "JUNGLE_FENCE_GATE"),
+            Map.entry(186, "DARK_OAK_FENCE_GATE"), Map.entry(187, "ACACIA_FENCE_GATE"),
+            Map.entry(188, "SPRUCE_FENCE"), Map.entry(189, "BIRCH_FENCE"),
+            Map.entry(190, "JUNGLE_FENCE"), Map.entry(191, "DARK_OAK_FENCE"),
+            Map.entry(192, "ACACIA_FENCE"), Map.entry(193, "SPRUCE_DOOR"),
+            Map.entry(194, "BIRCH_DOOR"), Map.entry(195, "JUNGLE_DOOR"),
+            Map.entry(196, "ACACIA_DOOR"), Map.entry(197, "DARK_OAK_DOOR"),
+            Map.entry(199, "CHORUS_PLANT"),
+            Map.entry(200, "CHORUS_FLOWER"), Map.entry(201, "PURPUR_BLOCK"),
+            Map.entry(202, "PURPUR_PILLAR"), Map.entry(203, "PURPUR_STAIRS"),
+            Map.entry(204, "PURPUR_SLAB"), Map.entry(205, "PURPUR_SLAB"),
+            Map.entry(206, "END_STONE_BRICKS"), Map.entry(207, "BEETROOTS"),
+            Map.entry(208, "DIRT_PATH"), Map.entry(209, "END_GATEWAY"),
+            Map.entry(210, "REPEATING_COMMAND_BLOCK"), Map.entry(211, "CHAIN_COMMAND_BLOCK"),
+            Map.entry(212, "FROSTED_ICE"), Map.entry(213, "MAGMA_BLOCK"), Map.entry(214, "NETHER_WART_BLOCK"),
+            Map.entry(215, "RED_NETHER_BRICKS"), Map.entry(216, "BONE_BLOCK"), Map.entry(217, "STRUCTURE_VOID"),
+            Map.entry(218, "OBSERVER"),
+            Map.entry(219, "WHITE_SHULKER_BOX"), Map.entry(220, "ORANGE_SHULKER_BOX"),
+            Map.entry(221, "MAGENTA_SHULKER_BOX"), Map.entry(222, "LIGHT_BLUE_SHULKER_BOX"),
+            Map.entry(223, "YELLOW_SHULKER_BOX"), Map.entry(224, "LIME_SHULKER_BOX"),
+            Map.entry(225, "PINK_SHULKER_BOX"), Map.entry(226, "GRAY_SHULKER_BOX"),
+            Map.entry(227, "LIGHT_GRAY_SHULKER_BOX"), Map.entry(228, "CYAN_SHULKER_BOX"),
+            Map.entry(229, "PURPLE_SHULKER_BOX"), Map.entry(230, "BLUE_SHULKER_BOX"),
+            Map.entry(231, "BROWN_SHULKER_BOX"), Map.entry(232, "GREEN_SHULKER_BOX"),
+            Map.entry(233, "RED_SHULKER_BOX"), Map.entry(234, "BLACK_SHULKER_BOX"),
+            Map.entry(235, "WHITE_GLAZED_TERRACOTTA"), Map.entry(236, "ORANGE_GLAZED_TERRACOTTA"),
+            Map.entry(237, "MAGENTA_GLAZED_TERRACOTTA"), Map.entry(238, "LIGHT_BLUE_GLAZED_TERRACOTTA"),
+            Map.entry(239, "YELLOW_GLAZED_TERRACOTTA"), Map.entry(240, "LIME_GLAZED_TERRACOTTA"),
+            Map.entry(241, "PINK_GLAZED_TERRACOTTA"), Map.entry(242, "GRAY_GLAZED_TERRACOTTA"),
+            Map.entry(243, "LIGHT_GRAY_GLAZED_TERRACOTTA"), Map.entry(244, "CYAN_GLAZED_TERRACOTTA"),
+            Map.entry(245, "PURPLE_GLAZED_TERRACOTTA"), Map.entry(246, "BLUE_GLAZED_TERRACOTTA"),
+            Map.entry(247, "BROWN_GLAZED_TERRACOTTA"), Map.entry(248, "GREEN_GLAZED_TERRACOTTA"),
+            Map.entry(249, "RED_GLAZED_TERRACOTTA"), Map.entry(250, "BLACK_GLAZED_TERRACOTTA"),
+            Map.entry(255, "STRUCTURE_BLOCK"));
 
     @Override
     public String sourceId() {
@@ -157,8 +330,14 @@ public final class MythicMobsImporter implements MigrationImporter {
             String sourceId = rawId == null ? null : String.valueOf(rawId).trim();
             Object rawData = ciGet(item, "Data", "data");
             String dataText = rawData == null ? null : String.valueOf(rawData);
-            String skullMaterial = legacySkullMaterial(sourceId, dataText);
-            String modernId = skullMaterial == null ? modernLegacyMaterial(sourceId, dataText) : skullMaterial;
+            LegacyIdData normalized = splitLegacyIdData(sourceId, dataText);
+            String legacyIdText = normalized.id();
+            String legacyDataText = normalized.data();
+            String skullMaterial = legacySkullMaterial(legacyIdText, legacyDataText);
+            String modernId = skullMaterial == null
+                    ? modernLegacyMaterial(legacyIdText, legacyDataText) : skullMaterial;
+            if (modernId == null) modernId = modernNamespacedMaterial(legacyIdText);
+            String legacyPotionType = legacyPotionType(legacyIdText, legacyDataText);
             if (modernId != null) {
                 target.set(path + ".id", modernId);
                 note(entries, file.toString(), "Items." + key + ".Id", path + ".id",
@@ -167,33 +346,41 @@ public final class MythicMobsImporter implements MigrationImporter {
                                 : "Legacy skull ID/data converted to modern skull Material.");
             } else if (sourceId != null) {
                 target.set(path + ".id", rawId);
-                if (isInteger(sourceId) && !isKnownLegacyItemId(Integer.parseInt(sourceId))) {
+                if (isInteger(legacyIdText) && !isKnownLegacyItemId(Integer.parseInt(legacyIdText))) {
                     target.set(path + ".unsupported.legacy-id", sourceId);
                     note(entries, file.toString(), "Items." + key + ".Id",
                             path + ".unsupported.legacy-id", sourceId, "unsupported",
                             "Legacy numeric item ID has no verified modern Material mapping.", "WARN");
                 }
             }
-            if (rawData != null) {
-                int dataValue = parseInteger(String.valueOf(rawData), Integer.MIN_VALUE);
-                int legacyId = isInteger(sourceId) ? parseInteger(sourceId, Integer.MIN_VALUE)
+            if (legacyPotionType != null) {
+                target.set(path + ".base-potion-type", legacyPotionType);
+                note(entries, file.toString(), "Items." + key + ".Data", path + ".base-potion-type",
+                        legacyPotionType, "mapped", "Legacy potion damage value converted to a modern PotionType.");
+            }
+            if (legacyDataText != null) {
+                int dataValue = parseInteger(legacyDataText, Integer.MIN_VALUE);
+                int legacyId = isInteger(legacyIdText) ? parseInteger(legacyIdText, Integer.MIN_VALUE)
                         : Integer.MIN_VALUE;
-                if (skullMaterial != null || legacyVariantMaterial(sourceId, dataText) != null) {
+                if (legacyPotionType != null || skullMaterial != null || legacyVariantMaterial(legacyIdText, legacyDataText) != null
+                        || isNeutralLegacyData(legacyIdText, legacyDataText, modernId)) {
                     note(entries, file.toString(), "Items." + key + ".Data", path + ".id",
-                            modernId, "mapped", "Legacy data value converted to a modern Material variant.");
-                    String blockStates = legacyBlockStates(sourceId, dataText);
+                            modernId, "mapped", legacyPotionType != null || skullMaterial != null || legacyVariantMaterial(legacyIdText, legacyDataText) != null
+                                    ? "Legacy data value converted to a modern Material variant."
+                                    : "Legacy data value 0 is the neutral metadata value for the converted Material.");
+                    String blockStates = legacyBlockStates(legacyIdText, legacyDataText);
                     if (blockStates != null) target.set(path + ".block-states", blockStates);
                 } else if (legacyId != Integer.MIN_VALUE && LEGACY_DURABILITY_IDS.contains(legacyId)
                         && dataValue >= 0 && ciGet(item, "Durability", "durability") == null) {
                     target.set(path + ".durability", dataValue);
                 } else {
-                    target.set(path + ".unsupported.legacy-data", rawData);
+                    target.set(path + ".unsupported.legacy-data", rawData == null ? legacyDataText : rawData);
                     note(entries, file.toString(), "Items." + key + ".Data",
-                            path + ".unsupported.legacy-data", rawData, "unsupported",
+                            path + ".unsupported.legacy-data", rawData == null ? legacyDataText : rawData, "unsupported",
                             "Legacy data value is item-specific and has no verified modern equivalent.", "WARN");
                 }
             }
-            String legacyBlockStates = legacyBlockStates(sourceId, dataText);
+            String legacyBlockStates = legacyBlockStates(legacyIdText, legacyDataText);
             if (legacyBlockStates != null) target.set(path + ".block-states", legacyBlockStates);
             copyFirst(item, target, path + ".display-name", "Display", "display", "ItemName");
             Object lore = ciGet(item, "Lore", "lore");
@@ -267,10 +454,15 @@ public final class MythicMobsImporter implements MigrationImporter {
                     removeIgnoreCase(unsupportedOptions, mapped);
                 }
                 if (!unsupportedOptions.isEmpty()) {
+                    boolean hasVersionGatedComponent = unsupportedOptions.keySet().stream()
+                            .anyMatch(optionKey -> optionKey.equalsIgnoreCase("ItemModel")
+                                    || optionKey.equalsIgnoreCase("DamageType"));
                     target.set(path + ".unsupported.options", unsupportedOptions);
                     note(entries, file.toString(), "Items." + key + ".Options",
                             path + ".unsupported.options", unsupportedOptions, "unsupported",
-                            "Item options without a Paper 1.21.1 runtime equivalent were preserved.", "WARN");
+                            hasVersionGatedComponent
+                                    ? "Paper 1.21.1 ItemMeta exposes no public ItemModel or DamageType component API; values were preserved for a version-gated adapter."
+                                    : "Item options without a Paper 1.21.1 runtime equivalent were preserved.", "WARN");
                 }
             }
             Object potion = ciGet(item, "PotionEffects", "potion-effects");
@@ -350,7 +542,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             copyFirst(sp, target, path + ".players-radius", "players-radius", "activationrange", "activation-range");
             copyFirst(sp, target, path + ".y-range", "y-range", "yrange", "vertical-range");
             copyFirst(sp, target, path + ".ai-profile", "ai-profile", "aiprofile", "ai_profile");
-            copyFirst(sp, target, path + ".conditions", "conditions", "Conditions", "spawn-conditions");
+            mapSpawnerConditions(sp, file.toString(), entries, target, key, path);
             ConfigurationSection random = ciSection(sp, "random-mobs", "RandomMobs", "mobs", "mob-pool", "random-pool");
             if (random != null) {
                 for (String mobKey : random.getKeys(false)) {
@@ -373,6 +565,64 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (raw != null && !String.valueOf(raw).isBlank()) return String.valueOf(raw);
         }
         return null;
+    }
+
+    private void mapSpawnerConditions(ConfigurationSection source, String srcFile,
+                                      List<Map<String, Object>> entries,
+                                      YamlConfiguration target, String spawnerKey,
+                                      String targetPath) {
+        Object raw = ciGet(source, "conditions", "Conditions", "spawn-conditions");
+        List<String> input = conditionList(raw);
+        if (input.isEmpty()) return;
+
+        List<String> mapped = new ArrayList<>();
+        List<String> unmapped = new ArrayList<>();
+        for (String condition : input) {
+            if (condition == null || condition.isBlank()) continue;
+            String value = condition.trim();
+            boolean negated = value.startsWith("!");
+            String leaf = negated ? value.substring(1).trim() : value;
+            MmConditions.Mapped translated = MmConditions.translate(leaf);
+            if (translated.translated()) {
+                mapped.add(negated ? "!" + translated.condition() : translated.condition());
+            } else {
+                mapped.add(value);
+                if (!isSpawnerNativeCondition(leaf)) unmapped.add(value);
+            }
+        }
+        if (mapped.isEmpty()) return;
+        target.set(targetPath + ".conditions", mapped);
+        note(entries, srcFile, "Spawners." + spawnerKey + ".Conditions", targetPath + ".conditions",
+                mapped, "mapped", "Spawner conditions translated while preserving native spawner predicates.");
+        noteUnmappedSkillConditions(entries, srcFile, "Spawners." + spawnerKey + ".Conditions",
+                targetPath + ".conditions", unmapped);
+    }
+
+    private static List<String> conditionList(Object raw) {
+        return ConditionListParser.parse(raw);
+    }
+
+    private static boolean isSpawnerNativeCondition(String condition) {
+        String normalized = condition.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "day", "night", "raining", "thundering" -> true;
+            default -> normalized.startsWith("lunar-phase-is=")
+                    || normalized.startsWith("moon-phase-is=")
+                    || normalized.startsWith("player-faction-is=")
+                    || normalized.startsWith("player-faction-allied-to=")
+                    || normalized.startsWith("player-faction-hostile-to=")
+                    || normalized.startsWith("region=")
+                    || normalized.startsWith("biome-is=")
+                    || normalized.startsWith("time-between=")
+                    || normalized.startsWith("entities-at-least=")
+                    || normalized.startsWith("mobs-at-least=")
+                    || normalized.startsWith("players-at-most=")
+                    || normalized.startsWith("players-at-least=")
+                    || normalized.startsWith("world-is=")
+                    || normalized.startsWith("world-is ")
+                    || normalized.startsWith("y-below=")
+                    || normalized.startsWith("y-above=");
+        };
     }
 
     private static void copyFirst(ConfigurationSection source, YamlConfiguration target,
@@ -421,6 +671,7 @@ public final class MythicMobsImporter implements MigrationImporter {
 
         // ---- Options：MythicMobs 里最常改的语义配置 ----
         ConfigurationSection options = ciSection(mob, "Options");
+        boolean preventConversionMapped = true;
         if (options != null) {
             mapOption(options, srcFile, entries, target, "FollowRange", "mob.sight-radius");
             mapOption(options, srcFile, entries, target, "MovementSpeed", "mob.move-speed");
@@ -470,7 +721,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "PreventRenaming", "mob.prevent-renaming");
             mapOption(options, srcFile, entries, target, "PreventTransformation", "mob.prevent-transformation");
             mapOption(options, srcFile, entries, target, "PreventTransformationReasons", "mob.prevent-transformation-reasons");
-            mapPreventZombieConversion(options, srcFile, entries, target);
+            preventConversionMapped = mapPreventConversion(options, srcFile, entries, target,
+                    target.getString("mob.entity-type", ""));
             mapOption(options, srcFile, entries, target, "PreventMount", "mob.prevent-mount");
             mapOption(options, srcFile, entries, target, "PreventJockeyMounts", "mob.prevent-jockey-mounts");
             mapOption(options, srcFile, entries, target, "PreventTarget", "mob.prevent-target");
@@ -478,6 +730,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "PreventAttack", "mob.prevent-attack");
             mapOption(options, srcFile, entries, target, "PreventVanillaDamage", "mob.prevent-vanilla-damage");
             mapOption(options, srcFile, entries, target, "PreventSlimeSplit", "mob.prevent-slime-split");
+            mapOption(options, srcFile, entries, target, "PreventBlockInfection", "mob.prevent-block-infection");
+            mapOption(options, srcFile, entries, target, "PreventSnowFormation", "mob.prevent-snow-formation");
             mapOption(options, srcFile, entries, target, "Age", "entity.age");
             mapOption(options, srcFile, entries, target, "AgeLock", "entity.age-lock");
             mapOption(options, srcFile, entries, target, "Baby", "entity.baby");
@@ -485,6 +739,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "PatrolLeader", "entity.patrol-leader");
             mapOption(options, srcFile, entries, target, "Tamed", "entity.tamed");
             mapOption(options, srcFile, entries, target, "Angry", "entity.angry");
+            mapOption(options, srcFile, entries, target, "HeldBlock", "entity.held-block");
             mapEntitySize(options, srcFile, entries, target);
             mapOption(options, srcFile, entries, target, "ExplosionRadius", "entity.creeper-explosion-radius");
             mapOption(options, srcFile, entries, target, "FuseTicks", "entity.creeper-fuse-ticks");
@@ -495,6 +750,12 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "PreventTeleport", "mob.prevent-teleport");
             mapOption(options, srcFile, entries, target, "PreventPickup", "mob.prevent-pickup");
             mapOption(options, srcFile, entries, target, "PreventItemUse", "mob.prevent-item-use");
+            mapOption(options, srcFile, entries, target, "Interactable", "mob.interactable");
+            if (ciGet(options, "Interactable") == null) {
+                target.set("mob.interactable", false);
+                note(entries, srcFile, "Options.Interactable", "mob.interactable", false, "defaulted",
+                        "MythicMobs Interactable defaults to false.");
+            }
             mapOption(options, srcFile, entries, target, "PreventDrowning", "mob.prevent-drowning");
             mapOption(options, srcFile, entries, target, "PreventFallDamage", "mob.prevent-fall-damage");
             mapOption(options, srcFile, entries, target, "PreventFire", "mob.prevent-fire");
@@ -535,9 +796,10 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "UseThreatTable", "SpawningDistance",
                     "Scale", "ShowHealth", "Silent", "NoAI",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "Gravity", "NoGravity", "Collidable", "PreventItemPickup",
-                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventConversion", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventStingerLoss", "Age", "AgeLock", "Baby", "CanJoinRaid", "PatrolLeader", "Tamed", "Angry", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "PreventTeleport", "PreventPickup", "PreventItemUse", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops")) {
+                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Baby", "CanJoinRaid", "PatrolLeader", "Tamed", "Angry", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops")) {
                 removeIgnoreCase(leftover, mapped);
             }
+            if (preventConversionMapped) removeIgnoreCase(leftover, "PreventConversion");
             removeIgnoreCase(leftover, "PreventSuicide");
             if (!leftover.isEmpty()) {
                 target.set("mob.unsupported.Options", leftover);
@@ -595,7 +857,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             List<String> skillRefs = new ArrayList<>();
             SkillScan scan = new SkillScan();
             for (String line : rawSkills) {
-                classifySkillLine(line, scan, skillRefs, decisions, entries, srcFile, mobKey);
+                classifySkillLine(line, scan, skillRefs, decisions, entries, srcFile, mobKey, false);
             }
             if (!skillRefs.isEmpty()) target.set("mob.skills", skillRefs);
             if (!decisions.isEmpty()) target.set("mob.on-decision", decisions);
@@ -620,6 +882,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         mapAiSelectors(mob, srcFile, entries, target, mobKey, "AIGoalSelectors", "ai.goals");
         mapAiSelectors(mob, srcFile, entries, target, mobKey, "AIGoalTargets", "ai.targets");
         mapAiSelectors(mob, srcFile, entries, target, mobKey, "AITargetSelectors", "ai.targets");
+        mapAiPathfindingMalus(mob, srcFile, entries, target, mobKey);
         mapModules(mob, srcFile, entries, target, mobKey);
         unsupportedSections(mob, entries, srcFile, mobKey, target,
                 "Spawners", "Split embedded MythicMobs spawners into spawners.yml entries");
@@ -733,7 +996,7 @@ public final class MythicMobsImporter implements MigrationImporter {
      */
     private void classifySkillLine(String line, SkillScan scan, List<String> skillRefs,
                                    List<String> decisions, List<Map<String, Object>> entries,
-                                   String srcFile, String mobKey) {
+                                   String srcFile, String mobKey, boolean standaloneSkill) {
         if (line == null || line.isBlank()) return;
         String raw = line.trim();
 
@@ -753,7 +1016,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         // 2) skill{s=X}：转为技能引用，交给 skills.yml 解析
         String ref = MythicSpec.skillRef(raw);
         if (ref != null) {
-            skillRefs.add(ref);
+            if (standaloneSkill) decisions.add("cast-skill " + ref);
+            else skillRefs.add(ref);
             return;
         }
 
@@ -792,9 +1056,29 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "command-self", "command-target", "shoot-projectile", "stop", "sound", "particle",
                     "summon", "transform", "dash", "blink", "knockback-self", "heal-percent",
                     "set-health", "modify-health", "modify-speed", "invisible", "glowing",
+                    "set-max-health", "modify-max-health",
+                    "set-tick-speed", "set-intent", "jump", "leap", "pull", "force-pull",
+                    "actionbar", "title", "random-skill",
+                    "signal",
+                    "dot", "dot-targets",
+                    "damage-melee", "threat-add", "threat-clear", "threat-focus",
+                    "message-all", "message-self", "random-message",
+                    "set-global-cooldown", "gcd", "set-skill-cooldown",
                     "set-invulnerable", "start-cast", "cancel-cast", "start-dialogue", "dismount",
+                    "suicide", "kill-targets", "set-nameplate", "broadcast",
                     "set-variable", "var-set", "var-add", "var-math", "variable-unset",
-                    "variable-location-set", "location-unset", "remove-self", "equip", "set-item", "drop-item", "mount", "cancel-event", "set-name", "set-owner", "remove-owner", "set-parent", "remove-parent" -> true;
+                    "variable-location-set", "location-unset", "remove-self", "equip", "set-item", "drop-item",
+                    "give-item", "take-item", "close-inventory", "clear-inventory", "clear-experience",
+                    "clear-experience-levels", "give-experience-levels", "give-experience", "set-absorption", "oxygen", "consume-slot",
+                    "set-block", "break-block", "mount", "cancel-event",
+                    "disarm", "set-material-cooldown", "set-game-mode", "set-offhand", "set-armor", "set-faction", "set-level", "set-weather", "set-time", "lightning", "feed",
+                    "swing", "swing-main-hand", "swing-off-hand",
+                    "set-name", "set-ai", "set-gravity", "set-silent", "set-collidable",
+                    "set-sneaking", "set-gliding", "set-swimming", "set-sprinting", "set-flying",
+                    "set-no-damage-ticks", "set-maximum-no-damage-ticks", "set-walk-speed",
+                    "set-fire", "clear-fire", "freeze", "look-at", "set-rotation", "set-stance",
+                    "set-owner", "remove-owner", "set-parent", "remove-parent", "eject-passenger",
+                    "add-tag", "remove-tag", "score-set", "score-add" -> true;
             default -> false;
         };
     }
@@ -813,6 +1097,10 @@ public final class MythicMobsImporter implements MigrationImporter {
         String head = trimmed;
         int brace = trimmed.indexOf('{');
         if (brace >= 0) head = trimmed.substring(0, brace).trim();
+        else {
+            int space = trimmed.indexOf(' ');
+            if (space > 0) head = trimmed.substring(0, space).trim();
+        }
         head = head.toLowerCase(Locale.ROOT);
         if (head.contains(":")) head = head.substring(0, head.indexOf(':'));
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
@@ -825,14 +1113,30 @@ public final class MythicMobsImporter implements MigrationImporter {
                 if (message == null) message = positionalArg(trimmed, 0);
                 yield message == null ? "message-target \"\"" : "message-target \"" + escape(message) + "\"";
             }
-            case "ignite" -> "ignite-targets " + firstArgOr(trimmed, "ticks", "duration", "40");
+            case "actionbar" -> {
+                String message = firstArg(trimmed, "message", "m", "text");
+                if (message == null) message = positionalArg(trimmed, 0);
+                yield message == null ? "actionbar \"\"" : "actionbar \"" + escape(message) + "\"";
+            }
+            case "title" -> {
+                String title = firstArg(trimmed, "title", "t", "text");
+                if (title == null) title = positionalArg(trimmed, 0);
+                String subtitle = firstArg(trimmed, "subtitle", "sub");
+                if (subtitle == null) subtitle = positionalArg(trimmed, 1);
+                yield "title \"" + escape(title == null ? "" : title) + "\" \""
+                        + escape(subtitle == null ? "" : subtitle) + "\" "
+                        + firstArgOrPositional(trimmed, 2, "10", "fadein", "fade-in", "in") + " "
+                        + firstArgOrPositional(trimmed, 3, "40", "stay", "duration") + " "
+                        + firstArgOrPositional(trimmed, 4, "10", "fadeout", "fade-out", "out");
+            }
+            case "ignite" -> "ignite-targets " + firstArgOrPositional(trimmed, 0, "40", "ticks", "duration");
             case "knockback" -> "knockback-targets "
-                    + firstArgOr(trimmed, "power", "strength", "1") + " "
-                    + firstArgOr(trimmed, "vertical", "up", "0.4");
+                    + firstArgOrPositional(trimmed, 0, "1", "power", "strength") + " "
+                    + firstArgOrPositional(trimmed, 1, "0.4", "vertical", "up");
             case "effect", "potion" -> {
-                String effect = firstArg(trimmed, "effect", "type");
-                String duration = firstArgOr(trimmed, "duration", "60");
-                String amplifier = firstArgOr(trimmed, "amplifier", "level", "0");
+                String effect = firstArgOrPositional(trimmed, 0, "", "effect", "type");
+                String duration = firstArgOrPositional(trimmed, 1, "60", "duration");
+                String amplifier = firstArgOrPositional(trimmed, 2, "0", "amplifier", "level");
                 String ambient = firstArg(trimmed, "ambient");
                 String particles = firstArg(trimmed, "particles", "show-particles");
                 String icon = firstArg(trimmed, "icon", "show-icon");
@@ -840,80 +1144,323 @@ public final class MythicMobsImporter implements MigrationImporter {
                         : " " + (ambient == null ? "false" : ambient)
                         + " " + (particles == null ? "true" : particles)
                         + " " + (icon == null ? "true" : icon);
-                yield effect == null ? null : "effect-targets " + effect + " " + duration + " " + amplifier + flags;
+                yield effect.isBlank() ? null : "effect-targets " + effect + " " + duration + " " + amplifier + flags;
             }
             case "teleport" -> "teleport-targets @target";
             case "teleportself", "teleport-self" -> "teleport-self "
-                    + firstArgOr(trimmed, "x", "dx", "0") + " "
-                    + firstArgOr(trimmed, "y", "dy", "0") + " "
-                    + firstArgOr(trimmed, "z", "dz", "0");
+                    + firstArgOrPositional(trimmed, 0, "0", "x", "dx") + " "
+                    + firstArgOrPositional(trimmed, 1, "0", "y", "dy") + " "
+                    + firstArgOrPositional(trimmed, 2, "0", "z", "dz");
             case "teleportcaster", "teleport-caster" -> "teleport-caster "
-                    + firstArgOr(trimmed, "target", "location", "@origin");
+                    + firstArgOrPositional(trimmed, 0, "@origin", "target", "location");
             case "explosion", "explode" -> "explode "
-                    + firstArgOr(trimmed, "power", "yield", "2") + " "
-                    + firstArgOr(trimmed, "fire", "false") + " "
-                    + firstArgOr(trimmed, "breakblocks", "break-blocks", "false");
+                    + firstArgOrPositional(trimmed, 0, "2", "power", "yield") + " "
+                    + firstArgOrPositional(trimmed, 1, "false", "fire") + " "
+                    + firstArgOrPositional(trimmed, 2, "false", "breakblocks", "break-blocks");
             case "velocity" -> "velocity-targets "
-                    + firstArgOr(trimmed, "x", "vx", "0") + " "
-                    + firstArgOr(trimmed, "y", "vy", "0") + " "
-                    + firstArgOr(trimmed, "z", "vz", "0");
+                    + firstArgOrPositional(trimmed, 0, "0", "x", "vx") + " "
+                    + firstArgOrPositional(trimmed, 1, "0", "y", "vy") + " "
+                    + firstArgOrPositional(trimmed, 2, "0", "z", "vz");
             case "settarget", "set-target" -> "set-target";
             case "cleartarget", "clear-target", "untarget" -> "clear-target";
-            case "setscale" -> "set-scale " + firstArgOr(trimmed, "scale", "1");
+            case "setscale" -> "set-scale " + firstArgOrPositional(trimmed, 0, "1", "scale");
             case "playanimation" -> "play-animation "
-                    + firstArgOr(trimmed, "animation", "name", "") + " "
-                    + firstArgOr(trimmed, "loop", "false") + " "
-                    + firstArgOr(trimmed, "priority", "3");
-            case "stopanimation" -> "stop-animation " + firstArgOr(trimmed, "animation", "name", "");
+                    + firstArgOrPositional(trimmed, 0, "", "animation", "name") + " "
+                    + firstArgOrPositional(trimmed, 1, "false", "loop") + " "
+                    + firstArgOrPositional(trimmed, 2, "3", "priority");
+            case "stopanimation" -> "stop-animation "
+                    + firstArgOrPositional(trimmed, 0, "", "animation", "name");
+            case "setintent", "set-intent" -> {
+                String intent = firstArg(trimmed, "intent", "state", "i");
+                if (intent == null) intent = positionalArg(trimmed, 0);
+                yield "set-intent " + (intent == null ? "CUSTOM" : intent);
+            }
+            case "shoot", "shootprojectile", "shoot-projectile" -> {
+                String type = firstArg(trimmed, "type", "projectile", "p");
+                if (type == null) type = positionalArg(trimmed, 0);
+                String speed = firstArg(trimmed, "velocity", "speed", "v");
+                if (speed == null) speed = positionalArg(trimmed, 1);
+                String damage = firstArg(trimmed, "damage", "amount", "d");
+                if (damage == null) damage = positionalArg(trimmed, 2);
+                yield "shoot-projectile " + (type == null ? "ARROW" : type)
+                        + " " + (speed == null ? "1.6" : speed)
+                        + " " + (damage == null ? "3" : damage);
+            }
             case "damagepercent" -> "damage-percent " + (amount == null ? "0" : amount);
+            case "damagemelee", "damage-melee", "meleedamage" -> {
+                String radius = firstArg(trimmed, "radius", "r");
+                if (radius == null) radius = positionalArg(trimmed, 1);
+                yield "damage-melee " + (amount == null ? "3" : amount)
+                        + " " + (radius == null ? "2.5" : radius);
+            }
             case "aoedamage" -> "aoe-damage players "
-                    + firstArgOr(trimmed, "radius", "r", "8") + " 1 "
+                    + firstArgOrPositional(trimmed, 1, "8", "radius", "r") + " 1 "
                     + (amount == null ? "0" : amount);
-            case "removeeffect" -> "remove-effect " + firstArgOr(trimmed, "effect", "type", "");
+            case "removeeffect" -> "remove-effect " + firstArgOrPositional(trimmed, 0, "", "effect", "type");
             case "removealleffects" -> "remove-all-effects";
-            case "sound", "playsound" -> "sound " + firstArgOr(trimmed, "sound", "s", "name", "");
-            case "particle", "particles" -> "particle " + firstArgOr(trimmed, "particle", "p", "name", "");
+            case "sound", "playsound" -> "sound " + firstArgOrPositional(trimmed, 0, "", "sound", "s", "name");
+            case "particle", "particles" -> "particle " + firstArgOrPositional(trimmed, 0, "", "particle", "p", "name");
             case "summon" -> "summon "
-                    + firstArgOr(trimmed, "type", "mob", "model", "") + " "
-                    + firstArgOr(trimmed, "amount", "count", "1") + " "
-                    + firstArgOr(trimmed, "radius", "r", "3");
-            case "transform" -> "transform " + firstArgOr(trimmed, "type", "entitytype", "entity", "");
-            case "dash" -> "dash " + firstArgOr(trimmed, "distance", "amount", "5") + " "
-                    + firstArgOr(trimmed, "mode", "target");
-            case "blink" -> "blink " + firstArgOr(trimmed, "distance", "amount", "8") + " "
-                    + firstArgOr(trimmed, "mode", "target");
+                    + firstArgOrPositional(trimmed, 0, "", "type", "mob", "model") + " "
+                    + firstArgOrPositional(trimmed, 1, "1", "amount", "count") + " "
+                    + firstArgOrPositional(trimmed, 2, "3", "radius", "r");
+            case "transform" -> "transform " + firstArgOrPositional(trimmed, 0, "", "type", "entitytype", "entity");
+            case "dash" -> "dash " + firstArgOrPositional(trimmed, 0, "5", "distance", "amount") + " "
+                    + firstArgOrPositional(trimmed, 1, "target", "mode");
+            case "blink" -> "blink " + firstArgOrPositional(trimmed, 0, "8", "distance", "amount") + " "
+                    + firstArgOrPositional(trimmed, 1, "target", "mode");
             case "knockbackself" -> "knockback-self "
-                    + firstArgOr(trimmed, "power", "strength", "1") + " "
-                    + firstArgOr(trimmed, "vertical", "up", "0.4");
+                    + firstArgOrPositional(trimmed, 0, "1", "power", "strength") + " "
+                    + firstArgOrPositional(trimmed, 1, "0.4", "vertical", "up");
             case "healpercent" -> "heal-percent " + (amount == null ? "0" : amount);
             case "sethealth" -> "set-health " + (amount == null ? "0" : amount);
+            case "setmaxhealth" -> "set-max-health " + (amount == null ? "20" : amount);
+            case "modifymaxhealth" -> "modify-max-health " + (amount == null ? "0" : amount);
             case "modifyhealth" -> "modify-health " + (amount == null ? "0" : amount);
-            case "modifyspeed" -> "modify-speed " + firstArgOr(trimmed, "amount", "speed", "0");
-            case "invisible" -> "invisible " + firstArgOr(trimmed, "state", "true");
-            case "glowing" -> "glowing " + firstArgOr(trimmed, "state", "true");
-            case "setinvulnerable" -> "set-invulnerable " + firstArgOr(trimmed, "state", "true");
-            case "startcast" -> "start-cast " + firstArgOr(trimmed, "skill", "s", "");
+            case "modifyspeed" -> "modify-speed " + firstArgOrPositional(trimmed, 0, "0", "amount", "speed");
+            case "settickspeed", "set-tick-speed" -> "set-tick-speed "
+                    + firstArgOrPositional(trimmed, 0, "1", "factor", "speed", "amount");
+            case "leap" -> "leap " + firstArgOrPositional(trimmed, 0, "1.2", "velocity", "power", "amount");
+            case "pull" -> "pull "
+                    + firstArgOrPositional(trimmed, 0, "6", "radius", "r") + " "
+                    + firstArgOrPositional(trimmed, 1, "1", "power", "velocity", "strength");
+            case "jump" -> {
+                String velocity = firstArg(trimmed, "velocity", "power", "strength", "v");
+                if (velocity == null) velocity = positionalArg(trimmed, 0);
+                yield "jump " + (velocity == null ? "0.42" : velocity);
+            }
+            case "forcepull", "force-pull" -> {
+                String vertical = firstArg(trimmed, "vertical", "y", "yvelocity", "y-velocity", "yv");
+                String power = firstArg(trimmed, "velocity", "power", "strength", "v");
+                if (power == null) power = positionalArg(trimmed, 0);
+                if (vertical == null) vertical = positionalArg(trimmed, 1);
+                String forcePullMapped = "force-pull " + (power == null ? "1" : power);
+                yield vertical == null ? forcePullMapped : forcePullMapped + " " + vertical;
+            }
+            case "invisible" -> "invisible " + firstArgOrPositional(trimmed, 0, "true", "state");
+            case "glowing" -> "glowing " + firstArgOrPositional(trimmed, 0, "true", "state");
+            case "setinvulnerable" -> "set-invulnerable " + firstArgOrPositional(trimmed, 0, "true", "state");
+            case "startcast" -> "start-cast " + firstArgOrPositional(trimmed, 0, "", "skill", "s");
             case "cancelcast" -> "cancel-cast";
-            case "startdialogue", "startdialog" -> "start-dialogue " + firstArgOr(trimmed, "dialogue", "id", "");
-            case "disguise" -> "disguise " + firstArgOr(trimmed, "model", "type", "");
+            case "startdialogue", "startdialog" -> "start-dialogue "
+                    + firstArgOrPositional(trimmed, 0, "", "dialogue", "id");
+            case "setvariable" -> variableSetAction(trimmed);
+            case "variableunset", "unsetvariable" -> variableSimpleAction("variable-unset", trimmed);
+            case "variableadd" -> variableNumericAction("var-add", trimmed, "amount", "value", "val");
+            case "variablemath" -> variableMathAction(trimmed);
+            case "setvariablelocation", "variablelocationset" ->
+                    variableSimpleAction("variable-location-set", trimmed);
+            case "locationunset", "unsetlocation" -> variableSimpleAction("location-unset", trimmed);
+            case "signal" -> signalAction(trimmed);
+            case "dot" -> dotAction(trimmed);
+            case "addthreat", "threatadd", "threat-add" ->
+                    "threat-add " + (amount == null ? "0" : amount);
+            case "clearthreat", "threatclear", "threat-clear" -> {
+                String only = firstArg(trimmed, "target", "only", "current");
+                if (only == null) only = positionalArg(trimmed, 0);
+                yield only == null ? "threat-clear" : "threat-clear " + only;
+            }
+            case "threatfocus", "focusthreat", "threat-focus" -> "threat-focus";
+            case "messageall", "message-all" -> {
+                String message = firstArg(trimmed, "message", "m", "text");
+                if (message == null) message = positionalArg(trimmed, 0);
+                String radius = firstArg(trimmed, "radius", "r");
+                if (radius == null) radius = positionalArg(trimmed, 1);
+                yield "message-all \"" + escape(message == null ? "" : message) + "\" "
+                        + (radius == null ? "32" : radius);
+            }
+            case "messageself", "message-self" -> {
+                String message = firstArg(trimmed, "message", "m", "text");
+                if (message == null) message = positionalArg(trimmed, 0);
+                yield "message-self \"" + escape(message == null ? "" : message) + "\"";
+            }
+            case "randommessage", "random-message" -> {
+                String pool = firstArg(trimmed, "messages", "message", "pool", "m", "text");
+                if (pool == null) pool = positionalArg(trimmed, 0);
+                yield "random-message \"" + escape(pool == null ? "" : pool) + "\"";
+            }
+            case "globalcooldown", "gcd", "setgcd", "setglobalcooldown" ->
+                    globalCooldownAction(trimmed);
+            case "setskillcooldown", "skillcooldown", "setskillcd", "skillcd" ->
+                    skillCooldownAction(trimmed);
+            case "suicide" -> "suicide";
+            case "kill" -> "kill-targets";
+            case "setnameplate" -> "set-nameplate "
+                    + firstArgOrPositional(trimmed, 0, "", "name", "text", "n");
+            case "broadcast" -> "broadcast \""
+                    + escape(firstArgOrPositional(trimmed, 0, "", "message", "m", "text")) + "\"";
+            case "command", "commandconsole" -> commandAction("command", trimmed);
+            case "commandsimple", "commandself" -> commandAction("command-self", trimmed);
+            case "commandtarget" -> commandAction("command-target", trimmed);
+            case "disguise" -> "disguise " + firstArgOrPositional(trimmed, 0, "", "model", "type");
             case "removedisguise" -> "remove-disguise";
             case "remove" -> "remove-self";
             case "equip" -> "equip "
-                    + firstArgOr(trimmed, "item", "material", "") + " "
-                    + firstArgOr(trimmed, "slot", "hand") + " "
-                    + firstArgOr(trimmed, "amount", "a", "1");
+                    + firstArgOrPositional(trimmed, 0, "", "item", "material") + " "
+                    + firstArgOrPositional(trimmed, 1, "hand", "slot") + " "
+                    + firstArgOrPositional(trimmed, 2, "1", "amount", "a");
             case "setname" -> "set-name "
-                    + firstArgOr(trimmed, "name", "n", "") + " "
-                    + firstArgOr(trimmed, "visible", "true");
+                    + firstArgOrPositional(trimmed, 0, "", "name", "n") + " "
+                    + firstArgOrPositional(trimmed, 1, "true", "visible");
+            case "addtag", "add-tag", "addscoreboardtag", "add-scoreboard-tag" -> {
+                String tag = firstArg(trimmed, "tag", "t");
+                if (tag == null) tag = positionalArg(trimmed, 0);
+                yield "add-tag " + (tag == null ? "" : escape(tag));
+            }
+            case "removetag", "remove-tag", "removescoreboardtag", "remove-scoreboard-tag" -> {
+                String tag = firstArg(trimmed, "tag", "t");
+                if (tag == null) tag = positionalArg(trimmed, 0);
+                yield "remove-tag " + (tag == null ? "" : escape(tag));
+            }
+            case "setscore", "set-score", "score-set" -> {
+                String objective = firstArg(trimmed, "objective", "score", "name", "o");
+                if (objective == null) objective = positionalArg(trimmed, 0);
+                String value = firstArg(trimmed, "value", "amount", "v");
+                if (value == null) value = positionalArg(trimmed, 1);
+                yield "score-set " + (objective == null ? "" : escape(objective))
+                        + " " + (value == null ? "0" : value);
+            }
+            case "addscore", "add-score", "score-add" -> {
+                String objective = firstArg(trimmed, "objective", "score", "name", "o");
+                if (objective == null) objective = positionalArg(trimmed, 0);
+                String value = firstArg(trimmed, "value", "amount", "v");
+                if (value == null) value = positionalArg(trimmed, 1);
+                yield "score-add " + (objective == null ? "" : escape(objective))
+                        + " " + (value == null ? "0" : value);
+            }
             case "setitem" -> "set-item "
-                    + firstArgOr(trimmed, "item", "material", "") + " "
-                    + firstArgOr(trimmed, "slot", "hand") + " "
-                    + firstArgOr(trimmed, "amount", "a", "1");
+                    + firstArgOrPositional(trimmed, 0, "", "item", "material") + " "
+                    + firstArgOrPositional(trimmed, 1, "hand", "slot") + " "
+                    + firstArgOrPositional(trimmed, 2, "1", "amount", "a");
             case "dropitem" -> "drop-item "
-                    + firstArgOr(trimmed, "item", "material", "") + " "
-                    + firstArgOr(trimmed, "amount", "a", "1");
+                    + firstArgOrPositional(trimmed, 0, "", "item", "material") + " "
+                    + firstArgOrPositional(trimmed, 1, "1", "amount", "a");
+            case "giveitem", "give" -> "give-item "
+                    + firstArgOrPositional(trimmed, 0, "", "item", "material") + " "
+                    + firstArgOrPositional(trimmed, 1, "1", "amount", "a");
+            case "takeitem", "take", "consume", "removeitem", "remove-item" -> "take-item "
+                    + firstArgOrPositional(trimmed, 0, "", "item", "material") + " "
+                    + firstArgOrPositional(trimmed, 1, "1", "amount", "a");
+            case "closeinventory", "close-inventory" -> "close-inventory";
+            case "clearinventory", "clear-inventory" -> "clear-inventory";
+            case "clearexperience", "clear-experience", "clearexp" -> "clear-experience";
+            case "clearexperiencelevels", "clear-experience-levels", "clearexplevels" ->
+                    "clear-experience-levels";
+            case "giveexperiencelevels", "give-experience-levels", "giveexplevels" ->
+                    "give-experience-levels " + firstArgOrPositional(trimmed, 0, "0", "amount", "a");
+            case "giveexperience", "give-experience", "givexp", "give-xp" ->
+                    "give-experience " + firstArgOrPositional(trimmed, 0, "0", "amount", "a");
+            case "setabsorption", "set-absorption" ->
+                    "set-absorption " + firstArgOrPositional(trimmed, 0, "0", "amount", "a", "absorption");
+            case "oxygen" -> "oxygen " + firstArgOrPositional(trimmed, 0, "1", "amount", "a");
+            case "consumeslot", "consume-slot", "consumeslotitem" -> "consume-slot "
+                    + firstArgOrPositional(trimmed, 0, "HAND", "slot", "s") + " "
+                    + firstArgOrPositional(trimmed, 1, "1", "amount", "a");
+            case "disarm", "removehelditem", "remove-held-item" -> "disarm";
+            case "setmaterialcooldown", "set-material-cooldown", "setitemcooldown", "set-item-cooldown" -> {
+                String material = firstArg(trimmed, "material", "mat", "m", "type");
+                if (material == null) material = positionalArg(trimmed, 0);
+                String ticks = firstArg(trimmed, "ticks", "duration", "time", "t");
+                if (ticks == null) ticks = positionalArg(trimmed, 1);
+                yield "set-material-cooldown " + (material == null ? "ENDER_PEARL" : material)
+                        + " " + (ticks == null ? "0" : ticks);
+            }
+            case "setgamemode", "set-game-mode" -> {
+                String mode = firstArg(trimmed, "mode", "gamemode", "game-mode", "m");
+                if (mode == null) mode = positionalArg(trimmed, 0);
+                yield "set-game-mode " + (mode == null ? "SURVIVAL" : mode);
+            }
+            case "setoffhand", "set-offhand" -> {
+                String item = firstArg(trimmed, "item", "material", "type");
+                if (item == null) item = positionalArg(trimmed, 0);
+                String offhandAmount = firstArg(trimmed, "amount", "a");
+                if (offhandAmount == null) offhandAmount = positionalArg(trimmed, 1);
+                yield "set-offhand " + (item == null ? "AIR" : item)
+                        + " " + (offhandAmount == null ? "1" : offhandAmount);
+            }
+            case "setarmor", "set-armor" -> {
+                String helmet = firstArg(trimmed, "helmet", "head");
+                String chest = firstArg(trimmed, "chest", "chestplate");
+                String legs = firstArg(trimmed, "legs", "leggings");
+                String feet = firstArg(trimmed, "feet", "boots");
+                if (helmet == null) helmet = positionalArg(trimmed, 0);
+                if (chest == null) chest = positionalArg(trimmed, 1);
+                if (legs == null) legs = positionalArg(trimmed, 2);
+                if (feet == null) feet = positionalArg(trimmed, 3);
+                yield "set-armor " + (helmet == null ? "AIR" : helmet)
+                        + " " + (chest == null ? "AIR" : chest)
+                        + " " + (legs == null ? "AIR" : legs)
+                        + " " + (feet == null ? "AIR" : feet);
+            }
+            case "setfaction", "set-faction" -> {
+                String faction = firstArg(trimmed, "faction", "name", "f");
+                if (faction == null) faction = positionalArg(trimmed, 0);
+                yield "set-faction " + (faction == null ? "none" : faction);
+            }
+            case "setlevel", "set-level" ->
+                    "set-level " + firstArgOrPositional(trimmed, 0, "1", "level", "l", "amount", "a");
+            case "setweather", "set-weather" -> {
+                String weather = firstArg(trimmed, "weather", "type", "w");
+                if (weather == null) weather = positionalArg(trimmed, 0);
+                String duration = firstArg(trimmed, "duration", "ticks", "time", "t");
+                if (duration == null) duration = positionalArg(trimmed, 1);
+                yield "set-weather " + (weather == null ? "clear" : weather)
+                        + " " + (duration == null ? "0" : duration);
+            }
+            case "settime", "set-time" -> {
+                String time = firstArg(trimmed, "time", "ticks", "t");
+                if (time == null) time = positionalArg(trimmed, 0);
+                yield "set-time " + (time == null ? "day" : time);
+            }
+            case "lightning", "strike-lightning", "strike-lightning-effect" ->
+                    "lightning " + firstArgOrPositional(trimmed, 0, "false",
+                            "effectonly", "effect-only", "visual", "visual-only");
+            case "feed", "food" -> "feed " + (amount == null ? "1" : amount);
+            case "swing" -> {
+                String hand = firstArg(trimmed, "hand", "h");
+                if (hand == null) hand = positionalArg(trimmed, 0);
+                String offhand = firstArg(trimmed, "offhand", "off-hand", "off_hand");
+                if (offhand != null) {
+                    yield "swing " + (Boolean.parseBoolean(offhand) ? "OFF_HAND" : "MAIN_HAND");
+                }
+                yield hand == null ? "swing" : "swing " + hand;
+            }
+            case "swingmainhand", "swing-main-hand" -> "swing MAIN_HAND";
+            case "swingoffhand", "swing-offhand", "swing-off-hand" -> "swing OFF_HAND";
+            case "setblock", "set-block" -> "set-block "
+                    + firstArgOrPositional(trimmed, 0, "AIR", "material", "type", "block");
+            case "breakblock", "break-block" -> "break-block";
+            case "setai" -> "set-ai " + firstArgOrPositional(trimmed, 0, "true", "ai", "state");
+            case "setgravity" -> "set-gravity " + firstArgOrPositional(trimmed, 0, "true", "gravity", "state");
+            case "setnogravity" -> "set-gravity false";
+            case "setsilent" -> "set-silent " + firstArgOrPositional(trimmed, 0, "true", "silent", "state");
+            case "setcollidable" -> "set-collidable " + firstArgOrPositional(trimmed, 0, "true", "collidable", "state");
+            case "setsneaking" -> "set-sneaking " + firstArgOrPositional(trimmed, 0, "true", "sneaking", "state");
+            case "setgliding" -> "set-gliding " + firstArgOrPositional(trimmed, 0, "true", "gliding", "state");
+            case "setswimming" -> "set-swimming " + firstArgOrPositional(trimmed, 0, "true", "swimming", "state");
+            case "setsprinting" -> "set-sprinting " + firstArgOrPositional(trimmed, 0, "true", "sprinting", "state");
+            case "setflying" -> "set-flying " + firstArgOrPositional(trimmed, 0, "true", "flying", "state");
+            case "setnodamageticks", "set-ndt" -> "set-no-damage-ticks "
+                    + firstArgOrPositional(trimmed, 0, "0", "ticks", "duration");
+            case "setmaxnodamageticks", "setmaximumnodamageticks" -> "set-maximum-no-damage-ticks "
+                    + firstArgOrPositional(trimmed, 0, "20", "ticks", "duration");
+            case "setwalkspeed" -> "set-walk-speed "
+                    + firstArgOrPositional(trimmed, 0, "0.2", "speed", "amount");
+            case "setinvincible" -> "set-invulnerable " + firstArgOrPositional(trimmed, 0, "true", "invincible", "state");
+            case "setfire" -> "set-fire " + firstArgOrPositional(trimmed, 0, "40", "ticks", "duration");
+            case "extinguish", "clearfire" -> "clear-fire";
+            case "freeze" -> "freeze " + firstArgOrPositional(trimmed, 0, "140", "duration", "ticks");
+            case "look", "lookat", "look-at" -> "look-at";
+            case "setrotation", "set-rotation", "rotation" -> "set-rotation "
+                    + firstArgOrPositional(trimmed, 0, "0", "yaw", "y") + " "
+                    + firstArgOrPositional(trimmed, 1, "0", "pitch", "p");
+            case "setstance", "set-stance" -> "set-stance "
+                    + firstArgOrPositional(trimmed, 0, "", "stance", "name") ;
+            case "randomskill", "random-skill" -> "random-skill "
+                    + firstArgOrPositional(trimmed, 0, "", "skills", "skill");
             case "mount" -> "mount";
             case "dismount", "unmount" -> "dismount";
+            case "ejectpassenger", "eject_passenger", "eject-passenger" -> "eject-passenger";
             case "cancelevent", "cancel-event" -> "cancel-event";
             case "setowner" -> "set-owner";
             case "removeowner" -> "remove-owner";
@@ -922,6 +1469,96 @@ public final class MythicMobsImporter implements MigrationImporter {
             default -> null;
         };
         return mapped == null ? null : withExecutionOptions(mapped + executionSuffix(trimmed), trimmed);
+    }
+
+    private static String commandAction(String action, String raw) {
+        String command = firstArg(raw, "command", "cmd", "c");
+        if (command == null) command = positionalArg(raw, 0);
+        return command == null || command.isBlank()
+                ? null : action + " \"" + escape(command) + "\"";
+    }
+
+    private static String variableSetAction(String raw) {
+        String variable = variableName(raw);
+        String type = firstArg(raw, "type");
+        String value = firstArg(raw, "value", "val");
+        if (value == null) value = positionalArg(raw, 1);
+        if (variable == null || value == null) return null;
+        return "set-variable var=" + escape(variable)
+                + " type=" + escape(type == null ? "DOUBLE" : type)
+                + " value=\"" + escape(value) + "\"";
+    }
+
+    private static String variableSimpleAction(String action, String raw) {
+        String variable = variableName(raw);
+        return variable == null ? null : action + " var=" + escape(variable);
+    }
+
+    private static String variableNumericAction(String action, String raw, String... keys) {
+        String variable = variableName(raw);
+        String value = firstArg(raw, keys);
+        if (value == null) value = positionalArg(raw, 1);
+        return variable == null || value == null ? null
+                : action + " var=" + escape(variable) + " value=" + escape(value);
+    }
+
+    private static String variableMathAction(String raw) {
+        String variable = variableName(raw);
+        String operation = firstArg(raw, "operation", "op");
+        String value = firstArg(raw, "value", "val", "amount");
+        if (operation == null) operation = positionalArg(raw, 1);
+        if (value == null) value = positionalArg(raw, 2);
+        return variable == null || value == null ? null
+                : "var-math var=" + escape(variable) + " op="
+                + escape(operation == null ? "+" : operation) + " value=" + escape(value);
+    }
+
+    private static String variableName(String raw) {
+        String variable = firstArg(raw, "var", "variable", "name");
+        return variable == null ? positionalArg(raw, 0) : variable;
+    }
+
+    private static String dotAction(String raw) {
+        String damage = firstArg(raw, "damage", "amount", "d");
+        if (damage == null) damage = positionalArg(raw, 0);
+        String duration = firstArg(raw, "duration", "dur", "time");
+        String interval = firstArg(raw, "interval", "period", "ticks");
+        if (duration == null) duration = positionalArg(raw, 1);
+        if (interval == null) interval = positionalArg(raw, 2);
+        return "dot damage=" + (damage == null ? "1" : escape(damage))
+                + " duration=" + (duration == null ? "20" : escape(duration))
+                + " interval=" + (interval == null ? "20" : escape(interval));
+    }
+
+    private static String globalCooldownAction(String raw) {
+        String ticks = firstArg(raw, "ticks", "t");
+        if (ticks == null) ticks = positionalArg(raw, 0);
+        return "set-global-cooldown __mythic_gcd "
+                + escape(ticks == null ? "20" : ticks) + "t";
+    }
+
+    private static String skillCooldownAction(String raw) {
+        String skill = firstArg(raw, "skill", "s");
+        if (skill == null) skill = positionalArg(raw, 0);
+        String seconds = firstArg(raw, "seconds", "sec", "time", "t");
+        if (seconds == null) seconds = positionalArg(raw, 1);
+        if (skill == null || skill.isBlank()) return null;
+        return "set-skill-cooldown " + escape(skill) + " "
+                + (seconds == null ? "0" : escape(seconds));
+    }
+
+    private static String signalAction(String raw) {
+        String signal = firstArg(raw, "signal", "name", "s");
+        if (signal == null) signal = positionalArg(raw, 0);
+        String payload = firstArg(raw, "payload", "data", "message", "p");
+        if (payload == null) payload = positionalArg(raw, 1);
+        String global = firstArg(raw, "global", "broadcast", "g");
+        if (signal == null || signal.isBlank()) return null;
+        StringBuilder mapped = new StringBuilder("signal \"").append(escape(signal)).append("\"");
+        if (payload != null) mapped.append(" \"").append(escape(payload)).append("\"");
+        if ("true".equalsIgnoreCase(global) || "global".equalsIgnoreCase(global)
+                || "broadcast".equalsIgnoreCase(global)) mapped.append(" global");
+        return mapped.toString();
     }
 
     private static String withExecutionOptions(String mapped, String raw) {
@@ -942,16 +1579,28 @@ public final class MythicMobsImporter implements MigrationImporter {
     private static String positionalArg(String raw, int index) {
         int brace = raw.indexOf('{');
         int close = mechanicClose(raw, brace);
-        String tail = brace < 0 ? raw : raw.substring(close < 0 ? raw.length() : close + 1);
+        String tail;
+        if (brace < 0) {
+            int firstSpace = raw.indexOf(' ');
+            tail = firstSpace < 0 ? "" : raw.substring(firstSpace + 1);
+        } else {
+            tail = raw.substring(close < 0 ? raw.length() : close + 1);
+        }
         String[] parts = tail.trim().split("\\s+");
         return index >= 0 && index < parts.length ? parts[index] : null;
     }
 
     private static String executionSuffix(String raw) {
         int close = mechanicClose(raw, raw.indexOf('{'));
-        if (close >= 0 && close + 1 < raw.length()) return normalizeTargeterSuffix(raw.substring(close + 1).trim());
+        if (close >= 0) {
+            return close + 1 < raw.length()
+                    ? normalizeTargeterSuffix(raw.substring(close + 1).trim()) : "";
+        }
         int firstSpace = raw.indexOf(' ');
-        return firstSpace < 0 ? "" : normalizeTargeterSuffix(raw.substring(firstSpace + 1).trim());
+        if (firstSpace < 0) return "";
+        String suffix = raw.substring(firstSpace + 1).trim();
+        int at = suffix.indexOf('@');
+        return at < 0 ? "" : normalizeTargeterSuffix(suffix.substring(at));
     }
 
     private static String normalizeTargeterSuffix(String suffix) {
@@ -967,6 +1616,15 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "pir", "playersinradius" -> "playersinradius";
             case "eir", "entitiesinradius", "livingentitiesinradius" -> "livingentitiesinradius";
             case "mir", "mobsinradius" -> "mobsinradius";
+            case "monstersinradius" -> "monstersinradius";
+            case "animalsinradius" -> "animalsinradius";
+            case "villagersinradius" -> "villagersinradius";
+            case "tamedinradius" -> "tamedinradius";
+            case "nearestplayer" -> "nearestplayer";
+            case "nearestmonster" -> "nearestmonster";
+            case "nearestanimal" -> "nearestanimal";
+            case "nearestvillager" -> "nearestvillager";
+            case "nearesttamed" -> "nearesttamed";
             case "los", "lineofsight" -> "lineofsight";
             default -> rawName.toLowerCase(Locale.ROOT);
         };
@@ -1000,6 +1658,14 @@ public final class MythicMobsImporter implements MigrationImporter {
         String fallback = keysAndFallback[keysAndFallback.length - 1];
         String[] keys = java.util.Arrays.copyOf(keysAndFallback, keysAndFallback.length - 1);
         String value = firstArg(raw, keys);
+        return value == null ? fallback : value;
+    }
+
+    /** Reads a keyed value first, then the corresponding positional Mythic argument. */
+    private static String firstArgOrPositional(String raw, int index, String fallback,
+                                               String... keys) {
+        String value = firstArg(raw, keys);
+        if (value == null) value = positionalArg(raw, index);
         return value == null ? fallback : value;
     }
 
@@ -1039,23 +1705,35 @@ public final class MythicMobsImporter implements MigrationImporter {
             List<Map<String, Object>> skillNotes = new ArrayList<>();
             SkillScan scan = new SkillScan();
             for (String line : lines) {
-                classifySkillLine(line, scan, refs, actions, skillNotes, file.toString(), key);
+                classifySkillLine(line, scan, refs, actions, skillNotes, file.toString(), key, true);
             }
             if (!actions.isEmpty()) target.set("skills." + skillId + ".on-decision", actions);
             if (!scan.unsupported.isEmpty()) target.set("skills." + skillId + ".unsupported", scan.unsupported);
             List<String> targetConditions = stringOrList(skill, "TargetConditions");
             List<String> triggerConditions = stringOrList(skill, "TriggerConditions");
             if (!targetConditions.isEmpty()) {
-                target.set("skills." + skillId + ".target-conditions", targetConditions);
+                List<String> translated = new ArrayList<>();
+                List<String> unmapped = new ArrayList<>();
+                MmConditions.translateAll(targetConditions, translated, unmapped);
+                String targetPath = "skills." + skillId + ".target-conditions";
+                target.set(targetPath, translated);
                 note(entries, file.toString(), key + ".TargetConditions",
-                        "skills." + skillId + ".target-conditions", targetConditions,
-                        "mapped", "Copied to Helstera skill target conditions.");
+                        targetPath, translated, "mapped",
+                        "Mythic target conditions translated to Helstera condition names.");
+                noteUnmappedSkillConditions(entries, file.toString(), key + ".TargetConditions",
+                        targetPath, unmapped);
             }
             if (!triggerConditions.isEmpty()) {
-                target.set("skills." + skillId + ".trigger-conditions", triggerConditions);
+                List<String> translated = new ArrayList<>();
+                List<String> unmapped = new ArrayList<>();
+                MmConditions.translateAll(triggerConditions, translated, unmapped);
+                String targetPath = "skills." + skillId + ".trigger-conditions";
+                target.set(targetPath, translated);
                 note(entries, file.toString(), key + ".TriggerConditions",
-                        "skills." + skillId + ".trigger-conditions", triggerConditions,
-                        "mapped", "Copied to Helstera skill trigger conditions.");
+                        targetPath, translated, "mapped",
+                        "Mythic trigger conditions translated to Helstera condition names.");
+                noteUnmappedSkillConditions(entries, file.toString(), key + ".TriggerConditions",
+                        targetPath, unmapped);
             }
             for (SkillScan.Trigger trigger : scan.triggers) {
                 target.set("skills." + skillId + ".triggers." + trigger.trigger + ".do", trigger.actions);
@@ -1076,7 +1754,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             List<String> refs = new ArrayList<>();
             SkillScan scan = new SkillScan();
             for (String line : lines) {
-                classifySkillLine(line, scan, refs, actions, entries, file.toString(), fileStem);
+                classifySkillLine(line, scan, refs, actions, entries, file.toString(), fileStem, true);
             }
             if (!actions.isEmpty()) target.set("skills." + skillId + ".on-decision", actions);
             if (!scan.unsupported.isEmpty()) target.set("skills." + skillId + ".unsupported", scan.unsupported);
@@ -1127,21 +1805,32 @@ public final class MythicMobsImporter implements MigrationImporter {
                 continue;
             }
             String itemPath = "entity.items." + slot;
-            String sourceMaterial = parsed.itemSpec();
-            String legacyData = inlineValue(parsed.inline(), "data");
+            String rawSourceMaterial = parsed.itemSpec();
+            String inlineData = inlineValue(parsed.inline(), "data");
+            LegacyIdData normalized = splitLegacyIdData(rawSourceMaterial, inlineData);
+            String sourceMaterial = normalized.id();
+            String legacyData = normalized.data();
             String skullMaterial = legacySkullMaterial(sourceMaterial, legacyData);
             String numericMaterial = modernLegacyMaterial(sourceMaterial, legacyData);
+            String namespacedMaterial = modernNamespacedMaterial(sourceMaterial);
+            String legacyPotionType = legacyPotionType(sourceMaterial, legacyData);
             String itemMaterial = skullMaterial != null ? skullMaterial
-                    : numericMaterial == null ? sourceMaterial : numericMaterial;
+                    : numericMaterial != null ? numericMaterial
+                    : namespacedMaterial != null ? namespacedMaterial : rawSourceMaterial;
             String legacyBlockStates = legacyBlockStates(sourceMaterial, legacyData);
+            if (legacyPotionType != null) {
+                target.set(itemPath + ".base-potion-type", legacyPotionType);
+                note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".base-potion-type",
+                        legacyPotionType, "mapped", "Legacy potion damage value converted to a modern PotionType.");
+            }
             int legacyId = isInteger(sourceMaterial) ? parseInteger(sourceMaterial, Integer.MIN_VALUE)
                     : Integer.MIN_VALUE;
-            if (isInteger(sourceMaterial) && itemMaterial.equals(sourceMaterial)
+            if (isInteger(sourceMaterial) && numericMaterial == null
                     && !isKnownLegacyItemId(legacyId)) {
-                target.set(itemPath + ".unsupported.legacy-id", sourceMaterial);
+                target.set(itemPath + ".unsupported.legacy-id", rawSourceMaterial);
                 unsupported.add(spec);
                 note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".unsupported.legacy-id",
-                        sourceMaterial, "unsupported", "Legacy numeric item ID has no verified modern Material mapping.",
+                        rawSourceMaterial, "unsupported", "Legacy numeric item ID has no verified modern Material mapping.",
                         "WARN");
             }
             if (parsed.dropChance() != null) {
@@ -1164,12 +1853,33 @@ public final class MythicMobsImporter implements MigrationImporter {
                         parsed.unsupportedTrailing(), "unsupported",
                         "Unrecognized trailing Equipment metadata was preserved in the source entry.", "WARN");
             }
-            if (parsed.inline().isEmpty()) {
+            if (parsed.inline().isEmpty() && legacyData == null) {
                 target.set(itemPath, itemMaterial);
                 if (legacyBlockStates != null) target.set(itemPath + ".block-states", legacyBlockStates);
             } else {
                 target.set(itemPath + ".item", itemMaterial);
                 if (legacyBlockStates != null) target.set(itemPath + ".block-states", legacyBlockStates);
+                if (parsed.inline().isEmpty()) {
+                    if (legacyPotionType != null || skullMaterial != null || legacyVariantMaterial(sourceMaterial, legacyData) != null
+                            || isNeutralLegacyData(sourceMaterial, legacyData, numericMaterial)) {
+                        note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".item",
+                                itemMaterial, "mapped",
+                                legacyPotionType != null || skullMaterial != null || legacyVariantMaterial(sourceMaterial, legacyData) != null
+                                        ? "Legacy item data value converted to a modern Material variant."
+                                        : "Legacy item data value 0 is the neutral metadata value for the converted Material.");
+                    } else if (LEGACY_DURABILITY_IDS.contains(legacyId)
+                            && parseInteger(legacyData, Integer.MIN_VALUE) >= 0) {
+                        target.set(itemPath + ".durability", parseInteger(legacyData, 0));
+                        note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".durability",
+                                legacyData, "mapped", "Legacy item damage converted to modern durability.");
+                    } else {
+                        target.set(itemPath + ".unsupported.data", legacyData);
+                        note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".unsupported.data",
+                                legacyData, "unsupported",
+                                "Legacy data values depend on the old numeric item type; no safe modern Material or BlockData mapping was found.",
+                                "WARN");
+                    }
+                }
                 for (Map.Entry<String, String> attribute : parsed.inline().entrySet()) {
                     String key = attribute.getKey();
                     String value = attribute.getValue();
@@ -1194,10 +1904,19 @@ public final class MythicMobsImporter implements MigrationImporter {
                         case "skullowner" -> target.set(itemPath + ".skull-owner", value);
                         case "skulltexture" -> target.set(itemPath + ".skull-texture", value);
                         case "data" -> {
-                            if (skullMaterial != null || legacyVariantMaterial(sourceMaterial, value) != null) {
+                            String inlinePotionType = legacyPotionType(sourceMaterial, value);
+                            if (inlinePotionType != null) {
+                                target.set(itemPath + ".base-potion-type", inlinePotionType);
+                                note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".base-potion-type",
+                                        inlinePotionType, "mapped", "Legacy potion damage value converted to a modern PotionType.");
+                            }
+                            if (inlinePotionType != null || skullMaterial != null || legacyVariantMaterial(sourceMaterial, value) != null
+                                    || isNeutralLegacyData(sourceMaterial, value, numericMaterial)) {
                                 note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".item",
                                         itemMaterial, "mapped",
-                                        "Legacy item data value converted to a modern Material variant.");
+                                                inlinePotionType != null || skullMaterial != null || legacyVariantMaterial(sourceMaterial, value) != null
+                                                ? "Legacy item data value converted to a modern Material variant."
+                                                : "Legacy item data value 0 is the neutral metadata value for the converted Material.");
                             } else if (LEGACY_DURABILITY_IDS.contains(legacyId)
                                     && parseInteger(value, Integer.MIN_VALUE) >= 0) {
                                 target.set(itemPath + ".durability", parseInteger(value, 0));
@@ -1242,6 +1961,81 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
     }
 
+    private record LegacyIdData(String id, String data) { }
+
+    /**
+     * Converts the pre-flattening potion damage encoding into a Bukkit
+     * {@code PotionType}. Unknown bits stay unsupported instead of becoming a
+     * visually plausible but semantically different potion.
+     */
+    private static String legacyPotionType(String rawId, String rawData) {
+        if (rawId == null || !isInteger(rawData)) return null;
+        String normalizedId = rawId.trim().toUpperCase(Locale.ROOT);
+        if (normalizedId.startsWith("MINECRAFT:")) normalizedId = normalizedId.substring("MINECRAFT:".length());
+        int id = isInteger(normalizedId) ? parseInteger(normalizedId, Integer.MIN_VALUE) : switch (normalizedId) {
+            case "POTION" -> 373;
+            case "SPLASH_POTION" -> 438;
+            case "TIPPED_ARROW" -> 440;
+            case "LINGERING_POTION" -> 441;
+            default -> Integer.MIN_VALUE;
+        };
+        if (id != 373 && id != 438 && id != 440 && id != 441) return null;
+        int data = parseInteger(rawData, Integer.MIN_VALUE);
+        if (data < 0 || (data & ~0x7FFF) != 0) return null;
+
+        int base = data & 0x1F;
+        int flags = data & ~0x1F;
+        int allowedFlags = 0x20 | 0x40 | 0x2000 | 0x4000;
+        if ((flags & ~allowedFlags) != 0) return null;
+
+        if (base == 0) return flags == 0 || flags == 0x4000 ? "WATER" : null;
+        if (base == 16) return flags == 0 || flags == 0x4000 ? "MUNDANE" : null;
+        if (base == 32) return flags == 0 || flags == 0x4000 ? "THICK" : null;
+        if (base == 64) return flags == 0 || flags == 0x4000 ? "AWKWARD" : null;
+        if (base == 7 || (flags & 0x2000) == 0) return null;
+        if ((flags & 0x20) != 0 && (flags & 0x40) != 0) return null;
+        if ((base == 5 || base == 12) && (flags & 0x40) != 0) return null;
+
+        String name = switch (base) {
+            case 1 -> "REGENERATION";
+            case 2 -> "SWIFTNESS";
+            case 3 -> "FIRE_RESISTANCE";
+            case 4 -> "POISON";
+            case 5 -> "HEALING";
+            case 6 -> "NIGHT_VISION";
+            case 8 -> "WEAKNESS";
+            case 9 -> "STRENGTH";
+            case 10 -> "SLOWNESS";
+            case 11 -> "LEAPING";
+            case 12 -> "HARMING";
+            case 13 -> "WATER_BREATHING";
+            case 14 -> "INVISIBILITY";
+            default -> null;
+        };
+        if (name == null) return null;
+        if ((flags & 0x20) != 0) return "STRONG_" + name;
+        if ((flags & 0x40) != 0) return "LONG_" + name;
+        return name;
+    }
+
+    /** Accept the legacy numeric {@code id:data} shorthand without touching namespaced materials. */
+    private static LegacyIdData splitLegacyIdData(String rawId, String rawData) {
+        if (rawId == null || rawData != null) return new LegacyIdData(rawId, rawData);
+        String value = rawId.trim();
+        if (value.regionMatches(true, 0, "minecraft:", 0, "minecraft:".length())) {
+            value = value.substring("minecraft:".length());
+        }
+        int separator = value.indexOf(':');
+        if (separator <= 0 || separator != value.lastIndexOf(':')) {
+            return new LegacyIdData(rawId, rawData);
+        }
+        String id = value.substring(0, separator).trim();
+        String data = value.substring(separator + 1).trim();
+        return isInteger(id) && isInteger(data)
+                ? new LegacyIdData(id, data)
+                : new LegacyIdData(rawId, rawData);
+    }
+
     private record EquipmentSpec(String itemSpec, String slot, Map<String, String> inline,
                                  Map<String, String> trailingEnchantments,
                                  String dropChance, String unsupportedTrailing) { }
@@ -1264,13 +2058,15 @@ public final class MythicMobsImporter implements MigrationImporter {
     }
 
     private static boolean isKnownLegacyItemId(int id) {
-        return LEGACY_EQUIPMENT_IDS.containsKey(id) || id == 397
+        return LEGACY_EQUIPMENT_IDS.containsKey(id) || LEGACY_ITEM_MATERIALS.containsKey(id)
+                || LEGACY_BLOCK_MATERIALS.containsKey(id) || id == 397
                 || id == 1 || id == 3 || id == 5 || id == 6 || id == 12 || id == 17 || id == 18
                 || id == 24 || id == 35 || id == 37 || id == 38 || id == 43 || id == 44
                 || id == 95 || id == 98 || id == 125 || id == 126
                 || id == 161 || id == 162
                 || isLegacyStairsId(id)
-                || id == 159 || id == 160 || id == 171 || id == 181 || id == 182
+                || id == 31 || id == 97 || id == 144 || id == 155 || id == 159 || id == 160
+                || id == 168 || id == 171 || id == 175 || id == 181 || id == 182
                 || id == 251 || id == 252
                 || id == 263 || id == 351;
     }
@@ -1278,7 +2074,32 @@ public final class MythicMobsImporter implements MigrationImporter {
     private static String modernLegacyMaterial(String rawId, String rawData) {
         if (!isInteger(rawId)) return null;
         String variant = legacyVariantMaterial(rawId, rawData);
-        return variant == null ? LEGACY_EQUIPMENT_IDS.get(Integer.parseInt(rawId.trim())) : variant;
+        if (variant != null) return variant;
+        int id = Integer.parseInt(rawId.trim());
+        String simple = LEGACY_BLOCK_MATERIALS.get(id);
+        if (simple != null && (rawData == null || parseInteger(rawData, Integer.MIN_VALUE) == 0)) {
+            return simple;
+        }
+        String item = LEGACY_ITEM_MATERIALS.get(id);
+        if (item != null && (rawData == null || parseInteger(rawData, Integer.MIN_VALUE) == 0
+                || LEGACY_DURABILITY_IDS.contains(id) || legacyPotionType(rawId, rawData) != null)) {
+            return item;
+        }
+        return LEGACY_EQUIPMENT_IDS.get(id);
+    }
+
+    /** Normalize only the vanilla namespace; third-party namespaces stay for integration resolvers. */
+    private static String modernNamespacedMaterial(String rawId) {
+        if (rawId == null || !rawId.regionMatches(true, 0, "minecraft:", 0, 10)) return null;
+        String candidate = rawId.substring(10).trim();
+        org.bukkit.Material material = org.bukkit.Material.matchMaterial(candidate);
+        return material == null ? null : material.name();
+    }
+
+    private static boolean isNeutralLegacyData(String rawId, String rawData, String modernMaterial) {
+        if (modernMaterial == null || !isInteger(rawId) || !isInteger(rawData)) return false;
+        int id = Integer.parseInt(rawId.trim());
+        return parseInteger(rawData, Integer.MIN_VALUE) == 0 && !LEGACY_DURABILITY_IDS.contains(id);
     }
 
     private static String legacyVariantMaterial(String rawId, String rawData) {
@@ -1286,6 +2107,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         int id = Integer.parseInt(rawId.trim());
         int data = rawData == null ? 0 : parseInteger(rawData, Integer.MIN_VALUE);
         if (data < 0) return null;
+        if (id == 383) return LEGACY_SPAWN_EGGS.get(data);
         String[] colors = {"WHITE", "ORANGE", "MAGENTA", "LIGHT_BLUE", "YELLOW", "LIME", "PINK", "GRAY",
                 "LIGHT_GRAY", "CYAN", "PURPLE", "BLUE", "BROWN", "GREEN", "RED", "BLACK"};
         if (id == 35 || id == 95 || id == 159 || id == 160 || id == 171 || id == 251 || id == 252) {
@@ -1303,6 +2125,20 @@ public final class MythicMobsImporter implements MigrationImporter {
             };
             return color + suffix;
         }
+        if (id == 349) return switch (data) {
+            case 0 -> "COD";
+            case 1 -> "SALMON";
+            case 2 -> "TROPICAL_FISH";
+            case 3 -> "PUFFERFISH";
+            default -> null;
+        };
+        if (id == 350) return switch (data) {
+            case 0 -> "COOKED_COD";
+            case 1 -> "COOKED_SALMON";
+            default -> null;
+        };
+        if (id == 355) return data < colors.length ? colors[data] + "_BED" : null;
+        if (id == 425) return data < colors.length ? colors[data] + "_BANNER" : null;
         if (id == 1) return switch (data) {
             case 0 -> "STONE";
             case 1 -> "GRANITE";
@@ -1342,16 +2178,22 @@ public final class MythicMobsImporter implements MigrationImporter {
             case 5 -> "DARK_OAK_SAPLING";
             default -> null;
         };
+        if (id == 31) return switch (data) {
+            case 0 -> "DEAD_BUSH";
+            case 1 -> "SHORT_GRASS";
+            case 2 -> "FERN";
+            default -> null;
+        };
         String logMaterial = legacyLogMaterial(id, data);
         if (logMaterial != null) return logMaterial;
-        if (id == 18) return switch (data) {
+        if (id == 18 && data <= 7) return switch (data & 3) {
             case 0 -> "OAK_LEAVES";
             case 1 -> "SPRUCE_LEAVES";
             case 2 -> "BIRCH_LEAVES";
             case 3 -> "JUNGLE_LEAVES";
             default -> null;
         };
-        if (id == 161) return switch (data) {
+        if (id == 161 && data <= 5) return switch (data & 1) {
             case 0 -> "ACACIA_LEAVES";
             case 1 -> "DARK_OAK_LEAVES";
             default -> null;
@@ -1369,7 +2211,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             case 3 -> "CHISELED_STONE_BRICKS";
             default -> null;
         };
-        if (id == 37) return switch (data) {
+        if (id == 37) return data == 0 ? "DANDELION" : null;
+        if (id == 38) return switch (data) {
             case 0 -> "POPPY";
             case 1 -> "BLUE_ORCHID";
             case 2 -> "ALLIUM";
@@ -1381,7 +2224,36 @@ public final class MythicMobsImporter implements MigrationImporter {
             case 8 -> "OXEYE_DAISY";
             default -> null;
         };
-        if (id == 38) return data == 0 ? "DANDELION" : null;
+        if (id == 97) return switch (data) {
+            case 0 -> "INFESTED_STONE";
+            case 1 -> "INFESTED_COBBLESTONE";
+            case 2 -> "INFESTED_STONE_BRICKS";
+            case 3 -> "INFESTED_MOSSY_STONE_BRICKS";
+            case 4 -> "INFESTED_CRACKED_STONE_BRICKS";
+            case 5 -> "INFESTED_CHISELED_STONE_BRICKS";
+            default -> null;
+        };
+        if (id == 155) return switch (data) {
+            case 0 -> "QUARTZ_BLOCK";
+            case 1 -> "CHISELED_QUARTZ_BLOCK";
+            case 2 -> "QUARTZ_PILLAR";
+            default -> null;
+        };
+        if (id == 168) return switch (data) {
+            case 0 -> "PRISMARINE";
+            case 1 -> "PRISMARINE_BRICKS";
+            case 2 -> "DARK_PRISMARINE";
+            default -> null;
+        };
+        if (id == 175) return switch (data) {
+            case 0 -> "SUNFLOWER";
+            case 1 -> "LILAC";
+            case 2 -> "TALL_GRASS";
+            case 3 -> "LARGE_FERN";
+            case 4 -> "ROSE_BUSH";
+            case 5 -> "PEONY";
+            default -> null;
+        };
         String slabMaterial = legacySlabMaterial(id, data);
         if (slabMaterial != null) return slabMaterial;
         String stairMaterial = legacyStairMaterial(id, data);
@@ -1427,6 +2299,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             default -> null;
         };
         if (id == 181 || id == 182) return variant == 0 ? "RED_SANDSTONE_SLAB" : null;
+        if (id == 204 || id == 205) return variant == 0 ? "PURPUR_SLAB" : null;
         return null;
     }
 
@@ -1457,8 +2330,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             return "[facing=" + facing + ",half=" + half + "]";
         }
         if (legacySlabMaterial(id, data) == null) return null;
-        if (id == 43 || id == 125 || id == 181) return "[type=double]";
-        if ((id == 44 || id == 126 || id == 182) && (data & 8) != 0) return "[type=top]";
+        if (id == 43 || id == 125 || id == 181 || id == 204) return "[type=double]";
+        if ((id == 44 || id == 126 || id == 182 || id == 205) && (data & 8) != 0) return "[type=top]";
         return null;
     }
 
@@ -1506,7 +2379,7 @@ public final class MythicMobsImporter implements MigrationImporter {
     private static String legacySkullMaterial(String sourceMaterial, String rawData) {
         String material = sourceMaterial == null ? "" : sourceMaterial.trim()
                 .replaceFirst("(?i)^minecraft:", "").toUpperCase(Locale.ROOT);
-        boolean legacySkull = material.equals("SKULL_ITEM") || material.equals("397");
+        boolean legacySkull = material.equals("SKULL_ITEM") || material.equals("397") || material.equals("144");
         if (!legacySkull && !material.equals("PLAYER_HEAD")) return null;
         int data = rawData == null ? 0 : parseInteger(rawData, Integer.MIN_VALUE);
         if (material.equals("PLAYER_HEAD") && data == 3) return "PLAYER_HEAD";
@@ -1756,6 +2629,24 @@ public final class MythicMobsImporter implements MigrationImporter {
                 "mapped", "Preserved AI selector definitions for the Helstera AI adapter.");
     }
 
+    /**
+     * Paper's public Pathfinder API does not expose the native PathType malus
+     * table.  Keep the source value visible instead of silently dropping it;
+     * a later version-specific adapter can consume the preserved value.
+     */
+    private void mapAiPathfindingMalus(ConfigurationSection mob, String srcFile,
+                                       List<Map<String, Object>> entries,
+                                       YamlConfiguration target, String mobKey) {
+        Object raw = ciGet(mob, "AIPathfindingMalus");
+        if (raw == null) return;
+        if (raw instanceof ConfigurationSection section) raw = section.getValues(true);
+        target.set("mob.unsupported.AIPathfindingMalus", raw);
+        note(entries, srcFile, mobKey + ".AIPathfindingMalus",
+                "mob.unsupported.AIPathfindingMalus", raw, "unsupported",
+                "Paper's public API does not expose native PathType malus mutation; value preserved.",
+                "WARN");
+    }
+
     private void mapModules(ConfigurationSection mob, String srcFile,
                             List<Map<String, Object>> entries, YamlConfiguration target,
                             String mobKey) {
@@ -1877,6 +2768,13 @@ public final class MythicMobsImporter implements MigrationImporter {
                            String optionName, String path) {
         Object v = ciGet(options, optionName);
         if (v == null) return;
+        if (v instanceof String && (path.endsWith("-reasons") || path.endsWith("-causes"))) {
+            List<String> values = splitOptionList((String) v);
+            target.set(path, values);
+            note(entries, srcFile, "Options." + optionName, path, values, "mapped",
+                    "Delimited Mythic option values were normalized to a runtime string list.");
+            return;
+        }
         // Despawn 是嵌套节，直接搬会带出 MM 特有结构，标注需人工确认
         Object resolved = v instanceof ConfigurationSection
                 ? v.getClass().getSimpleName() : v;
@@ -1885,12 +2783,32 @@ public final class MythicMobsImporter implements MigrationImporter {
                 v instanceof ConfigurationSection ? "该 Options 项是嵌套节，helstera 侧结构不同，需人工确认" : null);
     }
 
-    private void mapPreventZombieConversion(ConfigurationSection options, String srcFile,
-                                            List<Map<String, Object>> entries, YamlConfiguration target) {
+    private static List<String> splitOptionList(String raw) {
+        if (raw == null || raw.isBlank()) return List.of();
+        return java.util.Arrays.stream(raw.split("[,;|]"))
+                .map(String::trim).filter(value -> !value.isBlank()).toList();
+    }
+
+    private boolean mapPreventConversion(ConfigurationSection options, String srcFile,
+                                         List<Map<String, Object>> entries, YamlConfiguration target,
+                                         String rawEntityType) {
         Object raw = ciGet(options, "PreventConversion");
-        if (raw == null) return;
+        if (raw == null) return true;
         boolean enabled = parseBoolean(String.valueOf(raw));
-        List<String> mappedReasons = List.of("DROWNED", "CURED", "INFECTION");
+        String entityType = rawEntityType == null ? ""
+                : rawEntityType.trim().toUpperCase(Locale.ROOT).replace("MINECRAFT:", "");
+        List<String> mappedReasons;
+        String family;
+        if (Set.of("ZOMBIE", "HUSK", "DROWNED", "ZOMBIE_VILLAGER", "ZOMBIFIED_PIGLIN",
+                "PIG_ZOMBIE").contains(entityType)) {
+            mappedReasons = List.of("DROWNED", "CURED", "INFECTION");
+            family = "Zombie";
+        } else if ("SKELETON".equals(entityType)) {
+            mappedReasons = List.of("FROZEN");
+            family = "Skeleton";
+        } else {
+            return false;
+        }
         if (enabled) {
             java.util.LinkedHashSet<String> reasons = new java.util.LinkedHashSet<>();
             for (String reason : target.getStringList("mob.prevent-transformation-reasons")) {
@@ -1901,7 +2819,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
         note(entries, srcFile, "Options.PreventConversion", "mob.prevent-transformation-reasons",
                 enabled ? mappedReasons : List.of(), "mapped",
-                "Zombie conversion prevention mapped to Bukkit conversion transformation reasons.");
+                family + " conversion prevention mapped to Bukkit transformation reasons.");
+        return true;
     }
 
     private void mapEntitySize(ConfigurationSection options, String srcFile,
@@ -1915,9 +2834,24 @@ public final class MythicMobsImporter implements MigrationImporter {
             note(entries, srcFile, "Options.Size", "entity.size", size, "mapped",
                     "Fixed slime, magma cube, or phantom size mapped to the Paper entity setter.");
         } else {
+            java.util.regex.Matcher range = java.util.regex.Pattern
+                    .compile("^(\\d+)\\s*(?:-|to)\\s*(\\d+)$", java.util.regex.Pattern.CASE_INSENSITIVE)
+                    .matcher(value);
+            if (range.matches()) {
+                int min = parseInteger(range.group(1), Integer.MIN_VALUE);
+                int max = parseInteger(range.group(2), Integer.MIN_VALUE);
+                if (min > 0 && max >= min) {
+                    target.set("entity.size-min", min);
+                    target.set("entity.size-max", max);
+                    note(entries, srcFile, "Options.Size", "entity.size-min/entity.size-max",
+                            List.of(min, max), "mapped",
+                            "Inclusive random entity size range is selected once when the entity spawns.");
+                    return;
+                }
+            }
             target.set("entity.unsupported.Options.Size", raw);
             note(entries, srcFile, "Options.Size", "entity.unsupported.Options.Size", raw,
-                    "unsupported", "Random ranges or non-positive sizes need MythicMobs-specific spawn semantics.",
+                    "unsupported", "Size must be a positive integer or an ordered positive integer range.",
                     "WARN");
         }
     }
@@ -1940,7 +2874,9 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (immRaw instanceof ConfigurationSection sec) {
             for (String k : sec.getKeys(false)) immunities.add(k);
         } else if (immRaw != null) {
-            immunities.addAll(stringOrList(mob, "Immunities"));
+            for (String value : stringOrList(mob, "Immunities")) {
+                immunities.addAll(splitOptionList(value));
+            }
         }
         if (!immunities.isEmpty()) {
             target.set("mob.immunities", immunities);
@@ -1963,7 +2899,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                 mapped++;
             } else if (raw instanceof ConfigurationSection sub) {
                 Double mul = sub.contains("multiplier") ? sub.getDouble("multiplier") : null;
-                List<String> rawConds = stringOrList(sub, "conditions");
+                List<String> rawConds = conditionList(sub.get("conditions"));
                 List<String> conds = new ArrayList<>();
                 List<String> unmapped = new ArrayList<>();
                 MmConditions.translateAll(rawConds, conds, unmapped);
@@ -2033,6 +2969,16 @@ public final class MythicMobsImporter implements MigrationImporter {
                     mods.getValues(true).toString(), "unsupported",
                     "未能识别出任何可迁移的倍率条目", "WARN");
         }
+    }
+
+    private void noteUnmappedSkillConditions(List<Map<String, Object>> entries,
+                                             String srcFile, String srcKey,
+                                             String targetKey, List<String> unmapped) {
+        if (unmapped == null || unmapped.isEmpty()) return;
+        note(entries, srcFile, srcKey + ".unmapped", targetKey, unmapped,
+                "mapped",
+                "以下技能条件没有已验证的等价物，已原样保留并需要手工改写: " + unmapped,
+                "WARN");
     }
 
     private void note(List<Map<String, Object>> entries, String srcFile, String srcKey,
@@ -2107,14 +3053,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         for (Map.Entry<?, ?> e : m.entrySet()) {
             if (!String.valueOf(e.getKey()).equalsIgnoreCase(key)) continue;
             Object v = e.getValue();
-            if (v instanceof String one) return one.isBlank() ? List.of() : List.of(one.trim());
-            if (v instanceof List<?> l) {
-                List<String> out = new ArrayList<>();
-                for (Object o : l) if (o != null && !String.valueOf(o).isBlank()) {
-                    out.add(String.valueOf(o).trim());
-                }
-                return out;
-            }
+            return ConditionListParser.parse(v);
         }
         return List.of();
     }

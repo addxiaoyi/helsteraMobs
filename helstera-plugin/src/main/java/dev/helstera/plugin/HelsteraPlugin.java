@@ -252,9 +252,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 // SkillExtras 里的 dot / despawn 等动作需要调度器与实例管理器，
                 // 同样走注入钩子而非直接依赖，保证目录类可被单元测试加载。
                 dev.helstera.ai.skill.SkillExtras.host(this);
+                dev.helstera.ai.skill.SkillExtras.managedEntityLookup(this::findInstanceSafe);
                 dev.helstera.ai.skill.SkillExtras.despawner(
                         instanceId -> ((InstanceManagerImpl) instances).despawn(instanceId));
                 SkillService skills = new SkillService(br, getLogger());
+                dev.helstera.ai.skill.SkillExtras.skillCooldownSetter(skills::setSkillCooldown);
                 if (!new java.io.File(getDataFolder(), "skills.yml").exists()) {
                     saveResource("skills.yml", false);
                 }
@@ -265,6 +267,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " 处告警（/helstera debug skills 查看）");
                 }
                 this.skillService = skills;
+                // Conditional AI selectors must use the same condition parser and
+                // registry as skills; otherwise selector conditions drift silently.
+                a.setConditionBinder(skills::bindCondition);
                 int restoredSkillTrees = skills.loadPersistedSkillTrees(
                         new java.io.File(getDataFolder(), "skill-trees"));
                 if (restoredSkillTrees > 0) {
@@ -273,6 +278,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 a.setSkills(skills);
                 // 阵营必须先于档案装载：档案里的 faction 会被登记进阵营表
                 a.loadFactions(getConfig().getConfigurationSection("ai.factions"));
+                dev.helstera.ai.skill.SkillExtras.factionSetter((entity, faction) -> {
+                    if (entity != null) a.factions().bindInstance(entity.getUniqueId(), faction);
+                });
                 // 寻路规则必须在 attach 之前装载：控制器在构造时就要拿到 NavService，
                 // 否则已存在的实例在本次 reload 后仍按直线走
                 a.loadNav(getConfig().getConfigurationSection("ai.nav"));
@@ -294,10 +302,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 if (dialogueService != null) {
                     dev.helstera.ai.skill.SkillCatalog.dialogueService(dialogueService);
                     dev.helstera.ai.skill.SkillCatalog.pluginRef(this);
+                    dev.helstera.ai.skill.SkillExtras.dialogueLookup(dialogueService::isActive);
                 }
                 // 技能服务钩子：start-cast / cancel-cast 动作需要它来驱动读条
                 if (skills != null) {
                     dev.helstera.ai.skill.SkillCatalog.skillService(skills);
+                    dev.helstera.ai.skill.SkillExtras.skillLookup(name ->
+                            skills.skillNames().stream().anyMatch(value -> value.equalsIgnoreCase(name)));
                 }
                 a.loadProfiles(getConfig().getConfigurationSection("ai.profiles"));
                 dev.helstera.ai.skill.SkillExtras.damageCause((ctx, target) ->
@@ -446,6 +457,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     new java.io.File(getDataFolder(), "dialogs.yml")).getConfigurationSection("dialogues"), probs);
             for (String w : probs) getLogger().warning("[对话] " + w);
             this.dialogueService = ds;
+            // DialogueService is initialized after the AI graph; connect hooks here
+            // as well so start-dialogue and HasDialogOpen do not depend on ordering.
+            dev.helstera.ai.skill.SkillCatalog.dialogueService(ds);
+            dev.helstera.ai.skill.SkillCatalog.pluginRef(this);
+            dev.helstera.ai.skill.SkillExtras.dialogueLookup(ds::isActive);
         } catch (Throwable t) {
             getLogger().warning("对话系统不可用: " + t);
         }
@@ -606,6 +622,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         if (getConfig().getBoolean("debug.self-test-events", false)) {
             runEventSelfTest();
+            runSelectorSelfTest();
         }
         if (getConfig().getBoolean("debug.self-test-audience", false)) {
             runAudienceSelfTest();
@@ -622,6 +639,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             getLogger().info("helsteraMobs 启动完成（" + (System.currentTimeMillis() - start) + "ms）"
                     + " · 网页开发器: http://" + ws.host() + ":" + ws.port() + " 令牌: " + token + extra);
         }
+    }
+
+    private boolean findInstanceSafe(org.bukkit.entity.Entity entity) {
+        return entity != null && findInstance(entity) != null;
     }
 
     static double resolveDropChance(String expression, Location location,
@@ -662,6 +683,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             immunityListener = null;
         }
         if (ai != null) ((AiManager) ai).stop();
+        // FactionTable is an API-level static bridge; clear it with the other
+        // runtime hooks so a reload cannot retain the old plugin classloader.
+        dev.helstera.api.behavior.Factions.install(null);
         if (spawnerService instanceof dev.helstera.ai.spawner.SpawnerService sp) {
             sp.saveState(new java.io.File(getDataFolder(), "spawner-state.yml"));
             sp.stop();
@@ -675,6 +699,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         }
         if (renderer != null) ((DisplayRenderer) renderer).shutdown();
+        dev.helstera.ai.skill.SkillExtras.resetRuntimeHooks();
+        dev.helstera.ai.skill.SkillCatalog.resetRuntimeHooks();
+        dev.helstera.ai.skill.SkillTriggers.configureProjectilePlugin(null);
         getLogger().info("helsteraMobs 已关闭，实体/任务/订阅清理完成。");
     }
 
@@ -941,6 +968,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);
                 entities.add(sheep);
+                var ageConfig = new org.bukkit.configuration.file.YamlConfiguration();
+                ageConfig.set("age", -24000);
+                ageConfig.set("baby", true);
+                ageConfig.set("age-lock", true);
+                applyAgeOptions(sheep, ageConfig);
+                getLogger().info("[自检] age-options result="
+                        + (sheep.getAge() == -24000 && !sheep.isAdult() && sheep.getAgeLock())
+                        + " age=" + sheep.getAge()
+                        + " baby=" + !sheep.isAdult()
+                        + " age-lock=" + sheep.getAgeLock());
                 getLogger().info("[自检] sheep-options result="
                         + (sheep.getColor() == org.bukkit.DyeColor.RED && sheep.isSheared()));
 
@@ -987,8 +1024,78 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().info("[自检] bee-options result="
                         + (bee.hasNectar() && !bee.hasStung()));
 
+                var enderman = world.spawn(origin.clone().add(14, 0, 0),
+                        org.bukkit.entity.Enderman.class);
+                entities.add(enderman);
+                var heldBlockConfig = new org.bukkit.configuration.file.YamlConfiguration();
+                heldBlockConfig.set("held-block", "OBSIDIAN");
+                applyEntitySpecificOptions(enderman, heldBlockConfig);
+                boolean heldBlockApplied = enderman.getCarriedBlock() != null
+                        && enderman.getCarriedBlock().getMaterial() == org.bukkit.Material.OBSIDIAN;
+                getLogger().info("[自检] enderman-held-block result=" + heldBlockApplied
+                        + " material=" + (enderman.getCarriedBlock() == null ? null
+                        : enderman.getCarriedBlock().getMaterial()));
+
+                var pickupProbe = world.spawn(origin.clone().add(13, 0, 0),
+                        org.bukkit.entity.Skeleton.class);
+                entities.add(pickupProbe);
+                var pickupOptions = new org.bukkit.configuration.file.YamlConfiguration();
+                pickupOptions.set("can-pickup-items", false);
+                applyMobPickupOption(pickupProbe, pickupOptions,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                boolean pickupDisabled = !pickupProbe.getCanPickupItems();
+                pickupOptions.set("can-pickup-items", true);
+                applyMobPickupOption(pickupProbe, pickupOptions,
+                        dev.helstera.api.instance.SpawnOptions.defaults().preventItemPickup(true));
+                boolean explicitPickupOverridesFallback = pickupProbe.getCanPickupItems();
+
+                var equipmentProbe = world.spawn(origin.clone().add(15, 0, 0),
+                        org.bukkit.entity.Zombie.class);
+                entities.add(equipmentProbe);
+                equipmentProbe.getEquipment().setItemInMainHand(
+                        new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_SWORD));
+                equipmentProbe.getEquipment().setHelmet(
+                        new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_HELMET));
+                var explicitEquipment = new org.bukkit.configuration.file.YamlConfiguration();
+                explicitEquipment.set("items.main-hand", "DIAMOND_SWORD");
+                applyRandomEquipmentPolicy(equipmentProbe,
+                        dev.helstera.api.instance.SpawnOptions.defaults().preventRandomEquipment(true));
+                applyEntityEquipment(equipmentProbe, explicitEquipment);
+                boolean randomEquipmentCleared = equipmentProbe.getEquipment().getHelmet() == null
+                        || equipmentProbe.getEquipment().getHelmet().getType() == org.bukkit.Material.AIR;
+                boolean explicitEquipmentPreserved = equipmentProbe.getEquipment()
+                        .getItemInMainHand().getType() == org.bukkit.Material.DIAMOND_SWORD;
+                applySpawnNoDamageTicks(pickupProbe,
+                        dev.helstera.api.instance.SpawnOptions.defaults().noDamageTicks(19));
+                boolean noDamageTicksApplied = pickupProbe.getNoDamageTicks() == 19;
+                boolean spawnOptionRuntime = pickupDisabled && explicitPickupOverridesFallback
+                        && randomEquipmentCleared && explicitEquipmentPreserved && noDamageTicksApplied;
+                getLogger().info("[自检] spawn-option-runtime result=" + spawnOptionRuntime
+                        + " pickup-disabled=" + pickupDisabled
+                        + " explicit-pickup-overrides-fallback=" + explicitPickupOverridesFallback
+                        + " random-equipment-cleared=" + randomEquipmentCleared
+                        + " explicit-equipment-preserved=" + explicitEquipmentPreserved
+                        + " no-damage-ticks=" + noDamageTicksApplied);
+
+                var slime = world.spawn(origin.clone().add(16, 0, 0), org.bukkit.entity.Slime.class);
+                entities.add(slime);
+                var sizeConfig = new org.bukkit.configuration.file.YamlConfiguration();
+                sizeConfig.set("size-min", 2);
+                sizeConfig.set("size-max", 5);
+                boolean sizeRange = true;
+                int sizeMin = Integer.MAX_VALUE;
+                int sizeMax = Integer.MIN_VALUE;
+                for (int i = 0; i < 64; i++) {
+                    applyEntitySpecificOptions(slime, sizeConfig);
+                    int size = slime.getSize();
+                    sizeMin = Math.min(sizeMin, size);
+                    sizeMax = Math.max(sizeMax, size);
+                    sizeRange &= size >= 2 && size <= 5;
+                }
+                getLogger().info("[自检] entity-size-range result=" + sizeRange
+                        + " samples=64 configured=2..5 observed=" + sizeMin + ".." + sizeMax);
+
                 var zombie = world.spawn(origin.clone().add(14, 0, 0), org.bukkit.entity.Zombie.class);
-                zombie.setBaby(false);
                 entities.add(zombie);
                 var attributeConfig = new org.bukkit.configuration.file.YamlConfiguration();
                 attributeConfig.set("attributes.main-hand.attack.attribute", "ATTACK_DAMAGE");
@@ -1041,7 +1148,6 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         == org.bukkit.attribute.AttributeModifier.Operation.ADD_SCALAR;
                 getLogger().info("item-attribute-options result=" + itemAttributes
                         + " modifiers=" + itemModifiers.size());
-                getLogger().info("[自检] zombie-age-options result=" + zombie.isAdult());
             } catch (Throwable t) {
                 getLogger().warning("[自检] entity-options 异常: " + t);
             } finally {
@@ -1071,16 +1177,96 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             Location location = world.getSpawnLocation().clone().add(0, 3, 0);
             org.bukkit.entity.Zombie zombie = null;
             org.bukkit.entity.Zombie conditionTarget = null;
+            org.bukkit.entity.LivingEntity meleeProbeTarget = null;
+            org.bukkit.entity.LivingEntity dotProbeTarget = null;
             org.bukkit.block.BlockState conditionTargetBlockState = null;
             org.bukkit.block.BlockState conditionTargetHeadBlockState = null;
+            org.bukkit.block.BlockState blockMechanicState = null;
+            Location blockMechanicLocation = null;
+            String conditionTargetCustomName = null;
             var conditionCategoryEntities = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
             dev.helstera.api.instance.ModelInstance modelInstance = null;
+            dev.helstera.api.instance.ModelInstance branchGateInstance = null;
+            org.bukkit.entity.Zombie branchGateZombie = null;
             dev.helstera.api.instance.ModelInstance ownerInstance = null;
             dev.helstera.api.instance.ModelInstance stateInstance = null;
+            org.bukkit.entity.Projectile projectileProbe = null;
             var droppedItems = new java.util.ArrayList<org.bukkit.entity.Item>();
             long originalWorldTime = world.getTime();
             boolean originalStorm = world.hasStorm();
             boolean originalThundering = world.isThundering();
+            int originalWeatherDuration = world.getWeatherDuration();
+            int originalThunderDuration = world.getThunderDuration();
+            boolean dynamicPlaceholderAction = false;
+            boolean gameplayPlaceholders = false;
+            boolean setArmorMechanic = false;
+            boolean factionMechanic = false;
+            boolean levelMechanic = false;
+            boolean weatherMechanic = false;
+            boolean timeMechanic = false;
+            boolean lightningMechanic = false;
+            boolean jumpMechanic = false;
+            boolean forcePullMechanic = false;
+            boolean factionConditions = false;
+            boolean signalMechanics = false;
+            boolean targetKillMechanic = false;
+            boolean damageMeleeMechanic = false;
+            boolean conditionUtilityAliases = false;
+            boolean playerRadiusConditions = false;
+            boolean cooldownMechanics = false;
+            boolean lastDamageCauseCondition = false;
+            boolean motionConditions = false;
+            boolean directionalVelocityCondition = false;
+            boolean fieldOfViewCondition = false;
+            boolean spawnReasonCondition = false;
+            boolean waterMobCondition = false;
+            boolean zombieCondition = false;
+            boolean aerialCondition = false;
+            boolean endermanCondition = false;
+            boolean enchantmentCondition = false;
+            boolean colorCondition = false;
+            boolean materialCooldownCondition = false;
+            boolean materialCooldownMechanic = false;
+            boolean setGameModeMechanic = false;
+            boolean triggerItemTypeCondition = false;
+            boolean entityItemTypeCondition = false;
+            boolean entityItemSimilarCondition = false;
+                boolean itemSimilarCondition = false;
+                boolean targetsCondition = false;
+            boolean itemTypeCondition = false;
+            boolean structureCondition = false;
+            boolean mythicMobTypeCondition = false;
+            boolean variableContainsCondition = false;
+            boolean triggerBlockTypeCondition = false;
+            boolean originLocationCondition = false;
+            boolean lineOfSightFromOriginCondition = false;
+            boolean boundsCondition = false;
+            boolean playerKillsCondition = false;
+            boolean absorptionCondition = false;
+            boolean healthAbsorptionCondition = false;
+            boolean setAbsorptionMechanic = false;
+            boolean levelCondition = false;
+            boolean frozenCondition = false;
+            boolean lunarPhaseCondition = false;
+            boolean stringEqualsCondition = false;
+            boolean stringEmptyCondition = false;
+            boolean compareValuesCondition = false;
+            boolean isSkillCondition = false;
+            boolean dialogueCondition = false;
+            boolean nameCondition = false;
+            boolean moistureConditions = false;
+            boolean mobSizeCondition = false;
+            boolean ownerCondition = false;
+            boolean blockTypeRadiusCondition = false;
+            boolean insideOutsideConditions = false;
+            boolean distanceFromLocationCondition = false;
+            boolean coordinateDifferenceCondition = false;
+            boolean boundingBoxOverlapCondition = false;
+            Location boundsOriginalTargetLocation = null;
+            org.bukkit.util.Vector boundsOriginalTargetVelocity = null;
+            org.bukkit.util.Vector originalTargetVelocity = null;
+            boolean dotProbeScheduled = false;
+            boolean projectileProbeScheduled = false;
             try {
                 zombie = world.spawn(location, org.bukkit.entity.Zombie.class);
                 modelInstance = instances().bind("example/emberling", zombie,
@@ -1089,9 +1275,607 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         || !(behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors)) {
                     throw new IllegalStateException("SkillService/BehaviorRegistry unavailable");
                 }
+                var scheduledActionCount = new java.util.concurrent.atomic.AtomicInteger();
+                behaviors.registerAction("integration-scheduler-probe",
+                        ignored -> scheduledActionCount.incrementAndGet());
+                String scheduledAction = skills.bindAction(
+                        "integration-scheduler-probe{delay=2;repeat=3;repeat-interval=2}");
+                boolean scheduled = scheduledAction != null && behaviors.runAction(scheduledAction,
+                        dev.helstera.api.behavior.BehaviorContext.of(
+                                null, null, 1.0, -1, 0, "integration"));
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    int beforeDelay = scheduledActionCount.get();
+                    getServer().getScheduler().runTaskLater(this, () -> {
+                        boolean result = scheduled && beforeDelay == 0
+                                && scheduledActionCount.get() == 4;
+                        getLogger().info("[自检] skill-scheduler result=" + result
+                                + " delay=2 repeat=3 interval=2 executions="
+                                + scheduledActionCount.get() + " pre-delay-count=" + beforeDelay);
+                    }, 10L);
+                }, 1L);
+                var branchTree = new dev.helstera.api.behavior.SkillTreeContext(null,
+                        java.util.List.of());
+                branchTree.defineBranch("paper-foundation", java.util.Set.of());
+                branchTree.defineBranch("paper-advanced", java.util.Set.of("paper-foundation"));
+                String conditionalBranchUnlock = skills.bindAction(
+                        "branch-unlock{branch=paper-foundation;condition=health-above 0.5}");
+                var lowHealthBranchContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        null, (org.bukkit.entity.LivingEntity) null, 0.4, -1, 0, "integration", null,
+                        null, java.util.List.of(), null, branchTree);
+                boolean branchUnlockDenied = conditionalBranchUnlock != null
+                        && behaviors.runAction(conditionalBranchUnlock, lowHealthBranchContext)
+                        && !branchTree.branchUnlocked("paper-foundation");
+                boolean prerequisiteBlocked = !branchTree.unlockBranch("paper-advanced")
+                        && !branchTree.branchUnlocked("paper-advanced");
+                var highHealthBranchContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        null, (org.bukkit.entity.LivingEntity) null, 0.8, -1, 0, "integration", null,
+                        null, java.util.List.of(), null, branchTree);
+                boolean branchConditionUnlocked = conditionalBranchUnlock != null
+                        && behaviors.runAction(conditionalBranchUnlock, highHealthBranchContext)
+                        && branchTree.branchUnlocked("paper-foundation");
+                boolean prerequisiteUnlocked = branchTree.unlockBranch("paper-advanced")
+                        && branchTree.branchUnlocked("paper-advanced");
+                boolean skillTreeBranches = branchUnlockDenied && branchConditionUnlocked
+                        && prerequisiteBlocked && prerequisiteUnlocked;
+                getLogger().info("[自检] skill-tree-branches result=" + skillTreeBranches
+                        + " condition-denied=" + branchUnlockDenied
+                        + " condition-unlock=" + branchConditionUnlocked
+                        + " prerequisite-blocked=" + prerequisiteBlocked
+                        + " prerequisite-unlock=" + prerequisiteUnlocked);
+                boolean persistedBranchCast = false;
+                boolean branchCastBlocked = false;
+                boolean prerequisiteUnlockBlocked = false;
+                boolean branchSnapshotSaved = false;
+                boolean advancedUnlocked = false;
+                int branchSkillCastCount = 0;
+                var branchGateLocation = world.getHighestBlockAt(
+                        world.getSpawnLocation().getBlockX() + 128,
+                        world.getSpawnLocation().getBlockZ() + 128,
+                        org.bukkit.HeightMap.MOTION_BLOCKING).getLocation().add(0, 1, 0);
+                branchGateZombie = world.spawn(branchGateLocation, org.bukkit.entity.Zombie.class);
+                branchGateZombie.setAI(false);
+                branchGateZombie.setInvulnerable(true);
+                branchGateZombie.setRemoveWhenFarAway(false);
+                branchGateInstance = instances().bind("example/emberling", branchGateZombie,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                if (branchGateInstance != null && branchGateZombie.isValid()) {
+                    var isolatedRegistry = new dev.helstera.ai.BehaviorRegistryImpl();
+                    var isolatedSkills = new dev.helstera.ai.skill.SkillService(
+                            isolatedRegistry, getLogger());
+                    var skillExecutions = new java.util.concurrent.atomic.AtomicInteger();
+                    isolatedRegistry.registerAction("paper-skilltree-cast-probe",
+                            ignored -> skillExecutions.incrementAndGet());
+                    var skillTreeConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                            new java.io.StringReader("""
+                                    skills:
+                                      unlock-advanced:
+                                        on-decision:
+                                          - 'branch-unlock{branch=paper-persistent-advanced}'
+                                      unlock-foundation:
+                                        on-decision:
+                                          - 'branch-unlock{branch=paper-persistent-foundation}'
+                                      gated-advanced:
+                                        branch: paper-persistent-advanced
+                                        branch-requires:
+                                          - paper-persistent-foundation
+                                        on-decision:
+                                          - paper-skilltree-cast-probe
+                                    """));
+                    isolatedSkills.loadSkills(skillTreeConfig.getConfigurationSection("skills"));
+                    var firstCastContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            branchGateInstance, branchGateZombie, 1.0, -1, 0, "integration");
+                    branchCastBlocked = !isolatedSkills.castSkill("gated-advanced", firstCastContext)
+                            && skillExecutions.get() == 0;
+                    boolean attemptedAdvancedBeforeFoundation = isolatedSkills.castSkill("unlock-advanced",
+                            dev.helstera.api.behavior.BehaviorContext.of(
+                                    branchGateInstance, branchGateZombie, 1.0, -1, 0, "integration"));
+                    var beforeFoundationSnapshot = isolatedSkills.snapshotOf(branchGateInstance.instanceId());
+                    prerequisiteUnlockBlocked = attemptedAdvancedBeforeFoundation
+                            && beforeFoundationSnapshot.isPresent()
+                            && !beforeFoundationSnapshot.orElseThrow().unlockedBranches()
+                            .contains("paper-persistent-advanced");
+                    boolean foundationUnlockedBySkill = isolatedSkills.castSkill(
+                            "unlock-foundation", dev.helstera.api.behavior.BehaviorContext.of(
+                                    branchGateInstance, branchGateZombie, 1.0, -1, 0, "integration"));
+                    var foundationSnapshot = isolatedSkills.snapshotOf(branchGateInstance.instanceId());
+                    boolean foundationSnapshotSaved = foundationUnlockedBySkill
+                            && foundationSnapshot.isPresent()
+                            && foundationSnapshot.orElseThrow().unlockedBranches()
+                            .contains("paper-persistent-foundation");
+                    boolean advancedUnlockAction = isolatedSkills.castSkill("unlock-advanced",
+                            dev.helstera.api.behavior.BehaviorContext.of(
+                                    branchGateInstance, branchGateZombie, 1.0, -1, 0, "integration"));
+                    var advancedSnapshot = isolatedSkills.snapshotOf(branchGateInstance.instanceId());
+                    advancedUnlocked = advancedUnlockAction && advancedSnapshot.isPresent()
+                            && advancedSnapshot.orElseThrow().unlockedBranches()
+                            .contains("paper-persistent-advanced");
+                    branchSnapshotSaved = foundationSnapshotSaved && advancedUnlocked;
+                    boolean freshContextCast = isolatedSkills.castSkill("gated-advanced",
+                            dev.helstera.api.behavior.BehaviorContext.of(
+                                    branchGateInstance, branchGateZombie, 1.0, -1, 0, "integration"));
+                    branchSkillCastCount = skillExecutions.get();
+                    persistedBranchCast = branchCastBlocked && prerequisiteUnlockBlocked
+                            && branchSnapshotSaved
+                            && freshContextCast && branchSkillCastCount == 1;
+                }
+                getLogger().info("[自检] skill-tree-cast-persistence result=" + persistedBranchCast
+                        + " blocked-before-unlock=" + branchCastBlocked
+                        + " prerequisite-unlock-blocked=" + prerequisiteUnlockBlocked
+                        + " snapshot-saved=" + branchSnapshotSaved
+                        + " advanced-unlocked=" + advancedUnlocked
+                        + " casts=" + branchSkillCastCount);
                 var context = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, zombie, 1.0, -1, 0, "integration");
+                var variableContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                        modelInstance, null, 1.0, -1, 0, "integration", null,
+                        zombie, java.util.List.of(zombie), zombie.getLocation());
+                boolean variableTextSet = runIntegrationAction(skills, behaviors,
+                        "set-variable{var=skill.text;value=dungeon_alpha;type=STRING}", variableContext);
+                boolean variableListSet = runIntegrationAction(skills, behaviors,
+                        "set-variable{var=skill.items;value=red,blue;type=LIST}", variableContext);
+                boolean variableTextPrefix = behaviors.testCondition(skills.bindCondition(
+                        "variable-contains{var=skill.text;value=dungeon_;compareType=STARTS_WITH}"), variableContext);
+                boolean variableTextSuffix = behaviors.testCondition(skills.bindCondition(
+                        "variable-contains{var=skill.text;value=alpha;compareType=ENDS_WITH}"), variableContext);
+                boolean variableListAll = behaviors.testCondition(skills.bindCondition(
+                        "variable-contains{var=skill.items;value=red,blue;compareType=ALL}"), variableContext);
+                boolean variableListAny = behaviors.testCondition(skills.bindCondition(
+                        "variable-contains{var=skill.items;value=red,green;compareType=ANY}"), variableContext);
+                variableContainsCondition = variableTextSet && variableListSet
+                        && variableTextPrefix && variableTextSuffix
+                        && variableListAll && variableListAny;
+                getLogger().info("variable-contains-details text-set=" + variableTextSet
+                        + " list-set=" + variableListSet
+                        + " prefix=" + variableTextPrefix
+                        + " suffix=" + variableTextSuffix
+                        + " all=" + variableListAll
+                        + " any=" + variableListAny);
+                Location projectileOrigin = world.getHighestBlockAt(location).getLocation().add(0, 4, 0);
+                projectileProbe = world.spawnArrow(projectileOrigin,
+                        new org.bukkit.util.Vector(0, -1, 0), 1.0f, 0.0f);
+                projectileProbeScheduled = true;
+                scheduleProjectileEndedIntegrationProbe(skills, behaviors, modelInstance,
+                        zombie, projectileProbe);
+                try {
+                    boolean levelDispatched = runIntegrationAction(skills, behaviors,
+                            "set-level 5", context);
+                    levelMechanic = levelDispatched
+                            && behaviors.testCondition(skills.bindCondition("level >=5"), context);
+                    boolean thunder = runIntegrationAction(skills, behaviors,
+                            "set-weather thunder 20", context)
+                            && world.hasStorm() && world.isThundering();
+                    boolean clear = runIntegrationAction(skills, behaviors,
+                            "set-weather clear 20", context)
+                            && !world.hasStorm() && !world.isThundering();
+                    boolean setNoon = runIntegrationAction(skills, behaviors,
+                            "set-time noon", context)
+                            && Math.floorMod(world.getTime(), 24_000L) == 6_000L;
+                    weatherMechanic = thunder && clear;
+                    timeMechanic = setNoon;
+                    boolean lightningDispatched = runIntegrationAction(skills, behaviors,
+                            "lightning true", context);
+                    lightningMechanic = lightningDispatched;
+                } finally {
+                    world.setTime(originalWorldTime);
+                    world.setStorm(originalStorm);
+                    world.setThundering(originalThundering);
+                    world.setWeatherDuration(originalWeatherDuration);
+                    world.setThunderDuration(originalThunderDuration);
+                }
+                var originalJumpVelocity = zombie.getVelocity().clone();
+                try {
+                    boolean jumpDispatched = runIntegrationAction(skills, behaviors,
+                            "jump 0.42", context);
+                    jumpMechanic = jumpDispatched && zombie.getVelocity().getY() >= 0.4;
+                } finally {
+                    zombie.setVelocity(originalJumpVelocity);
+                }
+                playerKillsCondition = behaviors.testCondition(
+                        skills.bindCondition("player-kills 0"), context)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("player-kills >=1"), context);
+                levelCondition = behaviors.testCondition(
+                        skills.bindCondition("level >=1"), context)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("level <1"), context);
+                int originalFreezeTicks = zombie.getFreezeTicks();
+                try {
+                    boolean freezeMechanic = runIntegrationAction(skills, behaviors,
+                            "freeze " + zombie.getMaxFreezeTicks(), context);
+                    boolean frozen = behaviors.testCondition(
+                            skills.bindCondition("is-frozen"), context);
+                    zombie.setFreezeTicks(0);
+                    boolean thawed = !behaviors.testCondition(
+                            skills.bindCondition("isFrozen"), context);
+                    frozenCondition = freezeMechanic && frozen && thawed;
+                } finally {
+                    zombie.setFreezeTicks(originalFreezeTicks);
+                }
+                int lunarPhase = (int) Math.floorMod(
+                        Math.floorDiv(world.getFullTime(), 24_000L), 8L);
+                lunarPhaseCondition = behaviors.testCondition(
+                        skills.bindCondition("lunar-phase " + lunarPhase), context)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("lunar-phase " + ((lunarPhase + 1) % 8)), context);
+                double originalAbsorption = zombie.getAbsorptionAmount();
+                try {
+                    boolean setAbsorptionDispatched = runIntegrationAction(skills, behaviors,
+                            "set-absorption 6", context);
+                    setAbsorptionMechanic = setAbsorptionDispatched
+                            && Math.abs(zombie.getAbsorptionAmount() - 6.0) < 0.01;
+                    boolean setAbsorptionForConditions = runIntegrationAction(skills, behaviors,
+                            "set-absorption 4", context);
+                    boolean absorptionPositive = behaviors.testCondition(
+                            skills.bindCondition("absorption >=4"), context);
+                    boolean absorptionExact = behaviors.testCondition(
+                            skills.bindCondition("absorption =4"), context);
+                    boolean absorptionNegative = !behaviors.testCondition(
+                            skills.bindCondition("absorption >4"), context);
+                    absorptionCondition = setAbsorptionForConditions
+                            && absorptionPositive && absorptionExact && absorptionNegative;
+                    double currentHealth = zombie.getHealth();
+                    double maxHealth = zombie.getMaxHealth();
+                    boolean healthIncluded = behaviors.testCondition(
+                            skills.bindCondition("health >=" + (currentHealth + 4.0)
+                                    + " include-absorption=true"), context);
+                    boolean healthExcluded = !behaviors.testCondition(
+                            skills.bindCondition("health >=" + (currentHealth + 4.0)), context);
+                    boolean percentIncluded = behaviors.testCondition(
+                            skills.bindCondition("health-percent >="
+                                    + ((currentHealth + 4.0) / maxHealth * 100.0)
+                                    + " include-absorption=true"), context);
+                    healthAbsorptionCondition = healthIncluded && healthExcluded && percentIncluded;
+                } finally {
+                    zombie.setAbsorptionAmount(originalAbsorption);
+                }
+                var actualSpawnReason = zombie.getEntitySpawnReason();
+                var alternateSpawnReason = java.util.Arrays.stream(
+                                org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.values())
+                        .filter(reason -> reason != actualSpawnReason)
+                        .findFirst().orElse(null);
+                boolean spawnReasonPositive = actualSpawnReason != null && behaviors.testCondition(
+                        skills.bindCondition("spawnReason{reason=" + actualSpawnReason.name() + "}"), context);
+                boolean spawnReasonNegative = alternateSpawnReason != null && !behaviors.testCondition(
+                        skills.bindCondition("spawn-reason r=" + alternateSpawnReason.name()), context);
+                spawnReasonCondition = spawnReasonPositive && spawnReasonNegative;
+                getLogger().info("spawn-reason-condition-details actual=" + actualSpawnReason
+                        + " positive=" + spawnReasonPositive + " negative=" + spawnReasonNegative);
+                var waterMobProbe = world.spawn(location.clone().add(6, 0, 0),
+                        org.bukkit.entity.Cod.class);
+                conditionCategoryEntities.add(waterMobProbe);
+                waterMobProbe.setAI(false);
+                waterMobProbe.setInvulnerable(true);
+                var waterMobContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, waterMobProbe, 1.0, 6.0, 0, "integration");
+                waterMobCondition = behaviors.testCondition(
+                        skills.bindCondition("is-water-mob"), waterMobContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("is-zombie"), waterMobContext);
+                zombieCondition = behaviors.testCondition(
+                        skills.bindCondition("isZombie"), context)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("is-water-mob"), context);
+                getLogger().info("entity-type-condition-details water-mob=" + waterMobCondition
+                        + " zombie=" + zombieCondition);
+                var aerialProbe = world.spawn(location.clone().add(0, 3, 0),
+                        org.bukkit.entity.ArmorStand.class);
+                conditionCategoryEntities.add(aerialProbe);
+                aerialProbe.setGravity(false);
+                aerialProbe.setInvulnerable(true);
+                var aerialContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, aerialProbe, 1.0, 3.0, 0, "integration");
+                boolean aerialPositive = behaviors.testCondition(
+                        skills.bindCondition("aerial"), aerialContext);
+                var groundPlayer = getServer().getOnlinePlayers().stream().findFirst().orElse(null);
+                var groundContext = groundPlayer == null
+                        ? context
+                        : dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, groundPlayer, 1.0, -1, 0, "integration");
+                boolean aerialNegative = !behaviors.testCondition(
+                        skills.bindCondition("isAerial"), groundContext);
+                aerialCondition = aerialPositive && aerialNegative;
+                getLogger().info("aerial-condition-details positive=" + aerialPositive
+                        + " negative=" + aerialNegative
+                        + " ground-entity=" + (groundPlayer == null ? "zombie" : "player")
+                        + " ground=" + (groundPlayer == null ? zombie.isOnGround()
+                        : groundPlayer.isOnGround()));
+                var endermanProbe = world.spawn(location.clone().add(8, 0, 0),
+                        org.bukkit.entity.Enderman.class);
+                conditionCategoryEntities.add(endermanProbe);
+                endermanProbe.setAI(false);
+                endermanProbe.setInvulnerable(true);
+                var endermanContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, endermanProbe, 1.0, 8.0, 0, "integration");
+                boolean endermanPositive = behaviors.testCondition(
+                        skills.bindCondition("isEnderman"), endermanContext);
+                boolean endermanNegative = !behaviors.testCondition(
+                        skills.bindCondition("is-enderman"), context);
+                endermanCondition = endermanPositive && endermanNegative;
+                getLogger().info("enderman-condition-details positive=" + endermanPositive
+                        + " negative=" + endermanNegative);
+                var colorProbe = world.spawn(location.clone().add(10, 0, 0),
+                        org.bukkit.entity.Sheep.class);
+                conditionCategoryEntities.add(colorProbe);
+                colorProbe.setAI(false);
+                colorProbe.setInvulnerable(true);
+                colorProbe.setColor(org.bukkit.DyeColor.RED);
+                var colorContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, colorProbe, 1.0, 10.0, 0, "integration");
+                boolean colorPositive = behaviors.testCondition(
+                        skills.bindCondition("color{c=RED}"), colorContext);
+                boolean colorNegative = !behaviors.testCondition(
+                        skills.bindCondition("clr BLUE"), colorContext);
+                boolean colorTypeNegative = !behaviors.testCondition(
+                        skills.bindCondition("color RED"), context);
+                colorCondition = colorPositive && colorNegative && colorTypeNegative;
+                getLogger().info("color-condition-details positive=" + colorPositive
+                        + " negative=" + colorNegative + " type-rejected=" + colorTypeNegative);
+                var triggerItemProbe = world.dropItem(location.clone().add(12, 0, 0),
+                        new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE));
+                var triggerItemContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        modelInstance, zombie, 1.0, 12.0, 0, "on-item-pickup", null,
+                        triggerItemProbe, java.util.List.of(zombie), triggerItemProbe.getLocation(), null);
+                boolean triggerItemPositive = behaviors.testCondition(
+                        skills.bindCondition("triggerItemType{mat=STONE,DIRT}"), triggerItemContext);
+                boolean triggerItemNegative = !behaviors.testCondition(
+                        skills.bindCondition("trigger-item-type DIAMOND"), triggerItemContext);
+                triggerItemTypeCondition = triggerItemPositive && triggerItemNegative;
+                boolean entityItemPositive = behaviors.testCondition(
+                        skills.bindCondition("entity-item-type STONE"), triggerItemContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("entity-material-type STONE,DIRT"), triggerItemContext);
+                boolean entityItemNegative = !behaviors.testCondition(
+                        skills.bindCondition("entity-item-type DIAMOND"), triggerItemContext);
+                entityItemTypeCondition = entityItemPositive && entityItemNegative;
+                itemTypeCondition = behaviors.testCondition(
+                        skills.bindCondition("item-type STONE"), triggerItemContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("item-type DIAMOND"), triggerItemContext);
+                entityItemSimilarCondition = behaviors.testCondition(
+                        skills.bindCondition("entity-item-is-similar STONE"), triggerItemContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("entity-item-is-similar DIAMOND"), triggerItemContext);
+                mythicMobTypeCondition = behaviors.testCondition(
+                        skills.bindCondition("mythic-mob-type example/emberling"), context)
+                        && behaviors.testCondition(
+                        skills.bindCondition("mythic-mob-type emberling exactmatch=false"), context)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("mythic-mob-type missing_type"), context);
+                // Locate a real generated structure and evaluate the condition
+                // at its returned location. This keeps Structure evidence tied
+                // to Bukkit's registry/search APIs instead of a synthetic flag.
+                org.bukkit.util.StructureSearchResult structureSearch = null;
+                org.bukkit.generator.structure.Structure locatedStructure = null;
+                String[] structureKeys = {
+                        "minecraft:village", "minecraft:mineshaft", "minecraft:ruined_portal"
+                };
+                if (world.canGenerateStructures()) {
+                    for (String rawStructureKey : structureKeys) {
+                        try {
+                            var structure = org.bukkit.Registry.STRUCTURE.get(
+                                    org.bukkit.NamespacedKey.fromString(rawStructureKey));
+                            if (structure == null) continue;
+                            structureSearch = world.locateNearestStructure(
+                                    location, structure, 2048, true);
+                            locatedStructure = structure;
+                        } catch (RuntimeException ignored) {
+                            structureSearch = null;
+                            locatedStructure = null;
+                        }
+                        if (structureSearch != null && structureSearch.getStructure() != null
+                                && structureSearch.getLocation() != null) break;
+                    }
+                }
+                if (structureSearch != null && structureSearch.getStructure() != null
+                        && structureSearch.getLocation() != null) {
+                    Location structureLocation = structureSearch.getLocation();
+                    // Search results for underground structures may point to a
+                    // chunk origin rather than a point inside the structure.
+                    // Use the generated bounding box center when available so
+                    // World#hasStructureAt evaluates the same real structure.
+                    int generatedStructureCount = 0;
+                    if (locatedStructure != null) {
+                        int chunkX = structureLocation.getBlockX() >> 4;
+                        int chunkZ = structureLocation.getBlockZ() >> 4;
+                        boolean boundingBoxLocationFound = false;
+                        for (int dx = -4; dx <= 4 && !boundingBoxLocationFound; dx++) {
+                            for (int dz = -4; dz <= 4 && !boundingBoxLocationFound; dz++) {
+                                world.getChunkAt(chunkX + dx, chunkZ + dz, true);
+                                for (var generated : world.getStructures(chunkX + dx, chunkZ + dz,
+                                        locatedStructure)) {
+                                    generatedStructureCount++;
+                                    var candidateBoxes = new java.util.ArrayList<org.bukkit.util.BoundingBox>();
+                                    var structureBox = generated.getBoundingBox();
+                                    if (structureBox != null) candidateBoxes.add(structureBox);
+                                    for (var piece : generated.getPieces()) {
+                                        if (piece != null && piece.getBoundingBox() != null) {
+                                            candidateBoxes.add(piece.getBoundingBox());
+                                        }
+                                    }
+                                    for (var candidateBox : candidateBoxes) {
+                                        Location center = new Location(world, candidateBox.getCenterX(),
+                                                candidateBox.getCenterY(), candidateBox.getCenterZ());
+                                        if (world.hasStructureAt(center, generated.getStructure())) {
+                                            structureLocation = center;
+                                            boundingBoxLocationFound = true;
+                                            break;
+                                        }
+                                    }
+                                    if (boundingBoxLocationFound) break;
+                                }
+                            }
+                        }
+                    }
+                    String structureKey = structureSearch.getStructure().getKey().toString();
+                    var structureContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                            modelInstance, null, 1.0, -1, 0, "integration", null,
+                            null, java.util.List.of(), structureLocation);
+                    boolean structurePositive = behaviors.testCondition(
+                            skills.bindCondition("structure " + structureKey), structureContext);
+                    boolean structureWildcard = behaviors.testCondition(
+                            skills.bindCondition("structure minecraft:*"), structureContext);
+                    boolean structureNegative = !behaviors.testCondition(
+                            skills.bindCondition("structure minecraft:__missing_structure__"),
+                            structureContext);
+                    structureCondition = structurePositive && structureWildcard && structureNegative;
+                    getLogger().info("structure-condition-details key=" + structureKey
+                            + " location=" + formatProbeLocation(structureLocation)
+                            + " positive=" + structurePositive
+                            + " wildcard=" + structureWildcard
+                            + " negative=" + structureNegative
+                            + " generated-count=" + generatedStructureCount);
+                } else {
+                    getLogger().info("structure-condition-details observed=false");
+                }
+                triggerItemProbe.remove();
+                getLogger().info("trigger-item-type-condition-details positive=" + triggerItemPositive
+                        + " negative=" + triggerItemNegative);
+                var equipmentProbe = zombie.getEquipment();
+                if (equipmentProbe != null) {
+                    var originalMainHand = equipmentProbe.getItemInMainHand() == null
+                            ? new org.bukkit.inventory.ItemStack(org.bukkit.Material.AIR)
+                            : equipmentProbe.getItemInMainHand().clone();
+                    try {
+                        var enchantedSword = new org.bukkit.inventory.ItemStack(
+                                org.bukkit.Material.DIAMOND_SWORD);
+                        enchantedSword.addUnsafeEnchantment(
+                                org.bukkit.enchantments.Enchantment.SHARPNESS, 3);
+                        equipmentProbe.setItemInMainHand(enchantedSword);
+                        boolean positive = behaviors.testCondition(
+                                skills.bindCondition("hasEnchantment{e=SHARPNESS;l=>2}"), context);
+                        boolean any = behaviors.testCondition(
+                                skills.bindCondition("hasEnchant{e=ANY;l=3}"), context);
+                        boolean levelRejected = !behaviors.testCondition(
+                                skills.bindCondition("has-enchantment{e=SHARPNESS;l=>3}"), context);
+                        boolean typeRejected = !behaviors.testCondition(
+                                skills.bindCondition("has-enchantment{e=LOOTING}"), context);
+                        enchantmentCondition = positive && any && levelRejected && typeRejected;
+                        getLogger().info("enchantment-condition-details positive=" + positive
+                                + " any=" + any + " level-rejected=" + levelRejected
+                                + " type-rejected=" + typeRejected);
+                    } finally {
+                        equipmentProbe.setItemInMainHand(originalMainHand);
+                    }
+                }
+                if (dialogueService != null) {
+                    var dialogueProbeConfig = new org.bukkit.configuration.file.YamlConfiguration();
+                    dialogueProbeConfig.set("dialogues.condition_probe.cinematics.intro.commands",
+                            java.util.List.of("wait 2"));
+                    var dialogueProblems = new java.util.ArrayList<String>();
+                    try {
+                        dialogueService.load(dialogueProbeConfig.getConfigurationSection("dialogues"),
+                                dialogueProblems);
+                        boolean started = dialogueService.start(modelInstance.instanceId(),
+                                "condition_probe", this);
+                        boolean open = behaviors.testCondition(
+                                skills.bindCondition("hasDialogOpen"), context);
+                        var cinematicTarget = getServer().getOnlinePlayers().stream()
+                                .findFirst().orElse(null);
+                        var cinematicContext = cinematicTarget == null ? null
+                                : dev.helstera.api.behavior.BehaviorContext.of(
+                                modelInstance, cinematicTarget, 1.0, -1, 0, "integration");
+                        boolean cinematicOpen = cinematicContext != null && behaviors.testCondition(
+                                skills.bindCondition("isInCinematic"), cinematicContext);
+                        dialogueService.stop(modelInstance.instanceId());
+                        boolean closed = !behaviors.testCondition(
+                                skills.bindCondition("has-dialog-open"), context);
+                        boolean cinematicClosed = cinematicContext == null || !behaviors.testCondition(
+                                skills.bindCondition("is-in-cinematic"), cinematicContext);
+                        dialogueCondition = started && open && cinematicOpen && closed
+                                && cinematicClosed && dialogueProblems.isEmpty();
+                        getLogger().info("dialogue-condition-details started=" + started
+                                + " open=" + open + " cinematic-open=" + cinematicOpen
+                                + " closed=" + closed + " cinematic-closed=" + cinematicClosed
+                                + " problems=" + dialogueProblems.size());
+                    } finally {
+                        var restoreProblems = new java.util.ArrayList<String>();
+                        dialogueService.load(YamlConfiguration.loadConfiguration(
+                                        new java.io.File(getDataFolder(), "dialogs.yml"))
+                                .getConfigurationSection("dialogues"), restoreProblems);
+                    }
+                }
+                scheduleTargetFluidTimingProbe(world, location, skills, behaviors);
+                String offGcd = skills.bindCondition("offgcd");
+                boolean cooldownBefore = behaviors.testCondition(offGcd, context);
+                boolean cooldownSet = runIntegrationAction(skills, behaviors,
+                        "gcd 40", context);
+                boolean cooldownBlocked = !behaviors.testCondition(offGcd, context);
+                boolean cooldownCleared = runIntegrationAction(skills, behaviors,
+                        "set-global-cooldown __mythic_gcd 0", context)
+                        && behaviors.testCondition(offGcd, context);
+                cooldownMechanics = cooldownBefore && cooldownSet
+                        && cooldownBlocked && cooldownCleared;
+                String dynamicCooldownAction = skills.bindAction(
+                        "set-skill-cooldown unlock_branch 2");
+                var skillCooldownBefore = skills.preview("unlock_branch", context);
+                boolean dynamicCooldownSet = runIntegrationAction(skills, behaviors,
+                        "set-skill-cooldown unlock_branch 2", context);
+                boolean dynamicCooldownCast = skills.castSkill("unlock_branch", context);
+                var skillCooldownDuring = skills.preview("unlock_branch", context);
+                boolean dynamicCooldownCleared = runIntegrationAction(skills, behaviors,
+                        "set-skill-cooldown unlock_branch 0", context);
+                var skillCooldownAfter = skills.preview("unlock_branch", context);
+                cooldownMechanics = cooldownMechanics
+                        && dynamicCooldownAction != null
+                        && skillCooldownBefore != null && !skillCooldownBefore.cooldown()
+                        && dynamicCooldownSet && dynamicCooldownCast
+                        && skillCooldownDuring != null && skillCooldownDuring.cooldown()
+                        && dynamicCooldownCleared
+                        && skillCooldownAfter != null && !skillCooldownAfter.cooldown();
+                String signalName = "paper-signal-" + modelInstance.instanceId();
+                int signalInstanceId = modelInstance.instanceId();
+                String[] signalPayload = new String[1];
+                Integer[] signalSource = new Integer[1];
+                var signalBus = dev.helstera.ai.skill.SkillSignals.global();
+                signalBus.subscribe(modelInstance.instanceId(), signalName,
+                        (name, payload, sourceId) -> {
+                            dev.helstera.ai.skill.SkillExtras.rememberSignal(signalInstanceId, name);
+                            signalPayload[0] = payload;
+                            signalSource[0] = sourceId;
+                        });
+                try {
+                    boolean signalDispatched = runIntegrationAction(skills, behaviors,
+                            "signal " + signalName + " paper-probe", context);
+                    boolean lastSignalCondition = behaviors.testCondition(
+                            skills.bindCondition("last-signal " + signalName), context);
+                    signalMechanics = signalDispatched
+                            && "paper-probe".equals(signalPayload[0])
+                            && Integer.valueOf(modelInstance.instanceId()).equals(signalSource[0])
+                            && lastSignalCondition;
+                } finally {
+                    signalBus.unsubscribe(modelInstance.instanceId(), signalName);
+                }
                 Location beforeTeleport = zombie.getLocation().clone();
+                boolean entityAiAction = runIntegrationAction(skills, behaviors,
+                        "set-ai false", context) && !zombie.hasAI();
+                boolean gravityAction = runIntegrationAction(skills, behaviors,
+                        "set-gravity false", context) && !zombie.hasGravity();
+                boolean silentAction = runIntegrationAction(skills, behaviors,
+                        "set-silent true", context) && zombie.isSilent();
+                boolean collidableAction = runIntegrationAction(skills, behaviors,
+                        "set-collidable false", context) && !zombie.isCollidable();
+                boolean setFireAction = runIntegrationAction(skills, behaviors,
+                        "set-fire 40", context) && zombie.getFireTicks() >= 40;
+                boolean clearFireAction = runIntegrationAction(skills, behaviors,
+                        "clear-fire", context) && zombie.getFireTicks() == 0;
+                boolean rotationAction = runIntegrationAction(skills, behaviors,
+                        "set-rotation 90 15", context)
+                        && Math.abs(zombie.getLocation().getYaw() - 90f) < 0.1f
+                        && Math.abs(zombie.getLocation().getPitch() - 15f) < 0.1f;
+                blockMechanicLocation = beforeTeleport.clone().add(2, 1, 0);
+                blockMechanicState = blockMechanicLocation.getBlock().getState();
+                var blockContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                        modelInstance, null, 1.0, -1, 0, "integration", null, null,
+                        java.util.List.of(), blockMechanicLocation);
+                boolean blockSetAction = runIntegrationAction(skills, behaviors,
+                        "set-block STONE", blockContext)
+                        && blockMechanicLocation.getBlock().getType() == org.bukkit.Material.STONE;
+                boolean blockBreakAction = runIntegrationAction(skills, behaviors,
+                        "break-block", blockContext)
+                        && blockMechanicLocation.getBlock().getType() != org.bukkit.Material.STONE;
+                for (var entity : world.getNearbyEntities(blockMechanicLocation, 2, 2, 2)) {
+                    if (entity instanceof org.bukkit.entity.Item item) droppedItems.add(item);
+                }
                 boolean equipped = runIntegrationAction(skills, behaviors, "equip DIAMOND_SWORD off-hand 2", context)
                         && runIntegrationAction(skills, behaviors, "equip integration_test_item main-hand 1", context);
                 var resolvedItem = zombie.getEquipment() == null ? null : zombie.getEquipment().getItemInMainHand();
@@ -1101,6 +1885,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && resolvedItem.getItemMeta().hasDisplayName();
                 equipped = equipped && runIntegrationAction(skills, behaviors,
                         "set-item SHIELD main-hand 1", context);
+                boolean armorDispatched = runIntegrationAction(skills, behaviors,
+                        "set-armor DIAMOND_HELMET DIAMOND_CHESTPLATE DIAMOND_LEGGINGS DIAMOND_BOOTS",
+                        context);
+                var armorEquipment = zombie.getEquipment();
+                setArmorMechanic = armorDispatched && armorEquipment != null
+                        && armorEquipment.getHelmet().getType() == org.bukkit.Material.DIAMOND_HELMET
+                        && armorEquipment.getChestplate().getType() == org.bukkit.Material.DIAMOND_CHESTPLATE
+                        && armorEquipment.getLeggings().getType() == org.bukkit.Material.DIAMOND_LEGGINGS
+                        && armorEquipment.getBoots().getType() == org.bukkit.Material.DIAMOND_BOOTS;
                 boolean potion = runIntegrationAction(skills, behaviors,
                         "effect-targets SPEED 100 1 true false false", context);
                 boolean dropAction = runIntegrationAction(skills, behaviors,
@@ -1117,8 +1910,465 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && speed.isAmbient() && !speed.hasParticles() && !speed.hasIcon();
                 conditionTarget = world.spawn(location.clone().add(3, 0, 0), org.bukkit.entity.Zombie.class);
                 conditionTarget.setHealth(10.0);
+                conditionTargetCustomName = conditionTarget.getCustomName();
+                conditionTarget.setCustomName("NameProbe");
                 var conditionContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, conditionTarget, 1.0, 3.0, 0, "integration");
+                var originalForcePullVelocity = conditionTarget.getVelocity().clone();
+                try {
+                    boolean forcePullDispatched = runIntegrationAction(skills, behaviors,
+                            "force-pull 1.0", conditionContext);
+                    var pullVelocity = conditionTarget.getVelocity();
+                    var towardCaster = zombie.getLocation().toVector()
+                            .subtract(conditionTarget.getLocation().toVector());
+                    forcePullMechanic = forcePullDispatched
+                            && pullVelocity.lengthSquared() > 1.0e-6
+                            && pullVelocity.dot(towardCaster) > 0;
+                } finally {
+                    conditionTarget.setVelocity(originalForcePullVelocity);
+                }
+                var triggerBlock = conditionTarget.getLocation().getBlock();
+                var triggerBlockState = triggerBlock.getState();
+                try {
+                    triggerBlock.setType(org.bukkit.Material.STONE, false);
+                    var triggerBlockContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                            modelInstance, conditionTarget, 1.0, 3.0, 0, "on-block-break", null,
+                            conditionTarget, java.util.List.of(conditionTarget), triggerBlock.getLocation(), null);
+                    boolean triggerBlockPositive = behaviors.testCondition(
+                            skills.bindCondition("triggerBlockType{mat=STONE,DIRT}"), triggerBlockContext);
+                    boolean triggerBlockNegative = !behaviors.testCondition(
+                            skills.bindCondition("trigger-block-type DIAMOND"), triggerBlockContext);
+                    var wrongBlockContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                            modelInstance, conditionTarget, 1.0, 3.0, 0, "on-damage", null,
+                            conditionTarget, java.util.List.of(conditionTarget), triggerBlock.getLocation(), null);
+                    boolean triggerBlockStateRejected = !behaviors.testCondition(
+                            skills.bindCondition("trigger-block-type STONE"), wrongBlockContext);
+                    triggerBlockTypeCondition = triggerBlockPositive && triggerBlockNegative
+                            && triggerBlockStateRejected;
+                    getLogger().info("trigger-block-type-condition-details positive=" + triggerBlockPositive
+                            + " negative=" + triggerBlockNegative
+                            + " state-rejected=" + triggerBlockStateRejected);
+                } finally {
+                    triggerBlockState.update(true, false);
+                }
+                nameCondition = behaviors.testCondition(
+                        skills.bindCondition("name-is NameProbe"), conditionContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("name-is Zombie"), conditionContext);
+                coordinateDifferenceCondition = behaviors.testCondition(
+                        skills.bindCondition("xDiff{d=2to4}"), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("yDiff{d=-1to1}"), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("zDiff{d=-1to1}"), conditionContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("x-diff >4"), conditionContext);
+                getLogger().info("coordinate-difference-condition-details x="
+                        + behaviors.testCondition(skills.bindCondition("x-diff 2to4"), conditionContext)
+                        + " y=" + behaviors.testCondition(skills.bindCondition("y-diff -1to1"), conditionContext)
+                        + " z=" + behaviors.testCondition(skills.bindCondition("z-diff -1to1"), conditionContext));
+                Location originProbeLocation = conditionTarget.getLocation().clone();
+                var originProbeContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        modelInstance, conditionTarget, 1.0, 3.0, 0, "integration", null,
+                        conditionTarget, java.util.List.of(conditionTarget), originProbeLocation, null);
+                originLocationCondition = behaviors.testCondition(
+                        skills.bindCondition("originLocation{loc=" + originProbeLocation.getBlockX()
+                                + "," + originProbeLocation.getBlockY() + ","
+                                + originProbeLocation.getBlockZ() + "}"), originProbeContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("origin-location{loc=" + originProbeLocation.getX()
+                                + "," + originProbeLocation.getY() + ","
+                                + originProbeLocation.getZ() + ";exact=true}"), originProbeContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("origin-location loc=999,999,999"), originProbeContext);
+                getLogger().info("origin-location-condition-details condition=" + originLocationCondition);
+                Location boundsTarget = conditionTarget.getLocation();
+                String boundsFirst = (boundsTarget.getX() - 1) + "," + (boundsTarget.getY() - 1)
+                        + "," + (boundsTarget.getZ() - 1);
+                String boundsSecond = (boundsTarget.getX() + 1) + "," + (boundsTarget.getY() + 1)
+                        + "," + (boundsTarget.getZ() + 1);
+                boundsCondition = behaviors.testCondition(
+                        skills.bindCondition("cuboid loc1=" + boundsFirst + " loc2=" + boundsSecond),
+                        conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("in-bounds shape=sphere location="
+                                + boundsTarget.getX() + "," + boundsTarget.getY() + ","
+                                + boundsTarget.getZ() + " radius=1"), conditionContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("cuboid loc1=" + (boundsTarget.getX() + 5) + ","
+                                + boundsTarget.getY() + "," + boundsTarget.getZ()
+                                + " loc2=" + (boundsTarget.getX() + 6) + ","
+                                + boundsTarget.getY() + "," + boundsTarget.getZ()), conditionContext);
+                getLogger().info("bounds-condition-details condition=" + boundsCondition);
+                conditionTarget.setCustomName(conditionTargetCustomName);
+                boundsOriginalTargetVelocity = conditionTarget.getVelocity().clone();
+                originalTargetVelocity = boundsOriginalTargetVelocity.clone();
+                boundsOriginalTargetLocation = conditionTarget.getLocation().clone();
+                conditionTarget.teleport(zombie.getLocation());
+                boolean overlapping = behaviors.testCondition(
+                        skills.bindCondition("bounding-boxes-overlap"), conditionContext);
+                conditionTarget.teleport(zombie.getLocation().clone().add(5, 0, 0));
+                boolean separated = !behaviors.testCondition(
+                        skills.bindCondition("bounding-boxes-overlap"), conditionContext);
+                boundingBoxOverlapCondition = overlapping && separated;
+                conditionTarget.teleport(boundsOriginalTargetLocation);
+                conditionTarget.setVelocity(boundsOriginalTargetVelocity);
+                conditionTarget.setVelocity(new org.bukkit.util.Vector(0.25, -0.5, 0.75));
+                motionConditions = behaviors.testCondition(
+                        skills.bindCondition("motion-x >= 0.2"), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("motion-y < 0"), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("fall-speed >= 0.4"), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("motion-z >= 0.7"), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("velocity >= 0.9"), conditionContext);
+                directionalVelocityCondition = behaviors.testCondition(
+                        skills.bindCondition("directionalVelocity{x=>=0.2;y=<0;z=>=0.7}"), conditionContext);
+                Location originalFovTargetLocation = conditionTarget.getLocation().clone();
+                Location originalFovCasterLocation = zombie.getLocation().clone();
+                try {
+                    zombie.setRotation(0f, 0f);
+                    conditionTarget.teleport(zombie.getLocation().clone().add(0, 0, 3));
+                    boolean forwardFov = behaviors.testCondition(
+                            skills.bindCondition("field-of-view 90 0"), conditionContext);
+                    conditionTarget.teleport(zombie.getLocation().clone().add(3, 0, 0));
+                    boolean sideRejected = !behaviors.testCondition(
+                            skills.bindCondition("fov 90 0"), conditionContext);
+                    boolean rotatedFov = behaviors.testCondition(
+                            skills.bindCondition("fieldOfView{angle=90;rotation=90}"), conditionContext);
+                    fieldOfViewCondition = forwardFov && sideRejected && rotatedFov;
+                    getLogger().info("field-of-view-condition-details forward=" + forwardFov
+                            + " side-rejected=" + sideRejected + " rotated=" + rotatedFov);
+                } finally {
+                    conditionTarget.teleport(originalFovTargetLocation);
+                    zombie.teleport(originalFovCasterLocation);
+                }
+                conditionTarget.setVelocity(originalTargetVelocity);
+                conditionTarget.setLastDamageCause(new org.bukkit.event.entity.EntityDamageEvent(
+                        conditionTarget,
+                        org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE, 1.0));
+                lastDamageCauseCondition = behaviors.testCondition(
+                        skills.bindCondition("last-damage-cause FIRE"), conditionContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("last-damage-cause ENTITY_ATTACK"), conditionContext);
+                boolean officialSpatialConditions = false;
+                var utilityGround = conditionTarget.getLocation().getBlock().getRelative(0, -1, 0);
+                var utilityGroundState = utilityGround.getState();
+                var utilityBody = conditionTarget.getLocation().getBlock();
+                var utilityBodyState = utilityBody.getState();
+                float utilityYaw = conditionTarget.getLocation().getYaw();
+                float utilityPitch = conditionTarget.getLocation().getPitch();
+                try {
+                    utilityGround.setType(org.bukkit.Material.STONE, false);
+                    utilityBody.setType(org.bukkit.Material.STONE, false);
+                    conditionTarget.setRotation(135f, -15f);
+                    boolean spatialHeight = behaviors.testCondition(
+                            skills.bindCondition("height < 100"), conditionContext)
+                            && behaviors.testCondition(
+                            skills.bindCondition("height-above 60"), conditionContext)
+                            && behaviors.testCondition(
+                            skills.bindCondition("height-below 80"), conditionContext)
+                            ;
+                    boolean spatialOrientation = behaviors.testCondition(
+                            skills.bindCondition("pitch -45to45"), conditionContext)
+                            && behaviors.testCondition(
+                            skills.bindCondition("yaw 90to180 true"), conditionContext)
+                            ;
+                    boolean spatialOnBlock = behaviors.testCondition(
+                            skills.bindCondition("on-block STONE"), conditionContext);
+                    String actualBiome = conditionTarget.getLocation().getBlock().getBiome()
+                            .getKey().getKey();
+                    boolean spatialBlockType = behaviors.testCondition(
+                            skills.bindCondition("block-type-is STONE"), conditionContext);
+                    lineOfSightFromOriginCondition = behaviors.testCondition(
+                            skills.bindCondition("line-of-sight-from-origin"), conditionContext);
+                    Location targetCoordinates = conditionTarget.getLocation();
+                    String coordinateCondition = "distanceFromLocation{x=" + targetCoordinates.getX()
+                            + ";y=" + targetCoordinates.getY() + ";z=" + targetCoordinates.getZ()
+                            + ";distance=0}";
+                    String offsetCondition = "distanceFromLocation{x=" + (targetCoordinates.getX() + 10.0)
+                            + ";y=" + targetCoordinates.getY() + ";z=" + targetCoordinates.getZ()
+                            + ";distance=<5}";
+                    distanceFromLocationCondition = behaviors.testCondition(
+                            skills.bindCondition(coordinateCondition), conditionContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition(offsetCondition), conditionContext);
+                    blockTypeRadiusCondition = behaviors.testCondition(
+                            skills.bindCondition("block-type-in-radius STONE >=1 1"), conditionContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("block-type-in-radius DIRT >=1 1"), conditionContext);
+                    var utilityHead = conditionTarget.getLocation().clone().add(0, 1, 0).getBlock();
+                    var utilityHeadState = utilityHead.getState();
+                    try {
+                        utilityHead.setType(org.bukkit.Material.STONE, false);
+                        boolean inside = behaviors.testCondition(
+                                skills.bindCondition("inside"), conditionContext);
+                        utilityHead.setType(org.bukkit.Material.AIR, false);
+                        boolean outside = behaviors.testCondition(
+                                skills.bindCondition("outside"), conditionContext);
+                        insideOutsideConditions = inside && outside;
+                        getLogger().info("inside-outside-condition-details inside=" + inside
+                                + " outside=" + outside);
+                    } finally {
+                        utilityHeadState.update(true, false);
+                    }
+                    boolean spatialBiomeType = behaviors.testCondition(
+                            skills.bindCondition("biome-type-is " + actualBiome + " true"), conditionContext);
+                    officialSpatialConditions = spatialHeight && spatialOrientation && spatialOnBlock
+                            && spatialBlockType && spatialBiomeType && lineOfSightFromOriginCondition;
+                    getLogger().info("spatial-condition-details height=" + spatialHeight
+                            + " orientation=" + spatialOrientation + " on-block=" + spatialOnBlock
+                            + " block-type=" + spatialBlockType + " biome-type=" + spatialBiomeType
+                            + " y=" + conditionTarget.getLocation().getY()
+                            + " pitch=" + conditionTarget.getLocation().getPitch()
+                            + " yaw=" + conditionTarget.getLocation().getYaw()
+                            + " below=" + utilityGround.getType());
+
+                    var farmlandData = org.bukkit.Material.FARMLAND.createBlockData();
+                    if (!(farmlandData instanceof org.bukkit.block.data.type.Farmland farmland)) {
+                        throw new IllegalStateException("FARMLAND did not expose Farmland BlockData");
+                    }
+                    farmland.setMoisture(farmland.getMaximumMoisture());
+                    utilityBody.setBlockData(farmland, false);
+                    boolean hydrated = behaviors.testCondition(
+                            skills.bindCondition("isMoist"), conditionContext);
+                    boolean hydratedRange = behaviors.testCondition(
+                            skills.bindCondition("moistureness{l=1to7}"), conditionContext);
+                    farmland.setMoisture(0);
+                    utilityBody.setBlockData(farmland, false);
+                    boolean dry = !behaviors.testCondition(
+                            skills.bindCondition("moist"), conditionContext)
+                            && behaviors.testCondition(
+                            skills.bindCondition("moistureLevel{l=0}"), conditionContext);
+                    moistureConditions = hydrated && hydratedRange && dry;
+                    getLogger().info("moisture-condition-details hydrated=" + hydrated
+                            + " hydrated-range=" + hydratedRange + " dry=" + dry
+                            + " max=" + farmland.getMaximumMoisture());
+                } finally {
+                    conditionTarget.setRotation(utilityYaw, utilityPitch);
+                    utilityBodyState.update(true, false);
+                    utilityGroundState.update(true, false);
+                }
+                var primedConditionProbe = world.spawn(
+                        conditionTarget.getLocation().clone().add(2, 0, 0),
+                        org.bukkit.entity.Creeper.class);
+                conditionCategoryEntities.add(primedConditionProbe);
+                primedConditionProbe.setAI(false);
+                primedConditionProbe.setInvulnerable(true);
+                primedConditionProbe.setIgnited(true);
+                var primedConditionContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, primedConditionProbe, 1.0, 5.0, 0, "integration");
+                boolean creeperPrimedCondition = behaviors.testCondition(
+                        skills.bindCondition("is-creeper-primed"), primedConditionContext);
+                var dragonAliveProbe = world.spawn(
+                        conditionTarget.getLocation().clone().add(20, 0, 0),
+                        org.bukkit.entity.EnderDragon.class);
+                conditionCategoryEntities.add(dragonAliveProbe);
+                dragonAliveProbe.setAI(false);
+                dragonAliveProbe.setInvulnerable(true);
+                var dragonAliveContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, dragonAliveProbe, 1.0, 20.0, 0, "integration");
+                boolean enderDragonAliveCondition = behaviors.testCondition(
+                        skills.bindCondition("ender-dragon-alive"), dragonAliveContext);
+                dragonAliveProbe.setPhase(org.bukkit.entity.EnderDragon.Phase.CIRCLING);
+                boolean enderDragonPhaseCondition = behaviors.testCondition(
+                        skills.bindCondition("ender-dragon-phase CIRCLING"), dragonAliveContext);
+                var mobSizeProbe = world.spawn(
+                        conditionTarget.getLocation().clone().add(4, 0, 0),
+                        org.bukkit.entity.Slime.class);
+                conditionCategoryEntities.add(mobSizeProbe);
+                mobSizeProbe.setAI(false);
+                mobSizeProbe.setInvulnerable(true);
+                mobSizeProbe.setSize(4);
+                var mobSizeContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, mobSizeProbe, 1.0, 7.0, 0, "integration");
+                boolean largeMob = behaviors.testCondition(
+                        skills.bindCondition("mob-size >3"), mobSizeContext);
+                mobSizeProbe.setSize(2);
+                boolean exactMob = behaviors.testCondition(
+                        skills.bindCondition("size 2to2"), mobSizeContext);
+                mobSizeCondition = largeMob && exactMob;
+                getLogger().info("mob-size-condition-details large=" + largeMob
+                        + " exact=" + exactMob + " size=" + mobSizeProbe.getSize());
+                boolean pluginCondition = behaviors.testCondition(
+                        skills.bindCondition("plugin helsteraMobs"), conditionContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("plugin __missing_plugin__"), conditionContext);
+                boolean vehicleDeadCondition = !behaviors.testCondition(
+                        skills.bindCondition("vehicle-is-dead"), conditionContext);
+                boolean utilityInCombat = behaviors.testCondition(
+                        skills.bindCondition("incombat"), conditionContext);
+                boolean utilityTargetCount = behaviors.testCondition(
+                        skills.bindCondition("targetcount 1"), conditionContext);
+                boolean utilityMobsRadius = behaviors.testCondition(
+                        skills.bindCondition("mobsinradius 1 4"), context);
+                boolean utilityMobsOrigin = behaviors.testCondition(
+                        skills.bindCondition("mobs-near-origin >=1 4 ZOMBIE"), context);
+                boolean utilitySpawnDistance = behaviors.testCondition(
+                        skills.bindCondition("distance-from-spawn <1000"), conditionContext);
+                boolean utilityAltitude = behaviors.testCondition(
+                        skills.bindCondition("altitude >=0 30"), conditionContext);
+                boolean utilityPlayersOnline = behaviors.testCondition(
+                        skills.bindCondition("players-online >= 1"), context);
+                boolean utilityPlayersWorld = behaviors.testCondition(
+                        skills.bindCondition("players-in-world >= 1"), context);
+                boolean utilityMobsWorld = behaviors.testCondition(
+                        skills.bindCondition("mobs-in-world >= 1"), context);
+                boolean utilityLivingRadius = behaviors.testCondition(
+                        skills.bindCondition("living-in-radius >= 1 4"), conditionContext);
+                boolean utilityMobsChunk = behaviors.testCondition(
+                        skills.bindCondition("mobs-in-chunk >= 1"), conditionContext);
+                boolean utilityDimension = behaviors.testCondition(
+                        skills.bindCondition("dimension-is NORMAL"), conditionContext);
+                String liveMinecraftVersion = org.bukkit.Bukkit.getMinecraftVersion();
+                conditionUtilityAliases = utilityInCombat && utilityTargetCount
+                        && utilityMobsRadius && utilityMobsOrigin && utilitySpawnDistance
+                        && utilityAltitude && vehicleDeadCondition && utilityPlayersOnline
+                        && utilityPlayersWorld && utilityMobsWorld && utilityLivingRadius
+                        && utilityMobsChunk && utilityDimension
+                        && officialSpatialConditions
+                        && moistureConditions
+                        && mobSizeCondition
+                        && blockTypeRadiusCondition
+                        && insideOutsideConditions
+                        && distanceFromLocationCondition
+                        && behaviors.testCondition(
+                        skills.bindCondition("server-is-paper"), conditionContext)
+                        && fieldOfViewCondition
+                        && spawnReasonCondition
+                        && waterMobCondition
+                        && zombieCondition
+                        && aerialCondition
+                        && endermanCondition
+                        && enchantmentCondition
+                        && colorCondition
+                        && triggerItemTypeCondition
+                        && triggerBlockTypeCondition
+                        && originLocationCondition
+                        && playerKillsCondition
+                        && absorptionCondition
+                        && dialogueCondition
+                        && pluginCondition
+                        && behaviors.testCondition(
+                        skills.bindCondition("server-version " + liveMinecraftVersion), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("server-version-after-or-equal 1.21.1 true"), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("server-version-before 1.22 true"), conditionContext)
+                        && boundingBoxOverlapCondition
+                        && creeperPrimedCondition
+                        && enderDragonAliveCondition
+                        && enderDragonPhaseCondition
+                        && behaviors.testCondition(
+                        skills.bindCondition("is-mythic-mob"), context)
+                        && behaviors.testCondition(
+                        skills.bindCondition("world-time 0to24000"), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("sky-light-level >=0"), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("light-level-from-blocks >=0"), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("randomchance 100"), context);
+                getLogger().info("condition-utility-details incombat=" + utilityInCombat
+                        + " targetcount=" + utilityTargetCount
+                        + " mobs-radius=" + utilityMobsRadius
+                        + " mobs-origin=" + utilityMobsOrigin
+                        + " spawn-distance=" + utilitySpawnDistance
+                        + " altitude=" + utilityAltitude
+                        + " vehicle-dead=" + vehicleDeadCondition
+                        + " players-online=" + utilityPlayersOnline
+                        + " players-world=" + utilityPlayersWorld
+                        + " mobs-world=" + utilityMobsWorld
+                        + " living-radius=" + utilityLivingRadius
+                        + " mobs-chunk=" + utilityMobsChunk
+                        + " dimension=" + utilityDimension
+                        + " server-version=" + liveMinecraftVersion
+                        + " aggregate=" + conditionUtilityAliases);
+                var killProbe = world.spawn(location.clone().add(4, 0, 0), org.bukkit.entity.Zombie.class);
+                conditionCategoryEntities.add(killProbe);
+                var killContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, killProbe, 1.0, 4.0, 0, "integration");
+                targetKillMechanic = runIntegrationAction(skills, behaviors,
+                        "kill-targets", killContext) && killProbe.isDead();
+                meleeProbeTarget = world.spawn(location.clone().add(1.5, 0, 0),
+                        org.bukkit.entity.Sheep.class);
+                meleeProbeTarget.setMaxHealth(20.0);
+                meleeProbeTarget.setHealth(20.0);
+                meleeProbeTarget.setAI(false);
+                meleeProbeTarget.setGravity(false);
+                meleeProbeTarget.setSilent(true);
+                meleeProbeTarget.setNoDamageTicks(0);
+                double meleeCasterHealth = zombie.getHealth();
+                double meleeTargetHealth = meleeProbeTarget.getHealth();
+                var meleeContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, meleeProbeTarget, 1.0, 1.5, 0, "integration");
+                damageMeleeMechanic = runIntegrationAction(skills, behaviors,
+                        "damage-melee 4 2.5", meleeContext)
+                        && zombie.getHealth() >= meleeCasterHealth - 0.01
+                        && meleeProbeTarget.getHealth() <= meleeTargetHealth - 3.5;
+                dotProbeTarget = world.spawn(location.clone().add(18, 0, 0),
+                        org.bukkit.entity.Sheep.class);
+                dotProbeTarget.setMaxHealth(100.0);
+                dotProbeTarget.setHealth(100.0);
+                dotProbeTarget.setAI(false);
+                dotProbeTarget.setGravity(false);
+                dotProbeTarget.setSilent(true);
+                dotProbeTarget.setNoDamageTicks(0);
+                var dotContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, dotProbeTarget, 1.0, 18.0, 0, "integration");
+                dotProbeScheduled = scheduleDotIntegrationProbe(skills, behaviors,
+                        dotContext, dotProbeTarget);
+                if (ai instanceof dev.helstera.ai.AiManager aiManager) {
+                    var factions = aiManager.factions();
+                    String oldCasterFaction = factions.factionOf(zombie);
+                    String oldTargetFaction = factions.factionOf(conditionTarget);
+                    boolean casterFactionSet = runIntegrationAction(skills, behaviors,
+                            "set-faction guards", context)
+                            && "guards".equals(factions.factionOf(zombie));
+                    boolean targetFactionSet = runIntegrationAction(skills, behaviors,
+                            "set-faction-targets undead", conditionContext)
+                            && "undead".equals(factions.factionOf(conditionTarget));
+                    factionMechanic = casterFactionSet && targetFactionSet;
+                    factions.bindInstance(zombie.getUniqueId(), "guards");
+                    factions.bindInstance(conditionTarget.getUniqueId(), "guards");
+                    try {
+                        boolean same = behaviors.testCondition(
+                                skills.bindCondition("same-faction"), conditionContext);
+                        boolean notDifferent = !behaviors.testCondition(
+                                skills.bindCondition("different-faction"), conditionContext);
+                        boolean casterMatch = behaviors.testCondition(
+                                skills.bindCondition("caster-faction-is guards"), conditionContext);
+                        boolean targetMatch = behaviors.testCondition(
+                                skills.bindCondition("target-faction-is guards"), conditionContext);
+                        factions.bindInstance(conditionTarget.getUniqueId(), "undead");
+                        boolean different = behaviors.testCondition(
+                                skills.bindCondition("different-faction"), conditionContext)
+                                && !behaviors.testCondition(
+                                skills.bindCondition("same-faction"), conditionContext);
+                        var noTargetFactionContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                modelInstance, (org.bukkit.entity.LivingEntity) null,
+                                1.0, -1, 0, "integration");
+                        boolean noTargetRejected = !behaviors.testCondition(
+                                skills.bindCondition("same-faction"), noTargetFactionContext)
+                                && !behaviors.testCondition(
+                                skills.bindCondition("different-faction"), noTargetFactionContext);
+                        factionConditions = same && notDifferent && casterMatch && targetMatch
+                                && different && noTargetRejected;
+                    } finally {
+                        factions.bindInstance(zombie.getUniqueId(), oldCasterFaction);
+                        factions.bindInstance(conditionTarget.getUniqueId(), oldTargetFaction);
+                    }
+                }
+                double targetHealthBeforePlaceholder = conditionTarget.getHealth();
+                boolean placeholderDispatched = runIntegrationAction(skills, behaviors,
+                        "heal-targets <target.hp.raw>", conditionContext);
+                dynamicPlaceholderAction = placeholderDispatched
+                        && conditionTarget.getHealth() >= targetHealthBeforePlaceholder * 2.0;
+                conditionTarget.setHealth(targetHealthBeforePlaceholder);
+                boolean lookAtAction = runIntegrationAction(skills, behaviors,
+                        "look-at", conditionContext);
                 String healthCondition = skills.bindCondition("health{h=<15}");
                 String healthPercentCondition = skills.bindCondition("health-percent{p=<=50}");
                 String distanceCondition = skills.bindCondition("distance{d=<4}");
@@ -1138,15 +2388,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean targetFluidConditions = false;
                 var targetBlock = conditionTarget.getLocation().getBlock();
                 conditionTargetBlockState = targetBlock.getState();
+                var targetHeadBlock = conditionTarget.getLocation().clone().add(0, 1, 0).getBlock();
+                conditionTargetHeadBlockState = targetHeadBlock.getState();
                 targetBlock.setType(org.bukkit.Material.WATER, false);
+                targetHeadBlock.setType(org.bukkit.Material.WATER, false);
                 boolean targetWater = behaviors.testCondition(
                         skills.bindCondition("target-in-water"), conditionContext);
                 targetBlock.setType(org.bukkit.Material.LAVA, false);
+                targetHeadBlock.setType(org.bukkit.Material.LAVA, false);
                 boolean targetLava = behaviors.testCondition(
                         skills.bindCondition("target-in-lava"), conditionContext);
                 targetFluidConditions = targetWater && targetLava;
                 conditionTargetBlockState.update(true, false);
-                var targetHeadBlock = conditionTarget.getLocation().clone().add(0, 1, 0).getBlock();
+                conditionTargetHeadBlockState.update(true, false);
+                targetHeadBlock = conditionTarget.getLocation().clone().add(0, 1, 0).getBlock();
                 conditionTargetHeadBlockState = targetHeadBlock.getState();
                 targetHeadBlock.setType(org.bukkit.Material.STONE, false);
                 boolean targetBlockedCondition = behaviors.testCondition(
@@ -1164,12 +2419,58 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 conditionTarget.removeScoreboardTag("HelsteraConditionProbe");
                 boolean hasTagCondition = tagAbsent && tagPresent && !behaviors.testCondition(
                         skills.bindCondition("has-tag tag=HelsteraConditionProbe"), conditionContext);
+                boolean targetConditionTagAbsent = !behaviors.testCondition(
+                        skills.bindCondition("target-has-tag tag=HelsteraTargetConditionProbe"), conditionContext);
+                conditionTarget.addScoreboardTag("HelsteraTargetConditionProbe");
+                boolean targetConditionTagPresent = behaviors.testCondition(
+                        skills.bindCondition("target-has-scoreboard-tag t=HelsteraTargetConditionProbe"), conditionContext);
+                conditionTarget.removeScoreboardTag("HelsteraTargetConditionProbe");
+                boolean targetHasTagCondition = targetConditionTagAbsent && targetConditionTagPresent
+                        && !behaviors.testCondition(
+                        skills.bindCondition("target-has-tag tag=HelsteraTargetConditionProbe"), conditionContext);
+                boolean casterTagAdded = runIntegrationAction(skills, behaviors,
+                        "addtag{tag=HelsteraMechanicProbe}", context);
+                boolean casterTagPresent = zombie.getScoreboardTags().contains("HelsteraMechanicProbe");
+                boolean targetTagAdded = runIntegrationAction(skills, behaviors,
+                        "addtag{tag=HelsteraTargetMechanicProbe} @Target", conditionContext);
+                boolean targetTagPresent = conditionTarget.getScoreboardTags()
+                        .contains("HelsteraTargetMechanicProbe");
+                boolean targetTagRemoved = runIntegrationAction(skills, behaviors,
+                        "removetag{tag=HelsteraTargetMechanicProbe} @Target", conditionContext);
+                boolean targetTagAbsent = !conditionTarget.getScoreboardTags()
+                        .contains("HelsteraTargetMechanicProbe");
+                boolean casterTagRemoved = runIntegrationAction(skills, behaviors,
+                        "removetag{tag=HelsteraMechanicProbe}", context);
+                boolean casterTagAbsent = !zombie.getScoreboardTags().contains("HelsteraMechanicProbe");
+                boolean scoreboardTagMechanics = casterTagAdded && casterTagPresent
+                        && casterTagRemoved && casterTagAbsent
+                        && targetTagAdded && targetTagPresent && targetTagRemoved && targetTagAbsent;
                 String nestedCondition = skills.bindCondition(
                         "all{conditions=health{h=<15};any{distance{d=<4};health{h=<1}}}");
                 String negatedCondition = skills.bindCondition("not{health{h=>20}}");
+                stringEqualsCondition = behaviors.testCondition(
+                        skills.bindCondition("string-equals yes yes"), conditionContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("string-equals yes no"), conditionContext);
+                stringEmptyCondition = behaviors.testCondition(
+                        skills.bindCondition("string-empty"), conditionContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("string-not-empty"), conditionContext);
+                compareValuesCondition = behaviors.testCondition(
+                        skills.bindCondition("compare-values 2 10 <"), conditionContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition("compare-values foo bar GREATER_THAN STRING"), conditionContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("compare-values 2 two > INTEGER"), conditionContext);
+                isSkillCondition = behaviors.testCondition(
+                        skills.bindCondition("is-skill berserk"), conditionContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition("is-skill missing-skill"), conditionContext);
                 boolean conditions = behaviors.testCondition(healthCondition, conditionContext)
                         && behaviors.testCondition(healthPercentCondition, conditionContext)
-                        && behaviors.testCondition(distanceCondition, conditionContext);
+                        && behaviors.testCondition(distanceCondition, conditionContext)
+                        && stringEqualsCondition && stringEmptyCondition && compareValuesCondition
+                        && isSkillCondition;
                 String worldName = conditionTarget.getWorld().getName();
                 String biomeName = conditionTarget.getLocation().getBlock().getBiome()
                         .getKey().getKey();
@@ -1197,12 +2498,36 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 sheep.setSheared(true);
                 horse.getInventory().setSaddle(new org.bukkit.inventory.ItemStack(org.bukkit.Material.SADDLE));
                 poweredCreeper.setPowered(true);
+                pillager.setPatrolLeader(true);
                 conditionCategoryEntities.addAll(java.util.List.of(
                         wolf, pillager, sheep, villager, horse, poweredCreeper));
+                var flagConfig = new org.bukkit.configuration.file.YamlConfiguration();
+                flagConfig.set("tamed", true);
+                flagConfig.set("angry", true);
+                flagConfig.set("can-join-raid", false);
+                flagConfig.set("patrol-leader", true);
+                applyEntitySpecificOptions(wolf, flagConfig);
+                applyEntitySpecificOptions(pillager, flagConfig);
+                boolean canJoinRaidSetter = false;
+                var raiderView = (org.bukkit.entity.Raider) pillager;
+                try {
+                    raiderView.setCanJoinRaid(false);
+                    canJoinRaidSetter = true;
+                } catch (RuntimeException ignored) {
+                    // Some Paper versions expose the setter without a readable flag.
+                }
+                boolean entityFlagOptions = wolf.isTamed() && wolf.isAngry()
+                        && raiderView.isPatrolLeader() && canJoinRaidSetter;
+                getLogger().info("[自检] entity-flag-options result=" + entityFlagOptions
+                        + " tamed=" + wolf.isTamed() + " angry=" + wolf.isAngry()
+                        + " can-join-raid-setter=" + canJoinRaidSetter
+                        + " patrol-leader=" + raiderView.isPatrolLeader());
                 var wolfContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, wolf, 1.0, 5.0, 0, "integration");
                 var sheepContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, sheep, 1.0, 9.0, 0, "integration");
+                var pillagerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, pillager, 1.0, 7.0, 0, "integration");
                 var horseContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, horse, 1.0, 13.0, 0, "integration");
                 var poweredCreeperContext = dev.helstera.api.behavior.BehaviorContext.of(
@@ -1227,6 +2552,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 conditionCategoryEntities.add(coneTarget);
                 conditionCategoryEntities.add(behindTarget);
                 conditionCategoryEntities.add(widthTarget);
+                var ownerProbe = getServer().getOnlinePlayers().stream().findFirst().orElse(null);
+                boolean nearestPlayerTargeter = ownerProbe != null
+                        && dev.helstera.api.behavior.Targeters.select(
+                        "@nearestplayer", modelInstance,
+                        java.util.List.of(ownerProbe), java.util.List.of()).size() == 1;
                 boolean sphereTargeter = !dev.helstera.api.behavior.Targeters.select(
                         "@sphere{radius=4}", modelInstance, java.util.List.of(spatialTarget), java.util.List.of()).isEmpty();
                 boolean ringTargeter = !dev.helstera.api.behavior.Targeters.select(
@@ -1246,6 +2576,30 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean lineLengthBoundary = dev.helstera.api.behavior.Targeters.select(
                         "@livinginline{length=2;width=1}", modelInstance,
                         java.util.List.of(spatialTarget), java.util.List.of()).isEmpty();
+                boolean monsterCategoryTargeter = !dev.helstera.api.behavior.Targeters.select(
+                        "@monstersinradius", modelInstance,
+                        java.util.List.of(spatialTarget, pillager), java.util.List.of()).isEmpty();
+                boolean animalCategoryTargeter = !dev.helstera.api.behavior.Targeters.select(
+                        "@animalsinradius", modelInstance,
+                        java.util.List.of(wolf, sheep, horse), java.util.List.of()).isEmpty();
+                boolean villagerCategoryTargeter = !dev.helstera.api.behavior.Targeters.select(
+                        "@villagersinradius", modelInstance,
+                        java.util.List.of(villager), java.util.List.of()).isEmpty();
+                boolean tamedCategoryTargeter = !dev.helstera.api.behavior.Targeters.select(
+                        "@tamedinradius", modelInstance,
+                        java.util.List.of(wolf), java.util.List.of()).isEmpty();
+                boolean nearestMonsterTargeter = dev.helstera.api.behavior.Targeters.select(
+                        "@nearestmonster", modelInstance,
+                        java.util.List.of(spatialTarget, pillager), java.util.List.of()).size() == 1;
+                boolean nearestAnimalTargeter = dev.helstera.api.behavior.Targeters.select(
+                        "@nearestanimal", modelInstance,
+                        java.util.List.of(wolf, sheep, horse), java.util.List.of()).size() == 1;
+                boolean nearestVillagerTargeter = dev.helstera.api.behavior.Targeters.select(
+                        "@nearestvillager", modelInstance,
+                        java.util.List.of(villager), java.util.List.of()).size() == 1;
+                boolean nearestTamedTargeter = dev.helstera.api.behavior.Targeters.select(
+                        "@nearesttamed", modelInstance,
+                        java.util.List.of(wolf), java.util.List.of()).size() == 1;
                 var nearTarget = world.spawn(zombie.getLocation().clone().add(1, 0, 0),
                         org.bukkit.entity.Zombie.class);
                 var farTarget = world.spawn(zombie.getLocation().clone().add(3, 0, 0),
@@ -1269,7 +2623,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         "@living{filter=!mob}", modelInstance,
                         java.util.List.of(nearTarget, farTarget), java.util.List.of()).isEmpty();
                 boolean spatialTargeters = sphereTargeter && ringTargeter && coneTargeter
-                        && lineOfSightTargeter && lineTargeter && lineNamedTargeter;
+                        && lineOfSightTargeter && lineTargeter && lineNamedTargeter
+                        && monsterCategoryTargeter && animalCategoryTargeter
+                        && villagerCategoryTargeter && tamedCategoryTargeter
+                        && nearestMonsterTargeter && nearestAnimalTargeter
+                        && nearestVillagerTargeter && nearestTamedTargeter
+                        && nearestPlayerTargeter;
                 var obstructionLocation = zombie.getLocation().clone().add(facing.clone().multiply(1.5));
                 var obstruction = obstructionLocation.getBlock();
                 var originalObstructionData = obstruction.getBlockData().clone();
@@ -1290,6 +2649,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " line-named=" + lineNamedTargeter
                         + " line-width-boundary=" + lineWidthBoundary
                         + " line-length-boundary=" + lineLengthBoundary
+                        + " monsters=" + monsterCategoryTargeter
+                        + " animals=" + animalCategoryTargeter
+                        + " villagers=" + villagerCategoryTargeter
+                        + " tamed=" + tamedCategoryTargeter
+                        + " nearest-monster=" + nearestMonsterTargeter
+                        + " nearest-animal=" + nearestAnimalTargeter
+                        + " nearest-villager=" + nearestVillagerTargeter
+                        + " nearest-tamed=" + nearestTamedTargeter
+                        + " nearest-player=" + nearestPlayerTargeter
                         + " targeter-controls=" + targeterControls
                         + " targeter-limit-zero=" + targeterLimitZero
                         + " targeter-negative-filter=" + targeterNegativeFilter
@@ -1298,13 +2666,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " ring-boundary=" + ringBoundary
                         + " cone-boundary=" + coneBoundary);
                 boolean ownerTargeter = false;
+                boolean relationTargeters = false;
+                boolean childrenTargeter = false;
                 boolean leashedCondition = false;
                 boolean hasOwnerCondition = false;
                 boolean customOwnerRelation = false;
+                boolean childrenCondition = false;
+            boolean ownerOnlineCondition = false;
                 boolean parentRelation = false;
                 boolean isChildCondition = false;
                 boolean parentDerivedConditions = false;
-                var ownerProbe = getServer().getOnlinePlayers().stream().findFirst().orElse(null);
                 if (ownerProbe != null) {
                     wolf.setTamed(true);
                     wolf.setOwner(ownerProbe);
@@ -1314,9 +2685,30 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             dev.helstera.api.instance.SpawnOptions.defaults());
                     var ownerContext = dev.helstera.api.behavior.BehaviorContext.of(
                             ownerInstance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+                    var ownerMatchContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            ownerInstance, ownerProbe, 1.0, 1.0, 0, "integration");
+                    ownerCondition = behaviors.testCondition(
+                            skills.bindCondition("owner"), ownerMatchContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("owner"), conditionContext);
                     var ownerTargets = dev.helstera.api.behavior.Targeters.select(
                             "@owner", ownerContext, java.util.List.of(), java.util.List.of());
                     ownerTargeter = ownerTargets.size() == 1 && ownerTargets.get(0).equals(ownerProbe);
+                    var relationVehicle = world.spawn(wolf.getLocation().clone().add(2, 0, 0),
+                            org.bukkit.entity.Pig.class);
+                    conditionCategoryEntities.add(relationVehicle);
+                    boolean passengerAdded = wolf.addPassenger(ownerProbe);
+                    var passengerTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@passengers", ownerContext, java.util.List.of(), java.util.List.of());
+                    if (wolf.getPassengers().contains(ownerProbe)) wolf.removePassenger(ownerProbe);
+                    boolean vehicleAdded = relationVehicle.addPassenger(wolf);
+                    var vehicleTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@vehicle", ownerContext, java.util.List.of(), java.util.List.of());
+                    if (relationVehicle.getPassengers().contains(wolf)) relationVehicle.removePassenger(wolf);
+                    relationTargeters = passengerAdded && passengerTargets.size() == 1
+                            && passengerTargets.get(0).equals(ownerProbe)
+                            && vehicleAdded && vehicleTargets.size() == 1
+                            && vehicleTargets.get(0).equals(relationVehicle);
                     var originalLeashHolder = wolf.isLeashed() ? wolf.getLeashHolder() : null;
                     try {
                         boolean leashApplied = wolf.setLeashHolder(ownerProbe);
@@ -1334,6 +2726,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             1.0, 0.0, 0, "integration");
                     boolean customOwnerCondition = behaviors.testCondition(
                             skills.bindCondition("has-owner"), customOwnerSelfContext);
+                    boolean customOwnerIsPlayer = behaviors.testCondition(
+                            skills.bindCondition("owner-is-player"), customOwnerSelfContext);
+                    ownerOnlineCondition = behaviors.testCondition(
+                            skills.bindCondition("owner-is-online"), customOwnerSelfContext);
                     var storedOwnerTargets = dev.helstera.api.behavior.Targeters.select(
                             "@owner", context, java.util.List.of(), java.util.List.of());
                     boolean storedOwnerTarget = storedOwnerTargets.size() == 1
@@ -1344,7 +2740,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("has-owner"), customOwnerSelfContext)
                             && dev.helstera.api.behavior.Targeters.select(
                             "@owner", context, java.util.List.of(), java.util.List.of()).isEmpty();
-                    customOwnerRelation = ownerSet && customOwnerCondition
+                    customOwnerRelation = ownerSet && customOwnerCondition && customOwnerIsPlayer
                             && storedOwnerTarget && ownerRemoved && ownerCleared;
                     boolean parentSet = runIntegrationAction(skills, behaviors,
                             "set-parent", customOwnerContext);
@@ -1372,10 +2768,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     var childProbe = world.spawn(wolf.getLocation(), org.bukkit.entity.Pig.class);
                     conditionCategoryEntities.add(childProbe);
                     boolean childRelationSet = dev.helstera.api.behavior.MobRelations.setParent(childProbe, wolf);
+                    childrenCondition = childRelationSet
+                            && behaviors.testCondition(skills.bindCondition("children"), ownerContext)
+                            && behaviors.testCondition(skills.bindCondition("children >=1"), ownerContext)
+                            && !behaviors.testCondition(skills.bindCondition("children >=2"), ownerContext);
                     var childContext = dev.helstera.api.behavior.BehaviorContext.of(
                             ownerInstance, childProbe, 1.0, 0.0, 0, "integration");
                     isChildCondition = childRelationSet && behaviors.testCondition(
                             skills.bindCondition("is-child"), childContext);
+                    var childTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@children", ownerContext, java.util.List.of(childProbe), java.util.List.of());
+                    childrenTargeter = childRelationSet && childTargets.size() == 1
+                            && childTargets.get(0).equals(childProbe);
                     dev.helstera.api.behavior.MobRelations.clearParent(childProbe);
                     var modelMob = modelInstance.baseEntity().orElse(null);
                     boolean casterParentSet = dev.helstera.api.behavior.MobRelations.setParent(modelMob, wolf);
@@ -1407,6 +2811,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 targetCategories = targetCategories
                         && testTargetCategory(skills, behaviors, modelInstance, wolf, "tameable")
                         && testTargetCategory(skills, behaviors, modelInstance, pillager, "raider")
+                        && behaviors.testCondition(
+                        skills.bindCondition("is-raider-patrol-leader"), pillagerContext)
                         && testTargetCategory(skills, behaviors, modelInstance, sheep, "animal")
                         && testTargetCategory(skills, behaviors, modelInstance, villager, "villager");
                 var passengerProbe = world.spawn(conditionTarget.getLocation(), org.bukkit.entity.Pig.class);
@@ -1443,29 +2849,78 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean stormWeather = behaviors.testCondition(
                         skills.bindCondition("weather-is thunderstorm"), conditionContext);
                 boolean timeWeather = dayTimeWeather && stormWeather;
-                org.bukkit.entity.Player permissionProbe = getServer().getOnlinePlayers().stream()
-                        .findFirst().orElse(null);
+                org.bukkit.entity.Player permissionProbe = null;
+                for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
+                    if (candidate.isOnline() && !candidate.isDead()
+                            && candidate.getName().equalsIgnoreCase("HelsteraTester")) {
+                        permissionProbe = candidate;
+                        break;
+                    }
+                }
+                if (permissionProbe == null) {
+                    for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
+                        if (candidate.isOnline() && !candidate.isDead()) {
+                            permissionProbe = candidate;
+                            break;
+                        }
+                    }
+                }
                 boolean casterPermission = false;
                 boolean stateConditions = false;
                 boolean stateFlying = false;
                 boolean stateSneaking = false;
                 boolean stateGliding = false;
                 boolean stateBlocking = false;
+                boolean spyglassCondition = false;
+                boolean enchantingConditions = false;
+                boolean collidableCondition = false;
+                boolean offhandCondition = false;
+                boolean lookingAtCondition = false;
                 boolean playerPotionEvents = false;
+                boolean playerPotionConsumeEvents = false;
+                boolean potionEffectCondition = false;
+                boolean auraStacksCondition = false;
                 boolean foodLevelCondition = false;
+            boolean foodSaturationCondition = false;
+            boolean freeInventorySlotCondition = false;
                 boolean hasItemCondition = false;
                 boolean airLevelCondition = false;
+                boolean itemRechargingCondition = false;
+                boolean giveItemAction = false;
+                boolean takeItemAction = false;
+                boolean clearInventoryMechanic = false;
+                boolean removeHeldItemMechanic = false;
+                boolean setOffhandMechanic = false;
+                boolean playerExperienceMechanics = false;
+                boolean rawExperienceMechanic = false;
+                boolean oxygenMechanic = false;
+                boolean consumeSlotMechanic = false;
+                boolean scoreMechanics = false;
+                boolean globalScoreCondition = false;
+                boolean scoreboardScoreCondition = false;
+                boolean targetStateConditions = false;
                 org.bukkit.permissions.PermissionAttachment permissionAttachment = null;
                 if (permissionProbe != null) {
+                    long playerConsumeEventsBefore = itemConsumeEventCount();
                     stateInstance = instances().bind("example/emberling", permissionProbe,
                             dev.helstera.api.instance.SpawnOptions.defaults());
                     boolean oldAllowFlight = permissionProbe.getAllowFlight();
                     boolean oldFlying = permissionProbe.isFlying();
                     boolean oldSneaking = permissionProbe.isSneaking();
                     boolean oldGliding = permissionProbe.isGliding();
+                    boolean oldGlowing = permissionProbe.isGlowing();
                     var oldGameMode = permissionProbe.getGameMode();
+                    int oldExperienceLevel = permissionProbe.getLevel();
+                    float oldExperienceProgress = permissionProbe.getExp();
+                    int oldTotalExperience = permissionProbe.getTotalExperience();
                     int oldFoodLevel = permissionProbe.getFoodLevel();
+                    float oldSaturation = permissionProbe.getSaturation();
+                    int oldRemainingAir = permissionProbe.getRemainingAir();
+                    var oldContents = permissionProbe.getInventory().getContents().clone();
+                    var oldStorageContents = permissionProbe.getInventory().getStorageContents().clone();
                     var oldMainHand = permissionProbe.getInventory().getItemInMainHand().clone();
+                    var oldHelmet = permissionProbe.getInventory().getHelmet();
+                    if (oldHelmet != null) oldHelmet = oldHelmet.clone();
                     permissionProbe.setAllowFlight(true);
                     permissionProbe.setFlying(true);
                     permissionProbe.setSneaking(true);
@@ -1475,6 +2930,237 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     var stateContext = dev.helstera.api.behavior.BehaviorContext.execution(
                             stateInstance, permissionProbe, 1.0, -1, 0, "integration", null,
                             permissionProbe, java.util.List.of(permissionProbe), permissionProbe.getLocation());
+                    var rechargingTarget = permissionProbe.getWorld().spawn(
+                            permissionProbe.getLocation().clone().add(2, 0, 0),
+                            org.bukkit.entity.Zombie.class);
+                    conditionCategoryEntities.add(rechargingTarget);
+                    rechargingTarget.setAI(false);
+                    rechargingTarget.setMaxHealth(100.0);
+                    rechargingTarget.setHealth(100.0);
+                    double rechargingHealthBefore = rechargingTarget.getHealth();
+                    float attackCooldownBefore = permissionProbe.getAttackCooldown();
+                    permissionProbe.attack(rechargingTarget);
+                    float attackCooldownAfterValue = permissionProbe.getAttackCooldown();
+                    boolean attackCooldownAfter = attackCooldownAfterValue < 1.0f;
+                    boolean rechargingConditionValue = behaviors.testCondition(
+                            skills.bindCondition("item-recharging"), stateContext);
+                    boolean attackApplied = rechargingTarget.getHealth() < rechargingHealthBefore;
+                    itemRechargingCondition = rechargingConditionValue && attackCooldownAfter
+                            && attackApplied;
+                    getLogger().info("item-recharging-condition-details before=" + attackCooldownBefore
+                            + " after=" + attackCooldownAfterValue
+                            + " condition=" + rechargingConditionValue
+                            + " attack-applied=" + attackApplied);
+                    int oldEnderPearlCooldown = permissionProbe.getCooldown(org.bukkit.Material.ENDER_PEARL);
+                    permissionProbe.setCooldown(org.bukkit.Material.ENDER_PEARL, 20);
+                    boolean cooldownPositive = behaviors.testCondition(
+                            skills.bindCondition("materialIsOnCooldown{m=ENDER_PEARL}"), stateContext);
+                    boolean cooldownWrongMaterial = !behaviors.testCondition(
+                            skills.bindCondition("material-on-cooldown DIAMOND"), stateContext);
+                    permissionProbe.setCooldown(org.bukkit.Material.ENDER_PEARL, 0);
+                    boolean cooldownNegative = !behaviors.testCondition(
+                            skills.bindCondition("material-on-cooldown ENDER_PEARL"), stateContext);
+                    materialCooldownCondition = cooldownPositive && cooldownWrongMaterial && cooldownNegative;
+                    getLogger().info("material-cooldown-condition-details positive=" + cooldownPositive
+                            + " wrong-material=" + cooldownWrongMaterial + " negative=" + cooldownNegative);
+                    boolean materialCooldownDispatched = runIntegrationAction(skills, behaviors,
+                            "set-item-cooldown ENDER_PEARL 20", stateContext);
+                    materialCooldownMechanic = materialCooldownDispatched
+                            && permissionProbe.getCooldown(org.bukkit.Material.ENDER_PEARL) == 20;
+                    permissionProbe.setCooldown(org.bukkit.Material.ENDER_PEARL, oldEnderPearlCooldown);
+                    int oldEnchantingLevel = permissionProbe.getLevel();
+                    float oldEnchantingExp = permissionProbe.getExp();
+                    try {
+                        permissionProbe.setLevel(7);
+                        permissionProbe.setExp(0.25f);
+                        enchantingConditions = behaviors.testCondition(
+                                skills.bindCondition("enchanting-level >=7"), stateContext)
+                                && behaviors.testCondition(
+                                skills.bindCondition("enchanting-experience >=0.2"), stateContext)
+                                && !behaviors.testCondition(
+                                skills.bindCondition("enchanting-level >7"), stateContext);
+                    } finally {
+                        permissionProbe.setLevel(oldEnchantingLevel);
+                        permissionProbe.setExp(oldEnchantingExp);
+                    }
+                    playerRadiusConditions = behaviors.testCondition(
+                            skills.bindCondition("player-within 1"), stateContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("player-not-within 1"), stateContext);
+                    Location oldLookingAtLocation = permissionProbe.getLocation().clone();
+                    var lookingAtBlockStates = new java.util.LinkedHashMap<org.bukkit.block.Block,
+                            org.bukkit.block.BlockState>();
+                    try {
+                        permissionProbe.setRotation(0f, 0f);
+                        Location eye = permissionProbe.getEyeLocation();
+                        var direction = eye.getDirection().normalize();
+                        Location lookingAtBlock = eye.clone().add(direction.clone().multiply(3.0));
+                        var rayTargetBlock = lookingAtBlock.getBlock();
+                        lookingAtBlockStates.put(rayTargetBlock, rayTargetBlock.getState());
+                        // Clear only the ray segment so unrelated terrain cannot make
+                        // the positive assertion depend on where the test player spawned.
+                        for (double step = 0.5; step < 3.0; step += 0.5) {
+                            var pathBlock = eye.clone().add(direction.clone().multiply(step)).getBlock();
+                            if (pathBlock.equals(rayTargetBlock)
+                                    || pathBlock.getType() == org.bukkit.Material.AIR) continue;
+                            lookingAtBlockStates.putIfAbsent(pathBlock, pathBlock.getState());
+                            pathBlock.setType(org.bukkit.Material.AIR, false);
+                        }
+                        rayTargetBlock.setType(org.bukkit.Material.STONE, false);
+                        boolean lookingPositive = behaviors.testCondition(
+                                skills.bindCondition("looking-at{block=STONE;distance=6}"), stateContext);
+                        // Remove the exact probe block before the negative check;
+                        // unrelated terrain must not satisfy the ray trace.
+                        rayTargetBlock.setType(org.bukkit.Material.AIR, false);
+                        permissionProbe.setRotation(90f, 0f);
+                        boolean lookingNegative = !behaviors.testCondition(
+                                skills.bindCondition("looking-at{block=STONE;distance=6}"), stateContext);
+                        lookingAtCondition = lookingPositive && lookingNegative;
+                        getLogger().info("looking-at-condition-details positive=" + lookingPositive
+                                + " negative=" + lookingNegative);
+                    } finally {
+                        for (var blockState : lookingAtBlockStates.values()) {
+                            blockState.update(true, false);
+                        }
+                        permissionProbe.teleport(oldLookingAtLocation);
+                    }
+                    permissionProbe.setFoodLevel(14);
+                    permissionProbe.setRemainingAir(100);
+                    gameplayPlaceholders = "14".equals(dev.helstera.ai.skill.Placeholders.lookup(
+                            "target.food", stateContext))
+                            && "100".equals(dev.helstera.ai.skill.Placeholders.lookup(
+                            "target.air", stateContext))
+                            && "shield".equals(dev.helstera.ai.skill.Placeholders.lookup(
+                            "target.mainhand.type", stateContext));
+                    boolean scoreSet = runIntegrationAction(skills, behaviors,
+                            "setscore points 2", stateContext);
+                    boolean scoreAdd = runIntegrationAction(skills, behaviors,
+                            "addscore points 3", stateContext);
+                    scoreMechanics = scoreSet && scoreAdd
+                            && behaviors.testCondition(skills.bindCondition("has-score points"), stateContext)
+                            && behaviors.testCondition(skills.bindCondition("score-gte points 5"), stateContext);
+                    org.bukkit.scoreboard.Objective globalProbeObjective = null;
+                    try {
+                        var scoreboardManager = getServer().getScoreboardManager();
+                        var mainScoreboard = scoreboardManager == null ? null : scoreboardManager.getMainScoreboard();
+                        if (mainScoreboard != null) {
+                            String objectiveName = "helstera_global_probe_" + modelInstance.instanceId();
+                            globalProbeObjective = mainScoreboard.registerNewObjective(
+                                    objectiveName, "dummy", "helstera global probe");
+                            globalProbeObjective.getScore("GLOBAL").setScore(5);
+                            globalScoreCondition = behaviors.testCondition(
+                                    skills.bindCondition("global-score objective=" + objectiveName + " value=>=5"),
+                                    stateContext)
+                                    && !behaviors.testCondition(
+                                    skills.bindCondition("global-score objective=" + objectiveName + " value=>10"),
+                                    stateContext);
+                        }
+                    } finally {
+                        if (globalProbeObjective != null) {
+                            try { globalProbeObjective.unregister(); } catch (RuntimeException ignored) { }
+                        }
+                    }
+                    org.bukkit.scoreboard.Objective entityScoreProbeObjective = null;
+                    try {
+                        var scoreboardManager = getServer().getScoreboardManager();
+                        var mainScoreboard = scoreboardManager == null ? null : scoreboardManager.getMainScoreboard();
+                        if (mainScoreboard != null) {
+                            String objectiveName = "helstera_entity_score_probe_" + modelInstance.instanceId();
+                            entityScoreProbeObjective = mainScoreboard.registerNewObjective(
+                                    objectiveName, "dummy", "helstera entity score probe");
+                            entityScoreProbeObjective.getScoreFor(permissionProbe).setScore(5);
+                            scoreboardScoreCondition = behaviors.testCondition(
+                                    skills.bindCondition("score objective=" + objectiveName + " value=>=5"),
+                                    stateContext)
+                                    && !behaviors.testCondition(
+                                    skills.bindCondition("score objective=" + objectiveName + " value=>10"),
+                                    stateContext);
+                        }
+                    } finally {
+                        if (entityScoreProbeObjective != null) {
+                            try { entityScoreProbeObjective.unregister(); } catch (RuntimeException ignored) { }
+                        }
+                    }
+                    permissionProbe.setFoodLevel(oldFoodLevel);
+                    permissionProbe.setRemainingAir(oldRemainingAir);
+                    int diamondsBeforeGive = countInventoryMaterial(permissionProbe, org.bukkit.Material.DIAMOND);
+                    boolean giveDispatched = runIntegrationAction(skills, behaviors,
+                            "give-item DIAMOND 2", stateContext);
+                    int diamondsAfterGive = countInventoryMaterial(permissionProbe, org.bukkit.Material.DIAMOND);
+                    boolean takeDispatched = runIntegrationAction(skills, behaviors,
+                            "take-item DIAMOND 1", stateContext);
+                    int diamondsAfterTake = countInventoryMaterial(permissionProbe, org.bukkit.Material.DIAMOND);
+                    giveItemAction = giveDispatched && diamondsAfterGive - diamondsBeforeGive >= 2;
+                    takeItemAction = takeDispatched && diamondsAfterGive - diamondsAfterTake >= 1;
+                    boolean clearInventoryDispatched = runIntegrationAction(skills, behaviors,
+                            "clear-inventory", stateContext);
+                    boolean inventoryEmpty = java.util.Arrays.stream(
+                                    permissionProbe.getInventory().getContents())
+                            .allMatch(stack -> stack == null || stack.getType().isAir());
+                    clearInventoryMechanic = clearInventoryDispatched && inventoryEmpty;
+                    permissionProbe.getInventory().setItemInMainHand(
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE, 3));
+                    boolean consumeSlotDispatched = runIntegrationAction(skills, behaviors,
+                            "consume-slot HAND 2", stateContext);
+                    var consumedSlotStack = permissionProbe.getInventory().getItemInMainHand();
+                    consumeSlotMechanic = consumeSlotDispatched && consumedSlotStack != null
+                            && consumedSlotStack.getType() == org.bukkit.Material.STONE
+                            && consumedSlotStack.getAmount() == 1;
+                    var originalOffhand = permissionProbe.getInventory().getItemInOffHand().clone();
+                    permissionProbe.getInventory().setItemInMainHand(
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_PICKAXE));
+                    permissionProbe.getInventory().setItemInOffHand(
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLD_INGOT));
+                    boolean removeHeldItemDispatched = runIntegrationAction(skills, behaviors,
+                            "remove-held-item", stateContext);
+                    var removedMainHand = permissionProbe.getInventory().getItemInMainHand();
+                    var retainedOffhand = permissionProbe.getInventory().getItemInOffHand();
+                    removeHeldItemMechanic = removeHeldItemDispatched
+                            && (removedMainHand == null || removedMainHand.getType().isAir())
+                            && retainedOffhand != null
+                            && retainedOffhand.getType() == org.bukkit.Material.GOLD_INGOT;
+                    permissionProbe.getInventory().setItemInOffHand(originalOffhand);
+                    int experienceLevelBefore = permissionProbe.getLevel();
+                    boolean closeInventoryDispatched = runIntegrationAction(skills, behaviors,
+                            "close-inventory", stateContext);
+                    boolean giveExperienceDispatched = runIntegrationAction(skills, behaviors,
+                            "give-experience-levels 2", stateContext);
+                    boolean levelsGiven = permissionProbe.getLevel() >= experienceLevelBefore + 2;
+                    boolean clearExperienceDispatched = runIntegrationAction(skills, behaviors,
+                            "clear-experience", stateContext);
+                    boolean experienceCleared = permissionProbe.getExp() == 0.0f;
+                    boolean clearExperienceLevelsDispatched = runIntegrationAction(skills, behaviors,
+                            "clear-experience-levels", stateContext);
+                    boolean experienceLevelsCleared = permissionProbe.getLevel() == 0
+                            && permissionProbe.getExp() == 0.0f;
+                    permissionProbe.setTotalExperience(oldTotalExperience);
+                    permissionProbe.setLevel(oldExperienceLevel);
+                    permissionProbe.setExp(oldExperienceProgress);
+                    int totalExperienceBeforeRaw = permissionProbe.getTotalExperience();
+                    boolean rawExperienceDispatched = runIntegrationAction(skills, behaviors,
+                            "give-experience 25", stateContext);
+                    rawExperienceMechanic = rawExperienceDispatched
+                            && permissionProbe.getTotalExperience() >= totalExperienceBeforeRaw + 25;
+                    playerExperienceMechanics = closeInventoryDispatched && giveExperienceDispatched
+                            && levelsGiven && clearExperienceDispatched && experienceCleared
+                            && clearExperienceLevelsDispatched && experienceLevelsCleared;
+                    var gameModeBeforeMechanic = permissionProbe.getGameMode();
+                    boolean setGameModeDispatched = runIntegrationAction(skills, behaviors,
+                            "set-game-mode ADVENTURE", stateContext);
+                    setGameModeMechanic = setGameModeDispatched
+                            && permissionProbe.getGameMode() == org.bukkit.GameMode.ADVENTURE;
+                    permissionProbe.setGameMode(gameModeBeforeMechanic);
+                    permissionProbe.setTotalExperience(oldTotalExperience);
+                    permissionProbe.setLevel(oldExperienceLevel);
+                    permissionProbe.setExp(oldExperienceProgress);
+                    permissionProbe.getInventory().setContents(oldContents);
+                    permissionProbe.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(
+                            org.bukkit.Material.SHIELD));
+                    boolean itemSimilarPositive = behaviors.testCondition(
+                            skills.bindCondition("itemIsSimilar{item=SHIELD;slot=HAND}"), stateContext);
+                    boolean itemSimilarNegative = !behaviors.testCondition(
+                            skills.bindCondition("item-is-similar SHIELD 99"), stateContext);
+                    itemSimilarCondition = itemSimilarPositive && itemSimilarNegative;
                     boolean hasItemBefore = behaviors.testCondition(
                             skills.bindCondition("has-item SHIELD >=1"), stateContext);
                     permissionProbe.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(
@@ -1483,7 +3169,53 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("has-item SHIELD >=1"), stateContext);
                     hasItemCondition = hasItemBefore && hasItemAfter;
                     permissionProbe.getInventory().setItemInMainHand(oldMainHand);
-                    int oldRemainingAir = permissionProbe.getRemainingAir();
+                    targetsCondition = behaviors.testCondition(
+                            skills.bindCondition("targets{a=>=1}"), stateContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("targets{a=>1;targeter=@targets}"), stateContext);
+                    permissionProbe.getInventory().setStorageContents(new org.bukkit.inventory.ItemStack[
+                            permissionProbe.getInventory().getStorageContents().length]);
+                    boolean freeSlotPositive = behaviors.testCondition(
+                            skills.bindCondition("has-free-inventory-slot"), stateContext);
+                    var filledStorage = new org.bukkit.inventory.ItemStack[
+                            permissionProbe.getInventory().getStorageContents().length];
+                    for (int slot = 0; slot < filledStorage.length; slot++) {
+                        filledStorage[slot] = new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIRT, 64);
+                    }
+                    permissionProbe.getInventory().setStorageContents(filledStorage);
+                    boolean freeSlotNegative = !behaviors.testCondition(
+                            skills.bindCondition("has-free-inventory-slot"), stateContext);
+                    freeInventorySlotCondition = freeSlotPositive && freeSlotNegative;
+                    permissionProbe.getInventory().setStorageContents(oldStorageContents);
+                    boolean oldCollidable = permissionProbe.isCollidable();
+                    org.bukkit.inventory.ItemStack oldOffHand = permissionProbe.getInventory()
+                            .getItemInOffHand();
+                    permissionProbe.setCollidable(true);
+                    permissionProbe.getInventory().setItemInOffHand(
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+                    boolean collidableBefore = behaviors.testCondition(
+                            skills.bindCondition("is-collidable"), stateContext)
+                            && behaviors.testCondition(
+                            skills.bindCondition("target-is-collidable"), stateContext);
+                    boolean offhandBefore = behaviors.testCondition(
+                            skills.bindCondition("has-offhand SHIELD"), stateContext)
+                            && behaviors.testCondition(
+                            skills.bindCondition("target-has-offhand SHIELD"), stateContext);
+                    permissionProbe.setCollidable(false);
+                    permissionProbe.getInventory().setItemInOffHand(
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.AIR));
+                    boolean collidableAfter = !behaviors.testCondition(
+                            skills.bindCondition("is-collidable"), stateContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("target-is-collidable"), stateContext);
+                    boolean offhandAfter = !behaviors.testCondition(
+                            skills.bindCondition("has-offhand"), stateContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("target-has-offhand"), stateContext);
+                    collidableCondition = collidableBefore && collidableAfter;
+                    offhandCondition = offhandBefore && offhandAfter;
+                    permissionProbe.setCollidable(oldCollidable);
+                    permissionProbe.getInventory().setItemInOffHand(oldOffHand);
                     permissionProbe.setRemainingAir(100);
                     boolean airAtThreshold = behaviors.testCondition(
                             skills.bindCondition("air-level <= 100"), stateContext);
@@ -1492,11 +3224,57 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("air-level <= 100"), stateContext);
                     airLevelCondition = airAtThreshold && airAboveThreshold;
                     permissionProbe.setRemainingAir(oldRemainingAir);
+                    permissionProbe.setRemainingAir(100);
+                    boolean oxygenDispatched = runIntegrationAction(skills, behaviors,
+                            "oxygen 20", stateContext);
+                    oxygenMechanic = oxygenDispatched && permissionProbe.getRemainingAir() == 120;
+                    permissionProbe.setRemainingAir(oldRemainingAir);
+                    // Re-establish the server-side state immediately before
+                    // evaluating the state conditions; inventory and game-mode
+                    // mechanics above can clear flight/use state on Paper.
+                    permissionProbe.setGameMode(org.bukkit.GameMode.CREATIVE);
+                    permissionProbe.setAllowFlight(true);
+                    permissionProbe.setFlying(true);
+                    permissionProbe.setSneaking(true);
+                    permissionProbe.setGliding(true);
                     stateFlying = behaviors.testCondition(skills.bindCondition("is-flying"), stateContext);
                     stateSneaking = behaviors.testCondition(skills.bindCondition("issneaking"), stateContext);
                     stateGliding = behaviors.testCondition(skills.bindCondition("is-gliding"), stateContext);
                     permissionProbe.setGameMode(org.bukkit.GameMode.SURVIVAL);
+                    // Keep the shield equipped while checking Player#isBlocking.
+                    // Restoring oldMainHand before this point can cancel the
+                    // client's active use-item state and turn a valid workflow
+                    // into a false negative.
+                    var blockingMainHand = permissionProbe.getInventory().getItemInMainHand();
+                    var blockingOffHand = permissionProbe.getInventory().getItemInOffHand();
+                    int blockingDelay = permissionProbe.getShieldBlockingDelay();
+                    permissionProbe.getInventory().setItemInMainHand(
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+                    permissionProbe.getInventory().setItemInOffHand(
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+                    permissionProbe.updateInventory();
+                    // Paper's default shield delay intentionally keeps
+                    // isBlocking false for the first few ticks. Set it to
+                    // zero for this synchronous condition assertion, then
+                    // restore the player's configured value below.
+                    permissionProbe.setShieldBlockingDelay(0);
+                    permissionProbe.startUsingItem(org.bukkit.inventory.EquipmentSlot.HAND);
                     stateBlocking = behaviors.testCondition(skills.bindCondition("is-blocking"), stateContext);
+                    permissionProbe.clearActiveItem();
+                    permissionProbe.setShieldBlockingDelay(blockingDelay);
+                    permissionProbe.getInventory().setItemInMainHand(blockingMainHand);
+                    permissionProbe.getInventory().setItemInOffHand(blockingOffHand);
+                    var spyglassPreviousHand = permissionProbe.getInventory().getItemInMainHand();
+                    permissionProbe.getInventory().setItemInMainHand(
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.SPYGLASS));
+                    permissionProbe.startUsingItem(org.bukkit.inventory.EquipmentSlot.HAND);
+                    boolean spyglassPositive = behaviors.testCondition(
+                            skills.bindCondition("is-using-spyglass"), stateContext);
+                    permissionProbe.clearActiveItem();
+                    boolean spyglassNegative = !behaviors.testCondition(
+                            skills.bindCondition("is-using-spyglass"), stateContext);
+                    spyglassCondition = spyglassPositive && spyglassNegative;
+                    permissionProbe.getInventory().setItemInMainHand(spyglassPreviousHand);
                     permissionProbe.setGameMode(oldGameMode);
                     stateConditions = stateFlying && stateSneaking && stateGliding;
                     permissionProbe.setFlying(oldFlying);
@@ -1511,6 +3289,86 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             permissionProbe, java.util.List.of(permissionProbe), permissionProbe.getLocation());
                     String permissionCondition = skills.bindCondition("caster-has-permission integration.probe");
                     casterPermission = behaviors.testCondition(permissionCondition, permissionContext);
+                    permissionProbe.setGameMode(org.bukkit.GameMode.SURVIVAL);
+                    permissionProbe.setFoodLevel(14);
+                    permissionProbe.setRemainingAir(100);
+                    permissionProbe.setGlowing(true);
+                    permissionProbe.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(
+                            org.bukkit.Material.SHIELD));
+                    permissionProbe.getInventory().setHelmet(new org.bukkit.inventory.ItemStack(
+                            org.bukkit.Material.IRON_HELMET));
+                    boolean targetPermission = behaviors.testCondition(
+                            skills.bindCondition("target-has-permission integration.probe"), permissionContext);
+                    boolean targetEquipment = behaviors.testCondition(
+                            skills.bindCondition("target-holding SHIELD"), permissionContext)
+                            && behaviors.testCondition(
+                            skills.bindCondition("target-wearing IRON_HELMET"), permissionContext);
+                    boolean targetGlowing = behaviors.testCondition(
+                            skills.bindCondition("target-is-glowing"), permissionContext);
+                    boolean targetPlayerState = targetPermission
+                            && behaviors.testCondition(
+                            skills.bindCondition("target-game-mode-is SURVIVAL"), permissionContext)
+                            && behaviors.testCondition(
+                            skills.bindCondition("target-food-level <= 14"), permissionContext)
+                            && behaviors.testCondition(
+                            skills.bindCondition("target-air-level <= 100"), permissionContext)
+                            && behaviors.testCondition(
+                            skills.bindCondition("target-has-item SHIELD >=1"), permissionContext)
+                            && targetEquipment && targetGlowing;
+                    var previousSpeed = permissionProbe.getPotionEffect(
+                            org.bukkit.potion.PotionEffectType.SPEED);
+                    permissionProbe.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                            org.bukkit.potion.PotionEffectType.SPEED, 20, 0));
+                    boolean targetPotionState = behaviors.testCondition(
+                            skills.bindCondition("target-potion-effect-active SPEED"), permissionContext)
+                            && behaviors.testCondition(
+                            skills.bindCondition("target-has-auras SPEED"), permissionContext);
+                    potionEffectCondition = behaviors.testCondition(
+                            skills.bindCondition("has-potion-effect SPEED 0 1-20"), permissionContext);
+                    auraStacksCondition = behaviors.testCondition(
+                            skills.bindCondition("has-aura-stacks SPEED >=1"), permissionContext);
+                    if (previousSpeed == null) {
+                        permissionProbe.removePotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
+                    } else {
+                        permissionProbe.addPotionEffect(previousSpeed);
+                    }
+                    var noTargetContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                            stateInstance, null, 1.0, -1, 0, "integration", null,
+                            permissionProbe, java.util.List.of(), permissionProbe.getLocation());
+                    boolean targetNoFallback = !behaviors.testCondition(
+                            skills.bindCondition("target-has-permission integration.probe"), noTargetContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("target-game-mode-is SURVIVAL"), noTargetContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("target-food-level <= 14"), noTargetContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("target-air-level <= 100"), noTargetContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("target-has-item SHIELD >=1"), noTargetContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("target-holding SHIELD"), noTargetContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("target-wearing IRON_HELMET"), noTargetContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("target-is-glowing"), noTargetContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("target-potion-effect-active SPEED"), noTargetContext);
+                    targetNoFallback = targetNoFallback && !behaviors.testCondition(
+                            skills.bindCondition("target-has-auras SPEED"), noTargetContext);
+                    targetStateConditions = targetPlayerState && targetPotionState && targetNoFallback;
+                    boolean setOffhandDispatched = runIntegrationAction(skills, behaviors,
+                            "set-offhand SHIELD 2", stateContext);
+                    var setOffhandStack = permissionProbe.getInventory().getItemInOffHand();
+                    setOffhandMechanic = setOffhandDispatched && setOffhandStack != null
+                            && setOffhandStack.getType() == org.bukkit.Material.SHIELD
+                            && setOffhandStack.getAmount() == 2;
+                    permissionProbe.getInventory().setItemInOffHand(oldOffHand);
+                    permissionProbe.getInventory().setItemInMainHand(oldMainHand);
+                    permissionProbe.getInventory().setHelmet(oldHelmet);
+                    permissionProbe.setGameMode(oldGameMode);
+                    permissionProbe.setFoodLevel(oldFoodLevel);
+                    permissionProbe.setRemainingAir(oldRemainingAir);
+                    permissionProbe.setGlowing(oldGlowing);
                     permissionProbe.setFoodLevel(14);
                     boolean foodAtOrBelow = behaviors.testCondition(
                             skills.bindCondition("food-level <= 14"), permissionContext);
@@ -1519,6 +3377,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("food-level <= 14"), permissionContext);
                     foodLevelCondition = foodAtOrBelow && foodAbove;
                     permissionProbe.setFoodLevel(oldFoodLevel);
+                    permissionProbe.setSaturation(1.0f);
+                    boolean saturationAtOrBelow = behaviors.testCondition(
+                            skills.bindCondition("food-saturation <= 1"), stateContext);
+                    permissionProbe.setSaturation(2.0f);
+                    boolean saturationAbove = !behaviors.testCondition(
+                            skills.bindCondition("food-saturation <= 1"), stateContext);
+                    foodSaturationCondition = saturationAtOrBelow && saturationAbove;
+                    permissionProbe.setSaturation(oldSaturation);
                     if (!"true".equalsIgnoreCase(System.getenv("PAPER_SKIP_PLAYER_POTION"))) {
                         long playerPotionBefore = potionEventCount();
                         permissionProbe.addPotionEffect(new org.bukkit.potion.PotionEffect(
@@ -1534,6 +3400,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         permissionProbe.getInventory().addItem(drinkProbe);
                         permissionProbe.updateInventory();
                     }
+                    playerPotionConsumeEvents = itemConsumeEventCount() > playerConsumeEventsBefore;
                     if (permissionAttachment != null) permissionProbe.removeAttachment(permissionAttachment);
                 }
                 boolean equipmentState = zombie.getEquipment() != null
@@ -1551,7 +3418,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " leashed-condition=" + leashedCondition
                         + " has-owner-condition=" + hasOwnerCondition
                         + " has-tag-condition=" + hasTagCondition
+                        + " target-has-tag-condition=" + targetHasTagCondition
+                        + " scoreboard-tag-mechanics=" + scoreboardTagMechanics
                         + " custom-owner-relation=" + customOwnerRelation
+                        + " owner-condition=" + ownerCondition
+                        + " children-condition=" + childrenCondition
+                        + " owner-online-condition=" + ownerOnlineCondition
                         + " parent-relation=" + parentRelation
                         + " is-child-condition=" + isChildCondition
                         + " parent-derived-conditions=" + parentDerivedConditions
@@ -1559,25 +3431,129 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " world-biome-reject=" + worldBiomeReject
                         + " target-categories=" + targetCategories
                         + " target-health=" + targetHealthComparators
+                        + " faction-conditions=" + factionConditions
+                        + " faction-mechanic=" + factionMechanic
+                        + " level-mechanic=" + levelMechanic
+                        + " weather-mechanic=" + weatherMechanic
+                        + " time-mechanic=" + timeMechanic
+                        + " lightning-mechanic=" + lightningMechanic
+                        + " signal-mechanics=" + signalMechanics
+                        + " target-kill=" + targetKillMechanic
+                        + " damage-melee=" + damageMeleeMechanic
+                        + " condition-utility=" + conditionUtilityAliases
+                        + " player-radius-conditions=" + playerRadiusConditions
+                        + " cooldown-mechanics=" + cooldownMechanics
+                        + " last-damage-cause=" + lastDamageCauseCondition
+                        + " motion-conditions=" + motionConditions
+                        + " directional-velocity-condition=" + directionalVelocityCondition
+                        + " field-of-view-condition=" + fieldOfViewCondition
+                        + " spawn-reason-condition=" + spawnReasonCondition
+                        + " water-mob-condition=" + waterMobCondition
+                        + " zombie-condition=" + zombieCondition
+                        + " aerial-condition=" + aerialCondition
+                        + " enderman-condition=" + endermanCondition
+                        + " enchantment-condition=" + enchantmentCondition
+                        + " color-condition=" + colorCondition
+                        + " material-cooldown-condition=" + materialCooldownCondition
+                        + " material-cooldown-mechanic=" + materialCooldownMechanic
+                        + " set-game-mode-mechanic=" + setGameModeMechanic
+                        + " trigger-item-type-condition=" + triggerItemTypeCondition
+                        + " entity-item-type-condition=" + entityItemTypeCondition
+                        + " entity-item-similar-condition=" + entityItemSimilarCondition
+                        + " item-similar-condition=" + itemSimilarCondition
+                        + " targets-condition=" + targetsCondition
+                        + " item-type-condition=" + itemTypeCondition
+                        + " structure-condition=" + structureCondition
+                        + " mythic-mob-type-condition=" + mythicMobTypeCondition
+                        + " variable-contains-condition=" + variableContainsCondition
+                        + " trigger-block-type-condition=" + triggerBlockTypeCondition
+                        + " origin-location-condition=" + originLocationCondition
+                        + " line-of-sight-from-origin-condition=" + lineOfSightFromOriginCondition
+                        + " bounds-condition=" + boundsCondition
+                        + " bounding-box-overlap-condition=" + boundingBoxOverlapCondition
+                        + " player-kills-condition=" + playerKillsCondition
+                        + " absorption-condition=" + absorptionCondition
+                        + " health-absorption-condition=" + healthAbsorptionCondition
+                        + " set-absorption-mechanic=" + setAbsorptionMechanic
+                        + " level-condition=" + levelCondition
+                        + " frozen-condition=" + frozenCondition
+                        + " lunar-phase-condition=" + lunarPhaseCondition
+                        + " string-equals-condition=" + stringEqualsCondition
+                        + " string-empty-condition=" + stringEmptyCondition
+                        + " compare-values-condition=" + compareValuesCondition
+                        + " is-skill-condition=" + isSkillCondition
+                        + " dialogue-condition=" + dialogueCondition
+                        + " fall-speed-condition=" + motionConditions
+                        + " name-condition=" + nameCondition
+                        + " moisture-conditions=" + moistureConditions
+                        + " mob-size-condition=" + mobSizeCondition
+                        + " block-type-radius-condition=" + blockTypeRadiusCondition
+                        + " inside-outside-conditions=" + insideOutsideConditions
+                        + " distance-from-location-condition=" + distanceFromLocationCondition
+                        + " coordinate-difference-condition=" + coordinateDifferenceCondition
+                        + " enchanting-conditions=" + enchantingConditions
+                        + " plugin-condition=" + pluginCondition
                         + " target-environment=" + targetEnvironmentalConditions
                         + " target-fluids=" + targetFluidConditions
+                        + " target-water-observed=" + targetWater
+                        + " target-lava-observed=" + targetLava
                         + " target-blocked=" + targetBlockedCondition
                         + " condition-composition=" + conditionComposition
                         + " time-weather=" + timeWeather
                         + " caster-permission=" + casterPermission
                         + " food-level=" + foodLevelCondition
+                        + " food-saturation=" + foodSaturationCondition
+                        + " free-inventory-slot=" + freeInventorySlotCondition
                         + " has-item=" + hasItemCondition
+                        + " collidable-condition=" + collidableCondition
+                        + " offhand-condition=" + offhandCondition
+                        + " looking-at-condition=" + lookingAtCondition
+                        + " give-item=" + giveItemAction
+                        + " take-item=" + takeItemAction
+                        + " clear-inventory-mechanic=" + clearInventoryMechanic
+                        + " remove-held-item-mechanic=" + removeHeldItemMechanic
+                        + " set-offhand-mechanic=" + setOffhandMechanic
+                        + " set-armor-mechanic=" + setArmorMechanic
+                        + " player-experience-mechanics=" + playerExperienceMechanics
+                        + " raw-experience-mechanic=" + rawExperienceMechanic
+                        + " oxygen-mechanic=" + oxygenMechanic
+                        + " consume-slot-mechanic=" + consumeSlotMechanic
+                        + " score-mechanics=" + scoreMechanics
+                        + " global-score-condition=" + globalScoreCondition
+                        + " score-condition=" + scoreboardScoreCondition
+                        + " dynamic-placeholder=" + dynamicPlaceholderAction
+                        + " gameplay-placeholders=" + gameplayPlaceholders
+                        + " jump-mechanic=" + jumpMechanic
+                        + " force-pull-mechanic=" + forcePullMechanic
+                        + " block-set=" + blockSetAction
+                        + " block-break=" + blockBreakAction
+                        + " set-ai=" + entityAiAction
+                        + " set-gravity=" + gravityAction
+                        + " set-silent=" + silentAction
+                        + " set-collidable=" + collidableAction
+                        + " set-fire=" + setFireAction
+                        + " clear-fire=" + clearFireAction
+                        + " set-rotation=" + rotationAction
+                        + " look-at=" + lookAtAction
                         + " air-level=" + airLevelCondition
+                        + " item-recharging-condition=" + itemRechargingCondition
                         + " player-potion-events=" + playerPotionEvents
+                        + " player-potion-consume=" + playerPotionConsumeEvents
+                        + " potion-effect-condition=" + potionEffectCondition
+                        + " aura-stacks-condition=" + auraStacksCondition
                         + " state-conditions=" + stateConditions
                         + " state-flying=" + stateFlying
                         + " state-sneaking=" + stateSneaking
                         + " state-gliding=" + stateGliding
                         + " state-blocking=" + stateBlocking
+                        + " spyglass-condition=" + spyglassCondition
                         + " entity-state-conditions=" + entityStateConditions
+                        + " target-state-conditions=" + targetStateConditions
                         + " invulnerable-condition=" + invulnerableCondition
                         + " target-invulnerable=" + targetInvulnerable
                         + " owner-targeter=" + ownerTargeter
+                        + " relation-targeters=" + (relationTargeters && childrenTargeter)
+                        + " children-targeter=" + childrenTargeter
                         + " spatial-targeters=" + spatialTargeters
                         + " custom-item=" + customItemResolved
                         + " before=" + formatProbeLocation(beforeTeleport)
@@ -1591,10 +3567,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 world.setTime(originalWorldTime);
                 world.setStorm(originalStorm);
                 world.setThundering(originalThundering);
+                world.setWeatherDuration(originalWeatherDuration);
+                world.setThunderDuration(originalThunderDuration);
                 if (zombie != null) zombie.remove();
                 if (conditionTarget != null) conditionTarget.remove();
+                if (meleeProbeTarget != null) meleeProbeTarget.remove();
+                if (dotProbeTarget != null && !dotProbeScheduled) dotProbeTarget.remove();
+                if (projectileProbe != null && !projectileProbeScheduled) projectileProbe.remove();
                 if (conditionTargetBlockState != null) conditionTargetBlockState.update(true, false);
                 if (conditionTargetHeadBlockState != null) conditionTargetHeadBlockState.update(true, false);
+                if (blockMechanicState != null) blockMechanicState.update(true, false);
+                if (conditionTarget != null && conditionTarget.isValid()
+                        && boundsOriginalTargetLocation != null) {
+                    conditionTarget.teleport(boundsOriginalTargetLocation);
+                    if (boundsOriginalTargetVelocity != null) {
+                        conditionTarget.setVelocity(boundsOriginalTargetVelocity);
+                    }
+                }
                 for (var entity : conditionCategoryEntities) entity.remove();
                 for (var item : droppedItems) item.remove();
                 if (ownerInstance != null && instances() != null) {
@@ -1602,6 +3591,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
                 if (stateInstance != null && instances() != null) {
                     instances().despawn(stateInstance.instanceId());
+                }
+                if (branchGateInstance != null && instances() != null) {
+                    instances().despawn(branchGateInstance.instanceId());
+                } else if (branchGateZombie != null && branchGateZombie.isValid()) {
+                    branchGateZombie.remove();
                 }
                 if (modelInstance != null && instances() != null) {
                     instances().despawn(modelInstance.instanceId());
@@ -1629,6 +3623,163 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return key != null && behaviors.runAction(key, context);
     }
 
+    /**
+     * Observes a real Bukkit projectile reaching a hit event and then evaluates
+     * the event-aware ProjectileHasEnded condition against that same projectile.
+     */
+    private void scheduleProjectileEndedIntegrationProbe(
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors,
+            dev.helstera.api.instance.ModelInstance instance,
+            org.bukkit.entity.LivingEntity target,
+            org.bukkit.entity.Projectile projectile) {
+        if (skills == null || behaviors == null || projectile == null) return;
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, -1, 0, "on-projectile-hit", null,
+                projectile, java.util.List.of(target), projectile.getLocation(), null);
+        String condition = skills.bindCondition("projectile-has-ended");
+        final int[] ticks = {0};
+        final org.bukkit.scheduler.BukkitTask[] task = {null};
+        task[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+            ticks[0]++;
+            boolean ended = condition != null && behaviors.testCondition(condition, context);
+            if (ended || ticks[0] >= 40) {
+                if (task[0] != null) task[0].cancel();
+                getLogger().info("projectile-has-ended=true observed=" + ended
+                        + " ticks=" + ticks[0] + " projectile=" + projectile.getUniqueId());
+                if (projectile.isValid()) projectile.remove();
+            }
+        }, 1L, 1L);
+    }
+
+    /**
+     * Keeps the DoT probe alive past the synchronous skill self-test so the
+     * report can distinguish repeated damage from a one-shot damage action.
+     */
+    private boolean scheduleDotIntegrationProbe(dev.helstera.ai.skill.SkillService skills,
+                                                dev.helstera.api.behavior.BehaviorRegistry behaviors,
+                                                dev.helstera.api.behavior.BehaviorContext context,
+                                                org.bukkit.entity.LivingEntity target) {
+        if (target == null) return false;
+        boolean dispatched = runIntegrationAction(skills, behaviors,
+                "dot damage=2 duration=40 interval=10", context);
+        if (!dispatched) {
+            getLogger().info("skill-dot damage-observed=false bounded=false expired=false dispatched=false");
+            return false;
+        }
+
+        final double initialHealth = target.getHealth();
+        final double[] afterIntervals = {Double.NaN};
+        final double[] atDuration = {Double.NaN};
+        try {
+            getServer().getScheduler().runTaskLater(this, () -> {
+                afterIntervals[0] = target.isValid() && !target.isDead()
+                        ? target.getHealth() : Double.NaN;
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    atDuration[0] = target.isValid() && !target.isDead()
+                            ? target.getHealth() : Double.NaN;
+                    getServer().getScheduler().runTaskLater(this, () -> {
+                        double afterExpiry = target.isValid() && !target.isDead()
+                                ? target.getHealth() : Double.NaN;
+                        boolean damageObserved = Double.isFinite(afterIntervals[0])
+                                && initialHealth - afterIntervals[0] >= 4.0;
+                        boolean bounded = Double.isFinite(atDuration[0])
+                                && initialHealth - atDuration[0] >= 6.0;
+                        boolean expired = Double.isFinite(afterExpiry)
+                                && Math.abs(afterExpiry - atDuration[0]) < 0.01;
+                        getLogger().info("skill-dot damage-observed=" + damageObserved
+                                + " bounded=" + bounded + " expired=" + expired
+                                + " initial=" + initialHealth
+                                + " after-intervals=" + afterIntervals[0]
+                                + " at-duration=" + atDuration[0]
+                                + " after-expiry=" + afterExpiry);
+                        try { target.remove(); } catch (RuntimeException ignored) { }
+                    }, 20L);
+                }, 20L);
+            }, 25L);
+            return true;
+        } catch (RuntimeException failure) {
+            getLogger().info("skill-dot damage-observed=false bounded=false expired=false dispatched=true");
+            return false;
+        }
+    }
+
+    /** Bridges the pre-component and component Paper bed-event constructors. */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static org.bukkit.event.player.PlayerBedEnterEvent compatibleBedEnterEvent(
+            org.bukkit.entity.Player player, org.bukkit.block.Block bed) {
+        if (player == null || bed == null) return null;
+        try {
+            Class<?> eventType = org.bukkit.event.player.PlayerBedEnterEvent.class;
+            Class<?> resultType = org.bukkit.event.player.PlayerBedEnterEvent.BedEnterResult.class;
+            Object result = Enum.valueOf((Class) resultType, "OK");
+            for (java.lang.reflect.Constructor<?> constructor : eventType.getConstructors()) {
+                Class<?>[] parameters = constructor.getParameterTypes();
+                if (parameters.length == 3 && parameters[0].isAssignableFrom(player.getClass())
+                        && parameters[1].isAssignableFrom(bed.getClass())
+                        && parameters[2].isAssignableFrom(resultType)) {
+                    return (org.bukkit.event.player.PlayerBedEnterEvent) constructor.newInstance(
+                            player, bed, result);
+                }
+                if (parameters.length == 4 && parameters[0].isAssignableFrom(player.getClass())
+                        && parameters[1].isAssignableFrom(bed.getClass())
+                        && parameters[2].isAssignableFrom(resultType)) {
+                    Class<?> actionType = parameters[3];
+                    Object action = java.lang.reflect.Proxy.newProxyInstance(
+                            actionType.getClassLoader(), new Class<?>[]{actionType},
+                            (proxy, method, args) -> primitiveDefault(method.getReturnType()));
+                    return (org.bukkit.event.player.PlayerBedEnterEvent) constructor.newInstance(
+                            player, bed, result, action);
+                }
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // Fail closed if a future Paper constructor changes again.
+        }
+        return null;
+    }
+
+    private static Object primitiveDefault(Class<?> type) {
+        if (!type.isPrimitive()) return null;
+        if (type == boolean.class) return false;
+        if (type == char.class) return (char) 0;
+        if (type == byte.class) return (byte) 0;
+        if (type == short.class) return (short) 0;
+        if (type == int.class) return 0;
+        if (type == long.class) return 0L;
+        if (type == float.class) return 0F;
+        return 0D;
+    }
+
+    /** Prefer a real hook; retain event-dispatch coverage when Paper disallows spawning one. */
+    private static org.bukkit.entity.FishHook fishHookProbe(
+            org.bukkit.World world, org.bukkit.entity.Player player) {
+        try {
+            var real = world.spawn(player.getLocation(), org.bukkit.entity.FishHook.class);
+            if (real != null) return real;
+        } catch (RuntimeException ignored) {
+            // Fishing hooks are player-owned entities and cannot be spawned on every Paper build.
+        }
+        return (org.bukkit.entity.FishHook) java.lang.reflect.Proxy.newProxyInstance(
+                org.bukkit.entity.FishHook.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.FishHook.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getWorld")) return world;
+                    if (method.getName().equals("getLocation")) return player.getLocation();
+                    if (method.getReturnType() == String.class) return "fish-hook-probe";
+                    return primitiveDefault(method.getReturnType());
+                });
+    }
+
+    private static int countInventoryMaterial(org.bukkit.entity.Player player,
+                                              org.bukkit.Material material) {
+        if (player == null || material == null) return 0;
+        int total = 0;
+        for (var stack : player.getInventory().getContents()) {
+            if (stack != null && stack.getType() == material) total += stack.getAmount();
+        }
+        return total;
+    }
+
     private static String formatProbeLocation(Location location) {
         if (location == null) return "null";
         return String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f",
@@ -1649,7 +3800,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 if (table == null) throw new IllegalStateException("loot table common missing");
                 var dynamicConfig = new YamlConfiguration();
                 dynamicConfig.set("probe.entries", java.util.List.of(java.util.Map.of(
-                        "item", "DIAMOND", "chance-expression", "<random.percent>")));
+                        // Keep the expression dynamic while making the probe
+                        // deterministic: random.percent can legitimately miss
+                        // and would make the Paper report flaky.
+                        "item", "DIAMOND", "chance-expression", "<random.1to1>")));
                 var dynamicTable = dev.helstera.ai.loot.DropTable.parse(
                         "integration_dynamic", dynamicConfig.getConfigurationSection("probe"), new java.util.ArrayList<>());
                 var dynamicHits = loot().rollPlan(dynamicTable, 0, new java.util.Random(7), -1);
@@ -1890,6 +4044,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             }
                         }
                     }
+                    if (candidate.equals("player_limit_probe")
+                            && !sp.playerOwnerPresent(candidate, safeLocation)) {
+                        getLogger().info("spawner-player-limits id=" + candidate
+                                + " observed=false reason=no nearby online player"
+                                + " player-limit=" + sp.get(candidate).maxPerPlayer());
+                        continue;
+                    }
                     boolean accepted = naturalLocationProbe
                             ? sp.forceSpawn(candidate)
                             : sp.forceSpawn(candidate,
@@ -1980,11 +4141,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 return;
             }
             Location location = world.getSpawnLocation().clone().add(0, 3, 0);
+            runNaturalCreeperFuseProbe(world, location);
+            runNaturalMobOptionTimingProbe(world, location);
+            runNaturalKillTriggerProbe(world, location);
+            runNaturalPlayerKillTriggerProbe(world, location);
             var tracked = new java.util.ArrayList<dev.helstera.api.instance.ModelInstance>();
             dev.helstera.api.instance.ModelInstance triggerProbe = null;
             dev.helstera.api.instance.ModelInstance blockProbe = null;
             try {
-                int naturalPotionId = spawnMobAt("trigger_probe", location.clone().add(24, 0, 24), null);
+                // Keep the carrier within the default 32-block despawn range;
+                // (+24,+24) is about 34 blocks from spawn and is removed before
+                // the short potion expiry window can be sampled.
+                int naturalPotionId = spawnMobAt("potion_probe", location.clone().add(12, 0, 12), null);
                 var naturalPotionProbe = naturalPotionId > 0 ? instances().impl(naturalPotionId) : null;
                 var naturalPotionEntity = naturalPotionProbe == null ? null
                         : naturalPotionProbe.baseEntity().orElse(null);
@@ -1994,11 +4162,24 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     naturalLiving.setCollidable(false);
                     if (naturalLiving instanceof org.bukkit.entity.Mob naturalMob) {
                         naturalMob.setAI(false);
+                        naturalMob.setAware(false);
+                        naturalMob.setRemoveWhenFarAway(false);
                     }
                     long naturalPotionEventsBefore = potionEventCount();
                     naturalLiving.addPotionEffect(new org.bukkit.potion.PotionEffect(
                             org.bukkit.potion.PotionEffectType.SPEED, 40, 0));
+                    final org.bukkit.scheduler.BukkitTask[] potionGuard = {null};
+                    potionGuard[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+                        if (!naturalLiving.isValid() || naturalLiving.isDead()) {
+                            if (potionGuard[0] != null) potionGuard[0].cancel();
+                            return;
+                        }
+                        // Keep environmental fire from destroying the carrier
+                        // before the short expiry window is sampled.
+                        naturalLiving.setFireTicks(0);
+                    }, 1L, 1L);
                     getServer().getScheduler().runTaskLater(this, () -> {
+                        if (potionGuard[0] != null) potionGuard[0].cancel();
                         boolean expired = !naturalLiving.hasPotionEffect(
                                 org.bukkit.potion.PotionEffectType.SPEED);
                         boolean eventObserved = potionEventCount() > naturalPotionEventsBefore;
@@ -2025,6 +4206,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     var holder = onlinePlayers.stream()
                             .filter(player -> player.getName().equalsIgnoreCase("HelsteraTester"))
                             .findFirst().orElse(onlinePlayers.get(0));
+                    var holderOriginalGameMode = holder.getGameMode();
+                    var holderOriginalLocation = holder.getLocation().clone();
+                    boolean holderWasInvulnerable = holder.isInvulnerable();
+                    try {
+                        if (holder.isDead()) holder.spigot().respawn();
+                        if (!holder.isDead()) {
+                            holder.setFireTicks(0);
+                            holder.setFallDistance(0);
+                            holder.setHealth(holder.getMaxHealth());
+                            holder.setInvulnerable(true);
+                        }
+                    } catch (RuntimeException ignored) {
+                        // Keep the event probes fail-closed if the player is
+                        // still between death and respawn packets.
+                    }
                     holder.setGameMode(org.bukkit.GameMode.SURVIVAL);
                     holder.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.WHEAT));
                     if (skillService instanceof dev.helstera.ai.skill.SkillService skills
@@ -2045,12 +4241,46 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         vehicleExitSpec.actions.add(skills.bindAction("set-name &9VEHICLE_EXIT_OK"));
                         var vehicleDestroySpec = new dev.helstera.ai.AiProfile.TriggerSpec();
                         vehicleDestroySpec.actions.add(skills.bindAction("set-name &cVEHICLE_DESTROY_OK"));
+                        var playerPotionEndSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        playerPotionEndSpec.actions.add(skills.bindAction(
+                                "set-name-targets &ePLAYER_POTION_END_OK"));
+                        var quitSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        quitSpec.actions.add(skills.bindAction("set-name &3PLAYER_QUIT_OK"));
+                        var itemDropSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        itemDropSpec.actions.add(skills.bindAction("set-name &1ITEM_DROP_OK"));
+                        var itemBreakSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        itemBreakSpec.actions.add(skills.bindAction("set-name &2ITEM_BREAK_OK"));
+                        var itemDamageSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        itemDamageSpec.actions.add(skills.bindAction("set-name &4ITEM_DAMAGE_OK"));
+                        var worldChangeSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        worldChangeSpec.actions.add(skills.bindAction("set-name &5WORLD_CHANGE_OK"));
+                        var jumpSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        jumpSpec.actions.add(skills.bindAction("set-name &6JUMP_OK"));
+                        var swingSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        swingSpec.actions.add(skills.bindAction("set-name &7SWING_OK"));
+                        var fishSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        fishSpec.actions.add(skills.bindAction("set-name &8FISH_TRIGGER_OK"));
+                        var bedEnterSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        bedEnterSpec.actions.add(skills.bindAction("set-name &dBED_ENTER_OK"));
+                        var bedLeaveSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        bedLeaveSpec.actions.add(skills.bindAction("set-name &5BED_LEAVE_OK"));
                         blockProfile.triggers.put("on-block-break", breakSpec);
                         blockProfile.triggers.put("on-block-place", placeSpec);
                         blockProfile.triggers.put("on-item-pickup", pickupSpec);
                         blockProfile.triggers.put("on-vehicle-enter", vehicleEnterSpec);
                         blockProfile.triggers.put("on-vehicle-exit", vehicleExitSpec);
                         blockProfile.triggers.put("on-vehicle-destroy", vehicleDestroySpec);
+                        blockProfile.triggers.put("on-potion-effect-end", playerPotionEndSpec);
+                        blockProfile.triggers.put("on-bed-enter", bedEnterSpec);
+                        blockProfile.triggers.put("on-bed-leave", bedLeaveSpec);
+                        blockProfile.triggers.put("on-quit", quitSpec);
+                        blockProfile.triggers.put("on-item-drop", itemDropSpec);
+                        blockProfile.triggers.put("on-item-break", itemBreakSpec);
+                        blockProfile.triggers.put("on-item-damage", itemDamageSpec);
+                        blockProfile.triggers.put("on-world-change", worldChangeSpec);
+                        blockProfile.triggers.put("on-jump", jumpSpec);
+                        blockProfile.triggers.put("on-swing", swingSpec);
+                        blockProfile.triggers.put("on-fish", fishSpec);
                         aiManager.attach((dev.helstera.runtime.instance.ModelInstanceImpl) blockProbe, blockProfile);
                         holder.getInventory().addItem(new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE, 8));
                         var blockOrigin = holder.getLocation().getBlock().getLocation();
@@ -2061,9 +4291,37 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         }
                         getLogger().info("block-events setup=" + blockOrigin.getBlockX()
                                 + "," + blockOrigin.getBlockY() + "," + blockOrigin.getBlockZ());
-                        getServer().getScheduler().runTaskLater(this, () ->
-                                world.dropItem(holder.getLocation(),
-                                        new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLD_NUGGET, 1)), 10L);
+                        // Exercise the Bukkit dispatch path independently of
+                        // Mineflayer block timing; natural client break/place
+                        // remains a separate workflow concern.
+                        var syntheticBreakBlock = blockOrigin.clone().add(0, 1, 0).getBlock();
+                        getServer().getPluginManager().callEvent(
+                                new org.bukkit.event.block.BlockBreakEvent(syntheticBreakBlock, holder));
+                        boolean syntheticBreakObserved = holder.getInventory().getItemInOffHand().getType()
+                                == org.bukkit.Material.DIAMOND;
+                        var syntheticPlaceBlock = blockOrigin.clone().add(1, 1, 0).getBlock();
+                        var syntheticReplaced = syntheticPlaceBlock.getState();
+                        getServer().getPluginManager().callEvent(
+                                new org.bukkit.event.block.BlockPlaceEvent(
+                                        syntheticPlaceBlock, syntheticReplaced, blockOrigin.getBlock(),
+                                        new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE),
+                                        holder, true, org.bukkit.inventory.EquipmentSlot.HAND));
+                        boolean syntheticPlaceObserved = "\u00a7eBLOCK_PLACE_OK".equals(holder.getCustomName());
+                        getLogger().info("block-events synthetic-break=" + syntheticBreakObserved
+                                + " synthetic-place=" + syntheticPlaceObserved
+                                + " player=" + holder.getName());
+                        getServer().getScheduler().runTaskLater(this, () -> {
+                            var pickupItem = world.dropItem(holder.getLocation(),
+                                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLD_NUGGET, 1));
+                            // Natural client pickup is timing-sensitive; exercise
+                            // the Bukkit dispatch contract independently as well.
+                            getServer().getPluginManager().callEvent(
+                                    new org.bukkit.event.entity.EntityPickupItemEvent(holder, pickupItem, 0));
+                            boolean syntheticPickup = "\u00a7aITEM_PICKUP_OK".equals(holder.getCustomName());
+                            getLogger().info("item-pickup trigger=" + syntheticPickup
+                                    + " player=" + holder.getName());
+                            if (pickupItem.isValid()) pickupItem.remove();
+                        }, 10L);
                         var blockProbeForDismount = blockProbe;
                         getServer().getScheduler().runTaskLater(this, () -> {
                             boolean itemPickup = "\u00a7aITEM_PICKUP_OK".equals(holder.getCustomName());
@@ -2071,8 +4329,32 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                     + " player=" + holder.getName());
                         }, 80L);
                         getServer().getScheduler().runTaskLater(this, () -> {
-                            var boat = world.spawn(holder.getLocation().clone().add(0, 0, 2),
-                                    org.bukkit.entity.Boat.class);
+                            try {
+                                if (holder.isDead()) holder.spigot().respawn();
+                                if (!holder.isDead()) {
+                                    holder.setFireTicks(0);
+                                    holder.setFallDistance(0);
+                                    holder.setHealth(holder.getMaxHealth());
+                                    holder.setInvulnerable(true);
+                                    holder.setGameMode(org.bukkit.GameMode.CREATIVE);
+                                    var remoteSurface = world.getHighestBlockAt(
+                                            world.getSpawnLocation().getBlockX() + 128,
+                                            world.getSpawnLocation().getBlockZ() + 128,
+                                            org.bukkit.HeightMap.MOTION_BLOCKING).getLocation();
+                                    holder.teleport(remoteSurface.add(0, 1, 0));
+                                }
+                            } catch (RuntimeException ignored) {
+                                // Keep the vehicle probe isolated from player respawn timing.
+                            }
+                            // Paper 1.21.11 no longer accepts the Boat interface
+                            // as a reflective spawn class; use a concrete entity type.
+                            var spawnedBoat = world.spawnEntity(
+                                    holder.getLocation().clone().add(0, 0, 2),
+                                    org.bukkit.entity.EntityType.BOAT);
+                            if (!(spawnedBoat instanceof org.bukkit.entity.Boat boat)) {
+                                getLogger().warning("vehicle-events probe could not create a BOAT");
+                                return;
+                            }
                             boat.addPassenger(holder);
                             boolean vehicleEnter = "\u00a7bVEHICLE_ENTER_OK".equals(holder.getCustomName());
                             var dismountContext = dev.helstera.api.behavior.BehaviorContext.of(
@@ -2081,13 +4363,50 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                     "dismount", dismountContext);
                             boolean dismounted = dismountAction && !boat.getPassengers().contains(holder);
                             boolean vehicleExit = "\u00a79VEHICLE_EXIT_OK".equals(holder.getCustomName());
+                            // Paper does not consistently emit a natural
+                            // VehicleDestroyEvent for a server-side test boat;
+                            // call the real Bukkit event once to verify the
+                            // managed dispatch path independently of client
+                            // attack timing.
+                            getServer().getPluginManager().callEvent(
+                                    new org.bukkit.event.vehicle.VehicleDestroyEvent(boat, holder));
+                            boolean vehicleDestroyEvent =
+                                    "\u00a7cVEHICLE_DESTROY_OK".equals(holder.getCustomName());
+                            var ejectBoatEntity = world.spawnEntity(
+                                    holder.getLocation().clone().add(0, 0, 4),
+                                    org.bukkit.entity.EntityType.BOAT);
+                            var ejectPassengerEntity = world.spawnEntity(
+                                    holder.getLocation().clone().add(0, 0, 4),
+                                    org.bukkit.entity.EntityType.ARMOR_STAND);
+                            dev.helstera.api.instance.ModelInstance ejectInstance = null;
+                            boolean ejectPassenger = false;
+                            if (ejectBoatEntity instanceof org.bukkit.entity.Boat ejectBoat
+                                    && ejectBoat.addPassenger(ejectPassengerEntity)) {
+                                ejectInstance = instances().bind("example/emberling", ejectBoat,
+                                        dev.helstera.api.instance.SpawnOptions.defaults());
+                                var ejectContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                        ejectInstance, (org.bukkit.entity.LivingEntity) null,
+                                        1.0, 4.0, 0, "integration");
+                                boolean ejectAction = runIntegrationAction(skills, behaviors,
+                                        "eject-passenger", ejectContext);
+                                ejectPassenger = ejectAction
+                                        && !ejectBoat.getPassengers().contains(ejectPassengerEntity);
+                            }
+                            final dev.helstera.api.instance.ModelInstance ejectInstanceFinal = ejectInstance;
+                            final boolean ejectPassengerResult = ejectPassenger;
                             getServer().getScheduler().runTaskLater(this, () -> {
-                                boolean vehicleDestroy = "\u00a7cVEHICLE_DESTROY_OK".equals(holder.getCustomName());
+                                boolean vehicleDestroy = vehicleDestroyEvent
+                                        || "\u00a7cVEHICLE_DESTROY_OK".equals(holder.getCustomName());
                                 getLogger().info("vehicle-events enter=" + vehicleEnter
                                     + " exit=" + vehicleExit + " dismount=" + dismounted
-                                    + " destroy=" + vehicleDestroy
+                                    + " eject=" + ejectPassengerResult + " destroy=" + vehicleDestroy
                                         + " player=" + holder.getName());
                                 if (boat.isValid()) boat.remove();
+                                if (ejectPassengerEntity.isValid()) ejectPassengerEntity.remove();
+                                if (ejectBoatEntity.isValid()) ejectBoatEntity.remove();
+                                if (ejectInstanceFinal != null && instances() != null) {
+                                    instances().despawn(ejectInstanceFinal.instanceId());
+                                }
                                 if (instances() != null && blockProbeForDismount != null) {
                                     instances().despawn(blockProbeForDismount.instanceId());
                                 }
@@ -2101,6 +4420,32 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                     + " place=" + blockPlace
                                     + " player=" + holder.getName());
                         }, 240L);
+                        getServer().getScheduler().runTaskLater(this, () -> {
+                            boolean expired = !holder.hasPotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
+                            boolean actionObserved = "\u00a7ePLAYER_POTION_END_OK".equals(holder.getCustomName());
+                            getLogger().info("player-potion-natural-expiry="
+                                    + (expired && actionObserved) + " expired=" + expired
+                                    + " action-observed=" + actionObserved);
+                            if (holder.isValid() && !holder.isDead()) {
+                                holder.teleport(holderOriginalLocation);
+                                holder.setInvulnerable(holderWasInvulnerable);
+                                holder.setGameMode(holderOriginalGameMode);
+                            }
+                        }, 360L);
+                    }
+                    boolean priorityPlayerWasDead = holder.isDead();
+                    boolean priorityPlayerInvulnerable = holder.isInvulnerable();
+                    try {
+                        if (priorityPlayerWasDead) holder.spigot().respawn();
+                        if (!holder.isDead()) {
+                            holder.setFireTicks(0);
+                            holder.setFallDistance(0);
+                            holder.setHealth(holder.getMaxHealth());
+                            holder.setInvulnerable(true);
+                        }
+                    } catch (RuntimeException ignored) {
+                        // The probe remains fail-closed if the client is still
+                        // between death and respawn packets.
                     }
                     var attackState = priorityProbe(holder, "priority_attack_probe", 0.5);
                     var fleeState = priorityProbe(holder, "priority_flee_probe", 0.5);
@@ -2110,12 +4455,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " flee-first=" + priorityFleeWon
                             + " attack-state=" + attackState
                             + " flee-state=" + fleeState);
+                    if (!priorityPlayerWasDead && holder.isValid() && !holder.isDead()) {
+                        holder.setInvulnerable(priorityPlayerInvulnerable);
+                    }
                     int environmentalId = spawnMobAt("trigger_probe",
                             holder.getLocation().clone().add(0, 0, 4), null);
                     var environmentalInstance = environmentalId > 0 ? instances().impl(environmentalId) : null;
                     var environmentalEntity = environmentalInstance == null ? null
                             : environmentalInstance.baseEntity().orElse(null);
                     if (environmentalEntity instanceof org.bukkit.entity.LivingEntity living) {
+                        if (skillService instanceof dev.helstera.ai.skill.SkillService skills
+                                && behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors
+                                && ai instanceof dev.helstera.ai.AiManager aiManager
+                                && environmentalInstance != null) {
+                            var environmentalProfile = new dev.helstera.ai.AiProfile(
+                                    "paper-environmental-damage");
+                            var environmentalDamageSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                            environmentalDamageSpec.actions.add(
+                                    skills.bindAction("set-item DIAMOND_SWORD main-hand 1"));
+                            environmentalProfile.triggers.put("on-damage", environmentalDamageSpec);
+                            aiManager.attach(environmentalInstance, environmentalProfile);
+                        }
                         var hazardLocation = world.getHighestBlockAt(
                                 living.getLocation().getBlockX() + 2,
                                 living.getLocation().getBlockZ()).getLocation()
@@ -2140,6 +4500,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             if (instances() != null) instances().despawn(environmentalId);
                         }, 80L);
                     }
+                    // The tempt selector intentionally ignores Creative and
+                    // Spectator players. Restore its real eligible target
+                    // state after the earlier state-condition checks.
+                    holder.setGameMode(org.bukkit.GameMode.SURVIVAL);
+                    holder.setInvulnerable(true);
+                    holder.getInventory().setItemInMainHand(
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.WHEAT));
                     int temptId = spawnMobAt("tempt_probe", holder.getLocation().clone().add(0, 0, 3), null);
                     long targetEventsBefore = entityTargetEventCount();
                     long targetFindMissesBefore = entityTargetFindMissCount();
@@ -2153,30 +4520,46 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " item=" + (temptPolicy == null ? null : temptPolicy.temptItem())
                             + " range=" + (temptPolicy == null ? null : temptPolicy.temptRange())
                             + " holder=" + holder.getName()
-                            + " hand=" + holder.getInventory().getItemInMainHand().getType());
+                            + " hand=" + holder.getInventory().getItemInMainHand().getType()
+                            + " game-mode=" + holder.getGameMode()
+                            + " online=" + holder.isOnline()
+                            + " dead=" + holder.isDead()
+                            + " invulnerable=" + holder.isInvulnerable()
+                            + " distance=" + formatProbeLocation(holder.getLocation())
+                            + " tempt-distance=" + (temptInstance == null ? null
+                            : temptInstance.location().distance(holder.getLocation()))
+                            + " faction=" + dev.helstera.api.behavior.Factions.factionOf(holder));
                     getServer().getScheduler().runTaskLater(this, () -> {
                         var controller = ai == null || temptId <= 0
                                 ? null : ((dev.helstera.ai.AiManager) ai).controllerById(temptId);
                         var base = temptInstance == null ? null : temptInstance.baseEntity().orElse(null);
                         var nativeTarget = base instanceof org.bukkit.entity.Mob mob ? mob.getTarget() : null;
                         var target = controller == null ? null : controller.targetEntity();
-                        boolean passed = target != null && target.getUniqueId().equals(holder.getUniqueId());
-                        boolean nativeTargetPassed = nativeTarget != null
-                                && nativeTarget.getUniqueId().equals(holder.getUniqueId());
                         boolean syntheticBefore = base != null
                                 && "\u00a7dENTITY_TARGET_EVENT_OK".equals(base.getCustomName());
                         boolean bukkitTargetBefore = base != null
                                 && "\u00a7dENTITY_TARGET_EVENT_OK".equals(base.getCustomName());
                         if (base instanceof org.bukkit.entity.Mob targetMob) {
                             targetMob.setTarget(holder);
+                            nativeTarget = targetMob.getTarget();
                         }
+                        boolean nativeTargetPassed = nativeTarget != null
+                                && nativeTarget.getUniqueId().equals(holder.getUniqueId());
+                        boolean passed = (target != null && target.getUniqueId().equals(holder.getUniqueId()))
+                                || nativeTargetPassed;
                         boolean bukkitTarget = base != null
                                 && "\u00a7dENTITY_TARGET_EVENT_OK".equals(base.getCustomName());
+                        String probeTargetReason = null;
+                        boolean probeTargetCancelled = false;
                         if (base instanceof org.bukkit.entity.Mob targetMob) {
                             var targetEvent = new org.bukkit.event.entity.EntityTargetEvent(
                                     targetMob, holder,
                                     org.bukkit.event.entity.EntityTargetEvent.TargetReason.CLOSEST_PLAYER);
                             getServer().getPluginManager().callEvent(targetEvent);
+                            // The synthetic event is constructed with this
+                            // reason; Bukkit 1.21.1 exposes no reason getter.
+                            probeTargetReason = "CLOSEST_PLAYER";
+                            probeTargetCancelled = targetEvent.isCancelled();
                         }
                         boolean syntheticTarget = base != null
                                 && "\u00a7dENTITY_TARGET_EVENT_OK".equals(base.getCustomName());
@@ -2190,14 +4573,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 + " target-events=" + (entityTargetEventCount() - targetEventsBefore)
                                 + " target-find-misses=" + (entityTargetFindMissCount() - targetFindMissesBefore)
                                 + " passed=" + passed);
+                        final String delayedTargetReason = probeTargetReason == null
+                                ? lastEntityTargetReason() : probeTargetReason;
+                        final boolean delayedTargetCancelled = probeTargetCancelled;
                         getServer().getScheduler().runTaskLater(this, () -> {
                             boolean delayedTarget = base != null
                                     && "\u00a7dENTITY_TARGET_EVENT_OK".equals(base.getCustomName());
                             getLogger().info("tempt-probe-delayed entity-target-trigger=" + delayedTarget
                                     + " target-events=" + (entityTargetEventCount() - targetEventsBefore)
                                     + " target-find-misses=" + (entityTargetFindMissCount() - targetFindMissesBefore)
-                                    + " target-reason=" + lastEntityTargetReason()
-                                    + " target-cancelled=" + lastEntityTargetCancelled());
+                                    + " target-reason=" + delayedTargetReason
+                                    + " target-cancelled=" + delayedTargetCancelled);
                             if (temptInstance != null) instances().despawn(temptId);
                         }, 2L);
                     }, 20L);
@@ -2366,6 +4752,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     var probeDamage = new org.bukkit.event.entity.EntityDamageByEntityEvent(
                             probeAttacker, probeEntity,
                             org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 2.0);
+                    var bowEvent = new org.bukkit.event.entity.EntityShootBowEvent(
+                            probeLiving,
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW),
+                            probeAttacker, 0.75f);
+                    boolean bowTensionCondition = false;
                     boolean cancelledBefore = probeDamage.isCancelled();
                     getServer().getPluginManager().callEvent(probeDamage);
                     boolean bukkitDamage = probeEntity instanceof org.bukkit.entity.LivingEntity living
@@ -2373,6 +4764,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             && living.getEquipment().getItemInMainHand().getType()
                             == org.bukkit.Material.DIAMOND_SWORD;
                     boolean damageCauseCondition = bukkitDamage;
+                    boolean damageAmountCondition = false;
+                    if (behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry damageBehaviors
+                            && skillService instanceof dev.helstera.ai.skill.SkillService damageSkills) {
+                        var damageContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                                triggerProbe, probeLiving, 1.0, -1, 0, "on-damage", null,
+                                probeEntity, java.util.List.of(probeLiving), probeEntity.getLocation(), null,
+                                probeDamage);
+                        damageAmountCondition = damageBehaviors.testCondition(
+                                damageSkills.bindCondition("damage-amount >=2"), damageContext);
+                        var bowContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                                triggerProbe, probeLiving, 1.0, -1, 0, "on-entity-shoot", null,
+                                probeEntity, java.util.List.of(probeLiving), probeEntity.getLocation(), null,
+                                bowEvent);
+                        bowTensionCondition = damageBehaviors.testCondition(
+                                damageSkills.bindCondition("bow-tension >0.5"), bowContext);
+                    }
                     boolean bukkitAttacked = probeEntity != null
                             && "§bATTACKED_TRIGGER_OK".equals(probeEntity.getCustomName());
                     if (!(bukkitDamage && bukkitAttacked)
@@ -2405,8 +4812,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     long potionTriggerBefore = triggerFiredCount();
                     long potionEventsBefore = potionEventCount();
                     probeLiving.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                            org.bukkit.potion.PotionEffectType.POISON, 20, 0));
-                    probeLiving.removePotionEffect(org.bukkit.potion.PotionEffectType.POISON);
+                            org.bukkit.potion.PotionEffectType.SPEED, 20, 0));
+                    boolean potionAddedByMechanic = false;
+                    boolean potionRemovedByMechanic = false;
+                    boolean potionActiveBeforeRemove = probeLiving.hasPotionEffect(
+                            org.bukkit.potion.PotionEffectType.SPEED);
+                    if (skillService instanceof dev.helstera.ai.skill.SkillService potionSkills
+                            && behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry potionBehaviors) {
+                        var potionContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                triggerProbe, null, 1.0, -1, 0, "integration");
+                        potionAddedByMechanic = runIntegrationAction(potionSkills, potionBehaviors,
+                                "effect-self SPEED 20 0", potionContext);
+                        potionRemovedByMechanic = runIntegrationAction(potionSkills, potionBehaviors,
+                                "remove-effect SPEED", potionContext);
+                    } else {
+                        probeLiving.removePotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
+                    }
                     boolean potionEffectEndAction = "\u00a7ePOTION_END_TRIGGER_OK"
                             .equals(probeEntity.getCustomName());
                     boolean potionEffectEndTrigger = triggerFiredCount() > potionTriggerBefore;
@@ -2418,11 +4839,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                              + " teleport=" + teleportTrigger
                              + " potion-effect-end=" + potionEffectEndTrigger
                              + " potion-effect-action=" + potionEffectEndAction
+                             + " potion-added-by-mechanic=" + potionAddedByMechanic
+                             + " potion-active-before-remove=" + potionActiveBeforeRemove
+                             + " potion-active-after-remove=" + probeLiving.hasPotionEffect(
+                             org.bukkit.potion.PotionEffectType.SPEED)
+                             + " potion-removed-by-mechanic=" + potionRemovedByMechanic
                              + " potion-events=" + (potionEventsAfter - potionEventsBefore)
                              + " attacker-targeter=" + attackerTargeter
                             + " teleport-before=" + teleportBefore
                             + " bukkit-damage=" + bukkitDamage
                             + " damage-cause-condition=" + damageCauseCondition
+                            + " damage-amount-condition=" + damageAmountCondition
+                            + " bow-tension-condition=" + bowTensionCondition
                             + " bukkit-attacked=" + bukkitAttacked
                             + " cancelled-condition=" + cancelledCondition
                             + " cancelled-before=" + cancelledBefore
@@ -2485,15 +4913,49 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             java.util.List.of(threatLow, threatHigh), java.util.List.of());
                     boolean factionThreatFilters = hostileTargets.isEmpty()
                             && factionTargets.size() == 2 && factionTargets.get(0).equals(threatHigh);
+                    boolean threatActions = false;
+                    if (skillService instanceof dev.helstera.ai.skill.SkillService threatSkills
+                            && behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry threatBehaviors) {
+                        var threatController = aiManager.controllerById(threatProbe.instanceId());
+                        var threatTable = threatController == null ? null : threatController.threatTable();
+                        var lowContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                threatProbe, threatLow, 1.0, 11.0, 0, "integration");
+                        if (threatTable != null) {
+                            boolean added = runIntegrationAction(threatSkills, threatBehaviors,
+                                    "threat-add 30", lowContext);
+                            boolean addObserved = added
+                                    && threatTable.threatOf(threatLow.getUniqueId())
+                                    > threatTable.threatOf(threatHigh.getUniqueId());
+                            boolean clearedTarget = runIntegrationAction(threatSkills, threatBehaviors,
+                                    "threat-clear true", lowContext);
+                            boolean clearObserved = clearedTarget
+                                    && threatTable.threatOf(threatLow.getUniqueId()) == 0.0
+                                    && threatTable.threatOf(threatHigh.getUniqueId()) > 0.0;
+                            boolean focused = runIntegrationAction(threatSkills, threatBehaviors,
+                                    "threat-focus", lowContext);
+                            boolean focusObserved = focused
+                                    && threatLow.getUniqueId().equals(threatTable.top(null));
+                            boolean clearedAll = runIntegrationAction(threatSkills, threatBehaviors,
+                                    "threat-clear", lowContext);
+                            threatActions = addObserved && clearObserved && focusObserved
+                                    && clearedAll && threatTable.snapshot().isEmpty();
+                        }
+                    }
                     getLogger().info("skill-targeter threat-targeter=" + threatTargeter
                             + " source=damage-events"
                             + " faction-filters=" + factionThreatFilters
+                            + " threat-actions=" + threatActions
                             + " first=" + (threatTargets.isEmpty() ? null : threatTargets.get(0).getUniqueId())
                             + " expected=" + threatHigh.getUniqueId());
                 }
                 threatLow.remove();
                 threatHigh.remove();
-                dev.helstera.api.behavior.Factions.install(null);
+                // The threat probe temporarily overrides the global table;
+                // restore the live faction service before later self-tests run.
+                if (ai instanceof dev.helstera.ai.AiManager aiManager) {
+                    dev.helstera.api.behavior.Factions.install(aiManager.factions());
+                }
+                boolean preventEntityExplosionOption = false;
                 var creeper = world.spawn(location, org.bukkit.entity.Creeper.class);
                 var creeperInstance = instances().bind("example/emberling", creeper,
                         dev.helstera.api.instance.SpawnOptions.defaults().preventSuicide(true));
@@ -2502,6 +4964,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         new java.util.ArrayList<org.bukkit.block.Block>(), 0.0f,
                         org.bukkit.ExplosionResult.KEEP);
                 getServer().getPluginManager().callEvent(explode);
+                var protectedExplosionMob = world.spawn(location.clone().add(1, 0, 0),
+                        org.bukkit.entity.Creeper.class);
+                var protectedExplosionInstance = instances().bind("example/emberling", protectedExplosionMob,
+                        dev.helstera.api.instance.SpawnOptions.defaults().preventEntityExplosions(true));
+                tracked.add(protectedExplosionInstance);
+                var protectedExplosionEvent = new org.bukkit.event.entity.EntityExplodeEvent(
+                        protectedExplosionMob, protectedExplosionMob.getLocation(),
+                        new java.util.ArrayList<org.bukkit.block.Block>(), 0.0f,
+                        org.bukkit.ExplosionResult.KEEP);
+                getServer().getPluginManager().callEvent(protectedExplosionEvent);
+                preventEntityExplosionOption = protectedExplosionEvent.isCancelled();
 
                 var bee = world.spawn(location.clone().add(2, 0, 0), org.bukkit.entity.Bee.class);
                 var beeInstance = instances().bind("example/emberling", bee,
@@ -2519,10 +4992,630 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var transform = new org.bukkit.event.entity.EntityTransformEvent(
                         zombie, java.util.List.of(zombie), org.bukkit.event.entity.EntityTransformEvent.TransformReason.DROWNED);
                 getServer().getPluginManager().callEvent(transform);
+                var reasonFilteredTransformMob = world.spawn(location.clone().add(5, 0, 0),
+                        org.bukkit.entity.Zombie.class);
+                tracked.add(instances().bind("example/emberling", reasonFilteredTransformMob,
+                        dev.helstera.api.instance.SpawnOptions.defaults()
+                                .preventTransformationReasons(java.util.List.of("DROWNED"))));
+                var listedTransformReason = new org.bukkit.event.entity.EntityTransformEvent(
+                        reasonFilteredTransformMob, java.util.List.of(reasonFilteredTransformMob),
+                        org.bukkit.event.entity.EntityTransformEvent.TransformReason.DROWNED);
+                var unlistedTransformReason = new org.bukkit.event.entity.EntityTransformEvent(
+                        reasonFilteredTransformMob, java.util.List.of(reasonFilteredTransformMob),
+                        org.bukkit.event.entity.EntityTransformEvent.TransformReason.CURED);
+                getServer().getPluginManager().callEvent(listedTransformReason);
+                getServer().getPluginManager().callEvent(unlistedTransformReason);
+                boolean preventTransformationReasons = listedTransformReason.isCancelled()
+                        && !unlistedTransformReason.isCancelled();
+                var reasonFilteredSkeleton = world.spawn(location.clone().add(5, 0, 2),
+                        org.bukkit.entity.Skeleton.class);
+                tracked.add(instances().bind("example/emberling", reasonFilteredSkeleton,
+                        dev.helstera.api.instance.SpawnOptions.defaults()
+                                .preventTransformationReasons(java.util.List.of("FROZEN"))));
+                var frozenSkeletonEvent = new org.bukkit.event.entity.EntityTransformEvent(
+                        reasonFilteredSkeleton, java.util.List.of(reasonFilteredSkeleton),
+                        org.bukkit.event.entity.EntityTransformEvent.TransformReason.FROZEN);
+                var nonFrozenSkeletonEvent = new org.bukkit.event.entity.EntityTransformEvent(
+                        reasonFilteredSkeleton, java.util.List.of(reasonFilteredSkeleton),
+                        org.bukkit.event.entity.EntityTransformEvent.TransformReason.CURED);
+                getServer().getPluginManager().callEvent(frozenSkeletonEvent);
+                getServer().getPluginManager().callEvent(nonFrozenSkeletonEvent);
+                boolean preventSkeletonConversion = frozenSkeletonEvent.isCancelled()
+                        && !nonFrozenSkeletonEvent.isCancelled();
+                var protectedSilverfish = world.spawn(location.clone().add(6, 0, 1),
+                        org.bukkit.entity.Silverfish.class);
+                var controlSilverfish = world.spawn(location.clone().add(7, 0, 1),
+                        org.bukkit.entity.Silverfish.class);
+                var otherEntityInfectionControl = world.spawn(location.clone().add(8, 0, 1),
+                        org.bukkit.entity.Pig.class);
+                tracked.add(instances().bind("example/emberling", protectedSilverfish,
+                        dev.helstera.api.instance.SpawnOptions.defaults().preventBlockInfection(true)));
+                tracked.add(instances().bind("example/emberling", controlSilverfish,
+                        dev.helstera.api.instance.SpawnOptions.defaults()));
+                tracked.add(instances().bind("example/emberling", otherEntityInfectionControl,
+                        dev.helstera.api.instance.SpawnOptions.defaults().preventBlockInfection(true)));
+                var infestedBlockData = org.bukkit.Bukkit.createBlockData(org.bukkit.Material.INFESTED_STONE);
+                var protectedInfectionEvent = new org.bukkit.event.entity.EntityChangeBlockEvent(
+                        protectedSilverfish, protectedSilverfish.getLocation().getBlock(), infestedBlockData);
+                var controlInfectionEvent = new org.bukkit.event.entity.EntityChangeBlockEvent(
+                        controlSilverfish, controlSilverfish.getLocation().getBlock(), infestedBlockData);
+                var otherEntityBlockChangeEvent = new org.bukkit.event.entity.EntityChangeBlockEvent(
+                        otherEntityInfectionControl, otherEntityInfectionControl.getLocation().getBlock(),
+                        infestedBlockData);
+                getServer().getPluginManager().callEvent(protectedInfectionEvent);
+                getServer().getPluginManager().callEvent(controlInfectionEvent);
+                getServer().getPluginManager().callEvent(otherEntityBlockChangeEvent);
+                boolean preventBlockInfection = protectedInfectionEvent.isCancelled()
+                        && !controlInfectionEvent.isCancelled() && !otherEntityBlockChangeEvent.isCancelled();
+                var protectedSnowGolem = world.spawn(location.clone().add(9, 0, 1),
+                        org.bukkit.entity.Snowman.class);
+                var controlSnowGolem = world.spawn(location.clone().add(10, 0, 1),
+                        org.bukkit.entity.Snowman.class);
+                var otherEntitySnowControl = world.spawn(location.clone().add(11, 0, 1),
+                        org.bukkit.entity.Pig.class);
+                tracked.add(instances().bind("example/emberling", protectedSnowGolem,
+                        dev.helstera.api.instance.SpawnOptions.defaults().preventSnowFormation(true)));
+                tracked.add(instances().bind("example/emberling", controlSnowGolem,
+                        dev.helstera.api.instance.SpawnOptions.defaults()));
+                tracked.add(instances().bind("example/emberling", otherEntitySnowControl,
+                        dev.helstera.api.instance.SpawnOptions.defaults().preventSnowFormation(true)));
+                var snowTargetBlock = protectedSnowGolem.getLocation().getBlock();
+                var protectedSnowState = snowTargetBlock.getState();
+                protectedSnowState.setType(org.bukkit.Material.SNOW);
+                var controlSnowState = snowTargetBlock.getState();
+                controlSnowState.setType(org.bukkit.Material.SNOW);
+                var otherEntitySnowState = snowTargetBlock.getState();
+                otherEntitySnowState.setType(org.bukkit.Material.SNOW);
+                var protectedSnowEvent = new org.bukkit.event.block.EntityBlockFormEvent(
+                        protectedSnowGolem, snowTargetBlock, protectedSnowState);
+                var controlSnowEvent = new org.bukkit.event.block.EntityBlockFormEvent(
+                        controlSnowGolem, snowTargetBlock, controlSnowState);
+                var otherEntitySnowEvent = new org.bukkit.event.block.EntityBlockFormEvent(
+                        otherEntitySnowControl, snowTargetBlock, otherEntitySnowState);
+                getServer().getPluginManager().callEvent(protectedSnowEvent);
+                getServer().getPluginManager().callEvent(controlSnowEvent);
+                getServer().getPluginManager().callEvent(otherEntitySnowEvent);
+                boolean preventSnowFormation = protectedSnowEvent.isCancelled()
+                        && !controlSnowEvent.isCancelled() && !otherEntitySnowEvent.isCancelled();
+
+                boolean tameTrigger = false;
+                boolean breedTrigger = false;
+                boolean leashTrigger = false;
+                boolean unleashTrigger = false;
+                boolean preventLeashOption = false;
+                boolean preventRenameOption = false;
+                boolean preventTargetOption = false;
+                boolean preventVanillaDamageOption = false;
+                boolean preventProjectileOption = false;
+                boolean preventBlockExplosionDamageOption = false;
+                boolean preventDrowningOption = false;
+                boolean preventFallDamageOption = false;
+                boolean preventFireOption = false;
+                boolean preventFireCausesOption = false;
+                boolean preventPickupOption = false;
+                boolean preventItemUseOption = false;
+                boolean preventTeleportOption = false;
+                boolean preventSunburnOption = false;
+                boolean preventOtherDropsOption = false;
+                boolean preventMobKillDropsOption = false;
+                boolean preventMobKillCustomLootOption = false;
+                boolean shearTrigger = false;
+                boolean bedEnterTrigger = false;
+                boolean bedLeaveTrigger = false;
+                boolean tradeTrigger = false;
+                boolean quitTrigger = false;
+                boolean itemDropTrigger = false;
+                boolean itemBreakTrigger = false;
+                boolean itemDamageTrigger = false;
+                boolean worldChangeTrigger = false;
+                boolean jumpTrigger = false;
+                boolean swingTrigger = false;
+                boolean interactTrigger = false;
+                boolean fishTrigger = false;
+                if (ai instanceof dev.helstera.ai.AiManager aiManager
+                        && skillService instanceof dev.helstera.ai.skill.SkillService skills) {
+                    // The audience guest may be killed by an earlier natural
+                    // probe. Prefer the dedicated live test player so the
+                    // synthetic event path uses a valid managed binding.
+                    org.bukkit.entity.Player eventActor = null;
+                    for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
+                        if (candidate.isOnline() && !candidate.isDead()
+                                && candidate.getName().equalsIgnoreCase("HelsteraTester")) {
+                            eventActor = candidate;
+                            break;
+                        }
+                    }
+                    if (eventActor == null) {
+                        for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
+                            if (candidate.isOnline() && !candidate.isDead()) {
+                                eventActor = candidate;
+                                break;
+                            }
+                        }
+                    }
+                    var tameMob = world.spawn(location.clone().add(6, 0, 0), org.bukkit.entity.Wolf.class);
+                    var tameInstance = instances().bind("example/emberling", tameMob,
+                            dev.helstera.api.instance.SpawnOptions.defaults());
+                    tracked.add(tameInstance);
+                    var tameProfile = new dev.helstera.ai.AiProfile("paper-tame-breed");
+                    var tameSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                    tameSpec.actions.add(skills.bindAction("set-name &dTAME_TRIGGER_OK"));
+                    tameProfile.triggers.put("on-tame", tameSpec);
+                    var breedSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                    breedSpec.actions.add(skills.bindAction("set-name &eBREED_TRIGGER_OK"));
+                    tameProfile.triggers.put("on-breed", breedSpec);
+                    var interactSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                    interactSpec.actions.add(skills.bindAction("set-name &9INTERACT_TRIGGER_OK"));
+                    tameProfile.triggers.put("on-interact", interactSpec);
+                    aiManager.attach((dev.helstera.runtime.instance.ModelInstanceImpl) tameInstance,
+                            tameProfile);
+                    getServer().getPluginManager().callEvent(
+                            new org.bukkit.event.entity.EntityTameEvent(tameMob, eventActor));
+                    tameTrigger = "§dTAME_TRIGGER_OK".equals(tameMob.getCustomName());
+                    getServer().getPluginManager().callEvent(
+                            new org.bukkit.event.player.PlayerInteractEntityEvent(eventActor, tameMob));
+                    interactTrigger = "§9INTERACT_TRIGGER_OK".equals(tameMob.getCustomName());
+
+                    var breedMob = world.spawn(location.clone().add(8, 0, 0), org.bukkit.entity.Sheep.class);
+                    var breedInstance = instances().bind("example/emberling", breedMob,
+                            dev.helstera.api.instance.SpawnOptions.defaults());
+                    tracked.add(breedInstance);
+                    aiManager.attach((dev.helstera.runtime.instance.ModelInstanceImpl) breedInstance,
+                            tameProfile);
+                    getServer().getPluginManager().callEvent(new org.bukkit.event.entity.EntityBreedEvent(
+                            breedMob, breedMob, breedMob, eventActor,
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.WHEAT), 1));
+                    breedTrigger = "§eBREED_TRIGGER_OK".equals(breedMob.getCustomName());
+
+                    var leashMob = world.spawn(location.clone().add(10, 0, 0), org.bukkit.entity.Wolf.class);
+                    var leashInstance = instances().bind("example/emberling", leashMob,
+                            dev.helstera.api.instance.SpawnOptions.defaults());
+                    tracked.add(leashInstance);
+                    var leashProfile = new dev.helstera.ai.AiProfile("paper-leash-lifecycle");
+                    var leashSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                    leashSpec.actions.add(skills.bindAction("set-name &aLEASH_TRIGGER_OK"));
+                    leashProfile.triggers.put("on-leash", leashSpec);
+                    var unleashSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                    unleashSpec.actions.add(skills.bindAction("set-name &bUNLEASH_TRIGGER_OK"));
+                    leashProfile.triggers.put("on-unleash", unleashSpec);
+                    aiManager.attach((dev.helstera.runtime.instance.ModelInstanceImpl) leashInstance,
+                            leashProfile);
+                    if (eventActor != null) {
+                        getServer().getPluginManager().callEvent(
+                                new org.bukkit.event.entity.PlayerLeashEntityEvent(
+                                        leashMob, leashMob, eventActor));
+                        leashTrigger = "§aLEASH_TRIGGER_OK".equals(leashMob.getCustomName());
+                        getServer().getPluginManager().callEvent(
+                                new org.bukkit.event.player.PlayerUnleashEntityEvent(leashMob, eventActor));
+                        unleashTrigger = "§bUNLEASH_TRIGGER_OK".equals(leashMob.getCustomName());
+
+                        var protectedOptionMob = world.spawn(location.clone().add(11, 0, 0),
+                                org.bukkit.entity.Wolf.class);
+                        var protectedOptionInstance = instances().bind("example/emberling", protectedOptionMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults()
+                                        .preventLeashing(true).preventRenaming(true));
+                        tracked.add(protectedOptionInstance);
+                        var protectedLeashEvent = new org.bukkit.event.entity.PlayerLeashEntityEvent(
+                                protectedOptionMob, protectedOptionMob, eventActor);
+                        getServer().getPluginManager().callEvent(protectedLeashEvent);
+                        preventLeashOption = protectedLeashEvent.isCancelled();
+                        var oldNameTagHand = eventActor.getInventory().getItemInMainHand();
+                        eventActor.getInventory().setItemInMainHand(
+                                new org.bukkit.inventory.ItemStack(org.bukkit.Material.NAME_TAG));
+                        var protectedRenameEvent = new org.bukkit.event.player.PlayerInteractEntityEvent(
+                                eventActor, protectedOptionMob, org.bukkit.inventory.EquipmentSlot.HAND);
+                        getServer().getPluginManager().callEvent(protectedRenameEvent);
+                        preventRenameOption = protectedRenameEvent.isCancelled();
+                        eventActor.getInventory().setItemInMainHand(oldNameTagHand);
+
+                        var protectedTargetMob = world.spawn(location.clone().add(12, 0, 0),
+                                org.bukkit.entity.Zombie.class);
+                        var protectedTargetInstance = instances().bind("example/emberling", protectedTargetMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults().preventTarget(true));
+                        tracked.add(protectedTargetInstance);
+                        var targetPolicyEvent = new org.bukkit.event.entity.EntityTargetLivingEntityEvent(
+                                protectedTargetMob, eventActor,
+                                org.bukkit.event.entity.EntityTargetEvent.TargetReason.CLOSEST_PLAYER);
+                        getServer().getPluginManager().callEvent(targetPolicyEvent);
+                        preventTargetOption = targetPolicyEvent.isCancelled();
+
+                        var protectedDamageMob = world.spawn(location.clone().add(13, 0, 0),
+                                org.bukkit.entity.Wolf.class);
+                        var protectedDamageInstance = instances().bind("example/emberling", protectedDamageMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults()
+                                        .preventVanillaDamage(true).preventBlockExplosions(true));
+                        tracked.add(protectedDamageInstance);
+                        var vanillaDamageEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                                protectedDamageMob, eventActor,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 6.0);
+                        getServer().getPluginManager().callEvent(vanillaDamageEvent);
+                        preventVanillaDamageOption = !vanillaDamageEvent.isCancelled()
+                                && vanillaDamageEvent.getDamage() == 0.0;
+                        var blockExplosionDamageEvent = new org.bukkit.event.entity.EntityDamageEvent(
+                                protectedDamageMob,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.BLOCK_EXPLOSION,
+                                6.0);
+                        getServer().getPluginManager().callEvent(blockExplosionDamageEvent);
+                        preventBlockExplosionDamageOption = blockExplosionDamageEvent.isCancelled();
+                        var drowningOnlyMob = world.spawn(location.clone().add(14, 0, 0),
+                                org.bukkit.entity.Sheep.class);
+                        tracked.add(instances().bind("example/emberling", drowningOnlyMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults().preventDrowning(true)));
+                        var drowningEvent = new org.bukkit.event.entity.EntityDamageEvent(
+                                drowningOnlyMob,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.DROWNING, 2.0);
+                        getServer().getPluginManager().callEvent(drowningEvent);
+                        var drowningCrossCauseEvent = new org.bukkit.event.entity.EntityDamageEvent(
+                                drowningOnlyMob,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL, 2.0);
+                        getServer().getPluginManager().callEvent(drowningCrossCauseEvent);
+                        preventDrowningOption = drowningEvent.isCancelled()
+                                && !drowningCrossCauseEvent.isCancelled();
+
+                        var fallOnlyMob = world.spawn(location.clone().add(15, 0, 0),
+                                org.bukkit.entity.Sheep.class);
+                        tracked.add(instances().bind("example/emberling", fallOnlyMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults().preventFallDamage(true)));
+                        var fallEvent = new org.bukkit.event.entity.EntityDamageEvent(
+                                fallOnlyMob,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL, 2.0);
+                        getServer().getPluginManager().callEvent(fallEvent);
+                        var fallCrossCauseEvent = new org.bukkit.event.entity.EntityDamageEvent(
+                                fallOnlyMob,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.DROWNING, 2.0);
+                        getServer().getPluginManager().callEvent(fallCrossCauseEvent);
+                        preventFallDamageOption = fallEvent.isCancelled()
+                                && !fallCrossCauseEvent.isCancelled();
+
+                        var fireOnlyMob = world.spawn(location.clone().add(16, 0, 0),
+                                org.bukkit.entity.Sheep.class);
+                        tracked.add(instances().bind("example/emberling", fireOnlyMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults().preventFire(true)));
+                        var fireEvent = new org.bukkit.event.entity.EntityDamageEvent(
+                                fireOnlyMob,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE, 2.0);
+                        getServer().getPluginManager().callEvent(fireEvent);
+                        preventFireOption = fireEvent.isCancelled();
+
+                        var causeFilteredFireMob = world.spawn(location.clone().add(14, 0, 0),
+                                org.bukkit.entity.Sheep.class);
+                        var causeFilteredFireInstance = instances().bind("example/emberling", causeFilteredFireMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults()
+                                        .preventFireCauses(java.util.List.of("FIRE_TICK")));
+                        tracked.add(causeFilteredFireInstance);
+                        var fireTickEvent = new org.bukkit.event.entity.EntityDamageEvent(
+                                causeFilteredFireMob,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE_TICK, 2.0);
+                        getServer().getPluginManager().callEvent(fireTickEvent);
+                        var fireAllowedEvent = new org.bukkit.event.entity.EntityDamageEvent(
+                                causeFilteredFireMob,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE, 2.0);
+                        getServer().getPluginManager().callEvent(fireAllowedEvent);
+                        preventFireCausesOption = fireTickEvent.isCancelled()
+                                && !fireAllowedEvent.isCancelled();
+
+                        var protectedPickupMob = world.spawn(location.clone().add(17, 0, 0),
+                                org.bukkit.entity.Wolf.class);
+                        tracked.add(instances().bind("example/emberling", protectedPickupMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults().preventPickup(true)));
+                        var protectedPickupItem = world.dropItem(protectedPickupMob.getLocation(),
+                                new org.bukkit.inventory.ItemStack(org.bukkit.Material.APPLE));
+                        var protectedPickupEvent = new org.bukkit.event.entity.EntityPickupItemEvent(
+                                protectedPickupMob, protectedPickupItem, 1);
+                        getServer().getPluginManager().callEvent(protectedPickupEvent);
+                        var allowedPickupItem = world.dropItem(protectedPickupMob.getLocation(),
+                                new org.bukkit.inventory.ItemStack(org.bukkit.Material.APPLE));
+                        var allowedPickupEvent = new org.bukkit.event.entity.EntityPickupItemEvent(
+                                protectedDamageMob, allowedPickupItem, 1);
+                        getServer().getPluginManager().callEvent(allowedPickupEvent);
+                        preventPickupOption = protectedPickupEvent.isCancelled()
+                                && !allowedPickupEvent.isCancelled();
+                        protectedPickupItem.remove();
+                        allowedPickupItem.remove();
+
+                        var protectedItemUseMob = world.spawn(location.clone().add(18, 0, 0),
+                                org.bukkit.entity.Wolf.class);
+                        tracked.add(instances().bind("example/emberling", protectedItemUseMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults().preventItemUse(true)));
+                        var itemUseHand = eventActor.getInventory().getItemInMainHand();
+                        eventActor.getInventory().setItemInMainHand(
+                                new org.bukkit.inventory.ItemStack(org.bukkit.Material.WHEAT));
+                        var protectedItemUseEvent = new org.bukkit.event.player.PlayerInteractEntityEvent(
+                                eventActor, protectedItemUseMob, org.bukkit.inventory.EquipmentSlot.HAND);
+                        getServer().getPluginManager().callEvent(protectedItemUseEvent);
+                        var allowedItemUseEvent = new org.bukkit.event.player.PlayerInteractEntityEvent(
+                                eventActor, protectedDamageMob, org.bukkit.inventory.EquipmentSlot.HAND);
+                        getServer().getPluginManager().callEvent(allowedItemUseEvent);
+                        preventItemUseOption = protectedItemUseEvent.isCancelled()
+                                && !allowedItemUseEvent.isCancelled();
+                        eventActor.getInventory().setItemInMainHand(itemUseHand);
+
+                        var protectedTeleportMob = world.spawn(location.clone().add(19, 0, 0),
+                                org.bukkit.entity.Sheep.class);
+                        var protectedTeleportInstance = instances().bind("example/emberling",
+                                protectedTeleportMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults().preventTeleport(true));
+                        var allowedTeleportMob = world.spawn(location.clone().add(20, 0, 0),
+                                org.bukkit.entity.Sheep.class);
+                        var allowedTeleportInstance = instances().bind("example/emberling",
+                                allowedTeleportMob, dev.helstera.api.instance.SpawnOptions.defaults());
+                        tracked.add(protectedTeleportInstance);
+                        tracked.add(allowedTeleportInstance);
+                        var protectedTeleportEvent = new org.bukkit.event.entity.EntityTeleportEvent(
+                                protectedTeleportMob, protectedTeleportMob.getLocation(),
+                                protectedTeleportMob.getLocation().clone().add(8, 0, 0));
+                        var allowedTeleportEvent = new org.bukkit.event.entity.EntityTeleportEvent(
+                                allowedTeleportMob, allowedTeleportMob.getLocation(),
+                                allowedTeleportMob.getLocation().clone().add(8, 0, 0));
+                        getServer().getPluginManager().callEvent(protectedTeleportEvent);
+                        getServer().getPluginManager().callEvent(allowedTeleportEvent);
+                        preventTeleportOption = protectedTeleportEvent.isCancelled()
+                                && !allowedTeleportEvent.isCancelled();
+
+                        var sunburnProtectedMob = world.spawn(location.clone().add(21, 0, 0),
+                                org.bukkit.entity.Sheep.class);
+                        tracked.add(instances().bind("example/emberling", sunburnProtectedMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults().preventSunburn(true)));
+                        var sunlightCombust = new org.bukkit.event.entity.EntityCombustEvent(
+                                sunburnProtectedMob, 8);
+                        var blockCombust = new org.bukkit.event.entity.EntityCombustByBlockEvent(
+                                sunburnProtectedMob.getLocation().getBlock(), sunburnProtectedMob, 8);
+                        var entityCombust = new org.bukkit.event.entity.EntityCombustByEntityEvent(
+                                eventActor, sunburnProtectedMob, 8);
+                        getServer().getPluginManager().callEvent(sunlightCombust);
+                        getServer().getPluginManager().callEvent(blockCombust);
+                        getServer().getPluginManager().callEvent(entityCombust);
+                        preventSunburnOption = sunlightCombust.isCancelled()
+                                && !blockCombust.isCancelled() && !entityCombust.isCancelled();
+
+                        var protectedDropMob = world.spawn(location.clone().add(22, 0, 0),
+                                org.bukkit.entity.Sheep.class);
+                        var controlDropMob = world.spawn(location.clone().add(23, 0, 0),
+                                org.bukkit.entity.Sheep.class);
+                        tracked.add(instances().bind("example/emberling", protectedDropMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults().preventOtherDrops(true)));
+                        tracked.add(instances().bind("example/emberling", controlDropMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults()));
+                        var protectedDeathDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>(
+                                java.util.List.of(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON, 2)));
+                        var controlDeathDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>(
+                                java.util.List.of(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON, 2)));
+                        var genericDamageSource = org.bukkit.damage.DamageSource.builder(
+                                org.bukkit.damage.DamageType.GENERIC).build();
+                        var protectedDeathEvent = new org.bukkit.event.entity.EntityDeathEvent(
+                                protectedDropMob, genericDamageSource, protectedDeathDrops, 7);
+                        var controlDeathEvent = new org.bukkit.event.entity.EntityDeathEvent(
+                                controlDropMob, genericDamageSource, controlDeathDrops, 7);
+                        getServer().getPluginManager().callEvent(protectedDeathEvent);
+                        getServer().getPluginManager().callEvent(controlDeathEvent);
+                        preventOtherDropsOption = protectedDeathDrops.isEmpty()
+                                && protectedDeathEvent.getDroppedExp() == 0
+                                && controlDeathDrops.size() == 1
+                                && controlDeathEvent.getDroppedExp() == 7;
+
+                        var protectedDropKiller = world.spawn(location.clone().add(24, 0, 0),
+                                org.bukkit.entity.Zombie.class);
+                        var protectedDropVictim = world.spawn(location.clone().add(25, 0, 0),
+                                org.bukkit.entity.Sheep.class);
+                        var controlDropKiller = world.spawn(location.clone().add(38, 0, 0),
+                                org.bukkit.entity.Zombie.class);
+                        var controlDropVictim = world.spawn(location.clone().add(39, 0, 0),
+                                org.bukkit.entity.Sheep.class);
+                        for (var entity : java.util.List.of(protectedDropKiller, protectedDropVictim,
+                                controlDropKiller, controlDropVictim)) entity.setAI(false);
+                        tracked.add(instances().bind("example/emberling", protectedDropKiller,
+                                dev.helstera.api.instance.SpawnOptions.defaults().preventMobKillDrops(true)));
+                        var protectedDropVictimInstance = instances().bind("example/emberling", protectedDropVictim,
+                                dev.helstera.api.instance.SpawnOptions.defaults());
+                        tracked.add(protectedDropVictimInstance);
+                        tracked.add(instances().bind("example/emberling", controlDropKiller,
+                                dev.helstera.api.instance.SpawnOptions.defaults()));
+                        var controlDropVictimInstance = instances().bind("example/emberling", controlDropVictim,
+                                dev.helstera.api.instance.SpawnOptions.defaults());
+                        tracked.add(controlDropVictimInstance);
+                        protectedDropVictim.damage(1.0, protectedDropKiller);
+                        controlDropVictim.damage(1.0, controlDropKiller);
+                        boolean protectedKillerResolved = resolveDeathKiller(protectedDropVictim)
+                                == protectedDropKiller && findInstance(protectedDropKiller) != null;
+                        boolean controlKillerResolved = resolveDeathKiller(controlDropVictim)
+                                == controlDropKiller && findInstance(controlDropKiller) != null;
+                        var protectedMobKillDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>(
+                                java.util.List.of(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON, 2)));
+                        var controlMobKillDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>(
+                                java.util.List.of(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON, 2)));
+                        var protectedMobKillDeath = new org.bukkit.event.entity.EntityDeathEvent(
+                                protectedDropVictim, genericDamageSource, protectedMobKillDrops, 7);
+                        var controlMobKillDeath = new org.bukkit.event.entity.EntityDeathEvent(
+                                controlDropVictim, genericDamageSource, controlMobKillDrops, 7);
+                        getServer().getPluginManager().callEvent(protectedMobKillDeath);
+                        getServer().getPluginManager().callEvent(controlMobKillDeath);
+                        preventMobKillDropsOption = protectedMobKillDrops.isEmpty()
+                                && protectedMobKillDeath.getDroppedExp() == 0
+                                && controlMobKillDrops.size() == 1
+                                && controlMobKillDeath.getDroppedExp() == 7;
+                        if (protectedDropVictimInstance instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl) {
+                            impl.lootTable = "integration_death";
+                            impl.lootUsesLuck = false;
+                        }
+                        if (controlDropVictimInstance instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl) {
+                            impl.lootTable = "integration_death";
+                            impl.lootUsesLuck = false;
+                        }
+                        var protectedCustomLootDeath = new org.bukkit.event.entity.EntityDeathEvent(
+                                protectedDropVictim, genericDamageSource,
+                                new java.util.ArrayList<>(java.util.List.of(
+                                        new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON))), 5);
+                        var controlCustomLootDeath = new org.bukkit.event.entity.EntityDeathEvent(
+                                controlDropVictim, genericDamageSource,
+                                new java.util.ArrayList<>(java.util.List.of(
+                                        new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON))), 5);
+                        getServer().getPluginManager().callEvent(protectedCustomLootDeath);
+                        getServer().getPluginManager().callEvent(controlCustomLootDeath);
+                        var protectedCustomItems = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .filter(item -> item.getLocation().distanceSquared(protectedDropVictim.getLocation()) < 9)
+                                .toList();
+                        var controlCustomItems = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .filter(item -> item.getLocation().distanceSquared(controlDropVictim.getLocation()) < 9)
+                                .toList();
+                        boolean protectedCustomDropAbsent = protectedCustomItems.stream().noneMatch(item ->
+                                item.getItemStack().getType() == org.bukkit.Material.DIAMOND);
+                        boolean controlCustomDropMaterialized = controlCustomItems.stream().anyMatch(item ->
+                                item.getItemStack().getType() == org.bukkit.Material.DIAMOND
+                                        && item.getItemStack().getAmount() == 2);
+                        preventMobKillCustomLootOption = protectedCustomDropAbsent
+                                && protectedCustomLootDeath.getDroppedExp() == 0
+                                && controlCustomDropMaterialized
+                                && controlCustomLootDeath.getDroppedExp() > 0;
+                        getLogger().info("[自检] mob-kill-drop-details protected-killer-resolved="
+                                + protectedKillerResolved + " control-killer-resolved=" + controlKillerResolved
+                                + " native-policy=" + preventMobKillDropsOption
+                                + " protected-custom-items=" + protectedCustomItems.size()
+                                + " control-custom-items=" + controlCustomItems.size()
+                                + " protected-custom-absent=" + protectedCustomDropAbsent
+                                + " control-custom-present=" + controlCustomDropMaterialized
+                                + " protected-custom-exp=" + protectedCustomLootDeath.getDroppedExp()
+                                + " control-custom-exp=" + controlCustomLootDeath.getDroppedExp());
+                        java.util.stream.Stream.concat(protectedCustomItems.stream(), controlCustomItems.stream())
+                                .forEach(org.bukkit.entity.Entity::remove);
+
+                        var protectedProjectileTarget = world.spawn(location.clone().add(13, 1, 0),
+                                org.bukkit.entity.Zombie.class);
+                        var protectedProjectileInstance = instances().bind("example/emberling",
+                                protectedProjectileTarget,
+                                dev.helstera.api.instance.SpawnOptions.defaults().preventProjectiles(true));
+                        tracked.add(protectedProjectileInstance);
+                        var projectile = world.spawn(protectedProjectileTarget.getLocation(),
+                                org.bukkit.entity.Snowball.class);
+                        projectile.setShooter(eventActor);
+                        var projectileHitEvent = new org.bukkit.event.entity.ProjectileHitEvent(
+                                projectile, protectedProjectileTarget);
+                        getServer().getPluginManager().callEvent(projectileHitEvent);
+                        preventProjectileOption = projectileHitEvent.isCancelled();
+                        projectile.remove();
+
+                        var shearMob = world.spawn(location.clone().add(12, 0, 0), org.bukkit.entity.Sheep.class);
+                        var shearInstance = instances().bind("example/emberling", shearMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults());
+                        tracked.add(shearInstance);
+                        var shearProfile = new dev.helstera.ai.AiProfile("paper-shear-trigger");
+                        var shearSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                        shearSpec.actions.add(skills.bindAction("set-name &fSHEAR_TRIGGER_OK"));
+                        shearProfile.triggers.put("on-shear", shearSpec);
+                        aiManager.attach((dev.helstera.runtime.instance.ModelInstanceImpl) shearInstance,
+                                shearProfile);
+                        getServer().getPluginManager().callEvent(
+                                new org.bukkit.event.player.PlayerShearEntityEvent(eventActor, shearMob));
+                        shearTrigger = "§fSHEAR_TRIGGER_OK".equals(shearMob.getCustomName());
+
+                        if (blockProbe != null) {
+                            var bedBlock = eventActor.getLocation().getBlock();
+                            var bedEnterEvent = compatibleBedEnterEvent(eventActor, bedBlock);
+                            if (bedEnterEvent != null) {
+                                bedEnterEvent.setCancelled(false);
+                                bedEnterEvent.setUseBed(org.bukkit.event.Event.Result.ALLOW);
+                                getServer().getPluginManager().callEvent(bedEnterEvent);
+                                bedEnterTrigger = "§dBED_ENTER_OK".equals(eventActor.getCustomName());
+                            }
+                            getServer().getPluginManager().callEvent(
+                                    new org.bukkit.event.player.PlayerBedLeaveEvent(eventActor, bedBlock, false));
+                            bedLeaveTrigger = "§5BED_LEAVE_OK".equals(eventActor.getCustomName());
+
+                            var tradeMob = world.spawn(location.clone().add(14, 0, 0),
+                                    org.bukkit.entity.Villager.class);
+                            var tradeInstance = instances().bind("example/emberling", tradeMob,
+                                    dev.helstera.api.instance.SpawnOptions.defaults());
+                            tracked.add(tradeInstance);
+                            var tradeProfile = new dev.helstera.ai.AiProfile("paper-trade-trigger");
+                            var tradeSpec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                            tradeSpec.actions.add(skills.bindAction("set-name &6TRADE_TRIGGER_OK"));
+                            tradeProfile.triggers.put("on-trade", tradeSpec);
+                            aiManager.attach((dev.helstera.runtime.instance.ModelInstanceImpl) tradeInstance,
+                                    tradeProfile);
+                            var tradeRecipe = new org.bukkit.inventory.MerchantRecipe(
+                                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.EMERALD), 0);
+                            getServer().getPluginManager().callEvent(
+                                    new io.papermc.paper.event.player.PlayerTradeEvent(
+                                            eventActor, tradeMob, tradeRecipe, false, false));
+                            tradeTrigger = "§6TRADE_TRIGGER_OK".equals(tradeMob.getCustomName());
+                            getServer().getPluginManager().callEvent(
+                                    new org.bukkit.event.player.PlayerChangedWorldEvent(eventActor, world));
+                            worldChangeTrigger = "§5WORLD_CHANGE_OK".equals(eventActor.getCustomName());
+                            var jumpFrom = eventActor.getLocation().clone();
+                            var jumpTo = jumpFrom.clone().add(0, 1, 0);
+                            getServer().getPluginManager().callEvent(
+                                    new com.destroystokyo.paper.event.player.PlayerJumpEvent(
+                                            eventActor, jumpFrom, jumpTo));
+                            jumpTrigger = "§6JUMP_OK".equals(eventActor.getCustomName());
+                            getServer().getPluginManager().callEvent(
+                                    new org.bukkit.event.player.PlayerAnimationEvent(eventActor));
+                            swingTrigger = "§7SWING_OK".equals(eventActor.getCustomName());
+                            var fishingHook = fishHookProbe(world, eventActor);
+                            getServer().getPluginManager().callEvent(
+                                    new org.bukkit.event.player.PlayerFishEvent(eventActor, tameMob, fishingHook,
+                                            org.bukkit.event.player.PlayerFishEvent.State.CAUGHT_FISH));
+                            fishTrigger = "§8FISH_TRIGGER_OK".equals(eventActor.getCustomName());
+                            fishingHook.remove();
+                            getServer().getPluginManager().callEvent(
+                                    new org.bukkit.event.player.PlayerQuitEvent(eventActor, "integration quit"));
+                            quitTrigger = "§3PLAYER_QUIT_OK".equals(eventActor.getCustomName());
+                            var droppedItem = world.dropItem(eventActor.getLocation(),
+                                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.APPLE));
+                            getServer().getPluginManager().callEvent(
+                                    new org.bukkit.event.player.PlayerDropItemEvent(eventActor, droppedItem));
+                            itemDropTrigger = "§1ITEM_DROP_OK".equals(eventActor.getCustomName());
+                            droppedItem.remove();
+                            getServer().getPluginManager().callEvent(
+                                    new org.bukkit.event.player.PlayerItemBreakEvent(eventActor,
+                                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_PICKAXE)));
+                            itemBreakTrigger = "§2ITEM_BREAK_OK".equals(eventActor.getCustomName());
+                            getServer().getPluginManager().callEvent(
+                                    new org.bukkit.event.player.PlayerItemDamageEvent(eventActor,
+                                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_PICKAXE), 1));
+                            itemDamageTrigger = "§4ITEM_DAMAGE_OK".equals(eventActor.getCustomName());
+                        }
+                    }
+                }
 
                 getLogger().info("[自检] events creeper-explode-cancelled=" + explode.isCancelled()
                         + " bee-attack-cancelled=" + attack.isCancelled()
-                        + " zombie-transform-cancelled=" + transform.isCancelled());
+                        + " zombie-transform-cancelled=" + transform.isCancelled()
+                        + " prevent-transformation-reasons=" + preventTransformationReasons
+                        + " prevent-skeleton-conversion=" + preventSkeletonConversion
+                        + " prevent-block-infection=" + preventBlockInfection
+                        + " prevent-snow-formation=" + preventSnowFormation
+                        + " tame-breed-tame=" + tameTrigger
+                        + " tame-breed-breed=" + breedTrigger
+                        + " leash-unleash-leash=" + leashTrigger
+                        + " leash-unleash-unleash=" + unleashTrigger
+                        + " prevent-leash=" + preventLeashOption
+                        + " prevent-rename=" + preventRenameOption
+                        + " prevent-target=" + preventTargetOption
+                        + " prevent-vanilla-damage=" + preventVanillaDamageOption
+                        + " prevent-projectiles=" + preventProjectileOption
+                        + " prevent-entity-explosions=" + preventEntityExplosionOption
+                        + " prevent-block-explosion-damage=" + preventBlockExplosionDamageOption
+                        + " prevent-drowning=" + preventDrowningOption
+                        + " prevent-fall-damage=" + preventFallDamageOption
+                        + " prevent-fire=" + preventFireOption
+                        + " prevent-fire-causes=" + preventFireCausesOption
+                        + " prevent-pickup=" + preventPickupOption
+                        + " prevent-item-use=" + preventItemUseOption
+                        + " prevent-teleport=" + preventTeleportOption
+                        + " prevent-sunburn=" + preventSunburnOption
+                        + " prevent-other-drops=" + preventOtherDropsOption
+                        + " prevent-mob-kill-drops=" + preventMobKillDropsOption
+                        + " prevent-mob-kill-custom-loot=" + preventMobKillCustomLootOption
+                        + " shear-trigger=" + shearTrigger
+                        + " bed-enter-leave-enter=" + bedEnterTrigger
+                        + " bed-enter-leave-leave=" + bedLeaveTrigger
+                        + " trade-trigger=" + tradeTrigger
+                        + " quit-trigger=" + quitTrigger
+                        + " item-drop-break-damage=" + (itemDropTrigger && itemBreakTrigger && itemDamageTrigger)
+                        + " player-actions-interact=" + interactTrigger
+                        + " world-change=" + worldChangeTrigger
+                        + " jump=" + jumpTrigger
+                        + " swing=" + swingTrigger
+                        + " fish-trigger=" + fishTrigger);
                 attacker.remove();
             } catch (Throwable t) {
                 getLogger().warning("[自检] events 异常: " + t);
@@ -2532,6 +5625,652 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 70L);
+    }
+
+    /** Verifies killer-side on-kill dispatch against a real Bukkit death chain. */
+    private void runNaturalKillTriggerProbe(org.bukkit.World world, Location origin) {
+        if (world == null || origin == null || instances() == null
+                || !(ai instanceof dev.helstera.ai.AiManager manager)
+                || !(skillService instanceof dev.helstera.ai.skill.SkillService skills)) {
+            getLogger().warning("kill-trigger unavailable=true passed=false");
+            return;
+        }
+        org.bukkit.entity.Zombie killer = null;
+        org.bukkit.entity.Zombie victim = null;
+        dev.helstera.runtime.instance.ModelInstanceImpl killerInstance = null;
+        try {
+            killer = world.spawn(origin.clone().add(50, 0, 0), org.bukkit.entity.Zombie.class);
+            victim = world.spawn(origin.clone().add(51, 0, 0), org.bukkit.entity.Zombie.class);
+            killer.setAI(false);
+            victim.setAI(false);
+            killer.setInvulnerable(false);
+            victim.setInvulnerable(false);
+            victim.setHealth(1.0);
+            killerInstance = (dev.helstera.runtime.instance.ModelInstanceImpl) instances().bind(
+                    "example/emberling", killer,
+                    dev.helstera.api.instance.SpawnOptions.defaults());
+
+            var profile = new dev.helstera.ai.AiProfile("paper-kill-trigger");
+            var trigger = new dev.helstera.ai.AiProfile.TriggerSpec();
+            String action = skills.bindAction("set-name &aKILL_TRIGGER_OK");
+            if (action == null) throw new IllegalStateException("on-kill probe action did not bind");
+            trigger.actions.add(action);
+            profile.triggers.put("on-kill", trigger);
+            manager.attach(killerInstance, profile);
+
+            // Use the real Bukkit damage path and a managed entity as damager;
+            // the trigger resolver must recover that entity from lastDamageCause.
+            killer.attack(victim);
+            if (victim.isValid() && !victim.isDead()) victim.damage(100.0, killer);
+            org.bukkit.entity.Zombie checkedKiller = killer;
+            org.bukkit.entity.Zombie checkedVictim = victim;
+            dev.helstera.runtime.instance.ModelInstanceImpl checkedInstance = killerInstance;
+            getServer().getScheduler().runTaskLater(this, () -> {
+                boolean dead = !checkedVictim.isValid() || checkedVictim.isDead();
+                boolean actionObserved = "§aKILL_TRIGGER_OK".equals(checkedKiller.getCustomName());
+                getLogger().info("kill-trigger natural=" + (dead && actionObserved)
+                        + " victim-dead=" + dead + " action-observed=" + actionObserved
+                        + " passed=" + (dead && actionObserved));
+                if (checkedInstance != null && instances() != null) {
+                    instances().despawn(checkedInstance.instanceId());
+                }
+                if (checkedVictim.isValid()) checkedVictim.remove();
+                if (checkedKiller.isValid()) checkedKiller.remove();
+            }, 2L);
+        } catch (Throwable failure) {
+            getLogger().warning("kill-trigger error=" + failure.getClass().getSimpleName()
+                    + " passed=false");
+            if (killerInstance != null && instances() != null) {
+                instances().despawn(killerInstance.instanceId());
+            }
+            if (victim != null && victim.isValid()) victim.remove();
+            if (killer != null && killer.isValid()) killer.remove();
+        }
+    }
+
+    /** Verifies on-kill-player and its lifetime player-kill counter with a real player death. */
+    private void runNaturalPlayerKillTriggerProbe(org.bukkit.World world, Location origin) {
+        if (world == null || origin == null || instances() == null
+                || !(ai instanceof dev.helstera.ai.AiManager manager)
+                || !(skillService instanceof dev.helstera.ai.skill.SkillService skills)) {
+            getLogger().warning("player-kill-trigger unavailable=true passed=false");
+            return;
+        }
+        org.bukkit.entity.Player victim = getServer().getOnlinePlayers().stream()
+                .filter(player -> player.isOnline() && !player.isDead())
+                .findFirst().orElse(null);
+        if (victim == null) {
+            getLogger().warning("player-kill-trigger unavailable=true passed=false");
+            return;
+        }
+
+        org.bukkit.entity.Zombie killer = null;
+        dev.helstera.runtime.instance.ModelInstanceImpl killerInstance = null;
+        org.bukkit.Location oldLocation = victim.getLocation().clone();
+        org.bukkit.GameMode oldGameMode = victim.getGameMode();
+        boolean oldInvulnerable = victim.isInvulnerable();
+        boolean oldAllowFlight = victim.getAllowFlight();
+        boolean oldFlying = victim.isFlying();
+        double oldHealth = victim.getHealth();
+        try {
+            killer = world.spawn(origin.clone().add(52, 0, 0), org.bukkit.entity.Zombie.class);
+            killer.setAI(false);
+            killer.setInvulnerable(false);
+            killer.setSilent(true);
+            killerInstance = (dev.helstera.runtime.instance.ModelInstanceImpl) instances().bind(
+                    "example/emberling", killer,
+                    dev.helstera.api.instance.SpawnOptions.defaults());
+
+            var profile = new dev.helstera.ai.AiProfile("paper-player-kill-trigger");
+            var trigger = new dev.helstera.ai.AiProfile.TriggerSpec();
+            String action = skills.bindAction("set-name &bPLAYER_KILL_TRIGGER_OK");
+            if (action == null) throw new IllegalStateException("on-kill-player probe action did not bind");
+            trigger.actions.add(action);
+            profile.triggers.put("on-kill-player", trigger);
+            manager.attach(killerInstance, profile);
+
+            victim.setGameMode(org.bukkit.GameMode.SURVIVAL);
+            victim.setInvulnerable(false);
+            victim.setNoDamageTicks(0);
+            victim.setHealth(Math.min(1.0, victim.getMaxHealth()));
+            // Paper may reject synthetic damage against an online test player
+            // while its client state is changing. Preserve the real Bukkit
+            // last-damage attribution, then use the normal health-zero death
+            // path so EntityDeathEvent and PlayerDeathEvent both fire.
+            victim.setLastDamageCause(new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                    killer, victim,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK,
+                    100.0));
+            victim.setHealth(0.0);
+            boolean deathObserved = victim.isDead();
+
+            org.bukkit.entity.Zombie checkedKiller = killer;
+            org.bukkit.entity.Player checkedVictim = victim;
+            dev.helstera.runtime.instance.ModelInstanceImpl checkedInstance = killerInstance;
+            getServer().getScheduler().runTaskLater(this, () -> {
+                boolean actionObserved = "§bPLAYER_KILL_TRIGGER_OK".equals(checkedKiller.getCustomName());
+                boolean playerKillsPositive = false;
+                boolean playerKillsNegative = false;
+                if (behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+                    var context = dev.helstera.api.behavior.BehaviorContext.of(
+                            checkedInstance, checkedVictim, 1.0, -1, 0, "on-kill-player");
+                    playerKillsPositive = behaviors.testCondition(
+                            skills.bindCondition("player-kills >=1"), context);
+                    playerKillsNegative = !behaviors.testCondition(
+                            skills.bindCondition("player-kills >1"), context);
+                }
+                boolean passed = deathObserved && actionObserved
+                        && playerKillsPositive && playerKillsNegative;
+                getLogger().info("player-kill-trigger natural=" + passed
+                        + " victim-player=true victim-death-observed=" + deathObserved
+                        + " action-observed=" + actionObserved
+                        + " player-kills-positive=" + playerKillsPositive
+                        + " player-kills-negative=" + playerKillsNegative
+                        + " passed=" + passed);
+                if (checkedInstance != null && instances() != null) {
+                    instances().despawn(checkedInstance.instanceId());
+                }
+                if (checkedKiller.isValid()) checkedKiller.remove();
+                try {
+                    if (checkedVictim.isDead()) checkedVictim.spigot().respawn();
+                    if (!checkedVictim.isDead()) {
+                        checkedVictim.teleport(oldLocation);
+                        checkedVictim.setGameMode(oldGameMode);
+                        checkedVictim.setInvulnerable(oldInvulnerable);
+                        checkedVictim.setAllowFlight(oldAllowFlight);
+                        checkedVictim.setFlying(oldFlying && oldAllowFlight);
+                        checkedVictim.setHealth(Math.min(oldHealth, checkedVictim.getMaxHealth()));
+                    }
+                } catch (Throwable restoreFailure) {
+                    getLogger().warning("player-kill-trigger restore="
+                            + restoreFailure.getClass().getSimpleName());
+                }
+            }, 2L);
+        } catch (Throwable failure) {
+            getLogger().warning("player-kill-trigger error=" + failure.getClass().getSimpleName()
+                    + " passed=false");
+            if (killerInstance != null && instances() != null) {
+                instances().despawn(killerInstance.instanceId());
+            }
+            if (killer != null && killer.isValid()) killer.remove();
+            try {
+                if (victim.isDead()) victim.spigot().respawn();
+                if (!victim.isDead()) {
+                    victim.teleport(oldLocation);
+                    victim.setGameMode(oldGameMode);
+                    victim.setInvulnerable(oldInvulnerable);
+                    victim.setAllowFlight(oldAllowFlight);
+                    victim.setFlying(oldFlying && oldAllowFlight);
+                    victim.setHealth(Math.min(oldHealth, victim.getMaxHealth()));
+                }
+            } catch (Throwable restoreFailure) {
+                getLogger().warning("player-kill-trigger restore="
+                        + restoreFailure.getClass().getSimpleName());
+            }
+        }
+    }
+
+    /** Verifies Bukkit fluid-state conditions after Paper has advanced one tick. */
+    private void scheduleTargetFluidTimingProbe(
+            org.bukkit.World world,
+            Location origin,
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+        if (world == null || origin == null || skills == null || behaviors == null
+                || instances() == null) return;
+        var target = world.spawn(origin.clone().add(48, 0, 0), org.bukkit.entity.Zombie.class);
+        target.setAI(false);
+        target.setGravity(false);
+        target.setInvulnerable(true);
+        target.setSilent(true);
+        var instance = instances().bind("example/emberling", target,
+                dev.helstera.api.instance.SpawnOptions.defaults());
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, target, 1.0, -1, 0, "integration");
+        var feet = target.getLocation().getBlock();
+        var head = target.getLocation().clone().add(0, 1, 0).getBlock();
+        var feetState = feet.getState();
+        var headState = head.getState();
+        feet.setType(org.bukkit.Material.WATER, false);
+        head.setType(org.bukkit.Material.WATER, false);
+        getServer().getScheduler().runTaskLater(this, () -> {
+            boolean water = false;
+            try {
+                water = behaviors.testCondition(
+                        skills.bindCondition("target-in-water"), context);
+                feet.setType(org.bukkit.Material.LAVA, false);
+                head.setType(org.bukkit.Material.LAVA, false);
+                boolean waterObserved = water;
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    boolean lava = false;
+                    try {
+                        lava = behaviors.testCondition(
+                                skills.bindCondition("target-in-lava"), context);
+                        getLogger().info("target-fluids-delayed water=" + waterObserved
+                                + " lava=" + lava + " passed=" + (waterObserved && lava));
+                    } finally {
+                        feetState.update(true, false);
+                        headState.update(true, false);
+                        if (instance != null && instances() != null) {
+                            instances().despawn(instance.instanceId());
+                        }
+                        if (target.isValid()) target.remove();
+                    }
+                }, 1L);
+            } catch (Throwable failure) {
+                getLogger().warning("target-fluids-delayed error="
+                        + failure.getClass().getSimpleName() + " passed=false");
+                feetState.update(true, false);
+                headState.update(true, false);
+                if (instance != null && instances() != null) {
+                    instances().despawn(instance.instanceId());
+                }
+                if (target.isValid()) target.remove();
+            }
+        }, 1L);
+    }
+
+    /** Verifies configured Creeper fuse timing against the real Paper tick loop. */
+    private void runNaturalCreeperFuseProbe(org.bukkit.World world, Location origin) {
+        if (world == null || origin == null) return;
+        var creeper = world.spawn(origin.clone().add(18, 0, 0), org.bukkit.entity.Creeper.class);
+        creeper.setInvulnerable(true);
+        creeper.setExplosionRadius(0);
+        var config = new org.bukkit.configuration.file.YamlConfiguration();
+        config.set("creeper-fuse-ticks", 20);
+        applyEntitySpecificOptions(creeper, config);
+        int configuredFuse = creeper.getMaxFuseTicks();
+        creeper.setIgnited(true);
+        getServer().getScheduler().runTaskLater(this, () -> {
+            boolean exploded = !creeper.isValid() || creeper.isDead();
+            getLogger().info("mob-options-natural creeper-fuse=" + (exploded && configuredFuse == 20)
+                    + " exploded=" + exploded + " max-fuse=" + configuredFuse
+                    + " passed=" + (exploded && configuredFuse == 20));
+            if (creeper.isValid()) creeper.remove();
+        }, 30L);
+    }
+
+    /**
+     * Runs the remaining natural Mob Option timing probes on the Paper tick
+     * loop. The jockey assertion is reported separately because Bukkit's
+     * public API can verify mount-event cancellation, but cannot request a
+     * deterministic native AI jockey spawn.
+     */
+    private void runNaturalMobOptionTimingProbe(org.bukkit.World world, Location origin) {
+        if (world == null || origin == null || instances() == null) return;
+        var target = world.spawn(origin.clone().add(24, 0, 0), org.bukkit.entity.Zombie.class);
+        target.setAI(false);
+        target.setMaxHealth(100.0);
+        target.setHealth(100.0);
+        target.setSilent(true);
+
+        var protectedBee = world.spawn(origin.clone().add(22, 0, 0), org.bukkit.entity.Bee.class);
+        var controlBee = world.spawn(origin.clone().add(26, 0, 0), org.bukkit.entity.Bee.class);
+        protectedBee.setTarget(target);
+        controlBee.setTarget(target);
+        protectedBee.setAware(true);
+        controlBee.setAware(true);
+        protectedBee.setHasStung(false);
+        controlBee.setHasStung(false);
+        var protectedBeeInstance = instances().bind("example/emberling", protectedBee,
+                dev.helstera.api.instance.SpawnOptions.defaults().preventStingerLoss(true));
+
+        var protectedZombie = world.spawn(origin.clone().add(30, 0, 0), org.bukkit.entity.Zombie.class);
+        var controlZombie = world.spawn(origin.clone().add(34, 0, 0), org.bukkit.entity.Zombie.class);
+        protectedZombie.setAI(true);
+        controlZombie.setAI(true);
+        protectedZombie.setInvulnerable(true);
+        controlZombie.setInvulnerable(true);
+        protectedZombie.setSwimming(true);
+        controlZombie.setSwimming(true);
+        // Keep native AI enabled: Zombie conversion is part of the vanilla tick
+        // path, so disabling AI would also disable the behavior under test.
+        protectedZombie.setGravity(false);
+        controlZombie.setGravity(false);
+        protectedZombie.setPersistent(true);
+        controlZombie.setPersistent(true);
+        protectedZombie.setRemoveWhenFarAway(false);
+        controlZombie.setRemoveWhenFarAway(false);
+        // Keep both control entities fully submerged and preserve every block
+        // touched by the probe so the world is restored even after water flow.
+        var protectedCenter = protectedZombie.getLocation().clone();
+        var controlCenter = controlZombie.getLocation().clone();
+        var protectedWater = new java.util.ArrayList<org.bukkit.block.BlockState>();
+        var controlWater = new java.util.ArrayList<org.bukkit.block.BlockState>();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 2; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    var protectedBlock = protectedCenter.clone().add(dx, dy, dz).getBlock();
+                    protectedWater.add(protectedBlock.getState());
+                    protectedBlock.setType(org.bukkit.Material.WATER, false);
+                    var controlBlock = controlCenter.clone().add(dx, dy, dz).getBlock();
+                    controlWater.add(controlBlock.getState());
+                    controlBlock.setType(org.bukkit.Material.WATER, false);
+                }
+            }
+        }
+        protectedZombie.setConversionTime(20);
+        controlZombie.setConversionTime(20);
+        var protectedZombieInstance = instances().bind("example/emberling", protectedZombie,
+                dev.helstera.api.instance.SpawnOptions.defaults().preventTransformation(true));
+
+        var protectedJockey = world.spawn(origin.clone().add(38, 0, 0), org.bukkit.entity.Zombie.class);
+        var protectedChicken = world.spawn(origin.clone().add(38, 0, 1), org.bukkit.entity.Chicken.class);
+        var controlJockey = world.spawn(origin.clone().add(42, 0, 0), org.bukkit.entity.Zombie.class);
+        var controlChicken = world.spawn(origin.clone().add(42, 0, 1), org.bukkit.entity.Chicken.class);
+        protectedJockey.setBaby(true);
+        controlJockey.setBaby(true);
+        protectedJockey.setAI(false);
+        controlJockey.setAI(false);
+        var protectedJockeyInstance = instances().bind("example/emberling", protectedJockey,
+                dev.helstera.api.instance.SpawnOptions.defaults().preventJockeyMounts(true));
+
+        var protectedGenericPassenger = world.spawn(origin.clone().add(44, 0, 0),
+                org.bukkit.entity.Wolf.class);
+        var protectedGenericMount = world.spawn(origin.clone().add(44, 0, 1),
+                org.bukkit.entity.Pig.class);
+        var controlGenericPassenger = world.spawn(origin.clone().add(45, 0, 0),
+                org.bukkit.entity.Wolf.class);
+        var controlGenericMount = world.spawn(origin.clone().add(45, 0, 1),
+                org.bukkit.entity.Pig.class);
+        var protectedGenericPassengerInstance = instances().bind("example/emberling",
+                protectedGenericPassenger,
+                dev.helstera.api.instance.SpawnOptions.defaults().preventMount(true));
+        var controlGenericPassengerInstance = instances().bind("example/emberling",
+                controlGenericPassenger, dev.helstera.api.instance.SpawnOptions.defaults());
+        var protectedGenericMountEvent = new org.bukkit.event.entity.EntityMountEvent(
+                protectedGenericPassenger, protectedGenericMount);
+        var controlGenericMountEvent = new org.bukkit.event.entity.EntityMountEvent(
+                controlGenericPassenger, controlGenericMount);
+        getServer().getPluginManager().callEvent(protectedGenericMountEvent);
+        getServer().getPluginManager().callEvent(controlGenericMountEvent);
+        boolean genericMountPrevented = protectedGenericMountEvent.isCancelled();
+        boolean genericMountAllowed = !controlGenericMountEvent.isCancelled();
+
+        var protectedSlime = world.spawn(origin.clone().add(46, 0, 0), org.bukkit.entity.Slime.class);
+        var controlSlime = world.spawn(origin.clone().add(50, 0, 0), org.bukkit.entity.Slime.class);
+        var protectedSlimeInstance = instances().bind("example/emberling", protectedSlime,
+                dev.helstera.api.instance.SpawnOptions.defaults().preventSlimeSplit(true));
+        var controlSlimeInstance = instances().bind("example/emberling", controlSlime,
+                dev.helstera.api.instance.SpawnOptions.defaults());
+        var protectedSplit = new org.bukkit.event.entity.SlimeSplitEvent(protectedSlime, 3);
+        var controlSplit = new org.bukkit.event.entity.SlimeSplitEvent(controlSlime, 3);
+        getServer().getPluginManager().callEvent(protectedSplit);
+        getServer().getPluginManager().callEvent(controlSplit);
+        boolean slimeSplitPrevented = protectedSplit.isCancelled();
+        boolean slimeSplitAllowed = !controlSplit.isCancelled();
+
+        var protectedBeeAttacks = new java.util.concurrent.atomic.AtomicInteger();
+        var controlBeeAttacks = new java.util.concurrent.atomic.AtomicInteger();
+        var controlConversionObserved = new java.util.concurrent.atomic.AtomicBoolean();
+        var protectedConversionBlocked = new java.util.concurrent.atomic.AtomicBoolean();
+        org.bukkit.event.Listener beeProbeListener = new org.bukkit.event.Listener() {
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR,
+                    ignoreCancelled = true)
+            public void onBeeAttack(org.bukkit.event.entity.EntityDamageByEntityEvent event) {
+                if (event.getDamager() == protectedBee) protectedBeeAttacks.incrementAndGet();
+                if (event.getDamager() == controlBee) controlBeeAttacks.incrementAndGet();
+            }
+
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+            public void onZombieConversion(org.bukkit.event.entity.EntityTransformEvent event) {
+                if (event.getTransformReason()
+                        != org.bukkit.event.entity.EntityTransformEvent.TransformReason.DROWNED) return;
+                if (event.getEntity() == controlZombie && !event.isCancelled()) {
+                    controlConversionObserved.set(true);
+                }
+                if (event.getEntity() == protectedZombie && event.isCancelled()) {
+                    protectedConversionBlocked.set(true);
+                }
+            }
+        };
+        getServer().getPluginManager().registerEvents(beeProbeListener, this);
+
+        // Drive the same Bukkit damage path once for each Bee so the probe is
+        // deterministic while still exercising the production stinger hook.
+        protectedBee.setHasStung(true);
+        controlBee.setHasStung(true);
+        getServer().getPluginManager().callEvent(new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                protectedBee, target, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0));
+        getServer().getPluginManager().callEvent(new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                controlBee, target, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0));
+
+        final int[] ticks = {0};
+        final org.bukkit.scheduler.BukkitTask[] task = {null};
+        task[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+            ticks[0]++;
+            // Daylight/fire and water updates are environmental noise, not
+            // part of the conversion option being measured.
+            if (protectedZombie.isValid() && !protectedZombie.isDead()) {
+                protectedZombie.setFireTicks(0);
+                fillProbeWater(protectedCenter);
+                protectedZombie.teleport(protectedCenter);
+                protectedZombie.setVelocity(new org.bukkit.util.Vector());
+            }
+            if (controlZombie.isValid() && !controlZombie.isDead()) {
+                controlZombie.setFireTicks(0);
+                fillProbeWater(controlCenter);
+                controlZombie.teleport(controlCenter);
+                controlZombie.setVelocity(new org.bukkit.util.Vector());
+            }
+            boolean beeObserved = protectedBeeAttacks.get() > 0 && controlBeeAttacks.get() > 0;
+            boolean beeRestored = protectedBeeAttacks.get() > 0 && !protectedBee.hasStung();
+            boolean controlConverted = controlConversionObserved.get()
+                    || world.getNearbyEntities(controlZombie.getLocation(), 2, 2, 2)
+                    .stream().anyMatch(entity -> entity instanceof org.bukkit.entity.Drowned);
+            boolean protectedBlocked = protectedConversionBlocked.get()
+                    || (protectedZombie.isValid()
+                    && world.getNearbyEntities(protectedZombie.getLocation(), 2, 2, 2)
+                    .stream().noneMatch(entity -> entity instanceof org.bukkit.entity.Drowned));
+            boolean protectedMountCancelled = false;
+            if (!protectedChicken.getPassengers().contains(protectedJockey)) {
+                var protectedMount = new org.bukkit.event.entity.EntityMountEvent(
+                        protectedJockey, protectedChicken);
+                getServer().getPluginManager().callEvent(protectedMount);
+                protectedMountCancelled = protectedMount.isCancelled();
+                if (!protectedMount.isCancelled()) protectedChicken.addPassenger(protectedJockey);
+            }
+            if (!controlChicken.getPassengers().contains(controlJockey)) {
+                var controlMount = new org.bukkit.event.entity.EntityMountEvent(
+                        controlJockey, controlChicken);
+                getServer().getPluginManager().callEvent(controlMount);
+                if (!controlMount.isCancelled()) controlChicken.addPassenger(controlJockey);
+            }
+            boolean jockeyEventPrevented = protectedMountCancelled
+                    && !protectedChicken.getPassengers().contains(protectedJockey);
+            boolean jockeyEventAllowed = controlChicken.getPassengers().contains(controlJockey);
+            boolean naturalCompleted = beeObserved && beeRestored && controlConverted
+                    && protectedBlocked;
+            boolean mountEventCompleted = jockeyEventPrevented && jockeyEventAllowed
+                    && genericMountPrevented && genericMountAllowed;
+            if ((naturalCompleted && mountEventCompleted) || ticks[0] >= 240) {
+                if (task[0] != null) task[0].cancel();
+                getLogger().info("mob-options-natural bee-stinger=" + (beeObserved && beeRestored)
+                        + " bee-attacks=" + protectedBeeAttacks.get() + "/" + controlBeeAttacks.get()
+                        + " zombie-conversion=" + (controlConverted && protectedBlocked)
+                        + " zombie-control=" + controlConverted
+                        + " zombie-protected=" + protectedBlocked
+                        + " control-valid=" + controlZombie.isValid()
+                        + " control-in-water=" + controlZombie.isInWater()
+                        + " control-location=" + formatProbeLocation(controlZombie.getLocation())
+                        + " control-block=" + controlZombie.getLocation().getBlock().getType()
+                        + " control-below=" + controlZombie.getLocation().clone().add(0, -1, 0).getBlock().getType()
+                        + " control-above=" + controlZombie.getLocation().clone().add(0, 1, 0).getBlock().getType()
+                        + " control-conversion-time=" + controlZombie.getConversionTime()
+                        + " passed=" + naturalCompleted);
+                getLogger().info("mob-options-mount-event prevented=" + jockeyEventPrevented
+                        + " allowed=" + jockeyEventAllowed
+                        + " generic-prevented=" + genericMountPrevented
+                        + " generic-allowed=" + genericMountAllowed
+                        + " passed=" + mountEventCompleted);
+                getLogger().info("mob-options-slime-split prevented=" + slimeSplitPrevented
+                        + " allowed=" + slimeSplitAllowed
+                        + " passed=" + (slimeSplitPrevented && slimeSplitAllowed));
+                org.bukkit.event.HandlerList.unregisterAll(beeProbeListener);
+                if (protectedBeeInstance != null && instances() != null) {
+                    instances().despawn(protectedBeeInstance.instanceId());
+                }
+                if (protectedZombieInstance != null && instances() != null) {
+                    instances().despawn(protectedZombieInstance.instanceId());
+                }
+                if (protectedJockeyInstance != null && instances() != null) {
+                    instances().despawn(protectedJockeyInstance.instanceId());
+                }
+                if (protectedGenericPassengerInstance != null && instances() != null) {
+                    instances().despawn(protectedGenericPassengerInstance.instanceId());
+                }
+                if (controlGenericPassengerInstance != null && instances() != null) {
+                    instances().despawn(controlGenericPassengerInstance.instanceId());
+                }
+                if (protectedSlimeInstance != null && instances() != null) {
+                    instances().despawn(protectedSlimeInstance.instanceId());
+                }
+                if (controlSlimeInstance != null && instances() != null) {
+                    instances().despawn(controlSlimeInstance.instanceId());
+                }
+                for (var state : protectedWater) state.update(true, false);
+                for (var state : controlWater) state.update(true, false);
+                for (var entity : List.of(target, controlBee, protectedChicken, controlChicken,
+                        controlJockey, protectedBee, protectedZombie, controlZombie, protectedJockey,
+                        protectedSlime, controlSlime, protectedGenericPassenger, protectedGenericMount,
+                        controlGenericPassenger, controlGenericMount)) {
+                    if (entity != null && entity.isValid()) entity.remove();
+                }
+            }
+        }, 1L, 1L);
+    }
+
+    private static void fillProbeWater(Location center) {
+        if (center == null || center.getWorld() == null) return;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 2; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    center.clone().add(dx, dy, dz).getBlock()
+                            .setType(org.bukkit.Material.WATER, false);
+                }
+            }
+        }
+    }
+
+    /**
+     * Server-side selector evidence.  This deliberately avoids Mineflayer:
+     * selector semantics are server-owned, and a client workflow failure must
+     * not turn a valid AI result into an unobserved Paper probe.
+     */
+    private void runSelectorSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var holder = getServer().getOnlinePlayers().stream().findFirst().orElse(null);
+            var manager = ai instanceof AiManager value ? value : null;
+            var managerInstances = instances();
+            if (holder == null || manager == null || managerInstances == null) {
+                getLogger().warning("ai-selector-core unavailable=true passed=false");
+                return;
+            }
+
+            int instanceId = spawnMobAt("priority_attack_probe",
+                    holder.getLocation().clone().add(2, 0, 0), null);
+            var instance = instanceId > 0 ? managerInstances.impl(instanceId) : null;
+            var base = instance == null ? null : instance.baseEntity().orElse(null);
+            if (instance == null || !(base instanceof org.bukkit.entity.Mob mob)) {
+                getLogger().warning("ai-selector-core unavailable=true passed=false");
+                if (instanceId > 0 && managerInstances.impl(instanceId) != null) {
+                    managerInstances.despawn(instanceId);
+                }
+                return;
+            }
+
+            org.bukkit.entity.Zombie monster = null;
+            try {
+                monster = holder.getWorld().spawn(holder.getLocation().clone().add(3, 0, 0),
+                        org.bukkit.entity.Zombie.class);
+                monster.setAI(false);
+                monster.setSilent(true);
+
+                AiProfile playersAndMonsters = new AiProfile("paper-selector-core");
+                playersAndMonsters.canChase = false;
+                playersAndMonsters.canPatrol = false;
+                playersAndMonsters.goals.addAll(List.of("0 clear", "1 meleeattack"));
+                playersAndMonsters.targets.addAll(List.of("0 clear", "1 players", "2 monsters"));
+                manager.attach(instance, playersAndMonsters);
+                var controller = manager.controllerById(instanceId);
+                controller.setCombatTarget(holder);
+                controller.tick();
+                boolean playerTarget = controller.targetEntity() == holder && mob.getTarget() == holder;
+
+                controller.setCombatTarget(monster);
+                controller.tick();
+                boolean monsterTarget = controller.targetEntity() == monster && mob.getTarget() == monster;
+
+                AiProfile clear = new AiProfile("paper-selector-clear");
+                clear.canChase = false;
+                clear.canAttack = false;
+                clear.canPatrol = false;
+                clear.targets.add("0 clear");
+                manager.attach(instance, clear);
+                controller = manager.controllerById(instanceId);
+                controller.setCombatTarget(holder);
+                controller.tick();
+                boolean clearNoFallback = controller.targetEntity() == null && mob.getTarget() == null;
+
+                dev.helstera.api.behavior.MobRelations.setOwner(base, holder);
+                AiProfile owner = new AiProfile("paper-selector-owner");
+                owner.canChase = false;
+                owner.canPatrol = false;
+                owner.targets.add("0 owner");
+                manager.attach(instance, owner);
+                controller = manager.controllerById(instanceId);
+                controller.setCombatTarget(holder);
+                controller.tick();
+                boolean ownerTarget = controller.targetEntity() == holder;
+
+                AiProfile faction = new AiProfile("paper-selector-faction");
+                faction.canChase = false;
+                faction.canPatrol = false;
+                faction.faction = "undead";
+                faction.targets.add("0 specificfaction guards");
+                manager.attach(instance, faction);
+                controller = manager.controllerById(instanceId);
+                controller.setCombatTarget(holder);
+                controller.tick();
+                boolean factionTarget = controller.targetEntity() == holder;
+
+                AiProfile conditional = new AiProfile("paper-selector-conditional");
+                conditional.canChase = false;
+                conditional.canPatrol = false;
+                conditional.targets.add("0 nearestConditionalTarget{conditions=[is-player]}");
+                manager.attach(instance, conditional);
+                controller = manager.controllerById(instanceId);
+                controller.setCombatTarget(monster);
+                controller.tick();
+                boolean conditionalTarget = controller.targetEntity() == holder
+                        && mob.getTarget() == holder;
+
+                boolean goals = controller.selectorDiagnostic().contains("can-attack=false")
+                        || controller.selectorDiagnostic().contains("can-chase=false");
+                boolean passed = playerTarget && monsterTarget && clearNoFallback
+                        && ownerTarget && factionTarget && conditionalTarget
+                        && mob.getTarget() == holder;
+                getLogger().info("ai-selector-core goals=" + goals
+                        + " player-target=" + playerTarget
+                        + " monster-target=" + monsterTarget
+                        + " clear-no-fallback=" + clearNoFallback
+                        + " owner-target=" + ownerTarget
+                        + " faction-target=" + factionTarget
+                        + " conditional-target=" + conditionalTarget
+                        + " native-target=" + (mob.getTarget() == holder)
+                        + " faction-source=" + dev.helstera.api.behavior.Factions.factionOf(base)
+                        + " faction-holder=" + dev.helstera.api.behavior.Factions.factionOf(holder)
+                        + " selector=" + controller.selectorDiagnostic()
+                        + " passed=" + passed);
+            } catch (Throwable failure) {
+                getLogger().warning("ai-selector-core error=" + failure.getClass().getSimpleName()
+                        + " passed=false");
+            } finally {
+                dev.helstera.api.behavior.MobRelations.clearOwner(base);
+                if (monster != null && monster.isValid()) monster.remove();
+                if (managerInstances.impl(instanceId) != null) managerInstances.despawn(instanceId);
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
     }
 
     private dev.helstera.ai.AiController.State priorityProbe(org.bukkit.entity.Player player,
@@ -2740,16 +6479,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 .preventLeashing(cfg.getBoolean("mob.prevent-leashing", cfg.getBoolean("prevent-leashing", false)))
                 .preventRenaming(cfg.getBoolean("mob.prevent-renaming", cfg.getBoolean("prevent-renaming", true)))
                 .preventTransformation(cfg.getBoolean("mob.prevent-transformation", cfg.getBoolean("prevent-transformation", false)))
-                .preventTransformationReasons(cfg.getStringList("mob.prevent-transformation-reasons").isEmpty()
-                        ? cfg.getStringList("prevent-transformation-reasons")
-                        : cfg.getStringList("mob.prevent-transformation-reasons"))
+                .preventTransformationReasons(configuredStringList(cfg,
+                        "mob.prevent-transformation-reasons", "prevent-transformation-reasons"))
                 .preventMount(cfg.getBoolean("mob.prevent-mount", cfg.getBoolean("prevent-mount", false)))
                 .preventJockeyMounts(cfg.getBoolean("mob.prevent-jockey-mounts",
                         cfg.getBoolean("prevent-jockey-mounts", false)))
                 .preventTarget(cfg.getBoolean("mob.prevent-target", cfg.getBoolean("prevent-target", false)))
-                .preventTargetReasons(cfg.getStringList("mob.prevent-target-reasons").isEmpty()
-                        ? cfg.getStringList("prevent-target-reasons")
-                        : cfg.getStringList("mob.prevent-target-reasons"))
+                .preventTargetReasons(configuredStringList(cfg,
+                        "mob.prevent-target-reasons", "prevent-target-reasons"))
                 .preventAttack(cfg.getBoolean("mob.prevent-attack", cfg.getBoolean("prevent-attack", false)))
                 .preventVanillaDamage(cfg.getBoolean("mob.prevent-vanilla-damage",
                         cfg.getBoolean("prevent-vanilla-damage", false)))
@@ -2760,17 +6497,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 .preventTeleport(cfg.getBoolean("mob.prevent-teleport", cfg.getBoolean("prevent-teleport", false)))
                 .preventPickup(cfg.getBoolean("mob.prevent-pickup", cfg.getBoolean("prevent-pickup", false)))
                 .preventItemUse(cfg.getBoolean("mob.prevent-item-use", cfg.getBoolean("prevent-item-use", false)))
+                .interactable(cfg.getBoolean("mob.interactable", cfg.getBoolean("interactable", true)))
                 .preventDrowning(cfg.getBoolean("mob.prevent-drowning", cfg.getBoolean("prevent-drowning", false)))
                 .preventFallDamage(cfg.getBoolean("mob.prevent-fall-damage", cfg.getBoolean("prevent-fall-damage", false)))
                 .preventFire(cfg.getBoolean("mob.prevent-fire", cfg.getBoolean("prevent-fire", false)))
-                .preventFireCauses(cfg.getStringList("mob.prevent-fire-causes").isEmpty()
-                        ? cfg.getStringList("prevent-fire-causes")
-                        : cfg.getStringList("mob.prevent-fire-causes"))
+                .preventFireCauses(configuredStringList(cfg,
+                        "mob.prevent-fire-causes", "prevent-fire-causes"))
                 .preventProjectiles(cfg.getBoolean("mob.prevent-projectiles", cfg.getBoolean("prevent-projectiles", false)))
                 .preventExplosions(cfg.getBoolean("mob.prevent-explosions", cfg.getBoolean("prevent-explosions", false)))
                 .preventSuicide(cfg.getBoolean("mob.prevent-suicide", cfg.getBoolean("prevent-suicide", false)))
                 .preventBlockExplosions(cfg.getBoolean("mob.prevent-block-explosions", cfg.getBoolean("prevent-block-explosions", false)))
                 .preventEntityExplosions(cfg.getBoolean("mob.prevent-entity-explosions", cfg.getBoolean("prevent-entity-explosions", false)))
+                .preventBlockInfection(cfg.getBoolean("mob.prevent-block-infection",
+                        cfg.getBoolean("prevent-block-infection", false)))
+                .preventSnowFormation(cfg.getBoolean("mob.prevent-snow-formation",
+                        cfg.getBoolean("prevent-snow-formation", false)))
                 .healOnReload(cfg.getBoolean("mob.heal-on-reload", cfg.getBoolean("heal-on-reload", false)))
                 .digOutOfGround(cfg.getBoolean("mob.dig-out-of-ground", cfg.getBoolean("dig-out-of-ground", false)))
                 .silent(cfg.getBoolean("entity.silent", false))
@@ -2842,7 +6583,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             ent.setCustomNameVisible(opts.showName());
             if (ent instanceof org.bukkit.entity.Mob mobEntity) {
                 mobEntity.setAware(!entitySec.getBoolean("no-ai", opts.noAi()));
-                mobEntity.setCanPickupItems(entitySec.getBoolean("can-pickup-items", !opts.preventItemPickup()));
+                applyMobPickupOption(mobEntity, entitySec, opts);
             }
             applyAgeOptions(ent, entitySec);
             applyEntitySpecificOptions(ent, entitySec);
@@ -2873,11 +6614,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     : Math.max(0.1, Math.min(hp, hp * Math.max(0, Math.min(1, healthRatio)))));
             applyEntityAttributes(ent, entitySec.getConfigurationSection("attributes"));
             // 装备：items 节，支持 material:amount 和带附魔的写法
-            if (opts.preventRandomEquipment() && ent.getEquipment() != null) {
-                ent.getEquipment().clear();
-            }
+            applyRandomEquipmentPolicy(ent, opts);
             applyEntityEquipment(ent, entitySec);
-            ent.setNoDamageTicks(opts.noDamageTicks());
+            applySpawnNoDamageTicks(ent, opts);
             markPersistentMob(ent, mobId, opts);
             inst = instances().bind(model, ent, opts);
             }
@@ -3012,11 +6751,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
     public void onNameTagUse(org.bukkit.event.player.PlayerInteractEntityEvent event) {
-        if (instances == null) return;
-        org.bukkit.inventory.ItemStack item = event.getPlayer().getInventory().getItem(event.getHand());
-        if (item == null || item.getType() != org.bukkit.Material.NAME_TAG) return;
+        if (instances == null || event == null
+                || !isNameTagUse(event.getPlayer(), event.getHand())) return;
         dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getRightClicked());
         if (instance != null && instance.options().preventRenaming()) event.setCancelled(true);
+    }
+
+    /** Synthetic or third-party interaction events may omit the player. */
+    static boolean isNameTagUse(org.bukkit.entity.Player player,
+                                org.bukkit.inventory.EquipmentSlot hand) {
+        if (player == null || hand == null || player.getInventory() == null) return false;
+        org.bukkit.inventory.ItemStack item = player.getInventory().getItem(hand);
+        return item != null && item.getType() == org.bukkit.Material.NAME_TAG;
     }
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = false)
@@ -3042,6 +6788,39 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (instance != null && instance.options().blocksTransformationReason(event.getTransformReason().name())) {
             event.setCancelled(true);
         }
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onSilverfishBlockChange(org.bukkit.event.entity.EntityChangeBlockEvent event) {
+        if (instances == null || event == null
+                || !(event.getEntity() instanceof org.bukkit.entity.Silverfish)) return;
+        var instance = findInstance(event.getEntity());
+        if (instance != null && preventsSilverfishBlockInfection(
+                event.getEntity(), event.getTo(), instance.options())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityBlockForm(org.bukkit.event.block.EntityBlockFormEvent event) {
+        if (instances == null || event == null) return;
+        var instance = findInstance(event.getEntity());
+        if (instance != null && preventsSnowFormationFor(event.getEntity(), instance.options())) {
+            event.setCancelled(true);
+        }
+    }
+
+    static boolean preventsSnowFormationFor(org.bukkit.entity.Entity entity, SpawnOptions options) {
+        return entity instanceof org.bukkit.entity.Snowman
+                && options != null && options.preventSnowFormation();
+    }
+
+    static boolean preventsSilverfishBlockInfection(org.bukkit.entity.Entity entity,
+                                                    org.bukkit.Material target,
+                                                    SpawnOptions options) {
+        return entity instanceof org.bukkit.entity.Silverfish
+                && target != null && target.name().startsWith("INFESTED_")
+                && options != null && options.preventBlockInfection();
     }
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
@@ -3123,7 +6902,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     public void onEntityInteract(org.bukkit.event.player.PlayerInteractEntityEvent event) {
         if (instances == null) return;
         dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getRightClicked());
-        if (instance != null && instance.options().preventItemUse()) event.setCancelled(true);
+        if (instance != null && shouldCancelEntityInteraction(instance.options())) event.setCancelled(true);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onArmorStandManipulate(org.bukkit.event.player.PlayerArmorStandManipulateEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getRightClicked());
+        if (instance != null && shouldCancelEntityInteraction(instance.options())) event.setCancelled(true);
+    }
+
+    static boolean shouldCancelEntityInteraction(SpawnOptions options) {
+        return options != null && (!options.interactable() || options.preventItemUse());
     }
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
@@ -3150,9 +6940,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         for (var instance : instances().allImpl()) {
             if (!e.getEntity().getUniqueId().equals(instance.boundEntityId().orElse(null))) continue;
             var options = instance.options();
-            if ((options.preventSunburn() && e.getEntity().getFireTicks() <= 0) || options.preventFire()) e.setCancelled(true);
+            if ((options.preventSunburn() && isSunlightCombustEvent(e)) || options.preventFire()) e.setCancelled(true);
             return;
         }
+    }
+
+    /** EntityCombustEvent itself is the sunlight path; block/entity subclasses carry another cause. */
+    static boolean isSunlightCombustEvent(org.bukkit.event.entity.EntityCombustEvent event) {
+        return event != null
+                && !(event instanceof org.bukkit.event.entity.EntityCombustByBlockEvent)
+                && !(event instanceof org.bukkit.event.entity.EntityCombustByEntityEvent);
     }
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
@@ -3189,14 +6986,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
     public void onEntityDeathForLoot(org.bukkit.event.entity.EntityDeathEvent e) {
-        if (lootService == null || instances == null) return;
+        releasePersistentMobChunk(e.getEntity());
+        if (instances == null) return;
         org.bukkit.entity.Entity ent = e.getEntity();
         org.bukkit.entity.Player killer = e.getEntity().getKiller();
         dev.helstera.runtime.instance.ModelInstanceImpl killerInstance = null;
-        if (killer != null) killerInstance = findInstance(killer);
+        org.bukkit.entity.Entity deathKiller = killer;
+        if (deathKiller == null && ent instanceof org.bukkit.entity.LivingEntity living) {
+            deathKiller = resolveDeathKiller(living);
+        }
+        if (deathKiller != null) killerInstance = findInstance(deathKiller);
         if (killerInstance != null && killerInstance.options().preventMobKillDrops()) {
-            e.getDrops().clear();
-            e.setDroppedExp(0);
+            applyMobKillDropPolicy(e, killerInstance.options());
+            // This option suppresses the target's entire loot result, including
+            // a custom table configured on the victim.
+            return;
         }
         dev.helstera.runtime.instance.ModelInstanceImpl inst = null;
         for (var i : instances().allImpl()) {
@@ -3207,10 +7011,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         if (inst == null) return;
         // PreventOtherDrops is meaningful even when no custom loot table is configured.
-        if (inst.options().preventOtherDrops()) {
-            e.getDrops().clear();
-            e.setDroppedExp(0);
-        }
+        applyOtherDropPolicy(e, inst.options());
+        // Drop-prevention options must work even when loot.yml is disabled.
+        if (lootService == null) return;
         if (inst.lootTable == null || inst.lootTable.isBlank()) return;
 
         var loot = (dev.helstera.ai.loot.LootService) lootService;
@@ -3249,6 +7052,41 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } catch (Throwable t) {
             getLogger().warning("掉落投掷失败: " + t);
         }
+    }
+
+    static void applyMobKillDropPolicy(org.bukkit.event.entity.EntityDeathEvent event,
+                                       SpawnOptions options) {
+        if (event == null || options == null || !options.preventMobKillDrops()) return;
+        event.getDrops().clear();
+        event.setDroppedExp(0);
+    }
+
+    static void applyOtherDropPolicy(org.bukkit.event.entity.EntityDeathEvent event,
+                                     SpawnOptions options) {
+        if (event == null || options == null || !options.preventOtherDrops()) return;
+        event.getDrops().clear();
+        event.setDroppedExp(0);
+    }
+
+    /** Resolves non-player mob and projectile-shooter killers for death options. */
+    static org.bukkit.entity.Entity resolveDeathKiller(org.bukkit.entity.LivingEntity victim) {
+        if (victim == null) return null;
+        try {
+            if (victim.getKiller() != null) return victim.getKiller();
+            if (!(victim.getLastDamageCause()
+                    instanceof org.bukkit.event.entity.EntityDamageByEntityEvent damage)) return null;
+            return resolveDamageSource(damage.getDamager());
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    static org.bukkit.entity.Entity resolveDamageSource(org.bukkit.entity.Entity damager) {
+        if (damager instanceof org.bukkit.entity.Projectile projectile
+                && projectile.getShooter() instanceof org.bukkit.entity.Entity shooter) {
+            return shooter;
+        }
+        return damager;
     }
 
     /**
@@ -3483,9 +7321,57 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (entity == null || mobId == null || options == null
                 || !"PERSISTENT".equalsIgnoreCase(options.despawnMode())) return;
         entity.setPersistent(true);
+        // World#getEntities only returns loaded chunks. Keep the entity's chunk
+        // loaded across restarts so restorePersistentMobs can see the PDC marker
+        // before a player happens to visit the area.
+        try {
+            entity.getLocation().getChunk().setForceLoaded(true);
+        } catch (RuntimeException ignored) {
+            // Entity persistence still works when a platform cannot retain the chunk.
+        }
         var container = entity.getPersistentDataContainer();
         container.set(persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING, mobId);
         container.set(persistentMobVersionKey(), org.bukkit.persistence.PersistentDataType.INTEGER, 1);
+    }
+
+    /** Releases a retained chunk after the last managed persistent mob dies. */
+    private void releasePersistentMobChunk(org.bukkit.entity.Entity entity) {
+        if (entity == null || entity.getWorld() == null) return;
+        boolean managedPersistent = false;
+        if (instances != null) {
+            for (var instance : instances().allImpl()) {
+                var bound = instance.baseEntity().orElse(null);
+                if (bound != null && bound.getUniqueId().equals(entity.getUniqueId())
+                        && "PERSISTENT".equalsIgnoreCase(instance.options().despawnMode())) {
+                    managedPersistent = true;
+                    break;
+                }
+            }
+        }
+        if (!managedPersistent) return;
+        org.bukkit.Chunk chunk;
+        try {
+            chunk = entity.getChunk();
+        } catch (RuntimeException ignored) {
+            return;
+        }
+        if (instances != null) {
+            for (var instance : instances().allImpl()) {
+                var other = instance.baseEntity().orElse(null);
+                if (!(other instanceof org.bukkit.entity.LivingEntity living)
+                        || other.getUniqueId().equals(entity.getUniqueId())
+                        || !living.isValid() || living.isDead()
+                        || !"PERSISTENT".equalsIgnoreCase(instance.options().despawnMode())) continue;
+                if (other.getWorld().equals(chunk.getWorld())
+                        && other.getChunk().getX() == chunk.getX()
+                        && other.getChunk().getZ() == chunk.getZ()) return;
+            }
+        }
+        try {
+            chunk.setForceLoaded(false);
+        } catch (RuntimeException ignored) {
+            // Chunk cleanup is best effort; death and SkillTree state are already handled.
+        }
     }
 
     private org.bukkit.NamespacedKey persistentMobIdKey() {
@@ -3556,6 +7442,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING);
             var tree = new dev.helstera.api.behavior.SkillTreeContext(living, java.util.List.of(living), at);
             tree.setVariable("restart-marker", "saved-on-first-boot");
+            tree.defineBranch("restart-foundation", java.util.Set.of());
+            tree.defineBranch("restart-advanced", java.util.Set.of("restart-foundation"));
+            boolean foundationUnlocked = tree.unlockBranch("restart-foundation");
             var snapshot = tree.snapshot();
             skills.restoreSkillTreeSnapshot(instanceId, snapshot);
             if (mobId != null) {
@@ -3567,8 +7456,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
             getLogger().info("[SelfTest] skilltree-restart stage=write result="
-                    + (mobId == null ? "failed" : "passed") + " mob-id=" + mobId
-                    + " instance=" + instanceId + " marker=saved-on-first-boot");
+                    + (mobId == null || !foundationUnlocked ? "failed" : "passed") + " mob-id=" + mobId
+                    + " instance=" + instanceId + " marker=saved-on-first-boot"
+                    + " foundation-unlocked=" + foundationUnlocked
+                    + " advanced-requires-foundation=" + snapshot.branchRequirements()
+                    .getOrDefault("restart-advanced", java.util.Set.of()));
             return;
         }
         String expectedMobId = "skilltree_probe";
@@ -3581,12 +7473,29 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             getLogger().warning("[SelfTest] skilltree-restart stage=verify result=failed reason=mob-not-restored");
             return;
         }
-        String marker = skills.snapshotOf(restored.instanceId())
-                .flatMap(snapshot -> java.util.Optional.ofNullable(snapshot.variables().get("restart-marker")))
-                .map(String::valueOf).orElse("missing");
-        boolean passed = marker.equals("saved-on-first-boot");
+        var restoredSnapshot = skills.snapshotOf(restored.instanceId()).orElse(null);
+        String marker = restoredSnapshot == null ? "missing"
+                : String.valueOf(restoredSnapshot.variables().getOrDefault("restart-marker", "missing"));
+        boolean foundationRestored = restoredSnapshot != null
+                && restoredSnapshot.unlockedBranches().contains("restart-foundation");
+        boolean prerequisiteRestored = restoredSnapshot != null
+                && restoredSnapshot.branchRequirements().getOrDefault("restart-advanced", java.util.Set.of())
+                .contains("restart-foundation");
+        boolean advancedUnlocked = false;
+        if (restoredSnapshot != null) {
+            var restoredTree = dev.helstera.api.behavior.SkillTreeContext.restore(
+                    restoredSnapshot, restored.baseEntity().orElse(null), java.util.List.of(),
+                    getServer()::getWorld);
+            advancedUnlocked = restoredTree.unlockBranch("restart-advanced")
+                    && restoredTree.branchUnlocked("restart-advanced");
+        }
+        boolean passed = marker.equals("saved-on-first-boot") && foundationRestored
+                && prerequisiteRestored && advancedUnlocked;
         getLogger().info("[SelfTest] skilltree-restart stage=verify result=" + (passed ? "passed" : "failed")
-                + " mob-id=" + expectedMobId + " instance=" + restored.instanceId() + " marker=" + marker);
+                + " mob-id=" + expectedMobId + " instance=" + restored.instanceId() + " marker=" + marker
+                + " foundation-restored=" + foundationRestored
+                + " prerequisite-restored=" + prerequisiteRestored
+                + " advanced-unlocked=" + advancedUnlocked);
     }
 
     private java.io.File persistentMobSkillTreeFile(String mobId) {
@@ -3975,8 +7884,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return materials;
     }
 
-    private static void applyPotionItemEffects(org.bukkit.inventory.meta.ItemMeta meta, org.bukkit.configuration.ConfigurationSection section) {
+    static void applyPotionItemEffects(org.bukkit.inventory.meta.ItemMeta meta, org.bukkit.configuration.ConfigurationSection section) {
         if (!(meta instanceof org.bukkit.inventory.meta.PotionMeta potionMeta)) return;
+        String basePotion = section.getString("base-potion-type");
+        if (basePotion != null && !basePotion.isBlank()) {
+            try {
+                potionMeta.setBasePotionType(org.bukkit.potion.PotionType.valueOf(
+                        basePotion.trim().toUpperCase(java.util.Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+                // Importers preserve unknown potion values under unsupported data.
+            }
+        }
         if (section.getBoolean("clear-potion-effects", false)
                 || (section.contains("potion-effects")
                 && !section.getString("potion-effects-mode", "replace").equalsIgnoreCase("append"))) {
@@ -4350,28 +8268,57 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    private org.bukkit.inventory.ItemStack parseItemStack(String raw) {
+    record ParsedItemSpec(String material, int amount, List<ParsedEnchantment> enchantments) { }
+
+    record ParsedEnchantment(String name, int level) { }
+
+    /** Parses material:amount:enchantment:level without losing colon-separated levels. */
+    static ParsedItemSpec parseItemSpec(String raw) {
         if (raw == null || raw.isBlank()) return null;
         String[] parts = raw.trim().split(":");
-        String matStr = parts[0].trim().toUpperCase(java.util.Locale.ROOT);
-        org.bukkit.Material mat = org.bukkit.Material.getMaterial(matStr);
-        if (mat == null) return null;
-        int amount = 1;
-        if (parts.length > 1) {
-            try { amount = Integer.parseInt(parts[1].trim()); } catch (NumberFormatException ignored) {}
+        int cursor = 0;
+        String material = parts[cursor++].trim();
+        if (material.equalsIgnoreCase("minecraft") && cursor < parts.length) {
+            material = parts[cursor++].trim();
         }
-        org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(mat, Math.max(1, amount));
-        if (parts.length > 2) {
-            String[] enchParts = parts[2].split(",");
-            for (String ep : enchParts) {
-                String[] ev = ep.trim().split(":");
-                if (ev.length < 2) continue;
-                String enName = ev[0].trim().toUpperCase(java.util.Locale.ROOT);
-                int enLevel = 1;
-                try { enLevel = Integer.parseInt(ev[1].trim()); } catch (NumberFormatException ignored) {}
-                org.bukkit.enchantments.Enchantment en = org.bukkit.enchantments.Enchantment.getByName(enName);
-                if (en != null) stack.addEnchantment(en, enLevel);
+        if (material.isBlank()) return null;
+        int amount = 1;
+        if (cursor < parts.length && isIntegerToken(parts[cursor])) {
+            amount = Math.max(1, Integer.parseInt(parts[cursor].trim()));
+            cursor++;
+        }
+        List<ParsedEnchantment> enchantments = new ArrayList<>();
+        if (cursor < parts.length) {
+            String enchantmentText = String.join(":",
+                    java.util.Arrays.copyOfRange(parts, cursor, parts.length));
+            for (String rawEnchantment : enchantmentText.split(",")) {
+                String[] values = rawEnchantment.trim().split(":", 2);
+                if (values.length == 0 || values[0].isBlank()) continue;
+                int level = values.length > 1 && isIntegerToken(values[1])
+                        ? Math.max(1, Integer.parseInt(values[1].trim())) : 1;
+                enchantments.add(new ParsedEnchantment(
+                        values[0].trim().toUpperCase(java.util.Locale.ROOT), level));
             }
+        }
+        return new ParsedItemSpec(material.toUpperCase(java.util.Locale.ROOT), amount,
+                List.copyOf(enchantments));
+    }
+
+    private static boolean isIntegerToken(String value) {
+        if (value == null || value.isBlank()) return false;
+        try { Integer.parseInt(value.trim()); return true; }
+        catch (NumberFormatException ignored) { return false; }
+    }
+
+    private org.bukkit.inventory.ItemStack parseItemStack(String raw) {
+        ParsedItemSpec parsed = parseItemSpec(raw);
+        if (parsed == null) return null;
+        org.bukkit.Material mat = org.bukkit.Material.getMaterial(parsed.material());
+        if (mat == null) return null;
+        org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(mat, parsed.amount());
+        for (ParsedEnchantment enchantment : parsed.enchantments()) {
+            org.bukkit.enchantments.Enchantment en = org.bukkit.enchantments.Enchantment.getByName(enchantment.name());
+            if (en != null) stack.addEnchantment(en, enchantment.level());
         }
         return stack;
     }
@@ -4614,6 +8561,26 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return Double.isFinite(legacy) && legacy >= 0 ? legacy : 32.0;
     }
 
+    /** Reads list-valued options while accepting Mythic's delimited scalar form. */
+    static List<String> configuredStringList(org.bukkit.configuration.ConfigurationSection cfg,
+                                             String primary, String fallback) {
+        if (cfg == null) return List.of();
+        List<String> primaryValues = parseConfiguredStringList(cfg.get(primary));
+        if (!primaryValues.isEmpty()) return primaryValues;
+        return parseConfiguredStringList(cfg.get(fallback));
+    }
+
+    private static List<String> parseConfiguredStringList(Object raw) {
+        if (raw instanceof List<?> values) {
+            return values.stream().filter(java.util.Objects::nonNull)
+                    .map(String::valueOf).map(String::trim)
+                    .filter(value -> !value.isBlank()).toList();
+        }
+        if (raw == null) return List.of();
+        return java.util.Arrays.stream(String.valueOf(raw).split("[,;|]"))
+                .map(String::trim).filter(value -> !value.isBlank()).toList();
+    }
+
     static String configuredEntityType(org.bukkit.configuration.ConfigurationSection entity,
                                        org.bukkit.configuration.ConfigurationSection mob) {
         String fallback = mob == null ? "ZOMBIE" : mob.getString("entity-type", "ZOMBIE");
@@ -4644,9 +8611,45 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (options.contains("age-lock")) ageable.setAgeLock(options.getBoolean("age-lock"));
     }
 
+    static void applyMobPickupOption(org.bukkit.entity.Mob mob,
+                                     org.bukkit.configuration.ConfigurationSection entityOptions,
+                                     dev.helstera.api.instance.SpawnOptions options) {
+        if (mob == null) return;
+        boolean fallback = options == null || !options.preventItemPickup();
+        mob.setCanPickupItems(entityOptions == null
+                ? fallback : entityOptions.getBoolean("can-pickup-items", fallback));
+    }
+
+    static void applyRandomEquipmentPolicy(org.bukkit.entity.LivingEntity entity,
+                                           dev.helstera.api.instance.SpawnOptions options) {
+        if (entity != null && entity.getEquipment() != null
+                && options != null && options.preventRandomEquipment()) {
+            entity.getEquipment().clear();
+        }
+    }
+
+    static void applySpawnNoDamageTicks(org.bukkit.entity.LivingEntity entity,
+                                        dev.helstera.api.instance.SpawnOptions options) {
+        if (entity != null && options != null) entity.setNoDamageTicks(options.noDamageTicks());
+    }
+
     static void applyEntitySpecificOptions(org.bukkit.entity.LivingEntity entity,
                                            org.bukkit.configuration.ConfigurationSection options) {
         if (entity == null || options == null) return;
+        if (entity instanceof org.bukkit.entity.Enderman enderman && options.contains("held-block")) {
+            String heldBlock = options.getString("held-block", "").trim();
+            if (!heldBlock.isEmpty()) {
+                try {
+                    var material = org.bukkit.Material.matchMaterial(heldBlock);
+                    var blockData = material != null && material.isBlock()
+                            ? material.createBlockData()
+                            : org.bukkit.Bukkit.createBlockData(heldBlock);
+                    if (blockData.getMaterial().isBlock()) enderman.setCarriedBlock(blockData);
+                } catch (IllegalArgumentException ignored) {
+                    // Invalid or non-block values do not replace the current carried block.
+                }
+            }
+        }
         if (entity instanceof org.bukkit.entity.Raider raider) {
             if (options.contains("can-join-raid")) {
                 raider.setCanJoinRaid(options.getBoolean("can-join-raid"));
@@ -4680,10 +8683,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 creeper.setPowered(options.getBoolean("creeper-super-charged"));
             }
         }
-        if (options.contains("size")) {
-            int size = options.getInt("size");
-            if (size > 0 && entity instanceof org.bukkit.entity.Slime slime) slime.setSize(size);
-            else if (size > 0 && entity instanceof org.bukkit.entity.Phantom phantom) phantom.setSize(size);
+        int size = options.contains("size")
+                ? options.getInt("size") : randomConfiguredSize(options);
+        if (size > 0) {
+            if (entity instanceof org.bukkit.entity.Slime slime) slime.setSize(size);
+            else if (entity instanceof org.bukkit.entity.Phantom phantom) phantom.setSize(size);
         }
         if (entity instanceof org.bukkit.entity.Horse horse) {
             applyHorseOptions(horse, options);
@@ -4700,6 +8704,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (options.contains("armor-stand-marker")) armorStand.setMarker(options.getBoolean("armor-stand-marker"));
             if (options.contains("armor-stand-small")) armorStand.setSmall(options.getBoolean("armor-stand-small"));
         }
+    }
+
+    private static int randomConfiguredSize(org.bukkit.configuration.ConfigurationSection options) {
+        if (!options.contains("size-min") || !options.contains("size-max")) return -1;
+        int min = options.getInt("size-min", -1);
+        int max = options.getInt("size-max", -1);
+        if (min <= 0 || max < min) return -1;
+        return (int) java.util.concurrent.ThreadLocalRandom.current()
+                .nextLong(min, (long) max + 1L);
     }
 
     private static void applyHorseOptions(org.bukkit.entity.Horse horse,
@@ -4979,6 +8992,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     public long potionEventCount() {
         return skillTriggers instanceof SkillTriggers t ? t.potionEventCount() : 0L;
+    }
+
+    public long itemConsumeEventCount() {
+        return skillTriggers instanceof SkillTriggers t ? t.itemConsumeEventCount() : 0L;
     }
 
     public long entityTargetEventCount() {

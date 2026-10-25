@@ -51,7 +51,17 @@ class MythicDropSpecTest {
                 "chance-expression", "luck-based",
                 "conditions", List.of("permission loot.vip")));
         assertEquals("luck-based", spec.runtimeEntry().get("chance-expression"));
-        assertEquals(List.of("permission loot.vip"), spec.runtimeEntry().get("conditions"));
+        assertEquals(List.of("has-permission loot.vip"), spec.runtimeEntry().get("conditions"));
         assertEquals(2, spec.runtimeEntry().get("amount-min"));
+    }
+
+    @Test
+    void runtimeProjectionTranslatesMythicConditionPrefixes() {
+        MythicDropSpec spec = MythicDropSpec.parse(Map.of(
+                "item", "DIAMOND",
+                "conditions", List.of("?isLiving", "?healthPercent{p=>=50%}")));
+
+        assertEquals(List.of("is-living", "health-percent >=50"),
+                spec.runtimeEntry().get("conditions"));
     }
 }

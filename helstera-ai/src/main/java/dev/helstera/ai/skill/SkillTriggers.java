@@ -26,6 +26,9 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.entity.EntityTameEvent;
+import org.bukkit.event.entity.EntityBreedEvent;
+import org.bukkit.event.entity.EntityUnleashEvent;
 import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.event.vehicle.VehicleExitEvent;
 import org.bukkit.event.vehicle.VehicleDestroyEvent;
@@ -35,7 +38,20 @@ import org.bukkit.event.entity.EntityTeleportEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.PlayerLeashEntityEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
-import org.bukkit.event.player.PlayerInteractAtEntityEvent;
+import org.bukkit.event.player.PlayerItemConsumeEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerAnimationEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerItemBreakEvent;
+import org.bukkit.event.player.PlayerItemDamageEvent;
+import org.bukkit.event.player.PlayerFishEvent;
+import org.bukkit.event.player.PlayerShearEntityEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerBedEnterEvent;
+import org.bukkit.event.player.PlayerBedLeaveEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import com.destroystokyo.paper.event.player.PlayerJumpEvent;
+import io.papermc.paper.event.player.PlayerTradeEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.plugin.Plugin;
@@ -82,12 +98,18 @@ public final class SkillTriggers implements Listener {
     private final SkillService skills;
     private final AtomicLong fired = new AtomicLong();
     private final AtomicLong potionEvents = new AtomicLong();
+    /** Number of real PlayerItemConsumeEvent callbacks observed. */
+    private final AtomicLong itemConsumeEvents = new AtomicLong();
     private final AtomicLong entityTargetEvents = new AtomicLong();
     private final AtomicLong entityTargetFindMisses = new AtomicLong();
     private final AtomicReference<String> lastEntityTargetReason = new AtomicReference<>();
     private final AtomicReference<Boolean> lastEntityTargetCancelled = new AtomicReference<>(false);
     /** Last observed active potion types per managed entity; used for Paper expiry detection. */
     private final Map<java.util.UUID, Set<String>> potionState = new ConcurrentHashMap<>();
+    /** Per-tick dedupe for mechanic and Bukkit potion-end paths. */
+    private final Map<String, Long> potionEndDispatchTick = new ConcurrentHashMap<>();
+    /** Prevent PlayerShearEntityEvent + EntityTransformEvent from double firing on one tick. */
+    private final Map<java.util.UUID, Long> shearDispatchTick = new ConcurrentHashMap<>();
     private final Map<String, java.util.function.Consumer<?>> busSubs =
             new ConcurrentHashMap<>();
     private BukkitTask timerTask;
@@ -100,6 +122,7 @@ public final class SkillTriggers implements Listener {
      * 影响，改时间后连杀可能永不重置或立刻归零。</p>
      */
     private final KillStreak streaks = new KillStreak();
+    private final PlayerKillCount playerKills = new PlayerKillCount();
 
     /** 连杀计数表，供条件 {@code kill-streak-at-least} 与诊断命令读取。 */
     public KillStreak killStreak() {
@@ -131,6 +154,7 @@ public final class SkillTriggers implements Listener {
         // 条件/动作工厂表是 static，拿不到本实例持有的连杀表；
         // 不桥接的话 kill-streak-at-least 读的是另一张空表，症状是「连杀永远 0」
         SkillExtras.killStreak(streaks);
+        SkillExtras.playerKillCount(playerKills);
         // 仇恨同理：条件要读的是「选目标时用的那张表」，另建一份会让
         // 条件按自己记的仇恨判断，与实际仇恨平衡脱节
         SkillExtras.threatLookup(instanceId -> {
@@ -138,6 +162,24 @@ public final class SkillTriggers implements Listener {
             if (mgr == null) return null;
             var c = mgr.controllerById(instanceId);
             return c == null ? null : c.threatTable();
+        });
+        SkillExtras.potionEffectEndDispatcher((context, affected, type) -> {
+            dev.helstera.runtime.instance.ModelInstanceImpl inst = null;
+            if (context != null && context.instance() instanceof dev.helstera.runtime.instance.ModelInstanceImpl direct) {
+                Entity bound = direct.baseEntity().orElse(null);
+                if (bound == affected || (bound != null && affected != null
+                        && bound.getUniqueId().equals(affected.getUniqueId()))) {
+                    inst = direct;
+                }
+            }
+            if (inst == null) inst = find(affected);
+            if (inst == null && plugin.getConfig().getBoolean("debug.trace-triggers", false)) {
+                log.info("[trigger-debug] potion-end mechanic lookup miss entity="
+                        + (affected == null ? null : affected.getUniqueId())
+                        + " context-instance=" + (context == null || context.instance() == null
+                        ? null : context.instance().instanceId()));
+            }
+            if (inst != null) dispatchPotionEffectEnd(inst, affected, type.getKey().toString());
         });
     }
 
@@ -171,6 +213,10 @@ public final class SkillTriggers implements Listener {
         java.util.function.Consumer<ModelRemoveEvent> onRemove =
                 e -> {
                     dispatch(SkillTrigger.REMOVE, e.instance(), null, e.instance().location());
+                    e.instance().boundEntityId().ifPresent(id -> {
+                        shearDispatchTick.remove(id);
+                        potionEndDispatchTick.keySet().removeIf(key -> key.startsWith(id + "|"));
+                    });
                     // 退订必须与订阅成对：残留的监听器会持有已失效的实例，
                     // 同名信号再发时会对着一堆死实体派发
                     SkillSignals.global().purgeInstance(e.instance().instanceId());
@@ -179,6 +225,8 @@ public final class SkillTriggers implements Listener {
                         skills.clearQueueFor(e.instance().instanceId());
                         skills.clearAllCastsFor(e.instance().instanceId());
                     }
+                    playerKills.forget(e.instance().instanceId());
+                    streaks.forgetInstance(e.instance().instanceId());
                 };
         java.util.function.Consumer<MobStateChangedEvent> onState = e -> {
             // on-state 只在进入 DEAD 时触发一次，避免每次状态抖动都播死亡动作
@@ -255,6 +303,19 @@ public final class SkillTriggers implements Listener {
             timerTask.cancel();
             timerTask = null;
         }
+        nextFire.clear();
+        condLatch.clear();
+        derivedLatch.clear();
+        potionState.clear();
+        itemConsumeEvents.set(0);
+        potionEndDispatchTick.clear();
+        shearDispatchTick.clear();
+        currentPhase.clear();
+        busSubs.clear();
+        SkillExtras.potionEffectEndDispatcher(null);
+        SkillExtras.threatLookup(null);
+        SkillExtras.killStreak(null);
+        SkillExtras.resetRuntimeHooks();
     }
 
     /** 累计触发次数，供 /helstera debug 展示。 */
@@ -265,6 +326,10 @@ public final class SkillTriggers implements Listener {
     /** Number of Bukkit EntityPotionEffectEvent callbacks observed by this listener. */
     public long potionEventCount() {
         return potionEvents.get();
+    }
+
+    public long itemConsumeEventCount() {
+        return itemConsumeEvents.get();
     }
 
     public long entityTargetEventCount() {
@@ -568,7 +633,10 @@ public final class SkillTriggers implements Listener {
             String signalName = cond.contains("=") ? cond.substring(cond.indexOf('=') + 1).trim() : cond.trim();
             if (signalName.isEmpty()) continue;
             SkillSignals.global().subscribe(id, signalName,
-                    (sig, payload, sourceId) -> dispatchSignal(instance, payload));
+                    (sig, payload, sourceId) -> {
+                        SkillExtras.rememberSignal(id, sig);
+                        dispatchSignal(instance, payload);
+                    });
         }
     }
 
@@ -670,7 +738,7 @@ public final class SkillTriggers implements Listener {
             if (previous == null) continue;
             for (String removed : previous) {
                 if (current.contains(removed)) continue;
-                dispatch(SkillTrigger.POTION_EFFECT_END, inst, null, living.getLocation());
+                dispatchPotionEffectEnd(inst, living, removed);
             }
         }
         potionState.keySet().removeIf(id -> !alive.contains(id));
@@ -712,15 +780,16 @@ public final class SkillTriggers implements Listener {
     /**
      * 玩家与生物载体交互。
      *
-     * <p>只认 {@link PlayerInteractAtEntityEvent}：它是「点到实体」的语义，
-     * 而 {@code PlayerInteractEvent} 拿到的是方块位置，无法反查是哪个实例。</p>
+     * <p>监听 {@link PlayerInteractEntityEvent} 的父类事件，以同时覆盖普通实体
+     * 右键和 {@code PlayerInteractAtEntityEvent} 子类事件；
+     * {@code PlayerInteractEvent} 拿到的是方块位置，无法反查是哪个实例。</p>
      *
      * <p>目标取交互者，这样 {@code on-interact} 里的伤害/对话动作才有正确的
      * {@code <target>} 占位符——否则玩家交互后技能作用在空气上。</p>
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onInteract(PlayerInteractAtEntityEvent e) {
-        var inst = find(e.getRightClicked());
+    public void onInteract(PlayerInteractEntityEvent e) {
+        var inst = find(e.getRightClicked(), SkillTrigger.INTERACT);
         if (inst == null) return;
         dispatch(SkillTrigger.INTERACT, inst, e.getPlayer(), e.getRightClicked().getLocation(), e.getPlayer(),
                 livingTargets(e.getRightClicked()), e);
@@ -728,7 +797,7 @@ public final class SkillTriggers implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onTeleport(EntityTeleportEvent e) {
-        var inst = find(e.getEntity());
+        var inst = find(e.getEntity(), SkillTrigger.TELEPORT);
         if (inst == null) return;
         LivingEntity living = e.getEntity() instanceof LivingEntity entity ? entity : null;
         dispatch(SkillTrigger.TELEPORT, inst, living, e.getTo(), e.getEntity(),
@@ -737,7 +806,7 @@ public final class SkillTriggers implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent e) {
-        var inst = find(e.getPlayer());
+        var inst = find(e.getPlayer(), SkillTrigger.BLOCK_BREAK);
         if (inst == null) return;
         dispatch(SkillTrigger.BLOCK_BREAK, inst, e.getPlayer(), e.getBlock().getLocation(),
                 e.getPlayer(), java.util.List.of(e.getPlayer()), e);
@@ -745,7 +814,7 @@ public final class SkillTriggers implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent e) {
-        var inst = find(e.getPlayer());
+        var inst = find(e.getPlayer(), SkillTrigger.BLOCK_PLACE);
         if (inst == null) return;
         dispatch(SkillTrigger.BLOCK_PLACE, inst, e.getPlayer(), e.getBlock().getLocation(),
                 e.getPlayer(), java.util.List.of(e.getPlayer()), e);
@@ -753,7 +822,7 @@ public final class SkillTriggers implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onItemPickup(EntityPickupItemEvent e) {
-        var inst = find(e.getEntity());
+        var inst = find(e.getEntity(), SkillTrigger.ITEM_PICKUP);
         if (inst == null) return;
         LivingEntity living = e.getEntity() instanceof LivingEntity entity ? entity : null;
         if (living == null) return;
@@ -762,11 +831,167 @@ public final class SkillTriggers implements Listener {
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onItemDrop(PlayerDropItemEvent e) {
+        var inst = find(e.getPlayer(), SkillTrigger.ITEM_DROP);
+        if (inst == null) return;
+        dispatch(SkillTrigger.ITEM_DROP, inst, e.getPlayer(), e.getItemDrop().getLocation(),
+                e.getItemDrop(), java.util.List.of(e.getPlayer()), e);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onItemBreak(PlayerItemBreakEvent e) {
+        var inst = find(e.getPlayer(), SkillTrigger.ITEM_BREAK);
+        if (inst == null) return;
+        dispatch(SkillTrigger.ITEM_BREAK, inst, e.getPlayer(), e.getPlayer().getLocation(),
+                e.getPlayer(), java.util.List.of(e.getPlayer()));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onItemDamage(PlayerItemDamageEvent e) {
+        var inst = find(e.getPlayer(), SkillTrigger.ITEM_DAMAGE);
+        if (inst == null) return;
+        dispatch(SkillTrigger.ITEM_DAMAGE, inst, e.getPlayer(), e.getPlayer().getLocation(),
+                e.getPlayer(), java.util.List.of(e.getPlayer()), e);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onFish(PlayerFishEvent e) {
+        var inst = find(e.getPlayer(), SkillTrigger.FISH);
+        if (inst == null) return;
+        LivingEntity caught = e.getCaught() instanceof LivingEntity living ? living : null;
+        dispatch(SkillTrigger.FISH, inst, caught == null ? e.getPlayer() : caught,
+                e.getPlayer().getLocation(), e.getCaught() == null ? e.getPlayer() : e.getCaught(),
+                caught == null ? java.util.List.of(e.getPlayer()) : java.util.List.of(caught), e);
+    }
+
+    /** Player shear event preserves the player actor that a transform event lacks. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerShear(PlayerShearEntityEvent e) {
+        var inst = find(e.getEntity(), SkillTrigger.SHEAR);
+        if (inst == null) return;
+        if (!claimShear(e.getEntity())) return;
+        dispatch(SkillTrigger.SHEAR, inst, e.getPlayer(), e.getEntity().getLocation(),
+                e.getPlayer(), java.util.List.of(e.getPlayer()), e);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onQuit(PlayerQuitEvent e) {
+        var inst = find(e.getPlayer(), SkillTrigger.QUIT);
+        if (inst == null) return;
+        dispatch(SkillTrigger.QUIT, inst, e.getPlayer(), e.getPlayer().getLocation(),
+                e.getPlayer(), java.util.List.of(e.getPlayer()));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBedEnter(PlayerBedEnterEvent e) {
+        var inst = find(e.getPlayer(), SkillTrigger.BED_ENTER);
+        if (inst == null) return;
+        dispatch(SkillTrigger.BED_ENTER, inst, e.getPlayer(), e.getBed().getLocation(),
+                e.getPlayer(), java.util.List.of(e.getPlayer()), e);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBedLeave(PlayerBedLeaveEvent e) {
+        var inst = find(e.getPlayer(), SkillTrigger.BED_LEAVE);
+        if (inst == null) return;
+        dispatch(SkillTrigger.BED_LEAVE, inst, e.getPlayer(), e.getBed().getLocation(),
+                e.getPlayer(), java.util.List.of(e.getPlayer()), e);
+    }
+
+    private boolean claimShear(Entity entity) {
+        if (entity == null) return false;
+        Long previous = shearDispatchTick.put(entity.getUniqueId(), tick);
+        return previous == null || previous.longValue() != tick;
+    }
+
+    /**
+     * Mythic onConsume/onEat bridge.  The consumer is the active target so
+     * item-dependent skills can still use target placeholders and targeters.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onItemConsume(PlayerItemConsumeEvent e) {
+        itemConsumeEvents.incrementAndGet();
+        if (plugin.getConfig().getBoolean("debug.trace-triggers", false)) {
+            log.info("[trigger-debug] player-potion-consume event=true player="
+                    + e.getPlayer().getName() + " item=" + e.getItem().getType());
+        }
+        var inst = find(e.getPlayer(), SkillTrigger.ITEM_CONSUME);
+        if (inst == null) return;
+        dispatch(SkillTrigger.ITEM_CONSUME, inst, e.getPlayer(), e.getPlayer().getLocation(),
+                e.getPlayer(), java.util.List.of(e.getPlayer()), e);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTame(EntityTameEvent e) {
+        var inst = find(e.getEntity(), SkillTrigger.TAME);
+        if (inst == null) return;
+        LivingEntity owner = e.getOwner() instanceof LivingEntity living ? living : null;
+        dispatch(SkillTrigger.TAME, inst, owner, e.getEntity().getLocation(),
+                e.getOwner() instanceof Entity entity ? entity : e.getEntity(),
+                owner == null ? java.util.List.of() : java.util.List.of(owner), e);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBreed(EntityBreedEvent e) {
+        var inst = find(e.getEntity(), SkillTrigger.BREED);
+        if (inst == null) return;
+        LivingEntity breeder = e.getBreeder();
+        dispatch(SkillTrigger.BREED, inst, breeder, e.getEntity().getLocation(),
+                breeder == null ? e.getEntity() : breeder,
+                breeder == null ? java.util.List.of() : java.util.List.of(breeder), e);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onWorldChange(PlayerChangedWorldEvent e) {
+        var inst = find(e.getPlayer(), SkillTrigger.WORLD_CHANGE);
+        if (inst == null) return;
+        dispatch(SkillTrigger.WORLD_CHANGE, inst, e.getPlayer(), e.getPlayer().getLocation(),
+                e.getPlayer(), java.util.List.of(e.getPlayer()));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onJump(PlayerJumpEvent e) {
+        var inst = find(e.getPlayer(), SkillTrigger.JUMP);
+        if (inst == null) return;
+        dispatch(SkillTrigger.JUMP, inst, e.getPlayer(), e.getTo(),
+                e.getPlayer(), java.util.List.of(e.getPlayer()), e);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onSwing(PlayerAnimationEvent e) {
+        var inst = find(e.getPlayer(), SkillTrigger.SWING);
+        if (inst == null) return;
+        dispatch(SkillTrigger.SWING, inst, e.getPlayer(), e.getPlayer().getLocation(),
+                e.getPlayer(), java.util.List.of(e.getPlayer()), e);
+    }
+
+    /** Handles both player-driven and natural leash removal. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onUnleash(EntityUnleashEvent e) {
+        var inst = find(e.getEntity(), SkillTrigger.UNLEASH);
+        if (inst == null) return;
+        LivingEntity actor = e instanceof org.bukkit.event.player.PlayerUnleashEntityEvent playerEvent
+                ? playerEvent.getPlayer() : null;
+        dispatch(SkillTrigger.UNLEASH, inst, actor, e.getEntity().getLocation(),
+                actor == null ? e.getEntity() : actor,
+                actor == null ? java.util.List.of() : java.util.List.of(actor), e);
+    }
+
+    /** Paper trade event; the managed villager is the caster and the player is the target. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTrade(PlayerTradeEvent e) {
+        var inst = find(e.getVillager(), SkillTrigger.TRADE);
+        if (inst == null) return;
+        dispatch(SkillTrigger.TRADE, inst, e.getPlayer(), e.getVillager().getLocation(),
+                e.getPlayer(), java.util.List.of(e.getPlayer()), e);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityTarget(EntityTargetEvent e) {
         entityTargetEvents.incrementAndGet();
         lastEntityTargetReason.set(e.getReason() == null ? null : e.getReason().name());
         lastEntityTargetCancelled.set(e.isCancelled());
-        var inst = find(e.getEntity());
+        var inst = find(e.getEntity(), SkillTrigger.ENTITY_TARGET);
         if (inst == null) {
             entityTargetFindMisses.incrementAndGet();
             return;
@@ -778,7 +1003,7 @@ public final class SkillTriggers implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onVehicleEnter(VehicleEnterEvent e) {
-        var inst = find(e.getEntered());
+        var inst = find(e.getEntered(), SkillTrigger.VEHICLE_ENTER);
         if (inst == null || !(e.getEntered() instanceof LivingEntity living)) return;
         dispatch(SkillTrigger.VEHICLE_ENTER, inst, living, e.getVehicle().getLocation(),
                 e.getVehicle(), java.util.List.of(living), e);
@@ -786,7 +1011,7 @@ public final class SkillTriggers implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onVehicleExit(VehicleExitEvent e) {
-        var inst = find(e.getExited());
+        var inst = find(e.getExited(), SkillTrigger.VEHICLE_EXIT);
         if (inst == null || !(e.getExited() instanceof LivingEntity living)) return;
         dispatch(SkillTrigger.VEHICLE_EXIT, inst, living, e.getVehicle().getLocation(),
                 e.getVehicle(), java.util.List.of(living), e);
@@ -795,11 +1020,11 @@ public final class SkillTriggers implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onVehicleDestroy(VehicleDestroyEvent e) {
         Entity responsible = e.getAttacker();
-        var inst = find(e.getVehicle());
+        var inst = find(e.getVehicle(), SkillTrigger.VEHICLE_DESTROY);
         LivingEntity contextEntity = e.getVehicle() instanceof LivingEntity living ? living
                 : responsible instanceof LivingEntity living ? living : null;
         if (inst == null && responsible != null) {
-            inst = find(responsible);
+            inst = find(responsible, SkillTrigger.VEHICLE_DESTROY);
             if (!(responsible instanceof LivingEntity)) return;
         }
         if (inst == null) return;
@@ -810,26 +1035,43 @@ public final class SkillTriggers implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(EntityDeathEvent e) {
-        var inst = find(e.getEntity());
-        if (inst == null) return;
-        dispatch(SkillTrigger.DEATH, inst, e.getEntity().getKiller(), e.getEntity().getLocation(), e.getEntity(), livingTargets(e.getEntity()));
-        // on-death-skill 是 on-death 的别名：同一时刻同时触发两者，
-        // 兼容 MythicMobs 的 "deathSkill" 写法（旧配置可能混用两种命名）
-        if (inst.baseEntity().orElse(null) instanceof LivingEntity le && le.getMaxHealth() > 0) {
-            dispatch(SkillTrigger.ON_DEATH_SKILL, inst, e.getEntity().getKiller(),
-                    e.getEntity().getLocation(), e.getEntity(), livingTargets(e.getEntity()));
+        LivingEntity victim = e.getEntity();
+        var victimInst = find(victim);
+        if (victimInst != null) {
+            Player playerKiller = victim.getKiller();
+            dispatch(SkillTrigger.DEATH, victimInst, playerKiller, victim.getLocation(), victim,
+                    livingTargets(victim));
+            // on-death-skill is an alias for on-death; both are intentionally dispatched.
+            if (victimInst.baseEntity().orElse(null) instanceof LivingEntity le && le.getMaxHealth() > 0) {
+                dispatch(SkillTrigger.ON_DEATH_SKILL, victimInst, playerKiller,
+                        victim.getLocation(), victim, livingTargets(victim));
+            }
         }
-        // on-kill-player 只在「死于本生物且死者是玩家」时触发。
-        // 怪物自然死亡（摔落、岩浆）也会走这里，若不判死者类型，
-        // 玩家在野外摔死也会触发 Boss 的处决播报。
-        if (shouldFireKillPlayer(e.getEntity(), e.getEntity().getKiller())) {
-            dispatch(SkillTrigger.KILL_PLAYER, inst, e.getEntity(),
-                    e.getEntity().getLocation(), e.getEntity(), livingTargets(e.getEntity()));
+
+        Entity killer = killerEntity(victim);
+        var killerInst = find(killer);
+        if (killerInst != null && killer != victim) {
+            // Kill triggers belong to the killer.  The victim remains the active
+            // target so target conditions and message-targets keep their meaning.
+            org.bukkit.Location origin = killer.getLocation();
+            if (origin == null) origin = victim.getLocation();
+            dispatch(SkillTrigger.KILL, killerInst, victim, origin, victim,
+                    livingTargets(victim));
+            if (shouldFireKillPlayer(victim, killer)) {
+                playerKills.record(killerInst.instanceId());
+                dispatch(SkillTrigger.KILL_PLAYER, killerInst, victim, origin, victim,
+                        livingTargets(victim));
+            }
         }
-        // 连杀按「击杀者」记，且只认玩家击杀：投射物 / 陷阱 / 环境致死都拿不到
-        // Player 击杀者，若把它们也算进去，玩家站在岩浆边就能刷出连杀。
-        if (e.getEntity().getKiller() instanceof Player killer) {
-            streaks.record(inst.instanceId(), killer.getUniqueId(), System.nanoTime());
+
+        // Keep the victim-side pointer for on-death skills and also register the
+        // killer-side pointer for on-kill skills.
+        if (killer instanceof Player playerKiller) {
+            long now = System.nanoTime();
+            if (victimInst != null) streaks.record(victimInst.instanceId(), playerKiller.getUniqueId(), now);
+            if (killerInst != null && killerInst != victimInst) {
+                streaks.record(killerInst.instanceId(), playerKiller.getUniqueId(), now);
+            }
         }
     }
 
@@ -846,6 +1088,7 @@ public final class SkillTriggers implements Listener {
     public void onTransform(EntityTransformEvent e) {
         SkillTrigger trigger = triggerForTransformReason(e.getTransformReason());
         if (trigger == null) return;
+        if (trigger == SkillTrigger.SHEAR && !claimShear(e.getEntity())) return;
         var inst = find(e.getEntity());
         if (inst == null) return;
         dispatch(trigger, inst, null, e.getEntity().getLocation());
@@ -915,11 +1158,12 @@ public final class SkillTriggers implements Listener {
         // 射箭者必是玩家类型的载体；若将来接入别的发射源，这里判不出就传 null
         LivingEntity shooter = e.getEntity() instanceof LivingEntity living ? living : null;
         dispatch(SkillTrigger.ENTITY_SHOOT, inst, shooter,
-                e.getEntity().getLocation(), e.getEntity(), java.util.List.of());
+                e.getEntity().getLocation(), e.getEntity(), java.util.List.of(), e);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onProjectileHit(ProjectileHitEvent e) {
+        SkillExtras.rememberProjectileEnded(e.getEntity());
         if (!(e.getEntity().getShooter() instanceof Entity shooter)) return;
         var inst = find(shooter);
         if (inst == null) return;
@@ -1014,9 +1258,27 @@ public final class SkillTriggers implements Listener {
         }
         SkillTrigger trigger = triggerForPotionAction(e.getAction(), isBeneficial(e.getModifiedType()));
         if (trigger == null) return;
-        var inst = find(e.getEntity());
+        var inst = find(e.getEntity(), trigger);
         if (inst == null) return;
-        dispatch(trigger, inst, null, e.getEntity().getLocation());
+        if (trigger == SkillTrigger.POTION_EFFECT_END) {
+            String type = e.getModifiedType() == null ? "*" : e.getModifiedType().getKey().toString();
+            dispatchPotionEffectEnd(inst, (LivingEntity) e.getEntity(), type);
+        } else {
+            // The affected entity is both the event subject and Mythic target.
+            // Keeping it in the context makes target conditions/actions work for
+            // on-buff just like they do for on-consume and on-damage.
+            dispatch(trigger, inst, (LivingEntity) e.getEntity(), e.getEntity().getLocation());
+        }
+    }
+
+    private void dispatchPotionEffectEnd(dev.helstera.runtime.instance.ModelInstanceImpl inst,
+                                         LivingEntity affected, String type) {
+        if (inst == null || affected == null) return;
+        String key = affected.getUniqueId() + "|" + type;
+        Long previous = potionEndDispatchTick.put(key, tick);
+        if (previous != null && previous == tick) return;
+        // Natural expiry and explicit removal share the same target semantics.
+        dispatch(SkillTrigger.POTION_EFFECT_END, inst, affected, affected.getLocation());
     }
 
     /**
@@ -1109,13 +1371,57 @@ public final class SkillTriggers implements Listener {
         return victim instanceof Player && killer != null;
     }
 
+    /**
+     * Resolves the entity that caused a death, including non-player mobs and
+     * projectiles whose shooter is an entity-backed model.
+     */
+    static Entity killerEntity(LivingEntity victim) {
+        if (victim == null) return null;
+        try {
+            Player player = victim.getKiller();
+            if (player != null) return player;
+        } catch (RuntimeException ignored) {
+            // Fall back to the damage cause when the entity is already being removed.
+        }
+        try {
+            if (!(victim.getLastDamageCause() instanceof EntityDamageByEntityEvent damage)) return null;
+            Entity damager = damage.getDamager();
+            if (damager instanceof org.bukkit.entity.Projectile projectile
+                    && projectile.getShooter() instanceof Entity shooter) {
+                return shooter;
+            }
+            return damager;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
     private dev.helstera.runtime.instance.ModelInstanceImpl find(Entity e) {
+        return find(e, null);
+    }
+
+    /** Prefer the managed binding whose profile declares the incoming trigger. */
+    private dev.helstera.runtime.instance.ModelInstanceImpl find(Entity e, SkillTrigger trigger) {
         if (e == null) return null;
+        dev.helstera.runtime.instance.ModelInstanceImpl fallback = null;
         for (var inst : ai.allInstances()) {
             Entity base = inst.baseEntity().orElse(null);
-            if (base == e || e.getUniqueId().equals(inst.boundEntityId().orElse(null))) return inst;
+            if (base != e && !e.getUniqueId().equals(inst.boundEntityId().orElse(null))) continue;
+            if (fallback == null) fallback = inst;
+            if (trigger != null) {
+                AiProfile profile = ai.profileOf(inst.instanceId());
+                if (profileDeclaresTrigger(profile, trigger)) return inst;
+            } else {
+                return inst;
+            }
         }
-        return null;
+        return fallback;
+    }
+
+    /** Pure routing predicate kept separate so event binding cannot drift silently. */
+    static boolean profileDeclaresTrigger(AiProfile profile, SkillTrigger trigger) {
+        return profile != null && trigger != null
+                && profile.triggers.containsKey(trigger.configName());
     }
 
     // ------------------------------------------------------------------

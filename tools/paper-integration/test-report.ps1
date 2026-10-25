@@ -32,7 +32,7 @@ function Assert-ReportShape($report, $schema) {
             if ($probe.sampleCount -ge 100) {
                 $expectedStatus = if ($probe.maxDeviation -le $probe.tolerance) { 'passed' } else { 'failed' }
                 Assert-True ($probe.status -eq $expectedStatus) 'random deviation status must match configured tolerance'
-            } else {
+            } elseif ($probe.status -ne 'not-observed') {
                 Assert-True ($probe.status -eq 'insufficient-sample') 'under-sampled random probe status'
             }
         }
@@ -44,31 +44,60 @@ try {
         'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
         '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
         '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
-        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-mobility=true leashed-condition=true has-owner-condition=true has-tag-condition=true custom-owner-relation=true parent-relation=true is-child-condition=true parent-derived-conditions=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] skill-scheduler result=true delay=2 repeat=3 interval=2 executions=4 pre-delay-count=0',
+        '[Server thread/INFO]: [helsteraMobs] [自检] skill-tree-branches result=true condition-denied=true condition-unlock=true prerequisite-blocked=true prerequisite-unlock=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] skill-tree-cast-persistence result=true blocked-before-unlock=true prerequisite-unlock-blocked=true snapshot-saved=true advanced-unlocked=true casts=1',
+        '[Server thread/INFO]: [helsteraMobs] [自检] skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true bounds-condition=true bounding-box-overlap-condition=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-mobility=true leashed-condition=true has-owner-condition=true has-tag-condition=true target-has-tag-condition=true scoreboard-tag-mechanics=true score-mechanics=true global-score-condition=true score-condition=true custom-owner-relation=true owner-condition=true children-condition=true inside-outside-conditions=true distance-from-location-condition=true coordinate-difference-condition=true origin-location-condition=true line-of-sight-from-origin-condition=true bounds-condition=true enchanting-conditions=true plugin-condition=true field-of-view-condition=true spawn-reason-condition=true water-mob-condition=true zombie-condition=true aerial-condition=true enderman-condition=true enchantment-condition=true color-condition=true material-cooldown-condition=true material-cooldown-mechanic=true set-game-mode-mechanic=true jump-mechanic=true force-pull-mechanic=true set-offhand-mechanic=true set-armor-mechanic=true clear-inventory-mechanic=true remove-held-item-mechanic=true raw-experience-mechanic=true set-absorption-mechanic=true trigger-item-type-condition=true entity-item-type-condition=true entity-item-similar-condition=true item-similar-condition=true targets-condition=true item-type-condition=true structure-condition=true mythic-mob-type-condition=true trigger-block-type-condition=true frozen-condition=true dialogue-condition=true player-kills-condition=true absorption-condition=true health-absorption-condition=true potion-effect-condition=true aura-stacks-condition=true level-condition=true lunar-phase-condition=true string-equals-condition=true string-empty-condition=true compare-values-condition=true is-skill-condition=true owner-online-condition=true parent-relation=true is-child-condition=true parent-derived-conditions=true player-experience-mechanics=true oxygen-mechanic=true consume-slot-mechanic=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true',
-        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true target-environment=true target-fluids=true target-blocked=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true block-type-radius-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
+        '[Server thread/INFO]: skill-dot damage-observed=true bounded=true expired=true initial=100 after-intervals=94 at-duration=92 after-expiry=92',
+        '[Server thread/INFO]: skill-targeter threat-targeter=true source=damage-events faction-filters=true threat-actions=true first=high expected=high',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true custom-item=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true give-item=true take-item=true custom-item=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true give-item=true take-item=true block-set=true block-break=true custom-item=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true give-item=true take-item=true block-set=true block-break=true set-ai=true set-gravity=true set-silent=true set-collidable=true custom-item=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true give-item=true take-item=true block-set=true block-break=true set-ai=true set-gravity=true set-silent=true set-collidable=true set-fire=true clear-fire=true custom-item=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true give-item=true take-item=true block-set=true block-break=true set-ai=true set-gravity=true set-silent=true set-collidable=true set-fire=true clear-fire=true set-rotation=true look-at=true custom-item=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true give-item=true take-item=true dynamic-placeholder=true block-set=true block-break=true set-ai=true set-gravity=true set-silent=true set-collidable=true set-fire=true clear-fire=true set-rotation=true look-at=true custom-item=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true dynamic-placeholder=true gameplay-placeholders=true custom-item=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true time-weather=true custom-item=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true world-biome=true condition-composition=true time-weather=true custom-item=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true world-biome=true world-biome-reject=true condition-composition=true time-weather=true custom-item=true',
-        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true caster-permission=true food-level=true has-item=true air-level=true custom-item=true',
-        '[Server thread/INFO]: [自检] skill-trigger damage=true attacked=false teleport=true teleport-before=false bukkit-damage=true damage-cause-condition=true bukkit-attacked=true cancelled-condition=true cancelled-before=false cancelled-after=true entity-valid=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true caster-permission=true food-level=true food-saturation=true free-inventory-slot=true has-item=true air-level=true custom-item=true target-state-conditions=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true spyglass-condition=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true name-condition=true',
+        '[Server thread/INFO]: [自检] skill-trigger damage=true attacked=false teleport=true teleport-before=false bukkit-damage=true damage-cause-condition=true damage-amount-condition=true bow-tension-condition=true bukkit-attacked=true cancelled-condition=true cancelled-before=false cancelled-after=true entity-valid=true',
         '[Server thread/INFO]: block-events break=true place=true player=HelsteraTester',
         '[Server thread/INFO]: skill-trigger damage=true attacked=false teleport=true potion-effect-end=true teleport-before=false bukkit-damage=true bukkit-attacked=true cancelled-before=false cancelled-after=false entity-valid=true',
         '[Server thread/INFO]: potion-natural-expiry=true expired=true event-observed=false action-observed=true item-marker-observed=false',
+        '[Server thread/INFO]: kill-trigger natural=true victim-dead=true action-observed=true passed=true',
+        '[Server thread/INFO]: player-kill-trigger natural=true victim-player=true victim-death-observed=true action-observed=true player-kills-positive=true player-kills-negative=true passed=true',
         '[Server thread/INFO]: tempt-probe-delayed entity-target-trigger=true target-events=1 target-find-misses=0',
         '[Server thread/INFO]: item-pickup trigger=true player=HelsteraTester',
-        '[Server thread/INFO]: vehicle-events enter=true exit=true dismount=true destroy=false player=HelsteraTester',
+        '[Server thread/INFO]: vehicle-events enter=true exit=true dismount=true eject=true destroy=false player=HelsteraTester',
         '[Server thread/INFO]: environmental-damage trigger=true fire-ticks=0',
-        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true before=1.00,2.00,3.00 after=1.00,2.00,3.00 offset-distance=1.000 moved-distance=0.000',
+        '[Server thread/INFO]: [helsteraMobs] [trigger-debug] player-potion-consume event=true player=HelsteraTester item=POTION',
+        '[Server thread/INFO]: player-potion-natural-expiry=true expired=true action-observed=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true looking-at-condition=true item-recharging-condition=true variable-contains-condition=true before=1.00,2.00,3.00 after=1.00,2.00,3.00 offset-distance=1.000 moved-distance=0.000',
+        '[Server thread/INFO]: projectile-has-ended=true observed=true ticks=3 projectile=00000000-0000-0000-0000-000000000000',
         '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true age-lock=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true patrol-leader=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
         '[Server thread/INFO]: attribute-options result=true modifiers=1',
+        '[Server thread/INFO]: [helsteraMobs] [自检] spawn-option-runtime result=true pickup-disabled=true explicit-pickup-overrides-fallback=true random-equipment-cleared=true explicit-equipment-preserved=true no-damage-ticks=true',
         '[Server thread/INFO]: item-attribute-options result=true modifiers=1',
-        '[Server thread/INFO]: [helsteraMobs] [自检] events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true prevent-transformation-reasons=true prevent-skeleton-conversion=true prevent-block-infection=true prevent-snow-formation=true tame-breed-tame=true tame-breed-breed=true leash-unleash-leash=true leash-unleash-unleash=true prevent-leash=true prevent-rename=true prevent-target=true prevent-vanilla-damage=true prevent-projectiles=true prevent-entity-explosions=true prevent-block-explosion-damage=true prevent-drowning=true prevent-fall-damage=true prevent-fire=true prevent-fire-causes=true prevent-pickup=true prevent-item-use=true prevent-teleport=true prevent-sunburn=true prevent-other-drops=true prevent-mob-kill-drops=true prevent-mob-kill-custom-loot=true shear-trigger=true bed-enter-leave-enter=true bed-enter-leave-leave=true trade-trigger=true quit-trigger=true item-drop-break-damage=true player-actions-interact=true world-change=true jump=true swing=true fish-trigger=true',
+        '[Server thread/INFO]: mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true',
+        '[Server thread/INFO]: mob-options-natural bee-stinger=true bee-attacks=1/1 zombie-conversion=true zombie-control=true zombie-protected=true passed=true',
+        '[Server thread/INFO]: mob-options-mount-event prevented=true allowed=true generic-prevented=true generic-allowed=true passed=true',
+        '[Server thread/INFO]: mob-options-slime-split prevented=true allowed=true passed=true',
         '[Server thread/INFO]: pathfinder-clear probe=path_clear_probe found=true reachable=true started=true active-before=true accepted=true cleared=true stop-calls=1 passed=true',
         '[Server thread/INFO]: ai-priority-probe attack-first=true flee-first=true attack-state=ATTACK flee-state=FLEE',
         '[Server thread/INFO]: ai-priority-detail probe=priority_attack_probe target-assigned=true target-valid=true health-ratio=0.5 attack-priority=0 flee-priority=1 selector=mode=PLAYERS can-attack=true can-chase=true can-flee=true target-matches=true',
+        '[Server thread/INFO]: ai-selector-core goals=true player-target=true monster-target=true clear-no-fallback=true owner-target=true faction-target=true conditional-target=true native-target=true selector=mode=PLAYERS can-attack=true can-chase=false conditional=is-player=>is-player entity=PLAYER passed=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] death-loot items=1 conditional-drop=true rejected-drop-absent=true dynamic-chance-drop=true experience=10',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawner-probe id=pass requested=true failure=null',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawner-probe id=reject requested=false failure=player gate closed',
@@ -124,38 +153,133 @@ try {
     $schema = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'integration-report.schema.json') -Raw -Encoding utf8 |
         ConvertFrom-Json
     Assert-ReportShape $report $schema
+    foreach ($requiredProbeId in @('custom-menu-player-workflow', 'audience-player-delivery',
+            'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates')) {
+        Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
+        Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
+    }
     Assert-True $report.pluginEnabled 'plugin enabled detection'
     Assert-True (($report.probes | Where-Object id -eq 'pathfinderClear').status -eq 'passed') 'native Pathfinder clear probe'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriority').status -eq 'passed') 'AI selector priority arbitration probe'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriorityTargets').status -eq 'passed') 'AI priority probe target setup'
+    Assert-True (($report.probes | Where-Object id -eq 'aiSelectorCore').status -eq 'passed') 'AI selector core Paper probe'
     Assert-True ($report.paperVersion -eq '1.21.1-test') 'Paper version extraction'
     Assert-True (($report.probes | Where-Object id -eq 'horse').status -eq 'passed') 'positive probe'
+    Assert-True (($report.probes | Where-Object id -eq 'ageOptions').status -eq 'passed') 'age options probe'
+    Assert-True (($report.probes | Where-Object id -eq 'entityFlagOptions').status -eq 'passed') 'entity flag options probe'
+    Assert-True (($report.probes | Where-Object id -eq 'endermanHeldBlock').status -eq 'passed') 'Enderman held block option probe'
+    Assert-True (($report.probes | Where-Object id -eq 'spawnOptionRuntime').status -eq 'passed') 'spawn option runtime probe'
     Assert-True (($report.probes | Where-Object id -eq 'sheep').status -eq 'not-observed') 'missing probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawner:reject').status -eq 'observed-rejected') 'rejected probe'
     Assert-True (($report.probes | Where-Object id -eq 'lootDynamicChance').status -eq 'passed') 'dynamic chance probe'
     $events = @($report.probes | Where-Object id -eq 'events')
     Assert-True ($events.Count -eq 1 -and $events[0].status -eq 'passed') 'single passing events probe'
-    Assert-True ($events[0].observations[0] -match 'creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true') 'all event policies cancelled'
+    Assert-True ($events[0].observations[0] -match 'creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true .*prevent-transformation-reasons=true .*prevent-skeleton-conversion=true .*prevent-block-infection=true .*prevent-snow-formation=true .*prevent-leash=true .*prevent-rename=true .*prevent-target=true .*prevent-vanilla-damage=true .*prevent-projectiles=true .*prevent-entity-explosions=true .*prevent-block-explosion-damage=true .*prevent-drowning=true .*prevent-fall-damage=true .*prevent-fire=true .*prevent-fire-causes=true .*prevent-pickup=true .*prevent-item-use=true .*prevent-teleport=true .*prevent-sunburn=true .*prevent-other-drops=true .*prevent-mob-kill-drops=true .*prevent-mob-kill-custom-loot=true') 'all event policies cancelled'
+    Assert-True (($report.probes | Where-Object id -eq 'tameBreed').status -eq 'passed') 'tame and breed trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'leashLifecycle').status -eq 'passed') 'leash lifecycle trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'shearTrigger').status -eq 'passed') 'shear trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'bedLifecycle').status -eq 'passed') 'bed lifecycle trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'tradeTrigger').status -eq 'passed') 'trade trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'quitTrigger').status -eq 'passed') 'quit trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'itemLifecycle').status -eq 'passed') 'item lifecycle trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'playerActions').status -eq 'passed') 'player action trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'fishTrigger').status -eq 'passed') 'fish trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'creeperNaturalFuse').status -eq 'passed') 'natural Creeper fuse probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mobOptionsNatural').status -eq 'passed') 'natural Bee/Zombie probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mobOptionsMountEvent').status -eq 'passed') 'jockey mount event probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mobOptionsSlimeSplit').status -eq 'passed') 'slime split option probe'
     Assert-True (($report.probes | Where-Object id -eq 'custom-menu-player-workflow').status -eq 'passed') 'menu client workflow probe'
     Assert-True (($report.probes | Where-Object id -eq 'audience-player-delivery').status -eq 'passed') 'audience client workflow probe'
     Assert-True (($report.probes | Where-Object id -eq 'audience-filter-delivery').status -eq 'passed') 'audience filter workflow probe'
     Assert-True (($report.probes | Where-Object id -eq 'deathLootConditions').status -eq 'passed') 'death loot conditions probe'
     Assert-True (($report.probes | Where-Object id -eq 'deathLootDynamicChance').status -eq 'passed') 'death loot dynamic chance probe'
     Assert-True (($report.probes | Where-Object id -eq 'skillTeleport').status -eq 'passed') 'teleport mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'skillScheduling').status -eq 'passed') 'Paper tick scheduler probe'
+    Assert-True (($report.probes | Where-Object id -eq 'skillTreeBranches').status -eq 'passed') 'Paper SkillTree branch gates probe'
+    Assert-True (($report.probes | Where-Object id -eq 'skillTreeCastPersistence').status -eq 'passed') 'Paper persisted SkillTree cast gate probe'
+    Assert-True (($report.probes | Where-Object id -eq 'playerExperienceMechanics').status -eq 'passed') 'player experience mechanics probe'
+    Assert-True (($report.probes | Where-Object id -eq 'materialCooldownMechanic').status -eq 'passed') 'material cooldown mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'setGameModeMechanic').status -eq 'passed') 'set game mode mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'jumpMechanic').status -eq 'passed') 'jump mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'forcePullMechanic').status -eq 'passed') 'force pull mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'setOffhandMechanic').status -eq 'passed') 'set offhand mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'setArmorMechanic').status -eq 'passed') 'set armor mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'clearInventoryMechanic').status -eq 'passed') 'clear inventory mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'removeHeldItemMechanic').status -eq 'passed') 'remove held item mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'rawExperienceMechanic').status -eq 'passed') 'raw experience mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'setAbsorptionMechanic').status -eq 'passed') 'set absorption mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'oxygenMechanic').status -eq 'passed') 'oxygen mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'consumeSlotMechanic').status -eq 'passed') 'consume slot mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'cancelledCondition').status -eq 'passed') 'cancelled condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'damageCauseCondition').status -eq 'passed') 'damage cause condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'bowTensionCondition').status -eq 'passed') 'bow tension condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'potionNaturalExpiry').status -eq 'passed') 'natural potion expiry probe'
+    Assert-True (($report.probes | Where-Object id -eq 'playerKillTrigger').status -eq 'passed') 'player kill trigger and counter probe'
+    Assert-True (($report.probes | Where-Object id -eq 'playerKillsCondition').status -eq 'passed') 'player kills condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mythicMobTypeCondition').status -eq 'passed') 'mythic mob type condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'variableContainsCondition').status -eq 'passed') 'variable contains condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionCatalog').status -eq 'passed') 'condition catalog probe'
+    Assert-True (($report.probes | Where-Object id -eq 'projectileHasEndedCondition').status -eq 'passed') 'projectile ended condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'absorptionCondition').status -eq 'passed') 'absorption condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'healthAbsorptionCondition').status -eq 'passed') 'health absorption condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'potionEffectCondition').status -eq 'passed') 'potion effect condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'auraStacksCondition').status -eq 'passed') 'aura stacks condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'levelCondition').status -eq 'passed') 'level condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'lunarPhaseCondition').status -eq 'passed') 'lunar phase condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'stringEqualsCondition').status -eq 'passed') 'string equals condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'stringEmptyCondition').status -eq 'passed') 'string empty condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'compareValuesCondition').status -eq 'passed') 'compare values condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'isSkillCondition').status -eq 'passed') 'is skill condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'frozenCondition').status -eq 'passed') 'frozen condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'boundsCondition').status -eq 'passed') 'bounds condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'boundingBoxOverlapCondition').status -eq 'passed') 'bounding box overlap condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'itemSimilarCondition').status -eq 'passed') 'item similarity condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'entityItemTypeCondition').status -eq 'passed') 'entity item type condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'entityItemSimilarCondition').status -eq 'passed') 'entity item similarity condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'targetsCondition').status -eq 'passed') 'targets condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'itemTypeCondition').status -eq 'passed') 'item type condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'structureCondition').status -eq 'passed') 'structure condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'lineOfSightFromOriginCondition').status -eq 'passed') 'line of sight from origin probe'
+    Assert-True (($report.probes | Where-Object id -eq 'originLocationCondition').status -eq 'passed') 'origin location condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'triggerBlockTypeCondition').status -eq 'passed') 'trigger block type condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'worldBiome').status -eq 'passed') 'world and biome condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'worldBiomeReject').status -eq 'passed') 'world and biome rejection probe'
     Assert-True (($report.probes | Where-Object id -eq 'targetCategories').status -eq 'passed') 'target categories probe'
     Assert-True (($report.probes | Where-Object id -eq 'targetHealthComparators').status -eq 'passed') 'target health comparators probe'
+    Assert-True (($report.probes | Where-Object id -eq 'targetFluidConditions').status -eq 'passed') 'target fluid conditions probe'
+    Assert-True (($report.probes | Where-Object id -eq 'factionConditions').status -eq 'passed') 'faction conditions probe'
+    Assert-True (($report.probes | Where-Object id -eq 'factionMechanic').status -eq 'passed') 'faction mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'levelMechanic').status -eq 'passed') 'level mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'weatherMechanic').status -eq 'passed') 'weather mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'timeMechanic').status -eq 'passed') 'time mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'lightningMechanic').status -eq 'passed') 'lightning mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'signalMechanics').status -eq 'passed') 'signal mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'globalScoreCondition').status -eq 'passed') 'global score condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'scoreCondition').status -eq 'passed') 'score condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'targetKillMechanic').status -eq 'passed') 'target kill mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'damageMeleeMechanic').status -eq 'passed') 'damage melee mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'conditionUtilityAliases').status -eq 'passed') 'condition utility alias probe'
+    Assert-True (($report.probes | Where-Object id -eq 'spyglassCondition').status -eq 'passed') 'spyglass condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'foodSaturationCondition').status -eq 'passed') 'food saturation condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'freeInventorySlotCondition').status -eq 'passed') 'free inventory slot condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'cooldownMechanics').status -eq 'passed') 'cooldown mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'lastDamageCauseCondition').status -eq 'passed') 'last damage cause condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'motionConditions').status -eq 'passed') 'motion condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'nameCondition').status -eq 'passed') 'name condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'playerRadiusConditions').status -eq 'passed') 'player radius condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'dotMechanic').status -eq 'passed') 'DoT mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'threatActions').status -eq 'passed') 'threat action probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionComposition').status -eq 'passed') 'condition composition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionMobility').status -eq 'passed') 'condition mobility probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionLeashed').status -eq 'passed') 'leashed condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionHasOwner').status -eq 'passed') 'has-owner condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionHasTag').status -eq 'passed') 'has-tag condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'targetHasTagCondition').status -eq 'passed') 'target has-tag condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'targetStateConditions').status -eq 'passed') 'target state condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'scoreboardTagMechanics').status -eq 'passed') 'scoreboard tag mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'scoreMechanics').status -eq 'passed') 'score mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'customOwnerRelation').status -eq 'passed') 'custom owner relation probe'
+    Assert-True (($report.probes | Where-Object id -eq 'ownerOnlineCondition').status -eq 'passed') 'owner online condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'parentRelation').status -eq 'passed') 'parent relation probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionIsChild').status -eq 'passed') 'is-child condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'parentDerivedConditions').status -eq 'passed') 'parent-derived conditions probe'
@@ -165,10 +289,18 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'foodLevelCondition').status -eq 'passed') 'food level condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'hasItemCondition').status -eq 'passed') 'has item condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'airLevelCondition').status -eq 'passed') 'air level condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'lookingAtCondition').status -eq 'passed') 'looking at condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'itemRechargingCondition').status -eq 'passed') 'item recharging condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'gameplayPlaceholders').status -eq 'passed') 'gameplay placeholder probe'
+    Assert-True (($report.probes | Where-Object id -eq 'playerPotionConsume').status -eq 'passed') 'raw player potion consume probe'
+    Assert-True ($report.expectedProbeIds -contains 'playerPotionConsume') 'raw player potion consume catalog entry'
+    Assert-True (($report.probes | Where-Object id -eq 'playerPotionNaturalExpiry').status -eq 'passed') 'raw player potion natural expiry probe'
+    Assert-True ($report.expectedProbeIds -contains 'playerPotionNaturalExpiry') 'raw player potion natural expiry catalog entry'
     Assert-True (($report.probes | Where-Object id -eq 'skillTrigger').status -eq 'passed') 'skill trigger probe'
     Assert-True (($report.probes | Where-Object id -eq 'blockEvents').status -eq 'passed') 'block event trigger probe'
     Assert-True (($report.probes | Where-Object id -eq 'itemPickup').status -eq 'passed') 'item pickup trigger probe'
     Assert-True (($report.probes | Where-Object id -eq 'vehicleEvents').status -eq 'passed') 'vehicle event trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'ejectPassenger').status -eq 'passed') 'eject passenger mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'environmentalDamage').status -eq 'passed') 'environmental damage probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerMaxSpawns').status -eq 'passed') 'spawner max-spawns probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerScopedLimits').status -eq 'passed') 'spawner scoped-limits probe'
@@ -225,6 +357,142 @@ try {
             $_.Exception.Message -match 'out-of-tolerance=failed'
     }
     Assert-True $strictRejected 'strict gate rejects missing, under-sampled, and failed Paper evidence'
+
+    $targetGateReportPath = Join-Path $temp 'target-gate-report.json'
+    @{
+        schemaVersion = 1
+        generatedAtUtc = [DateTime]::UtcNow.ToString('o')
+        fixtureDirectory = 'target-gate'
+        evidenceMode = 'release'
+        paperVersion = '1.21.1-test'
+        paperApiVersion = '1.21.1-test-api'
+        pluginEnabled = $true
+        log = 'logs/latest.log'
+        expectedProbeIds = @('positive')
+        probes = @(@{ id = 'positive'; status = 'passed'; observations = @('ok') })
+    } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $targetGateReportPath -Encoding utf8
+    & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $targetGateReportPath `
+        -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+
+    $exploratoryReportPath = Join-Path $temp 'exploratory-report.json'
+    $exploratoryReport = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $exploratoryReport.evidenceMode = 'exploratory'
+    $exploratoryReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $exploratoryReportPath -Encoding utf8
+    $exploratoryRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $exploratoryReportPath `
+            -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+    } catch {
+        $exploratoryRejected = $_.Exception.Message -match 'not release evidence'
+    }
+    Assert-True $exploratoryRejected 'strict gate rejects exploratory evidence mode'
+
+    $wrongTargetReportPath = Join-Path $temp 'wrong-target-report.json'
+    $wrongTargetReport = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $wrongTargetReport.paperVersion = '1.21.4-test'
+    $wrongTargetReport.paperApiVersion = '1.21.4-test-api'
+    $wrongTargetReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $wrongTargetReportPath -Encoding utf8
+    $wrongTargetRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $wrongTargetReportPath `
+            -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+    } catch {
+        $wrongTargetRejected = $_.Exception.Message -match 'Paper implementation mismatch'
+    }
+    Assert-True $wrongTargetRejected 'strict gate rejects a report from another Paper version'
+
+    $missingTargetProbePath = Join-Path $temp 'missing-target-probe-report.json'
+    $missingTargetProbe = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $missingTargetProbe.expectedProbeIds = @('positive', 'required-probe')
+    $missingTargetProbe | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $missingTargetProbePath -Encoding utf8
+    $missingTargetProbeRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $missingTargetProbePath `
+            -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+    } catch {
+        $missingTargetProbeRejected = $_.Exception.Message -match 'required-probe'
+    }
+    Assert-True $missingTargetProbeRejected 'strict gate rejects missing registered probe evidence'
+
+    $duplicateProbePath = Join-Path $temp 'duplicate-probe-report.json'
+    $duplicateProbe = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $duplicateProbe.probes = @(
+        @{ id = 'positive'; status = 'passed'; observations = @('ok') },
+        @{ id = 'positive'; status = 'passed'; observations = @('duplicate') }
+    )
+    $duplicateProbe | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $duplicateProbePath -Encoding utf8
+    $duplicateRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $duplicateProbePath `
+            -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+    } catch {
+        $duplicateRejected = $_.Exception.Message -match 'duplicate probes'
+    }
+    Assert-True $duplicateRejected 'strict gate rejects duplicate probe IDs'
+
+    $unexpectedProbePath = Join-Path $temp 'unexpected-probe-report.json'
+    $unexpectedProbe = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $unexpectedProbe.probes = @(
+        @{ id = 'positive'; status = 'passed'; observations = @('ok') },
+        @{ id = 'unexpected'; status = 'passed'; observations = @('unregistered') }
+    )
+    $unexpectedProbe | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $unexpectedProbePath -Encoding utf8
+    $unexpectedRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $unexpectedProbePath `
+            -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+    } catch {
+        $unexpectedRejected = $_.Exception.Message -match 'unregistered probes'
+    }
+    Assert-True $unexpectedRejected 'strict gate rejects unregistered probe IDs'
+
+    $emptyTargetReportPath = Join-Path $temp 'empty-target-report.json'
+    $emptyTargetReport = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $emptyTargetReport.probes = @()
+    $emptyTargetReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $emptyTargetReportPath -Encoding utf8
+    $emptyTargetRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $emptyTargetReportPath `
+            -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+    } catch {
+        $emptyTargetRejected = $_.Exception.Message -match 'contains no probe evidence'
+    }
+    Assert-True $emptyTargetRejected 'strict gate rejects a report with no probe evidence'
+
+    $noClientTemp = Join-Path $temp 'no-client-fixture'
+    New-Item -ItemType Directory -Path (Join-Path $noClientTemp 'logs') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $noClientTemp 'logs/latest.log') -Encoding utf8 -Value @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: Done (1.000s)! For help, type "help"'
+    )
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $noClientTemp | Out-Null
+    $noClientReport = Get-Content -LiteralPath (Join-Path $noClientTemp 'integration-report.json') -Raw -Encoding utf8 |
+        ConvertFrom-Json
+    foreach ($dynamicProbeId in @('custom-menu-player-workflow', 'audience-player-delivery',
+            'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates')) {
+        $dynamicProbe = @($noClientReport.probes | Where-Object id -eq $dynamicProbeId)
+        Assert-True ($dynamicProbe.Count -eq 1) "no-client report includes $dynamicProbeId"
+        Assert-True ($dynamicProbe[0].status -eq 'not-observed') "no-client $dynamicProbeId is explicit missing evidence"
+        Assert-True ($noClientReport.expectedProbeIds -contains $dynamicProbeId) "no-client catalog includes $dynamicProbeId"
+    }
+
+    $dynamicSpawnerTemp = Join-Path $temp 'dynamic-spawner-fixture'
+    New-Item -ItemType Directory -Path (Join-Path $dynamicSpawnerTemp 'logs') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $dynamicSpawnerTemp 'logs/latest.log') -Encoding utf8 -Value @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: spawner-probe id=aggregate requested=false failure=first',
+        '[Server thread/INFO]: spawner-probe id=aggregate requested=true failure=null',
+        '[Server thread/INFO]: Done (1.000s)! For help, type "help"'
+    )
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $dynamicSpawnerTemp | Out-Null
+    $dynamicSpawnerReport = Get-Content -LiteralPath (Join-Path $dynamicSpawnerTemp 'integration-report.json') -Raw -Encoding utf8 |
+        ConvertFrom-Json
+    $aggregateProbes = @($dynamicSpawnerReport.probes | Where-Object id -eq 'spawner:aggregate')
+    Assert-True ($aggregateProbes.Count -eq 1) 'dynamic spawner evidence is aggregated by ID'
+    Assert-True ($aggregateProbes[0].status -eq 'passed') 'aggregated dynamic spawner keeps passing evidence'
+    Assert-True ($dynamicSpawnerReport.expectedProbeIds -contains 'spawner:aggregate') 'dynamic spawner is registered in the strict catalog'
 
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp `
         -RandomSpawnTolerance 0.10 | Out-Null

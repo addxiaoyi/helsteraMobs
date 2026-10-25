@@ -5,6 +5,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -59,6 +60,46 @@ class SpawnerServiceTest {
         service.tickOnce();
         assertEquals(199, service.nextSpawnInTicks("arena"));
         assertEquals(-1, service.nextSpawnInTicks("missing"));
+    }
+
+    @Test
+    @DisplayName("shared scheduler advances cooldown by real elapsed ticks")
+    void sharedSchedulerUsesElapsedTicks() {
+        SpawnerService service = service("""
+                spawners:
+                  arena:
+                    mob: boss
+                    x: 0
+                    z: 0
+                    interval: 200
+                """);
+
+        service.tickOnce(40);
+        assertEquals(200, service.nextSpawnInTicks("arena"));
+        service.tickOnce(40);
+        assertEquals(160, service.nextSpawnInTicks("arena"));
+    }
+
+    @Test
+    @DisplayName("config reload keeps alive instance tracking")
+    void reloadKeepsAliveInstanceTracking() {
+        String yaml = """
+                spawners:
+                  arena:
+                    mob: boss
+                    x: 0
+                    z: 0
+                    max-alive: 3
+                """;
+        SpawnerService service = service(yaml);
+        service.setAliveCheck(id -> true);
+        assertTrue(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+        assertEquals(1, service.aliveCount("arena"));
+
+        service.load(YamlConfiguration.loadConfiguration(new StringReader(yaml))
+                .getConfigurationSection("spawners"));
+
+        assertEquals(1, service.aliveCount("arena"));
     }
 
     @Test
@@ -301,6 +342,32 @@ class SpawnerServiceTest {
         assertEquals(2, service.get("arena").maxPerPlayer());
         assertTrue(service.warnings().stream().anyMatch(w -> w.contains("per-world-limit")));
         assertTrue(service.warnings().stream().anyMatch(w -> w.contains("per-player-limit")));
+    }
+
+    @Test
+    @DisplayName("player-scoped probes require an online owner in range")
+    void playerOwnerPresenceUsesConfiguredRadius() {
+        World world = mock(World.class);
+        when(world.getName()).thenReturn("arena");
+        Player player = mock(Player.class);
+        when(player.isOnline()).thenReturn(true);
+        when(player.isDead()).thenReturn(false);
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        when(player.getLocation()).thenReturn(new Location(world, 2, 64, 0));
+        when(world.getPlayers()).thenReturn(java.util.List.of(player));
+
+        SpawnerService service = service("""
+                spawners:
+                  arena:
+                    mob: a
+                    x: 0
+                    z: 0
+                    max-per-player: 1
+                    players-radius: 4
+                """);
+        assertTrue(service.playerOwnerPresent("arena", new Location(world, 0, 64, 0)));
+        when(player.getLocation()).thenReturn(new Location(world, 8, 64, 0));
+        assertFalse(service.playerOwnerPresent("arena", new Location(world, 0, 64, 0)));
     }
 
     @Test
@@ -827,6 +894,22 @@ class SpawnerServiceTest {
                       - "!raining"
                 """)).getConfigurationSection("spawners"));
         assertEquals(List.of("night", "!raining"), service.get("arena").conditions());
+    }
+
+    @Test
+    @DisplayName("scalar spawner conditions split without breaking range arguments")
+    void loadsDelimitedScalarConditions() {
+        SpawnerService service = new SpawnerService(null, (mob, location, profile) -> 1);
+        service.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                spawners:
+                  arena:
+                    mob: boss
+                    x: 0
+                    z: 0
+                    conditions: "day, !raining, time-between=0,12000"
+                """)).getConfigurationSection("spawners"));
+        assertEquals(List.of("day", "!raining", "time-between=0,12000"),
+                service.get("arena").conditions());
     }
 
 

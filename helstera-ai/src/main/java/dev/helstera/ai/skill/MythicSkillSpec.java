@@ -1,6 +1,8 @@
 package dev.helstera.ai.skill;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -22,7 +24,9 @@ public record MythicSkillSpec(
 
     public MythicSkillSpec {
         mechanic = Objects.requireNonNull(mechanic, "mechanic").toLowerCase(Locale.ROOT);
-        arguments = Map.copyOf(arguments);
+        // Preserve Mythic's keyed argument order when binding positional
+        // factories. Map.copyOf is intentionally free to reorder entries.
+        arguments = Collections.unmodifiableMap(new LinkedHashMap<>(arguments));
         positional = List.copyOf(positional);
         inlineConditions = List.copyOf(inlineConditions);
         if (chance != null && (chance < 0 || chance > 100)) {

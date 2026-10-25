@@ -1,7 +1,10 @@
 package dev.helstera.ai.skill;
 
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -9,7 +12,10 @@ import java.lang.reflect.Proxy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * 触发器守卫与键构造的测试。
@@ -86,6 +92,44 @@ class SkillTriggerGuardsTest {
     void mobKilledByPlayerDoesNotCount() {
         // on-kill-player 语义是「本生物杀了玩家」，不是「本生物杀了某个东西」
         assertFalse(SkillTriggers.shouldFireKillPlayer(fakeNonPlayer(), fakePlayer()));
+    }
+
+    @Test
+    @DisplayName("killer resolution prefers Bukkit player attribution")
+    void resolvesPlayerKillerFirst() {
+        LivingEntity victim = mock(LivingEntity.class);
+        Player killer = fakePlayer();
+        when(victim.getKiller()).thenReturn(killer);
+
+        assertSame(killer, SkillTriggers.killerEntity(victim));
+    }
+
+    @Test
+    @DisplayName("killer resolution recovers a managed mob from the damage event")
+    void resolvesMobKillerFromDamageEvent() {
+        LivingEntity victim = mock(LivingEntity.class);
+        LivingEntity killer = mock(LivingEntity.class);
+        EntityDamageByEntityEvent damage = mock(EntityDamageByEntityEvent.class);
+        when(victim.getKiller()).thenReturn(null);
+        when(victim.getLastDamageCause()).thenReturn(damage);
+        when(damage.getDamager()).thenReturn(killer);
+
+        assertSame(killer, SkillTriggers.killerEntity(victim));
+    }
+
+    @Test
+    @DisplayName("killer resolution unwraps projectile shooters")
+    void resolvesProjectileShooter() {
+        LivingEntity victim = mock(LivingEntity.class);
+        Projectile projectile = mock(Projectile.class);
+        LivingEntity shooter = mock(LivingEntity.class);
+        EntityDamageByEntityEvent damage = mock(EntityDamageByEntityEvent.class);
+        when(victim.getKiller()).thenReturn(null);
+        when(victim.getLastDamageCause()).thenReturn(damage);
+        when(damage.getDamager()).thenReturn(projectile);
+        when(projectile.getShooter()).thenReturn(shooter);
+
+        assertSame(shooter, SkillTriggers.killerEntity(victim));
     }
 
     // ---------- 条件观测键 ----------

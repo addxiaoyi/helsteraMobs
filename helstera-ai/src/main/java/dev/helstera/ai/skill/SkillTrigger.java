@@ -29,10 +29,28 @@ public enum SkillTrigger {
     BLOCK_BREAK("on-block-break", true),
     BLOCK_PLACE("on-block-place", true),
     ITEM_PICKUP("on-item-pickup", true),
+    ITEM_DROP("on-item-drop", true),
+    ITEM_BREAK("on-item-break", true),
+    ITEM_DAMAGE("on-item-damage", true),
+    FISH("on-fish", true),
     ENTITY_TARGET("on-entity-target", true),
+    // PlayerItemConsumeEvent is the Bukkit-side bridge for Mythic onConsume/onEat.
+    ITEM_CONSUME("on-consume", true),
+    TAME("on-tame", true),
+    BREED("on-breed", true),
+    WORLD_CHANGE("on-world-change", true),
+    JUMP("on-jump", true),
+    SWING("on-swing", true),
+    QUIT("on-quit", true),
+    BED_ENTER("on-bed-enter", true),
+    BED_LEAVE("on-bed-leave", true),
+    UNLEASH("on-unleash", true),
+    TRADE("on-trade", true),
     VEHICLE_ENTER("on-vehicle-enter", true),
     VEHICLE_EXIT("on-vehicle-exit", true),
     VEHICLE_DESTROY("on-vehicle-destroy", true),
+    // Fired on a managed killer when its damage caused a living entity to die.
+    KILL("on-kill", true),
     KILL_PLAYER("on-kill-player", true),
     // 由 EntityShootBowEvent 驱动。此前误判为「模型实例不会自己发射弹丸」而标 false，
     // 但载体的 entity.type 可以是 player —— 这类载体确实能射箭，事件可达，
@@ -169,8 +187,16 @@ public enum SkillTrigger {
      */
     public static SkillTrigger of(String name) {
         if (name == null) return null;
-        String n = normalize(name);
+        String candidate = name.trim();
+        int colon = candidate.indexOf(':');
+        if (colon >= 0) candidate = candidate.substring(0, colon).trim();
+        String n = normalize(candidate);
         if (n.isEmpty()) return null;
+        // Common Mythic aliases for the Bukkit item-consumption event.
+        if (n.equals("onitemconsume") || n.equals("itemconsume") || n.equals("oneat") || n.equals("eat")) {
+            return ITEM_CONSUME;
+        }
+        if (n.equals("onchangeworld") || n.equals("changeworld")) return WORLD_CHANGE;
         // 先按全名匹配（onspawn / onspawn / on-spawn）
         for (SkillTrigger t : values()) {
             if (normalize(t.configName).equals(n)) return t;
@@ -181,8 +207,10 @@ public enum SkillTrigger {
         }
         // "事件" 这类冗余前缀写法
         if (n.startsWith("event")) {
+            String withoutEvent = n.substring("event".length());
             for (SkillTrigger t : values()) {
-                if (normalize(t.configName).equals("event" + normalize(t.configName))) return t;
+                if (normalize(t.configName).equals(withoutEvent)
+                        || normalize(t.shortName()).equals(withoutEvent)) return t;
             }
         }
         return null;
@@ -204,7 +232,9 @@ public enum SkillTrigger {
 
     /** 供 {@code SkillTriggers} 按归一化名建索引；未知名返回 null。 */
     public static SkillTrigger byNormalized(String normalized) {
-        return normalized == null ? null : INDEX.get(normalized);
+        if (normalized == null) return null;
+        SkillTrigger indexed = INDEX.get(normalized);
+        return indexed != null ? indexed : of(normalized);
     }
 
     /** 归一化工具，供外部解析配置键时保持与本枚举一致。 */

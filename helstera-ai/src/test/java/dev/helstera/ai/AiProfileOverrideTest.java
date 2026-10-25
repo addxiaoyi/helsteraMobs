@@ -123,6 +123,25 @@ class AiProfileOverrideTest {
     }
 
     @Test
+    @DisplayName("触发器别名在装载时收敛到运行时规范键")
+    void triggerAliasesUseCanonicalKeys() {
+        var section = YamlConfiguration.loadConfiguration(new StringReader("""
+                triggers:
+                  onSpawn:
+                    do: [stop]
+                  on-item-consume:
+                    do: [stop]
+                """));
+
+        AiProfile profile = AiProfile.fromSection("aliases", section);
+
+        assertTrue(profile.triggers.containsKey("on-spawn"));
+        assertTrue(profile.triggers.containsKey("on-consume"));
+        assertFalse(profile.triggers.containsKey("onSpawn"));
+        assertFalse(profile.triggers.containsKey("on-item-consume"));
+    }
+
+    @Test
     @DisplayName("标量覆盖后档案副本彼此隔离")
     void overrideDoesNotMutateBase() {
         AiProfile shared = base();

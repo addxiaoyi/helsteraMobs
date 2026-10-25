@@ -12,8 +12,9 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`Invalid Paper port: ${rawPort}`);
 }
 
-const bot = mineflayer.createBot({ host, port, username: 'HelsteraTester', version: '1.21.1' });
-const guest = mineflayer.createBot({ host, port, username: 'AudienceGuest', version: '1.21.1' });
+const version = process.env.PAPER_MINEFLAYER_VERSION || '1.21.1';
+const bot = mineflayer.createBot({ host, port, username: 'HelsteraTester', version });
+const guest = mineflayer.createBot({ host, port, username: 'AudienceGuest', version });
 const guestEvents = [];
 
 function waitFor(predicate, label) {
@@ -199,7 +200,10 @@ run().catch(error => {
   if (reportPath) fs.appendFileSync(reportPath, `PAPER_MENU_ERROR ${error.stack || error.message}\n`, 'utf8');
   console.error(error.stack || error.message);
   process.exitCode = 1;
-}).finally(() => {
+}).finally(async () => {
+  // Keep the primary player online briefly after the menu assertions so the
+  // server-side skill/event self-tests can finish before the fixture tears it down.
+  await new Promise(resolve => setTimeout(resolve, 30000));
   bot.quit('integration complete');
   guest.quit('integration complete');
 });

@@ -11,6 +11,8 @@ class AudienceFilterTest {
         assertTrue(SkillExtras.audienceFactionAllowed("guards", "guards"));
         assertFalse(SkillExtras.audienceFactionAllowed("guards", "undead"));
         assertTrue(SkillExtras.audienceFactionAllowed("", null));
+        assertTrue(SkillExtras.audienceFactionAllowed("undead", "guards", true));
+        assertFalse(SkillExtras.audienceFactionAllowed("undead", "undead", true));
     }
 
     @Test

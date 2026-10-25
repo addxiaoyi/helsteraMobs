@@ -29,6 +29,13 @@ class MythicSkillSpecTest {
     }
 
     @Test
+    void preservesKeyedArgumentOrderForPositionalFactories() {
+        MythicSkillSpec spec = MythicSkillSpec.parse(
+                "setmaterialcooldown{material=ENDER_PEARL;ticks=20}");
+        assertEquals(List.of("material", "ticks"), List.copyOf(spec.arguments().keySet()));
+    }
+
+    @Test
     void rejectsMalformedInput() {
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage{amount=5"));
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage 101%"));

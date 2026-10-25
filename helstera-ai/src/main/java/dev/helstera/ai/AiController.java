@@ -17,6 +17,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -46,6 +47,8 @@ public final class AiController {
     private final HelsteraEventBus bus;
     /** 自定义条件/动作来源；为 null 时决策链不执行任何扩展钩子。 */
     private final dev.helstera.api.behavior.BehaviorRegistry behaviors;
+    /** Shared SkillService condition binder; null in API-only/unit-test construction. */
+    private final java.util.function.Function<String, String> conditionBinder;
 
     private State state = State.IDLE;
     private Player target;
@@ -87,17 +90,25 @@ public final class AiController {
 
     public AiController(ModelInstanceImpl inst, AiProfile profile,
                         EntityAnimationStateMachine anim, HelsteraEventBus bus) {
-        this(inst, profile, anim, bus, null);
+        this(inst, profile, anim, bus, null, null);
     }
 
     public AiController(ModelInstanceImpl inst, AiProfile profile,
                         EntityAnimationStateMachine anim, HelsteraEventBus bus,
                         dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+        this(inst, profile, anim, bus, behaviors, null);
+    }
+
+    public AiController(ModelInstanceImpl inst, AiProfile profile,
+                        EntityAnimationStateMachine anim, HelsteraEventBus bus,
+                        dev.helstera.api.behavior.BehaviorRegistry behaviors,
+                        java.util.function.Function<String, String> conditionBinder) {
         this.inst = inst;
         this.profile = profile;
         this.anim = anim;
         this.bus = bus;
         this.behaviors = behaviors;
+        this.conditionBinder = conditionBinder;
         this.threat = profile.threatEnabled
                 ? new ThreatTable(profile.threatDecayPerSecond, profile.threatDistanceWeight,
                         System::currentTimeMillis, id -> Bukkit.getEntity(id))
@@ -142,7 +153,9 @@ public final class AiController {
                 + " can-chase=" + selectorCanChase
                 + " can-flee=" + selectorCanFlee
                 + " target-matches=" + selectorTargetMatches(combatTarget)
-                + " combat-target=" + (combatTarget == null ? null : combatTarget.getUniqueId());
+                + " combat-target=" + (combatTarget == null ? null : combatTarget.getUniqueId())
+                + " conditional=" + lastSelectorConditionDiagnostic
+                + " conditional-player=" + lastConditionalPlayerDiagnostic;
     }
 
     /**
@@ -257,6 +270,7 @@ public final class AiController {
     private boolean selectorAllowsPlayerTargets = true;
     private AiProfile.TargetMode selectorTargetMode = AiProfile.TargetMode.PLAYERS;
     private boolean selectorLooksAtPlayers;
+    private boolean selectorLooksAtTarget;
     private boolean selectorAvoidsEntities;
     private boolean selectorAttackerFirst;
     private boolean selectorHurtByFirst;
@@ -270,9 +284,13 @@ public final class AiController {
     private boolean selectorCanOpenDoors;
     private boolean selectorAvoidSun;
     private boolean selectorHasExplicitGoalPriority;
+    private boolean selectorHasExplicitTargets;
+    private SelectorPlan selectorPlan = SelectorPlan.compile(null);
     private int selectorFleePriority = Integer.MAX_VALUE;
     private int selectorAttackPriority = Integer.MAX_VALUE;
     private int nativePathStopCalls;
+    private String lastSelectorConditionDiagnostic = "none";
+    private String lastConditionalPlayerDiagnostic = "none";
 
     public int nativePathStopCalls() {
         return nativePathStopCalls;
@@ -280,19 +298,36 @@ public final class AiController {
 
     private void applySelectorProfile(Entity base, Location loc) {
         AiProfile.SelectorPolicy policy = profile.selectorPolicy();
-        selectorCanChase = policy.chase();
+        selectorPlan = SelectorPlan.compile(profile);
+        selectorCanChase = policy.chase() || selectorPlan.goals().stream().anyMatch(AiController::isChaseGoal);
         selectorCanAttack = policy.attack();
-        selectorCanPatrol = policy.patrol();
-        selectorCanFlee = policy.flee();
-        selectorRangedAttack = policy.rangedAttack() || profile.rangedAttack;
-        selectorLeapAtTarget = policy.leapAtTarget() || profile.leapAtTarget;
-        selectorCanSwim = policy.swim();
-        selectorCanOpenDoors = policy.openDoors();
-        selectorAvoidSun = policy.avoidSun();
+        selectorCanPatrol = policy.patrol() || hasGoal("randomstroll", "random_stroll");
+        selectorCanFlee = policy.flee() || hasGoal("panic", "avoidentity", "avoid_entity",
+                "fleeplayers", "flee_players", "runfromplayers", "run_from_players",
+                "fleegolems", "flee_golems", "runfromgolems", "run_from_golems",
+                "fleevillagers", "flee_villagers", "runfromvillagers", "run_from_villagers",
+                "fleewolf", "flee_wolf", "fleewolves", "flee_wolves", "runfromwolves",
+                "run_from_wolves", "fleefaction", "flee_faction", "runfromfaction",
+                "run_from_faction");
+        selectorRangedAttack = policy.rangedAttack() || profile.rangedAttack
+                || hasGoal("rangedattack", "ranged_attack", "arrowattack", "bowattack", "bowshoot", "bowmaster");
+        selectorLeapAtTarget = policy.leapAtTarget() || profile.leapAtTarget
+                || hasGoal("leapattarget", "leap_at_target");
+        selectorCanSwim = policy.swim() || hasGoal("float", "swim");
+        selectorCanOpenDoors = policy.openDoors() || hasGoal("opendoor", "opendoors", "open_door", "open_doors");
+        selectorAvoidSun = policy.avoidSun() || hasGoal("avoidsun", "avoid_sun", "restrictsun", "restrict_sun",
+                "fleesun", "flee_sun");
         selectorAllowsPlayerTargets = policy.playerTargets();
         selectorTargetMode = policy.targetMode();
-        selectorLooksAtPlayers = policy.lookAtPlayers();
-        selectorAvoidsEntities = policy.avoidEntities();
+        selectorLooksAtPlayers = policy.lookAtPlayers()
+                || hasGoal("lookatplayers", "look_at_players", "randomlookaround", "lookaround");
+        selectorLooksAtTarget = hasGoal("lookattarget", "look_at_target");
+        selectorAvoidsEntities = policy.avoidEntities() || hasGoal("avoidentity", "avoid_entity",
+                "fleeplayers", "flee_players", "runfromplayers", "run_from_players", "fleegolems",
+                "flee_golems", "runfromgolems", "run_from_golems", "fleevillagers", "flee_villagers",
+                "runfromvillagers", "run_from_villagers", "fleewolf", "flee_wolf", "fleewolves",
+                "flee_wolves", "runfromwolves", "run_from_wolves", "fleefaction", "flee_faction",
+                "runfromfaction", "run_from_faction");
         selectorAttackerFirst = policy.attackerFirst();
         selectorHurtByFirst = policy.hurtByTargetFirst();
         selectorThreatPriority = policy.targetMode() == AiProfile.TargetMode.THREAT;
@@ -302,16 +337,35 @@ public final class AiController {
         if (selectorTemptItem == null) selectorTemptItem = temptItemFromGoals(profile.goals);
         selectorTemptRange = policy.temptRange();
         selectorHasExplicitGoalPriority = !profile.goals.isEmpty();
+        selectorHasExplicitTargets = selectorPlan.explicitTargets();
         selectorFleePriority = policy.goalPriority(profile.goals, "flee");
         selectorAttackPriority = policy.goalPriority(profile.goals, "attack");
         applySelectorAdapters(base, loc);
-        for (String unsupported : policy.unsupported()) {
+        for (String unsupported : selectorPlan.unsupported()) {
             int separator = unsupported.indexOf(':');
             warnSelector(separator < 0 ? "selector" : unsupported.substring(0, separator),
                     separator < 0 ? unsupported : unsupported.substring(separator + 1));
         }
         if (selectorTargetMode != AiProfile.TargetMode.PLAYERS) target = null;
         if (!selectorTargetMatches(combatTarget)) combatTarget = null;
+    }
+
+    private static boolean isChaseGoal(SelectorPlan.Rule rule) {
+        if (rule == null) return false;
+        return switch (rule.token()) {
+            case "meleeattack", "melee_attack", "zombieattack", "spiderattack",
+                    "rangedattack", "ranged_attack", "arrowattack", "bowattack",
+                    "bowshoot", "bowmaster", "leapattarget", "leap_at_target",
+                    "movetowardstarget", "move_towards_target", "followowner", "follow_owner",
+                    "gotoowner", "goto_owner", "gotoparent", "goto_parent" -> true;
+            default -> false;
+        };
+    }
+
+    private boolean hasGoal(String... tokens) {
+        if (tokens == null) return false;
+        java.util.Set<String> wanted = java.util.Set.of(tokens);
+        return selectorPlan.goals().stream().anyMatch(rule -> wanted.contains(rule.token()));
     }
 
     private void applySelectorAdapters(Entity base, Location loc) {
@@ -330,6 +384,10 @@ public final class AiController {
             if (base instanceof LivingEntity living) living.setSwimming(selectorCanSwim && base.isInWater());
             if (selectorAvoidSun && base instanceof org.bukkit.entity.Mob mob && mob.isInDaylight()) moveToShade(mob, loc);
             if (selectorLooksAtPlayers) { Player player = nearestVisiblePlayer(loc); if (player != null) faceToward(player.getLocation()); }
+            if (selectorLooksAtTarget) {
+                LivingEntity current = targetEntity();
+                if (current != null) faceToward(current.getLocation());
+            }
         } catch (RuntimeException ex) {
             warnSelector("adapter", ex.getClass().getSimpleName());
         }
@@ -479,7 +537,20 @@ public final class AiController {
     }
 
     private LivingEntity preferredTarget(Location loc, LivingEntity sensed) {
+        if (selectorHasExplicitTargets) return selectConfiguredTarget(loc);
         if (selectorTargetMode == AiProfile.TargetMode.OWNER) return ownerTarget(loc);
+        if (selectorTargetMode == AiProfile.TargetMode.OWNER_ATTACKER) {
+            return relationTarget(ownerEntity(), true, loc);
+        }
+        if (selectorTargetMode == AiProfile.TargetMode.OWNER_TARGET) {
+            return relationTarget(ownerEntity(), false, loc);
+        }
+        if (selectorTargetMode == AiProfile.TargetMode.PARENT_ATTACKER) {
+            return relationTarget(parentEntity(), true, loc);
+        }
+        if (selectorTargetMode == AiProfile.TargetMode.PARENT_TARGET) {
+            return relationTarget(parentEntity(), false, loc);
+        }
         if (selectorThreatPriority) return threatTargetEntity(loc);
         if (selectorTargetMode == AiProfile.TargetMode.FACTION) return factionTarget(loc);
         if ((selectorAttackerFirst || selectorHurtByFirst) && validTarget(lastAttackerEntity)) {
@@ -492,11 +563,204 @@ public final class AiController {
         return targetMatches(sensed, selectorTargetMode) ? sensed : null;
     }
 
+    /**
+     * Resolves explicit AITargetSelectors in priority order.  The first rule
+     * with a valid candidate wins; later rules are fallbacks, matching the
+     * native selector priority model while remaining implementable through
+     * the public Bukkit/Paper API.
+     */
+    private LivingEntity selectConfiguredTarget(Location origin) {
+        if (origin == null || origin.getWorld() == null) return null;
+        for (SelectorPlan.Rule rule : selectorPlan.targets()) {
+            LivingEntity selected = targetForRule(origin, rule);
+            if (selected != null && validTarget(selected)
+                    && withinSight(origin, selected.getLocation())) return selected;
+        }
+        return null;
+    }
+
+    private LivingEntity targetForRule(Location origin, SelectorPlan.Rule rule) {
+        SelectorPlan.TargetKind kind = SelectorPlan.targetKind(rule);
+        return switch (kind) {
+            case OWNER -> ownerTarget(origin);
+            case THREAT -> threatTargetEntity(origin);
+            case ATTACKER -> validTarget(lastAttackerEntity) ? lastAttackerEntity : null;
+            case OWNER_ATTACKER -> relationTarget(ownerEntity(), true, origin);
+            case OWNER_TARGET -> relationTarget(ownerEntity(), false, origin);
+            case PARENT_ATTACKER -> relationTarget(parentEntity(), true, origin);
+            case PARENT_TARGET -> relationTarget(parentEntity(), false, origin);
+            case SPECIFIC_FACTION, OTHER_FACTION, OTHER_FACTION_MONSTERS ->
+                    nearestConfiguredTarget(origin, rule, kind);
+            default -> nearestConfiguredTarget(origin, rule, kind);
+        };
+    }
+
+    private LivingEntity nearestConfiguredTarget(Location origin, SelectorPlan.Rule rule,
+                                                 SelectorPlan.TargetKind kind) {
+        Entity self = inst.entity();
+        LivingEntity best = null;
+        double bestDistance = profile.sightRadius;
+        List<LivingEntity> candidates = new ArrayList<>();
+        Set<UUID> seen = new HashSet<>();
+        for (Entity entity : origin.getWorld().getNearbyEntities(origin,
+                profile.sightRadius, profile.sightRadius, profile.sightRadius)) {
+            if (!(entity instanceof LivingEntity living) || !seen.add(living.getUniqueId())) continue;
+            candidates.add(living);
+        }
+        // World#getNearbyEntities can lag one tick behind a freshly joined
+        // player; explicit selectors must still see the authoritative online set.
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player.getWorld() == null || !player.getWorld().equals(origin.getWorld())) continue;
+            if (seen.add(player.getUniqueId())) candidates.add(player);
+        }
+        for (LivingEntity living : candidates) {
+            if (living == self || !validTarget(living)) continue;
+            if (!matchesConfiguredKind(living, kind, rule, origin)) continue;
+            if (dev.helstera.api.behavior.Factions.allied(self, living)) continue;
+            double distance = safeDistance(origin, living.getLocation());
+            boolean visible = visible(origin, living);
+            if (kind == SelectorPlan.TargetKind.CONDITIONAL && living instanceof Player) {
+                lastConditionalPlayerDiagnostic = "distance=" + distance
+                        + " visible=" + visible + " best=" + bestDistance;
+            }
+            // Conditional selectors own their filter semantics; forcing an
+            // implicit ray-trace here makes `nearestConditionalTarget`
+            // silently reject valid targets unless the world happens to be
+            // empty between the entities.  Authors can request line of sight
+            // explicitly through the shared condition catalog.
+            if (distance < 0 || distance > bestDistance
+                    || (kind != SelectorPlan.TargetKind.CONDITIONAL && !visible)) continue;
+            best = living;
+            bestDistance = distance;
+        }
+        return best;
+    }
+
+    private boolean matchesConfiguredKind(LivingEntity entity, SelectorPlan.TargetKind kind,
+                                          SelectorPlan.Rule rule, Location origin) {
+        if (entity == null) return false;
+        if (kind == SelectorPlan.TargetKind.CONDITIONAL) {
+            String token = rule == null ? "" : rule.token();
+            if (token.contains("player") && !(entity instanceof Player)) return false;
+            return selectorConditionsPass(entity, origin, rule);
+        }
+        if (kind == SelectorPlan.TargetKind.OTHER_FACTION
+                || kind == SelectorPlan.TargetKind.OTHER_FACTION_MONSTERS) {
+            if (kind == SelectorPlan.TargetKind.OTHER_FACTION_MONSTERS
+                    && !(entity instanceof org.bukkit.entity.Monster)) return false;
+            String sourceFaction = dev.helstera.api.behavior.Factions.factionOf(inst.entity());
+            String candidateFaction = dev.helstera.api.behavior.Factions.factionOf(entity);
+            return sourceFaction != null && candidateFaction != null
+                    && !sourceFaction.equalsIgnoreCase(candidateFaction)
+                    && !dev.helstera.api.behavior.Factions.allied(inst.entity(), entity);
+        }
+        if (kind == SelectorPlan.TargetKind.SPECIFIC_FACTION) {
+            String expected = SelectorPlan.targetArgument(rule);
+            String actual = dev.helstera.api.behavior.Factions.factionOf(entity);
+            if (actual == null || expected.isBlank()) return false;
+            String token = rule.token();
+            if (token.equals("allied_to_faction")) {
+                return dev.helstera.api.behavior.Factions.table() != null
+                        && dev.helstera.api.behavior.Factions.table().alliedFactions(actual, expected);
+            }
+            if (token.equals("hostile_to_faction")) {
+                return !actual.equalsIgnoreCase(expected);
+            }
+            return actual.equalsIgnoreCase(expected);
+        }
+        return switch (kind) {
+            case PLAYERS -> entity instanceof Player;
+            case LIVING -> true;
+            case MOBS -> entity instanceof org.bukkit.entity.Mob;
+            case MONSTERS -> entity instanceof org.bukkit.entity.Monster;
+            case ANIMALS -> entity instanceof org.bukkit.entity.Animals;
+            case VILLAGERS -> entity instanceof org.bukkit.entity.Villager;
+            case IRON_GOLEMS -> entity instanceof org.bukkit.entity.IronGolem;
+            default -> false;
+        };
+    }
+
+    /** Evaluates conditional target selectors through the shared condition catalog. */
+    private boolean selectorConditionsPass(LivingEntity entity, Location origin,
+                                           SelectorPlan.Rule rule) {
+        List<String> conditions = SelectorPlan.targetConditions(rule);
+        if (conditions.isEmpty()) return true;
+        if (behaviors == null) return false;
+        double ratio = entity.getMaxHealth() > 0 ? entity.getHealth() / entity.getMaxHealth() : 0;
+        double distance = safeDistance(origin, entity.getLocation());
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                inst, entity, ratio, distance, decisions, state.name());
+        for (String raw : conditions) {
+            try {
+                String key = conditionBinder == null ? raw : conditionBinder.apply(raw);
+                boolean passed = key != null && !key.isBlank() && behaviors.testCondition(key, context);
+                lastSelectorConditionDiagnostic = raw + "=>" + key
+                        + " entity=" + entity.getType() + " passed=" + passed;
+                if (!passed) return false;
+            } catch (RuntimeException failure) {
+                warnSelector("conditional-target", failure.getClass().getSimpleName());
+                lastSelectorConditionDiagnostic = raw + "=>error:" + failure.getClass().getSimpleName();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean visible(Location origin, LivingEntity entity) {
+        Location targetLocation = entity.getLocation();
+        if (targetLocation.getWorld() == null || !targetLocation.getWorld().equals(origin.getWorld())) return false;
+        var ray = origin.getWorld().rayTraceBlocks(
+                origin.clone().add(0, 1.5, 0),
+                targetLocation.clone().add(0, 1.2, 0)
+                        .subtract(origin.clone().add(0, 1.5, 0)).toVector(),
+                safeDistance(origin, targetLocation), org.bukkit.FluidCollisionMode.NEVER);
+        return ray == null || ray.getHitBlock() == null;
+    }
+
+    private boolean withinSight(Location origin, Location targetLocation) {
+        return origin != null && targetLocation != null && targetLocation.getWorld() != null
+                && origin.getWorld() != null && origin.getWorld().equals(targetLocation.getWorld())
+                && safeDistance(origin, targetLocation) <= profile.sightRadius;
+    }
+
+    private Entity ownerEntity() {
+        Entity base = inst.entity();
+        Entity owner = dev.helstera.api.behavior.MobRelations.owner(base);
+        if (owner != null) return owner;
+        if (base instanceof org.bukkit.entity.Tameable tameable && tameable.isTamed()) {
+            return tameable.getOwner() instanceof Entity entity ? entity : null;
+        }
+        return null;
+    }
+
+    private Entity parentEntity() {
+        return dev.helstera.api.behavior.MobRelations.parent(inst.entity());
+    }
+
+    private LivingEntity relationTarget(Entity relation, boolean attacker, Location origin) {
+        if (relation == null) return null;
+        LivingEntity result = null;
+        if (attacker && relation.getLastDamageCause()
+                instanceof org.bukkit.event.entity.EntityDamageByEntityEvent damage
+                && damage.getDamager() instanceof LivingEntity living) {
+            result = living;
+        } else if (!attacker && relation instanceof org.bukkit.entity.Mob mob
+                && mob.getTarget() instanceof LivingEntity living) {
+            result = living;
+        }
+        return result != null && validTarget(result) && withinSight(origin, result.getLocation())
+                && !dev.helstera.api.behavior.Factions.allied(inst.entity(), result) ? result : null;
+    }
+
     private static boolean validTarget(Player player) {
         return player != null && player.isOnline() && !player.isDead();
     }
 
     private static boolean validTarget(LivingEntity entity) {
+        // A freshly joined Player can be online before Bukkit reports the
+        // entity wrapper as valid; retain the stronger player-specific
+        // online/dead semantics used by selector targeters.
+        if (entity instanceof Player player) return validTarget(player);
         return entity != null && entity.isValid() && !entity.isDead();
     }
 
@@ -528,8 +792,7 @@ public final class AiController {
                     : selectorFactionHostile
                     ? faction == null || !faction.equalsIgnoreCase(selectorTargetFaction)
                     : faction != null && faction.equalsIgnoreCase(selectorTargetFaction);
-            if (!match || (!selectorFactionHostile
-                    && dev.helstera.api.behavior.Factions.allied(inst.entity(), living))) continue;
+            if (!match || dev.helstera.api.behavior.Factions.allied(inst.entity(), living)) continue;
             double distance = safeDistance(loc, living.getLocation());
             if (distance >= 0 && distance <= bestDistance) {
                 best = living;
@@ -562,13 +825,27 @@ public final class AiController {
         double distance = profile.sightRadius;
         for (Player player : loc.getWorld().getPlayers()) {
             if (player.isDead() || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) continue;
+            if (dev.helstera.api.behavior.Factions.allied(inst.entity(), player)) continue;
             double candidateDistance = safeDistance(loc, player);
             if (candidateDistance <= distance) { nearest = player; distance = candidateDistance; }
         }
         return nearest;
     }
     private LivingEntity sense(Location loc) {
+        if (selectorHasExplicitTargets) return selectConfiguredTarget(loc);
         if (selectorTargetMode == AiProfile.TargetMode.OWNER) return ownerTarget(loc);
+        if (selectorTargetMode == AiProfile.TargetMode.OWNER_ATTACKER) {
+            return relationTarget(ownerEntity(), true, loc);
+        }
+        if (selectorTargetMode == AiProfile.TargetMode.OWNER_TARGET) {
+            return relationTarget(ownerEntity(), false, loc);
+        }
+        if (selectorTargetMode == AiProfile.TargetMode.PARENT_ATTACKER) {
+            return relationTarget(parentEntity(), true, loc);
+        }
+        if (selectorTargetMode == AiProfile.TargetMode.PARENT_TARGET) {
+            return relationTarget(parentEntity(), false, loc);
+        }
         if (selectorThreatPriority || selectorTargetMode == AiProfile.TargetMode.FACTION) return preferredTarget(loc, null);
         LivingEntity best = null;
         double bestD = selectorTemptItem == null ? profile.sightRadius
@@ -644,9 +921,12 @@ public final class AiController {
 
     private LivingEntity ownerTarget(Location origin) {
         Entity base = inst.entity();
-        if (!(base instanceof org.bukkit.entity.Tameable tameable) || !tameable.isTamed()) return null;
-        org.bukkit.entity.AnimalTamer owner = tameable.getOwner();
-        if (!(owner instanceof LivingEntity living) || !validTarget(living)) return null;
+        Entity ownerEntity = dev.helstera.api.behavior.MobRelations.owner(base);
+        if (ownerEntity == null && base instanceof org.bukkit.entity.Tameable tameable
+                && tameable.isTamed()) {
+            ownerEntity = tameable.getOwner() instanceof Player player ? player : null;
+        }
+        if (!(ownerEntity instanceof LivingEntity living) || !validTarget(living)) return null;
         Location at = living.getLocation();
         if (origin == null || at == null || origin.getWorld() == null
                 || !origin.getWorld().equals(at.getWorld())) return null;
@@ -655,8 +935,26 @@ public final class AiController {
 
     private boolean selectorTargetMatches(LivingEntity entity) {
         if (entity == null || !validTarget(entity)) return false;
+        if (selectorHasExplicitTargets) {
+            for (SelectorPlan.Rule rule : selectorPlan.targets()) {
+                SelectorPlan.TargetKind kind = SelectorPlan.targetKind(rule);
+                if (kind == SelectorPlan.TargetKind.OWNER
+                        || kind == SelectorPlan.TargetKind.OWNER_ATTACKER
+                        || kind == SelectorPlan.TargetKind.OWNER_TARGET
+                        || kind == SelectorPlan.TargetKind.PARENT_ATTACKER
+                        || kind == SelectorPlan.TargetKind.PARENT_TARGET) {
+                    if (targetForRule(inst.location(), rule) == entity) return true;
+                } else if (kind == SelectorPlan.TargetKind.THREAT) {
+                    if (threat != null && threat.contains(entity.getUniqueId())) return true;
+                } else if (matchesConfiguredKind(entity, kind, rule, inst.location())) {
+                    return true;
+                }
+            }
+            return false;
+        }
         if (selectorTargetMode == AiProfile.TargetMode.THREAT) return threat != null && threat.contains(entity.getUniqueId());
         if (selectorTargetMode == AiProfile.TargetMode.FACTION) {
+            if (dev.helstera.api.behavior.Factions.allied(inst.entity(), entity)) return false;
             String faction = dev.helstera.api.behavior.Factions.factionOf(entity);
             if (selectorFactionAllied) {
                 return dev.helstera.api.behavior.Factions.table() != null
@@ -681,7 +979,9 @@ public final class AiController {
             case MONSTERS -> entity instanceof org.bukkit.entity.Monster;
             case ANIMALS -> entity instanceof org.bukkit.entity.Animals;
             case VILLAGERS -> entity instanceof org.bukkit.entity.Villager;
-            case OWNER, THREAT, FACTION -> false;
+            case IRON_GOLEMS -> entity instanceof org.bukkit.entity.IronGolem;
+            case OWNER, THREAT, FACTION, OWNER_ATTACKER, OWNER_TARGET,
+                    PARENT_ATTACKER, PARENT_TARGET -> false;
         };
     }
 

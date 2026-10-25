@@ -147,7 +147,11 @@ public final class MythicSpec {
         String head = s.substring(1, colon).trim();
         String tail = s.substring(colon + 1).trim();
         if (head.isEmpty() || tail.isEmpty()) return null;
-        return head.toLowerCase(Locale.ROOT).replaceAll("(?<!^)(?=[A-Z])", "-") + "|" + tail;
+        // Split camel-case before lower-casing; otherwise onKill becomes onkill
+        // and the migration output no longer has the canonical trigger key.
+        String normalized = head.replaceAll("(?<!^)(?=[A-Z])", "-")
+                .toLowerCase(Locale.ROOT);
+        return normalized + "|" + tail;
     }
 
     /** 取大括号内第 N 个参数（位置语义）。 */

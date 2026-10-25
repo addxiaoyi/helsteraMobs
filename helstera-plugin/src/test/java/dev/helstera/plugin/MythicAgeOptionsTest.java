@@ -16,10 +16,13 @@ import org.bukkit.entity.Cat;
 import org.bukkit.entity.Sheep;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.FallingBlock;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionType;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,6 +30,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MythicAgeOptionsTest {
+    @Test
+    void interactionPolicyCombinesInteractableAndPreventItemUse() {
+        assertFalse(HelsteraPlugin.shouldCancelEntityInteraction(SpawnOptions.defaults()));
+        assertTrue(HelsteraPlugin.shouldCancelEntityInteraction(
+                SpawnOptions.defaults().interactable(false)));
+        assertTrue(HelsteraPlugin.shouldCancelEntityInteraction(
+                SpawnOptions.defaults().preventItemUse(true)));
+    }
+
 
     @Test
     void importedEntityOptionsDoNotHideTheMobEntityType() {
@@ -76,6 +88,29 @@ class MythicAgeOptionsTest {
         assertEquals(-1, calls.get("setAge"));
         assertEquals(true, calls.get("setBaby"), calls.toString());
         assertEquals(true, calls.get("setAgeLock"));
+    }
+
+    @Test
+    void appliesPickupOverrideAndInitialNoDamageTicks() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var mob = proxy(org.bukkit.entity.Mob.class, calls);
+        var explicitPickup = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader("can-pickup-items: true"));
+        HelsteraPlugin.applyMobPickupOption(mob, explicitPickup,
+                SpawnOptions.defaults().preventItemPickup(true));
+        assertEquals(true, calls.get("setCanPickupItems"),
+                "explicit mob pickup configuration overrides policy fallback");
+
+        calls.clear();
+        HelsteraPlugin.applyMobPickupOption(mob,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("")),
+                SpawnOptions.defaults().preventItemPickup(true));
+        assertEquals(false, calls.get("setCanPickupItems"),
+                "PreventItemPickup supplies the fallback only when entity config is absent");
+
+        calls.clear();
+        HelsteraPlugin.applySpawnNoDamageTicks(mob, SpawnOptions.defaults().noDamageTicks(19));
+        assertEquals(19, calls.get("setNoDamageTicks"));
     }
 
     @Test
@@ -191,6 +226,57 @@ class MythicAgeOptionsTest {
 
         assertEquals(true, calls.get("setHasNectar"));
         assertEquals(false, calls.get("setHasStung"));
+    }
+
+    @Test
+    void appliesLegacyMigratedPotionTypeToPotionMeta() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        PotionMeta meta = proxy(PotionMeta.class, calls);
+        var options = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                base-potion-type: LONG_SWIFTNESS
+                """));
+
+        HelsteraPlugin.applyPotionItemEffects(meta, options);
+
+        assertEquals(PotionType.LONG_SWIFTNESS, calls.get("setBasePotionType"));
+    }
+
+    @Test
+    void parsesNamespacedItemEnchantmentsWithoutDroppingLevels() {
+        var parsed = HelsteraPlugin.parseItemSpec(
+                "minecraft:diamond:2:SHARPNESS:5,LOOTING:2");
+
+        assertEquals("DIAMOND", parsed.material());
+        assertEquals(2, parsed.amount());
+        assertEquals(List.of(
+                new HelsteraPlugin.ParsedEnchantment("SHARPNESS", 5),
+                new HelsteraPlugin.ParsedEnchantment("LOOTING", 2)),
+                parsed.enchantments());
+    }
+
+    @Test
+    void readsDelimitedReasonOptionsAsRuntimeLists() {
+        var config = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                mob:
+                  prevent-transformation-reasons: DROWNED, CURED|INFECTION
+                """));
+
+        assertEquals(List.of("DROWNED", "CURED", "INFECTION"),
+                HelsteraPlugin.configuredStringList(config,
+                        "mob.prevent-transformation-reasons", "prevent-transformation-reasons"));
+    }
+
+    @Test
+    void emptyNestedReasonListFallsBackToLegacyOption() {
+        var config = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                mob:
+                  prevent-transformation-reasons: []
+                prevent-transformation-reasons: DROWNED,CURED
+                """));
+
+        assertEquals(List.of("DROWNED", "CURED"),
+                HelsteraPlugin.configuredStringList(config,
+                        "mob.prevent-transformation-reasons", "prevent-transformation-reasons"));
     }
 
     @Test
