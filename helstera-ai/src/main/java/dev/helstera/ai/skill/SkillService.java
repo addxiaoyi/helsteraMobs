@@ -51,10 +51,14 @@ public final class SkillService {
     private final Map<String, SkillDef> defs = new LinkedHashMap<>();
     /** 冷却记录："实例id|技能名" -> 上次放行时间（epoch 毫秒）。 */
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
+    /** Runtime SetSkillCooldown overrides: "实例id|技能名" -> duration in milliseconds. */
+    private final Map<String, Long> cooldownOverrides = new ConcurrentHashMap<>();
     /** 活跃读条："实例id|技能名" -> 施法记录。 */
     private final Map<String, SkillCast> activeCasts = new ConcurrentHashMap<>();
     /** Per-instance generation invalidates delayed/repeated actions after cancel, death, or reload. */
     private final Map<Integer, Long> executionGenerations = new ConcurrentHashMap<>();
+    /** Number of delayed/repeated continuations still waiting for each instance. */
+    private final Map<Integer, Integer> pendingScheduledActions = new ConcurrentHashMap<>();
     /** Per-instance SkillTree state retained across separate casts. */
     private final Map<Integer, dev.helstera.api.behavior.SkillTreeContext.Snapshot> persistedTrees =
             new ConcurrentHashMap<>();
@@ -166,15 +170,15 @@ public final class SkillService {
         conds.putAll(SkillExtras.conditions());
         Map<String, SkillCatalog.ActionFactory> acts = new LinkedHashMap<>(actionFactories);
         acts.putAll(SkillExtras.actions());
-        this.conditionFactories = Map.copyOf(conds);
-        this.actionFactories = Map.copyOf(acts);
-        SkillExtras.branchConditionEvaluator((ctx, specs) -> {
+        acts.put("branch-unlock", args -> SkillExtras.branchUnlockAction(args, (context, specs) -> {
             for (String spec : specs) {
                 String key = bindCondition(spec);
-                if (key == null || !registry.testCondition(key, ctx)) return false;
+                if (key == null || !registry.testCondition(key, context)) return false;
             }
             return true;
-        });
+        }));
+        this.conditionFactories = Map.copyOf(conds);
+        this.actionFactories = Map.copyOf(acts);
     }
 
     /** 加载期告警（未知名、参数缺失、环引用等），供 /helstera debug 与启动日志展示。 */
@@ -260,8 +264,9 @@ public final class SkillService {
             trace.add(new CondTrace(condKey, ok));
             if (!ok) allPass = false;
         }
-        boolean cooling = def.cooldownMillis > 0
-                && !cooldownReady(def, cooldownKey(def, ctx), System.currentTimeMillis());
+        String previewCooldownKey = cooldownKey(def, ctx);
+        boolean cooling = cooldownOverrides.getOrDefault(previewCooldownKey, def.cooldownMillis) > 0
+                && !cooldownReady(def, previewCooldownKey, System.currentTimeMillis());
         return new Preview(def.name, List.copyOf(trace), allPass,
                 List.copyOf(def.actions), cooling, def.priority);
     }
@@ -490,6 +495,7 @@ public final class SkillService {
 
         String ref = parseSkillRef(spec);
         if (ref != null) return bindCast(ref);
+        if ("random-skill".equals(name)) return bindRandomSkill(args);
 
         Double chance = parsed == null ? null : parsed.chance();
         String targeterSpec = parsed == null ? null : parsed.targeter();
@@ -621,7 +627,8 @@ public final class SkillService {
         var scoped = dev.helstera.api.behavior.BehaviorContext.continueExecution(
                 ctx.instance(), activeTarget, targetHealth, targetDistance, ctx.decisionCount(),
                 ctx.state(), ctx.payload().orElse(null), ctx.trigger().orElse(null), selected,
-                ctx.origin().orElse(null), tree);
+                ctx.origin().orElse(null), tree, ctx.cancellableEvent().orElse(null),
+                ctx.damageCause().orElse(null));
         action.accept(scoped);
     }
 
@@ -668,32 +675,87 @@ public final class SkillService {
                                      long delayTicks, int remaining, long intervalTicks,
                                      int instanceId, long generation) {
         Runnable run = () -> {
-            if (executionGenerations.getOrDefault(instanceId, 0L) != generation) return;
-            action.accept(ctx);
-            if (remaining > 1) {
-                scheduleInvocation(action, ctx, intervalTicks, remaining - 1, intervalTicks,
-                        instanceId, generation);
+            pendingScheduledActions.computeIfPresent(instanceId, (key, count) ->
+                    count <= 1 ? null : count - 1);
+            if (executionGenerations.getOrDefault(instanceId, 0L) != generation) {
+                cleanupExecutionGeneration(instanceId);
+                return;
+            }
+            try {
+                action.accept(ctx);
+                if (remaining > 1) {
+                    scheduleInvocation(action, ctx, intervalTicks, remaining - 1, intervalTicks,
+                            instanceId, generation);
+                }
+            } finally {
+                cleanupExecutionGeneration(instanceId);
             }
         };
         if (delayTicks == 0 && remaining == 1) {
             run.run();
             return;
         }
+        pendingScheduledActions.merge(instanceId, 1, Integer::sum);
         if (!SkillCatalog.schedule(run, delayTicks)) {
+            pendingScheduledActions.computeIfPresent(instanceId, (key, count) ->
+                    count <= 1 ? null : count - 1);
+            cleanupExecutionGeneration(instanceId);
             warn("延迟技能动作无法调度：Bukkit 插件调度器未就绪");
+        }
+    }
+
+    private void cleanupExecutionGeneration(int instanceId) {
+        if (!pendingScheduledActions.containsKey(instanceId)) {
+            executionGenerations.remove(instanceId);
         }
     }
 
     private static String targetableMechanicName(String mechanic) {
         return switch (mechanic) {
             case "damage" -> "damage-target";
+            case "damage-percent" -> "damage-percent-targets";
             case "message" -> "message-target";
-            case "heal" -> "heal-self";
+            // A targeter changes the recipient of heal; without this route
+            // `heal @Target` silently healed the caster after selecting a target.
+            case "heal", "heal-self" -> "heal-targets";
+            case "heal-percent" -> "heal-percent-targets";
+            case "set-health" -> "set-health-targets";
+            case "modify-health" -> "modify-health-targets";
+            case "set-max-health" -> "set-max-health-targets";
+            case "modify-max-health" -> "modify-max-health-targets";
+            case "modify-speed" -> "modify-speed-targets";
+            case "set-tick-speed" -> "set-tick-speed-targets";
+            case "jump" -> "jump-targets";
+            case "force-pull" -> "force-pull-targets";
+            case "set-offhand" -> "set-offhand-targets";
+            case "set-armor" -> "set-armor-targets";
+            case "set-faction" -> "set-faction-targets";
+            case "lightning" -> "lightning-targets";
+            case "leap" -> "leap-targets";
+            case "dot" -> "dot-targets";
             case "ignite" -> "ignite-targets";
             case "knockback" -> "knockback-targets";
             case "effect" -> "effect-targets";
             case "teleport" -> "teleport-targets";
             case "velocity" -> "velocity-targets";
+            case "set-name" -> "set-name-targets";
+            case "invisible" -> "invisible-targets";
+            case "glowing" -> "glowing-targets";
+            case "set-invulnerable" -> "set-invulnerable-targets";
+            case "add-tag" -> "add-tag-targets";
+            case "remove-tag" -> "remove-tag-targets";
+            case "equip", "set-item" -> mechanic + "-targets";
+            case "drop-item" -> "drop-item-targets";
+            case "set-ai" -> "set-ai-targets";
+            case "set-gravity" -> "set-gravity-targets";
+            case "set-silent" -> "set-silent-targets";
+            case "set-collidable" -> "set-collidable-targets";
+            case "set-sneaking", "set-gliding", "set-swimming", "set-sprinting", "set-flying",
+                    "set-no-damage-ticks", "set-maximum-no-damage-ticks", "set-walk-speed" -> mechanic + "-targets";
+            case "set-fire" -> "set-fire-targets";
+            case "clear-fire" -> "clear-fire-targets";
+            case "remove-effect" -> "remove-effect-targets";
+            case "remove-all-effects" -> "remove-all-effects-targets";
             case "set-target", "settarget", "target" -> "set-target";
             case "shoot", "projectile" -> "shoot-projectile";
             default -> mechanic;
@@ -701,10 +763,22 @@ public final class SkillService {
     }
 
     public void loadSkills(ConfigurationSection root) {
+        // Invalidate old delayed continuations before replacing definitions.
+        // Clearing the generation map would make an old task with generation 0
+        // look current again after reload, so keep its tombstone until every
+        // pending continuation has observed the new generation.
+        Set<Integer> oldScheduledInstances = new LinkedHashSet<>(executionGenerations.keySet());
+        oldScheduledInstances.addAll(pendingScheduledActions.keySet());
+        for (Integer instanceId : oldScheduledInstances) {
+            executionGenerations.merge(instanceId, 1L, Long::sum);
+        }
+        for (Integer instanceId : oldScheduledInstances) {
+            cleanupExecutionGeneration(instanceId);
+        }
         defs.clear();
         cooldowns.clear();
+        cooldownOverrides.clear();
         activeCasts.clear();
-        executionGenerations.clear();
         skillQueue.clear();
         queueProcessing.clear();
         // warnings 必须清，否则每次 reload 都把上一轮的告警**叠加**上去：
@@ -740,6 +814,7 @@ public final class SkillService {
                     if (spec == null || spec.isBlank()) continue;
                     String dep = parseSkillRef(spec);
                     if (dep != null) def.deps.add(dep);
+                def.deps.addAll(randomSkillRefs(spec));
                 }
             }
             defs.put(key, def);
@@ -828,6 +903,65 @@ public final class SkillService {
         return key;
     }
 
+    /** Binds MythicMobs randomskill into the same guarded named-skill path. */
+    private String bindRandomSkill(List<String> args) {
+        List<String> requested = normalizeRandomSkillArgs(args);
+        if (requested.isEmpty()) {
+            warn("random-skill 缺少候选技能");
+            return null;
+        }
+        List<String> choices = new ArrayList<>();
+        for (String candidate : requested) {
+            String name = candidate.toLowerCase(Locale.ROOT);
+            if (defs.containsKey(name)) {
+                choices.add(name);
+            } else {
+                warn("random-skill 引用了不存在的技能 \"" + candidate + "\"");
+            }
+        }
+        if (choices.isEmpty()) return null;
+
+        String key = "random-skill:" + String.join(",", choices);
+        if (bound.add("a:" + key)) {
+            List<String> captured = List.copyOf(choices);
+            registry.registerAction(key, ctx -> {
+                if (captured.isEmpty()) return;
+                String selected = captured.get(ThreadLocalRandom.current().nextInt(captured.size()));
+                castSkill(selected, ctx);
+            });
+        }
+        return key;
+    }
+
+    private static List<String> randomSkillRefs(String spec) {
+        if (spec == null || spec.isBlank()) return List.of();
+        String normalized = spec.indexOf('{') >= 0 ? SpecSyntax.normalize(spec) : spec.trim();
+        List<String> parts = split(normalized);
+        if (parts.isEmpty() || !"random-skill".equals(canonicalActionName(
+                parts.get(0).toLowerCase(Locale.ROOT)))) return List.of();
+        return normalizeRandomSkillArgs(parts.subList(1, parts.size()));
+    }
+
+    private static List<String> normalizeRandomSkillArgs(List<String> args) {
+        List<String> out = new ArrayList<>();
+        if (args == null) return out;
+        for (String raw : args) {
+            if (raw == null || raw.isBlank()) continue;
+            for (String token : raw.split("[,;|]")) {
+                String value = token.trim();
+                int equals = value.indexOf('=');
+                if (equals >= 0) {
+                    String key = value.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                    if (key.equals("skill") || key.equals("skills")) {
+                        value = value.substring(equals + 1).trim();
+                    }
+                }
+                if (!value.isBlank()) out.add(value);
+            }
+        }
+        return List.copyOf(out);
+    }
+
     /**
      * 执行一个命名技能（带冷却与深度守卫）。
      *
@@ -853,7 +987,7 @@ public final class SkillService {
         long now = System.currentTimeMillis();
         String cdKey = cooldownKey(def, ctx);
         if (!cooldownReady(def, cdKey, now)) return false;
-        if (def.cooldownMillis > 0) cooldowns.put(cdKey, now);
+        if (cooldownOverrides.getOrDefault(cdKey, def.cooldownMillis) > 0) cooldowns.put(cdKey, now);
 
         // 队列门控：同一实例有技能正在执行时入队
         int instId = ctx != null && ctx.instance() != null ? ctx.instance().instanceId() : -1;
@@ -879,9 +1013,16 @@ public final class SkillService {
                     ctx.targets(), ctx.origin().orElse(null), tree,
                     ctx.cancellableEvent().orElse(null), ctx.damageCause().orElse(null));
         }
+        for (SkillDef declared : defs.values()) {
+            if (!declared.branch.isBlank()) {
+                tree.defineBranch(declared.branch, declared.branchRequires);
+            }
+        }
         if (!def.branch.isBlank()) {
-            tree.defineBranch(def.branch, def.branchRequires);
-            if (!tree.branchUnlocked(def.branch)) return false;
+            if (!tree.branchUnlocked(def.branch)) {
+                d[0]--;
+                return false;
+            }
         }
         if (def.castMillis > 0) {
             try {
@@ -1155,6 +1296,7 @@ public final class SkillService {
 
     private void invalidateScheduledActions(int instId) {
         executionGenerations.merge(instId, 1L, Long::sum);
+        cleanupExecutionGeneration(instId);
     }
 
     /**
@@ -1196,10 +1338,34 @@ public final class SkillService {
         return id + "|" + def.name;
     }
 
+    /** Dynamically changes one named skill's cooldown for the current instance. */
+    public boolean setSkillCooldown(String skillName,
+                                    dev.helstera.api.behavior.BehaviorContext ctx,
+                                    long durationMillis) {
+        if (skillName == null || skillName.isBlank()) return false;
+        String normalized = skillName.trim().toLowerCase(Locale.ROOT);
+        SkillDef def = defs.get(normalized);
+        if (def == null) return false;
+        cooldownOverrides.put(cooldownKey(def, ctx), Math.max(0L, durationMillis));
+        return true;
+    }
+
+    /** Releases per-instance dynamic cooldown state during entity teardown. */
+    public void forget(int instanceId) {
+        String prefix = instanceId + "|";
+        cooldowns.keySet().removeIf(key -> key.startsWith(prefix));
+        cooldownOverrides.keySet().removeIf(key -> key.startsWith(prefix));
+        activeCasts.keySet().removeIf(key -> key.startsWith(prefix));
+        skillQueue.remove(instanceId);
+        queueProcessing.remove(instanceId);
+        persistedTrees.remove(instanceId);
+    }
+
     private boolean cooldownReady(SkillDef def, String key, long now) {
-        if (def.cooldownMillis <= 0) return true;
+        long duration = cooldownOverrides.getOrDefault(key, def.cooldownMillis);
+        if (duration <= 0) return true;
         Long prev = cooldowns.get(key);
-        return prev == null || (now - prev) >= def.cooldownMillis;
+        return prev == null || (now - prev) >= duration;
     }
 
     /**
@@ -1388,7 +1554,9 @@ public final class SkillService {
                     "variable-key-not-exists", "variable-map-value-equals", "variable-map-value-not-equals",
                     "variable-map-value-gte", "variable-map-value-lte", "variable-map-value-in-range",
                     "variable-map-value-not-in-range",
-                    "variable-gte", "variable-lte" -> true;
+                    "variable-gte", "variable-lte", "directional-velocity", "distance-from-location",
+                    "has-aura-stacks", "health", "health-percent", "compare-values", "score", "targets",
+                    "cuboid", "in-bounds", "global-score" -> true;
             default -> false;
         };
     }
@@ -1399,6 +1567,9 @@ public final class SkillService {
             case "permission", "permission-is", "haspermission" -> "has-permission";
             case "casterpermission", "caster-permission", "casterhaspermission" -> "caster-has-permission";
             case "entity-type", "entitytype", "entitytypeis" -> "entity-type-is";
+            case "name", "name-is", "nameis" -> "name-is";
+            case "color", "clr", "color-is" -> "color";
+            case "spawnreason", "spawn-reason" -> "spawn-reason";
             case "isliving", "living", "is-living" -> "is-living";
             case "isplayer", "player" -> "is-player";
             case "ismob", "mob" -> "is-mob";
@@ -1406,24 +1577,55 @@ public final class SkillService {
             case "isanimal", "animal" -> "is-animal";
             case "isvillager", "villager" -> "is-villager";
             case "istameable", "tameable" -> "is-tameable";
+            case "iswatermob", "watermob", "is-water-mob" -> "is-water-mob";
+            case "iszombie", "zombie", "is-zombie" -> "is-zombie";
+            case "aerial", "isaerial", "is-aerial" -> "aerial";
+            case "isenderman", "enderman", "is-enderman" -> "is-enderman";
             case "israider", "raider" -> "is-raider";
+            case "israiderpatrolleader", "is-patrol-leader" -> "is-raider-patrol-leader";
             case "isundead", "undead" -> "is-undead";
             case "iscreature", "creature" -> "is-creature";
             case "isbaby", "baby", "ischild", "child" -> "is-baby";
             case "isadult", "adult" -> "is-adult";
+            case "mobsize", "mob-size", "size" -> "mob-size";
             case "istamed", "tamed" -> "is-tamed";
             case "issheared", "sheared" -> "is-sheared";
             case "issaddled", "saddled" -> "is-saddled";
             case "ispowered", "powered", "ischarged", "charged" -> "is-powered";
-            case "targetisundead", "target-is-undead" -> "is-undead";
-            case "targetiscreature", "target-is-creature" -> "is-creature";
-            case "targetisbaby", "target-is-baby", "targetischild", "target-is-child" -> "is-baby";
-            case "targetisadult", "target-is-adult" -> "is-adult";
-            case "targetistamed", "target-is-tamed" -> "is-tamed";
-            case "targetissheared", "target-is-sheared" -> "is-sheared";
-            case "targetissaddled", "target-is-saddled" -> "is-saddled";
-            case "targetispowered", "target-is-powered", "targetischarged", "target-is-charged" -> "is-powered";
+            case "iscollidable", "is-collidable", "collidable" -> "is-collidable";
+            case "hasoffhand", "has-offhand", "offhand" -> "has-offhand";
+            case "isop", "is-op", "isoperator", "is-operator" -> "is-op";
+            case "hasai", "has-ai" -> "has-ai";
+            case "hasgravity", "has-gravity" -> "has-gravity";
+            case "issilent", "silent", "is-silent" -> "is-silent";
+            case "isdead", "dead", "is-dead" -> "is-dead";
+            case "isalive", "alive", "is-alive" -> "is-alive";
+            case "isvalid", "valid", "is-valid" -> "is-valid";
+            case "targetisplayer", "target-is-player" -> "target-is-player";
+            case "iscaster", "is-caster" -> "is-caster";
+            case "targetisop", "target-is-op", "targetisoperator", "target-is-operator" -> "target-is-op";
+            case "targetisliving", "target-is-living" -> "target-is-living";
+            case "targetismob", "target-is-mob" -> "target-is-mob";
+            case "targetismonster", "target-is-monster" -> "target-is-monster";
+            case "targetisanimal", "target-is-animal" -> "target-is-animal";
+            case "targetisvillager", "target-is-villager" -> "target-is-villager";
+            case "targetistameable", "target-is-tameable" -> "target-is-tameable";
+            case "targetisraider", "target-is-raider" -> "target-is-raider";
+            case "targetisundead", "target-is-undead" -> "target-is-undead";
+            case "targetiscreature", "target-is-creature" -> "target-is-creature";
+            case "targetisbaby", "target-is-baby", "targetischild", "target-is-child" -> "target-is-baby";
+            case "targetisadult", "target-is-adult" -> "target-is-adult";
+            case "targetistamed", "target-is-tamed" -> "target-is-tamed";
+            case "targetissheared", "target-is-sheared" -> "target-is-sheared";
+            case "targetissaddled", "target-is-saddled" -> "target-is-saddled";
+            case "targetispowered", "target-is-powered", "targetischarged", "target-is-charged" -> "target-is-powered";
+            case "targetiscollidable", "target-is-collidable" -> "target-is-collidable";
+            case "targethasoffhand", "target-has-offhand", "targetoffhand" -> "target-has-offhand";
             case "targetissneaking", "target-is-sneaking" -> "target-is-sneaking";
+            case "targethasai", "target-has-ai" -> "target-has-ai";
+            case "targethasgravity", "target-has-gravity" -> "target-has-gravity";
+            case "targetissilent", "target-is-silent" -> "target-is-silent";
+            case "targetisvalid", "target-is-valid" -> "target-is-valid";
             case "targetissprinting", "target-is-sprinting" -> "target-is-sprinting";
             case "targetisflying", "target-is-flying" -> "target-is-flying";
             case "targetisblocking", "target-is-blocking" -> "target-is-blocking";
@@ -1433,61 +1635,223 @@ public final class SkillService {
             case "targetinair", "target-in-air", "targetairborne" -> "target-in-air";
             case "targetinwater", "target-in-water" -> "target-in-water";
             case "targetinlava", "target-in-lava" -> "target-in-lava";
+            case "targetisglowing", "target-is-glowing" -> "target-is-glowing";
             case "targetisinvisible", "target-is-invisible" -> "target-is-invisible";
             case "targetisclimbing", "target-is-climbing" -> "target-is-climbing";
             case "targetisblocked", "target-is-blocked" -> "target-is-blocked";
+            case "inside", "in" -> "inside";
+            case "outside", "out" -> "outside";
             case "targetisdead", "target-is-dead" -> "target-dead";
+            case "targetisalive", "target-is-alive" -> "target-is-alive";
             case "targetisonground", "target-is-on-ground" -> "target-on-ground";
             case "targetisairborne", "target-is-airborne" -> "target-airborne";
+            case "targethaspermission", "target-has-permission", "targetpermission" -> "target-has-permission";
+            case "targetgamemode", "target-gamemode", "targetgamemodeis", "target-game-mode-is" ->
+                    "target-game-mode-is";
+            case "targetfoodlevel", "target-food-level", "targetfoodlevelis", "target-food-level-is" ->
+                    "target-food-level";
+            case "foodsaturation", "food-saturation", "saturation" -> "food-saturation";
+            case "targetfoodsaturation", "target-food-saturation" -> "target-food-saturation";
+            case "targetairlevel", "target-air-level", "targetremainingair", "target-remaining-air" ->
+                    "target-air-level";
+            case "targethasitem", "target-has-item", "targetitemcount", "target-item-count" ->
+                    "target-has-item";
+            case "targetpotioneffectactive", "target-potion-effect-active", "targetpotionactive" ->
+                    "target-potion-effect-active";
+            case "targethasauras", "target-has-auras" -> "target-has-auras";
+            case "kill", "kill-targets" -> "kill-targets";
+            case "playerkills", "player-kills", "player-kill-count" -> "player-kills";
+            case "targethaspotion", "target-has-potion", "targethaspotioneffect",
+                    "target-has-potion-effect" ->
+                    "target-potion-effect-active";
+            case "targetholding", "target-holding" -> "target-holding";
+            case "targetwearing", "target-wearing" -> "target-wearing";
+            case "ownerisplayer", "owner-is-player" -> "owner-is-player";
+            case "ownerisonline", "owner-is-online" -> "owner-is-online";
+            case "owner", "isowner", "is-owner" -> "is-owner";
+            case "children", "children-count", "child-count" -> "children";
+            case "samefaction", "same-faction" -> "same-faction";
+            case "differentfaction", "different-faction" -> "different-faction";
             case "stance", "stanceis" -> "stance-is";
             case "target", "target-exists", "targetexists", "hastarget" -> "has-target";
             case "hastag", "has-tag", "hasscoreboardtag", "has-scoreboard-tag" -> "has-tag";
+            case "targethastag", "target-has-tag", "targethasscoreboardtag",
+                    "target-has-scoreboard-tag" -> "target-has-tag";
             case "targettype", "target-type", "targettypeis", "target-type-is" -> "target-is";
-            case "lineofsight", "haslineofsight", "targetinlineofsight",
-                    "target-line-of-sight", "targetlineofsight" -> "has-line-of-sight";
+            case "lineofsight", "haslineofsight",
+                    "target-line-of-sight" -> "has-line-of-sight";
             case "sneaking", "issneaking", "sneakingis" -> "is-sneaking";
             case "sprinting", "issprinting", "sprintingis" -> "is-sprinting";
             case "glowing", "isglowing", "glowingis" -> "is-glowing";
             case "invulnerable", "isinvulnerable", "invulnerableis" -> "is-invulnerable";
             case "swimming", "isswimming", "swimmingis" -> "is-swimming";
             case "climbing", "isclimbing", "climbingis" -> "is-climbing";
-            case "inair", "airborne", "isairborne" -> "in-air";
+            case "inair", "isinair", "is-in-air", "airborne", "isairborne" -> "in-air";
             case "gliding", "isgliding", "glidingis" -> "is-gliding";
             case "flying", "isflying", "flyingis" -> "is-flying";
             case "blocking", "isblocking", "blockingis" -> "is-blocking";
             case "facingtarget", "facing-target" -> "facing-target";
-            case "onground" -> "on-ground";
-            case "inwater" -> "in-water";
-            case "inlava" -> "in-lava";
-            case "onfire", "isburning" -> "on-fire";
+            case "onground", "isonground", "is-on-ground" -> "on-ground";
+            case "inwater", "isinwater", "is-in-water" -> "in-water";
+            case "inlava", "isinlava", "is-in-lava" -> "in-lava";
+            case "onfire", "isonfire", "is-on-fire", "isburning" -> "on-fire";
+            case "isblocked", "is-blocked", "blocked" -> "is-blocked";
+            case "standon", "stand-on", "standingon", "standing-on" -> "stand-on";
+            case "daylight", "isdaylight", "is-daylight" -> "daylight";
             case "playersinradius" -> "players-in-radius";
             case "entitiesinradius" -> "entities-in-radius";
+            case "mobsinradius" -> "mobs-in-radius";
+            case "mobsnearorigin", "mobs-near-origin" -> "mobs-near-origin";
+            case "livinginradius", "living-in-radius" -> "living-in-radius";
+            case "mobsinchunk", "mobs-in-chunk" -> "mobs-in-chunk";
+            case "dimension", "dimension-is" -> "dimension-is";
+            case "enderdragonalive", "isdragonalive", "dragonalive", "ender-dragon-alive" ->
+                    "ender-dragon-alive";
+            case "enderdragonphase", "ender-dragon-phase", "edragonphase" -> "ender-dragon-phase";
+            case "distancefromspawn", "distance-from-spawn" -> "distance-from-spawn";
+            case "distancefromlocation", "distance-from-location" -> "distance-from-location";
+            case "xdiff", "x-diff" -> "x-diff";
+            case "ydiff", "y-diff" -> "y-diff";
+            case "zdiff", "z-diff" -> "z-diff";
+            case "originlocation", "origin-location" -> "origin-location";
+            case "playersonline", "onlineplayercount", "onlineplayers" -> "players-online";
+            case "playersinworld" -> "players-in-world";
+            case "mobsinworld" -> "mobs-in-world";
+            case "playerwithin", "playerswithin" -> "player-within";
+            case "playernotwithin", "playersnotwithin" -> "player-not-within";
+            case "incombat" -> "in-combat";
+            case "targetcount", "target-count" -> "target-count-at-least";
+            case "hungerbelow", "hunger-below" -> "hunger-below";
+            case "motionx", "motion-x", "motx" -> "motion-x";
+            case "motiony", "motion-y", "moty" -> "motion-y";
+            case "directionalvelocity", "directional-velocity", "dvelocity" -> "directional-velocity";
+            case "fallspeed", "fall-speed", "falling-speed" -> "fall-speed";
+            case "motionz", "motion-z", "motz" -> "motion-z";
+            case "velocity" -> "velocity";
+            case "height", "height-is" -> "height";
+            case "altitude", "height-from-surface" -> "altitude";
+            case "heightabove", "height-above" -> "height-above";
+            case "heightbelow", "height-below" -> "height-below";
+            case "pitch" -> "pitch";
+            case "yaw" -> "yaw";
+            case "onblock", "on-block" -> "on-block";
+            case "moist", "ismoist", "is-moist" -> "moist";
+            case "moisturelevel", "moisture-level", "moistureness", "moistness" ->
+                    "moisture-level";
+            case "blocktype", "block-type-is", "block-type" -> "block-type-is";
+            case "blocktypeinradius", "block-type-in-radius" -> "block-type-in-radius";
+            case "biometype", "biome-type-is", "biomecategory" -> "biome-type-is";
+            case "lightlevel", "light-level", "lightlevelis", "light-level-is" -> "light-level";
             case "lightlevelbelow" -> "light-level-below";
             case "lightlevelabove" -> "light-level-above";
-            case "ylevelbelow", "heightbelow" -> "y-level-below";
-            case "ylevelabove", "heightabove" -> "y-level-above";
+            case "skylightlevel", "sky-light-level" -> "sky-light-level";
+            case "lightlevelfromblocks", "light-level-from-blocks", "blocklightlevel" ->
+                    "light-level-from-blocks";
+            case "ylevelbelow" -> "y-level-below";
+            case "ylevelabove" -> "y-level-above";
             case "targethealthbelow" -> "target-health-below";
             case "targethealthabove" -> "target-health-above";
             case "targethealthpercent", "targethealthpercentage" -> "target-health-percent";
             case "targethealth" -> "target-health";
             case "targetinvulnerable", "target-is-invulnerable", "targetinvulnerableis" -> "target-invulnerable";
             case "gamemode", "gamemodeis" -> "game-mode-is";
+            case "serverispaper", "is-paper", "ispaper" -> "server-is-paper";
+            case "plugin", "plugin-exists", "pluginexists", "hasplugin", "has-plugin" -> "plugin";
+            case "serverversion", "server-version", "server", "version" -> "server-version";
+            case "serveraftereq", "serverafter", "versionaftereq", "server-version-after-or-equal" ->
+                    "server-version-after-or-equal";
+            case "serverbefore", "versionbefore", "server-version-before" -> "server-version-before";
+            case "ismythicmob", "is-mythic-mob", "ismm" -> "is-mythic-mob";
+            case "mythicmobtype", "mythic-mob-type", "mmtype" -> "mythic-mob-type";
+            case "iscreeperprimed", "is-creeper-primed" -> "is-creeper-primed";
+            case "boundingboxesoverlap", "bounding-boxes-overlap", "bbsoverlap" ->
+                    "bounding-boxes-overlap";
+            case "cuboid", "incuboid" -> "cuboid";
+            case "inbounds", "in-bounds", "withinbounds", "insidebounds" -> "in-bounds";
+            case "fieldofview", "field-of-view", "fov", "infieldofview" -> "field-of-view";
+            case "isinsurvivalmode", "in-survival-mode", "insurvivalmode" -> "is-in-survival-mode";
+            case "isusingspyglass", "is-using-spyglass", "isscoping" -> "is-using-spyglass";
             case "foodlevel", "food-level", "foodlevelis", "food-level-is" -> "food-level";
+            case "enchantinglevel", "enchanting-level" -> "enchanting-level";
+            case "enchantingexperience", "enchanting-experience", "enchantingexp",
+                    "enchanting-exp", "enchantexperience", "enchant-exp" -> "enchanting-experience";
             case "airlevel", "air-level", "remainingair", "remaining-air", "air" -> "air-level";
             case "damagecause", "damage-cause", "cause" -> "damage-cause";
+            case "damageamount", "damage-amount", "amount", "a" -> "damage-amount";
+            case "lastdamagecause", "last-damage-cause" -> "last-damage-cause";
             case "hasitem", "has-item", "item-count", "itemcount" -> "has-item";
+            case "hasenchantment", "has-enchantment", "hasenchant", "has-enchant" ->
+                    "has-enchantment";
+            case "haspotioneffect", "has-potion-effect" -> "has-potion-effect";
+            case "hasaurastacks", "has-aura-stacks", "hasbuffstacks", "hasdebuffstacks",
+                    "aurastacks", "buffstacks", "debuffstacks" -> "has-aura-stacks";
+            case "hasdialogopen", "has-dialog-open", "dialogopen", "dialog-open" ->
+                    "has-dialog-open";
+            case "isincinematic", "is-in-cinematic", "incinematic" -> "is-in-cinematic";
+            case "materialisoncooldown", "material-is-on-cooldown", "materialcooldown",
+                    "matcooldown" -> "material-on-cooldown";
+            case "triggeritemtype", "trigger-item-type", "triggeringitemtype" -> "trigger-item-type";
+            case "itemtype", "item-type" -> "trigger-item-type";
+            case "triggerblocktype", "trigger-block-type", "triggeringblocktype" -> "trigger-block-type";
+            case "entityitemtype", "entity-item-type" -> "entity-item-type";
+            case "entitymaterialtype", "entity-material-type" -> "entity-material-type";
+            case "entityitemissimilar", "entity-item-is-similar" -> "entity-item-is-similar";
+            case "itemissimilar", "item-is-similar", "issimilar", "similarto", "similar-to" ->
+                    "item-is-similar";
+            case "itemrecharging", "item-recharging", "recharging" -> "item-recharging";
+            case "hasfreeslot", "has-free-slot", "hasfreeinventoryslot",
+                    "has-free-inventory-slot" -> "has-free-inventory-slot";
             case "potioneffectactive", "potionactive" -> "potion-effect-active";
+            case "haspassenger", "has-passenger", "haspassengers" -> "has-passenger";
+            case "isvehicle", "is-vehicle", "vehicle" -> "is-vehicle";
+            case "targethaspassenger", "target-has-passenger", "targethaspassengers" -> "target-has-passenger";
+            case "targetisvehicle", "target-is-vehicle" -> "target-is-vehicle";
             case "randomchance" -> "random-chance";
+            case "offgcd", "off-global-cooldown" -> "offgcd";
             case "healthbelow" -> "health-below";
             case "healthabove" -> "health-above";
             case "healthpercent", "health-percentage" -> "health-percent";
+            case "level-is", "mob-level", "moblevel" -> "level";
+            case "isfrozen", "is-frozen", "frozen" -> "is-frozen";
+            case "lunarphase", "lunar-phase", "moonphase", "moon-phase" -> "lunar-phase";
+            case "lastsignal", "last-signal" -> "last-signal";
+            case "projectilehasended", "projectile-has-ended" -> "projectile-has-ended";
+            case "absorptionamount", "absorption-amount", "hasabsorption", "has-absorption" ->
+                    "absorption";
             case "distancebelow" -> "distance-below";
             case "distanceabove" -> "distance-above";
             case "world", "worldis" -> "world-is";
             case "biome", "biomeis" -> "biome-is";
             case "weather", "weatheris" -> "weather-is";
             case "time", "timeis" -> "time-is";
+            case "worldtime", "world-time" -> "world-time";
+            case "night", "nighttime" -> "night";
+            case "raining", "israining", "rain" -> "raining";
+            case "thundering", "isthundering", "thunder" -> "thundering";
+            case "falling", "isfalling" -> "falling";
+            case "drowning", "isdrowning" -> "drowning";
+            case "hasauras", "has-auras", "haspotion", "has-potion" -> "has-auras";
+            case "isriding", "riding", "is-mounted" -> "mounted";
+            case "vehicleisdead", "vehicle-is-dead" -> "vehicle-is-dead";
+            case "targetwithin", "target-within" -> "target-within";
+            case "targetnotwithin", "target-not-within" -> "target-not-within";
+            case "targetinlineofsight", "targetlineofsight", "target-has-line-of-sight" -> "target-has-line-of-sight";
+            case "targetnotinlineofsight", "target-not-in-line-of-sight" -> "target-not-in-line-of-sight";
+            case "lineofsightfromorigin", "line-of-sight-from-origin", "inlineofsightfromorigin" ->
+                    "line-of-sight-from-origin";
+            case "structure", "structures" -> "structure";
+            case "stringequals", "string-equals", "stringeq" -> "string-equals";
+            case "stringempty", "string-empty", "isempty" -> "string-empty";
+            case "stringnotempty", "string-not-empty", "notempty" -> "string-not-empty";
+            case "isskill", "is-skill", "skillexists", "skill-exists" -> "is-skill";
+            case "globalscore", "global-score", "scoreglobal" -> "global-score";
+            case "score" -> "score";
+            case "comparevalues", "compare-values", "comparevalue" -> "compare-values";
+            case "lookingat", "looking-at" -> "looking-at";
+            case "bowtension", "bow-tension", "bowshoottension" -> "bow-tension";
             case "variableisset", "variable-is-set" -> "variable-is-set";
+            case "branchunlocked", "branch-unlocked", "hasbranch", "has-branch" -> "branch-unlocked";
+            case "branchlocked", "branch-locked" -> "branch-locked";
             case "variableequals", "variable-equals" -> "variable-equals";
             case "variablenotequals", "variable-ne", "variable-not-equal" -> "variable-not-equals";
             case "variableinrange", "variable-in-range" -> "variable-in-range";
@@ -1511,7 +1875,8 @@ public final class SkillService {
     private static boolean isVariableMechanic(String name) {
         return switch (name) {
             case "variable-unset", "var-unset", "variable-location-set", "location-unset",
-                    "var-set", "set-variable", "var-add", "var-math" -> true;
+                    "var-set", "set-variable", "var-add", "var-math",
+                    "score-set", "score-add", "signal", "dot" -> true;
             default -> false;
         };
     }
@@ -1526,22 +1891,110 @@ public final class SkillService {
             case "locationunset" -> "location-unset";
             case "explosion" -> "explode";
             case "aoedamage" -> "aoe-damage";
+            case "damage" -> "damage-target";
+            case "heal" -> "heal-self";
+            case "message", "msg" -> "message-target";
+            case "actionbar" -> "actionbar";
+            case "title" -> "title";
+            case "effect", "potion" -> "effect-targets";
+            case "ignite" -> "ignite-targets";
+            case "knockback" -> "knockback-targets";
             case "settarget", "target" -> "set-target";
             case "cleartarget", "untarget" -> "clear-target";
             case "setvelocity", "velocity" -> "velocity-targets";
             case "setscale" -> "set-scale";
             case "setintent" -> "set-intent";
+            case "settickspeed", "set-tick-speed" -> "set-tick-speed";
             case "playanimation" -> "play-animation";
             case "stopanimation" -> "stop-animation";
             case "setname" -> "set-name";
+            case "addtag", "add-tag", "addscoreboardtag", "add-scoreboard-tag" -> "add-tag";
+            case "removetag", "remove-tag", "removescoreboardtag", "remove-scoreboard-tag" -> "remove-tag";
+            case "setscore", "set-score", "score-set" -> "score-set";
+            case "addscore", "add-score", "score-add" -> "score-add";
             case "setitem" -> "set-item";
             case "dropitem" -> "drop-item";
-            case "potion", "effect" -> "effect-targets";
+            case "giveitem", "give" -> "give-item";
+            case "takeitem", "take", "consume", "removeitem", "remove-item" -> "take-item";
+            case "closeinventory", "close-inventory" -> "close-inventory";
+            case "clearinventory", "clear-inventory" -> "clear-inventory";
+            case "clearexperience", "clear-experience", "clearexp" -> "clear-experience";
+            case "clearexperiencelevels", "clear-experience-levels", "clearexplevels" ->
+                    "clear-experience-levels";
+            case "giveexperiencelevels", "give-experience-levels", "giveexplevels" ->
+                    "give-experience-levels";
+            case "giveexperience", "give-experience", "givexp", "give-xp" -> "give-experience";
+            case "setabsorption", "set-absorption" -> "set-absorption";
+            case "oxygen" -> "oxygen";
+            case "consumeslot", "consume-slot", "consumeslotitem" -> "consume-slot";
+            case "disarm", "remove-held-item", "removehelditem" -> "disarm";
+            case "setmaterialcooldown", "set-material-cooldown", "setitemcooldown",
+                    "set-item-cooldown", "materialcooldown" ->
+                    "set-material-cooldown";
+            case "setgamemode", "set-game-mode", "gamemode" -> "set-game-mode";
+            case "forcepull", "force-pull" -> "force-pull";
+            case "setoffhand", "set-offhand" -> "set-offhand";
+            case "setarmor", "set-armor" -> "set-armor";
+            case "setfaction", "set-faction" -> "set-faction";
+            case "setlevel", "set-level" -> "set-level";
+            case "setweather", "set-weather" -> "set-weather";
+            case "settime", "set-time" -> "set-time";
+            case "lightning", "strike-lightning", "strike-lightning-effect" -> "lightning";
+            case "feed", "food" -> "feed";
+            case "setblock", "set-block" -> "set-block";
+            case "breakblock", "break-block" -> "break-block";
+            case "setai", "set-ai" -> "set-ai";
+            case "setgravity", "set-gravity", "setnogravity" -> "set-gravity";
+            case "setsilent", "set-silent" -> "set-silent";
+            case "setcollidable", "set-collidable" -> "set-collidable";
+            case "setsneaking", "set-sneaking" -> "set-sneaking";
+            case "setgliding", "set-gliding" -> "set-gliding";
+            case "setswimming", "set-swimming" -> "set-swimming";
+            case "setsprinting", "set-sprinting" -> "set-sprinting";
+            case "setflying", "set-flying" -> "set-flying";
+            case "setnodamageticks", "set-no-damage-ticks", "setndt" -> "set-no-damage-ticks";
+            case "setmaxnodamageticks", "set-maximum-no-damage-ticks", "setmaximumnodamageticks" ->
+                    "set-maximum-no-damage-ticks";
+            case "setwalkspeed", "set-walk-speed" -> "set-walk-speed";
+            case "setinvincible", "set-invincible" -> "set-invulnerable";
+            case "setfire", "set-fire", "ignite-self" -> "set-fire";
+            case "clearfire", "clear-fire", "extinguish" -> "clear-fire";
+            case "freeze" -> "freeze";
+            case "look", "lookat", "look-at" -> "look-at";
+            case "setrotation", "set-rotation", "rotation" -> "set-rotation";
+            case "setstance", "set-stance" -> "set-stance";
+            case "randomskill", "random-skill" -> "random-skill";
+            case "remove", "remove-self" -> "remove-self";
+            case "setowner", "set-owner" -> "set-owner";
+            case "removeowner", "remove-owner" -> "remove-owner";
+            case "setparent", "set-parent" -> "set-parent";
+            case "removeparent", "remove-parent" -> "remove-parent";
+            case "addthreat", "threatadd" -> "threat-add";
+            case "clearthreat", "threatclear" -> "threat-clear";
+            case "threatfocus", "focusthreat" -> "threat-focus";
+            case "messageall" -> "message-all";
+            case "messageself" -> "message-self";
+            case "randommessage" -> "random-message";
+            case "setskillcooldown", "skillcooldown", "setskillcd", "skillcd" -> "set-skill-cooldown";
+            case "teleportself", "teleport-self" -> "teleport-self";
+            case "teleportcaster", "teleport-caster" -> "teleport-caster";
+            case "sethealth", "set-health" -> "set-health";
+            case "modifyhealth", "modify-health" -> "modify-health";
+            case "modifyspeed", "modify-speed" -> "modify-speed";
+            case "knockbackself", "knockback-self" -> "knockback-self";
+            case "startcast", "start-cast" -> "start-cast";
+            case "cancelcast", "cancel-cast" -> "cancel-cast";
+            case "startdialogue", "start-dialogue", "startdialog" -> "start-dialogue";
+            case "setinvulnerable", "set-invulnerable" -> "set-invulnerable";
             case "mount" -> "mount";
             case "dismount", "unmount" -> "dismount";
+            case "ejectpassenger", "eject_passenger", "eject-passenger" -> "eject-passenger";
             case "cancelevent" -> "cancel-event";
             case "damagepercent" -> "damage-percent";
+            case "damagemelee", "meleedamage" -> "damage-melee";
             case "healpercent" -> "heal-percent";
+            case "setmaxhealth", "set-max-health" -> "set-max-health";
+            case "modifymaxhealth", "modify-max-health" -> "modify-max-health";
             case "removeeffect" -> "remove-effect";
             case "removealleffects" -> "remove-all-effects";
             case "shootprojectile" -> "shoot-projectile";

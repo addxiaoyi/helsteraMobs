@@ -3,6 +3,8 @@ package dev.helstera.ai.skill;
 import dev.helstera.ai.BehaviorRegistryImpl;
 import dev.helstera.api.behavior.BehaviorContext;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * 嵌套技能、环引用与冷却的测试。
@@ -135,6 +141,28 @@ class SkillNestingTest {
 
         assertTrue(svc.castSkill("outer", ctx()));
         assertEquals(1, fired.get());
+    }
+
+    @Test
+    @DisplayName("randomskill selects a loaded named skill through the normal cast guards")
+    void selectsRandomNamedSkill() {
+        var fired = new AtomicInteger();
+        registry.registerAction("probe", c -> fired.incrementAndGet());
+
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  child:
+                    on-decision:
+                      - probe
+                  outer:
+                    on-decision:
+                      - randomskill{skills=child}
+                """).getConfigurationSection("skills"));
+
+        assertTrue(svc.castSkill("outer", ctx()));
+        assertEquals(1, fired.get());
+        assertTrue(svc.warnings().isEmpty(), svc.warnings().toString());
     }
 
     @Test
@@ -644,11 +672,517 @@ class SkillNestingTest {
     }
 
     @Test
+    @DisplayName("dash / blink 的目标器只提供方向，不把自身位移路由成目标动作")
+    void selfMovementTargetersKeepCasterMechanics() {
+        var svc = service();
+
+        String dash = svc.bindAction("dash 5 @Target");
+        String blink = svc.bindAction("blink 8 @Target");
+
+        assertNotNull(dash, svc.warnings().toString());
+        assertNotNull(blink, svc.warnings().toString());
+        assertTrue(dash.startsWith("dash:"), dash);
+        assertTrue(blink.startsWith("blink:"), blink);
+    }
+
+    @Test
     @DisplayName("targeter binding resolves mechanic aliases before validation")
     void targeterBindingRoutesDamageAlias() {
         String bound = service().bindAction("damage{amount=3} @Target");
         assertNotNull(bound);
         assertTrue(bound.startsWith("damage-target:"), bound);
+    }
+
+    @Test
+    @DisplayName("targeted heal applies to the selected target rather than the caster")
+    void targetedHealUsesTargetMechanic() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.getMaxHealth()).thenReturn(20.0);
+        when(caster.getHealth()).thenReturn(4.0);
+        when(target.getMaxHealth()).thenReturn(20.0);
+        when(target.getHealth()).thenReturn(5.0);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+
+        String bound = service.bindAction("heal{amount=4} @Target");
+
+        assertNotNull(bound, service.warnings().toString());
+        assertTrue(registry.runAction(bound, context));
+        verify(target).setHealth(9.0);
+        verify(caster, never()).setHealth(org.mockito.ArgumentMatchers.anyDouble());
+    }
+
+    @Test
+    @DisplayName("untargeted heal binds to the caster mechanic")
+    void untargetedHealUsesSelfMechanic() {
+        String bound = service().bindAction("heal 5");
+
+        assertNotNull(bound);
+        assertTrue(bound.startsWith("heal-self:"), bound);
+    }
+
+    @Test
+    @DisplayName("set-stance stores a Mythic stance independently from the AI state")
+    void stanceMechanicAndConditionUseInstanceStance() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(901);
+        var context = BehaviorContext.of(instance, null, 1.0, -1, 0, "ATTACK");
+
+        String action = service.bindAction("set-stance enraged");
+        String condition = service.bindCondition("stance-is enraged");
+        assertNotNull(action, service.warnings().toString());
+        assertNotNull(condition, service.warnings().toString());
+        assertTrue(registry.runAction(action, context));
+        assertTrue(registry.testCondition(condition, context));
+
+        SkillExtras.forget(901);
+        assertFalse(registry.testCondition(condition, context));
+    }
+
+    @Test
+    @DisplayName("untargeted damage binds to the active target mechanic")
+    void untargetedDamageUsesTargetMechanic() {
+        String bound = service().bindAction("damage 5");
+
+        assertNotNull(bound);
+        assertTrue(bound.startsWith("damage-target:"), bound);
+    }
+
+    @Test
+    @DisplayName("common untargeted Mythic mechanics bind to existing target factories")
+    void commonMechanicAliasesUseTargetFactories() {
+        var service = service();
+        assertTrue(service.bindAction("message hello").startsWith("message-target:"));
+        assertTrue(service.bindAction("effect SPEED 20 0").startsWith("effect-targets:"));
+        assertEquals("effect-self:SPEED 40 2 true false false",
+                service.bindAction("effect-self SPEED 40 2 true false false"));
+        assertTrue(service.bindAction("ignite 40").startsWith("ignite-targets:"));
+        assertTrue(service.bindAction("knockback 1 0.4").startsWith("knockback-targets:"));
+    }
+
+    @Test
+    @DisplayName("@Targets 让 damage mechanic 对全部选中实体执行")
+    void targetedDamageExecutesForAllSelectedEntities() {
+        var svc = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.Entity.class);
+        var first = mock(org.bukkit.entity.LivingEntity.class);
+        var second = mock(org.bukkit.entity.LivingEntity.class);
+        var world = mock(org.bukkit.World.class);
+        var origin = new org.bukkit.Location(world, 0, 64, 0);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(instance.location()).thenReturn(origin);
+        when(first.getWorld()).thenReturn(world);
+        when(second.getWorld()).thenReturn(world);
+        when(first.getLocation()).thenReturn(new org.bukkit.Location(world, 1, 64, 0));
+        when(second.getLocation()).thenReturn(new org.bukkit.Location(world, -1, 64, 0));
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, first, 1.0, 2.0, 0, "skill", null, first,
+                java.util.List.of(first, second), origin, null);
+
+        String bound = svc.bindAction("damage 3 @Targets");
+
+        assertNotNull(bound, svc.warnings().toString());
+        assertTrue(registry.hasAction(bound), "bound=" + bound + ", warnings=" + svc.warnings());
+        assertTrue(registry.runAction(bound, context));
+        verify(first).damage(3.0, caster);
+        verify(second).damage(3.0, caster);
+    }
+
+    @Test
+    @DisplayName("@Targets 让 damage-percent mechanic 对全部选中实体执行")
+    void targetedDamagePercentExecutesForAllSelectedEntities() {
+        var svc = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.Entity.class);
+        var first = mock(org.bukkit.entity.LivingEntity.class);
+        var second = mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(first.getMaxHealth()).thenReturn(20.0);
+        when(second.getMaxHealth()).thenReturn(40.0);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, first, 1.0, 2.0, 0, "skill", null, first,
+                java.util.List.of(first, second), null, null);
+
+        String bound = svc.bindAction("damage-percent{amount=25} @Targets");
+
+        assertNotNull(bound, svc.warnings().toString());
+        assertTrue(bound.startsWith("damage-percent-targets:"), bound);
+        assertTrue(registry.runAction(bound, context));
+        verify(first).damage(5.0, caster);
+        verify(second).damage(10.0, caster);
+    }
+
+    @Test
+    @DisplayName("@Targets 让 explode mechanic 在每个选中位置执行")
+    void targetedExplosionExecutesForAllSelectedEntities() {
+        var svc = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var first = mock(org.bukkit.entity.LivingEntity.class);
+        var second = mock(org.bukkit.entity.LivingEntity.class);
+        var world = mock(org.bukkit.World.class);
+        var origin = new org.bukkit.Location(world, 0, 64, 0);
+        var firstLocation = new org.bukkit.Location(world, 1, 64, 0);
+        var secondLocation = new org.bukkit.Location(world, -1, 64, 0);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(origin);
+        when(first.getLocation()).thenReturn(firstLocation);
+        when(second.getLocation()).thenReturn(secondLocation);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, first, 1.0, 2.0, 0, "skill", null, first,
+                java.util.List.of(first, second), origin, null);
+
+        String bound = svc.bindAction("explode 2 @Targets");
+
+        assertNotNull(bound, svc.warnings().toString());
+        assertTrue(registry.runAction(bound, context));
+        verify(world).createExplosion(firstLocation, 2.0f, false, false);
+        verify(world).createExplosion(secondLocation, 2.0f, false, false);
+    }
+
+    @Test
+    @DisplayName("@Targets 让 message mechanic 发送给全部选中玩家")
+    void targetedMessageExecutesForAllSelectedPlayers() {
+        var svc = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var first = mock(org.bukkit.entity.Player.class);
+        var second = mock(org.bukkit.entity.Player.class);
+        when(instance.isValid()).thenReturn(true);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, first, 1.0, 2.0, 0, "skill", null, first,
+                java.util.List.of(first, second), null, null);
+
+        String bound = svc.bindAction("message hello @Targets");
+
+        assertNotNull(bound, svc.warnings().toString());
+        assertTrue(registry.runAction(bound, context));
+        verify(first).sendMessage("hello");
+        verify(second).sendMessage("hello");
+    }
+
+    @Test
+    @DisplayName("targeted heal-percent heals the selected target")
+    void targetedHealPercentUsesTargetMechanic() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(target.getMaxHealth()).thenReturn(20.0);
+        when(target.getHealth()).thenReturn(10.0);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+
+        String bound = service.bindAction("heal-percent{amount=25} @Target");
+
+        assertNotNull(bound, service.warnings().toString());
+        assertTrue(registry.runAction(bound, context));
+        verify(target).setHealth(15.0);
+        verify(caster, never()).setHealth(org.mockito.ArgumentMatchers.anyDouble());
+    }
+
+    @Test
+    @DisplayName("targeted set-health modifies the selected target")
+    void targetedSetHealthUsesTargetMechanic() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(target.getMaxHealth()).thenReturn(20.0);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+
+        String bound = service.bindAction("set-health 7 @Target");
+
+        assertNotNull(bound, service.warnings().toString());
+        assertTrue(registry.runAction(bound, context));
+        verify(target).setHealth(7.0);
+        verify(caster, never()).setHealth(org.mockito.ArgumentMatchers.anyDouble());
+    }
+
+    @Test
+    @DisplayName("targeted set-name modifies the selected target")
+    void targetedSetNameUsesTargetMechanic() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+
+        String bound = service.bindAction("set-name &cTarget false @Target");
+
+        assertNotNull(bound, service.warnings().toString());
+        assertTrue(registry.runAction(bound, context));
+        verify(target).setCustomName("§cTarget");
+        verify(target).setCustomNameVisible(false);
+    }
+
+    @Test
+    @DisplayName("targeted scoreboard tag mechanics mutate the selected target")
+    void targetedScoreboardTagUsesTargetMechanic() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+
+        String add = service.bindAction("addtag{tag=HelsteraTargetProbe} @Target");
+        String remove = service.bindAction("removetag{tag=HelsteraTargetProbe} @Target");
+
+        assertNotNull(add, service.warnings().toString());
+        assertNotNull(remove, service.warnings().toString());
+        assertTrue(add.startsWith("add-tag-targets:"), add);
+        assertTrue(remove.startsWith("remove-tag-targets:"), remove);
+        assertTrue(registry.runAction(add, context));
+        assertTrue(registry.runAction(remove, context));
+        verify(target).addScoreboardTag("HelsteraTargetProbe");
+        verify(target).removeScoreboardTag("HelsteraTargetProbe");
+        verify(caster, never()).addScoreboardTag(org.mockito.ArgumentMatchers.anyString());
+        verify(caster, never()).removeScoreboardTag(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    @DisplayName("targeted set-fire modifies the selected target")
+    void targetedSetFireUsesTargetMechanic() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+
+        String bound = service.bindAction("set-fire 40 @Target");
+
+        assertNotNull(bound, service.warnings().toString());
+        assertTrue(registry.runAction(bound, context));
+        verify(target).setFireTicks(40);
+        verify(caster, never()).setFireTicks(org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    @DisplayName("targeted equip places the item on the selected target")
+    void targetedEquipUsesTargetMechanic() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var equipment = mock(org.bukkit.inventory.EntityEquipment.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(target.getEquipment()).thenReturn(equipment);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+        var resolvedItem = mock(ItemStack.class);
+        var resolvedMaterial = mock(org.bukkit.Material.class);
+        when(resolvedItem.getType()).thenReturn(resolvedMaterial);
+        when(resolvedItem.clone()).thenReturn(resolvedItem);
+        SkillExtras.itemResolver(name -> resolvedItem);
+        try {
+            String bound = service.bindAction("equip DIAMOND_SWORD main-hand 1 @Target");
+            assertNotNull(bound, service.warnings().toString());
+            assertTrue(registry.runAction(bound, context));
+            verify(equipment).setItem(EquipmentSlot.HAND, resolvedItem);
+            verify(caster, never()).getEquipment();
+        } finally {
+            SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("targeted drop-item drops at the selected target location")
+    void targetedDropItemUsesTargetLocation() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var world = mock(org.bukkit.World.class);
+        var location = mock(org.bukkit.Location.class);
+        var item = mock(ItemStack.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(target.getLocation()).thenReturn(location);
+        when(location.getWorld()).thenReturn(world);
+        when(item.clone()).thenReturn(item);
+        SkillExtras.itemResolver(name -> item);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+        try {
+            String bound = service.bindAction("drop-item DIAMOND 2 @Target");
+            assertNotNull(bound, service.warnings().toString());
+            assertTrue(registry.runAction(bound, context));
+            verify(world).dropItemNaturally(location, item);
+        } finally {
+            SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("targeted invulnerability modifies the selected target")
+    void targetedInvulnerabilityUsesTargetMechanic() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+
+        String bound = service.bindAction("set-invulnerable true @Target");
+
+        assertNotNull(bound, service.warnings().toString());
+        assertTrue(registry.runAction(bound, context));
+        verify(target).setInvulnerable(true);
+        verify(caster, never()).setInvulnerable(org.mockito.ArgumentMatchers.anyBoolean());
+    }
+
+    @Test
+    @DisplayName("targeted remove-all-effects binds to the target factory")
+    void targetedRemoveEffectsUsesTargetMechanic() {
+        String bound = service().bindAction("remove-all-effects @Target");
+
+        assertNotNull(bound);
+        assertTrue(bound.startsWith("remove-all-effects-targets"), bound);
+    }
+
+    @Test
+    @DisplayName("targeted modify-speed uses the selected target attribute")
+    void targetedModifySpeedUsesTargetMechanic() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var attribute = mock(org.bukkit.attribute.AttributeInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(target.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED))
+                .thenReturn(attribute);
+        when(attribute.getBaseValue()).thenReturn(0.1);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+
+        String bound = service.bindAction("modify-speed 2 @Target");
+
+        assertNotNull(bound, service.warnings().toString());
+        assertTrue(registry.runAction(bound, context));
+        verify(attribute).setBaseValue(0.2);
+        verify(caster, never()).getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED);
+    }
+
+    @Test
+    @DisplayName("targeted leap modifies the selected target velocity")
+    void targetedLeapUsesTargetMechanic() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector(0, 0, 0));
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+
+        String bound = service.bindAction("leap 1.2 @Target");
+
+        assertNotNull(bound, service.warnings().toString());
+        assertTrue(registry.runAction(bound, context));
+        verify(target).setVelocity(org.mockito.ArgumentMatchers.argThat(vector ->
+                Math.abs(vector.getY() - 1.2) < 1.0e-9));
+        verify(caster, never()).setVelocity(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    @DisplayName("movement mechanics resolve target numeric placeholders at execution time")
+    void movementMechanicsResolveNumericPlaceholders() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var attribute = mock(org.bukkit.attribute.AttributeInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(target.getHealth()).thenReturn(4.0);
+        when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector(0, 0, 0));
+        when(target.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED))
+                .thenReturn(attribute);
+        when(attribute.getBaseValue()).thenReturn(0.1);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), null, null);
+
+        String leap = service.bindAction("leap <target.hp.raw> @Target");
+        String speed = service.bindAction("modify-speed <target.hp.raw> @Target");
+
+        assertNotNull(leap, service.warnings().toString());
+        assertNotNull(speed, service.warnings().toString());
+        assertTrue(registry.runAction(leap, context));
+        assertTrue(registry.runAction(speed, context));
+        verify(target).setVelocity(org.mockito.ArgumentMatchers.argThat(vector ->
+                Math.abs(vector.getY() - 4.0) < 1.0e-9));
+        verify(attribute).setBaseValue(0.4);
+    }
+
+    @Test
+    @DisplayName("pull 不会把施法者自己纳入拉拽目标")
+    void pullExcludesCasterFromNearbyTargets() {
+        var service = service();
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var casterEntity = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var world = mock(org.bukkit.World.class);
+        var origin = new org.bukkit.Location(world, 0, 64, 0);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(casterEntity));
+        when(instance.location()).thenReturn(origin);
+        when(casterEntity.isValid()).thenReturn(true);
+        when(target.isValid()).thenReturn(true);
+        when(world.getNearbyEntities(org.mockito.ArgumentMatchers.any(org.bukkit.Location.class),
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble()))
+                .thenReturn(java.util.List.of(casterEntity, target));
+        when(target.getLocation()).thenReturn(new org.bukkit.Location(world, 2, 64, 0));
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, target, 1.0, 2.0, 0, "skill", null, target,
+                java.util.List.of(target), origin, null);
+
+        String bound = service.bindAction("pull 6 1");
+
+        assertNotNull(bound, service.warnings().toString());
+        assertTrue(registry.runAction(bound, context));
+        org.mockito.Mockito.verify(casterEntity, org.mockito.Mockito.never())
+                .setVelocity(org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verify(target).setVelocity(org.mockito.ArgumentMatchers.any());
     }
 
 }

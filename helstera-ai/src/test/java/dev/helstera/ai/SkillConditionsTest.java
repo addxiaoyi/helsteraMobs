@@ -2,8 +2,19 @@ package dev.helstera.ai;
 
 import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.ai.skill.SkillCatalog;
+import dev.helstera.ai.skill.SkillExtras;
+import dev.helstera.ai.skill.PlayerKillCount;
+import dev.helstera.api.instance.ModelInstance;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Farmland;
+import org.bukkit.Location;
 
 import java.util.List;
 
@@ -11,6 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * 新增触发条件的行为测试。
@@ -28,6 +42,12 @@ class SkillConditionsTest {
     private static SkillCatalog.ConditionFactory factory(String name) {
         var f = SkillCatalog.conditions().get(name);
         assertNotNull(f, "内置条件 " + name + " 不存在");
+        return f;
+    }
+
+    private static SkillCatalog.ConditionFactory extraFactory(String name) {
+        var f = SkillExtras.conditions().get(name);
+        assertNotNull(f, "扩展条件 " + name + " 不存在");
         return f;
     }
 
@@ -139,5 +159,947 @@ class SkillConditionsTest {
         // 无目标时 distance-below 必须为 false
         var below = all.get("distance-below").create(List.of("10"));
         assertFalse(below.test(ctx()), "距离未知时不应判为近距离");
+    }
+
+    @Test
+    @DisplayName("Targets 匹配 skill tree 继承目标数量并支持 targets targeter")
+    void officialTargetsConditionCountsInheritedTargets() {
+        LivingEntity first = mock(LivingEntity.class);
+        LivingEntity second = mock(LivingEntity.class);
+        var context = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "IDLE", null, null, List.of(first, second), null);
+
+        assertTrue(extraFactory("targets").create(List.of(">=2")).test(context));
+        assertTrue(extraFactory("targets").create(List.of("0to2")).test(context));
+        assertFalse(extraFactory("targets").create(List.of(">2")).test(context));
+        assertTrue(extraFactory("targets").create(List.of("amount=>=2", "targeter=@targets"))
+                .test(context));
+        assertFalse(extraFactory("targets").create(List.of(">0")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("vehicle/passenger 条件区分载具和乘客状态")
+    void vehicleAndPassengerConditions() {
+        LivingEntity vehicle = org.mockito.Mockito.mock(LivingEntity.class);
+        Entity passenger = org.mockito.Mockito.mock(Entity.class);
+        org.mockito.Mockito.when(vehicle.getPassengers()).thenReturn(List.of(passenger));
+        BehaviorContext context = BehaviorContext.of(null, vehicle, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("is-vehicle").create(List.of()).test(context));
+        assertTrue(extraFactory("has-passenger").create(List.of()).test(context));
+        assertTrue(extraFactory("target-is-vehicle").create(List.of()).test(context));
+        assertTrue(extraFactory("target-has-passenger").create(List.of()).test(context));
+    }
+
+    @Test
+    @DisplayName("name-is：优先匹配自定义名，无目标或空参数时失败关闭")
+    void nameConditionMatchesCustomAndEntityNames() {
+        LivingEntity named = mock(LivingEntity.class);
+        when(named.getCustomName()).thenReturn("Emberling");
+        when(named.getName()).thenReturn("Zombie");
+        BehaviorContext context = BehaviorContext.of(null, named, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("name-is").create(List.of("Emberling")).test(context));
+        assertFalse(extraFactory("name-is").create(List.of("Zombie")).test(context));
+        assertFalse(extraFactory("name-is").create(List.of()).test(ctx()));
+
+        when(named.getCustomName()).thenReturn(null);
+        assertTrue(extraFactory("name-is").create(List.of("Zombie")).test(context));
+    }
+
+    @Test
+    @DisplayName("official population and dimension conditions fail closed without a context")
+    void extendedOfficialConditionsAreRegistered() {
+        assertFalse(extraFactory("living-in-radius").create(List.of(">=1", "5")).test(ctx()));
+        assertFalse(extraFactory("mobs-in-chunk").create(List.of(">=1")).test(ctx()));
+        assertFalse(extraFactory("dimension-is").create(List.of("NORMAL")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("official height, orientation and block conditions fail closed without a context")
+    void officialSpatialConditionsAreRegistered() {
+        assertFalse(extraFactory("height").create(List.of("<50")).test(ctx()));
+        assertFalse(extraFactory("height-above").create(List.of("50")).test(ctx()));
+        assertFalse(extraFactory("height-below").create(List.of("50")).test(ctx()));
+        assertFalse(extraFactory("pitch").create(List.of("-45to45")).test(ctx()));
+        assertFalse(extraFactory("yaw").create(List.of("90to180", "true")).test(ctx()));
+        assertFalse(extraFactory("on-block").create(List.of("STONE")).test(ctx()));
+        assertFalse(extraFactory("line-of-sight-from-origin").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("BowTension 只读取 EntityShootBowEvent 的力度")
+    void officialBowTensionConditionReadsShootEventForce() {
+        var event = mock(org.bukkit.event.entity.EntityShootBowEvent.class);
+        when(event.getForce()).thenReturn(0.75f);
+        var context = BehaviorContext.continueExecution(null, (LivingEntity) null,
+                1.0, -1, 0, "on-entity-shoot", null, null, List.of(), null, null, event);
+
+        assertTrue(extraFactory("bow-tension").create(List.of(">0.5")).test(context));
+        assertFalse(extraFactory("bow-tension").create(List.of(">0.8")).test(context));
+        assertFalse(extraFactory("bow-tension").create(List.of(">0.5")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("StringEquals 支持字面量和执行期 placeholder")
+    void officialStringEqualsConditionMatchesValues() {
+        assertTrue(extraFactory("string-equals").create(List.of("yes", "yes")).test(ctx()));
+        assertFalse(extraFactory("string-equals").create(List.of("yes", "no")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("CompareValues 支持数字、字符串和操作符别名")
+    void officialCompareValuesConditionComparesTypedValues() {
+        assertTrue(extraFactory("compare-values").create(List.of("2", "10", "<")).test(ctx()));
+        assertTrue(extraFactory("compare-values").create(List.of("foo", "bar", "GREATER_THAN", "STRING"))
+                .test(ctx()));
+        assertTrue(extraFactory("compare-values").create(List.of("2", "2", "EQUALS", "INTEGER"))
+                .test(ctx()));
+        assertFalse(extraFactory("compare-values").create(List.of("2", "two", ">", "INTEGER"))
+                .test(ctx()));
+    }
+
+    @Test
+    @DisplayName("VariableContains 支持字符串前后缀和集合 ALL/ANY")
+    void officialVariableContainsSupportsCompareTypes() {
+        var instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(321);
+        var context = BehaviorContext.execution(instance, null, 1.0, -1, 0, "IDLE", null,
+                null, List.of(), null);
+        try {
+            SkillExtras.actions().get("set-variable").create(List.of("text", "dungeon_alpha",
+                    "type=STRING")).accept(context);
+            SkillExtras.actions().get("set-variable").create(List.of("items", "red,blue",
+                    "type=LIST")).accept(context);
+            assertTrue(extraFactory("variable-contains").create(List.of(
+                    "text", "dungeon_", "STARTS_WITH")).test(context));
+            assertTrue(extraFactory("variable-contains").create(List.of(
+                    "text", "alpha", "ENDS_WITH")).test(context));
+            assertTrue(extraFactory("variable-contains").create(List.of(
+                    "items", "red,blue", "ALL")).test(context));
+            assertTrue(extraFactory("variable-contains").create(List.of(
+                    "items", "red,green", "ANY")).test(context));
+        } finally {
+            SkillExtras.forget(321);
+        }
+    }
+
+    @Test
+    @DisplayName("StringEmpty 和 StringNotEmpty 检查解析后的文本")
+    void officialStringEmptyConditionsMatchText() {
+        assertTrue(extraFactory("string-empty").create(List.of("")).test(ctx()));
+        assertFalse(extraFactory("string-empty").create(List.of("value")).test(ctx()));
+        assertTrue(extraFactory("string-not-empty").create(List.of("value")).test(ctx()));
+        assertFalse(extraFactory("string-not-empty").create(List.of("")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("IsSkill 读取注入的命名技能表并对未知技能 fail-closed")
+    void officialIsSkillConditionUsesSkillLookup() {
+        try {
+            SkillExtras.skillLookup(name -> "known-skill".equalsIgnoreCase(name));
+            assertTrue(extraFactory("is-skill").create(List.of("known-skill")).test(ctx()));
+            assertFalse(extraFactory("is-skill").create(List.of("missing-skill")).test(ctx()));
+        } finally {
+            SkillExtras.skillLookup(null);
+        }
+    }
+
+    @Test
+    @DisplayName("GlobalScore 读取主 scoreboard fake entry")
+    void officialGlobalScoreConditionUsesLookup() {
+        try {
+            SkillExtras.globalScoreLookup((objective, entry) ->
+                    "KillCount".equals(objective) && "GLOBAL".equals(entry) ? 5 : null);
+            assertTrue(extraFactory("global-score").create(List.of("KillCount", "5")).test(ctx()));
+            assertTrue(extraFactory("global-score").create(List.of("KillCount", ">=5")).test(ctx()));
+            assertFalse(extraFactory("global-score").create(List.of("Missing", "5")).test(ctx()));
+            SkillExtras.globalScoreLookup((objective, entry) ->
+                    "KillCount".equals(objective) && "__GLOBAL__".equals(entry) ? 5 : null);
+            assertTrue(extraFactory("global-score").create(List.of("KillCount", "5")).test(ctx()));
+        } finally {
+            SkillExtras.globalScoreLookup(null);
+        }
+    }
+
+    @Test
+    @DisplayName("Score 读取目标实体 objective 分数")
+    void officialScoreConditionUsesEntityLookup() {
+        LivingEntity target = mock(LivingEntity.class);
+        try {
+            SkillExtras.scoreLookup((objective, entity, entry) ->
+                    "Kills".equals(objective) && entity == target && entry == null ? 7 : null);
+            var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+            assertTrue(extraFactory("score").create(List.of("Kills", "", ">=7")).test(context));
+            assertTrue(extraFactory("score").create(List.of("Kills", ">=7")).test(context));
+            assertFalse(extraFactory("score").create(List.of("Missing", "", "7")).test(context));
+        } finally {
+            SkillExtras.scoreLookup(null);
+        }
+    }
+
+    @Test
+    @DisplayName("LookingAt 仅允许 Player 目标并读取 ray trace 结果")
+    void officialLookingAtConditionUsesPlayerRayTrace() {
+        Player player = mock(Player.class);
+        var ray = mock(org.bukkit.util.RayTraceResult.class);
+        var block = mock(Block.class);
+        when(player.rayTraceBlocks(5.0, org.bukkit.FluidCollisionMode.NEVER)).thenReturn(ray);
+        when(ray.getHitBlock()).thenReturn(block);
+        when(block.getType()).thenReturn(org.bukkit.Material.STONE);
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("looking-at").create(List.of("STONE", "5")).test(context));
+        assertFalse(extraFactory("looking-at").create(List.of("DIRT", "5")).test(context));
+        assertFalse(extraFactory("looking-at").create(List.of("STONE", "5")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("EntityItemType 和 EntityMaterialType 读取 Item trigger")
+    void officialEntityItemConditionsReadItemTrigger() {
+        var item = mock(org.bukkit.entity.Item.class);
+        var stack = mock(org.bukkit.inventory.ItemStack.class);
+        when(item.getItemStack()).thenReturn(stack);
+        when(stack.getType()).thenReturn(org.bukkit.Material.STONE);
+        var context = BehaviorContext.continueExecution(null, (LivingEntity) null,
+                1.0, -1, 0, "on-item-pickup", null, item, List.of(), null, null);
+
+        assertTrue(extraFactory("entity-item-type").create(List.of("STONE")).test(context));
+        assertTrue(extraFactory("entity-material-type").create(List.of("STONE,DIRT")).test(context));
+        assertFalse(extraFactory("entity-item-type").create(List.of("DIAMOND")).test(context));
+        assertFalse(extraFactory("entity-item-type").create(List.of("STONE")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("EntityItemIsSimilar 使用 custom item resolver 和 ItemStack 相似性")
+    void officialEntityItemIsSimilarConditionMatchesResolvedStack() {
+        var item = mock(org.bukkit.entity.Item.class);
+        var actual = mock(org.bukkit.inventory.ItemStack.class);
+        var expected = mock(org.bukkit.inventory.ItemStack.class);
+        when(item.getItemStack()).thenReturn(actual);
+        when(actual.isSimilar(any(org.bukkit.inventory.ItemStack.class))).thenReturn(true);
+        try {
+            SkillExtras.itemResolver(name -> "integration_item".equals(name) ? expected : null);
+            var context = BehaviorContext.continueExecution(null, (LivingEntity) null,
+                    1.0, -1, 0, "on-item-pickup", null, item, List.of(), null, null);
+            assertTrue(extraFactory("entity-item-is-similar").create(List.of("integration_item")).test(context));
+            assertFalse(extraFactory("entity-item-is-similar").create(List.of("missing_item")).test(ctx()));
+        } finally {
+            SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("ItemIsSimilar 只读取目标玩家指定背包槽位")
+    void officialItemIsSimilarConditionMatchesPlayerSlot() {
+        var player = mock(Player.class);
+        var inventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        var actual = mock(org.bukkit.inventory.ItemStack.class);
+        var expected = mock(org.bukkit.inventory.ItemStack.class);
+        when(player.getInventory()).thenReturn(inventory);
+        when(inventory.getItem(0)).thenReturn(actual);
+        when(actual.getType()).thenReturn(org.bukkit.Material.STONE);
+        when(actual.isSimilar(expected)).thenReturn(true);
+        try {
+            SkillExtras.itemResolver(name -> "integration_item".equals(name) ? expected : null);
+            var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+            assertTrue(extraFactory("item-is-similar").create(List.of("integration_item", "0")).test(context));
+            assertFalse(extraFactory("item-is-similar").create(List.of("integration_item", "1")).test(context));
+            assertFalse(extraFactory("item-is-similar").create(List.of("integration_item", "99")).test(context));
+            assertFalse(extraFactory("item-is-similar").create(List.of("integration_item", "0")).test(ctx()));
+        } finally {
+            SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("ItemRecharging 读取 HumanEntity 攻击冷却")
+    void officialItemRechargingConditionUsesAttackCooldown() {
+        Player player = mock(Player.class);
+        when(player.getAttackCooldown()).thenReturn(0.75f);
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("item-recharging").create(List.of()).test(context));
+        when(player.getAttackCooldown()).thenReturn(1.0f);
+        assertFalse(extraFactory("item-recharging").create(List.of()).test(context));
+        assertFalse(extraFactory("item-recharging").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("ItemType 复用 Item trigger 材质语义")
+    void officialItemTypeConditionUsesItemTrigger() {
+        var item = mock(org.bukkit.entity.Item.class);
+        var stack = mock(org.bukkit.inventory.ItemStack.class);
+        when(item.getItemStack()).thenReturn(stack);
+        when(stack.getType()).thenReturn(org.bukkit.Material.STONE);
+        var context = BehaviorContext.continueExecution(null, (LivingEntity) null,
+                1.0, -1, 0, "on-item-pickup", null, item, List.of(), null, null);
+        assertTrue(extraFactory("trigger-item-type").create(List.of("STONE")).test(context));
+        assertTrue(extraFactory("trigger-item-type").create(List.of("STONE")).test(context));
+        assertFalse(extraFactory("trigger-item-type").create(List.of("DIRT")).test(context));
+    }
+
+    @Test
+    @DisplayName("Moist/MoistureLevel 只读取目标方块的 Farmland moisture")
+    void officialMoistureConditionsUseFarmlandData() {
+        World world = mock(World.class);
+        Block block = mock(Block.class);
+        Farmland farmland = mock(Farmland.class);
+        when(world.getBlockAt(0, 0, 0)).thenReturn(block);
+        when(world.getBlockAt(any(Location.class))).thenReturn(block);
+        when(block.getBlockData()).thenReturn(farmland);
+        when(farmland.getMoisture()).thenReturn(7);
+        var location = new Location(world, 0.5, 0, 0.5);
+        var context = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "IDLE", null, null, List.of(), location);
+
+        assertTrue(extraFactory("moist").create(List.of()).test(context));
+        assertTrue(extraFactory("moisture-level").create(List.of("1to7")).test(context));
+        assertFalse(extraFactory("moisture-level").create(List.of("0")).test(context));
+
+        when(farmland.getMoisture()).thenReturn(0);
+        assertFalse(extraFactory("moist").create(List.of()).test(context));
+        assertTrue(extraFactory("moisture-level").create(List.of("0")).test(context));
+
+        when(block.getBlockData()).thenReturn(mock(BlockData.class));
+        assertFalse(extraFactory("moist").create(List.of()).test(context));
+        assertFalse(extraFactory("moisture-level").create(List.of(">=0")).test(context));
+    }
+
+    @Test
+    @DisplayName("MobSize 只匹配可调整大小的 Slime、MagmaCube 或 Phantom")
+    void officialMobSizeConditionUsesSupportedEntities() {
+        var slime = mock(org.bukkit.entity.Slime.class);
+        when(slime.getSize()).thenReturn(4);
+        var context = BehaviorContext.of(null, slime, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("mob-size").create(List.of(">3")).test(context));
+        assertTrue(extraFactory("mob-size").create(List.of("4to5")).test(context));
+        assertFalse(extraFactory("mob-size").create(List.of("5")).test(context));
+
+        var phantom = mock(org.bukkit.entity.Phantom.class);
+        when(phantom.getSize()).thenReturn(2);
+        var phantomContext = BehaviorContext.of(null, phantom, 1.0, -1, 0, "IDLE");
+        assertTrue(extraFactory("mob-size").create(List.of("2")).test(phantomContext));
+        assertFalse(extraFactory("mob-size").create(List.of("1")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("IsWaterMob/IsZombie 使用 Bukkit 类型并失败关闭")
+    void officialEntityTypeConditionsUseBukkitTypes() {
+        var waterMob = mock(org.bukkit.entity.WaterMob.class);
+        var zombie = mock(org.bukkit.entity.Zombie.class);
+        var waterContext = BehaviorContext.of(null, waterMob, 1.0, -1, 0, "IDLE");
+        var zombieContext = BehaviorContext.of(null, zombie, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("is-water-mob").create(List.of()).test(waterContext));
+        assertFalse(extraFactory("is-water-mob").create(List.of()).test(zombieContext));
+        assertTrue(extraFactory("is-zombie").create(List.of()).test(zombieContext));
+        assertFalse(extraFactory("is-zombie").create(List.of()).test(waterContext));
+        assertFalse(extraFactory("is-water-mob").create(List.of()).test(ctx()));
+        assertFalse(extraFactory("is-zombie").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("Aerial 匹配目标实体的离地状态")
+    void officialAerialConditionUsesTargetGroundState() {
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.isOnGround()).thenReturn(false);
+        var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("aerial").create(List.of()).test(context));
+        when(target.isOnGround()).thenReturn(true);
+        assertFalse(extraFactory("aerial").create(List.of()).test(context));
+        assertFalse(extraFactory("aerial").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("IsEnderman 使用 Bukkit Enderman 类型并失败关闭")
+    void officialEndermanConditionUsesBukkitType() {
+        var enderman = mock(org.bukkit.entity.Enderman.class);
+        var zombie = mock(org.bukkit.entity.Zombie.class);
+        assertTrue(extraFactory("is-enderman").create(List.of()).test(
+                BehaviorContext.of(null, enderman, 1.0, -1, 0, "IDLE")));
+        assertFalse(extraFactory("is-enderman").create(List.of()).test(
+                BehaviorContext.of(null, zombie, 1.0, -1, 0, "IDLE")));
+        assertFalse(extraFactory("is-enderman").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("HasEnchantment 匹配装备槽附魔与等级范围")
+    void officialHasEnchantmentConditionMatchesEquipment() {
+        LivingEntity target = mock(LivingEntity.class);
+        org.bukkit.inventory.EntityEquipment equipment = mock(org.bukkit.inventory.EntityEquipment.class);
+        when(target.getEquipment()).thenReturn(equipment);
+        when(equipment.getItemInMainHand()).thenReturn(null);
+        when(equipment.getItemInOffHand()).thenReturn(null);
+        when(equipment.getHelmet()).thenReturn(null);
+        when(equipment.getChestplate()).thenReturn(null);
+        when(equipment.getLeggings()).thenReturn(null);
+        when(equipment.getBoots()).thenReturn(null);
+        var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        assertFalse(extraFactory("has-enchantment").create(List.of("SHARPNESS", ">2")).test(context));
+        assertFalse(extraFactory("has-enchantment").create(List.of("ANY", "3")).test(context));
+        assertFalse(extraFactory("has-enchantment").create(List.of("LOOTING", ">0")).test(context));
+        assertFalse(extraFactory("has-enchantment").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("HasDialogOpen 读取宿主对话运行状态并失败关闭")
+    void officialHasDialogOpenConditionUsesDialogueLookup() {
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(42);
+        BehaviorContext context = BehaviorContext.of(instance, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+        try {
+            SkillExtras.dialogueLookup(id -> id == 42);
+            assertTrue(extraFactory("has-dialog-open").create(List.of()).test(context));
+            Player player = mock(Player.class);
+            BehaviorContext playerContext = BehaviorContext.of(instance, player,
+                    1.0, -1, 0, "IDLE");
+            assertTrue(extraFactory("is-in-cinematic").create(List.of()).test(playerContext));
+            SkillExtras.dialogueLookup(id -> false);
+            assertFalse(extraFactory("has-dialog-open").create(List.of()).test(context));
+            assertFalse(extraFactory("is-in-cinematic").create(List.of()).test(playerContext));
+            assertFalse(extraFactory("has-dialog-open").create(List.of()).test(ctx()));
+        } finally {
+            SkillExtras.dialogueLookup(null);
+        }
+    }
+
+    @Test
+    @DisplayName("Color 匹配 Bukkit 颜色与实体变体")
+    void officialColorConditionMatchesSupportedEntities() {
+        var sheep = mock(org.bukkit.entity.Sheep.class);
+        when(sheep.getColor()).thenReturn(org.bukkit.DyeColor.RED);
+        var sheepContext = BehaviorContext.of(null, sheep, 1.0, -1, 0, "IDLE");
+        assertTrue(extraFactory("color").create(List.of("RED")).test(sheepContext));
+        assertFalse(extraFactory("color").create(List.of("BLUE")).test(sheepContext));
+
+        var cat = mock(org.bukkit.entity.Cat.class);
+        when(cat.getCatType()).thenReturn(null);
+        var catContext = BehaviorContext.of(null, cat, 1.0, -1, 0, "IDLE");
+        assertFalse(extraFactory("color").create(List.of("TABBY")).test(catContext));
+        assertFalse(extraFactory("color").create(List.of("RED")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("MaterialIsOnCooldown 读取目标玩家 Bukkit 冷却状态")
+    void officialMaterialCooldownConditionReadsPlayerCooldown() {
+        Player player = mock(Player.class);
+        when(player.hasCooldown(org.bukkit.Material.ENDER_PEARL)).thenReturn(true);
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+        assertTrue(extraFactory("material-on-cooldown").create(List.of()).test(context));
+        assertTrue(extraFactory("material-on-cooldown").create(List.of("ENDER_PEARL")).test(context));
+        assertFalse(extraFactory("material-on-cooldown").create(List.of("DIAMOND")).test(context));
+        assertFalse(extraFactory("material-on-cooldown").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("PlayerKills 读取注入的实例累计玩家击杀数")
+    void officialPlayerKillsConditionUsesInstanceCounter() {
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(7);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+        var counter = new PlayerKillCount();
+        try {
+            SkillExtras.playerKillCount(counter);
+            assertTrue(extraFactory("player-kills").create(List.of("0")).test(context));
+            counter.record(7);
+            counter.record(7);
+            assertTrue(extraFactory("player-kills").create(List.of(">=2")).test(context));
+            assertFalse(extraFactory("player-kills").create(List.of(">2")).test(context));
+            assertFalse(extraFactory("player-kills").create(List.of(">=1")).test(ctx()));
+        } finally {
+            SkillExtras.playerKillCount(null);
+        }
+    }
+
+    @Test
+    @DisplayName("Absorption 读取 Bukkit 吸收生命值并支持比较符")
+    void officialAbsorptionConditionReadsBukkitAmount() {
+        LivingEntity entity = mock(LivingEntity.class);
+        when(entity.getAbsorptionAmount()).thenReturn(4.0);
+        var context = BehaviorContext.of(null, entity, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("absorption").create(List.of(">=4")).test(context));
+        assertTrue(extraFactory("absorption").create(List.of("=4")).test(context));
+        assertFalse(extraFactory("absorption").create(List.of(">4")).test(context));
+        assertFalse(extraFactory("absorption").create(List.of(">0")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("Level 无管理实例时 fail-closed")
+    void officialLevelConditionRequiresManagedInstance() {
+        assertFalse(extraFactory("level").create(List.of(">=1")).test(ctx()));
+        assertFalse(extraFactory("level").create(List.of("1to3")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("IsFrozen 读取 Paper Entity.isFrozen")
+    void officialIsFrozenConditionReadsEntityState() {
+        LivingEntity entity = mock(LivingEntity.class);
+        when(entity.isFrozen()).thenReturn(true);
+        var context = BehaviorContext.of(null, entity, 1.0, -1, 0, "IDLE");
+        assertTrue(extraFactory("is-frozen").create(List.of()).test(context));
+        when(entity.isFrozen()).thenReturn(false);
+        assertFalse(extraFactory("is-frozen").create(List.of()).test(context));
+    }
+
+    @Test
+    @DisplayName("MythicMobType 无管理实例时 fail-closed")
+    void officialMythicMobTypeConditionRequiresManagedInstance() {
+        assertFalse(extraFactory("mythic-mob-type").create(List.of("example/emberling")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("LunarPhase 使用世界 fullTime 的八日周期")
+    void officialLunarPhaseConditionUsesWorldFullTime() {
+        World world = mock(World.class);
+        when(world.getFullTime()).thenReturn(9L * 24_000L);
+        Location location = new Location(world, 0, 64, 0);
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(location);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("lunar-phase").create(List.of("1")).test(context));
+        assertTrue(extraFactory("lunar-phase").create(List.of("0,1,2")).test(context));
+        assertFalse(extraFactory("lunar-phase").create(List.of("2")).test(context));
+    }
+
+    @Test
+    @DisplayName("LastSignal 读取实例最近收到的信号")
+    void officialLastSignalConditionReadsManagedInstanceState() {
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(91);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+        try {
+            SkillExtras.rememberSignal(91, "phase2");
+            assertTrue(extraFactory("last-signal").create(List.of("phase2")).test(context));
+            assertFalse(extraFactory("last-signal").create(List.of("phase1")).test(context));
+            assertFalse(extraFactory("last-signal").create(List.of("phase2")).test(ctx()));
+        } finally {
+            SkillExtras.forget(91);
+        }
+    }
+
+    @Test
+    @DisplayName("ProjectileHasEnded 读取命中事件记录")
+    void officialProjectileHasEndedConditionReadsHitState() {
+        var projectile = mock(org.bukkit.entity.Projectile.class);
+        when(projectile.isValid()).thenReturn(true);
+        when(projectile.isDead()).thenReturn(false);
+        when(projectile.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        var context = BehaviorContext.continueExecution(null, (LivingEntity) null,
+                1.0, -1, 0, "on-projectile-hit", null, projectile, List.of(), null, null);
+        try {
+            assertFalse(extraFactory("projectile-has-ended").create(List.of()).test(context));
+            SkillExtras.rememberProjectileEnded(projectile);
+            assertTrue(extraFactory("projectile-has-ended").create(List.of()).test(context));
+        } finally {
+            SkillExtras.resetRuntimeHooks();
+        }
+    }
+
+    @Test
+    @DisplayName("HasPotionEffect 匹配 Bukkit 效果、等级和持续时间范围")
+    void officialHasPotionEffectConditionMatchesDetails() {
+        LivingEntity entity = mock(LivingEntity.class);
+        var effect = mock(org.bukkit.potion.PotionEffect.class);
+        when(effect.getType()).thenReturn(null);
+        when(effect.getAmplifier()).thenReturn(2);
+        when(effect.getDuration()).thenReturn(120);
+        when(entity.getActivePotionEffects()).thenReturn(List.of(effect));
+        var context = BehaviorContext.of(null, entity, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("has-potion-effect").create(List.of("ANY", ">=2"))
+                .test(context));
+        assertTrue(extraFactory("has-potion-effect").create(List.of("ANY", "2", "100to130"))
+                .test(context));
+        assertFalse(extraFactory("has-potion-effect").create(List.of("SPEED", ">3"))
+                .test(context));
+    }
+
+    @Test
+    @DisplayName("HasAuraStacks 将 Bukkit amplifier 转为 1-based stack 范围")
+    void officialHasAuraStacksConditionMatchesOneBasedAmplifier() {
+        LivingEntity entity = mock(LivingEntity.class);
+        var effect = mock(org.bukkit.potion.PotionEffect.class);
+        when(effect.getType()).thenReturn(null);
+        when(effect.getAmplifier()).thenReturn(2);
+        when(entity.getActivePotionEffects()).thenReturn(List.of(effect));
+        var context = BehaviorContext.of(null, entity, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("has-aura-stacks").create(List.of("ANY", ">=3")).test(context));
+        assertTrue(extraFactory("has-aura-stacks").create(List.of("ANY", "3")).test(context));
+        assertFalse(extraFactory("has-aura-stacks").create(List.of("ANY", ">3")).test(context));
+    }
+
+    @Test
+    @DisplayName("TriggerItemType 匹配 trigger Item 的 Bukkit 材质")
+    void officialTriggerItemTypeConditionReadsTriggerItem() {
+        var item = mock(org.bukkit.entity.Item.class);
+        var stack = mock(org.bukkit.inventory.ItemStack.class);
+        when(item.getItemStack()).thenReturn(stack);
+        when(stack.getType()).thenReturn(org.bukkit.Material.STONE);
+        var context = BehaviorContext.continueExecution(null, (LivingEntity) null,
+                1.0, -1, 0, "on-item-pickup", null, item, List.of(), null, null);
+        assertTrue(extraFactory("trigger-item-type").create(List.of("STONE,DIRT")).test(context));
+        assertFalse(extraFactory("trigger-item-type").create(List.of("DIAMOND")).test(context));
+        assertFalse(extraFactory("trigger-item-type").create(List.of("STONE")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("TriggerBlockType 匹配 block trigger 的 origin 方块")
+    void officialTriggerBlockTypeConditionReadsOriginBlock() {
+        World world = mock(World.class);
+        Block block = mock(Block.class);
+        when(world.getBlockAt(any(Location.class))).thenReturn(block);
+        when(block.getType()).thenReturn(org.bukkit.Material.STONE);
+        Location origin = new Location(world, 0, 0, 0);
+        LivingEntity target = mock(LivingEntity.class);
+        var context = BehaviorContext.continueExecution(null, target, 1.0, -1, 0,
+                "on-block-break", null, target, List.of(target), origin, null);
+        assertTrue(extraFactory("trigger-block-type").create(List.of("STONE,DIRT")).test(context));
+        assertFalse(extraFactory("trigger-block-type").create(List.of("DIAMOND")).test(context));
+        var wrongState = BehaviorContext.continueExecution(null, target, 1.0, -1, 0,
+                "on-damage", null, target, List.of(target), origin, null);
+        assertFalse(extraFactory("trigger-block-type").create(List.of("STONE")).test(wrongState));
+    }
+
+    @Test
+    @DisplayName("DamageAmount 读取 damage event 的 final damage，并在无事件时失败关闭")
+    void officialDamageAmountConditionUsesDamageEvent() {
+        LivingEntity target = mock(LivingEntity.class);
+        var event = mock(org.bukkit.event.entity.EntityDamageEvent.class);
+        when(event.getFinalDamage()).thenReturn(5.0);
+        var context = BehaviorContext.continueExecution(null, target, 1.0, -1, 0,
+                "on-damage", null, target, List.of(target), null, null, event);
+
+        assertTrue(extraFactory("damage-amount").create(List.of(">=5")).test(context));
+        assertFalse(extraFactory("damage-amount").create(List.of(">5")).test(context));
+        assertTrue(extraFactory("damage-amount").create(List.of()).test(context));
+        assertFalse(extraFactory("damage-amount").create(List.of(">0")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("Owner 匹配 caster 的 Bukkit 或 Helstera owner，不回退到 target")
+    void officialOwnerConditionMatchesCasterOwner() {
+        var instance = mock(ModelInstance.class);
+        var caster = mock(org.bukkit.entity.Tameable.class);
+        var owner = mock(Player.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        var id = java.util.UUID.randomUUID();
+        when(owner.getUniqueId()).thenReturn(id);
+        when(caster.getOwner()).thenReturn(owner);
+        when(caster.getOwnerUniqueId()).thenReturn(id);
+        var context = BehaviorContext.of(instance, owner, 1.0, 0, 0, "IDLE");
+
+        assertTrue(extraFactory("is-owner").create(List.of()).test(context));
+        assertFalse(extraFactory("is-owner").create(List.of()).test(
+                BehaviorContext.of(instance, mock(Player.class), 1.0, 0, 0, "IDLE")));
+    }
+
+    @Test
+    @DisplayName("BlockTypeInRadius 统计球形范围内的精确 Bukkit 材质")
+    void officialBlockTypeInRadiusConditionCountsBlocks() {
+        World world = mock(World.class);
+        Block block = mock(Block.class);
+        when(world.getMinHeight()).thenReturn(0);
+        when(world.getMaxHeight()).thenReturn(1);
+        when(world.getBlockAt(0, 0, 0)).thenReturn(block);
+        when(block.getType()).thenReturn(org.bukkit.Material.STONE);
+        var location = new Location(world, 0.5, 0.5, 0.5);
+        var context = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "IDLE", null, null, List.of(), location);
+
+        assertTrue(extraFactory("block-type-in-radius").create(
+                List.of("STONE", ">0", "0")).test(context));
+        assertFalse(extraFactory("block-type-in-radius").create(
+                List.of("DIRT", ">0", "0")).test(context));
+        assertFalse(extraFactory("block-type-in-radius").create(
+                List.of("#minecraft:stone", ">0", "1")).test(context));
+    }
+
+    @Test
+    @DisplayName("Children 无 caster 时失败关闭并支持默认/范围工厂")
+    void officialChildrenConditionRequiresCaster() {
+        assertFalse(extraFactory("children").create(List.of()).test(ctx()));
+        assertFalse(extraFactory("children").create(List.of(">=1")).test(ctx()));
+        assertNotNull(extraFactory("children").create(List.of("1")));
+    }
+
+    @Test
+    @DisplayName("Inside/Outside 无位置上下文时失败关闭")
+    void officialInsideOutsideConditionsFailClosed() {
+        assertFalse(extraFactory("inside").create(List.of()).test(ctx()));
+        assertFalse(extraFactory("outside").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("FallSpeed 匹配向下速度正值，不把上升速度当下落")
+    void officialFallSpeedConditionUsesDownwardVelocity() {
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector(0, -0.5, 0));
+        var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+        assertTrue(extraFactory("fall-speed").create(List.of("0.4to0.6")).test(context));
+        when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector(0, 0.5, 0));
+        assertTrue(extraFactory("fall-speed").create(List.of("0")).test(context));
+        assertFalse(extraFactory("fall-speed").create(List.of(">0.1")).test(context));
+    }
+
+    @Test
+    @DisplayName("EnchantingLevel/Experience 只读取显式目标玩家")
+    void officialEnchantingConditionsUsePlayerTarget() {
+        Player player = mock(Player.class);
+        when(player.getLevel()).thenReturn(7);
+        when(player.getExp()).thenReturn(0.25f);
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("enchanting-level").create(List.of(">=7")).test(context));
+        assertTrue(extraFactory("enchanting-experience").create(List.of(">=0.2")).test(context));
+        assertFalse(extraFactory("enchanting-level").create(List.of(">8")).test(context));
+        assertFalse(extraFactory("enchanting-experience").create(List.of(">0.3")).test(context));
+        assertFalse(extraFactory("enchanting-level").create(List.of(">=0")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("DirectionalVelocity 支持具名轴、绝对值和可选分量")
+    void officialDirectionalVelocityConditionUsesNamedAxes() {
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector(0.25, -0.5, 0.75));
+        var location = mock(org.bukkit.Location.class);
+        when(location.getDirection()).thenReturn(new org.bukkit.util.Vector(0, 0, 1));
+        when(target.getLocation()).thenReturn(location);
+        var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("directional-velocity").create(
+                List.of("x=>=0.2", "y=<0", "z=>=0.7")).test(context));
+        assertTrue(extraFactory("directional-velocity").create(
+                List.of("y=>=0.4", "absy=true")).test(context));
+        assertFalse(extraFactory("directional-velocity").create(
+                List.of("x=>=0.3")).test(context));
+    }
+
+    @Test
+    @DisplayName("FieldOfView 使用 caster 朝向、总角度和 rotation")
+    void officialFieldOfViewConditionUsesViewCone() {
+        var instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        LivingEntity target = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.getLocation()).thenReturn(new org.bukkit.Location(null, 0, 0, 0, 0, 0));
+        when(target.getLocation()).thenReturn(new org.bukkit.Location(null, 0, 0, 10));
+        var context = BehaviorContext.of(instance, target, 1.0, 10, 0, "IDLE");
+
+        assertTrue(extraFactory("field-of-view").create(List.of("90", "0")).test(context));
+        when(target.getLocation()).thenReturn(new org.bukkit.Location(null, 10, 0, 0));
+        assertFalse(extraFactory("field-of-view").create(List.of("90", "0")).test(context));
+        assertTrue(extraFactory("field-of-view").create(List.of("90", "90")).test(context));
+    }
+
+    @Test
+    @DisplayName("DistanceFromLocation 只读取显式 target 的位置")
+    void officialDistanceFromLocationConditionUsesTargetPosition() {
+        var world = mock(org.bukkit.World.class);
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getLocation()).thenReturn(new org.bukkit.Location(world, 3, 4, 0));
+        var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("distance-from-location").create(
+                List.of("x=0", "y=0", "z=0", "distance=5")).test(context));
+        assertTrue(extraFactory("distance-from-location").create(
+                List.of("x=0", "y=0", "z=0", "distance=<6")).test(context));
+        assertFalse(extraFactory("distance-from-location").create(
+                List.of("x=0", "y=0", "z=0", "distance=<4")).test(context));
+        assertFalse(extraFactory("distance-from-location").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("XDiff/YDiff/ZDiff 匹配目标与 caster 的坐标差")
+    void officialCoordinateDifferenceConditionsUseCasterAndTargetLocations() {
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity target = mock(LivingEntity.class);
+        World world = mock(World.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(new Location(world, 10, 20, 30));
+        when(target.getLocation()).thenReturn(new Location(world, 13, 18, 31));
+        var context = BehaviorContext.of(instance, target, 1.0, 3, 0, "IDLE");
+        assertTrue(extraFactory("x-diff").create(List.of("2to4")).test(context));
+        assertTrue(extraFactory("y-diff").create(List.of("-3to-1")).test(context));
+        assertTrue(extraFactory("z-diff").create(List.of("1")).test(context));
+        assertFalse(extraFactory("x-diff").create(List.of(">4")).test(context));
+        assertFalse(extraFactory("x-diff").create(List.of("3")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("OriginLocation 匹配上下文 origin 的方块或精确坐标")
+    void officialOriginLocationConditionUsesContextOrigin() {
+        World world = mock(World.class);
+        Location origin = new Location(world, 10.25, 20.5, 30.75);
+        var context = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "IDLE", null, null, List.of(), origin);
+        assertTrue(extraFactory("origin-location").create(List.of("x=10", "y=20", "z=30")).test(context));
+        assertTrue(extraFactory("origin-location").create(List.of("loc=10.25,20.5,30.75", "exact=true"))
+                .test(context));
+        assertFalse(extraFactory("origin-location").create(List.of("loc=11,20,30")).test(context));
+        assertFalse(extraFactory("origin-location").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("Cuboid/InBounds 使用目标位置、相对坐标和球/柱体几何")
+    void officialBoundsConditionsUseGeometry() {
+        World world = mock(World.class);
+        Location origin = new Location(world, 0, 64, 0);
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getLocation()).thenReturn(new Location(world, 2, 65, 2));
+        var context = BehaviorContext.continueExecution(null, target, 1.0, 1.0, 0,
+                "IDLE", null, null, List.of(target), origin, null);
+
+        assertTrue(extraFactory("cuboid").create(List.of("0,64,0", "4,70,4")).test(context));
+        assertTrue(extraFactory("cuboid").create(List.of("-2,0,-2", "2,2,2", "true")).test(context));
+        assertFalse(extraFactory("cuboid").create(List.of("10,64,10", "12,70,12")).test(context));
+        assertTrue(extraFactory("in-bounds").create(List.of(
+                "shape=sphere", "location=0,64,0", "radius=5")).test(context));
+        assertTrue(extraFactory("in-bounds").create(List.of(
+                "shape=cylinder", "location=0,64,0", "radius=3", "height=2")).test(context));
+        assertFalse(extraFactory("in-bounds").create(List.of(
+                "shape=unknown", "location=0,64,0", "radius=5")).test(context));
+    }
+
+    @Test
+    @DisplayName("SpawnReason 匹配目标实体的 Bukkit 生成原因并失败关闭")
+    void officialSpawnReasonConditionUsesEntitySpawnReason() {
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getEntitySpawnReason())
+                .thenReturn(org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.RAID);
+        var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("spawn-reason").create(List.of("RAID")).test(context));
+        assertTrue(extraFactory("spawn-reason").create(List.of("r=raid")).test(context));
+        assertFalse(extraFactory("spawn-reason").create(List.of("NATURAL")).test(context));
+        assertFalse(extraFactory("spawn-reason").create(List.of()).test(context));
+        assertFalse(extraFactory("spawn-reason").create(List.of("not-a-reason")).test(context));
+        assertFalse(extraFactory("spawn-reason").create(List.of("RAID")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("official world-time and light-source conditions fail closed without a context")
+    void officialWorldTimeAndLightConditionsAreRegistered() {
+        assertFalse(extraFactory("world-time").create(List.of("0to6000")).test(ctx()));
+        assertFalse(extraFactory("sky-light-level").create(List.of(">=0")).test(ctx()));
+        assertFalse(extraFactory("light-level-from-blocks").create(List.of(">=0")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("official block and biome type conditions fail closed without a context")
+    void officialBlockAndBiomeConditionsAreRegistered() {
+        assertFalse(extraFactory("block-type-is").create(List.of("STONE")).test(ctx()));
+        assertFalse(extraFactory("biome-type-is").create(List.of("plains", "true")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("official server and survival conditions are registered and fail closed without a target")
+    void officialServerAndSurvivalConditionsAreRegistered() {
+        assertFalse(extraFactory("is-in-survival-mode").create(List.of()).test(ctx()));
+        assertNotNull(extraFactory("server-is-paper").create(List.of()));
+        assertFalse(extraFactory("plugin").create(List.of("__missing_plugin__")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("spyglass condition reads a target player's active item")
+    void officialSpyglassConditionReadsActiveItem() {
+        Player player = mock(Player.class);
+        org.bukkit.inventory.ItemStack item = mock(org.bukkit.inventory.ItemStack.class);
+        when(player.hasActiveItem()).thenReturn(true);
+        when(player.getActiveItem()).thenReturn(item);
+        when(item.getType()).thenReturn(org.bukkit.Material.SPYGLASS);
+        BehaviorContext context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+        assertTrue(extraFactory("is-using-spyglass").create(List.of()).test(context));
+        when(item.getType()).thenReturn(org.bukkit.Material.SHIELD);
+        assertFalse(extraFactory("is-using-spyglass").create(List.of()).test(context));
+    }
+
+    @Test
+    @DisplayName("is-mythic-mob recognizes the managed caster and rejects an empty context")
+    void officialMythicMobConditionUsesManagedInstance() {
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        BehaviorContext managed = BehaviorContext.of(instance, caster, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("is-mythic-mob").create(List.of()).test(managed));
+        assertFalse(extraFactory("is-mythic-mob").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("mobs-near-origin fails closed without an execution origin")
+    void officialMobsNearOriginConditionIsRegistered() {
+        assertFalse(extraFactory("mobs-near-origin").create(List.of(">=1", "5", "ZOMBIE")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("official server version conditions are registered")
+    void officialServerVersionConditionsAreRegistered() {
+        assertNotNull(extraFactory("server-version").create(List.of("1.21.11")));
+        assertNotNull(extraFactory("server-version-after-or-equal").create(List.of("1.21.1", "true")));
+        assertNotNull(extraFactory("server-version-before").create(List.of("1.22", "true")));
+    }
+
+    @Test
+    @DisplayName("raider patrol leader condition is registered and fails closed without a raider")
+    void officialRaiderPatrolLeaderConditionIsRegistered() {
+        assertFalse(extraFactory("is-raider-patrol-leader").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("bounding-box overlap is registered and fails closed without an instance")
+    void officialBoundingBoxConditionIsRegistered() {
+        assertFalse(extraFactory("bounding-boxes-overlap").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("creeper primed condition is registered and fails closed without a creeper")
+    void officialCreeperPrimedConditionIsRegistered() {
+        assertFalse(extraFactory("is-creeper-primed").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("distance-from-spawn fails closed without a location")
+    void officialDistanceFromSpawnConditionIsRegistered() {
+        assertFalse(extraFactory("distance-from-spawn").create(List.of("<100")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("ender dragon alive condition fails closed without a world context")
+    void officialEnderDragonAliveConditionIsRegistered() {
+        assertFalse(extraFactory("ender-dragon-alive").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("ender dragon phase condition is registered and fails closed without a dragon")
+    void officialEnderDragonPhaseConditionIsRegistered() {
+        assertFalse(extraFactory("ender-dragon-phase").create(List.of("CIRCLING")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("altitude condition fails closed without a world location")
+    void officialAltitudeConditionIsRegistered() {
+        assertFalse(extraFactory("altitude").create(List.of(">=0", "30")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("vehicle-is-dead fails closed without a mounted caster")
+    void officialVehicleIsDeadConditionIsRegistered() {
+        assertFalse(extraFactory("vehicle-is-dead").create(List.of()).test(ctx()));
     }
 }

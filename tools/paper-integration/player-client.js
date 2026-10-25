@@ -21,7 +21,8 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`Invalid Paper port: ${rawPort}`);
 }
 
-const bot = mineflayer.createBot({ host, port, username: 'HelsteraTester', version: '1.21.1' });
+const version = process.env.PAPER_MINEFLAYER_VERSION || '1.21.1';
+const bot = mineflayer.createBot({ host, port, username: 'HelsteraTester', version });
 clientPacket(bot);
 const rawWrite = bot._client.write.bind(bot._client);
 bot._client.write = (name, data) => {

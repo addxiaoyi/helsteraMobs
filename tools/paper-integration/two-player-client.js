@@ -6,8 +6,9 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`Invalid Paper port: ${rawPort}`);
 }
 
+const version = process.env.PAPER_MINEFLAYER_VERSION || '1.21.1';
 const bots = ['HelsteraTester', 'AudienceGuest'].map(username =>
-  mineflayer.createBot({ host, port, username, version: '1.21.1' }));
+  mineflayer.createBot({ host, port, username, version }));
 let ready = 0;
 for (const bot of bots) {
   bot.once('spawn', () => {

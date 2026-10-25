@@ -8,6 +8,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SpawnOptionsTest {
     @Test
+    void interactionDefaultsOnAndCanBeDisabled() {
+        var options = SpawnOptions.defaults();
+        assertTrue(options.interactable());
+        assertFalse(options.interactable(false).interactable());
+    }
+
+    @Test
     void slimeSplitPreventionDefaultsOffAndCanBeEnabled() {
         var options = SpawnOptions.defaults();
         assertFalse(options.preventSlimeSplit());
@@ -19,6 +26,20 @@ class SpawnOptionsTest {
         var options = SpawnOptions.defaults();
         assertFalse(options.preventStingerLoss());
         assertTrue(options.preventStingerLoss(true).preventStingerLoss());
+    }
+
+    @Test
+    void silverfishBlockInfectionPreventionDefaultsOffAndCanBeEnabled() {
+        var options = SpawnOptions.defaults();
+        assertFalse(options.preventBlockInfection());
+        assertTrue(options.preventBlockInfection(true).preventBlockInfection());
+    }
+
+    @Test
+    void snowFormationPreventionDefaultsOffAndCanBeEnabled() {
+        var options = SpawnOptions.defaults();
+        assertFalse(options.preventSnowFormation());
+        assertTrue(options.preventSnowFormation(true).preventSnowFormation());
     }
 
     @Test

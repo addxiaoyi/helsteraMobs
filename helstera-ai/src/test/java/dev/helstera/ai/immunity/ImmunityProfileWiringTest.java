@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.StringReader;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -38,6 +39,17 @@ class ImmunityProfileWiringTest {
         assertEquals(0.0, t.evaluate("LAVA", 10.0).damage(), 1e-9);
         assertEquals(0.0, t.evaluate("SUFFOCATION", 10.0).damage(), 1e-9,
                 "DROWNING 类别含 SUFFOCATION/CRAMMING");
+    }
+
+    @Test
+    @DisplayName("scalar immunities accept Mythic delimiters")
+    void scalarDelimitedImmunitiesParsed() {
+        AiProfile p = profile("immunities: FIRE,LAVA|DROWNING\n");
+        var t = p.immunityTable();
+        assertEquals(3, t.size());
+        assertTrue(t.evaluate("FIRE", 10.0).matched());
+        assertTrue(t.evaluate("LAVA", 10.0).matched());
+        assertTrue(t.evaluate("DROWNING", 10.0).matched());
     }
 
     @Test
@@ -76,6 +88,22 @@ class ImmunityProfileWiringTest {
         var t = p.immunityTable();
         assertEquals(1.0, t.evaluate("PROJECTILE", 10.0).damage(), 1e-9);
         assertEquals(0.0, t.evaluate("MAGIC", 10.0).damage(), 1e-9);
+    }
+
+    @Test
+    @DisplayName("scalar conditional modifier keeps multiple conditions and range commas")
+    void scalarConditionalModifier() {
+        AiProfile p = profile("""
+                damage-modifiers:
+                  fire:
+                    multiplier: 0.5
+                    conditions: "health-above 0.3|time-between=0,12000"
+                """);
+        var t = p.immunityTable();
+        assertEquals(List.of("health-above 0.3", "time-between=0,12000"),
+                t.rules().get(0).conditions());
+        assertTrue(t.evaluate("FIRE", 10.0, ignored -> true).matched());
+        assertFalse(t.evaluate("FIRE", 10.0, ignored -> false).matched());
     }
 
     @Test

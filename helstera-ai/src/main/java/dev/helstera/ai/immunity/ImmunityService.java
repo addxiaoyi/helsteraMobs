@@ -1,5 +1,7 @@
 package dev.helstera.ai.immunity;
 
+import dev.helstera.api.util.ConditionListParser;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -429,10 +431,10 @@ public final class ImmunityService {
             // 裸列表；也兼容「只写一条时退化成字符串」——此时 getStringList 返回空，
             // 写了一条却静默失效且无任何报错
             if (immRaw instanceof String one) {
-                rows.add(Row.immune(one));
+                addDelimitedImmunities(rows, one);
             } else {
                 for (String name : root.getStringList("immunities")) {
-                    rows.add(Row.immune(name));
+                    addDelimitedImmunities(rows, name);
                 }
             }
         }
@@ -469,6 +471,14 @@ public final class ImmunityService {
         return new Config(rows);
     }
 
+    private static void addDelimitedImmunities(List<Row> rows, String raw) {
+        if (raw == null || raw.isBlank()) return;
+        for (String value : raw.split("[,;|]")) {
+            String normalized = value.trim();
+            if (!normalized.isBlank()) rows.add(Row.immune(normalized));
+        }
+    }
+
     /**
      * 读生效条件：{@code when}（单条）与 {@code conditions}（列表）。
      *
@@ -484,10 +494,8 @@ public final class ImmunityService {
         if (c == null) return List.of();
         List<String> out = new ArrayList<>();
         String when = c.getString("when");
-        if (when != null && !when.isBlank()) out.add(when.trim());
-        for (String s : c.getStringList("conditions")) {
-            if (s != null && !s.isBlank()) out.add(s.trim());
-        }
+        if (when != null && !when.isBlank()) out.addAll(ConditionListParser.parse(when));
+        out.addAll(ConditionListParser.parse(c.get("conditions")));
         return out;
     }
 

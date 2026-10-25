@@ -9,6 +9,7 @@ ai:
     on-damage:
       require:
         - damage-cause ENTITY_ATTACK
+        - damage-amount >=2
       do:
         - set-item DIAMOND_SWORD main-hand 1
         - cancel-event

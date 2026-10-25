@@ -200,6 +200,8 @@
                     <configuration>
                         <threshold>High</threshold>
                         <effort>Max</effort>
+                        <!-- HelsteraPlugin contains the integrated runtime and Paper probes. -->
+                        <maxHeap>2048</maxHeap>
                         <failOnError>true</failOnError>
                         <excludeFilterFile>${maven.multiModuleProjectDirectory}/tools/spotbugs-exclude.xml</excludeFilterFile>
                     </configuration>

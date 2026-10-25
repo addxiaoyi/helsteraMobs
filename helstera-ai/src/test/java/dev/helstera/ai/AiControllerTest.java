@@ -42,4 +42,31 @@ class AiControllerTest {
         verify(pathfinder, atLeastOnce()).stopPathfinding();
         assertTrue(controller.nativePathStopCalls() >= 1);
     }
+
+    @Test
+    void coreMeleeSelectorEnablesChaseWithoutLegacyCanChaseFlag() {
+        ModelInstanceImpl instance = mock(ModelInstanceImpl.class);
+        Mob mob = mock(Mob.class);
+        Pathfinder pathfinder = mock(Pathfinder.class);
+        Location location = mock(Location.class);
+        AiProfile profile = new AiProfile("core-selector");
+        profile.canChase = false;
+        profile.canAttack = true;
+        profile.canPatrol = false;
+        profile.goals.add("0 meleeattack");
+        profile.targets.add("0 clear");
+
+        when(instance.entity()).thenReturn(mob);
+        when(instance.location()).thenReturn(location);
+        when(instance.isValid()).thenReturn(true);
+        when(mob.isValid()).thenReturn(true);
+        when(mob.getLocation()).thenReturn(location);
+        when(mob.getPathfinder()).thenReturn(pathfinder);
+
+        AiController controller = new AiController(instance, profile, null,
+                mock(HelsteraEventBus.class));
+        controller.tick();
+
+        assertTrue(controller.selectorDiagnostic().contains("can-chase=true"));
+    }
 }

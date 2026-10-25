@@ -2,7 +2,9 @@ package dev.helstera.ai;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.io.StringReader;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -161,5 +163,27 @@ class FactionServiceTest {
         FactionService fs = load(null, true, displays("guard", "近卫"), Map.of());
         // 闭包里没有 bandit，判定应退化为「同名才同盟」，而非全体同伙
         assertEquals(Set.of("guard"), fs.alliesOf("guard"));
+    }
+
+    @Test
+    @DisplayName("YAML faction sections preserve display names and allies")
+    void yamlFactionSectionsReadTheirOwnFields() {
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                players: guards
+                block-friendly-fire: true
+                factions:
+                  guards:
+                    display: Royal Guards
+                    allies: [kingdom]
+                  kingdom:
+                    display: Kingdom
+                """));
+        FactionService fs = new FactionService();
+        fs.load(yaml);
+
+        assertEquals("Royal Guards", fs.displayOf("guards"));
+        assertEquals("Kingdom", fs.displayOf("kingdom"));
+        assertTrue(fs.alliesOf("guards").contains("kingdom"));
+        assertTrue(fs.alliesOf("kingdom").contains("guards"));
     }
 }

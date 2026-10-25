@@ -1,10 +1,14 @@
 param(
     [int]$RunSeconds = 75,
     [switch]$Strict,
+    [switch]$Exploratory,
     [double]$RandomSpawnTolerance = 0.15
 )
 
 $ErrorActionPreference = 'Stop'
+if ($Strict -and $Exploratory) {
+    throw 'Exploratory mode cannot be combined with Strict mode.'
+}
 if ([double]::IsNaN($RandomSpawnTolerance) -or [double]::IsInfinity($RandomSpawnTolerance) -or
         $RandomSpawnTolerance -lt 0 -or $RandomSpawnTolerance -gt 1) {
     throw 'RandomSpawnTolerance must be finite and between 0 and 1.'
@@ -16,10 +20,83 @@ $serverName = if ([string]::IsNullOrWhiteSpace($env:PAPER_INTEGRATION_DIR)) {
     $env:PAPER_INTEGRATION_DIR
 }
 $server = Join-Path $repo $serverName
-$paper = Join-Path $repo 'srv-1.21.1/paper.jar'
+$paper = if ([string]::IsNullOrWhiteSpace($env:PAPER_JAR_PATH)) {
+    Join-Path $repo 'srv-1.21.1/paper.jar'
+} else {
+    [System.IO.Path]::GetFullPath($env:PAPER_JAR_PATH)
+}
 $plugin = Join-Path $repo 'helstera-plugin/target/helsteraMobs-1.0.0-full.jar'
 
-if (-not (Test-Path -LiteralPath $paper -PathType Leaf)) { throw "Paper fixture not found: $paper" }
+if (-not (Test-Path -LiteralPath $paper -PathType Leaf)) {
+    throw "Paper fixture not found: $paper (set PAPER_JAR_PATH to an existing Paper 1.21.1 server jar)"
+}
+
+function Get-PaperImplementationVersion([string]$JarPath) {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($JarPath)
+    try {
+        $entry = $archive.GetEntry('META-INF/MANIFEST.MF')
+        if ($null -ne $entry) {
+            $reader = [System.IO.StreamReader]::new($entry.Open())
+            try {
+                $manifest = $reader.ReadToEnd()
+            } finally {
+                $reader.Dispose()
+            }
+            $match = [regex]::Match($manifest, '(?m)^Implementation-Version:\s*(.+?)\s*$')
+            if ($match.Success) { return $match.Groups[1].Value.Trim() }
+        }
+
+        # Historical Paperclip jars may omit Implementation-Version but keep
+        # the authoritative Minecraft version in version.json.
+        $versionEntry = $archive.GetEntry('version.json')
+        if ($null -ne $versionEntry) {
+            $reader = [System.IO.StreamReader]::new($versionEntry.Open())
+            try {
+                $version = $reader.ReadToEnd() | ConvertFrom-Json
+                if ($null -ne $version.id -and -not [string]::IsNullOrWhiteSpace([string]$version.id)) {
+                    return [string]$version.id
+                }
+            } catch {
+                return $null
+            } finally {
+                $reader.Dispose()
+            }
+        }
+        return $null
+    } finally {
+        $archive.Dispose()
+    }
+}
+
+$paperImplementation = Get-PaperImplementationVersion $paper
+if ($Strict -and [string]::IsNullOrWhiteSpace($paperImplementation)) {
+    throw 'Paper jar has no recognizable version metadata; strict mode cannot prove the target server version'
+}
+if (-not [string]::IsNullOrWhiteSpace($paperImplementation) -and
+        $paperImplementation -notmatch '^1\.21\.1(?:-|$)') {
+    if (-not $Exploratory) {
+        throw "Paper version mismatch: $paperImplementation (expected 1.21.1; pass -Exploratory for non-release evidence)"
+    }
+    Write-Warning "Exploratory Paper run uses $paperImplementation; this run is not eligible for the 1.21.1 strict release gate."
+}
+$mineflayerVersion = $env:PAPER_MINEFLAYER_VERSION
+if ([string]::IsNullOrWhiteSpace($mineflayerVersion)) {
+    $versionMatch = [regex]::Match([string]$paperImplementation, '^(\d+\.\d+\.\d+)')
+    $mineflayerVersion = if ($versionMatch.Success) { $versionMatch.Groups[1].Value } else { '1.21.1' }
+}
+$env:PAPER_MINEFLAYER_VERSION = $mineflayerVersion
+if (-not [string]::IsNullOrWhiteSpace($env:PAPER_LIBRARIES_PATH) -and
+        -not (Test-Path -LiteralPath $env:PAPER_LIBRARIES_PATH -PathType Container)) {
+    throw "Paper libraries directory not found: $($env:PAPER_LIBRARIES_PATH)"
+}
+if (-not [string]::IsNullOrWhiteSpace($env:PAPER_LIBRARIES_PATH)) {
+    $paperApiJars = @(Get-ChildItem -LiteralPath $env:PAPER_LIBRARIES_PATH -Recurse -File -Filter 'paper-api-*.jar')
+    if ($paperApiJars.Count -gt 1) {
+        $paths = ($paperApiJars | ForEach-Object { $_.FullName }) -join ', '
+        throw "Paper libraries directory contains multiple paper-api jars; isolate one matching the server before running: $paths"
+    }
+}
 if (-not (Test-Path -LiteralPath $plugin -PathType Leaf)) { throw "Build plugin first: $plugin" }
 if (-not (Test-Path -LiteralPath $server)) { New-Item -ItemType Directory -Path $server | Out-Null }
 Copy-Item -LiteralPath $paper -Destination (Join-Path $server 'paper.jar') -Force
@@ -68,7 +145,20 @@ if (Test-Path -LiteralPath $opsPath -PathType Leaf) {
 $psi = [System.Diagnostics.ProcessStartInfo]::new()
 $psi.FileName = 'java'
 $psi.WorkingDirectory = $server
-$psi.Arguments = '-Xms1G -Xmx2G -jar paper.jar nogui'
+$runStartedUtc = [DateTime]::UtcNow
+$paperLaunch = '-Xms1G -Xmx2G -jar paper.jar nogui'
+if (-not [string]::IsNullOrWhiteSpace($env:PAPER_LIBRARIES_PATH)) {
+    $libraryJars = @(Get-ChildItem -LiteralPath $env:PAPER_LIBRARIES_PATH -Recurse -File -Filter '*.jar' |
+        ForEach-Object { $_.FullName })
+    if ($libraryJars.Count -eq 0) {
+        throw "Paper libraries directory contains no jar files: $($env:PAPER_LIBRARIES_PATH)"
+    }
+    $separator = [System.IO.Path]::PathSeparator
+    $classPathEntries = @((Join-Path $server 'paper.jar')) + $libraryJars
+    $classPath = [string]::Join($separator, [string[]]$classPathEntries)
+    $paperLaunch = '-Xms1G -Xmx2G -cp "' + $classPath + '" org.bukkit.craftbukkit.Main nogui'
+}
+$psi.Arguments = $paperLaunch
 $psi.UseShellExecute = $false
 $psi.RedirectStandardInput = $true
 $process = [System.Diagnostics.Process]::new()
@@ -108,8 +198,10 @@ try {
             $audienceOut = Join-Path $server 'audience-client.stdout.log'
             $playerOnly = $env:PAPER_MENU_WORKFLOW -ne 'true'
             $twoPlayers = $env:PAPER_TWO_PLAYER_WORKFLOW -eq 'true'
+            $rawPotion = $env:PAPER_RAW_POTION_WORKFLOW -eq 'true'
             $clientScript = if ($playerOnly) {
-                if ($twoPlayers) { Join-Path $PSScriptRoot 'two-player-client.js' }
+                if ($rawPotion) { Join-Path $PSScriptRoot 'raw-potion-client.js' }
+                elseif ($twoPlayers) { Join-Path $PSScriptRoot 'two-player-client.js' }
                 else { Join-Path $PSScriptRoot 'player-client.js' }
             } else {
                 Join-Path $PSScriptRoot 'menu-client-test.js'
@@ -124,11 +216,30 @@ try {
                 }
                 if (Select-String -LiteralPath $logPath -Pattern 'HelsteraTester joined the game' -Quiet) {
                     if ($playerOnly -and $env:PAPER_SKIP_PLAYER_POTION -ne 'true') {
-                        $process.StandardInput.WriteLine('give HelsteraTester minecraft:potion[minecraft:potion_contents={potion:"minecraft:swiftness"}] 1')
+                        $potionComponent = if ($env:PAPER_RAW_POTION_SHORT -eq 'true') {
+                            'minecraft:potion_contents={custom_effects:[{id:"minecraft:speed",duration:40,amplifier:0}]}'
+                        } else {
+                            'minecraft:potion_contents={potion:"minecraft:swiftness"}'
+                        }
+                        $process.StandardInput.WriteLine(
+                            "give HelsteraTester minecraft:potion[$potionComponent] 1")
                         $process.StandardInput.Flush()
+                        if ($rawPotion) {
+                            # The server self-test temporarily rewrites the
+                            # player's inventory. Re-arm hotbar slot 1 shortly
+                            # before the raw client sends use_item.
+                            Start-Sleep -Seconds 8
+                            $process.StandardInput.WriteLine(
+                                "item replace entity HelsteraTester hotbar.1 with minecraft:potion[$potionComponent] 1")
+                            $process.StandardInput.Flush()
+                        }
                     }
                     if (-not $playerOnly) {
                         $process.StandardInput.WriteLine('op HelsteraTester')
+                        # Keep the menu client alive while delayed server-side
+                        # self-tests exercise the same player context.
+                        $process.StandardInput.WriteLine(
+                            'effect give HelsteraTester minecraft:resistance 600 255 true')
                         $process.StandardInput.Flush()
                     }
                     break
@@ -228,8 +339,20 @@ try {
     }
 }
 if ($process.ExitCode -ne 0) { throw "Paper exited with code $($process.ExitCode)" }
+$evidenceMode = if ($Exploratory) { 'exploratory' } else { 'release' }
 & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $server `
-    -RandomSpawnTolerance $RandomSpawnTolerance
+    -EvidenceMode $evidenceMode `
+    -RandomSpawnTolerance $RandomSpawnTolerance `
+    -StartedAtUtc $runStartedUtc
 if ($Strict) {
-    & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath (Join-Path $server 'integration-report.json')
+    $strictReportPath = Join-Path $server 'integration-report.json'
+    $schemaPath = Join-Path $PSScriptRoot 'integration-report.schema.json'
+    $validatorPath = Join-Path $PSScriptRoot 'validate-report.py'
+    & python $validatorPath $schemaPath $strictReportPath
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Paper integration strict gate rejected the report JSON schema'
+    }
+    & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') `
+        -ReportPath $strictReportPath `
+        -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
 }

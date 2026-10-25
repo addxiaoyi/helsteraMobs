@@ -35,6 +35,7 @@ class SkillTriggerTest {
         assertSame(SkillTrigger.VEHICLE_ENTER, SkillTrigger.of("on-vehicle-enter"));
         assertSame(SkillTrigger.VEHICLE_EXIT, SkillTrigger.of("on-vehicle-exit"));
         assertSame(SkillTrigger.VEHICLE_DESTROY, SkillTrigger.of("on-vehicle-destroy"));
+        assertSame(SkillTrigger.KILL, SkillTrigger.of("on-kill"));
     }
 
     @Test
@@ -50,9 +51,28 @@ class SkillTriggerTest {
         assertSame(SkillTrigger.TELEPORT, SkillTrigger.of("onTeleport"));
         assertSame(SkillTrigger.BLOCK_BREAK, SkillTrigger.of("onBlockBreak"));
         assertSame(SkillTrigger.ITEM_PICKUP, SkillTrigger.of("onItemPickup"));
+        assertSame(SkillTrigger.ITEM_DROP, SkillTrigger.of("onItemDrop"));
+        assertSame(SkillTrigger.ITEM_BREAK, SkillTrigger.of("onItemBreak"));
+        assertSame(SkillTrigger.ITEM_DAMAGE, SkillTrigger.of("onItemDamage"));
+        assertSame(SkillTrigger.FISH, SkillTrigger.of("onFish"));
+        assertSame(SkillTrigger.ITEM_CONSUME, SkillTrigger.of("onConsume"));
+        assertSame(SkillTrigger.ITEM_CONSUME, SkillTrigger.of("onEat"));
+        assertSame(SkillTrigger.ITEM_CONSUME, SkillTrigger.of("on-item-consume"));
+        assertSame(SkillTrigger.INTERACT, SkillTrigger.of("eventOnInteract"));
+        assertSame(SkillTrigger.TAME, SkillTrigger.of("onTame"));
+        assertSame(SkillTrigger.BREED, SkillTrigger.of("onBreed"));
+        assertSame(SkillTrigger.WORLD_CHANGE, SkillTrigger.of("onChangeWorld"));
+        assertSame(SkillTrigger.JUMP, SkillTrigger.of("onJump"));
+        assertSame(SkillTrigger.SWING, SkillTrigger.of("onSwing"));
+        assertSame(SkillTrigger.QUIT, SkillTrigger.of("onQuit"));
+        assertSame(SkillTrigger.BED_ENTER, SkillTrigger.of("onBedEnter"));
+        assertSame(SkillTrigger.BED_LEAVE, SkillTrigger.of("onBedLeave"));
+        assertSame(SkillTrigger.UNLEASH, SkillTrigger.of("onUnleash"));
+        assertSame(SkillTrigger.TRADE, SkillTrigger.of("onTrade"));
         assertSame(SkillTrigger.ENTITY_TARGET, SkillTrigger.of("onEntityTarget"));
         assertSame(SkillTrigger.VEHICLE_ENTER, SkillTrigger.of("onVehicleEnter"));
         assertSame(SkillTrigger.VEHICLE_DESTROY, SkillTrigger.of("onVehicleDestroy"));
+        assertSame(SkillTrigger.KILL, SkillTrigger.of("onKill"));
     }
 
     @Test
@@ -61,6 +81,13 @@ class SkillTriggerTest {
         assertSame(SkillTrigger.SPAWN, SkillTrigger.of("spawn"));
         assertSame(SkillTrigger.TIMER, SkillTrigger.of("timer"));
         assertSame(SkillTrigger.DEATH, SkillTrigger.of("death"));
+        assertSame(SkillTrigger.KILL, SkillTrigger.of("kill"));
+    }
+
+    @Test
+    @DisplayName("带命名技能后缀的 Mythic 触发器键只解析前缀")
+    void ignoresMythicSkillSuffix() {
+        assertSame(SkillTrigger.SPAWN, SkillTrigger.of("~onSpawn:OpenSkill"));
     }
 
     @Test
@@ -79,6 +106,8 @@ class SkillTriggerTest {
             SkillTrigger viaIndex = SkillTrigger.byNormalized(SkillTrigger.normalizeName(t.configName()));
             assertSame(t, viaIndex, "索引应能查到 " + t.configName());
         }
+        assertSame(SkillTrigger.ITEM_CONSUME,
+                SkillTrigger.byNormalized(SkillTrigger.normalizeName("on-item-consume")));
     }
 
     @Test
@@ -88,7 +117,7 @@ class SkillTriggerTest {
         assertTrue(SkillTrigger.TIMER.wired());
         assertNotNull(SkillTrigger.of("on-interact"));
         assertTrue(SkillTrigger.INTERACT.wired(),
-                "on-interact 已接到 PlayerInteractAtEntityEvent");
+                "on-interact 已接到 PlayerInteractEntityEvent");
         // 仍未接线的：检查命令应提示「暂未接线」而非「未知名」，
         // 让用户知道是功能缺失而不是拼错了名字
         // on-spawn-boss 已接入 ModelSpawnEvent，按档案 boss 字段判定。
@@ -155,6 +184,7 @@ class SkillTriggerTest {
     void shortNameDropsPrefix() {
         assertEquals("spawn", SkillTrigger.SPAWN.shortName());
         assertEquals("kill-player", SkillTrigger.KILL_PLAYER.shortName());
+        assertEquals("kill", SkillTrigger.KILL.shortName());
     }
 
     @Test
@@ -164,6 +194,17 @@ class SkillTriggerTest {
         assertEquals(SkillTrigger.values().length, names.size());
         assertEquals(names.size(), new java.util.HashSet<>(names).size(), "不应有重复");
         assertTrue(names.contains("on-timer"));
+    }
+
+    @Test
+    @DisplayName("多实例事件路由只选择声明目标 trigger 的 profile")
+    void profileTriggerRoutingPredicateIsExact() {
+        var profile = new dev.helstera.ai.AiProfile("routing");
+        profile.triggers.put("on-block-break", new dev.helstera.ai.AiProfile.TriggerSpec());
+        assertTrue(SkillTriggers.profileDeclaresTrigger(profile, SkillTrigger.BLOCK_BREAK));
+        assertFalse(SkillTriggers.profileDeclaresTrigger(profile, SkillTrigger.BLOCK_PLACE));
+        assertFalse(SkillTriggers.profileDeclaresTrigger(null, SkillTrigger.BLOCK_BREAK));
+        assertFalse(SkillTriggers.profileDeclaresTrigger(profile, null));
     }
     @Test
     @DisplayName("pre-target event accepts LivingEntity targets")

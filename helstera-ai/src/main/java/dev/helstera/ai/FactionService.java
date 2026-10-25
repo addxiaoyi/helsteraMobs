@@ -117,9 +117,15 @@ public final class FactionService implements FactionTable {
         ConfigurationSection defs = root.getConfigurationSection("factions");
         if (defs != null) {
             for (String key : defs.getKeys(false)) {
-                displays.put(key, defs.getString("display", key));
                 ConfigurationSection sec = defs.getConfigurationSection(key);
-                if (sec != null) allies.put(key, sec.getStringList("allies"));
+                if (sec != null) {
+                    // Read fields from the individual faction section.  Looking
+                    // them up on `defs` silently discarded custom display names.
+                    displays.put(key, sec.getString("display", key));
+                    allies.put(key, sec.getStringList("allies"));
+                } else {
+                    displays.put(key, defs.getString(key, key));
+                }
             }
         }
         load(new Config(root.getString("players"),

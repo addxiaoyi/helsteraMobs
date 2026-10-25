@@ -1,5 +1,6 @@
 package dev.helstera.ai;
 
+import dev.helstera.ai.skill.SkillTrigger;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.ArrayList;
@@ -250,7 +251,10 @@ public final class AiProfile {
         }
     }
 
-    public enum TargetMode { NONE, PLAYERS, LIVING, MOBS, MONSTERS, ANIMALS, VILLAGERS, OWNER, THREAT, FACTION }
+    public enum TargetMode {
+        NONE, PLAYERS, LIVING, MOBS, MONSTERS, ANIMALS, VILLAGERS, IRON_GOLEMS,
+        OWNER, THREAT, FACTION, OWNER_ATTACKER, OWNER_TARGET, PARENT_ATTACKER, PARENT_TARGET
+    }
 
     public record SelectorPolicy(boolean chase, boolean attack, boolean patrol, boolean flee,
                                  boolean swim, boolean openDoors, boolean avoidSun,
@@ -331,11 +335,17 @@ public final class AiProfile {
                     rangedAttack = false;
                     leapAtTarget = false;
                 }
-                case "meleeattack", "melee_attack" -> attack = true;
-                case "rangedattack", "ranged_attack" -> { attack = true; rangedAttack = true; }
+                case "meleeattack", "melee_attack", "zombieattack", "spiderattack" -> {
+                    attack = true;
+                }
+                case "rangedattack", "ranged_attack", "arrowattack", "bowattack",
+                        "bowshoot", "bowmaster" -> { attack = true; rangedAttack = true; }
                 case "leapattarget", "leap_at_target" -> { attack = true; leapAtTarget = true; }
                 case "randomstroll", "random_stroll" -> patrol = true;
-                case "avoidentity", "avoid_entity" -> { flee = true; avoidEntities = true; }
+                case "avoidentity", "avoid_entity", "fleeplayers", "runfromplayers",
+                        "fleegolems", "flee_golems", "runfromgolems", "fleevillagers",
+                        "runfromvillagers", "fleewolf", "fleewolves", "runfromwolves",
+                        "fleefaction", "runfromfaction" -> { flee = true; avoidEntities = true; }
                 // Panic uses the same flee/pathfinding policy as avoid-entity;
                 // the native goal differs in trigger conditions, not movement.
                 case "panic" -> flee = true;
@@ -350,14 +360,20 @@ public final class AiProfile {
                         temptItem = item;
                     }
                 }
-                case "followowner", "follow_owner" -> {
+                case "followowner", "follow_owner", "gotoowner", "goto_owner" -> {
                     playerTargets = false;
                     targetMode = TargetMode.OWNER;
                 }
+                case "gotoparent", "goto_parent" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.PARENT_TARGET;
+                }
                 case "float", "swim" -> swim = true;
-                case "opendoors", "open_doors" -> openDoors = true;
-                case "avoidsun", "avoid_sun" -> avoidSunPolicy = true;
-                case "lookatplayers", "look_at_players" -> lookAtPlayers = true;
+                case "opendoor", "opendoors", "open_door", "open_doors" -> openDoors = true;
+                case "avoidsun", "avoid_sun", "restrictsun", "restrict_sun", "fleesun",
+                        "flee_sun" -> avoidSunPolicy = true;
+                case "lookatplayers", "look_at_players", "randomlookaround", "lookaround" -> lookAtPlayers = true;
+                case "lookattarget", "look_at_target" -> { }
                 default -> unsupported.add("goal:" + token);
             }
         }
@@ -428,6 +444,10 @@ public final class AiProfile {
                     playerTargets = false;
                     targetMode = TargetMode.VILLAGERS;
                 }
+                case "irongolem", "iron_golem", "irongolems", "iron_golems" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.IRON_GOLEMS;
+                }
                 case "owner", "owner_target", "owner_targeter" -> {
                     playerTargets = false;
                     targetMode = TargetMode.OWNER;
@@ -437,6 +457,37 @@ public final class AiProfile {
                     playerTargets = false;
                     targetMode = TargetMode.LIVING;
                     hurtByTargetFirst = true;
+                }
+                case "ownerattacker", "owner_hurt_by", "ownerhurtby", "ownerhurtbytarget",
+                        "owner_damager" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.OWNER_ATTACKER;
+                }
+                case "ownertarget", "owner_targeting", "ownerattack" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.OWNER_TARGET;
+                }
+                case "parenthurtby", "parent_hurt_by", "parenthurtbytarget", "parent_damager",
+                        "parentattacker" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.PARENT_ATTACKER;
+                }
+                case "parenttarget", "parent_target", "parenthurt", "parentattack" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.PARENT_TARGET;
+                }
+                case "otherfaction", "other_faction", "otherfactionmonsters", "other_faction_monsters",
+                        "specificfaction", "specific_faction" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.FACTION;
+                    targetFaction = selectorArgument(entry);
+                    factionHostile = token.startsWith("other") || token.startsWith("hostile");
+                }
+                case "nearestconditionaltarget", "nearest_conditional_target",
+                        "nearestconditionalentity", "nearest_conditional_entity",
+                        "nearestconditionalplayer", "nearest_conditional_player" -> {
+                    playerTargets = token.endsWith("player");
+                    targetMode = playerTargets ? TargetMode.PLAYERS : TargetMode.LIVING;
                 }
                 default -> unsupported.add("target:" + token);
             }
@@ -593,7 +644,13 @@ public final class AiProfile {
             spec.lowerHealthPercent = readPercent(evSec.get("health-below"),
                     spec.lowerHealthPercent);
             spec.sync = evSec.getBoolean("sync", false);
-            this.triggers.put(event.toLowerCase(java.util.Locale.ROOT), spec);
+            // Store the canonical key used by SkillTriggers.  Keeping an alias such
+            // as onSpawn in the map makes it pass the catalog check but never dispatch.
+            SkillTrigger parsed = SkillTrigger.of(event);
+            String key = parsed == null
+                    ? event.trim().toLowerCase(java.util.Locale.ROOT)
+                    : parsed.configName();
+            this.triggers.put(key, spec);
         }
     }
 

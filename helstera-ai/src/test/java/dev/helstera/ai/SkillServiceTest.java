@@ -1,6 +1,7 @@
 package dev.helstera.ai;
 
 import dev.helstera.ai.skill.SkillCatalog;
+import dev.helstera.ai.skill.SkillExtras;
 import dev.helstera.ai.skill.SkillService;
 import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.api.instance.ModelInstance;
@@ -8,9 +9,11 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -73,6 +77,38 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("is-caster compares the explicit target with the managed caster")
+    void isCasterConditionUsesEntityIdentity() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        var caster = mock(LivingEntity.class);
+        var other = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        when(other.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        var same = BehaviorContext.of(instance, caster, 1.0, 0, 0, "IDLE");
+        var different = BehaviorContext.of(instance, other, 1.0, 0, 0, "IDLE");
+        String key = svc.bindCondition("is-caster");
+        assertTrue(registry.testCondition(key, same));
+        assertFalse(registry.testCondition(key, different));
+    }
+
+    @Test
+    @DisplayName("name aliases bind to the active entity name condition")
+    void nameConditionAliasesBind() {
+        var svc = service();
+        var named = mock(LivingEntity.class);
+        when(named.getCustomName()).thenReturn("Emberling");
+        when(named.getName()).thenReturn("Zombie");
+        var context = BehaviorContext.of(null, named, 1.0, -1, 0, "IDLE");
+
+        assertTrue(registry.testCondition(svc.bindCondition("name Emberling"), context));
+        assertTrue(registry.testCondition(svc.bindCondition("name{n=Emberling}"), context));
+        assertFalse(registry.testCondition(svc.bindCondition("name Zombie"), context));
+    }
+
+    @Test
     @DisplayName("food-level compares the active player target and fails closed without one")
     void foodLevelConditionComparesPlayerFood() {
         var svc = service();
@@ -104,6 +140,172 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("target-prefixed player conditions never fall back to caster state")
+    void targetPrefixedPlayerConditionsUseOnlyTarget() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        var caster = mock(Player.class);
+        var target = mock(Player.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.hasPermission("probe.node")).thenReturn(true);
+        when(caster.getFoodLevel()).thenReturn(20);
+        when(caster.getGameMode()).thenReturn(org.bukkit.GameMode.CREATIVE);
+        when(caster.getRemainingAir()).thenReturn(20);
+        when(target.hasPermission("probe.node")).thenReturn(false);
+        when(target.getFoodLevel()).thenReturn(10);
+        when(target.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        when(target.getRemainingAir()).thenReturn(100);
+        var context = BehaviorContext.of(instance, target, 1.0, -1, 0, "IDLE");
+
+        assertFalse(registry.testCondition(svc.bindCondition("target-has-permission probe.node"), context));
+        assertFalse(registry.testCondition(svc.bindCondition("target-game-mode-is CREATIVE"), context));
+        assertFalse(registry.testCondition(svc.bindCondition("target-food-level >=14"), context));
+        assertFalse(registry.testCondition(svc.bindCondition("target-air-level <=50"), context));
+
+        var noTarget = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+        assertFalse(registry.testCondition(svc.bindCondition("target-has-permission probe.node"), noTarget));
+        assertFalse(registry.testCondition(svc.bindCondition("target-game-mode-is CREATIVE"), noTarget));
+        assertFalse(registry.testCondition(svc.bindCondition("target-food-level >=14"), noTarget));
+        assertFalse(registry.testCondition(svc.bindCondition("target-air-level <=50"), noTarget));
+
+        when(target.hasPermission("probe.node")).thenReturn(true);
+        when(target.getFoodLevel()).thenReturn(14);
+        when(target.getGameMode()).thenReturn(org.bukkit.GameMode.CREATIVE);
+        when(target.getRemainingAir()).thenReturn(50);
+        assertTrue(registry.testCondition(svc.bindCondition("target-has-permission probe.node"), context));
+        assertTrue(registry.testCondition(svc.bindCondition("target-game-mode-is CREATIVE"), context));
+        assertTrue(registry.testCondition(svc.bindCondition("target-food-level >=14"), context));
+        assertTrue(registry.testCondition(svc.bindCondition("target-air-level <=50"), context));
+    }
+
+    @Test
+    @DisplayName("signal action emits the active instance id and payload")
+    void signalActionEmitsScopedPayload() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(17);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+        var bus = new dev.helstera.ai.skill.SkillSignals();
+        var signal = new java.util.concurrent.atomic.AtomicReference<String>();
+        var source = new java.util.concurrent.atomic.AtomicReference<Integer>();
+        dev.helstera.ai.skill.SkillSignals.resetGlobal(bus);
+        bus.subscribe(17, "probe", (name, payload, sourceId) -> {
+            signal.set(payload);
+            source.set(sourceId);
+        });
+        try {
+            assertTrue(registry.runAction(svc.bindAction("signal probe payload"), context));
+            assertEquals("payload", signal.get());
+            assertEquals(17, source.get());
+            assertTrue(registry.runAction(svc.bindAction("signal{signal=probe;payload=keyed}"), context));
+            assertEquals("keyed", signal.get());
+        } finally {
+            dev.helstera.ai.skill.SkillSignals.resetGlobal(null);
+        }
+    }
+
+    @Test
+    @DisplayName("kill-targets kills selected entities without killing the caster")
+    void killTargetsKillsSelectedEntities() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        var caster = mock(LivingEntity.class);
+        var target = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(target.isValid()).thenReturn(true);
+        when(target.isDead()).thenReturn(false);
+        var context = BehaviorContext.continueExecution(instance, target, 1.0, 1.0, 0,
+                "IDLE", null, caster, List.of(target), null, null);
+        String key = svc.bindAction("kill-targets");
+        assertTrue(registry.runAction(key, context));
+        verify(target).setHealth(0);
+    }
+
+    @Test
+    @DisplayName("target-has-item and target-potion-effect-active use only the explicit target")
+    void targetInventoryAndPotionConditionsUseOnlyTarget() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        var caster = mock(Player.class);
+        var target = mock(Player.class);
+        var casterInventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        var targetInventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        var expected = mock(ItemStack.class);
+        var actual = mock(ItemStack.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getInventory()).thenReturn(casterInventory);
+        when(target.getInventory()).thenReturn(targetInventory);
+        when(expected.getType()).thenReturn(Material.SHIELD);
+        when(actual.getType()).thenReturn(Material.SHIELD);
+        when(actual.getAmount()).thenReturn(1);
+        when(actual.isSimilar(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        when(casterInventory.getContents()).thenReturn(new ItemStack[]{actual});
+        when(targetInventory.getContents()).thenReturn(new ItemStack[0]);
+
+        when(target.getActivePotionEffects()).thenReturn(java.util.Set.of());
+
+        var context = BehaviorContext.of(instance, target, 1.0, -1, 0, "IDLE");
+        SkillExtras.itemResolver(name -> expected);
+        try {
+            assertFalse(registry.testCondition(svc.bindCondition("target-has-item SHIELD >=1"), context));
+            assertFalse(registry.testCondition(svc.bindCondition("target-potion-effect-active SPEED"), context));
+            var noTarget = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+            assertFalse(registry.testCondition(svc.bindCondition("target-has-item SHIELD >=1"), noTarget));
+            assertFalse(registry.testCondition(svc.bindCondition("target-potion-effect-active SPEED"), noTarget));
+
+            when(targetInventory.getContents()).thenReturn(new ItemStack[]{actual});
+            assertTrue(registry.testCondition(svc.bindCondition("target-has-item SHIELD >=1"), context));
+        } finally {
+            SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("target holding and wearing conditions use only the explicit target")
+    void targetEquipmentConditionsUseOnlyTarget() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        var caster = mock(Player.class);
+        var target = mock(LivingEntity.class);
+        var casterEquipment = mock(org.bukkit.inventory.EntityEquipment.class);
+        var targetEquipment = mock(org.bukkit.inventory.EntityEquipment.class);
+        var diamond = mock(Material.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getEquipment()).thenReturn(casterEquipment);
+        when(target.getEquipment()).thenReturn(targetEquipment);
+        when(diamond.name()).thenReturn("DIAMOND");
+        var held = mock(ItemStack.class);
+        var helmet = mock(ItemStack.class);
+        when(held.getType()).thenReturn(diamond);
+        when(helmet.getType()).thenReturn(diamond);
+        when(casterEquipment.getItemInMainHand()).thenReturn(held);
+        when(casterEquipment.getHelmet()).thenReturn(helmet);
+        when(targetEquipment.getItemInMainHand()).thenReturn(null);
+        when(targetEquipment.getHelmet()).thenReturn(null);
+        when(target.getActivePotionEffects()).thenReturn(java.util.Set.of());
+
+        var context = BehaviorContext.of(instance, target, 1.0, -1, 0, "IDLE");
+        assertFalse(registry.testCondition(svc.bindCondition("target-holding DIAMOND"), context));
+        assertFalse(registry.testCondition(svc.bindCondition("target-wearing DIAMOND"), context));
+        assertFalse(registry.testCondition(svc.bindCondition("target-has-auras"), context));
+
+        var noTarget = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+        assertFalse(registry.testCondition(svc.bindCondition("target-holding DIAMOND"), noTarget));
+        assertFalse(registry.testCondition(svc.bindCondition("target-wearing DIAMOND"), noTarget));
+        assertFalse(registry.testCondition(svc.bindCondition("target-has-auras"), noTarget));
+
+        when(targetEquipment.getItemInMainHand()).thenReturn(held);
+        when(targetEquipment.getHelmet()).thenReturn(helmet);
+        assertTrue(registry.testCondition(svc.bindCondition("target-holding DIAMOND"), context));
+        assertTrue(registry.testCondition(svc.bindCondition("target-wearing DIAMOND"), context));
+    }
+
+    @Test
     @DisplayName("damage-cause reads the original Bukkit damage event cause")
     void damageCauseConditionReadsEventContext() {
         var svc = service();
@@ -117,6 +319,22 @@ class SkillServiceTest {
         assertTrue(registry.testCondition(key, context));
         assertFalse(registry.testCondition(svc.bindCondition("damage-cause FIRE"), context));
         assertFalse(registry.testCondition(key, ctx(1.0, 0)));
+    }
+
+    @Test
+    @DisplayName("last-damage-cause reads the entity's stored damage event, not context cause")
+    void lastDamageCauseReadsEntityState() {
+        var svc = service();
+        var entity = mock(LivingEntity.class);
+        var event = mock(org.bukkit.event.entity.EntityDamageEvent.class);
+        when(event.getCause()).thenReturn(org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE);
+        when(entity.getLastDamageCause()).thenReturn(event);
+        var context = BehaviorContext.of(null, entity, 1.0, -1, 0, "damage");
+        String key = svc.bindCondition("last-damage-cause FIRE");
+
+        assertNotNull(key, svc.warnings().toString());
+        assertTrue(registry.testCondition(key, context));
+        assertFalse(registry.testCondition(svc.bindCondition("last-damage-cause ENTITY_ATTACK"), context));
     }
 
     @Test
@@ -151,6 +369,247 @@ class SkillServiceTest {
         } finally {
             dev.helstera.ai.skill.SkillExtras.itemResolver(null);
         }
+    }
+
+    @Test
+    @DisplayName("has-item resolves custom items after the condition was bound")
+    void hasItemResolvesLateInjectedCustomItem() {
+        var svc = service();
+        var player = mock(Player.class);
+        var inventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        var expected = mock(org.bukkit.inventory.ItemStack.class);
+        var actual = mock(org.bukkit.inventory.ItemStack.class);
+        when(player.getInventory()).thenReturn(inventory);
+        when(expected.getType()).thenReturn(org.bukkit.Material.DIAMOND);
+        when(actual.getType()).thenReturn(org.bukkit.Material.DIAMOND);
+        when(actual.getAmount()).thenReturn(1);
+        when(actual.isSimilar(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        when(inventory.getContents()).thenReturn(new org.bukkit.inventory.ItemStack[]{actual});
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.itemResolver(null);
+        String key = svc.bindCondition("has-item integration_test_item >=1");
+        SkillExtras.itemResolver(name -> expected);
+        try {
+            assertTrue(registry.testCondition(key, context));
+        } finally {
+            SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("give-item and take-item operate on the active player target")
+    void giveAndTakeItemActionsUsePlayerInventory() {
+        Player player = mock(Player.class);
+        org.bukkit.inventory.PlayerInventory inventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        org.bukkit.inventory.ItemStack resolved = mock(org.bukkit.inventory.ItemStack.class);
+        org.bukkit.Material material = mock(org.bukkit.Material.class);
+        when(resolved.getType()).thenReturn(material);
+        when(material.name()).thenReturn("DIAMOND");
+        when(resolved.clone()).thenReturn(resolved);
+        when(resolved.getAmount()).thenReturn(2);
+        when(player.getInventory()).thenReturn(inventory);
+        when(inventory.addItem(org.mockito.ArgumentMatchers.any())).thenReturn(new java.util.HashMap<>());
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.itemResolver(name -> resolved);
+        try {
+            SkillExtras.actions().get("give-item").create(List.of("DIAMOND", "2")).accept(context);
+            var given = org.mockito.ArgumentCaptor.forClass(org.bukkit.inventory.ItemStack[].class);
+            verify(inventory).addItem(given.capture());
+            assertEquals(1, given.getValue().length);
+            assertEquals(material, given.getValue()[0].getType());
+            assertEquals(2, given.getValue()[0].getAmount());
+
+            org.bukkit.inventory.ItemStack stack = mock(org.bukkit.inventory.ItemStack.class);
+            when(stack.getType()).thenReturn(material);
+            when(stack.getAmount()).thenReturn(3);
+            when(inventory.getContents()).thenReturn(new org.bukkit.inventory.ItemStack[]{stack});
+            SkillExtras.actions().get("take-item").create(List.of("DIAMOND", "2")).accept(context);
+            verify(stack).setAmount(1);
+        } finally {
+            SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("target mechanics fall back to targetEntity when inherited targets are empty")
+    void targetMechanicsUseActiveSingleTarget() {
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getMaxHealth()).thenReturn(20.0);
+        when(target.getHealth()).thenReturn(10.0);
+        BehaviorContext context = BehaviorContext.continueExecution(null, target, 0.5, 2.0,
+                0, "target-test", null, target, List.of(), null, null);
+
+        SkillCatalog.actions().get("heal-targets").create(List.of("4")).accept(context);
+        SkillCatalog.actions().get("ignite-targets").create(List.of("40")).accept(context);
+
+        verify(target).setHealth(14.0);
+        verify(target).setFireTicks(40);
+    }
+
+    @Test
+    @DisplayName("placeholder-backed target mechanics resolve numbers at execution time")
+    void targetMechanicsResolveNumericPlaceholders() {
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getMaxHealth()).thenReturn(20.0);
+        when(target.getHealth()).thenReturn(10.0);
+        BehaviorContext context = BehaviorContext.continueExecution(null, target, 0.5, 2.0,
+                0, "target-test", null, target, List.of(), null, null);
+
+        SkillCatalog.actions().get("heal-targets").create(List.of("<target.hp.raw>")).accept(context);
+
+        verify(target).setHealth(20.0);
+    }
+
+    @Test
+    @DisplayName("feed updates player food and saturation for the active target")
+    void feedUpdatesPlayerFood() {
+        var svc = service();
+        Player player = mock(Player.class);
+        when(player.getFoodLevel()).thenReturn(10);
+        when(player.getSaturation()).thenReturn(2.0f);
+        BehaviorContext context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        String action = svc.bindAction("feed 4");
+
+        assertNotNull(action, svc.warnings().toString());
+        assertTrue(registry.runAction(action, context));
+        verify(player).setFoodLevel(14);
+        verify(player).setSaturation(6.0f);
+    }
+
+    @Test
+    @DisplayName("disarm removes the active target main-hand item")
+    void disarmRemovesTargetMainHand() {
+        var svc = service();
+        LivingEntity target = mock(LivingEntity.class);
+        EntityEquipment equipment = mock(EntityEquipment.class);
+        ItemStack held = mock(ItemStack.class);
+        when(target.getEquipment()).thenReturn(equipment);
+        when(equipment.getItem(EquipmentSlot.HAND)).thenReturn(held);
+        Material heldMaterial = mock(Material.class);
+        when(heldMaterial.isAir()).thenReturn(false);
+        when(held.getType()).thenReturn(heldMaterial);
+        BehaviorContext context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        String action = svc.bindAction("disarm");
+
+        assertNotNull(action, svc.warnings().toString());
+        assertTrue(registry.hasAction(action), action);
+        assertTrue(registry.runAction(action, context));
+        verify(equipment).setItem(EquipmentSlot.HAND, null);
+    }
+
+    @Test
+    @DisplayName("caster healing resolves target placeholders at execution time")
+    void selfHealingResolvesNumericPlaceholder() {
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        LivingEntity target = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getHealth()).thenReturn(5.0);
+        when(caster.getMaxHealth()).thenReturn(20.0);
+        when(target.getHealth()).thenReturn(7.0);
+        BehaviorContext context = BehaviorContext.continueExecution(instance, target, 1.0, 1.0,
+                0, "heal-test", null, target, List.of(target), null, null);
+
+        SkillCatalog.actions().get("heal-self")
+                .create(List.of("<target.hp.raw>"))
+                .accept(context);
+
+        verify(caster).setHealth(12.0);
+    }
+
+    @Test
+    @DisplayName("extended mechanics resolve placeholder-backed numeric values at execution time")
+    void extendedMechanicsResolveNumericPlaceholders() {
+        var casterInstance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        LivingEntity target = mock(LivingEntity.class);
+        when(casterInstance.isValid()).thenReturn(true);
+        when(casterInstance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getMaxHealth()).thenReturn(20.0);
+        when(target.getHealth()).thenReturn(7.0);
+        var context = BehaviorContext.continueExecution(casterInstance, target, 1.0, 1.0,
+                0, "placeholder-test", null, target, List.of(target), null, null);
+
+        SkillExtras.actions().get("set-health").create(List.of("<target.hp.raw>")).accept(context);
+
+        verify(caster).setHealth(7.0);
+    }
+
+    @Test
+    @DisplayName("set-max-health updates the Bukkit max-health attribute")
+    void setMaxHealthUpdatesAttribute() {
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        org.bukkit.attribute.AttributeInstance attribute = mock(org.bukkit.attribute.AttributeInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH))
+                .thenReturn(attribute);
+        when(caster.getHealth()).thenReturn(10.0);
+        when(attribute.getBaseValue()).thenReturn(20.0);
+        BehaviorContext context = BehaviorContext.of(instance, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("set-max-health").create(List.of("40")).accept(context);
+
+        verify(attribute).setBaseValue(40.0);
+    }
+
+    @Test
+    @DisplayName("velocity target mechanics resolve placeholders at execution time")
+    void velocityMechanicResolvesPlaceholder() {
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getHealth()).thenReturn(3.0);
+        BehaviorContext context = BehaviorContext.continueExecution(null, target, 1.0, 1.0,
+                0, "placeholder-test", null, target, List.of(), null, null);
+
+        SkillCatalog.actions().get("velocity-targets")
+                .create(List.of("<target.hp.raw>", "0", "0"))
+                .accept(context);
+
+        verify(target).setVelocity(org.mockito.ArgumentMatchers.argThat(vector ->
+                Math.abs(vector.getX() - 3.0) < 1.0e-9
+                        && Math.abs(vector.getY()) < 1.0e-9
+                        && Math.abs(vector.getZ()) < 1.0e-9));
+    }
+
+    @Test
+    @DisplayName("target-count condition counts the active single target")
+    void targetCountUsesActiveSingleTarget() {
+        var svc = service();
+        LivingEntity target = mock(LivingEntity.class);
+        BehaviorContext context = BehaviorContext.continueExecution(null, target, 1.0, 1.0,
+                0, "target-test", null, target, List.of(), null, null);
+        String key = svc.bindCondition("target-count-at-least 1");
+
+        assertTrue(registry.testCondition(key, context));
+    }
+
+    @Test
+    @DisplayName("target-within and target line-of-sight inspect the target's AI target")
+    void targetAiRelationConditionsUseMobTarget() {
+        var svc = service();
+        var mob = mock(org.bukkit.entity.Mob.class);
+        var aiTarget = mock(LivingEntity.class);
+        var world = mock(World.class);
+        when(mob.getWorld()).thenReturn(world);
+        when(aiTarget.getWorld()).thenReturn(world);
+        when(mob.getTarget()).thenReturn(aiTarget);
+        when(mob.getLocation()).thenReturn(new Location(world, 0, 64, 0));
+        when(aiTarget.getLocation()).thenReturn(new Location(world, 3, 64, 0));
+        when(aiTarget.isValid()).thenReturn(true);
+        when(mob.hasLineOfSight(aiTarget)).thenReturn(false);
+        var context = BehaviorContext.of(null, mob, 1.0, -1, 0, "IDLE");
+
+        assertTrue(registry.testCondition(svc.bindCondition("target-within <=3"), context));
+        assertFalse(registry.testCondition(svc.bindCondition("target-not-within 3"), context));
+        assertFalse(registry.testCondition(svc.bindCondition("target-has-line-of-sight"), context));
+        assertTrue(registry.testCondition(svc.bindCondition("target-not-in-line-of-sight"), context));
     }
 
     @Test
@@ -257,6 +716,7 @@ class SkillServiceTest {
         LivingEntity target = mock(LivingEntity.class);
         when(target.getHealth()).thenReturn(8.0);
         when(target.getMaxHealth()).thenReturn(20.0);
+        when(target.getAbsorptionAmount()).thenReturn(4.0);
         var context = BehaviorContext.of(null, target, 1.0, 7.5, 0, "IDLE");
         var svc = service();
 
@@ -268,6 +728,16 @@ class SkillServiceTest {
         String targetHealthPercent = svc.bindCondition("target-health-percent{p=>=40}");
         String targetHealthBelow = svc.bindCondition("target-health-below{p=>=50}");
         String targetHealthAbove = svc.bindCondition("target-health-above{p=>=40}");
+        String healthEqual = svc.bindCondition("health{h==8}");
+        String healthNotEqual = svc.bindCondition("health{h!=8}");
+        String healthWithAbsorption = svc.bindCondition(
+                "health{h=>=12;includeabsorption=true}");
+        String healthWithoutAbsorption = svc.bindCondition("health{h=>=12}");
+        String healthPercentWithAbsorption = svc.bindCondition(
+                "health-percent{p=>=60;includeabsorption=true}");
+        String distanceEqual = svc.bindCondition("distance{d==7.5}");
+        String targetHealthEqual = svc.bindCondition("target-health{h==8}");
+        String lightLevelEqual = svc.bindCondition("lightLevel{level==8}");
 
         assertTrue(registry.testCondition(healthBelow, context));
         assertTrue(registry.testCondition(healthPercent, context));
@@ -277,6 +747,14 @@ class SkillServiceTest {
         assertTrue(registry.testCondition(targetHealthPercent, context));
         assertFalse(registry.testCondition(targetHealthBelow, context));
         assertTrue(registry.testCondition(targetHealthAbove, context));
+        assertTrue(registry.testCondition(healthEqual, context));
+        assertFalse(registry.testCondition(healthNotEqual, context));
+        assertTrue(registry.testCondition(healthWithAbsorption, context));
+        assertFalse(registry.testCondition(healthWithoutAbsorption, context));
+        assertTrue(registry.testCondition(healthPercentWithAbsorption, context));
+        assertTrue(registry.testCondition(distanceEqual, context));
+        assertTrue(registry.testCondition(targetHealthEqual, context));
+        assertNotNull(lightLevelEqual);
         assertFalse(registry.testCondition(svc.bindCondition("health{h=invalid}"), context));
     }
 
@@ -325,16 +803,23 @@ class SkillServiceTest {
     @DisplayName("entity-type-is checks the active target and stance-is checks execution state")
     void entityTypeAndStanceConditions() {
         var svc = service();
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(902);
         LivingEntity target = mock(LivingEntity.class);
         when(target.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
-        var execution = BehaviorContext.of(null, target, 1.0, -1, 0, " enraged ");
+        var execution = BehaviorContext.of(instance, target, 1.0, -1, 0, "ATTACK");
 
         String type = svc.bindCondition("entity-type-is zombie");
         String stance = svc.bindCondition("stance-is enraged");
+        String setStance = svc.bindAction("set-stance enraged");
+        assertNotNull(setStance, svc.warnings().toString());
+        assertTrue(registry.runAction(setStance, execution));
 
         assertTrue(registry.testCondition(type, execution));
         assertTrue(registry.testCondition(stance, execution));
         assertFalse(registry.testCondition(svc.bindCondition("entity-type-is creeper"), execution));
+        SkillExtras.forget(902);
     }
 
     @Test
@@ -730,6 +1215,88 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("Mythic setscore/addscore aliases update the instance score table")
+    void mythicScoreMechanicAliasesUpdateScores() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(903);
+        var context = BehaviorContext.of(instance, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+
+        String set = svc.bindAction("setscore{objective=points;value=2}");
+        String add = svc.bindAction("addscore points 3");
+        String has = svc.bindCondition("has-score points");
+        String gte = svc.bindCondition("score-gte points 5");
+
+        assertNotNull(set, svc.warnings().toString());
+        assertNotNull(add, svc.warnings().toString());
+        assertTrue(registry.runAction(set, context));
+        assertTrue(registry.runAction(add, context));
+        assertTrue(registry.testCondition(has, context));
+        assertTrue(registry.testCondition(gte, context));
+        SkillExtras.forget(903);
+        assertFalse(registry.testCondition(has, context));
+    }
+
+    @Test
+    @DisplayName("Mythic GlobalCooldown is tick-based, instance-scoped, and cleaned on forget")
+    void mythicGlobalCooldownIsInstanceScoped() {
+        var svc = service();
+        var first = mock(ModelInstance.class);
+        var second = mock(ModelInstance.class);
+        when(first.isValid()).thenReturn(true);
+        when(second.isValid()).thenReturn(true);
+        when(first.instanceId()).thenReturn(904);
+        when(second.instanceId()).thenReturn(905);
+        var firstContext = BehaviorContext.of(first, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+        var secondContext = BehaviorContext.of(second, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+        String gcd = svc.bindAction("gcd 40");
+        String offgcd = svc.bindCondition("offgcd");
+
+        assertTrue(registry.testCondition(offgcd, firstContext));
+        assertTrue(registry.runAction(gcd, firstContext));
+        assertFalse(registry.testCondition(offgcd, firstContext));
+        assertTrue(registry.testCondition(offgcd, secondContext));
+
+        SkillExtras.forget(904);
+        assertTrue(registry.testCondition(offgcd, firstContext));
+        SkillExtras.forget(905);
+    }
+
+    @Test
+    @DisplayName("SetSkillCooldown changes a named skill and zero clears the override")
+    void setSkillCooldownChangesNamedSkill() {
+        var svc = service();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  child:
+                    on-decision: []
+                """));
+        svc.loadSkills(yaml.getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(906);
+        var context = BehaviorContext.of(instance, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+        SkillExtras.skillCooldownSetter(svc::setSkillCooldown);
+        try {
+            String action = svc.bindAction("setskillcooldown child 2");
+            assertNotNull(action, svc.warnings().toString());
+            assertTrue(registry.runAction(action, context));
+            assertTrue(svc.castSkill("child", context));
+            assertFalse(svc.castSkill("child", context));
+            assertTrue(svc.setSkillCooldown("child", context, 0));
+            assertTrue(svc.castSkill("child", context));
+        } finally {
+            SkillExtras.skillCooldownSetter(null);
+            svc.forget(906);
+        }
+    }
+
+    @Test
     @DisplayName("unset removes skill-tree and instance-scoped values")
     void variableUnsetRemovesStoredValue() {
         var svc = service();
@@ -854,6 +1421,99 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("set-offhand writes the resolved item to the caster off hand")
+    void setOffhandWritesOffhand() {
+        var svc = service();
+        var item = mock(org.bukkit.inventory.ItemStack.class);
+        SkillExtras.itemResolver(name -> item);
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        EntityEquipment equipment = mock(EntityEquipment.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getEquipment()).thenReturn(equipment);
+        var context = BehaviorContext.execution(instance, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+
+        try {
+            String action = svc.bindAction("setoffhand{item=SHIELD;amount=2}");
+            assertNotNull(action, svc.warnings().toString());
+            assertTrue(registry.runAction(action, context));
+            verify(item).setAmount(2);
+            verify(equipment).setItem(EquipmentSlot.OFF_HAND, item);
+        } finally {
+            SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("set-armor writes resolved items to all four armor slots")
+    void setArmorWritesArmorSlots() {
+        var svc = service();
+        var item = mock(org.bukkit.inventory.ItemStack.class);
+        SkillExtras.itemResolver(name -> item);
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        EntityEquipment equipment = mock(EntityEquipment.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getEquipment()).thenReturn(equipment);
+        var context = BehaviorContext.execution(instance, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+
+        try {
+            String action = svc.bindAction(
+                    "setarmor{helmet=IRON_HELMET;chestplate=IRON_CHESTPLATE;leggings=IRON_LEGGINGS;boots=IRON_BOOTS}");
+            assertNotNull(action, svc.warnings().toString());
+            assertTrue(registry.runAction(action, context));
+            verify(equipment).setItem(EquipmentSlot.HEAD, item);
+            verify(equipment).setItem(EquipmentSlot.CHEST, item);
+            verify(equipment).setItem(EquipmentSlot.LEGS, item);
+            verify(equipment).setItem(EquipmentSlot.FEET, item);
+        } finally {
+            SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("set-faction delegates the caster entity to the faction runtime bridge")
+    void setFactionUsesRuntimeBridge() {
+        var svc = service();
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        var seen = new java.util.ArrayList<String>();
+        SkillExtras.factionSetter((entity, faction) -> seen.add(entity == caster ? faction : "wrong"));
+        var context = BehaviorContext.execution(instance, null, 1.0, -1, 0,
+                "skill", null, null, List.of(), null);
+        try {
+            String action = svc.bindAction("setfaction{faction=guards}");
+            assertNotNull(action, svc.warnings().toString());
+            assertTrue(registry.runAction(action, context));
+            assertEquals(List.of("guards"), seen);
+        } finally {
+            SkillExtras.factionSetter(null);
+        }
+    }
+
+    @Test
+    @DisplayName("set-level updates the managed instance level used by Level condition")
+    void setLevelUpdatesManagedInstance() {
+        var svc = service();
+        var instance = mock(dev.helstera.runtime.instance.ModelInstanceImpl.class);
+        when(instance.isValid()).thenReturn(true);
+        instance.level = 1;
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+
+        String action = svc.bindAction("setlevel 5");
+        assertNotNull(action, svc.warnings().toString());
+        assertTrue(registry.runAction(action, context));
+        assertEquals(5, instance.level);
+        assertTrue(registry.testCondition(svc.bindCondition("level >=5"), context));
+    }
+
+    @Test
     @DisplayName("drop-item uses the caster location and item resolver")
     void dropItemDropsResolvedStack() {
         var svc = service();
@@ -928,6 +1588,23 @@ class SkillServiceTest {
         assertTrue(registry.runAction(action, ctx));
         verify(cancellable).setCancelled(true);
         assertTrue(registry.runAction(action, ctx(1.0, 0)));
+    }
+
+    @Test
+    @DisplayName("targeter invocation retains cancellable event context")
+    void targetedActionRetainsCancellableEvent() {
+        var svc = service();
+        var target = mock(LivingEntity.class);
+        var event = mock(org.bukkit.event.Cancellable.class);
+        var context = BehaviorContext.continueExecution(null, target, 1.0, 2.0, 0,
+                "damage", null, target, List.of(target), null,
+                new dev.helstera.api.behavior.SkillTreeContext(target, List.of(target), null),
+                event, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK);
+
+        String action = svc.bindAction("cancel-event @Target");
+        assertNotNull(action, svc.warnings().toString());
+        assertTrue(registry.runAction(action, context));
+        verify(event).setCancelled(true);
     }
 
     @Test
@@ -1409,6 +2086,38 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("same-faction and different-faction compare exact faction ids")
+    void exactFactionConditionsCompareCasterAndTarget() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        var caster = mock(Player.class);
+        var target = mock(LivingEntity.class);
+        var table = mock(dev.helstera.api.behavior.FactionTable.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(table.factionOf(caster)).thenReturn("guards");
+        when(table.factionOf(target)).thenReturn("guards");
+        dev.helstera.api.behavior.Factions.install(table);
+        try {
+            var context = BehaviorContext.of(instance, target, 1.0, -1, 0, "IDLE");
+            assertTrue(registry.testCondition(svc.bindCondition("caster-faction-is guards"), context));
+            assertTrue(registry.testCondition(svc.bindCondition("target-faction-is guards"), context));
+            assertTrue(registry.testCondition(svc.bindCondition("same-faction"), context));
+            assertFalse(registry.testCondition(svc.bindCondition("different-faction"), context));
+
+            when(table.factionOf(target)).thenReturn("undead");
+            assertFalse(registry.testCondition(svc.bindCondition("same-faction"), context));
+            assertTrue(registry.testCondition(svc.bindCondition("different-faction"), context));
+
+            var noTarget = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+            assertFalse(registry.testCondition(svc.bindCondition("same-faction"), noTarget));
+            assertFalse(registry.testCondition(svc.bindCondition("different-faction"), noTarget));
+        } finally {
+            dev.helstera.api.behavior.Factions.install(null);
+        }
+    }
+
+    @Test
     @DisplayName("common Mythic condition aliases bind to canonical factories")
     void commonConditionAliasesBind() {
         var svc = service();
@@ -1426,17 +2135,59 @@ class SkillServiceTest {
         var svc = service();
         for (String spec : List.of(
                 "biome-is plains", "weather-is clear", "time-is day",
+                "night", "raining", "thundering", "falling", "drowning <=0", "has-auras",
                 "has-permission vip.node", "entity-type-is ZOMBIE", "stance-is combat",
                 "health-above 0.5", "distance-below 8", "onground", "lineofsight",
                 "playersinradius 1 8", "entitiesinradius 1 8", "randomchance 100",
-                "targethealthbelow 50", "gamemode survival", "potionactive speed")) {
+                "mobsinradius 1 8", "incombat", "targetcount 1", "hungerbelow 10",
+                "playersonline >=1", "playersinworld >=1", "mobsinworld >=1",
+                "playerwithin 10", "playernotwithin 10",
+                "motionx <1", "motiony >=-1", "motionz =0", "velocity <=3",
+                "targethealthbelow 50", "gamemode survival", "potionactive speed", "owner", "isOwner",
+                "blockTypeInRadius{type=STONE;amount=>0;radius=3}", "children{a=>1}", "inside", "outside",
+                "fallSpeed{s=>0}", "enchantingLevel{l=>=1}", "enchantingExperience{a=>=0.1}",
+                "plugin{p=helsteraMobs}", "pluginexists{p=__missing_plugin__}",
+                "directionalVelocity{x=>0;y=<0;z=>0}", "fieldOfView{angle=90;rotation=0}",
+                "spawnReason{reason=RAID}", "spawn-reason{r=NATURAL}", "isWaterMob", "isZombie",
+                "aerial", "isAerial", "isEnderman", "hasEnchantment{e=SHARPNESS;l=>2}",
+                "itemIsSimilar{i=DIRT;slot=0}", "similarTo{i=DIRT;s=HAND}",
+                "itemRecharging",
+                "targets{a=>0;targeter=@targets}",
+                "cuboid{location1=0,64,0;location2=4,70,4}",
+                "inBounds{shape=sphere;l=0,64,0;r=5}")) {
             assertNotNull(svc.bindCondition(spec), spec);
+        }
+        assertNotNull(svc.bindCondition("hasDialogOpen"));
+        assertNotNull(svc.bindCondition("isInCinematic"));
+        assertNotNull(svc.bindCondition("color{c=RED}"));
+        assertNotNull(svc.bindCondition("materialIsOnCooldown{m=ENDER_PEARL}"));
+        assertNotNull(svc.bindCondition("triggerItemType{mat=STONE,DIRT}"));
+        assertNotNull(svc.bindCondition("playerKills{k=>=1}"));
+        assertNotNull(svc.bindCondition("absorption{amount=>=1}"));
+        assertNotNull(svc.bindCondition("hasPotionEffect{t=SPEED;l=0-2;d=1-200}"));
+        assertNotNull(svc.bindCondition("hasAuraStacks{n=SPEED;s=>=2}"));
+        assertNotNull(svc.bindCondition("triggerBlockType{mat=STONE}"));
+        assertNotNull(svc.bindCondition("distanceFromLocation{x=0;y=0;z=0;distance=<10}"));
+        for (String diff : List.of("xDiff{d=1}", "yDiff{diff=-1to1}", "zDiff{difference=>0}")) {
+            assertNotNull(svc.bindCondition(diff), diff);
+        }
+        assertNotNull(svc.bindCondition("originLocation{loc=0,0,0}"));
+        for (String alias : List.of("damageAmount >=1", "damage-amount >1", "amount >1", "a >1")) {
+            assertNotNull(svc.bindCondition(alias), alias);
         }
         for (String alias : List.of("sneaking", "issneaking", "sprinting", "issprinting",
                 "glowing", "isglowing", "swimming", "isswimming", "climbing", "isclimbing",
                 "inair", "airborne", "gliding", "isgliding", "flying", "isflying",
                 "blocking", "isblocking", "facingtarget", "targetinlineofsight",
-                "target-line-of-sight", "invulnerable", "isinvulnerable")) {
+                "target-line-of-sight", "invulnerable", "isinvulnerable", "isriding",
+                "targetwithin <=8", "hasPassenger", "isVehicle", "targetHasPassenger",
+                "targetIsVehicle", "targetNotWithin <=8", "targetInLineOfSight",
+                "targetNotInLineOfSight", "hasFreeInventorySlot")) {
+            assertNotNull(svc.bindCondition(alias), alias);
+        }
+        for (String alias : List.of("moist", "isMoist", "moistureLevel{l=3}",
+                "moistureness{l=1to6}", "moistness{l=>=1}", "mobSize{s=>3}",
+                "size{s=4}")) {
             assertNotNull(svc.bindCondition(alias), alias);
         }
         assertNotNull(svc.bindCondition("caster-has-permission vip.node"));
@@ -1507,6 +2258,9 @@ class SkillServiceTest {
         assertNotNull(hitSkill);
         assertTrue(registry.hasAction(direct));
         assertTrue(registry.hasAction(alias));
+        String dynamic = svc.bindAction("shoot-projectile ARROW <target.hp.raw> <target.hp.raw>");
+        assertNotNull(dynamic, svc.warnings().toString());
+        assertTrue(registry.hasAction(dynamic));
     }    @Test
     @DisplayName("combat and movement mechanics bind with Mythic aliases")
     void combatMechanicsBind() {
@@ -1522,12 +2276,72 @@ class SkillServiceTest {
         var svc = service();
         assertTrue(registry.hasAction(svc.bindAction("settarget")));
         assertTrue(registry.hasAction(svc.bindAction("cleartarget")));
+        assertTrue(registry.hasAction(svc.bindAction("remove")));
+        assertTrue(registry.hasAction(svc.bindAction("setowner")));
+        assertTrue(registry.hasAction(svc.bindAction("removeowner")));
+        assertTrue(registry.hasAction(svc.bindAction("setparent")));
+        assertTrue(registry.hasAction(svc.bindAction("removeparent")));
+        assertTrue(registry.hasAction(svc.bindAction("addtag HelsteraProbe")));
+        assertTrue(registry.hasAction(svc.bindAction("removetag HelsteraProbe")));
+        assertTrue(registry.hasAction(svc.bindAction("add-scoreboard-tag HelsteraProbe")));
+        assertTrue(registry.hasAction(svc.bindAction("setscore points 2")));
+        assertTrue(registry.hasAction(svc.bindAction("addscore points 3")));
+        assertTrue(registry.hasAction(svc.bindAction("closeinventory")));
+        assertTrue(registry.hasAction(svc.bindAction("clearexp")));
+        assertTrue(registry.hasAction(svc.bindAction("clearexplevels")));
+        assertTrue(registry.hasAction(svc.bindAction("giveexplevels 2")));
+        assertTrue(registry.hasAction(svc.bindAction("freeze{duration=80}")));
+        assertTrue(registry.hasAction(svc.bindAction("ejectpassenger")));
+        assertTrue(registry.hasAction(svc.bindAction("oxygen{amount=20}")));
+        assertTrue(registry.hasAction(svc.bindAction("consumeslot{slot=0;amount=1}")));
+        assertTrue(registry.hasAction(svc.bindAction("clearinventory")));
+        assertTrue(registry.hasAction(svc.bindAction("givexp 25")));
+        assertTrue(registry.hasAction(svc.bindAction("setabsorption 6")));
+        assertTrue(registry.hasAction(svc.bindAction("removeitem DIAMOND 1")));
+        assertTrue(registry.hasAction(svc.bindAction("removehelditem")));
+        String setMaterialCooldown = svc.bindAction(
+                "setmaterialcooldown{material=ENDER_PEARL;ticks=20}");
+        assertTrue(registry.hasAction(setMaterialCooldown), svc.warnings().toString());
+        assertTrue(registry.hasAction(svc.bindAction(
+                "setitemcooldown{material=ENDER_PEARL;ticks=20}")));
+        assertTrue(registry.hasAction(svc.bindAction("setgamemode{mode=ADVENTURE}")));
+        assertTrue(registry.hasAction(svc.bindAction("setoffhand{item=SHIELD;amount=1}")));
+        assertTrue(registry.hasAction(svc.bindAction("setarmor{helmet=IRON_HELMET;chestplate=AIR;leggings=AIR;boots=AIR}")));
+        assertTrue(registry.hasAction(svc.bindAction("setfaction guards")));
+        assertTrue(registry.hasAction(svc.bindAction("setlevel 5")));
+        assertTrue(registry.hasAction(svc.bindAction("setweather{weather=rain;duration=20}")));
+        assertTrue(registry.hasAction(svc.bindAction("settime noon")));
+        assertTrue(registry.hasAction(svc.bindAction("lightning{effectonly=true}")));
+        assertTrue(registry.hasAction(svc.bindAction("jump{velocity=0.42}")));
+        assertTrue(registry.hasAction(svc.bindAction("forcepull{v=1.5}")));
+        assertTrue(registry.hasAction(svc.bindAction("teleportself 1 2 3")));
+        assertTrue(registry.hasAction(svc.bindAction("teleportcaster @origin")));
+        assertTrue(registry.hasAction(svc.bindAction("sethealth 10")));
+        assertTrue(registry.hasAction(svc.bindAction("modifyhealth -2")));
+        assertTrue(registry.hasAction(svc.bindAction("modifyspeed 0.1")));
+        assertTrue(registry.hasAction(svc.bindAction("knockbackself 1 0.4")));
+        assertTrue(registry.hasAction(svc.bindAction("startcast fire")));
+        assertTrue(registry.hasAction(svc.bindAction("cancelcast")));
+        assertTrue(registry.hasAction(svc.bindAction("startdialogue intro")));
+        assertTrue(registry.hasAction(svc.bindAction("setinvulnerable true")));
         assertTrue(registry.hasAction(svc.bindAction("aoedamage players 8 2 4")));
         assertTrue(registry.hasAction(svc.bindAction("playanimation attack false 3")));
         assertTrue(registry.hasAction(svc.bindAction("stopanimation")));
+        assertTrue(registry.hasAction(svc.bindAction("leap 1.2")));
+        assertTrue(registry.hasAction(svc.bindAction("settickspeed 1.1")));
         assertTrue(registry.hasAction(svc.bindAction("command say <target.name>")));
         assertTrue(registry.hasAction(svc.bindAction("command-self help")));
         assertTrue(registry.hasAction(svc.bindAction("command-target help")));
+        assertTrue(registry.hasAction(svc.bindAction("damagemelee 3 2.5")));
+        assertTrue(registry.hasAction(svc.bindAction("addthreat 5")));
+        assertTrue(registry.hasAction(svc.bindAction("clearthreat true")));
+        assertTrue(registry.hasAction(svc.bindAction("threatfocus")));
+        assertTrue(registry.hasAction(svc.bindAction("messageall Hello 16")));
+        assertTrue(registry.hasAction(svc.bindAction("messageself Hello")));
+        assertTrue(registry.hasAction(svc.bindAction("randommessage One|Two")));
+        assertTrue(registry.hasAction(svc.bindAction("gcd 40")));
+        assertTrue(registry.hasAction(svc.bindAction("setglobalcooldown 40")));
+        assertNotNull(svc.bindCondition("offgcd"));
     }    @Test
     @DisplayName("audience title aliases bind successfully")
     void audienceTitleAliasesBind() {
@@ -1551,6 +2365,21 @@ class SkillServiceTest {
         var svc = service();
         assertNotNull(svc.bindAction("audience-actionbar target hello"));
         assertNotNull(svc.bindAction("actionbar-audience target hello"));
+        assertNotNull(svc.bindAction("actionbar hello"));
+        assertNotNull(svc.bindAction("title Hello Subtitle 5 40 5"));
+    }
+
+    @Test
+    @DisplayName("title mechanic sends title, subtitle, and timing to the active player target")
+    void titleMechanicSendsFullTitlePayload() {
+        var svc = service();
+        Player player = mock(Player.class);
+        BehaviorContext context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+        String action = svc.bindAction("title Hello Subtitle 5 40 5");
+
+        assertNotNull(action, svc.warnings().toString());
+        assertTrue(registry.runAction(action, context));
+        verify(player).sendTitle("Hello", "Subtitle", 5, 40, 5);
     }
 
     @Test
@@ -1566,6 +2395,24 @@ class SkillServiceTest {
                 1.0, -1, 0, "IDLE", null, null, List.of(), null, tree);
         assertTrue(svc.runAction(key, context));
         assertTrue(tree.branchUnlocked("advanced"));
+    }
+
+    @Test
+    @DisplayName("SkillTree branch conditions read unlocked state")
+    void branchConditionsReadSkillTreeState() {
+        var svc = service();
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, (LivingEntity) null, 1.0, -1, 0, "skill", null,
+                null, List.of(), null, tree);
+        String unlocked = svc.bindCondition("branch-unlocked combat");
+        String locked = svc.bindCondition("branch-locked combat");
+
+        assertFalse(registry.testCondition(unlocked, context));
+        assertTrue(registry.testCondition(locked, context));
+        tree.unlockBranch("combat");
+        assertTrue(registry.testCondition(unlocked, context));
+        assertFalse(registry.testCondition(locked, context));
     }
 
     @Test
@@ -1585,6 +2432,25 @@ class SkillServiceTest {
                 0.8, -1, 0, "IDLE", null, null, List.of(), null, tree);
         assertTrue(svc.runAction(key, context));
         assertTrue(tree.branchUnlocked("combat"));
+    }
+
+    @Test
+    @DisplayName("branch unlock conditions remain bound to their SkillService registry")
+    void branchUnlockConditionUsesOwningRegistry() {
+        var owningRegistry = new BehaviorRegistryImpl();
+        var owningService = new SkillService(owningRegistry, null);
+        String key = owningService.bindAction(
+                "branch-unlock{branch=isolated;condition=health-above 0.5}");
+        assertNotNull(key);
+
+        new SkillService(new BehaviorRegistryImpl(), null);
+
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        tree.defineBranch("isolated", java.util.Set.of());
+        var context = BehaviorContext.continueExecution(null, (LivingEntity) null,
+                0.8, -1, 0, "IDLE", null, null, List.of(), null, tree);
+        assertTrue(owningService.runAction(key, context));
+        assertTrue(tree.branchUnlocked("isolated"));
     }
 
     @Test
@@ -1625,6 +2491,50 @@ class SkillServiceTest {
         assertEquals(0, fired.get());
         assertTrue(svc.castSkill("unlock", context));
         assertTrue(svc.castSkill("gated", context));
+        assertEquals(1, fired.get());
+    }
+
+    @Test
+    @DisplayName("branch-requires gate restores unlocked branches across fresh cast contexts")
+    void branchGateRestoresSnapshotAcrossCasts() {
+        var fired = new AtomicInteger();
+        registry.registerAction("probe", context -> fired.incrementAndGet());
+        var svc = service();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  unlock_foundation:
+                    on-decision:
+                      - 'branch-unlock{branch=foundation}'
+                  unlock_advanced:
+                    on-decision:
+                      - 'branch-unlock{branch=advanced}'
+                  advanced:
+                    branch: advanced
+                    branch-requires:
+                      - foundation
+                    on-decision:
+                      - probe
+                """));
+        svc.loadSkills(yaml.getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(73);
+        when(instance.isValid()).thenReturn(true);
+        var lockedContext = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+
+        for (int attempt = 0; attempt < 20; attempt++) {
+            assertFalse(svc.castSkill("advanced", lockedContext));
+        }
+        assertEquals(0, fired.get());
+
+        assertTrue(svc.castSkill("unlock_advanced", lockedContext));
+        assertFalse(svc.snapshotOf(73).orElseThrow().unlockedBranches().contains("advanced"));
+        assertTrue(svc.castSkill("unlock_foundation", lockedContext));
+        assertTrue(svc.snapshotOf(73).orElseThrow().unlockedBranches().contains("foundation"));
+        assertTrue(svc.castSkill("unlock_advanced", lockedContext));
+        assertTrue(svc.snapshotOf(73).orElseThrow().unlockedBranches().contains("advanced"));
+
+        var freshContext = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+        assertTrue(svc.castSkill("advanced", freshContext));
         assertEquals(1, fired.get());
     }
 
@@ -1687,6 +2597,117 @@ class SkillServiceTest {
             assertEquals(List.of(2L, 1L, 1L, 1L), delays);
         } finally {
             dev.helstera.ai.skill.SkillCatalog.taskScheduler(null);
+        }
+    }
+
+    @Test
+    @DisplayName("clearing an instance cancels delayed work and releases generation state")
+    void clearingInstanceCancelsDelayedWork() throws Exception {
+        var fired = new AtomicInteger();
+        var scheduled = new java.util.ArrayList<Runnable>();
+        registry.registerAction("probe", context -> fired.incrementAndGet());
+        var svc = service();
+        dev.helstera.ai.skill.SkillCatalog.taskScheduler((task, delay) -> {
+            scheduled.add(task);
+            return true;
+        });
+        try {
+            String key = svc.bindAction("probe{delay=2}");
+            assertTrue(registry.runAction(key, ctx(1, 0)));
+            assertEquals(1, scheduled.size());
+            svc.clearQueueFor(-1);
+            scheduled.get(0).run();
+            assertEquals(0, fired.get(), "cleared delayed work must not execute");
+
+            var generations = SkillService.class.getDeclaredField("executionGenerations");
+            generations.setAccessible(true);
+            assertTrue(((Map<?, ?>) generations.get(svc)).isEmpty(),
+                    "generation state must be reclaimed after the cancelled continuation runs");
+        } finally {
+            dev.helstera.ai.skill.SkillCatalog.taskScheduler(null);
+        }
+    }
+
+    @Test
+    @DisplayName("reload invalidates every old delayed continuation")
+    void reloadInvalidatesOldDelayedWork() throws Exception {
+        var fired = new AtomicInteger();
+        var scheduled = new java.util.ArrayList<Runnable>();
+        registry.registerAction("probe", context -> fired.incrementAndGet());
+        var svc = service();
+        dev.helstera.ai.skill.SkillCatalog.taskScheduler((task, delay) -> {
+            scheduled.add(task);
+            return true;
+        });
+        try {
+            String key = svc.bindAction("probe{delay=2}");
+            assertTrue(registry.runAction(key, ctx(1, 0)));
+            assertTrue(registry.runAction(key, ctx(1, 0)));
+            assertEquals(2, scheduled.size());
+
+            svc.loadSkills(null);
+            scheduled.forEach(Runnable::run);
+            assertEquals(0, fired.get(), "reload must invalidate all old delayed actions");
+
+            var generations = SkillService.class.getDeclaredField("executionGenerations");
+            generations.setAccessible(true);
+            assertTrue(((Map<?, ?>) generations.get(svc)).isEmpty(),
+                    "reload tombstones must be reclaimed after old continuations drain");
+        } finally {
+            dev.helstera.ai.skill.SkillCatalog.taskScheduler(null);
+        }
+    }
+
+    @Test
+    @DisplayName("scheduler exceptions fail closed and release continuation state")
+    void schedulerExceptionReleasesContinuationState() throws Exception {
+        registry.registerAction("probe", context -> { });
+        var svc = service();
+        dev.helstera.ai.skill.SkillCatalog.taskScheduler((task, delay) -> {
+            throw new IllegalStateException("scheduler stopped");
+        });
+        try {
+            String key = svc.bindAction("probe{delay=2}");
+            assertTrue(registry.runAction(key, ctx(1, 0)));
+            assertTrue(svc.warnings().stream().anyMatch(w -> w.contains("调度")),
+                    svc.warnings().toString());
+
+            var pending = SkillService.class.getDeclaredField("pendingScheduledActions");
+            pending.setAccessible(true);
+            assertTrue(((Map<?, ?>) pending.get(svc)).isEmpty(),
+                    "failed scheduling must not retain pending continuation state");
+        } finally {
+            dev.helstera.ai.skill.SkillCatalog.taskScheduler(null);
+        }
+    }
+
+    @Test
+    @DisplayName("throwing delayed actions still reclaim continuation state")
+    void throwingDelayedActionReclaimsState() throws Exception {
+        Map<String, SkillCatalog.ActionFactory> actions = new java.util.LinkedHashMap<>(
+                SkillCatalog.actions());
+        actions.put("boom", args -> context -> {
+            throw new IllegalStateException("action failed");
+        });
+        var svc = new SkillService(registry, null, SkillCatalog.conditions(), actions);
+        var scheduled = new java.util.ArrayList<Runnable>();
+        SkillCatalog.taskScheduler((task, delay) -> {
+            scheduled.add(task);
+            return true;
+        });
+        try {
+            String key = svc.bindAction("boom{delay=2}");
+            assertTrue(registry.runAction(key, ctx(1, 0)));
+            assertThrows(IllegalStateException.class, () -> scheduled.get(0).run());
+
+            var pending = SkillService.class.getDeclaredField("pendingScheduledActions");
+            pending.setAccessible(true);
+            assertTrue(((Map<?, ?>) pending.get(svc)).isEmpty());
+            var generations = SkillService.class.getDeclaredField("executionGenerations");
+            generations.setAccessible(true);
+            assertTrue(((Map<?, ?>) generations.get(svc)).isEmpty());
+        } finally {
+            SkillCatalog.taskScheduler(null);
         }
     }
 
@@ -1877,6 +2898,94 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("AI, gravity, silence, dead, and validity conditions read the caster entity")
+    void entityLifecycleConditionsReadBukkitState() {
+        SkillService service = service();
+        var instance = mock(ModelInstance.class);
+        var mob = mock(org.bukkit.entity.Mob.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(mob));
+        when(mob.hasAI()).thenReturn(true);
+        when(mob.hasGravity()).thenReturn(true);
+        when(mob.isSilent()).thenReturn(false);
+        when(mob.isDead()).thenReturn(false);
+        when(mob.isValid()).thenReturn(true);
+        BehaviorContext context = BehaviorContext.of(instance, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+
+        assertTrue(registry.testCondition(service.bindCondition("hasAI"), context));
+        assertTrue(registry.testCondition(service.bindCondition("hasGravity"), context));
+        assertFalse(registry.testCondition(service.bindCondition("isSilent"), context));
+        assertFalse(registry.testCondition(service.bindCondition("isDead"), context));
+        assertTrue(registry.testCondition(service.bindCondition("isAlive"), context));
+        assertTrue(registry.testCondition(service.bindCondition("isValid"), context));
+        BehaviorContext noInstance = BehaviorContext.of(null, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+        assertFalse(registry.testCondition(service.bindCondition("hasAI"), noInstance));
+        assertFalse(registry.testCondition(service.bindCondition("hasGravity"), noInstance));
+        assertFalse(registry.testCondition(service.bindCondition("isSilent"), noInstance));
+        assertFalse(registry.testCondition(service.bindCondition("isDead"), noInstance));
+        assertFalse(registry.testCondition(service.bindCondition("isAlive"), noInstance));
+        assertFalse(registry.testCondition(service.bindCondition("isValid"), noInstance));
+    }
+
+    @Test
+    @DisplayName("operator conditions read caster and target player state")
+    void operatorConditionsReadPlayerState() {
+        SkillService service = service();
+        Player player = mock(Player.class);
+        when(player.isOp()).thenReturn(true);
+        BehaviorContext targetContext = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("target-is-op"), targetContext));
+        assertTrue(registry.testCondition(service.bindCondition("target-is-operator"), targetContext));
+
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(player));
+        BehaviorContext casterContext = BehaviorContext.of(instance, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("is-op"), casterContext));
+        when(player.isOp()).thenReturn(false);
+        assertFalse(registry.testCondition(service.bindCondition("is-op"), casterContext));
+        assertFalse(registry.testCondition(service.bindCondition("target-is-op"), targetContext));
+    }
+
+    @Test
+    @DisplayName("daylight follows the vanilla day cycle instead of rejecting daytime")
+    void daylightUsesDaytimeSunHeight() {
+        assertEquals(0.0, SkillCatalog.daylightLevel(0), 1e-9);
+        assertEquals(1.0, SkillCatalog.daylightLevel(6_000), 1e-9);
+        assertEquals(0.0, SkillCatalog.daylightLevel(12_000), 1e-9);
+        assertEquals(0.0, SkillCatalog.daylightLevel(18_000), 1e-9);
+
+        SkillService service = service();
+        ModelInstance instance = mock(ModelInstance.class);
+        Location location = mock(Location.class);
+        World world = mock(World.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(location);
+        when(location.getWorld()).thenReturn(world);
+        when(world.getTime()).thenReturn(6_000L, 18_000L);
+        BehaviorContext context = BehaviorContext.of(instance, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+        String key = service.bindCondition("daylight 0.5");
+        assertTrue(registry.testCondition(key, context));
+        assertFalse(registry.testCondition(key, context));
+    }
+
+    @Test
+    @DisplayName("official direct entity-state aliases bind to canonical conditions")
+    void officialDirectEntityStateAliasesBind() {
+        SkillService service = service();
+        for (String alias : List.of("isOnGround", "isInWater", "isInLava", "isInAir",
+                "isOnFire", "isBlocked", "standOn STONE", "daylight 0.5")) {
+            String key = service.bindCondition(alias);
+            assertNotNull(key, alias);
+            assertTrue(registry.hasCondition(key), alias + " -> " + key);
+        }
+    }
+
+    @Test
     @DisplayName("target entity state aliases bind to the shared state evaluators")
     void targetEntityStateAliasesBind() {
         SkillService service = service();
@@ -1904,6 +3013,17 @@ class SkillServiceTest {
         BehaviorContext babyContext = BehaviorContext.of(null, baby, 1.0, -1, 0, "IDLE");
         assertTrue(registry.testCondition(service.bindCondition("target-is-baby"), babyContext));
         assertFalse(registry.testCondition(service.bindCondition("target-is-adult"), babyContext));
+
+        ModelInstance casterInstance = mock(ModelInstance.class);
+        org.bukkit.entity.Zombie caster = mock(org.bukkit.entity.Zombie.class);
+        when(casterInstance.isValid()).thenReturn(true);
+        when(casterInstance.baseEntity()).thenReturn(Optional.of(caster));
+        BehaviorContext noTarget = BehaviorContext.of(casterInstance, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+        assertFalse(registry.testCondition(service.bindCondition("target-is-undead"), noTarget),
+                "target conditions must not fall back to the caster");
+        assertFalse(registry.testCondition(service.bindCondition("target-is-baby"), noTarget),
+                "target conditions must fail closed without a target");
     }
 
     @Test
@@ -1957,6 +3077,34 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("target environmental aliases never fall back to caster state")
+    void targetEnvironmentalAliasesDoNotUseCasterFallback() {
+        SkillService service = service();
+        ModelInstance instance = mock(ModelInstance.class);
+        Player caster = mock(Player.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.isSneaking()).thenReturn(true);
+        when(caster.isSprinting()).thenReturn(true);
+        when(caster.isFlying()).thenReturn(true);
+        when(caster.isBlocking()).thenReturn(true);
+        when(caster.isGliding()).thenReturn(true);
+        when(caster.isSwimming()).thenReturn(true);
+        when(caster.getFireTicks()).thenReturn(20);
+        when(caster.isOnGround()).thenReturn(false);
+
+        BehaviorContext context = BehaviorContext.of(instance, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+        for (String condition : List.of("target-is-sneaking", "target-is-sprinting",
+                "target-is-flying", "target-is-blocking", "target-is-gliding",
+                "target-is-swimming", "target-on-fire", "target-in-air",
+                "target-in-water", "target-in-lava", "target-is-invisible",
+                "target-is-climbing", "target-is-blocked")) {
+            assertFalse(registry.testCondition(service.bindCondition(condition), context), condition);
+        }
+    }
+
+    @Test
     @DisplayName("target environmental state aliases bind to runtime evaluators")
     void targetEnvironmentalStateAliasesBind() {
         SkillService service = service();
@@ -1975,6 +3123,8 @@ class SkillServiceTest {
         org.bukkit.block.Block block = mock(org.bukkit.block.Block.class);
         when(target.getFireTicks()).thenReturn(20);
         when(target.isOnGround()).thenReturn(false);
+        when(target.isInWater()).thenReturn(true);
+        when(target.isInLava()).thenReturn(false);
         when(target.getLocation()).thenReturn(location);
         when(location.getWorld()).thenReturn(world);
         when(location.getBlock()).thenReturn(block);
@@ -1986,7 +3136,8 @@ class SkillServiceTest {
         assertTrue(registry.testCondition(service.bindCondition("target-in-water"), waterContext));
         assertFalse(registry.testCondition(service.bindCondition("target-in-lava"), waterContext));
 
-        when(block.getType()).thenReturn(org.bukkit.Material.LAVA);
+        when(target.isInWater()).thenReturn(false);
+        when(target.isInLava()).thenReturn(true);
         assertTrue(registry.testCondition(service.bindCondition("target-in-lava"), waterContext));
     }
 
@@ -2001,18 +3152,45 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("target glowing condition reads the target entity")
+    void targetGlowingConditionReadsTarget() {
+        SkillService service = service();
+        org.bukkit.entity.Zombie target = mock(org.bukkit.entity.Zombie.class);
+        when(target.isGlowing()).thenReturn(true);
+        BehaviorContext context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        assertTrue(registry.testCondition(service.bindCondition("target-is-glowing"), context));
+        when(target.isGlowing()).thenReturn(false);
+        assertFalse(registry.testCondition(service.bindCondition("targetIsGlowing"), context));
+    }
+
+    @Test
     @DisplayName("target dead and ground-state aliases bind to runtime conditions")
     void targetBasicStateAliasesBind() {
         SkillService service = service();
-        for (String alias : List.of("target-is-dead", "target-is-on-ground", "target-is-airborne")) {
+        for (String alias : List.of("target-is-dead", "target-is-on-ground", "target-is-airborne",
+                "target-has-ai", "target-has-gravity", "target-is-silent", "target-is-valid")) {
             assertNotNull(service.bindCondition(alias), alias);
         }
 
         org.bukkit.entity.Zombie target = mock(org.bukkit.entity.Zombie.class);
         when(target.isOnGround()).thenReturn(false);
+        when(target.hasAI()).thenReturn(true);
+        when(target.hasGravity()).thenReturn(true);
+        when(target.isSilent()).thenReturn(false);
+        when(target.isValid()).thenReturn(true);
         BehaviorContext context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
         assertFalse(registry.testCondition(service.bindCondition("target-is-dead"), context));
         assertTrue(registry.testCondition(service.bindCondition("target-is-airborne"), context));
+        assertTrue(registry.testCondition(service.bindCondition("target-has-ai"), context));
+        assertTrue(registry.testCondition(service.bindCondition("target-has-gravity"), context));
+        assertFalse(registry.testCondition(service.bindCondition("target-is-silent"), context));
+        assertTrue(registry.testCondition(service.bindCondition("target-is-valid"), context));
+        BehaviorContext noTarget = BehaviorContext.of(null, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+        assertFalse(registry.testCondition(service.bindCondition("target-has-ai"), noTarget));
+        assertFalse(registry.testCondition(service.bindCondition("target-has-gravity"), noTarget));
+        assertFalse(registry.testCondition(service.bindCondition("target-is-silent"), noTarget));
+        assertFalse(registry.testCondition(service.bindCondition("target-is-valid"), noTarget));
 
         when(target.isOnGround()).thenReturn(true);
         assertTrue(registry.testCondition(service.bindCondition("target-is-on-ground"), context));

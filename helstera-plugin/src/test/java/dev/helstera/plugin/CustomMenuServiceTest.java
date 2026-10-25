@@ -9,6 +9,12 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CustomMenuServiceTest {
+    @Test void menuServiceCleansNavigationOnPlayerQuit() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/dev/helstera/plugin/CustomMenuService.java"));
+        assertTrue(source.contains("void onQuit(PlayerQuitEvent event)"));
+        assertTrue(source.contains("navigation.remove(event.getPlayer().getUniqueId())"));
+    }
+
     @Test void loadsMenuIdsCaseInsensitively(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("menu.yml");
         Files.writeString(file, """
@@ -135,6 +141,37 @@ class CustomMenuServiceTest {
     @Test void closeButtonDoesNotRunWhenPermissionIsDenied() {
         boolean mayRun = CustomMenuService.shouldRunButtonAction(true, true, false);
         assertFalse(mayRun, "close is part of the protected button action and should not run after denied permission");
+    }
+
+    @Test void visibilityConditionsSupportListsAndExclusions() {
+        assertTrue(CustomMenuService.menuValueMatches("world", "world,nether"));
+        assertTrue(CustomMenuService.menuValueMatches("world", "!nether"));
+        assertFalse(CustomMenuService.menuValueMatches("world", "!world"));
+        assertFalse(CustomMenuService.menuValueMatches("the_end", "world,nether"));
+        assertTrue(CustomMenuService.menuValueMatches(null, "!guards"));
+        assertTrue(CustomMenuService.menuClausesMatch("-10,64,-10,10,70,10",
+                value -> value.equals("-10,64,-10,10,70,10")));
+        assertTrue(CustomMenuService.menuClausesMatch("world,-10,64,-10,10,70,10",
+                value -> value.equals("world,-10,64,-10,10,70,10")));
+    }
+
+    @Test void permissionVisibilitySupportsPositiveAndNegativeClauses() {
+        var player = (org.bukkit.entity.Player) java.lang.reflect.Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Player.class}, (proxy, method, args) -> {
+                    if (method.getName().equals("hasPermission")) {
+                        return args != null && args.length == 1
+                                && "menu.admin".equals(String.valueOf(args[0]));
+                    }
+                    if (method.getReturnType() == boolean.class) return false;
+                    if (method.getReturnType() == int.class) return 0;
+                    if (method.getReturnType() == double.class) return 0.0;
+                    return null;
+                });
+
+        assertTrue(CustomMenuService.menuPermissionMatches(player, "menu.admin,menu.staff"));
+        assertTrue(CustomMenuService.menuPermissionMatches(player, "!menu.staff"));
+        assertFalse(CustomMenuService.menuPermissionMatches(player, "!menu.admin"));
     }
 
 

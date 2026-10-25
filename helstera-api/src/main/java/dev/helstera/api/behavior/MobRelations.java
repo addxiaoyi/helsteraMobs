@@ -43,7 +43,7 @@ public final class MobRelations {
 
     public static Entity owner(Entity mob) {
         UUID id = ownerId(mob);
-        return id == null ? null : Bukkit.getEntity(id);
+        return resolve(id);
     }
 
     public static boolean setOwner(Entity mob, Entity owner) {
@@ -113,10 +113,30 @@ public final class MobRelations {
 
     public static Entity parent(Entity child) {
         UUID id = parentId(child);
-        return id == null ? null : Bukkit.getEntity(id);
+        return resolve(id);
+    }
+
+    private static Entity resolve(UUID id) {
+        if (id == null) return null;
+        try {
+            return Bukkit.getEntity(id);
+        } catch (RuntimeException ignored) {
+            // API consumers can inspect persisted relations before Bukkit is enabled.
+            return null;
+        }
     }
 
     public static boolean hasParent(Entity child) {
+        return isParentAlive(child);
+    }
+
+    /** Whether the child still carries a parent relationship, even if the parent is unloaded. */
+    public static boolean hasParentRelation(Entity child) {
+        return parentId(child) != null;
+    }
+
+    /** Whether the relationship resolves to a currently valid, living entity. */
+    public static boolean isParentAlive(Entity child) {
         Entity parent = parent(child);
         return parent != null && parent.isValid() && !parent.isDead();
     }

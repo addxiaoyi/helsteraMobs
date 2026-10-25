@@ -70,3 +70,6 @@ tools/*.jar
 tools/**/*.zip
 tools/**/*.jar
 tools/paper-integration/node_modules/
+
+# Graphify local runtime state and generated reports
+.graphify/

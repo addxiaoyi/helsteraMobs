@@ -47,6 +47,8 @@ class ThreatWiringAuditTest {
             assertTrue(src.contains("Map.entry(\"" + n + "\""),
                     "动作 " + n + " 未注册：写进 mobs/*.yml 会静默无效");
         }
+        assertTrue(src.contains("t.focus(id2)"),
+                "threat-focus 必须调用 ThreatTable.focus，确保目标超过当前最高仇恨");
     }
 
     @Test

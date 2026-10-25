@@ -320,7 +320,9 @@ spawners:
     x: 36.5
     y: 70
     z: 0.5
-    radius: 0.0
+    # Keep random-location sampling inside the cleared block column; zero is
+    # normalized to the default radius by SpawnerService during loading.
+    radius: 0.1
     y-range: 0.0
     interval: 12000
     max-alive: 100

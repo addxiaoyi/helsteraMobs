@@ -62,6 +62,8 @@
              phase 构建会静默覆盖完整版产物：按 phase 验证完再部署，
              拿到的却是上一轮 phase 的残缺 jar（实测 1.03MB、缺 web 模块）。 -->
         <build.variant>full</build.variant>
+        <!-- PowerShell Core is the portable default; Windows uses inbox Windows PowerShell. -->
+        <paper.integration.shell>pwsh</paper.integration.shell>
     </properties>
 
     <build>
@@ -107,6 +109,18 @@
     -->
     <profiles>
         <profile>
+            <id>paper-integration-windows-shell</id>
+            <activation>
+                <os>
+                    <family>Windows</family>
+                </os>
+            </activation>
+            <properties>
+                <paper.integration.shell>powershell</paper.integration.shell>
+            </properties>
+        </profile>
+
+        <profile>
             <id>paper-integration</id>
             <properties>
                 <build.variant>full</build.variant>
@@ -137,7 +151,7 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>powershell</executable>
+                                    <executable>${paper.integration.shell}</executable>
                                     <arguments>
                                         <argument>-NoProfile</argument>
                                         <argument>-ExecutionPolicy</argument>

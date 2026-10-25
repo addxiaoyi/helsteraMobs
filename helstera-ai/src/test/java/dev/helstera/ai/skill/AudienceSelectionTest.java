@@ -18,5 +18,7 @@ class AudienceSelectionTest {
 
         assertTrue(SkillExtras.audiencePermissionAllowed(allowed, "helstera.menu"));
         assertFalse(SkillExtras.audiencePermissionAllowed(denied, "helstera.menu"));
+        assertFalse(SkillExtras.audiencePermissionAllowed(allowed, "helstera.menu", true));
+        assertTrue(SkillExtras.audiencePermissionAllowed(denied, "helstera.menu", true));
     }
 }

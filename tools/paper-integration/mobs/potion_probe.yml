@@ -1,0 +1,16 @@
+name: Potion Expiry Probe
+model: example/emberling
+entity:
+  type: PIG
+  no-ai: true
+  silent: true
+persistent: true
+mob:
+  despawn: PERSISTENT
+  despawn-distance: 0
+ai:
+  triggers:
+    on-potion-effect-end:
+      do:
+        - set-name-targets &ePOTION_END_TRIGGER_OK
+        - set-item GOLD_INGOT off-hand 1

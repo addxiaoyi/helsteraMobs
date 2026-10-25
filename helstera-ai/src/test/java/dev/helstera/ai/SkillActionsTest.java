@@ -2,14 +2,24 @@ package dev.helstera.ai;
 
 import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.ai.skill.SkillCatalog;
+import dev.helstera.ai.skill.SkillExtras;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * 自身位移动作的构造与边界测试。
@@ -48,6 +58,400 @@ class SkillActionsTest {
         factory("knockback-self").create(List.of("1.0", "0.4")).accept(ctx());
     }
 
+    @Test
+    @DisplayName("jump mechanic raises the caster without replacing horizontal velocity")
+    void jumpActionRaisesCaster() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var original = new org.bukkit.util.Vector(0.2, 0.1, -0.3);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.getVelocity()).thenReturn(original);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("jump").create(List.of("0.8")).accept(context);
+
+        var captured = org.mockito.ArgumentCaptor.forClass(org.bukkit.util.Vector.class);
+        verify(caster).setVelocity(captured.capture());
+        org.bukkit.util.Vector result = captured.getValue();
+        org.junit.jupiter.api.Assertions.assertEquals(0.2, result.getX(), 1.0e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(0.8, result.getY(), 1.0e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(-0.3, result.getZ(), 1.0e-9);
+    }
+
+    @Test
+    @DisplayName("force-pull moves the selected target toward the caster")
+    void forcePullActionMovesTargetTowardCaster() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var world = org.mockito.Mockito.mock(org.bukkit.World.class);
+        var origin = new Location(world, 0, 64, 0);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(target.getLocation()).thenReturn(new Location(world, 3, 64, 0));
+        var context = BehaviorContext.continueExecution(instance, target, 1.0, 3.0, 0,
+                "IDLE", null, target, List.of(target), origin, null);
+
+        SkillExtras.actions().get("force-pull").create(List.of("1.5")).accept(context);
+
+        var captured = org.mockito.ArgumentCaptor.forClass(org.bukkit.util.Vector.class);
+        verify(target).setVelocity(captured.capture());
+        org.bukkit.util.Vector result = captured.getValue();
+        org.junit.jupiter.api.Assertions.assertEquals(-1.5, result.getX(), 1.0e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(0.0, result.getY(), 1.0e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(0.0, result.getZ(), 1.0e-9);
+    }
+
+    @Test
+    @DisplayName("block mechanics are registered and safe without an instance")
+    void blockActionsRegisteredAndSafeWithoutInstance() {
+        assertNotNull(SkillExtras.actions().get("set-block"));
+        assertNotNull(SkillExtras.actions().get("break-block"));
+        SkillExtras.actions().get("set-block").create(List.of("STONE")).accept(ctx());
+        SkillExtras.actions().get("break-block").create(List.of()).accept(ctx());
+    }
+
+    @Test
+    @DisplayName("world weather and time mechanics use Bukkit world APIs")
+    void worldMechanicsWriteWeatherAndTime() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var world = org.mockito.Mockito.mock(org.bukkit.World.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(new Location(world, 0, 64, 0));
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("set-weather").create(List.of("thunder", "20")).accept(context);
+        SkillExtras.actions().get("set-time").create(List.of("noon")).accept(context);
+
+        verify(world).setStorm(true);
+        verify(world).setThundering(true);
+        verify(world).setWeatherDuration(20);
+        verify(world).setThunderDuration(20);
+        verify(world).setTime(6000L);
+    }
+
+    @Test
+    @DisplayName("lightning mechanic uses the target world strike API")
+    void lightningActionStrikesTargetWorld() {
+        var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var world = org.mockito.Mockito.mock(org.bukkit.World.class);
+        when(target.getLocation()).thenReturn(new Location(world, 3, 64, 0));
+        var context = BehaviorContext.of(null, target, 1.0, 3.0, 0, "IDLE");
+
+        SkillExtras.actions().get("lightning").create(List.of("true")).accept(context);
+
+        verify(world).strikeLightningEffect(new Location(world, 3, 64, 0));
+    }
+
+    @Test
+    @DisplayName("scoreboard tag mechanics mutate the caster entity")
+    void scoreboardTagActionsMutateCaster() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var mob = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(instance.baseEntity()).thenReturn(java.util.Optional.of(mob));
+        var context = BehaviorContext.of(instance, (org.bukkit.entity.LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("add-tag").create(List.of("tag=HelsteraProbe")).accept(context);
+        SkillExtras.actions().get("remove-tag").create(List.of("t=HelsteraProbe")).accept(context);
+
+        org.mockito.Mockito.verify(mob).addScoreboardTag("HelsteraProbe");
+        org.mockito.Mockito.verify(mob).removeScoreboardTag("HelsteraProbe");
+        assertNotNull(SkillExtras.actions().get("add-tag-targets"));
+        assertNotNull(SkillExtras.actions().get("remove-tag-targets"));
+    }
+
+    @Test
+    @DisplayName("entity state mechanics write Bukkit state flags")
+    void entityStateActionsWriteBukkitFlags() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var mob = org.mockito.Mockito.mock(org.bukkit.entity.Mob.class);
+        org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(instance.baseEntity()).thenReturn(java.util.Optional.of(mob));
+        var context = BehaviorContext.of(instance, (org.bukkit.entity.LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("set-ai").create(List.of("false")).accept(context);
+        SkillExtras.actions().get("set-gravity").create(List.of("false")).accept(context);
+        SkillExtras.actions().get("set-silent").create(List.of("true")).accept(context);
+        SkillExtras.actions().get("set-collidable").create(List.of("false")).accept(context);
+
+        org.mockito.Mockito.verify(mob).setAI(false);
+        org.mockito.Mockito.verify(mob).setGravity(false);
+        org.mockito.Mockito.verify(mob).setSilent(true);
+        org.mockito.Mockito.verify(mob).setCollidable(false);
+    }
+
+    @Test
+    @DisplayName("swing mechanic uses the requested hand and target context")
+    void swingActionUsesRequestedHand() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("swing").create(List.of("OFF_HAND")).accept(context);
+
+        verify(caster).swingOffHand();
+        org.mockito.Mockito.verify(caster, org.mockito.Mockito.never()).swingMainHand();
+    }
+
+    @Test
+    @DisplayName("swing aliases remain registered and fail safe without an instance")
+    void swingAliasesAreRegistered() {
+        for (String name : List.of("swing", "swing-main-hand", "swing-off-hand")) {
+            assertNotNull(SkillExtras.actions().get(name), name);
+            SkillExtras.actions().get(name).create(List.of()).accept(ctx());
+        }
+    }
+
+    @Test
+    @DisplayName("player and combat state mechanics write the matching Bukkit flags")
+    void playerAndCombatStateActionsWriteFlags() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(instance.baseEntity()).thenReturn(java.util.Optional.of(player));
+        var context = BehaviorContext.of(instance, (org.bukkit.entity.LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("set-sneaking").create(List.of("true")).accept(context);
+        SkillExtras.actions().get("set-gliding").create(List.of("true")).accept(context);
+        SkillExtras.actions().get("set-swimming").create(List.of("true")).accept(context);
+        SkillExtras.actions().get("set-sprinting").create(List.of("true")).accept(context);
+        SkillExtras.actions().get("set-flying").create(List.of("true")).accept(context);
+        SkillExtras.actions().get("set-no-damage-ticks").create(List.of("10")).accept(context);
+        SkillExtras.actions().get("set-maximum-no-damage-ticks").create(List.of("30")).accept(context);
+        SkillExtras.actions().get("set-walk-speed").create(List.of("0.4")).accept(context);
+
+        org.mockito.Mockito.verify(player).setSneaking(true);
+        org.mockito.Mockito.verify(player).setGliding(true);
+        org.mockito.Mockito.verify(player).setSwimming(true);
+        org.mockito.Mockito.verify(player).setSprinting(true);
+        org.mockito.Mockito.verify(player).setFlying(true);
+        org.mockito.Mockito.verify(player).setNoDamageTicks(10);
+        org.mockito.Mockito.verify(player).setMaximumNoDamageTicks(30);
+        org.mockito.Mockito.verify(player).setWalkSpeed(0.4f);
+    }
+
+    @Test
+    @DisplayName("fire mechanics set and clear caster fire ticks")
+    void fireActionsSetAndClearTicks() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var mob = org.mockito.Mockito.mock(org.bukkit.entity.Mob.class);
+        org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(instance.baseEntity()).thenReturn(java.util.Optional.of(mob));
+        var context = BehaviorContext.of(instance, (org.bukkit.entity.LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("set-fire").create(List.of("40")).accept(context);
+        SkillExtras.actions().get("clear-fire").create(List.of()).accept(context);
+
+        org.mockito.Mockito.verify(mob).setFireTicks(40);
+        org.mockito.Mockito.verify(mob).setFireTicks(0);
+    }
+
+    @Test
+    @DisplayName("freeze mechanic writes Paper freeze ticks to the target")
+    void freezeActionWritesFreezeTicks() {
+        var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("freeze").create(List.of("80")).accept(context);
+
+        verify(target).setFreezeTicks(80);
+    }
+
+    @Test
+    @DisplayName("player inventory and experience mechanics use the targeted player")
+    void playerInventoryAndExperienceActionsUseTarget() {
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        assertNotNull(SkillExtras.actions().get("close-inventory"));
+        assertNotNull(SkillExtras.actions().get("clear-experience"));
+        assertNotNull(SkillExtras.actions().get("clear-experience-levels"));
+        assertNotNull(SkillExtras.actions().get("give-experience-levels"));
+        SkillExtras.actions().get("close-inventory").create(List.of()).accept(context);
+        SkillExtras.actions().get("clear-experience").create(List.of()).accept(context);
+        SkillExtras.actions().get("clear-experience-levels").create(List.of()).accept(context);
+        SkillExtras.actions().get("give-experience-levels").create(List.of("3")).accept(context);
+
+        verify(player).closeInventory();
+        verify(player, org.mockito.Mockito.times(2)).setExp(0.0f);
+        verify(player).setLevel(0);
+        verify(player).giveExpLevels(3);
+    }
+
+    @Test
+    @DisplayName("clear-inventory clears the targeted player inventory")
+    void clearInventoryClearsTarget() {
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        var inventory = org.mockito.Mockito.mock(org.bukkit.inventory.PlayerInventory.class);
+        when(player.getInventory()).thenReturn(inventory);
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("clear-inventory").create(List.of()).accept(context);
+
+        verify(inventory).clear();
+    }
+
+    @Test
+    @DisplayName("give-experience grants raw player experience")
+    void giveExperienceGrantsRawExperience() {
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("give-experience").create(List.of("25")).accept(context);
+
+        verify(player).giveExp(25);
+    }
+
+    @Test
+    @DisplayName("set-absorption writes target absorption amount")
+    void setAbsorptionWritesTarget() {
+        var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("set-absorption").create(List.of("6")).accept(context);
+
+        verify(target).setAbsorptionAmount(6.0);
+    }
+
+    @Test
+    @DisplayName("set-absorption raises Paper's max absorption capacity")
+    void setAbsorptionRaisesCapacityWhenPaperClamps() {
+        var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var capacity = org.mockito.Mockito.mock(org.bukkit.attribute.AttributeInstance.class);
+        when(target.getAttribute(org.mockito.ArgumentMatchers.any(org.bukkit.attribute.Attribute.class)))
+                .thenReturn(capacity);
+        when(capacity.getValue()).thenReturn(0.0);
+        when(capacity.getBaseValue()).thenReturn(0.0);
+        var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("set-absorption").create(List.of("6")).accept(context);
+
+        verify(capacity).setBaseValue(6.0);
+        verify(target).setAbsorptionAmount(6.0);
+    }
+
+    @Test
+    @DisplayName("EjectPassenger only ejects passengers from the caster")
+    void ejectPassengerActionEjectsCasterPassengers() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = org.mockito.Mockito.mock(org.bukkit.entity.Entity.class);
+        org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        var context = BehaviorContext.of(instance, (org.bukkit.entity.LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("eject-passenger").create(List.of()).accept(context);
+
+        verify(caster).eject();
+    }
+
+    @Test
+    @DisplayName("Oxygen adds air to the targeted player without exceeding maximum")
+    void oxygenActionAddsTargetAir() {
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        when(player.getRemainingAir()).thenReturn(100);
+        when(player.getMaximumAir()).thenReturn(300);
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("oxygen").create(List.of("20")).accept(context);
+
+        verify(player).setRemainingAir(120);
+    }
+
+    @Test
+    @DisplayName("ConsumeSlot removes only the requested player inventory slot amount")
+    void consumeSlotActionRemovesRequestedSlotAmount() {
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        var inventory = org.mockito.Mockito.mock(org.bukkit.inventory.PlayerInventory.class);
+        var stack = org.mockito.Mockito.mock(org.bukkit.inventory.ItemStack.class);
+        when(player.getInventory()).thenReturn(inventory);
+        when(inventory.getItem(0)).thenReturn(stack);
+        when(stack.getAmount()).thenReturn(5);
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("consume-slot").create(List.of("0", "2")).accept(context);
+
+        verify(stack).setAmount(3);
+        verify(inventory, org.mockito.Mockito.never()).setItem(0, null);
+    }
+
+    @Test
+    @DisplayName("player cooldown and game-mode mechanics use the targeted player")
+    void playerCooldownAndGameModeActionsUseTarget() {
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("set-material-cooldown")
+                .create(List.of("ENDER_PEARL", "20")).accept(context);
+        SkillExtras.actions().get("set-game-mode")
+                .create(List.of("ADVENTURE")).accept(context);
+
+        verify(player).setCooldown(org.bukkit.Material.ENDER_PEARL, 20);
+        verify(player).setGameMode(org.bukkit.GameMode.ADVENTURE);
+    }
+
+    @Test
+    @DisplayName("RemoveHeldItem alias removes only the active hand item")
+    void removeHeldItemAliasRemovesActiveHand() {
+        var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var equipment = org.mockito.Mockito.mock(org.bukkit.inventory.EntityEquipment.class);
+        var held = org.mockito.Mockito.mock(org.bukkit.inventory.ItemStack.class);
+        var material = org.mockito.Mockito.mock(org.bukkit.Material.class);
+        when(target.getEquipment()).thenReturn(equipment);
+        when(equipment.getItem(org.bukkit.inventory.EquipmentSlot.HAND)).thenReturn(held);
+        when(held.getType()).thenReturn(material);
+        when(material.isAir()).thenReturn(false);
+        var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("remove-held-item").create(List.of()).accept(context);
+
+        verify(equipment).setItem(org.bukkit.inventory.EquipmentSlot.HAND, null);
+    }
+
+    @Test
+    @DisplayName("damage-melee excludes the caster from its nearby targets")
+    void meleeDamageDoesNotSelfDamage() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var world = org.mockito.Mockito.mock(org.bukkit.World.class);
+        var origin = new org.bukkit.Location(world, 0, 64, 0);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(instance.location()).thenReturn(origin);
+        when(caster.isValid()).thenReturn(true);
+        when(target.isValid()).thenReturn(true);
+        when(world.getNearbyEntities(org.mockito.ArgumentMatchers.any(org.bukkit.Location.class),
+                org.mockito.ArgumentMatchers.eq(2.5), org.mockito.ArgumentMatchers.eq(2.5),
+                org.mockito.ArgumentMatchers.eq(2.5)))
+                .thenReturn(List.<Entity>of(caster, target));
+        var context = BehaviorContext.of(instance, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("damage-melee").create(List.of("3", "2.5")).accept(context);
+
+        verify(target).damage(3.0, caster);
+        org.mockito.Mockito.verify(caster, org.mockito.Mockito.never()).damage(
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.any(Entity.class));
+    }
+
+    @Test
+    @DisplayName("rotation mechanics are registered and safe without an instance")
+    void rotationActionsRegisteredAndSafeWithoutInstance() {
+        assertNotNull(SkillExtras.actions().get("look-at"));
+        assertNotNull(SkillExtras.actions().get("set-rotation"));
+        SkillExtras.actions().get("look-at").create(List.of()).accept(ctx());
+        SkillExtras.actions().get("set-rotation").create(List.of("90", "15")).accept(ctx());
+    }
+
     /**
      * 非数值参数在<b>装载期</b>抛异常，而不是静默回落默认值。
      *
@@ -81,6 +485,68 @@ class SkillActionsTest {
         factory("dash").create(List.of("5", "not-a-direction")).accept(ctx());
         factory("blink").create(List.of("5", "back")).accept(ctx());
         factory("blink").create(List.of("5", "away")).accept(ctx());
+    }
+
+    @Test
+    @DisplayName("位移动作区分自身朝向、靠近目标与远离目标")
+    void movementDirectionModes() {
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(Entity.class);
+        var target = mock(LivingEntity.class);
+        World world = mock(World.class);
+        // Bukkit yaw=90 faces -X; the target is due +Z so the modes are observable.
+        Location origin = new Location(world, 0, 64, 0, 90, 0);
+        Location targetLocation = new Location(world, 0, 64, 10);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(origin);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(target.getLocation()).thenReturn(targetLocation);
+        var context = BehaviorContext.continueExecution(instance, target, 1.0, 10.0,
+                0, "movement", null, target, List.of(target), origin, null);
+
+        factory("dash").create(List.of("2", "forward")).accept(context);
+        verify(caster).setVelocity(org.mockito.ArgumentMatchers.argThat(vector ->
+                Math.abs(vector.getX() + 2.0) < 1.0e-9
+                        && Math.abs(vector.getY()) < 1.0e-9
+                        && Math.abs(vector.getZ()) < 1.0e-9));
+
+        clearInvocations(caster);
+        factory("dash").create(List.of("2", "near")).accept(context);
+        verify(caster).setVelocity(org.mockito.ArgumentMatchers.argThat(vector ->
+                Math.abs(vector.getX()) < 1.0e-9
+                        && Math.abs(vector.getY()) < 1.0e-9
+                        && Math.abs(vector.getZ() - 2.0) < 1.0e-9));
+
+        clearInvocations(caster);
+        factory("dash").create(List.of("2", "away")).accept(context);
+        verify(caster).setVelocity(org.mockito.ArgumentMatchers.argThat(vector ->
+                Math.abs(vector.getX()) < 1.0e-9
+                        && Math.abs(vector.getY()) < 1.0e-9
+                        && Math.abs(vector.getZ() + 2.0) < 1.0e-9));
+    }
+
+    @Test
+    @DisplayName("位移距离支持在执行时解析目标占位符")
+    void movementDistanceResolvesAtExecutionTime() {
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(Entity.class);
+        var target = mock(LivingEntity.class);
+        World world = mock(World.class);
+        Location origin = new Location(world, 0, 64, 0, 90, 0);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(origin);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(target.getLocation()).thenReturn(new Location(world, 0, 64, 10));
+        when(target.getHealth()).thenReturn(3.0);
+        var context = BehaviorContext.continueExecution(instance, target, 1.0, 10.0,
+                0, "movement", null, target, List.of(target), origin, null);
+
+        factory("dash").create(List.of("<target.hp.raw>", "forward")).accept(context);
+
+        verify(caster).setVelocity(org.mockito.ArgumentMatchers.argThat(vector ->
+                Math.abs(vector.getX() + 3.0) < 1.0e-9
+                        && Math.abs(vector.getY()) < 1.0e-9
+                        && Math.abs(vector.getZ()) < 1.0e-9));
     }
 
     @Test

@@ -4,40 +4,194 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
+Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
+the report contract passes with `214/214` probes observed (`206 passed` and `8`
+expected negative-control observations). Earlier bullets that say strict evidence
+is pending describe historical exploratory runs.
+
 ### Verified Progress
 
-- Skills: separate `TargetConditions` and `TriggerConditions`, nested `cast-skill`, delay/repeat/cast duration, scoped variables, `variable-unset`, location variables, and `@VariableLocation`.
-- Mechanics: `remove`, `equip`, `set-name`, `set-item`, `drop-item`, potion effects, teleport, mount/dismount, `cancel-event`, and custom item resolver integration.
-- Conditions: world/biome/time/weather, health/distance/permission/entity state, variables, composition, `food-level`, `has-item`, `air-level`, `damage-cause`, and `is-cancelled`.
+- Skills: separate `TargetConditions` and `TriggerConditions`, nested `cast-skill`, delay/repeat/cast duration, scoped variables, `variable-unset`, location variables, `@VariableLocation`, conditional targeters such as `@nearestConditionalTarget`, target-aware `damage`/`heal` mechanics, and execution-time numeric placeholders such as `<target.hp.raw>`.
+- Mechanics: `remove`, `suicide`, target-aware `kill`, bounded `dot` damage-over-time, radial `damage-melee` with caster exclusion, `setnameplate`, `equip`, `set-name`, `set-item`/`set-offhand`/`set-armor`, `set-health`, `set-max-health`, `modify-max-health`, `feed`, `swing` (main/off-hand), `disarm`/`remove-held-item`, `clear-inventory`, `set-material-cooldown`, `set-game-mode`, `jump`, target-aware `force-pull`, `addtag`/`removetag` scoreboard tags (including targeters), `setscore`/`addscore` instance scores, Mythic `setvariable`/`variableunset`/`variableadd`/`variablemath`, `setvariablelocation`/`locationunset`, `signal`/`~onSignal`, Mythic `shoot`/`shootprojectile`, `setintent`, `command`/`commandself`/`commandtarget`, `set-stance`, `randomskill`, `leap`, `set-tick-speed`, `pull`, actionbar, full `title`/`subtitle`/timing delivery, target-aware `damage`/`damage-percent`/`message`/`explode` multi-target dispatch, caster movement `dash`/`blink` with direction modes and placeholder distances, target-aware entity state actions including `set-ai`/`set-gravity`/`set-silent`/`set-collidable`/`set-sneaking`/`set-gliding`/`set-swimming`/`set-fire`/`clear-fire`/`invisible`/`glowing`/`set-invulnerable`, player `set-sprinting`/`set-flying`/`set-walk-speed`, no-damage-tick controls, `look-at`, `set-rotation`, `give-item`, `take-item`, `set-block`, `break-block`, `drop-item`, potion effects, teleport, mount/dismount, `cancel-event`, and custom item resolver integration.
+- Scoreboard tag evidence: exploratory Paper 1.21.11 r22 passes real caster/targeter `addtag`/`removetag` mutations; the current strict Paper 1.21.1-133 aggregate also completes the registered tag probes.
+- DoT evidence: exploratory Paper self-test verifies bounded `dot` damage across multiple intervals and confirms no damage after `duration`; the current strict Paper 1.21.1-133 aggregate completes the registered DoT probe.
+- Conditions: world/biome/time/weather, `night`/`raining`/`thundering`, health/distance/permission/stance/entity state (including caster and target `on-ground`, `has-ai`, `has-gravity`, `is-silent`, `is-dead`, `is-alive`, `target-is-alive`, `is-valid`, `is-collidable`, and `has-offhand` from Bukkit entity state), `ownerIsPlayer`, exact faction conditions (`faction`, `targetfaction`, `samefaction`, `differentfaction`), explicit `target-has-tag`/`targetHasScoreboardTag`, strict target-only permission/game-mode/food/air/item/potion/aura/holding/wearing conditions, vehicle/passenger aliases (`hasPassenger`, `isVehicle`, `targetHasPassenger`, `targetIsVehicle`), `branch-unlocked`/`branch-locked` SkillTree gates, `falling`, `drowning`, `has-auras`, `target-within`, equality/inequality comparators for health/target-health/distance/light-level, variables, composition, `food-level`, `has-item`, `air-level`, `damage-cause`, `damage-amount`, and `is-cancelled`.
+- Condition migration aliases now also cover Mythic `inCombat`, `playersInRadius`, `entitiesInRadius`, `mobsInRadius`, `randomChance`, `targetCount`, and `hungerBelow`; `mobsInRadius` uses a mob-only runtime evaluator.
+- Official condition aliases `Burning`, `Blocking`, `Charged`, `Crouching`, movement states, `Chance`, `Day`, `Dawn`, `Dusk`, and `Sunny` now map to existing runtime evaluators.
+- Direct camel-case condition names such as `isOnGround`, `isInWater`, `isInLava`, `isInAir`, `isOnFire`, `isBlocked`, `standOn`, and `daylight` now bind to the same canonical Bukkit evaluators as migrated forms.
+- Mythic `FoodSaturation`/`hungerSaturation` conditions now use Bukkit saturation comparators, including explicit target context.
+- Mythic `LastDamageCause` is mapped separately from current event `damage-cause` and reads the target entity's stored Bukkit damage event.
+- Exploratory Paper r48 verifies the stored FIRE cause path and rejects ENTITY_ATTACK for `LastDamageCause`.
+- Mythic `MotionX`/`MotionY`/`MotionZ`/`Velocity` conditions now use target velocity comparator evaluators; exploratory Paper coverage is included in the skill self-test.
+- Exploratory Paper r49 verifies all three velocity components and vector magnitude on a real target.
+- Mythic `PlayersOnline`/`PlayersInWorld`/`MobsInWorld` conditions now use Bukkit world population comparators; exploratory Paper r50 verifies the live counts.
+- Mythic `PlayerWithin`/`PlayerNotWithin` conditions now use world-safe online-player radius checks with explicit-target semantics.
+- Exploratory Paper r51 verifies the positive/negative player-radius pair for a real online target.
+- Mythic `isCaster` now compares active target identity with the managed caster explicitly.
+- Mythic `OwnerIsOnline` now checks resolved Bukkit/PDC owner availability separately from `ownerIsPlayer`.
+- Exploratory Paper r52 verifies `OwnerIsOnline` for a real online PDC-backed owner.
+- Mythic `HasFreeInventorySlot`/`HasFreeSlot` now use Bukkit inventory empty-slot semantics, including full-inventory rejection.
+- Exploratory Paper r53 verifies the positive and full-inventory-negative `HasFreeInventorySlot` paths on a real online player; strict Paper 1.21.1 evidence remains pending.
+- Exploratory Paper r56 verifies the positive and negative `HasItem` paths after restoring a real online player's inventory state; strict Paper 1.21.1 evidence remains pending.
+- Exploratory Paper r59 verifies target water/lava conditions across real Paper ticks; the report uses the delayed probe because same-tick fluid-cache evaluation is false by design.
+- Official `LivingInRadius`, `MobsInChunk`, and `Dimension` conditions now map to Bukkit living-entity, chunk mob, and world-environment evaluators; exploratory Paper r60 covers them through `conditionUtilityAliases`.
+- Official `Height`, `HeightAbove`, `HeightBelow`, `Pitch`, `Yaw`, and `OnBlock` conditions now support Mythic numeric ranges, Bukkit entity orientation, and exact block-material lists; exploratory Paper r64 verifies the live paths.
+- Official `BlockType` and exact `BiomeType` conditions now support comma-separated Bukkit material/biome lists; wildcard, block-tag, and non-exact biome category forms remain explicitly unmapped. Exploratory Paper r66 verifies the exact paths.
+- Official `ServerIsPaper` now detects Paper-family runtimes from Bukkit server identity; `IsInSurvivalMode` strictly checks an explicit target Player. Exploratory Paper r67 keeps the utility probe passed.
+- Official `ServerVersion`, `ServerVersionAfterOrEqual`, and `ServerVersionBefore` now compare structured Bukkit Minecraft versions with inclusive flags; the self-test uses the live Bukkit version for its exact-version branch, so the aggregate utility probe remains valid across Paper 1.21.4 and 1.21.11. Exploratory Paper r72 and r2 keep the utility probe passed.
+- Official `IsMythicMob` now uses the plugin-managed entity lookup, so it distinguishes real managed instances from ordinary Bukkit entities; exploratory Paper r68 keeps the utility probe passed.
+- Official `IsRaiderPatrolLeader` now maps to Bukkit `Raider#isPatrolLeader()`; exploratory Paper r75 verifies a real Pillager leader state through `targetCategories`.
+- Official `MobsNearOrigin` now counts valid Bukkit mobs around the execution origin with amount/radius/type filtering; exploratory Paper r70 keeps the utility probe passed.
+- Official `VehicleIsDead` now checks the caster's mounted vehicle through Bukkit vehicle state; runtime/migration coverage is present and exploratory Paper r80 keeps the fail-closed utility path passed.
+- Official `DistanceFromSpawn` now compares the active target/origin location to its Bukkit world spawn using Mythic range syntax; exploratory Paper r71 keeps the utility probe passed.
+- Official `BoundingBoxesOverlap` now uses Bukkit AABB overlap with optional caster forward offset; exploratory Paper r73 keeps the utility probe passed.
+- Official `IsCreeperPrimed` now maps to Bukkit `Creeper#isIgnited()`; exploratory Paper r74 keeps the utility probe passed. Official `IsFrozen` now reads Paper's `Entity#isFrozen()` boolean with runtime, migration, and condition-catalog self-test coverage. A new Paper run is still pending.
+- Official `IsUsingSpyglass` now reads a target Player's active Bukkit item and matches SPYGLASS; exploratory Paper r76 verifies active-item positive/negative paths.
+- Official `EnderDragonAlive` now checks for a valid EnderDragon in the target world's entity set; exploratory Paper r77 keeps the utility probe passed.
+- Official `PlayerKills` now uses a lifetime counter owned by each managed mob instance and increments only when that instance is resolved as the killer of a real Player death; `playerKills`/`player-kills` aliases, range syntax, teardown cleanup, and migration coverage are implemented. Exploratory Paper 1.21.4 killprobe records both `playerKillTrigger=passed` and `playerKillsCondition=passed` after a deterministic real Player death; strict Paper 1.21.1 evidence remains pending.
+- Official `Absorption` now reads Bukkit `Damageable#getAbsorptionAmount()` with exact and comparator forms, defaulting to a positive-absorption check; migration aliases and fail-closed runtime tests are included. Exploratory Paper 1.21.4 r8 records the condition path passed; strict Paper 1.21.1 evidence remains pending.
+- Official `HasPotionEffect` now matches Bukkit potion type, amplifier level, and remaining duration ranges, with `ANY` type support; migration and runtime tests cover type-only and detailed forms. Exploratory Paper 1.21.4 r8 records the independent `potionEffectCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `HasAuraStacks` now adapts Bukkit potion amplifier values to 1-based stack ranges, with aura/type aliases and `ANY` support. Exploratory Paper 1.21.4 r8 records the independent `auraStacksCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `Level` now reads the managed model instance's MythicMob level, defaults unset instances to level 1, and fails closed without a managed instance. Exploratory Paper 1.21.4 r8 records the independent `levelCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- `Health` and `HealthPercent` now preserve Mythic `includeabsorption`/`ia`, adding Bukkit absorption to raw and percentage comparisons; migration, runtime, and condition-catalog self-test coverage are included. Exploratory Paper 1.21.4 r8 records the inclusive condition path passed; strict Paper 1.21.1 evidence remains pending.
+- Official `LunarPhase` now follows the existing vanilla eight-day `World#getFullTime()` cycle and supports numeric phase lists. Exploratory Paper 1.21.4 r8 records the independent `lunarPhaseCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `LastSignal` now tracks the most recent signal delivered to each managed instance, clears it on teardown, and supports the Mythic `signal`/`s` aliases. Exploratory Paper 1.21.4 r3 records the independent `signalMechanics` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `LineOfSightFromOrigin` now ray-traces from `BehaviorContext.origin()` to the target eye location using Bukkit block collision. Exploratory Paper 1.21.4 r2 records the independent `lineOfSightFromOriginCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `BowTension` now reads `EntityShootBowEvent#getForce()` from the `on-entity-shoot` context, constrained to the 0..1 range. Exploratory Paper 1.21.4 r3 records the independent `bowTensionCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `StringEquals` now compares two resolved string values with `value1/value2` and Mythic aliases. Exploratory Paper 1.21.4 r8 records the independent `stringEqualsCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `StringEmpty` / `StringNotEmpty` now check resolved text values with Mythic value aliases. Exploratory Paper 1.21.4 r8 records the independent `stringEmptyCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `LookingAt` now uses a Player target's Bukkit block/entity ray trace with type and distance arguments; migration and runtime tests cover the path. Exploratory Paper 1.21.4 r2 records the independent `lookingAtCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `Structure` now uses Paper's structure registry and `World#hasStructureAt`, supporting namespaced values and `*` wildcards; migration and fail-closed runtime coverage are included. Exploratory Paper 1.21.11 r123 records the independent positive/wildcard/negative `structureCondition=passed` probe against a real Mineshaft; strict Paper 1.21.1 evidence remains pending.
+- Official `EntityItemType` / `EntityMaterialType` now read the Bukkit Item trigger's carried material in `on-item-pickup` contexts, with fail-closed non-Item contexts. Exploratory Paper 1.21.4 r2 records the independent `entityItemTypeCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `ItemType` now aliases the Bukkit Item trigger material path used by `TriggerItemType`, with migration and runtime coverage; exploratory Paper 1.21.11 r123 records the independent `itemTypeCondition=passed` probe; strict Paper 1.21.1 evidence remains pending.
+- Official `EntityItemIsSimilar` now compares a Bukkit Item trigger's carried stack with the resolved item template using `ItemStack#isSimilar`; custom item resolver, migration, and runtime coverage are included. Exploratory Paper 1.21.4 r2 records `entityItemSimilarCondition=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `ItemIsSimilar` now separately compares a target player's numeric inventory slot or hand/armor slot with the resolved item template; `itemIsSimilar` no longer aliases the dropped-entity condition. Exploratory Paper 1.21.4 r2 records `itemSimilarCondition=passed` and `targetsCondition=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `ItemRecharging` now reads Paper/Bukkit `HumanEntity#getAttackCooldown()` (`<1.0` means recharging), with `recharging` alias and fail-closed non-human semantics. Exploratory Paper 1.21.4 r3 records the independent `itemRechargingCondition` probe passed after a real Bukkit attack; strict Paper 1.21.1 evidence remains pending.
+- Official `CloseInventory`, `ClearExperience`, `ClearExperienceLevels`, `GiveExperienceLevels`, and `RemoveItem`/`removeitem` now use Bukkit player APIs with targeter-aware execution; importer, binder, and unit coverage are included. Exploratory Paper 1.21.4 r122 records `playerExperienceMechanics=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `GiveExperience` now grants raw Bukkit player experience separately from level grants; importer, binder, unit, and target-aware self-test coverage are included. Exploratory Paper 1.21.4 r136 records `rawExperienceMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `SetAbsorption` now writes target Bukkit absorption amounts, raising Paper's `MAX_ABSORPTION` capacity when necessary so the requested value is not clamped to zero. Importer, binder, unit, and target-aware self-test coverage are included. Exploratory Paper 1.21.4 r8 records `setAbsorptionMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `EjectPassenger` now uses Bukkit `Entity#eject()` with caster-only semantics and `eject_passenger` migration alias; importer, binder, and unit coverage are included. Exploratory Paper 1.21.4 r124 records `ejectPassenger=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `Oxygen` now adds capped air to target players through Bukkit remaining-air APIs; importer, binder, unit, and self-test coverage are included. Strict Paper 1.21.1 evidence remains pending.
+- Official `ConsumeSlot` now removes an exact amount from a target player's numeric or equipment inventory slot, separate from `take-item`; importer, binder, and unit coverage are included. The Paper stack write-back path is fixed and exploratory Paper 1.21.4 r127 records `consumeSlotMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `RemoveHeldItem`/`disarm`, `SetMaterialCooldown`/`SetItemCooldown`, and `SetGameMode` now use target-aware Bukkit APIs with importer aliases and unit coverage. Exploratory Paper 1.21.4 r132 executes the `SetItemCooldown` alias and records `materialCooldownMechanic=passed` and `setGameModeMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `Jump` preserves horizontal velocity while raising the caster/selected targets, and `ForcePull` directs selected targets toward the caster with an optional vertical override. Exploratory Paper 1.21.4 r128 records `jumpMechanic=passed` and `forcePullMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `SetOffhand` writes a resolved item to the caster or selected targets' Bukkit off-hand slot; importer, targeter, and unit coverage are included. Exploratory Paper 1.21.4 r129 records `setOffhandMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `SetArmor` writes resolved helmet/chestplate/leggings/boots items to Bukkit armor slots, with AIR/NONE clearing and targeter support. Exploratory Paper 1.21.4 r130 records `setArmorMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `SetFaction` now delegates caster/target faction assignment to the runtime `FactionService` bridge, with `none`/`clear` removal semantics and importer aliases. Exploratory Paper 1.21.4 r133 records `factionMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `SetLevel` now updates the managed instance level consumed by `Level` conditions and AI damage/speed scaling; generation-time HP scaling remains intentionally unchanged. Exploratory Paper 1.21.4 r137 records `levelMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `SetWeather` and `SetTime` now use Bukkit world APIs with clear/rain/thunder and named/numeric time forms. Exploratory Paper 1.21.4 r134 records `weatherMechanic=passed` and `timeMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `Lightning` now uses Bukkit world strike APIs with targeter support and effect-only mode. Exploratory Paper 1.21.4 r135 records `lightningMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- Mythic skill migration now preserves positional arguments alongside keyed arguments across common item, inventory, experience, oxygen, block, entity-state, movement, potion, animation, and audience mechanics; importer regression coverage protects both forms.
+- Exploratory Paper 1.21.4 r125 records `oxygenMechanic=passed`; strict Paper 1.21.1 evidence remains pending.
+- `Freeze` now uses Paper `LivingEntity#setFreezeTicks` and is exercised by the existing `IsFrozen` self-test path; importer, binder, and unit coverage are included. Exploratory Paper 1.21.4 r123 records `frozenCondition=passed`; strict Paper 1.21.1 evidence remains pending.
+- Official `CompareValues` now supports typed integer/double/string/boolean comparisons with Mythic operator aliases. Exploratory Paper 1.21.4 r8 records the independent `compareValuesCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `IsSkill` now checks the loaded named-skill registry through a lifecycle-safe SkillService bridge, with unknown skills failing closed. Exploratory Paper 1.21.4 r8 records the independent `isSkillCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `GlobalScore` now reads the main Bukkit scoreboard objective's standard `GLOBAL` fake entry, retains `__GLOBAL__` as a compatibility fallback, supports score ranges, and fails closed when the objective/score is absent. Exploratory Paper 1.21.4 r3 records the independent `globalScoreCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `Score` now preserves explicit objective/entry/value semantics and supports the adapter's objective/value shorthand; `Targets` matches inherited skill-tree target counts with optional context targeter selection. Exploratory Paper 1.21.4 r3 records `scoreMechanics` and `scoreCondition` passed; strict Paper 1.21.1 evidence remains pending.
+- Official `Cuboid`/`InBounds` now support inclusive coordinate cuboids, spheres, upright cylinders, relative coordinates, and location targeters with fail-closed malformed/pin inputs; migration, binder, runtime, and self-test coverage are included. Exploratory Paper 1.21.4 r121 records `bounds-condition=true`; strict Paper 1.21.1 evidence remains pending.
+- Official `MythicMobType` now maps to managed model IDs with exact and contains matching, preserving the adapter boundary explicitly. Exploratory Paper 1.21.4 r2 records the independent `mythicMobTypeCondition` path passed; strict Paper 1.21.1 evidence remains pending.
+- Official `VariableContains` now supports string substring/prefix/suffix checks and collection/map `ANY`/`ALL` modes through `compareType`. The Paper self-test now uses a real SkillTree execution context for non-numeric variables. Exploratory Paper 1.21.4 r3 records the independent `variableContainsCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `ProjectileHasEnded` now records Bukkit `ProjectileHitEvent` completion and checks the triggering projectile with teardown/reset cleanup; migration and unit coverage are included. Exploratory Paper 1.21.4 r3 records the independent `projectileHasEndedCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Official `EnderDragonPhase` now matches Bukkit `EnderDragon.Phase` lists; exploratory Paper r78 verifies a real `CIRCLING` phase.
+- Official `Altitude` now measures target height above the Bukkit highest-block surface with Mythic range and `maxHeight` handling; exploratory Paper r79 keeps the utility probe passed.
+- Official `WorldTime`, `SkyLightLevel`, and `LightLevelFromBlocks` conditions now use Bukkit world time and block light-source APIs; exploratory Paper r65 keeps the live `conditionUtilityAliases` probe passed.
+- Official `Moist`/`MoistureLevel` now read only Bukkit `Farmland` BlockData (`moisture > 0` or an `l` range); non-farmland blocks fail closed, and exploratory Paper r81 verifies hydrated, dry, and range paths with restoration.
+- Official `MobSize` now reads Bukkit size APIs for `Slime`, `MagmaCube`, and `Phantom`, with Mythic numeric ranges and strict non-size-entity rejection; exploratory Paper r82 verifies a real Slime size transition.
+- Official `BlockTypeInRadius` now counts exact Bukkit materials in a spherical block radius with Mythic amount/radius ranges; exploratory Paper r87 verifies positive STONE and negative DIRT paths with restoration.
+- Official `FallSpeed` now matches positive downward velocity ranges; exploratory Paper r91 extends the live motion condition probe.
+- Official `DirectionalVelocity` now preserves named x/y/z, absolute-axis, and relative-orientation checks; exploratory Paper r95 extends the motion probe.
+- Official `FieldOfView` now evaluates caster/target view cones with angle and rotation offsets; exploratory Paper r96 verifies forward, side-rejection, and rotated paths.
+- Official `DistanceFromLocation` now compares explicit target coordinates against x/y/z/world and distance ranges; exploratory Paper r97 verifies exact and out-of-range paths.
+- Official `EnchantingLevel` / `EnchantingExperience` now read explicit target-player level and 0..1 experience progress; exploratory Paper r92 verifies level and progress comparators with restoration.
+- Official `Plugin` / `PluginExists` / `HasPlugin` now check Bukkit PluginManager enabled state; exploratory Paper r93 verifies `helsteraMobs` positive and missing-plugin negative paths.
+- Official `SpawnReason` now matches the target entity's Bukkit `Entity#getEntitySpawnReason()` with case-insensitive enum parsing and fail-closed missing/invalid values; exploratory Paper 1.21.11 r98 records `spawn-reason-condition=true` with actual `CUSTOM` and a different-enum negative control.
+- Official `IsWaterMob` and `IsZombie` now use Bukkit's `WaterMob` marker and `Zombie` type checks; exploratory Paper 1.21.11 r99 records real Cod/Zombie positive paths and cross-type negative controls.
+- Official `Aerial` now evaluates the active target's Bukkit `isOnGround()` state with `aerial`/`isAerial` aliases; exploratory Paper 1.21.11 r102 verifies a real airborne ArmorStand and a grounded online-player negative control.
+- Official `IsEnderman` now uses Bukkit's `Enderman` type check; exploratory Paper 1.21.11 r103 verifies a real Enderman positive path and a Zombie negative control.
+- Official `HasEnchantment` now checks all Bukkit equipment slots with `enchantment/type/e` and `level/l` range arguments; exploratory Paper 1.21.11 r104 verifies Sharpness positive, `ANY` matching, level rejection, and wrong-type rejection.
+- Official `Color` now matches Bukkit Sheep/Shulker dye colors, Cat types, Parrot variants, Horse colors, and Llama colors; exploratory Paper 1.21.11 r108 verifies a real red Sheep positive, wrong-color rejection, and unsupported Zombie rejection.
+- Official `MaterialIsOnCooldown` now reads target-player Bukkit material cooldowns with `material/m` arguments and an `ENDER_PEARL` default; exploratory Paper 1.21.11 r110 verifies positive, wrong-material, and cleared negative paths alongside the passing aggregate condition catalog.
+- Official `TriggerItemType` now matches the Bukkit Item entity carried by the trigger context with `types/type/material/m` aliases; exploratory Paper 1.21.11 r113 verifies STONE/DIAMOND trigger-item positive and negative paths.
+- Official `TriggerBlockType` now matches the origin block for `on-block-break`/`on-block-place` trigger states with block-material aliases; exploratory Paper 1.21.11 r113 verifies STONE positive, DIAMOND negative, and wrong-state rejection.
+- Official `XDiff`/`YDiff`/`ZDiff` now compare target-minus-caster Bukkit coordinates with Mythic numeric ranges; exploratory Paper 1.21.11 r114 verifies positive ranges and an out-of-range rejection.
+- Official `OriginLocation` now matches `BehaviorContext.origin()` by block coordinates or exact coordinates with `loc/l/c`, `x/y/z`, and `exact/e`; exploratory Paper 1.21.11 r116 verifies block, exact, and mismatch paths.
+- Official `HasDialogOpen` now bridges the active DialogueService state by model instance, with lifecycle-safe hook injection; exploratory Paper 1.21.11 r106 verifies start/open/stop/closed transitions.
+- Official `IsInCinematic` now checks explicit player targets against the active DialogueService cinematic state; exploratory Paper 1.21.11 r107 verifies player-target open/closed transitions.
+- Mythic `Name` now matches the active entity's exact custom name, falling back to its Bukkit entity name when no custom name is present.
+- Exploratory Paper r54 verifies custom-name positive matching and default-name rejection on a real managed Zombie; strict Paper 1.21.1 evidence remains pending.
+- `TargetWithin`/`TargetNotWithin` and target-AI line-of-sight conditions now inspect the active entity's vanilla AI target; caster-to-target `LineOfSight` remains separate.
+- Mythic `GlobalCooldown` aliases (`gcd`/`setgcd`/`setglobalcooldown`) and `offgcd` are mapped to instance-scoped runtime cooldown state.
+- Exploratory Paper r45 verifies the live `offgcd -> gcd 40 -> clear -> offgcd` sequence; strict Paper 1.21.1 evidence remains pending.
+- Mythic `SetSkillCooldown` aliases dynamically update named-skill cooldowns per instance, with zero-duration clearing and teardown cleanup; exploratory r46 verifies the live transition.
+- Placeholders: caster/target health, location, state, permissions, entity flags, food/saturation/exhaustion, air, luck/armor attributes, main-hand/offhand item types; exploratory Paper r18 records `gameplay-placeholders=true`.
+- Kill triggers: killer-side `on-kill` / `on-kill-player` dispatch, including non-player damage attribution and projectile shooter unwrapping; exploratory Paper r27 verifies the real-death `kill-trigger`, and Paper 1.21.4 killprobe verifies the real-player death plus `PlayerKills` range assertions. Strict Paper 1.21.1 release evidence remains pending.
+- Taming/breeding trigger evidence: exploratory Paper 1.21.11 r23 dispatches `on-tame` and `on-breed` to real managed entities and observes both configured actions; natural player timing and Paper 1.21.1 release evidence remain pending.
+- Consumption trigger: Mythic `onConsume`/`onEat` aliases normalize to `on-consume` and dispatch from Bukkit `PlayerItemConsumeEvent`; potion `on-buff`/`on-potion-effect-end` contexts now preserve the affected living entity as target/targets for target conditions and actions. Exploratory Paper 1.21.11 r136/r137 now records real `item=POTION` consumption and natural short-effect expiry; strict Paper 1.21.1 timing remains pending.
+- Player event triggers: exploratory Paper trigger self-test now verifies `on-interact`, `on-world-change`, `on-jump`, and `on-swing` on managed entities/player; natural client timing and Paper 1.21.1 release evidence remain pending.
+- Entity interaction trigger: `on-interact` now listens to `PlayerInteractEntityEvent`, covering both ordinary entity right-clicks and the `PlayerInteractAtEntityEvent` child event; natural Paper timing evidence remains pending.
+- Reload lifecycle: plugin shutdown clears static SkillExtras/SkillCatalog hooks, state maps, delayed scheduler references, and the projectile bridge so a reload cannot retain the old plugin classloader.
+- Player lifecycle: exploratory Paper trigger self-test now verifies `on-quit` on a managed online player; natural disconnect timing and Paper 1.21.1 release evidence remain pending.
+- Bed lifecycle: exploratory Paper trigger self-test now verifies `on-bed-enter` and `on-bed-leave` on a managed online player; natural Paper timing and Paper 1.21.1 release evidence remain pending.
+- Item lifecycle triggers: exploratory Paper trigger self-test now verifies `on-item-drop`, `on-item-break`, and `on-item-damage` on a managed online player; natural client timing and Paper 1.21.1 release evidence remain pending.
+- Fishing/item durability triggers: exploratory Paper trigger self-test now verifies `on-fish` and `on-item-damage` on a managed online player; natural client timing and Paper 1.21.1 release evidence remain pending.
+- Shearing trigger: exploratory Paper trigger self-test now verifies `on-shear` on a real managed Sheep with the player preserved as target; natural Paper timing and Paper 1.21.1 release evidence remain pending.
+- Leash lifecycle: exploratory Paper 1.21.11 r24 now verifies player-driven `on-leash` and `on-unleash` actions on a real managed Wolf; natural timing and Paper 1.21.1 release evidence remain pending.
+- Villager trade trigger: exploratory Paper trigger self-test now verifies `on-trade` on a real managed Villager with the trading player as target; natural event timing and Paper 1.21.1 release evidence remain pending.
 - Drops: amount ranges, conditions, nested tables, cycle protection, dynamic chance, experience, and external drop classification.
+- Migration: legacy numeric IDs now cover common base blocks including `0 -> AIR`, classic water/lava and piston IDs, stable item IDs through 452, colored Shulker/Glazed Terracotta blocks, music discs `2256–2267`, common `383:DATA` spawn eggs, `ID:DATA` shorthand, and safe data variants/durability (including flowers, leaves, fish, banners, infested blocks, quartz, prismarine, double plants, fishing rods, shears, shields, and elytra); Mythic metaskill, standalone `skill{s=...}` references, DropTable, and spawner conditions are translated through the shared condition mapping, with unknown leaves preserved for manual review; unknown or unsafe data remains visible as an explicit warning.
+- Scalar condition compatibility now uses one parser across spawners, immunity/damage modifiers, drops, and Mythic imports: `day, !raining, time-between=0,12000` is split into separate conditions without corrupting range or coordinate commas; nested braces, quotes, YAML lists, and arrays remain intact.
+- Mythic `Options.Size` migrates positive integer ranges such as `2-5`/`2to5` to spawn-time randomized Slime/MagmaCube/Phantom sizes; fixed sizes remain unchanged and invalid ranges stay visible with migration warnings. Official Paper 1.21.1-133 strict evidence sampled the production Slime option path 64 times within inclusive bounds `2..5`.
+- Migration runtime contract audit now binds the canonical conditions and mechanics asserted by the importer tests through the real `SkillService`; missing runtime registrations fail `MigrationRuntimeConditionContractTest` instead of remaining a report-only mapping.
 - Mob Options, Spawners, Random Spawn, Audience, Custom Menu, SkillTree, and AI have focused Paper or unit evidence recorded in the parity matrix.
+- Exploratory Paper r55 now records natural Creeper fuse, Bee stinger restoration, Zombie conversion prevention, and jockey mount-event probes as passed; strict Paper 1.21.1 evidence and natural AI jockey selection remain open.
+- AI selector core is represented by a typed priority/`clear` plan with core goal/target aliases, relation/faction target resolution, conditional selectors, native `Mob#setTarget` synchronization, and an exploratory Paper `ai-selector-core` probe. Paper 1.21.1 release evidence is still required.
+- Exploratory Paper 1.21.11 r126 records `aiPriority=passed` and `aiPriorityTargets=passed` after the self-test revives and protects the online player before arbitration; `stateConditions=passed` now covers real flying/sneaking/gliding state. `stateBlocking` remains a client Shield-use timing gap.
+- Exploratory Paper 1.21.11 r127 records independent `itemPickup=passed` and `environmentalDamage=passed` probes after isolating the managed player from earlier natural damage and binding a dedicated no-attacker damage profile.
+- Exploratory Paper 1.21.11 r128 records `lootDynamicChance=passed` with a deterministic runtime `<random.1to1>` expression; the probe no longer depends on a flaky random hit.
+- Raw Potion follow-ups r129-r132 received the Potion in protocol slot 37 and sent delayed `use_item`/real-position `RELEASE_USE_ITEM` packets, but did not reproduce `PlayerItemConsumeEvent`; server-side potion add/remove events remain passed. The remaining consumption evidence is explicitly tracked as a client/server protocol handshake gap.
+- Raw Potion r136/r137 re-arm hotbar slot 1 immediately before use; r136 records `playerPotionConsume=passed` with `item=POTION`, and r137 records both `playerPotionConsume=passed` and `playerPotionNaturalExpiry=passed`.
+- Exploratory Paper 1.21.11 r133 records `vehicleEvents=passed` and `ejectPassenger=passed`; the fixture now exercises a real Bukkit `VehicleDestroyEvent` dispatch in addition to enter/exit/dismount/eject coverage.
+- Exploratory Paper 1.21.11 r138 records `blockEvents=passed` through immediate synthetic Bukkit `BlockBreakEvent`/`BlockPlaceEvent` dispatch; natural Mineflayer block timing remains separately unverified.
+- Exploratory Paper 1.21.11 r139 records the spawner no-ground negative control with `requested=false`, `failure=no valid spawn location`, and all 384 block states restored.
+- Exploratory Paper 1.21.11 r138 records delayed native entity targeting with `entity-target-trigger=true`, `target-reason=CLOSEST_PLAYER`, and `target-cancelled=false`; the report no longer treats unrelated global target lookup misses as this probe's failure.
+- Exploratory Paper 1.21.11 r142 records `tempt=passed`, `entityTargetBukkit=passed`, and `entityTargetDelayed=passed` with a real Survival player holding WHEAT and Paper target reason `TEMPT`.
+- Event routing now prefers the managed binding whose profile declares the incoming single trigger when one Bukkit entity has multiple managed bindings; Paper r138/r140 confirms block dispatch remains correct under that routing.
+- Trigger dispatch audit now requires every `wired=true` trigger to have an auditable direct-event, derived-sampler, condition-sampler, potion-event, or signal-bus source; `TriggerDispatchAuditTest` covers the classification.
+- Exploratory Paper 1.21.11 SkillTree restart fixture `srv-paper-skilltree-restart-034f7c7c184b48a9b2c57db5453effdb` now passes a two-boot persistent-chunk/entity/snapshot workflow; persistent chunk retention is released after the last managed persistent mob dies.
+- Exploratory Paper 1.21.11 player fixture `srv-paper-integration-exploratory-20261020-target-glowing-client` now records `targetStateConditions=passed` after setting and restoring a real player's glowing state; strict Paper 1.21.1 evidence remains pending.
 
 ### Remaining Work
 
 Many rows remain `mapped-unverified`; the project is not complete:
 
-1. Natural potion expiry and real potion drinking. Paper 1.21.1 has no `EXPIRED` action; expiry needs managed-entity tick-state evidence.
-2. Mineflayer player workflow still has a `PartialReadError`; server-side probes pass independently, but the full strict player/menu workflow is not restored.
+1. Exploratory Paper 1.21.11 r136/r137 records real Potion consumption and natural short-effect expiry after hotbar re-arming; strict Paper 1.21.1-133 now passes the registered release probes, while optional native client potion consumption remains a separate compatibility gap.
+2. The Paper client workflow now auto-selects the matching Mineflayer protocol; the strict Paper 1.21.1-133 run verifies the full menu, Audience, player, and server-side probe contract.
 3. Complete official Conditions, Mechanics, placeholders, comparator edge cases, and grammar coverage.
-4. Complete `AIGoalSelectors`/`AITargetSelectors`, native Pathfinder goal mutation, malus handling, and goal composition.
-5. Complete legacy numeric ID/data migration and document the version-gated `ItemModel`/`DamageType` unsupported boundary.
-6. Finish natural Mob Option timing for fuse, conversion, bee stinger loss, jockey mounts, and universal option ordering.
+4. Extend the core selector set; the strict Paper 1.21.1-133 run now covers the registered player/monster/clear/owner/faction/conditional/native target paths, while route/premium selectors, native Pathfinder Goal mutation, and `AIPathfindingMalus` remain outside the public Paper API boundary and are preserved with warnings.
+5. Expand the remaining legacy numeric ID/data families; `ItemModel` and `DamageType` are explicitly preserved because Paper 1.21.1 `ItemMeta` has no public component API for them.
+6. Strict Paper 1.21.1-133 now records the registered Creeper/Bee/Zombie and jockey mount-event probes; finish universal Mob Option ordering while natural AI jockey selection remains unverified.
 7. Add remaining Bukkit event, Audience version, and SkillTree lifecycle/restart evidence.
-8. The full Paper strict release gate has not passed.
+8. The Maven quality gate and strict Paper 1.21.1-133 release gate both pass; the remaining work is parity breadth, not the release fixture or report contract.
 
 ### Continue On Another Device
 
-```powershell
+```bash
 git clone https://github.com/addxiaoyi/helsteraMobs.git
 cd helsteraMobs
-mvn -o -q test
-mvn -o -q -Ppaper-integration -pl helstera-plugin -am verify
+./mvnw -o -q test
+./mvnw -q -Ppaper-integration -pl helstera-plugin -am verify
 ```
+
+On Windows PowerShell, use `.\mvnw.cmd` in place of `./mvnw`.
+
+The repository wrapper pins Maven 3.9.16 (`./mvnw` on Unix-like systems, `.\mvnw.cmd` on Windows), so a system Maven installation is not required. The strict `verify` gate requires Maven 3.8.9+ (Maven 3.9+ recommended), the SpotBugs Maven plugin and
+Python `jsonschema` 4.x; use the offline command only for the cached unit-test
+and package checks below.
 
 Useful Paper checks:
 
 ```powershell
-mvn -o -q -pl helstera-plugin -am package
+.\mvnw.cmd -o -q -pl helstera-plugin -am package
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/test-report.ps1
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75 -Strict
 ```
@@ -78,20 +232,20 @@ Minecraft（Paper / Spigot）模型引擎插件。采用「资源包 + Display �
 
 ## 构建
 
-要求：JDK 21、Maven 3.9+（离线构建，`~/.m2` 需预缓存 paper-api、adventure、joml、gson、snakeyaml 等）。
+要求：JDK 21；优先使用仓库自带 Maven Wrapper（Unix-like 系统 `./mvnw`，Windows `.\mvnw.cmd`，固定 Maven 3.9.16）。直接使用系统 Maven 时要求 3.8.9+（Maven 3.9+ 推荐；离线构建需在 `~/.m2` 预缓存 paper-api、adventure、joml、gson、snakeyaml 等）。
 
 ```bash
 # 完整版（5.0，含网页开发器）
-mvn -o clean install
+./mvnw -o clean install
 
 # 跑测试（全仓库 12 模块，589 个用例）
-mvn -o test
+./mvnw -o test
 
 # 分阶段出包（仅含"已完成"模块，产物名 HelsteraMobs-<n>.0-<variant>.jar）
-mvn -o clean package -P phase1   # 1.0：核心 api + core
-mvn -o clean package -P phase2   # 2.0：+ runtime + render-paper
-mvn -o clean package -P phase3   # 3.0：+ resourcepack + ai
-mvn -o clean package -P phase4   # 4.0：+ integrations + migration
+./mvnw -o clean package -P phase1   # 1.0：核心 api + core
+./mvnw -o clean package -P phase2   # 2.0：+ runtime + render-paper
+./mvnw -o clean package -P phase3   # 3.0：+ resourcepack + ai
+./mvnw -o clean package -P phase4   # 4.0：+ integrations + migration
 # 默认（不激活任何 -P）= 完整版 5.0（profile 定义在 helstera-plugin/pom.xml，不在根 pom）
 ```
 
@@ -179,13 +333,14 @@ ai:
 
 ### 从 MythicMobs 迁移
 
+`immunities` 既支持 YAML 列表，也支持 `FIRE,LAVA|DROWNING` 这类分隔字符串。
 迁移中心会自动落地 `Immunities` 与 `DamageModifiers`（含三种写法：裸数字、
 带 `multiplier` 的节、带 `conditions` 的条目列表），并把条件名换算成 helstera 的写法
 （`?health{<50%}` → `health-below 0.5`）。
 
 不换算会让条件永远匹配不上，而条件求值是 fail-closed——表现为「配了条件免疫，
-永远不免疫」，且没有任何报错。无等价物的条件（如 `?onGround`）会**原样保留并在
-报告中告警**，不会静默丢弃。
+永远不免疫」，且没有任何报错。无等价物的条件会**原样保留并在报告中告警**，
+不会静默丢弃。
 
 ## 仇恨与连杀
 
@@ -216,6 +371,9 @@ ai:
 
 **动作**：`threat-add <n>`（给当前目标加仇恨）/ `threat-clear [true]`（`true`
 只清当前目标，缺省清空整表）/ `threat-focus`（把当前目标顶成首要目标）。
+
+Paper 1.21.11 exploratory r41 已验证三种动作的真实仇恨表语义；严格
+Paper 1.21.1 release evidence 仍待匹配 server jar。
 
 排查前要知道的三条：
 
@@ -251,7 +409,7 @@ ai:
 
 ## 目标选择器（targeter）
 
-技能里的 `targeter:` 决定「挑谁」。共 12 个：
+技能里的 `targeter:` 决定「挑谁」。内置排序 targeter 以及上下文 targeter 均可用，关系类包括 `@Owner`、`@Parent`、`@Children`、`@Passengers`、`@Passenger` 和 `@Vehicle`：
 
 | 名字 | 排序依据 |
 | --- | --- |
@@ -505,7 +663,7 @@ spawners:
 
 | MM 条件 | helstera 写法 | 说明 |
 | --- | --- | --- |
-| `?onGround` | `on-ground` | 实体站在固体方块上 |
+| `?onGround` | `on-ground` | 优先读取 Bukkit 实体的地面状态 |
 | `?inWater` | `in-water` | 实体处于水中 |
 | `?inLava` | `in-lava` | 实体处于岩浆中 |
 | `?isSneaking` | `is-sneaking` | 实体是否潜行 |
@@ -519,7 +677,33 @@ spawners:
 | `?isInvisible` | `is-invisible` | 实体隐身中 |
 | `?inBlock` | `is-blocked [高度]` | 实体被方块卡住（默认查头顶） |
 | `?standingOn` | `stand-on <方块名>` | 脚下踩的是指定方块 |
+| `?lightLevel` | `light-level-below/above` 或 `light-level =/!= <等级>` | 当前方块光照等级比较 |
 | `?daylight` | `daylight [0..1]` | 太阳高度是否达到阈值 |
+| `?targetHasPermission` / `?targetHasItem` | `target-has-permission` / `target-has-item` | 严格读取显式目标，不回退到 caster |
+| `?targetGameMode` / `?targetFoodLevel` / `?targetAirLevel` | `target-game-mode-is` / `target-food-level` / `target-air-level` | 严格读取目标玩家或目标实体状态 |
+| `?targetPotionEffectActive` / `?targetHasPotionEffect` / `?targetHasAuras` | `target-potion-effect-active` / `target-has-auras` | 严格读取显式目标的药水效果 |
+| `?targetHolding` / `?targetWearing` | `target-holding` / `target-wearing` | 严格读取显式目标装备 |
+| `?targetHealth` / `?targetHealthPercent` | `target-health` / `target-health-percent` | 目标原始血量或百分比比较 |
+| `?owner` / `?isOwner` | `is-owner` | 检查显式目标是否为 caster 的 Bukkit/PDC owner |
+| `?children` | `children <数量范围>` | 统计 caster 关联的有效 LivingEntity 子实体，默认数量为 1 |
+| `?inside` / `?outside` | `inside` / `outside` | 检查目标头顶是否有方块，或上方是否开放天空 |
+| `?livingInRadius` | `living-in-radius <数量> <半径>` | 统计活动位置附近的有效 LivingEntity |
+| `?mobsInChunk` | `mobs-in-chunk <数量>` | 统计活动区块内的有效 Bukkit Mob |
+| `?dimension` | `dimension-is <环境>` | 匹配 Bukkit 世界环境，如 `NORMAL` / `NETHER` / `THE_END` |
+| `?height` / `?heightAbove` / `?heightBelow` | `height` / `height-above` / `height-below` | 匹配实体 Y 坐标范围或上下阈值 |
+| `?pitch` / `?yaw` | `pitch` / `yaw` | 匹配实体俯仰角或偏航角范围 |
+| `?onBlock` | `on-block <方块列表>` | 匹配实体脚下的精确 Bukkit 方块材质 |
+| `?moist` / `?isMoist` | `moist` | 目标方块必须是 moisture 大于 0 的 Farmland |
+| `?moisturelevel` / `?moistureness` / `?moistness` | `moisture-level <范围>` | 通过 `l` 参数匹配 Farmland moisture 等级（0–7） |
+| `?mobsize` / `?size` | `mob-size <范围>` | 匹配 Slime/MagmaCube/Phantom 的 Bukkit size，其他实体失败关闭 |
+| `?damageAmount` / `?amount` | `damage-amount <范围>` | 只在 damage event 上下文匹配 Bukkit final damage，默认 `>0` |
+| `?blockTypeInRadius` | `block-type-in-radius <材质> <数量范围> <半径>` | 统计球形范围内的精确 Bukkit 方块材质 |
+| `?fallSpeed` / `?fallingSpeed` | `fall-speed <范围>` | 匹配实体向下速度的正值 |
+| `?directionalVelocity` / `?dvelocity` | `directional-velocity{x=...;y=...;z=...}` | 按世界轴或实体朝向匹配速度分量 |
+| `?fieldOfView` / `?fov` | `field-of-view <角度> <旋转>` | 检查目标是否位于 caster 视野锥内，默认 90° |
+| `?distanceFromLocation` | `distance-from-location x=... y=... z=... distance=...` | 按显式目标位置匹配坐标与距离范围 |
+| `?enchantingLevel` / `?enchantingExperience` | `enchanting-level` / `enchanting-experience` | 匹配显式目标玩家的经验等级与升级进度 |
+| `?plugin` / `?pluginexists` / `?hasplugin` | `plugin <插件名>` | 检查指定 Bukkit 插件是否已启用，默认 `MythicMobs` |
 | — | `world-is <世界名>` | 实例所在世界匹配 |
 
 配置示例：
@@ -645,7 +829,7 @@ chance: 5.0         # 值越界       -> 静默钳到 1.0
 
 ## 构建质量门
 
-`mvn clean test` 开启编译器全部 lint（`-Xlint:all`）；`mvn clean verify` 额外跑 SpotBugs。
+`./mvnw clean test` 开启编译器全部 lint（`-Xlint:all`）；`./mvnw clean verify` 额外跑 SpotBugs。
 
 本项目此前**没有任何**静态分析环节：无 SpotBugs / Checkstyle / PMD / ErrorProne，编译器也未开 `-Xlint`。javac 不检查的那一类（未使用 import、未使用变量、冗余类型、潜在空指针）只有 IDEA 的 inspection 看得见，CI 与本地构建全都漏掉 —— IDEA 面板里长期挂着 160+ 个问题就是这么来的。
 
@@ -655,10 +839,10 @@ chance: 5.0         # 值越界       -> 静默钳到 1.0
 
 ```bash
 # 日常构建（依赖已缓存）：直接用
-mvn -o clean test
+./mvnw -o clean test
 
 # verify（SpotBugs）：必须指定镜像配置
-mvn -s tools/settings-ci.xml clean verify
+./mvnw -s tools/settings-ci.xml clean verify
 ```
 
 `tools/settings-ci.xml` 里 `mirrorOf` 必须写成 `*,!papermc`：Anthropic公共仓库不代理 PaperMC 的内容，写成 `*` 会让 `paper-api` 及其传递依赖解析失败。

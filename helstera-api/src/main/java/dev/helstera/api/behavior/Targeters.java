@@ -26,9 +26,16 @@ import java.util.Map;
 public final class Targeters {
 
     private static final Map<String, Targeter> BUILTIN = new LinkedHashMap<>();
+    private static final List<String> CONTEXT_TARGETERS = List.of(
+            "nearestconditionaltarget", "nearestconditionalentity", "nearestconditionalplayer");
 
     static {
         BUILTIN.put("nearest", Targeters::nearest);
+        BUILTIN.put("nearestplayer", Targeters::nearestPlayer);
+        BUILTIN.put("nearestmonster", Targeters::nearestMonster);
+        BUILTIN.put("nearestanimal", Targeters::nearestAnimal);
+        BUILTIN.put("nearestvillager", Targeters::nearestVillager);
+        BUILTIN.put("nearesttamed", Targeters::nearestTamed);
         BUILTIN.put("farthest", Targeters::farthest);
         BUILTIN.put("random", Targeters::random);
         BUILTIN.put("lowest-health", Targeters::lowestHealth);
@@ -39,7 +46,12 @@ public final class Targeters {
         BUILTIN.put("living", Targeters::living);
         BUILTIN.put("playersinradius", Targeters::playersOnly);
         BUILTIN.put("mobsinradius", Targeters::mobsOnly);
+        BUILTIN.put("entitiesinradius", Targeters::living);
         BUILTIN.put("livingentitiesinradius", Targeters::living);
+        BUILTIN.put("monstersinradius", Targeters::monstersOnly);
+        BUILTIN.put("animalsinradius", Targeters::animalsOnly);
+        BUILTIN.put("villagersinradius", Targeters::villagersOnly);
+        BUILTIN.put("tamedinradius", Targeters::tamedOnly);
         BUILTIN.put("tt", Targeters::byThreat);
         BUILTIN.put("vulnerable", Targeters::vulnerable);
         BUILTIN.put("lowest-health-percent", Targeters::vulnerable);
@@ -175,6 +187,18 @@ public final class Targeters {
         threatProvider = p;
     }
 
+    /** Shared condition evaluator used by conditional Mythic targeters. */
+    @FunctionalInterface
+    public interface ConditionProvider {
+        boolean test(String condition, BehaviorContext context);
+    }
+
+    private static volatile ConditionProvider conditionProvider;
+
+    public static void conditionProvider(ConditionProvider p) {
+        conditionProvider = p;
+    }
+
     /** 按当前仇恨降序排列；无数据源时返回空列表（见 {@link #threatProvider}）。 */
     private static List<LivingEntity> byThreat(ModelInstance src,
                                                Collection<? extends LivingEntity> candidates,
@@ -204,9 +228,15 @@ public final class Targeters {
                     ? List.of(living) : List.of();
         }
         if (name.equals("target")) {
-            return context.targetEntity().map(target -> List.<LivingEntity>of(target)).orElseGet(List::of);
+            return context.targetEntity().map(target -> List.<LivingEntity>of(target))
+                    .orElseGet(() -> context.targets().stream().findFirst()
+                            .map(target -> List.<LivingEntity>of(target)).orElseGet(List::of));
         }
-        if (name.equals("targets")) return context.targets();
+        if (name.equals("targets")) {
+            return context.targets().isEmpty()
+                    ? context.targetEntity().map(target -> List.<LivingEntity>of(target)).orElseGet(List::of)
+                    : context.targets();
+        }
         if (name.equals("location")) {
             Location location = parseLocation(spec, context);
             if (location == null) return List.of();
@@ -218,12 +248,22 @@ public final class Targeters {
             return select("@nearest", context.instance(), candidatesAt(location, candidates), fallbackArgs);
         }
         if (name.equals("trigger")) {
-            return context.trigger().filter(LivingEntity.class::isInstance)
-                    .map(LivingEntity.class::cast).map(entity -> List.<LivingEntity>of(entity)).orElseGet(List::of);
+            var trigger = context.trigger().orElse(null);
+            if (trigger instanceof LivingEntity living) return List.of(living);
+            if (trigger instanceof org.bukkit.entity.Projectile projectile
+                    && projectile.getShooter() instanceof LivingEntity shooter) {
+                return List.of(shooter);
+            }
+            return List.of();
         }
         if (name.equals("attacker")) {
-            return context.trigger().filter(LivingEntity.class::isInstance)
-                    .map(LivingEntity.class::cast).map(entity -> List.<LivingEntity>of(entity)).orElseGet(List::of);
+            var trigger = context.trigger().orElse(null);
+            if (trigger instanceof LivingEntity living) return List.of(living);
+            if (trigger instanceof org.bukkit.entity.Projectile projectile
+                    && projectile.getShooter() instanceof LivingEntity shooter) {
+                return List.of(shooter);
+            }
+            return List.of();
         }
         if (name.equals("owner")) {
             if (!context.instanceValid()) return List.of();
@@ -241,7 +281,121 @@ public final class Targeters {
             return parent instanceof LivingEntity living && parent.isValid() && !parent.isDead()
                     ? List.of(living) : List.of();
         }
+        if (name.equals("children") || name.equals("child")) {
+            if (!context.instanceValid()) return List.of();
+            var base = context.instance().baseEntity().orElse(null);
+            if (base == null || candidates == null) return List.of();
+            return candidates.stream()
+                    .filter(candidate -> candidate != null && MobRelations.isChild(base, candidate))
+                    .map(candidate -> (LivingEntity) candidate)
+                    .toList();
+        }
+        if (name.equals("passengers") || name.equals("passenger")) {
+            if (!context.instanceValid()) return List.of();
+            var base = context.instance().baseEntity().orElse(null);
+            if (base == null) return List.of();
+            return base.getPassengers().stream()
+                    .filter(LivingEntity.class::isInstance)
+                    .map(LivingEntity.class::cast)
+                    .toList();
+        }
+        if (name.equals("vehicle")) {
+            if (!context.instanceValid()) return List.of();
+            var base = context.instance().baseEntity().orElse(null);
+            return base != null && base.getVehicle() instanceof LivingEntity living
+                    ? List.of(living) : List.of();
+        }
+        if (name.equals("nearestconditionaltarget")
+                || name.equals("nearestconditionalentity")
+                || name.equals("nearestconditionalplayer")) {
+            return selectConditional(spec, context, candidates);
+        }
         return select(spec, context.instance(), candidates, fallbackArgs);
+    }
+
+    private static List<LivingEntity> selectConditional(
+            String spec, BehaviorContext context,
+            Collection<? extends LivingEntity> candidates) {
+        ConditionProvider provider = conditionProvider;
+        if (provider == null) return List.of();
+        ParsedSpec parsed = ParsedSpec.parse(spec);
+        List<String> conditions = conditionalConditions(parsed.args());
+        if (conditions.isEmpty()) return List.of();
+
+        Collection<? extends LivingEntity> scoped = candidates == null ? List.of() : candidates;
+        if (parsed.name().equals("nearestconditionalplayer")) {
+            scoped = scoped.stream().filter(Player.class::isInstance).toList();
+        }
+        if (parsed.radius() != null && parsed.radius() >= 0) {
+            Location origin = context.origin().orElse(null);
+            double radius = parsed.radius();
+            scoped = scoped.stream().filter(entity -> distance(origin, entity) <= radius).toList();
+        }
+        scoped = applyFilter(scoped, context.instance(), parsed.filter());
+        List<LivingEntity> selected = new ArrayList<>();
+        Location origin = context.origin().orElse(null);
+        for (LivingEntity candidate : scoped) {
+            if (candidate == null || !candidate.isValid() || candidate.isDead()) continue;
+            double distance = distance(origin, candidate);
+            double ratio = candidate.getMaxHealth() > 0
+                    ? candidate.getHealth() / candidate.getMaxHealth() : 0;
+            BehaviorContext candidateContext = BehaviorContext.continueExecution(
+                    context.instance(), candidate, ratio, distance, context.decisionCount(),
+                    context.state(), context.payload().orElse(null),
+                    context.trigger().orElse(null), List.of(candidate), origin,
+                    context.skillTree().orElse(null), context.cancellableEvent().orElse(null),
+                    context.damageCause().orElse(null));
+            boolean accepted = true;
+            for (String condition : conditions) {
+                if (!provider.test(condition, candidateContext)) {
+                    accepted = false;
+                    break;
+                }
+            }
+            if (accepted) selected.add(candidate);
+        }
+        selected.sort(Comparator.comparingDouble(entity -> distance(origin, entity)));
+        selected = applySort(selected, context.instance(), parsed.sort());
+        if (parsed.limit() != null && parsed.limit() <= 0) return List.of();
+        if (parsed.limit() != null && selected.size() > parsed.limit()) {
+            selected = selected.subList(0, parsed.limit());
+        }
+        return List.copyOf(selected);
+    }
+
+    private static List<String> conditionalConditions(List<String> args) {
+        for (String raw : args) {
+            int equals = raw.indexOf('=');
+            if (equals < 0) continue;
+            String key = raw.substring(0, equals).trim();
+            if (!key.equalsIgnoreCase("conditions") && !key.equalsIgnoreCase("condition")) continue;
+            String value = raw.substring(equals + 1).trim();
+            if (value.startsWith("[") && value.endsWith("]")) {
+                value = value.substring(1, value.length() - 1).trim();
+            }
+            return splitNestedArguments(value, ';', ',');
+        }
+        return List.of();
+    }
+
+    private static List<String> splitNestedArguments(String raw, char primary, char secondary) {
+        List<String> out = new ArrayList<>();
+        if (raw == null || raw.isBlank()) return out;
+        int depth = 0;
+        int start = 0;
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (c == '{' || c == '[' || c == '(') depth++;
+            else if (c == '}' || c == ']' || c == ')') depth = Math.max(0, depth - 1);
+            else if (depth == 0 && (c == primary || c == secondary)) {
+                String item = raw.substring(start, i).trim();
+                if (!item.isBlank()) out.add(item);
+                start = i + 1;
+            }
+        }
+        String tail = raw.substring(start).trim();
+        if (!tail.isBlank()) out.add(tail);
+        return List.copyOf(out);
     }
 
     /** Resolves a Mythic-style location targeter without coercing the location into an entity. */
@@ -404,7 +558,7 @@ public final class Targeters {
             Double radius = null;
             String filter = null;
             String sort = null;
-            for (String part : value.substring(open + 1, close).split(";")) {
+            for (String part : splitSpecArguments(value.substring(open + 1, close))) {
                 String token = part.trim();
                 if (token.isEmpty()) continue;
                 int eq = token.indexOf('=');
@@ -436,6 +590,29 @@ public final class Targeters {
             return new ParsedSpec(value.substring(0, open).toLowerCase(Locale.ROOT), args,
                     limit, radius, filter, sort);
         }
+    }
+
+    private static List<String> splitSpecArguments(String raw) {
+        List<String> parts = new ArrayList<>();
+        if (raw == null || raw.isBlank()) return parts;
+        int depth = 0;
+        int start = 0;
+        boolean quoted = false;
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (c == '"') quoted = !quoted;
+            if (quoted) continue;
+            if (c == '[' || c == '{' || c == '(') depth++;
+            else if (c == ']' || c == '}' || c == ')') depth = Math.max(0, depth - 1);
+            else if (c == ';' && depth == 0) {
+                String part = raw.substring(start, i).trim();
+                if (!part.isBlank()) parts.add(part);
+                start = i + 1;
+            }
+        }
+        String tail = raw.substring(start).trim();
+        if (!tail.isBlank()) parts.add(tail);
+        return parts;
     }
 
     private static List<String> splitTargeterChain(String raw) {
@@ -518,7 +695,9 @@ public final class Targeters {
 
     /** 全部内置选择器名（用于 /helstera debug 与告警提示）。 */
     public static Collection<String> names() {
-        return Collections.unmodifiableSet(BUILTIN.keySet());
+        var names = new java.util.LinkedHashSet<String>(BUILTIN.keySet());
+        names.addAll(CONTEXT_TARGETERS);
+        return Collections.unmodifiableSet(names);
     }
 
     /**
@@ -734,6 +913,82 @@ public final class Targeters {
         }
         list.sort(Comparator.comparingDouble(e -> distance(src, e)));
         return list;
+    }
+
+    private static List<LivingEntity> monstersOnly(ModelInstance src,
+                                                   Collection<? extends LivingEntity> candidates,
+                                                   List<String> args) {
+        return filteredByType(src, candidates, entity -> entity instanceof org.bukkit.entity.Monster);
+    }
+
+    private static List<LivingEntity> animalsOnly(ModelInstance src,
+                                                  Collection<? extends LivingEntity> candidates,
+                                                  List<String> args) {
+        return filteredByType(src, candidates, entity -> entity instanceof org.bukkit.entity.Animals);
+    }
+
+    private static List<LivingEntity> villagersOnly(ModelInstance src,
+                                                    Collection<? extends LivingEntity> candidates,
+                                                    List<String> args) {
+        return filteredByType(src, candidates, entity -> entity instanceof org.bukkit.entity.Villager);
+    }
+
+    private static List<LivingEntity> tamedOnly(ModelInstance src,
+                                                Collection<? extends LivingEntity> candidates,
+                                                List<String> args) {
+        return filteredByType(src, candidates,
+                entity -> entity instanceof org.bukkit.entity.Tameable tameable && tameable.isTamed());
+    }
+
+    private static List<LivingEntity> filteredByType(ModelInstance src,
+                                                     Collection<? extends LivingEntity> candidates,
+                                                     java.util.function.Predicate<LivingEntity> predicate) {
+        List<LivingEntity> list = new ArrayList<>();
+        if (candidates != null) {
+            for (LivingEntity entity : candidates) {
+                if (entity != null && predicate.test(entity)) list.add(entity);
+            }
+        }
+        list.sort(Comparator.comparingDouble(e -> distance(src, e)));
+        return list;
+    }
+
+    private static List<LivingEntity> nearestPlayer(ModelInstance src,
+                                                    Collection<? extends LivingEntity> candidates,
+                                                    List<String> args) {
+        return nearestMatching(src, candidates, entity -> entity instanceof Player);
+    }
+
+    private static List<LivingEntity> nearestMonster(ModelInstance src,
+                                                     Collection<? extends LivingEntity> candidates,
+                                                     List<String> args) {
+        return nearestMatching(src, candidates, entity -> entity instanceof org.bukkit.entity.Monster);
+    }
+
+    private static List<LivingEntity> nearestAnimal(ModelInstance src,
+                                                    Collection<? extends LivingEntity> candidates,
+                                                    List<String> args) {
+        return nearestMatching(src, candidates, entity -> entity instanceof org.bukkit.entity.Animals);
+    }
+
+    private static List<LivingEntity> nearestVillager(ModelInstance src,
+                                                      Collection<? extends LivingEntity> candidates,
+                                                      List<String> args) {
+        return nearestMatching(src, candidates, entity -> entity instanceof org.bukkit.entity.Villager);
+    }
+
+    private static List<LivingEntity> nearestTamed(ModelInstance src,
+                                                   Collection<? extends LivingEntity> candidates,
+                                                   List<String> args) {
+        return nearestMatching(src, candidates,
+                entity -> entity instanceof org.bukkit.entity.Tameable tameable && tameable.isTamed());
+    }
+
+    private static List<LivingEntity> nearestMatching(ModelInstance src,
+                                                      Collection<? extends LivingEntity> candidates,
+                                                      java.util.function.Predicate<LivingEntity> predicate) {
+        List<LivingEntity> matches = filteredByType(src, candidates, predicate);
+        return matches.isEmpty() ? List.of() : List.of(matches.get(0));
     }
 
     // ------------------------------------------------------------------

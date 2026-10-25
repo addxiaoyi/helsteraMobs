@@ -1,6 +1,7 @@
 package dev.helstera.ai.spawner;
 
 import dev.helstera.ai.YamlNums;
+import dev.helstera.api.util.ConditionListParser;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
@@ -250,14 +251,14 @@ public final class SpawnerService {
     public void load(ConfigurationSection root) {
         spawners.clear();
         regions.clear();
-        alive.clear();
-        worldSpawnCounts.clear();
-        playerSpawnCounts.clear();
         problems.clear();
         spawnWarningKeys.clear();
         runtimeDisabled.clear();
         minInterval = Integer.MAX_VALUE;
         if (root == null) {
+            alive.clear();
+            worldSpawnCounts.clear();
+            playerSpawnCounts.clear();
             minInterval = 100;
             return;
         }
@@ -391,8 +392,16 @@ public final class SpawnerService {
                     s.getString("ai-profile"), parseRandomPool(s, problems, where),
                     readConditions(s));
             spawners.put(id, sp);
-            alive.put(id, Collections.synchronizedList(new ArrayList<>()));
+            alive.putIfAbsent(id, Collections.synchronizedList(new ArrayList<>()));
             minInterval = Math.min(minInterval, sp.intervalTicks);
+        }
+        // A config reload must not forget living instances tracked by an
+        // existing spawner, but removed spawner definitions must be pruned.
+        for (String existing : new ArrayList<>(alive.keySet())) {
+            if (!spawners.containsKey(existing)) alive.remove(existing);
+        }
+        for (String existing : new ArrayList<>(playerSpawnCounts.keySet())) {
+            if (!spawners.containsKey(existing)) playerSpawnCounts.remove(existing);
         }
         if (minInterval == Integer.MAX_VALUE) minInterval = 100;
         if (log != null) {
@@ -579,21 +588,29 @@ public final class SpawnerService {
     }
 
     public void start() {
-        stop();
+        cancelTask();
         if (spawners.isEmpty()) return;
         int period = Math.max(20, minInterval);
         if (plugin == null) throw new IllegalStateException("Plugin is required to start the spawner scheduler");
-        task = plugin.getServer().getScheduler().runTaskTimer(plugin, this::tickOnce, period, period);
+        // The shared task runs every `period` real ticks. Advance the logical
+        // clock by that amount so interval/cooldown values are not multiplied
+        // by the shared scheduler period.
+        task = plugin.getServer().getScheduler().runTaskTimer(plugin,
+                () -> tickOnce(period), period, period);
     }
 
     public void stop() {
+        cancelTask();
+        alive.clear();
+        worldSpawnCounts.clear();
+        playerSpawnCounts.clear();
+    }
+
+    private void cancelTask() {
         if (task != null) {
             task.cancel();
             task = null;
         }
-        alive.clear();
-        worldSpawnCounts.clear();
-        playerSpawnCounts.clear();
     }
 
     /** 手动触发一次生成（/helstera spawner force <id>），忽略间隔与上限。 */
@@ -634,9 +651,14 @@ public final class SpawnerService {
         return id == null ? null : forceSpawnFailures.get(id.toLowerCase(Locale.ROOT));
     }
 
-    /** Shared scheduler beat; exposed for deterministic integration tests and diagnostics. */
+    /** Advances one logical tick; exposed for deterministic tests and diagnostics. */
     public void tickOnce() {
-        tickCounter++;
+        tickOnce(1);
+    }
+
+    /** Advances the logical clock by real server ticks for the shared scheduler. */
+    public void tickOnce(int elapsedTicks) {
+        tickCounter += Math.max(1, elapsedTicks);
         for (Spawner sp : spawners.values()) {
             try {
                 if (!isActive(sp)) continue;
@@ -778,6 +800,12 @@ public final class SpawnerService {
         return nearest;
     }
 
+    /** Returns whether a player can own a player-scoped spawn at this location. */
+    public boolean playerOwnerPresent(String id, Location location) {
+        Spawner sp = get(id);
+        return sp != null && nearestPlayer(location, sp.playersRadius()) != null;
+    }
+
     /** Deterministic test/diagnostic hook for player gates without a Bukkit world. */
     public static boolean playerGate(int minPlayers, int nearbyPlayers, double radius) {
         if (minPlayers <= 0) return true;
@@ -805,12 +833,7 @@ public final class SpawnerService {
     }
 
     private List<String> readConditions(ConfigurationSection section) {
-        List<String> conditions = new ArrayList<>(section.getStringList("conditions"));
-        if (conditions.isEmpty() && section.isString("conditions")) {
-            String value = section.getString("conditions", "").trim();
-            if (!value.isBlank()) conditions.add(value);
-        }
-        return conditions;
+        return ConditionListParser.parse(section.get("conditions"));
     }
 
     private boolean conditionsPass(Spawner sp, Location location) {

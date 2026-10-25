@@ -3,6 +3,7 @@ package dev.helstera.ai;
 import dev.helstera.ai.bossbar.BossBarService;
 import dev.helstera.ai.bossbar.BossBarState;
 import dev.helstera.api.event.ModelSpawnEvent;
+import dev.helstera.api.event.ModelRemoveEvent;
 import dev.helstera.ai.skill.SkillTrigger;
 import dev.helstera.api.event.AnimationMarkerEvent;
 import dev.helstera.api.event.HelsteraEventBus;
@@ -40,6 +41,8 @@ public final class AiManager implements Listener {
     private dev.helstera.api.behavior.BehaviorRegistry behaviors;
     /** 技能装载器：把 skills.yml 与 profile 中的文本定义绑定为可执行键；可为 null。 */
     private dev.helstera.ai.skill.SkillService skills;
+    /** Resolves selector condition text through the shared SkillService catalog. */
+    private volatile java.util.function.Function<String, String> conditionBinder;
     /**
      * 技能触发器分发器，用于派发 on-attack-hit；可为 null。
      *
@@ -81,6 +84,8 @@ public final class AiManager implements Listener {
     private final Map<String, AiProfile> profiles = new ConcurrentHashMap<>();
     private final Map<Integer, AiController> controllers = new ConcurrentHashMap<>();
     private BukkitTask task;
+    private java.util.function.Consumer<AnimationMarkerEvent> animationMarkerListener;
+    private java.util.function.Consumer<ModelRemoveEvent> modelRemoveListener;
 
     public AiManager(Plugin plugin, InstanceManagerImpl instances, HelsteraEventBus bus) {
         this.plugin = plugin;
@@ -100,11 +105,33 @@ public final class AiManager implements Listener {
     /** 注入自定义条件/动作注册表，使 profile 的 require / on-decision 生效。 */
     public void setBehaviors(dev.helstera.api.behavior.BehaviorRegistry behaviors) {
         this.behaviors = behaviors;
+        installConditionalTargeterProvider();
     }
 
     /** 注入技能装载器，用于把 profile 的 skills 列表展开为可绑定的条件/动作。 */
     public void setSkills(dev.helstera.ai.skill.SkillService skills) {
         this.skills = skills;
+        installConditionalTargeterProvider();
+    }
+
+    /** Injects the canonical condition binder used by conditional selectors. */
+    public void setConditionBinder(java.util.function.Function<String, String> binder) {
+        this.conditionBinder = binder;
+        installConditionalTargeterProvider();
+    }
+
+    private void installConditionalTargeterProvider() {
+        dev.helstera.api.behavior.Targeters.conditionProvider((condition, context) -> {
+            if (condition == null || context == null || behaviors == null) return false;
+            try {
+                String key = conditionBinder == null
+                        ? (skills == null ? null : skills.bindCondition(condition))
+                        : conditionBinder.apply(condition);
+                return key != null && !key.isBlank() && behaviors.testCondition(key, context);
+            } catch (RuntimeException ignored) {
+                return false;
+            }
+        });
     }
 
     /**
@@ -216,7 +243,7 @@ public final class AiManager implements Listener {
         var anim = inst.stateMachine;
         if (anim == null) return;
         AiProfile p = profile == null ? profile("default") : profile;
-        AiController c = new AiController(inst, p, anim, bus, behaviors);
+        AiController c = new AiController(inst, p, anim, bus, behaviors, conditionBinder);
         var navSvc = nav;
         if (navSvc != null) c.navService(navSvc);
         inst.aiController = c;
@@ -402,6 +429,7 @@ public final class AiManager implements Listener {
         var ms = minions;
         if (ms != null) ms.forget(instanceId);
         controllers.remove(instanceId);
+        if (skills != null) skills.forget(instanceId);
         dev.helstera.ai.skill.SkillExtras.forget(instanceId);
         boundProfiles.remove(instanceId);
     }
@@ -434,14 +462,22 @@ public final class AiManager implements Listener {
         // attack_hit 动画标记 -> 结算伤害；命中才派发 on-attack-hit 技能。
         // 取 hitTarget() 的返回值而非无条件派发：挂在动画帧上会让挥空也触发技能，
         // 对「命中后溅射」类配置就是凭空多打一次。
-        bus.register(AnimationMarkerEvent.class, e -> {
+        animationMarkerListener = e -> {
             if (!"attack_hit".equals(e.marker())) return;
             AiController c = controllers.get(e.instance().instanceId());
             if (c == null) return;
             LivingEntity hit = c.hitTarget();
             var trig = this.triggers;
             if (hit != null && trig != null) trig.fireAttackHit(e.instance(), hit);
-        });
+        };
+        bus.register(AnimationMarkerEvent.class, animationMarkerListener);
+        // InstanceManager removes entities through its event bus.  Detach only
+        // after SkillTriggers has observed ModelRemoveEvent, preserving on-remove
+        // skills while preventing stale controllers and per-instance state.
+        modelRemoveListener = e -> {
+            if (e != null && e.instance() != null) detach(e.instance().instanceId());
+        };
+        bus.register(ModelRemoveEvent.class, modelRemoveListener);
         // Boss 血条挂条：订阅自有事件总线，理由见 onModelSpawn 的注释。
         // 存字段而非就地传方法引用：方法引用每次求值都是新实例，
         // 反注册时按实例匹配会找不到，反注册静默失败 → reload 后重复订阅。
@@ -510,9 +546,23 @@ public final class AiManager implements Listener {
         // 同一次生成挂两条血条，且 bars map 只留最后一条
         bus.unregister(ModelSpawnEvent.class, bossBarSpawnListener);
         bossBarSpawnListener = null;
+        if (animationMarkerListener != null) {
+            bus.unregister(AnimationMarkerEvent.class, animationMarkerListener);
+            animationMarkerListener = null;
+        }
+        if (modelRemoveListener != null) {
+            bus.unregister(ModelRemoveEvent.class, modelRemoveListener);
+            modelRemoveListener = null;
+        }
+        // Do not clear maps directly: detach also releases faction bindings,
+        // scoped variables, stances, navigation state, and summon bookkeeping.
+        for (Integer instanceId : java.util.List.copyOf(controlled.keySet())) {
+            detach(instanceId);
+        }
         controllers.clear();
         boundProfiles.clear();
         controlled.clear();
+        dev.helstera.api.behavior.Targeters.conditionProvider(null);
     }
 
     public int activeCount() {
