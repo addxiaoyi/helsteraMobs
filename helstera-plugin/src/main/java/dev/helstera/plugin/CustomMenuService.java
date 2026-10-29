@@ -256,8 +256,32 @@ public final class CustomMenuService implements Listener {
         }
         renderPagination(inventory, player, menu);
         open.put(inventory, menu);
+        logRenderedSlots(player, menu, inventory);
         player.openInventory(inventory);
         return true;
+    }
+
+    /**
+     * 把实际渲染进容器的格子打到服务端日志。
+     *
+     * <p>存在的理由：端到端测试用的 Paper 客户端库（mineflayer + minecraft-data）
+     * 解析 1.21.1 的物品组件包会抛 {@code PartialReadError}，导致客户端拿到的
+     * 每个格子都是空的。测试因此只能看到「窗口开了但按钮没渲染」——这是客户端
+     * 解析失败，不是插件没渲染。把真实渲染结果留在服务端，测试才能验证
+     * 插件到底往哪个格子放了什么，而不是被迫相信一个解析坏掉的客户端。</p>
+     */
+    private static void logRenderedSlots(Player player, Menu menu, Inventory inventory) {
+        StringBuilder rendered = new StringBuilder();
+        for (int slot = 0; slot < inventory.getSize(); slot++) {
+            var stack = inventory.getItem(slot);
+            if (stack == null || stack.getType().isAir()) continue;
+            if (!rendered.isEmpty()) rendered.append(',');
+            rendered.append(slot).append('=').append(stack.getType().name());
+        }
+        Bukkit.getLogger().info("menu-render id=" + menu.id
+                + " player=" + player.getName()
+                + " rows=" + menu.rows
+                + " slots=" + rendered);
     }
 
     public void reload(File file) { load(file); }
@@ -499,6 +523,15 @@ public final class CustomMenuService implements Listener {
         if (button != null && event.getWhoClicked() instanceof Player player) {
             boolean permitted = button.permission.isBlank() || player.hasPermission(button.permission);
             boolean canRun = shouldRunButtonAction(isCurrentMenu, true, permitted && button.visible(player, regions, regionResolver));
+            // 服务端记录点击判定：端到端测试的客户端库解析不了 1.21.1 物品组件，
+            // 窗口状态会失步，靠「菜单有没有关」来推断拒绝语义并不可靠。
+            // 把 permitted / 是否执行 / 是否关闭打进日志，测试才能验证真实判定。
+            Bukkit.getLogger().info("menu-click id=" + menu.id
+                    + " player=" + player.getName()
+                    + " slot=" + event.getRawSlot()
+                    + " permitted=" + permitted
+                    + " ran=" + canRun
+                    + " close=" + button.close);
             if (canRun && !button.openMenu.isBlank()) {
                 if (button.openMenu.equalsIgnoreCase("back") || button.openMenu.equals("..")) {
                     var stack = navigation.get(player.getUniqueId());

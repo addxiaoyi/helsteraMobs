@@ -1160,4 +1160,208 @@ class SpawnerServiceTest {
         assertTrue(service.firstSpawnWarning("unloaded chunk"));
     }
 
+    // ---- 成组生成 / 间隔抖动 / 光照门控（Mythic 补齐语义） ----
+
+    @Test
+    @DisplayName("group-size accepts scalar, range and tilde forms")
+    void readsGroupSize() {
+        SpawnerService service = service("""
+                spawners:
+                  single:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: 4
+                  ranged:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: 2-5
+                  tilted:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    GroupSize: 3~6
+                """);
+        assertEquals(4, service.get("single").groupMin());
+        assertEquals(4, service.get("single").groupMax());
+        assertEquals(2, service.get("ranged").groupMin());
+        assertEquals(5, service.get("ranged").groupMax());
+        assertEquals(3, service.get("tilted").groupMin());
+        assertEquals(6, service.get("tilted").groupMax());
+    }
+
+    @Test
+    @DisplayName("group-size defaults to one and rejects nonsense with a warning")
+    void groupSizeDefaultsAndRejectsInvalid() {
+        SpawnerService service = service("""
+                spawners:
+                  plain:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                  zero:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: 0
+                  messy:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: 两只
+                """);
+        assertEquals(1, service.get("plain").groupMax());
+        assertEquals(1, service.get("zero").groupMax());
+        assertEquals(1, service.get("messy").groupMax());
+        assertTrue(service.warnings().stream().anyMatch(w -> w.contains("group-size = 两只")));
+        assertFalse(service.warnings().stream().anyMatch(w -> w.contains("group-size = 0")));
+    }
+
+    @Test
+    @DisplayName("rolled group size always lands inside the configured range")
+    void rollGroupSizeStaysInRange() {
+        SpawnerService service = service("""
+                spawners:
+                  pack:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: 2-5
+                """);
+        var sp = service.get("pack");
+        var rnd = new java.util.Random(7);
+        boolean sawMin = false;
+        boolean sawMax = false;
+        for (int i = 0; i < 500; i++) {
+            int rolled = sp.rollGroupSize(rnd);
+            assertTrue(rolled >= 2 && rolled <= 5, "rolled " + rolled);
+            sawMin |= rolled == 2;
+            sawMax |= rolled == 5;
+        }
+        assertTrue(sawMin && sawMax, "range should cover both ends");
+    }
+
+    @Test
+    @DisplayName("interval written as a range becomes a jittered schedule")
+    void intervalRangeBecomesJitter() {
+        SpawnerService service = service("""
+                spawners:
+                  ranged:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: [100, 300]
+                """);
+        var sp = service.get("ranged");
+        assertEquals(200, sp.intervalTicks());
+        assertTrue(sp.intervalJitter() > 0, "range form must introduce jitter");
+        var rnd = new java.util.Random(3);
+        for (int i = 0; i < 200; i++) {
+            int ticks = sp.rollIntervalTicks(rnd);
+            assertTrue(ticks >= 100 && ticks <= 300, "rolled " + ticks);
+        }
+        assertTrue(service.warnings().stream().anyMatch(w -> w.contains("interval 写成区间")));
+    }
+
+    @Test
+    @DisplayName("explicit interval-jitter accepts ratio, percent and cooldown alias")
+    void explicitIntervalJitter() {
+        SpawnerService service = service("""
+                spawners:
+                  ratio:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 100
+                    interval-jitter: 0.5
+                  percent:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 100
+                    interval-jitter: 20%
+                  alias:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 100
+                    cooldown-jitter: 0.1
+                """);
+        assertEquals(0.5, service.get("ratio").intervalJitter(), 1e-9);
+        assertEquals(0.2, service.get("percent").intervalJitter(), 1e-9);
+        assertEquals(0.1, service.get("alias").intervalJitter(), 1e-9);
+        var rnd = new java.util.Random(11);
+        for (int i = 0; i < 200; i++) {
+            assertTrue(service.get("ratio").rollIntervalTicks(rnd) >= 20);
+        }
+    }
+
+    @Test
+    @DisplayName("zero jitter keeps the fixed interval unchanged")
+    void zeroJitterKeepsFixedInterval() {
+        SpawnerService service = service("""
+                spawners:
+                  fixed:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 120
+                """);
+        var sp = service.get("fixed");
+        assertEquals(0.0, sp.intervalJitter());
+        assertEquals(120, sp.rollIntervalTicks(new java.util.Random(1)));
+    }
+
+    @Test
+    @DisplayName("light gate parses comparators, ranges and named variants")
+    void lightConditionParsesForms() {
+        Location location = litLocation("test", 3, 15, 12);
+
+        assertEquals(Boolean.TRUE, SpawnerService.lightCondition("light-level<8", location));
+        assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level<3", location));
+        assertEquals(Boolean.TRUE, SpawnerService.lightCondition("light-level<=3", location));
+        assertEquals(Boolean.TRUE, SpawnerService.lightCondition("light-level-above=2", location));
+        assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level-above=5", location));
+        assertEquals(Boolean.TRUE, SpawnerService.lightCondition("light-level 0-5", location));
+        assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level 10-15", location));
+        assertEquals(Boolean.TRUE, SpawnerService.lightCondition("light-level below 5", location));
+        assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level above 5", location));
+        // 天空光与方块光各取各的，不互相冒充
+        assertEquals(Boolean.TRUE, SpawnerService.lightCondition("sky-light-level=15", location));
+        assertEquals(Boolean.FALSE, SpawnerService.lightCondition("sky-light-level=12", location));
+        assertEquals(Boolean.TRUE, SpawnerService.lightCondition("light-level-from-blocks=12", location));
+        assertEquals(Boolean.TRUE, SpawnerService.lightCondition("blocklightlevel below 20", location));
+        // 非光照条件返回 null，交回原有判定链
+        assertNull(SpawnerService.lightCondition("night", location));
+        assertNull(SpawnerService.lightCondition("biome-is=plains", location));
+    }
+
+    @Test
+    @DisplayName("malformed light gate fails closed instead of passing")
+    void lightConditionFailsClosed() {
+        Location location = litLocation("test", 3, 15, 12);
+        assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level", location));
+        assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level", null));
+        // 取光照抛异常（区块未加载）时拒绝，而不是放行
+        Location broken = mock(Location.class);
+        when(broken.getWorld()).thenReturn(mock(World.class));
+        when(broken.getBlock()).thenThrow(new IllegalStateException("chunk not loaded"));
+        assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level<8", broken));
+    }
+
+    /** 伪造一个光照固定的方块位置（方块光/天空光以 int 存，Bukkit 返回 byte）。 */
+    private static Location litLocation(String worldName, int combined, int sky, int blockLight) {
+        World world = mock(World.class);
+        when(world.getName()).thenReturn(worldName);
+        Block block = mock(Block.class);
+        when(block.getLightLevel()).thenReturn((byte) combined);
+        when(block.getLightFromSky()).thenReturn((byte) sky);
+        when(block.getLightFromBlocks()).thenReturn((byte) blockLight);
+        Location location = mock(Location.class);
+        when(location.getWorld()).thenReturn(world);
+        when(location.getBlock()).thenReturn(block);
+        return location;
+    }
+
 }

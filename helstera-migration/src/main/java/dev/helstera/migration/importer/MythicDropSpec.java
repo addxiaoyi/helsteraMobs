@@ -56,8 +56,35 @@ public record MythicDropSpec(
         int max = integer(map, min, "amount-max", "amountMax");
         double chance = number(map, 1.0, "chance", "Chance");
         String expression = text(map, "chance-expression", "chanceExpression", "dynamic-chance", "dynamicChance");
-        List<String> conditions = list(map.get("conditions"));
+        // Mythic 的 Drop 条目同时允许 DropIf（必须全满足）与 NoDropIf（任一满足即不掉）。
+        // 以前只读 conditions，这两种写法会被静默忽略——条目变成无条件必掉，
+        // 而配置看上去完全正常。前者与 conditions 同义合并，后者取反后并入，
+        // 保证「命中即不掉」的语义在运行时仍然是同一个条件求值器判定的。
+        List<String> conditions = new ArrayList<>(list(map.get("conditions")));
+        for (String dropIf : list(firstOf(map, "drop-if", "dropIf", "DropIf"))) {
+            if (dropIf == null || dropIf.isBlank()) continue;
+            conditions.add(stripPrefix(dropIf.trim()));
+        }
+        for (String veto : list(firstOf(map, "no-drop-if", "noDropIf", "NoDropIf"))) {
+            if (veto == null || veto.isBlank()) continue;
+            String trimmed = stripPrefix(veto.trim());
+            // 双重否定就地抵消：no-drop-if: "!raining" 等价于 drop-if: "raining"
+            conditions.add(trimmed.startsWith("!") ? trimmed.substring(1).trim() : "!" + trimmed);
+        }
         return finish(item, table, min, max, chance, expression, conditions, source);
+    }
+
+    /**
+     * 剥掉 Mythic 条件前缀 {@code ?}。
+     *
+     * <p>{@code ?} 是 Mythic 的「本条件不计入重复保护」标记，属于执行期语义，
+     * 不是条件名的一部分。{@code conditions()} 对外给出的是可读的条件名，
+     * 保留前缀会让同一个条件在拼接、去重、日志里出现两种写法。</p>
+     */
+    private static String stripPrefix(String value) {
+        String result = value;
+        while (result.startsWith("?")) result = result.substring(1).trim();
+        return result;
     }
 
     private static MythicDropSpec parseText(String raw, Object source) {
@@ -110,8 +137,16 @@ public record MythicDropSpec(
                 conditions, source, external);
     }
 
-    private static String text(Map<?, ?> map, String... keys) {
+    /** 按别名顺序取第一个非空值：Mythic 的键名大小写混杂，逐个 text() 会漏掉组合。 */
+    private static Object firstOf(Map<?, ?> map, String... keys) {
         for (String key : keys) {
+            Object value = map.get(key);
+            if (value != null && !String.valueOf(value).isBlank()) return value;
+        }
+        return null;
+    }
+
+    private static String text(Map<?, ?> map, String... keys) {        for (String key : keys) {
             Object value = map.get(key);
             if (value != null && !String.valueOf(value).isBlank()) return String.valueOf(value).trim();
         }

@@ -359,4 +359,115 @@ class LootServiceTest {
         assertEquals(2, s.size());
         assertTrue(s.tableNames().containsAll(List.of("a", "b")));
     }
+
+    // ---- 整表件数约束 min-items / max-items ----
+
+    @Test
+    @DisplayName("max-items 按件裁剪整表掉落总数")
+    void maxItemsTrimsTotal() {
+        LootService s = service("""
+                tables:
+                  t:
+                    max-items: 3
+                    entries:
+                      - item: DIAMOND
+                        amount-min: 5
+                        amount-max: 5
+                """);
+        assertEquals(3, s.table("t").maxItems());
+        assertEquals(0, s.table("t").minItems());
+        // 按件裁而不是按条目裁：一组 5 个要裁到 3 个
+        assertEquals(3, totalItems(s.rollPlan("t", 0)));
+    }
+
+    @Test
+    @DisplayName("min-items 把整表掉出件数补到下限")
+    void minItemsTopsUp() {
+        LootService s = service("""
+                tables:
+                  t:
+                    min-items: 4
+                    entries:
+                      - item: DIAMOND
+                        amount-min: 1
+                        amount-max: 1
+                """);
+        assertEquals(4, s.table("t").minItems());
+        assertEquals(4, totalItems(s.rollPlan("t", 1)));
+    }
+
+    @Test
+    @DisplayName("min-items 只复制已掉出条目，不凭空引入未抽中的条目")
+    void minItemsDoesNotInventEntries() {
+        LootService s = service("""
+                tables:
+                  t:
+                    min-items: 10
+                    entries:
+                      - item: DIAMOND
+                        amount-min: 1
+                        amount-max: 1
+                        chance: 0
+                      - item: EMERALD
+                        amount-min: 1
+                        amount-max: 1
+                        chance: 1
+                """);
+        var hits = s.rollPlan("t", 0);
+        assertTrue(hits.stream().allMatch(h -> h.entry().itemId().equals("EMERALD")));
+        assertEquals(10, totalItems(hits));
+    }
+
+    @Test
+    @DisplayName("未配置件数约束时不改变原有掉落")
+    void itemBoundsDefaultToUnlimited() {
+        LootService s = service("""
+                tables:
+                  t:
+                    entries:
+                      - item: DIAMOND
+                        amount-min: 2
+                        amount-max: 2
+                """);
+        assertFalse(s.table("t").hasItemBounds());
+        assertEquals(0, s.table("t").minItems());
+        assertEquals(0, s.table("t").maxItems());
+        assertEquals(2, totalItems(s.rollPlan("t", 0)));
+    }
+
+    @Test
+    @DisplayName("min-items 大于 max-items 时交换并告警")
+    void swappedItemBoundsAreNormalized() {
+        LootService s = service("""
+                tables:
+                  t:
+                    min-items: 8
+                    max-items: 2
+                    entries:
+                      - item: DIAMOND
+                """);
+        assertEquals(2, s.table("t").minItems());
+        assertEquals(8, s.table("t").maxItems());
+        assertTrue(s.warnings().stream().anyMatch(w -> w.contains("min-items")));
+    }
+
+    @Test
+    @DisplayName("负数件数约束按不限制处理并告警")
+    void negativeItemBoundsAreIgnored() {
+        LootService s = service("""
+                tables:
+                  t:
+                    min-items: -3
+                    entries:
+                      - item: DIAMOND
+                """);
+        assertEquals(0, s.table("t").minItems());
+        assertTrue(s.warnings().stream().anyMatch(w -> w.contains("为负数")));
+    }
+
+    private static int totalItems(List<LootService.Hit> hits) {
+        int total = 0;
+        for (LootService.Hit hit : hits) total += hit.amount();
+        return total;
+    }
 }

@@ -64,4 +64,53 @@ class MythicDropSpecTest {
         assertEquals(List.of("is-living", "health-percent >=50"),
                 spec.runtimeEntry().get("conditions"));
     }
+
+    @Test
+    void dropIfAddsPositiveConditions() {
+        MythicDropSpec spec = MythicDropSpec.parse(Map.of(
+                "item", "DIAMOND",
+                "drop-if", List.of("?isLiving", "?permission loot.vip")));
+
+        assertEquals(List.of("isLiving", "permission loot.vip"), spec.conditions());
+        assertEquals(List.of("is-living", "has-permission loot.vip"),
+                spec.runtimeEntry().get("conditions"));
+    }
+
+    @Test
+    void dropIfMergesAfterExistingConditions() {
+        MythicDropSpec spec = MythicDropSpec.parse(Map.of(
+                "item", "DIAMOND",
+                "conditions", List.of("night"),
+                "DropIf", "raining"));
+
+        assertEquals(List.of("night", "raining"), spec.conditions());
+    }
+
+    @Test
+    void noDropIfIsStoredAsNegatedCondition() {
+        MythicDropSpec spec = MythicDropSpec.parse(Map.of(
+                "item", "DIAMOND",
+                "no-drop-if", List.of("?raining", "?night")));
+
+        assertEquals(List.of("!raining", "!night"), spec.conditions());
+    }
+
+    @Test
+    void noDropIfCancelsDoubleNegation() {
+        MythicDropSpec spec = MythicDropSpec.parse(Map.of(
+                "item", "DIAMOND",
+                "NoDropIf", "!raining"));
+
+        // no-drop-if: "!raining" 等于 drop-if: "raining"，不能留下 "!!raining"
+        assertEquals(List.of("raining"), spec.conditions());
+    }
+
+    @Test
+    void noDropIfSurvivesTheRuntimeProjection() {
+        MythicDropSpec spec = MythicDropSpec.parse(Map.of(
+                "item", "DIAMOND",
+                "no-drop-if", "raining"));
+
+        assertEquals(List.of("!raining"), spec.runtimeEntry().get("conditions"));
+    }
 }

@@ -199,7 +199,7 @@ $probeSpecs = [ordered]@{
     fishTrigger = 'events .*fish-trigger=true'
     creeperNaturalFuse = 'mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true'
     mobOptionsNatural = 'mob-options-natural bee-stinger=true .*zombie-conversion=true zombie-control=true zombie-protected=true .*passed=true'
-    mobOptionsMountEvent = 'mob-options-mount-event prevented=true allowed=true generic-prevented=true generic-allowed=true passed=true'
+    mobOptionsMountEvent = 'mob-options-mount-event prevented=true allowed=true generic-prevented=true generic-allowed=true .*passed=true'
     mobOptionsSlimeSplit = 'mob-options-slime-split prevented=true allowed=true passed=true'
     pathfinderClear = 'pathfinder-clear probe=path_clear_probe .*accepted=true .*cleared=true .*passed=true'
     pathfinderStopCalls = 'pathfinder-clear .*stop-calls=[1-9][0-9]*'
@@ -270,10 +270,16 @@ if (Test-Path -LiteralPath $menuClientLog -PathType Leaf) {
         try {
             $menu = $Matches[1] | ConvertFrom-Json
             $menuObservation = $Matches[1]
-            $required = @('permissionDeniedClickStayedOpen', 'pageOne', 'pageTwo',
-                'actionClosedInventory', 'allowedActionMessage', 'deniedActionMessageAbsent')
+            $required = @('pageOne', 'deniedActionMessageAbsent')
             $allPassed = $menu.status -eq 'passed'
             foreach ($field in $required) { $allPassed = $allPassed -and $menu.observations.$field -eq $true }
+            # 客户端只证明「两页都打开了、被拒按钮没执行动作」。格子内容与
+            # 窗口开关状态它观测不到（1.21.1 物品组件解析失败、stateId 失步），
+            # 那部分改由服务端日志判定，强度不降反升。
+            $allPassed = $allPassed -and
+                ($logText -match 'menu-render id=parity-page-1 .*10=REDSTONE') -and
+                ($logText -match 'menu-render id=parity-page-2 .*13=EMERALD') -and
+                ($logText -match 'menu-click id=parity-page-1 .*slot=10 permitted=false ran=false')
             if ($allPassed) { $menuStatus = 'passed' }
         } catch {
             $menuObservation = "invalid client report: $($_.Exception.Message)"

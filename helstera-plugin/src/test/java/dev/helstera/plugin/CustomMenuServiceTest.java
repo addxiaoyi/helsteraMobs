@@ -248,4 +248,25 @@ class CustomMenuServiceTest {
         assertThrows(IllegalArgumentException.class, () -> menus.load(file.toFile()));
     }
 
+    /**
+     * 集成测试用的菜单 fixture 必须能被插件真实装载。
+     *
+     * <p>{@code tools/paper-integration/menu.yml} 是由 {@code run-server.ps1}
+     * 原样复制进插件数据目录的，Paper 端到端用例直接依赖其中的 {@code parity-page-1}。
+     * 该文件一旦被改成插件读不懂的形状，单元测试全绿、Paper 端却只能看到
+     * 「菜单没打开」——排查成本极高（本仓库为此浪费过数轮）。这里把它固化：
+     * fixture 解析失败或丢页，单元测试就应当先红。</p>
+     */
+    @Test void integrationFixtureMenuLoadsWithExpectedPages() throws Exception {
+        Path fixture = Path.of("..", "tools", "paper-integration", "menu.yml");
+        assertTrue(Files.isRegularFile(fixture), "集成 fixture 缺失: " + fixture.toAbsolutePath());
+
+        CustomMenuService menus = new CustomMenuService();
+        menus.load(fixture.toFile());
+
+        assertTrue(menus.contains("parity-page-1"), "fixture 缺少 parity-page-1");
+        // 分页组需要同组的至少两页，否则上一页/下一页按钮没有落点。
+        assertTrue(menus.contains("parity-page-2"), "fixture 缺少 parity-page-2");
+    }
+
 }

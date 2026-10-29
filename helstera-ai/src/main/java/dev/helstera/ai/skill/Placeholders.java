@@ -107,6 +107,11 @@ public final class Placeholders {
             return loc(ctx).map(Location::getWorld).filter(java.util.Objects::nonNull)
                     .map(org.bukkit.World::getName).orElse(null);
         }
+        String worldField = worldField(loc(ctx), field);
+        if (worldField != null) return worldField;
+        if (field.equals("dx") || field.equals("dy") || field.equals("dz")) {
+            return deltaField(ctx, field.substring(1));
+        }
         if (field.equals("faction")) {
             var entity = ctx.instanceValid() ? ctx.instance().baseEntity().orElse(null) : null;
             var table = dev.helstera.api.behavior.Factions.table();
@@ -167,6 +172,8 @@ public final class Placeholders {
         if (field.equals("world")) {
             return target.getWorld() == null ? null : target.getWorld().getName();
         }
+        String worldField = worldField(java.util.Optional.ofNullable(target.getLocation()), field);
+        if (worldField != null) return worldField;
         if (field.equals("faction")) {
             var table = dev.helstera.api.behavior.Factions.table();
             return table == null ? null : table.factionOf(target);
@@ -301,7 +308,18 @@ public final class Placeholders {
                     "is-invisible", "is-glowing", "is-on-fire", "is-collidable", "has-offhand",
                     "offhand.type", "mainhand.type", "held.item", "food", "food.level",
                     "saturation", "exhaustion", "air", "air.max", "luck", "armor",
-                    "is-op", "game-mode")) {
+                    "is-op", "game-mode",
+                    // 实体状态补充
+                    "is-burning", "is-frozen", "is-invulnerable", "is-left-handed",
+                    "is-in-vehicle", "is-leashed", "is-passenger",
+                    // 生物类别（与 SkillExtras 条件同名同义）
+                    "is-monster", "is-animal", "is-villager", "is-tameable", "is-raider",
+                    // 玩家状态
+                    "is-creative", "is-survival", "is-spectator", "is-adventure",
+                    "level", "exp",
+                    // 位置偏移与世界向
+                    "dx", "dy", "dz", "biome", "time", "is-day", "is-night",
+                    "weather", "moonphase")) {
                 out.add(scope + "." + f);
             }
         }
@@ -386,8 +404,20 @@ public final class Placeholders {
             case "is-climbing" -> String.valueOf(living.isClimbing());
             case "is-invisible" -> String.valueOf(living.isInvisible());
             case "is-glowing" -> String.valueOf(living.isGlowing());
-            case "is-on-fire" -> String.valueOf(living.getFireTicks() > 0);
+            case "is-on-fire", "is-burning" -> String.valueOf(living.getFireTicks() > 0);
             case "is-collidable" -> String.valueOf(living.isCollidable());
+            case "is-invulnerable" -> String.valueOf(living.isInvulnerable());
+            case "is-frozen" -> String.valueOf(living.isFrozen());
+            case "is-in-vehicle" -> String.valueOf(living.isInsideVehicle());
+            case "is-leashed" -> String.valueOf(living.isLeashed());
+            case "is-passenger" -> String.valueOf(living.getVehicle() != null);
+            case "is-left-handed" -> String.valueOf(living instanceof org.bukkit.entity.HumanEntity human
+                    && human.getMainHand() == org.bukkit.inventory.MainHand.LEFT);
+            case "is-monster" -> String.valueOf(living instanceof org.bukkit.entity.Monster);
+            case "is-animal" -> String.valueOf(living instanceof org.bukkit.entity.Animals);
+            case "is-villager" -> String.valueOf(living instanceof org.bukkit.entity.Villager);
+            case "is-tameable" -> String.valueOf(living instanceof org.bukkit.entity.Tameable);
+            case "is-raider" -> String.valueOf(living instanceof org.bukkit.entity.Raider);
             case "has-offhand" -> {
                 var equipment = living.getEquipment();
                 var item = equipment == null ? null : equipment.getItemInOffHand();
@@ -402,12 +432,64 @@ public final class Placeholders {
             case "is-op" -> living instanceof Player player
                     ? String.valueOf(player.isOp()) : "false";
             case "game-mode" -> living instanceof Player player ? player.getGameMode().name().toLowerCase(Locale.ROOT) : null;
+            case "is-creative" -> playerMode(living, org.bukkit.GameMode.CREATIVE);
+            case "is-survival" -> playerMode(living, org.bukkit.GameMode.SURVIVAL);
+            case "is-spectator" -> playerMode(living, org.bukkit.GameMode.SPECTATOR);
+            case "is-adventure" -> playerMode(living, org.bukkit.GameMode.ADVENTURE);
+            case "level" -> living instanceof Player player
+                    ? String.valueOf(player.getLevel()) : null;
+            case "exp" -> living instanceof Player player
+                    ? String.valueOf(Math.round(player.getExp() * 100.0)) : null;
             default -> {
                 if (field.startsWith("permission.") && living instanceof Player player) {
                     yield String.valueOf(player.hasPermission(field.substring("permission.".length())));
                 }
                 yield null;
             }
+        };
+    }
+
+    /** 玩家游戏模式判定；非玩家返回 "false"（与其它 is-* 键的降级一致）。 */
+    private static String playerMode(LivingEntity living, org.bukkit.GameMode mode) {
+        return living instanceof Player player ? String.valueOf(player.getGameMode() == mode) : "false";
+    }
+
+    /**
+     * 相对偏移：相对 caster 到 target 的位移在三个轴上的分量。
+     *
+     * <p>没有目标时返回 null（保留原文），而不是退化成 0——
+     * 0 偏移是合法数值，会让「把目标推开」这类动作变成原地不动。</p>
+     */
+    private static String deltaField(BehaviorContext ctx, String axis) {
+        Location self = loc(ctx).orElse(null);
+        if (self == null) return null;
+        LivingEntity target = ctx.targetEntity().orElse(null);
+        if (target == null) return null;
+        Location other = target.getLocation();
+        if (other == null) return null;
+        return switch (axis) {
+            case "x" -> fmt(other.getX() - self.getX());
+            case "y" -> fmt(other.getY() - self.getY());
+            case "z" -> fmt(other.getZ() - self.getZ());
+            default -> null;
+        };
+    }
+
+    /** 世界向字段：时间、天气、月相、生物群系。 */
+    private static String worldField(java.util.Optional<Location> opt, String field) {
+        Location l = opt.orElse(null);
+        if (l == null) return null;
+        org.bukkit.World w = l.getWorld();
+        if (w == null) return null;
+        return switch (field) {
+            case "world" -> w.getName();
+            case "time" -> String.valueOf(Math.floorMod(w.getTime(), 24_000L));
+            case "is-day", "isday", "isdays" -> String.valueOf(Math.floorMod(w.getTime(), 24_000L) < 12_000L);
+            case "is-night", "isnight" -> String.valueOf(Math.floorMod(w.getTime(), 24_000L) >= 13_000L);
+            case "weather" -> w.isThundering() ? "thunder" : w.hasStorm() ? "rain" : "clear";
+            case "moonphase", "moon-phase" -> String.valueOf(w.getMoonPhase());
+            case "biome" -> l.getBlock().getBiome().getKey().getKey();
+            default -> null;
         };
     }
 

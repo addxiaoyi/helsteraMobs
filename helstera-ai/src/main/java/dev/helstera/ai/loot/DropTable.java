@@ -73,14 +73,25 @@ public final class DropTable {
     private final List<Entry> entries;
     private final int experienceMin;
     private final int experienceMax;
+    /** 整表掉落件数下限；0 表示不约束。 */
+    private final int minItems;
+    /** 整表掉落件数上限；0 表示不约束。 */
+    private final int maxItems;
 
     private DropTable(String name, double luckFactor, List<Entry> entries,
                       int experienceMin, int experienceMax) {
+        this(name, luckFactor, entries, experienceMin, experienceMax, 0, 0);
+    }
+
+    private DropTable(String name, double luckFactor, List<Entry> entries,
+                      int experienceMin, int experienceMax, int minItems, int maxItems) {
         this.name = name;
         this.luckFactor = luckFactor;
         this.entries = List.copyOf(entries);
         this.experienceMin = experienceMin;
         this.experienceMax = experienceMax;
+        this.minItems = Math.max(0, minItems);
+        this.maxItems = Math.max(0, maxItems);
     }
 
     public String name() {
@@ -98,6 +109,15 @@ public final class DropTable {
     public int experienceMin() { return experienceMin; }
 
     public int experienceMax() { return experienceMax; }
+
+    /** 整表掉落件数下限；0 表示不约束。 */
+    public int minItems() { return minItems; }
+
+    /** 整表掉落件数上限；0 表示不约束。 */
+    public int maxItems() { return maxItems; }
+
+    /** 是否配置了整表件数约束。 */
+    public boolean hasItemBounds() { return minItems > 0 || maxItems > 0; }
 
     public boolean isEmpty() {
         return entries.isEmpty();
@@ -238,7 +258,33 @@ public final class DropTable {
                         chanceExpression(es)));
             }
         }
-        return new DropTable(name, luckFactor, entries, experienceMin, experienceMax);
+        int minItems = readItems(sec, "min-items", "minItems", problems, name);
+        int maxItems = readItems(sec, "max-items", "maxItems", problems, name);
+        if (minItems > 0 && maxItems > 0 && minItems > maxItems) {
+            problems.add("掉落表 " + name + " min-items (" + minItems + ") > max-items ("
+                    + maxItems + ")，已交换");
+            int swap = minItems;
+            minItems = maxItems;
+            maxItems = swap;
+        }
+        return new DropTable(name, luckFactor, entries, experienceMin, experienceMax,
+                minItems, maxItems);
+    }
+
+    /** 读整表件数约束；负数与非数字折成 0（= 不限制）并留告警。 */
+    private static int readItems(ConfigurationSection sec, String primary, String alias,
+                                 List<String> problems, String tableName) {
+        // 空节（loot.yml 里只写了表名没写内容）应当按「不限制」处理，
+        // 而不是让 contains() 抛 NPE 把整份掉落表带崩。
+        if (sec == null) return 0;
+        String key = sec.contains(primary) ? primary : sec.contains(alias) ? alias : null;
+        if (key == null) return 0;
+        int value = YamlNums.i(sec, key, 0, problems, "掉落表 " + tableName);
+        if (value < 0) {
+            problems.add("掉落表 " + tableName + " " + key + " = " + value + " 为负数，已按 0（不限制）处理");
+            return 0;
+        }
+        return value;
     }
 
     private static String chanceExpression(ConfigurationSection sec) {

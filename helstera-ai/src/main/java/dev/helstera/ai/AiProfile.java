@@ -253,7 +253,9 @@ public final class AiProfile {
 
     public enum TargetMode {
         NONE, PLAYERS, LIVING, MOBS, MONSTERS, ANIMALS, VILLAGERS, IRON_GOLEMS,
-        OWNER, THREAT, FACTION, OWNER_ATTACKER, OWNER_TARGET, PARENT_ATTACKER, PARENT_TARGET
+        OWNER, THREAT, FACTION, OWNER_ATTACKER, OWNER_TARGET, PARENT_ATTACKER, PARENT_TARGET,
+        /** {@code insultedTargets}: 仅选中主动攻击过本体的实体（含双方互相记仇）。 */
+        INSULTED
     }
 
     public record SelectorPolicy(boolean chase, boolean attack, boolean patrol, boolean flee,
@@ -264,6 +266,7 @@ public final class AiProfile {
                                  boolean rangedAttack, boolean leapAtTarget,
                                  String targetFaction, boolean factionHostile,
                                  boolean factionAllied, String temptItem, double temptRange,
+                                 boolean canFloat, boolean canClimb, boolean canBreakDoors,
                                  List<String> unsupported) {
         /** Returns the source selectors in the exact priority order used by this policy. */
         public List<String> orderedGoals(List<String> source) {
@@ -296,7 +299,7 @@ public final class AiProfile {
             this(chase, attack, patrol, flee, swim, openDoors, avoidSun, playerTargets,
                     playerTargets ? TargetMode.PLAYERS : TargetMode.NONE, lookAtPlayers,
                     avoidEntities, attackerFirst, hurtByTargetFirst, false, false,
-                    null, false, false, null, 10.0, unsupported);
+                    null, false, false, null, 10.0, swim, false, false, unsupported);
         }
     }
 
@@ -322,6 +325,10 @@ public final class AiProfile {
         boolean swim = canSwim;
         boolean openDoors = canOpenDoors;
         boolean avoidSunPolicy = avoidSun;
+        // `float` 只在 goal 列表里出现时生效：档案默认的 can-swim 语义是
+        // 「不会淹死」，与浮在水面是两件事，不能互相顶替。
+        boolean floatGoal = false;
+        boolean breakDoors = false;
         List<String> unsupported = new ArrayList<>();
         for (String entry : orderedSelectors(goals)) {
             String token = selectorToken(entry);
@@ -368,12 +375,26 @@ public final class AiProfile {
                     playerTargets = false;
                     targetMode = TargetMode.PARENT_TARGET;
                 }
-                case "float", "swim" -> swim = true;
+                case "float", "swim" -> { swim = true; floatGoal = true; }
+                // `spider` / `climb`：Paper 的 Pathfinder 只暴露 setCanFloat /
+                // setCanOpenDoors / setCanPassDoors，没有「攀爬」开关；攀爬靠客户端
+                // 侧的本体能力，这里记为诊断而不是伪造成别的能力。
+                case "spider", "climb" ->
+                        unsupported.add("goal:" + token + " (native climbing has no public API)");
+                case "closedoor", "closedoors", "close_door", "close_doors" ->
+                        unsupported.add("goal:" + token + " (Pathfinder exposes no door-closing toggle)");
+                case "breakdoors", "break_door", "breakdoor" -> breakDoors = true;
                 case "opendoor", "opendoors", "open_door", "open_doors" -> openDoors = true;
                 case "avoidsun", "avoid_sun", "restrictsun", "restrict_sun", "fleesun",
                         "flee_sun" -> avoidSunPolicy = true;
                 case "lookatplayers", "look_at_players", "randomlookaround", "lookaround" -> lookAtPlayers = true;
                 case "lookattarget", "look_at_target" -> { }
+                // 原生 Pathfinder Goal 的别名：语义与对应 core goal 相同，
+                // 不做二次实现，只映射到同一策略位，避免被当成未知选择器告警。
+                case "meleeattacktarget", "nearestattackabletarget", "targetofopportunity",
+                        "movetowardstarget", "move_towards_target" -> chase = true;
+                case "interact", "interactwithdoor", "bees", "eatblock", "eatgrass" ->
+                        unsupported.add("goal:" + token + " (no public Pathfinder goal equivalent)");
                 default -> unsupported.add("goal:" + token);
             }
         }
@@ -489,6 +510,18 @@ public final class AiProfile {
                     playerTargets = token.endsWith("player");
                     targetMode = playerTargets ? TargetMode.PLAYERS : TargetMode.LIVING;
                 }
+                // Mythic 的 insultedTargets 与 hurtByTarget 来源相同（最近攻击者），
+                // 但选择器语义是「只认主动打我的人」，因此落成独立 TargetMode，
+                // 由控制器按仇恨/受击状态筛选，而不是退化成最近怪物。
+                case "insultedtargets", "insulted_targets", "insultedtarget" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.INSULTED;
+                    hurtByTargetFirst = true;
+                }
+                case "cleartarget", "cleartargets", "clear_target", "clear_targets" -> {
+                    playerTargets = false;
+                    targetMode = TargetMode.NONE;
+                }
                 default -> unsupported.add("target:" + token);
             }
         }
@@ -496,6 +529,7 @@ public final class AiProfile {
                 playerTargets, targetMode, lookAtPlayers, avoidEntities,
                 attackerFirst, hurtByTargetFirst, rangedAttack, leapAtTarget,
                 targetFaction, factionHostile, factionAllied, temptItem, temptRange,
+                floatGoal, /* canClimb 无公开 API，恒为 false */ false, breakDoors,
                 List.copyOf(unsupported));
     }
 

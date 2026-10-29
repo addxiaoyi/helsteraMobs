@@ -8,5 +8,8 @@
   },
   "devDependencies": {
     "mineflayer": "^4.33.0"
+  },
+  "dependencies": {
+    "minecraft-data": "^3.117.0"
   }
 }

@@ -4900,8 +4900,196 @@ public final class SkillExtras {
                     } catch (Throwable ignored) {
                         SkillFaults.swallow("SkillExtras#811");
                     }
+                }),
+
+                // ---- 强制位移：推离 ----
+
+                Map.entry("push-away", (SkillCatalog.ActionFactory) a ->
+                        pushAwayAction(dynamicNum(a, 0, 1.0), dynamicNum(a, 1, 0.25))),
+
+                // ---- 移动状态 ----
+
+                // MythicMobs 的 glide / stopglide 是同一件事的开关；stop-glide 复用同一个
+                // 工厂，避免两份几乎相同的闭包各改一遍却总有一份忘了改。
+                Map.entry("glide", (SkillCatalog.ActionFactory) a -> glideAction(a, true)),
+                Map.entry("stop-glide", (SkillCatalog.ActionFactory) a -> glideAction(a, false)),
+                Map.entry("glide-targets", (SkillCatalog.ActionFactory) a -> glideAction(a, true)),
+                Map.entry("stop-glide-targets", (SkillCatalog.ActionFactory) a -> glideAction(a, false)),
+
+                // ---- 饥饿度 ----
+
+                // 绝对值。与 feed（增量）刻意分开：把绝对值接成增量的话，
+                // `set-hunger 20` 会把已经吃饱的玩家写成 40，运行期被 clamp 掩盖成「没事」。
+                Map.entry("set-hunger", (SkillCatalog.ActionFactory) a ->
+                        setHungerAction(a, false)),
+                Map.entry("set-hunger-targets", (SkillCatalog.ActionFactory) a ->
+                        setHungerAction(a, true)),
+
+                // ---- 物品槽 ----
+
+                Map.entry("set-slot", (SkillCatalog.ActionFactory) a -> {
+                    String slotKey = keyedArg(a, "slot", "s");
+                    if (slotKey == null) slotKey = str(a, 0, "");
+                    String itemKey = keyedArg(a, "item", "material", "m", "type");
+                    if (itemKey == null) itemKey = str(a, 1, "");
+                    final String slot = slotKey.trim();
+                    final String item = itemKey.trim();
+                    final boolean armorSlot = isArmorSlot(slot);
+                    final boolean clearing = item.isEmpty() || "AIR".equalsIgnoreCase(item)
+                            || "NONE".equalsIgnoreCase(item);
+                    return ctx -> {
+                        if (slot.isEmpty()) return;
+                        for (LivingEntity target : itemTargets(ctx)) {
+                            if (!(target instanceof Player player)) continue;
+                            if (armorSlot) {
+                                // 护甲槽写原版装备栏，不走背包索引——否则头盔会被塞进背包第一格。
+                                applyArmorSlot(player, slot, clearing ? null : singleItem(item));
+                                continue;
+                            }
+                            setInventoryItem(player, slot, clearing ? null : singleItem(item));
+                        }
+                    };
                 })
         );
+    }
+
+    /**
+     * 推离向量：从 {@code from} 指向 {@code to} 的水平单位向量乘强度，再加纵向分量。
+     *
+     * <p>抽成静态纯函数是为了让「两者水平位置重合」这个分支可离线验证：
+     * 那时水平方向为零，目标原地不动——推离类机制最容易写成「看着在推、其实没动」。
+     * 返回 null 表示不该施加任何速度（世界不同 / 强度非法 / 位置重合）。</p>
+     */
+    static org.bukkit.util.Vector pushAwayVector(Location from, Location to,
+                                                 double strength, double lift) {
+        if (from == null || to == null) return null;
+        if (from.getWorld() == null || to.getWorld() == null) return null;
+        if (!from.getWorld().equals(to.getWorld())) return null;
+        if (!Double.isFinite(strength) || strength <= 0.0) return null;
+        double dx = to.getX() - from.getX();
+        double dz = to.getZ() - from.getZ();
+        double length = Math.sqrt(dx * dx + dz * dz);
+        if (!Double.isFinite(length) || length <= 1.0e-9) return null;
+        double y = Double.isFinite(lift) ? lift : 0.0;
+        return new org.bukkit.util.Vector(dx / length * strength, y, dz / length * strength);
+    }
+
+    private static java.util.function.Consumer<BehaviorContext> pushAwayAction(
+            java.util.function.ToDoubleFunction<BehaviorContext> power,
+            java.util.function.ToDoubleFunction<BehaviorContext> lift) {
+        return ctx -> {
+            Location origin = selfLoc(ctx);
+            double strength = power.applyAsDouble(ctx);
+            double rise = lift.applyAsDouble(ctx);
+            for (LivingEntity target : itemTargets(ctx)) {
+                org.bukkit.util.Vector away;
+                try {
+                    away = pushAwayVector(origin, target.getLocation(), strength, rise);
+                } catch (Throwable ignored) {
+                    SkillFaults.swallow("SkillExtras#pushAwayLocation");
+                    continue;
+                }
+                if (away == null) continue;
+                try {
+                    target.setVelocity(away);
+                } catch (Throwable ignored) {
+                    SkillFaults.swallow("SkillExtras#pushAway");
+                }
+            }
+        };
+    }
+
+    /**
+     * 绝对值饥饿度：饥饿值钳在 0..20，饱和度可选（给了才写，避免把饱和度顺手清零）。
+     *
+     * <p>{@code targetsOnly} 区分「只作用于 @Targeter 选出的目标」与「无目标时退回自身」，
+     * 与其余 {@code *-targets} 变体的语义保持一致。</p>
+     */
+    private static java.util.function.Consumer<BehaviorContext> setHungerAction(List<String> args,
+                                                                               boolean targetsOnly) {
+        var amount = dynamicNum(args, 0, 20);
+        var saturation = dynamicNum(args, 1, 0);
+        final boolean saturationGiven = args != null && args.size() > 1
+                && args.get(1) != null && !args.get(1).isBlank();
+        return ctx -> {
+            double raw = amount.applyAsDouble(ctx);
+            if (!Double.isFinite(raw)) return;
+            int food = clampFoodLevel(raw);
+            double sat = saturationGiven ? saturation.applyAsDouble(ctx) : Double.NaN;
+            List<LivingEntity> entities = targetsOnly ? targetEntities(ctx) : itemTargets(ctx);
+            for (LivingEntity target : entities) {
+                if (!(target instanceof Player player)) continue;
+                try {
+                    player.setFoodLevel(food);
+                    if (Double.isFinite(sat)) {
+                        player.setSaturation(clampSaturation(sat, food));
+                    }
+                } catch (RuntimeException ignored) {
+                    SkillFaults.swallow("SkillExtras#setHunger");
+                }
+            }
+        };
+    }
+
+    /** 统一开关滑翔：{@code glide} 与 {@code stop-glide} 共用一份闭包。 */
+    private static java.util.function.Consumer<BehaviorContext> glideAction(List<String> args,
+                                                                           boolean defaultGliding) {        boolean gliding = keyedBoolean(args, 0, defaultGliding,
+                "state", "g", "value", "v", "gliding");
+        return ctx -> {
+            for (LivingEntity target : itemTargets(ctx)) {
+                try {
+                    target.setGliding(gliding);
+                } catch (Throwable ignored) {
+                    SkillFaults.swallow("SkillExtras#glide");
+                }
+            }
+        };
+    }
+
+    /** 食物栏上限 20 点；负数按 0，超出按 20，NaN 按 0。 */
+    static int clampFoodLevel(double raw) {
+        if (!Double.isFinite(raw)) return 0;
+        return (int) Math.max(0, Math.min(20, Math.round(raw)));
+    }
+
+    /** 饱和度不得超过当前饥饿值，否则原版会在下一 tick 静默回写。 */
+    static float clampSaturation(double raw, int foodLevel) {
+        if (!Double.isFinite(raw) || raw <= 0.0) return 0.0f;
+        return (float) Math.min(Math.max(0, foodLevel), raw);
+    }
+
+    private static boolean isArmorSlot(String slot) {
+        if (slot == null) return false;
+        return switch (slot.trim().toUpperCase(Locale.ROOT).replace('-', '_')) {
+            case "HEAD", "HELMET", "CHEST", "CHESTPLATE", "LEGS", "LEGGINGS", "FEET", "BOOTS" -> true;
+            default -> false;
+        };
+    }
+
+    /** 单件物品模板；解析不到名字时返回 null（等价于清空该槽，而不是偷偷保留旧物品）。 */
+    private static ItemStack singleItem(String itemName) {
+        ItemStack template = resolveItem(itemName, 1);
+        if (template == null) return null;
+        ItemStack single = template.clone();
+        single.setAmount(1);
+        return single;
+    }
+
+    private static void applyArmorSlot(Player player, String slot, ItemStack item) {
+        if (player == null) return;
+        String key = slot.trim().toUpperCase(Locale.ROOT).replace('-', '_');
+        try {
+            var inventory = player.getInventory();
+            switch (key) {
+                case "HEAD", "HELMET" -> inventory.setHelmet(item);
+                case "CHEST", "CHESTPLATE" -> inventory.setChestplate(item);
+                case "LEGS", "LEGGINGS" -> inventory.setLeggings(item);
+                case "FEET", "BOOTS" -> inventory.setBoots(item);
+                default -> { }
+            }
+        } catch (RuntimeException ignored) {
+            SkillFaults.swallow("SkillExtras#setSlotArmor");
+        }
     }
 
     private static EquipmentSlot equipmentSlot(String raw) {

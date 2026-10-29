@@ -5,9 +5,10 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
-the report contract passes with `214/214` probes observed (`206 passed` and `8`
-expected negative-control observations). Earlier bullets that say strict evidence
-is pending describe historical exploratory runs.
+the report contract passes with `224/224` probes observed (`216 passed` and `8`
+expected negative-control observations) in fixture `srv-paper-integration-final-r47`.
+Earlier bullets that say strict evidence is pending describe historical
+exploratory runs.
 
 ### Verified Progress
 
@@ -232,13 +233,32 @@ Minecraft（Paper / Spigot）模型引擎插件。采用「资源包 + Display �
 
 ## 构建
 
+### 离线构建先确认 Maven 仓库指向
+
+`MAVEN_OPTS` 可能已把构建指向一个**不含** `paper-api:1.21.1-R0.1-SNAPSHOT` 的仓库，
+此时 `-o` 会在 `helstera-api` 处直接解析失败。先确认：
+
+```bash
+echo "$MAVEN_OPTS"                    # 看是否带 -Dmaven.repo.local=...
+ls ~/.m2/repository/io/papermc/paper/paper-api/
+```
+
+默认仓库里没有该版本时，显式指定一个有的仓库：
+
+```bash
+mvn -o -Dmaven.repo.local="$HOME/.m2/repository" test
+```
+
+**验证退出码不要写成 `mvn ... | tail`**：那样 `$?` 取到的是 `tail` 的退出码，
+构建失败也会显示为 0。重定向到文件后再看，或用 `grep -c FAIL` 交叉确认。
+
 要求：JDK 21；优先使用仓库自带 Maven Wrapper（Unix-like 系统 `./mvnw`，Windows `.\mvnw.cmd`，固定 Maven 3.9.16）。直接使用系统 Maven 时要求 3.8.9+（Maven 3.9+ 推荐；离线构建需在 `~/.m2` 预缓存 paper-api、adventure、joml、gson、snakeyaml 等）。
 
 ```bash
 # 完整版（5.0，含网页开发器）
 ./mvnw -o clean install
 
-# 跑测试（全仓库 12 模块，589 个用例）
+# 跑测试（全仓库 12 模块）
 ./mvnw -o test
 
 # 分阶段出包（仅含"已完成"模块，产物名 HelsteraMobs-<n>.0-<variant>.jar）
