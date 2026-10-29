@@ -73,3 +73,6 @@ tools/paper-integration/node_modules/
 
 # Graphify local runtime state and generated reports
 .graphify/
+
+# Local isolated worktrees
+.worktrees/
