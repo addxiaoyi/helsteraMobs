@@ -758,6 +758,9 @@ public final class SkillService {
             case "remove-all-effects" -> "remove-all-effects-targets";
             case "set-target", "settarget", "target" -> "set-target";
             case "shoot", "projectile" -> "shoot-projectile";
+            // 带 @Targeter 的单目标动作：键名是复数 --targets，不映射就会退化成
+            // 「在别的实体身上改自己的滑翔/饥饿/槽位」这种静默错配。
+            case "glide", "stop-glide", "set-hunger" -> mechanic + "-targets";
             default -> mechanic;
         };
     }

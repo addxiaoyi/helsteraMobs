@@ -74,6 +74,10 @@ class ConfigConsumptionAuditTest {
         EXEMPT.put("SpawnerService.alive", "实例追踪表，非配置");
         EXEMPT.put("SpawnerService.spawners", "装载表本身，非配置");
         EXEMPT.put("SpawnerService.runtimeDisabled", "运行期 toggle 覆盖集，非配置键");
+        // ---- 类内裸访问：字段定义与消费点都在同一个内部类 Spawner 里 ----
+        EXEMPT.put("SpawnerService.groupMin", "类内裸访问，见 Spawner.rollGroupSize()");
+        EXEMPT.put("SpawnerService.groupMax", "类内裸访问，见 Spawner.rollGroupSize()");
+        EXEMPT.put("SpawnerService.intervalJitter", "类内裸访问，见 Spawner.rollIntervalTicks()");
     }
 
     @Test

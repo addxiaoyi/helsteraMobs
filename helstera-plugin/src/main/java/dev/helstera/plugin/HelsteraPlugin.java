@@ -1647,8 +1647,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 org.bukkit.util.StructureSearchResult structureSearch = null;
                 org.bukkit.generator.structure.Structure locatedStructure = null;
                 String[] structureKeys = {
-                        "minecraft:village", "minecraft:mineshaft", "minecraft:ruined_portal"
+                        "minecraft:village_plains", "minecraft:mineshaft", "minecraft:ruined_portal"
                 };
+                // 这个闸门是保护性的，别删：实测直接调用 locateNearestStructure
+                // 会在大范围补生成区块，把主线程卡到 Watchdog 超时、服务端 exit 70。
+                // 本集成世界 canGenerateStructures() 返回 false，所以这里本就不会进入，
+                // 该探针在现有夹具下无法观测——要验它得换一个预生成好结构的世界。
                 if (world.canGenerateStructures()) {
                     for (String rawStructureKey : structureKeys) {
                         try {
@@ -1659,6 +1663,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                     location, structure, 2048, true);
                             locatedStructure = structure;
                         } catch (RuntimeException ignored) {
+                            structureSearch = null;
+                            locatedStructure = null;
+                        }
+                        if (structureSearch != null && structureSearch.getStructure() != null
+                                && structureSearch.getLocation() != null) break;
+                    }
+                }
+                long structureChunkGenMillis = -1;
+                // 曾经在这里一次性强制生成 33×33=1089 个区块来「让结构自己长出来」，
+                // 实测直接把服务端压到 exit code 70 崩溃。改为只加载结构所在的那
+                // 几个区块：定位本身不需要区块已生成，只有 hasStructureAt 需要。
+                if ((structureSearch == null || structureSearch.getStructure() == null
+                        || structureSearch.getLocation() == null) && world.canGenerateStructures()) {
+                    for (String rawStructureKey : structureKeys) {
+                        try {
+                            var structure = org.bukkit.Registry.STRUCTURE.get(
+                                    org.bukkit.NamespacedKey.fromString(rawStructureKey));
+                            if (structure == null) continue;
+                            structureSearch = world.locateNearestStructure(
+                                    location, structure, 4096, false);
+                            locatedStructure = structure;
+                        } catch (RuntimeException | LinkageError ignored) {
                             structureSearch = null;
                             locatedStructure = null;
                         }
@@ -1725,7 +1751,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " negative=" + structureNegative
                             + " generated-count=" + generatedStructureCount);
                 } else {
-                    getLogger().info("structure-condition-details observed=false");
+                    // 连续四轮在「为什么一个结构都定位不到」上猜，全部猜错。
+                    // 这一次先把三个决定性前提打出来，再决定要不要改逻辑：
+                    // 世界是否允许结构、注册表里到底有没有这个键、区块生成实际耗时。
+                    String structureDiagnostics;
+                    try {
+                        Object rawVillage = org.bukkit.Registry.STRUCTURE.get(
+                                org.bukkit.NamespacedKey.fromString("minecraft:village_plains"));
+                        structureDiagnostics = " can-generate=" + world.canGenerateStructures()
+                                + " registry-key-null=" + (rawVillage == null)
+                                + " registry-size=" + org.bukkit.Registry.STRUCTURE.stream().count()
+                                + " chunks-loaded=" + world.getLoadedChunks().length
+                                + " chunk-gen-ms=" + structureChunkGenMillis;
+                    } catch (RuntimeException | LinkageError failure) {
+                        structureDiagnostics = " diagnostics-failed=" + failure.getClass().getSimpleName();
+                    }
+                    getLogger().info("structure-condition-details observed=false" + structureDiagnostics);
                 }
                 triggerItemProbe.remove();
                 getLogger().info("trigger-item-type-condition-details positive=" + triggerItemPositive
@@ -4663,10 +4704,41 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var pathProbeEntity = pathProbe == null ? null : pathProbe.baseEntity().orElse(null);
                 if (pathProbeEntity instanceof org.bukkit.entity.Mob mob && pathProbeController != null
                         && mob.getPathfinder() != null) {
+                    // 探针生物会在生成后很快被移除（满血 dead=true，即 remove() 而非战死）。
+                    // 二分只能告诉我们「什么时候没的」，回答不了「谁干的」，所以这里挂一个
+                    // 一次性监听器，直接打印实体被移出世界的时机与位置。
+                    // 探针生物会在生成后很快 valid=false，满血 dead=true 说明是被移除而非战死。
+                    // 这个 paper-api 版本没有 EntityRemoveEvent，查不了「谁删的」，
+                    // 于是先排除最常见的一类：区块未加载 / 实体非持久化导致的连带失效。
+                    mob.setPersistent(true);
+                    mob.setRemoveWhenFarAway(false);
+                    getLogger().info("pathfinder-clear-spawn chunk-loaded="
+                            + world.isChunkLoaded(mob.getLocation().getBlockX() >> 4,
+                                    mob.getLocation().getBlockZ() >> 4)
+                            + " persistent=" + mob.isPersistent()
+                            + " at=" + formatProbeLocation(mob.getLocation()));
                     getServer().getScheduler().runTaskLater(this, () -> {
-                        int floorY = mob.getLocation().getBlockY() - 1;
-                        int centerX = mob.getLocation().getBlockX();
-                        int centerZ = mob.getLocation().getBlockZ();
+                        // 实测（第 41 轮二分诊断）：探针生物生成后 20 tick 内就被系统移除，
+                        // 指纹是 dead=true 但 health=20.0 —— 是 remove() 而不是被打死，
+                        // 与小僵尸坐骑探针同源。既然「实体能活过 20 tick」这个前提不成立，
+                        // 就在这里当场补生成一次，再继续做寻路判定。
+                        final org.bukkit.entity.Mob[] live = {mob};
+                        final int[] liveId = {pathProbeId};
+                        if (!mob.isValid() || mob.isDead()) {
+                            int retryId = spawnMobAt("path_clear_probe", pathProbeLocation, null);
+                            var retryInst = retryId > 0 ? instances().impl(retryId) : null;
+                            var retryEntity = retryInst == null ? null : retryInst.baseEntity().orElse(null);
+                            if (retryEntity instanceof org.bukkit.entity.Mob retried
+                                    && retried.getPathfinder() != null) {
+                                live[0] = retried;
+                                liveId[0] = retryId;
+                            }
+                            getLogger().info("pathfinder-clear-respawn original-invalid=true retried-id="
+                                    + retryId + " using=" + liveId[0]);
+                        }
+                        int floorY = live[0].getLocation().getBlockY() - 1;
+                        int centerX = live[0].getLocation().getBlockX();
+                        int centerZ = live[0].getLocation().getBlockZ();
                         for (int dx = -12; dx <= 12; dx++) {
                             for (int dz = -12; dz <= 12; dz++) {
                                 for (int dy = 0; dy <= 2; dy++) {
@@ -4676,46 +4748,46 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 }
                             }
                         }
-                        mob.teleport(new Location(world, centerX + 0.5, floorY + 1, centerZ + 0.5));
-                        mob.setVelocity(new org.bukkit.util.Vector());
-                        mob.setAI(true);
-                        mob.setAware(true);
+                        live[0].teleport(new Location(world, centerX + 0.5, floorY + 1, centerZ + 0.5));
+                        live[0].setVelocity(new org.bukkit.util.Vector());
+                        live[0].setAI(true);
+                        live[0].setAware(true);
                         getServer().getScheduler().runTaskLater(this, () -> {
                             Location pathDestination = new Location(world, centerX + 8.5, floorY + 1, centerZ + 0.5);
                             var pathTarget = world.spawn(pathDestination, org.bukkit.entity.Zombie.class);
                             pathTarget.setAI(true);
                             pathTarget.setAware(true);
                             pathTarget.setGravity(false);
-                            var path = mob.getPathfinder().findPath(pathTarget);
+                            var path = live[0].getPathfinder().findPath(pathTarget);
                             boolean pathFound = path != null;
                             boolean pathReachable = path != null && path.canReachFinalPoint();
-                            boolean pathStarted = pathReachable && mob.getPathfinder().moveTo(path, 1.0);
-                            boolean pathActiveBeforeClear = mob.getPathfinder().hasPath();
+                            boolean pathStarted = pathReachable && live[0].getPathfinder().moveTo(path, 1.0);
+                            boolean pathActiveBeforeClear = live[0].getPathfinder().hasPath();
                             boolean pathAccepted = pathStarted && pathActiveBeforeClear;
                             if (!pathAccepted) {
-                                pathStarted = mob.getPathfinder().moveTo(pathTarget, 1.0);
+                                pathStarted = live[0].getPathfinder().moveTo(pathTarget, 1.0);
                                 pathFound |= pathStarted;
                                 pathReachable |= pathStarted;
-                                pathActiveBeforeClear = mob.getPathfinder().hasPath();
+                                pathActiveBeforeClear = live[0].getPathfinder().hasPath();
                                 pathAccepted = pathStarted && pathActiveBeforeClear;
                             }
                             pathProbeController.tick();
-                            boolean pathCleared = pathAccepted && !mob.getPathfinder().hasPath();
+                            boolean pathCleared = pathAccepted && !live[0].getPathfinder().hasPath();
                             getLogger().info("pathfinder-clear probe=path_clear_probe found=" + pathFound
                                     + " reachable=" + pathReachable + " started=" + pathStarted
                                     + " active-before=" + pathActiveBeforeClear + " accepted=" + pathAccepted
-                                    + " on-ground=" + mob.isOnGround() + " valid=" + mob.isValid()
-                                    + " has-ai=" + mob.hasAI() + " aware=" + mob.isAware()
-                                    + " location=" + mob.getLocation().getX() + ","
-                                    + mob.getLocation().getY() + "," + mob.getLocation().getZ()
-                                    + " below=" + mob.getLocation().clone().subtract(0, 1, 0).getBlock().getType()
+                                    + " on-ground=" + live[0].isOnGround() + " valid=" + live[0].isValid()
+                                    + " has-ai=" + live[0].hasAI() + " aware=" + live[0].isAware()
+                                    + " location=" + live[0].getLocation().getX() + ","
+                                    + live[0].getLocation().getY() + "," + live[0].getLocation().getZ()
+                                    + " below=" + live[0].getLocation().clone().subtract(0, 1, 0).getBlock().getType()
                                     + " destination=" + pathDestination.getBlockX() + ","
                                     + pathDestination.getBlockY() + "," + pathDestination.getBlockZ()
                                     + " cleared=" + pathCleared + " stop-calls="
                                     + pathProbeController.nativePathStopCalls()
                                     + " passed=" + (pathAccepted && pathCleared));
                             pathTarget.remove();
-                            instances().despawn(pathProbeId);
+                            instances().despawn(liveId[0]);
                         }, 10L);
                     }, 20L);
                 } else {
@@ -5963,7 +6035,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         protectedJockey.setAI(false);
         controlJockey.setAI(false);
         var protectedJockeyInstance = instances().bind("example/emberling", protectedJockey,
-                dev.helstera.api.instance.SpawnOptions.defaults().preventJockeyMounts(true));
+                dev.helstera.api.instance.SpawnOptions.defaults().preventJockeyMounts(true).despawnMode("PERSISTENT"));
 
         var protectedGenericPassenger = world.spawn(origin.clone().add(44, 0, 0),
                 org.bukkit.entity.Wolf.class);
@@ -5975,9 +6047,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 org.bukkit.entity.Pig.class);
         var protectedGenericPassengerInstance = instances().bind("example/emberling",
                 protectedGenericPassenger,
-                dev.helstera.api.instance.SpawnOptions.defaults().preventMount(true));
+                dev.helstera.api.instance.SpawnOptions.defaults().preventMount(true).despawnMode("PERSISTENT"));
         var controlGenericPassengerInstance = instances().bind("example/emberling",
-                controlGenericPassenger, dev.helstera.api.instance.SpawnOptions.defaults());
+                controlGenericPassenger, dev.helstera.api.instance.SpawnOptions.defaults().despawnMode("PERSISTENT"));
         var protectedGenericMountEvent = new org.bukkit.event.entity.EntityMountEvent(
                 protectedGenericPassenger, protectedGenericMount);
         var controlGenericMountEvent = new org.bukkit.event.entity.EntityMountEvent(
@@ -6036,6 +6108,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 controlBee, target, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0));
 
         final int[] ticks = {0};
+        // 记录 EntityMountEvent 判定块真正被执行过几次：如果一直是 0，
+        // 说明守卫（鸡身上已有乘客）自始至终为假，事件根本没被触发过，
+        // prevented 永远不可能是 true——这与骑手是否被拦下无关。
+        final int[] mountAttempts = {0};
         final org.bukkit.scheduler.BukkitTask[] task = {null};
         task[0] = getServer().getScheduler().runTaskTimer(this, () -> {
             ticks[0]++;
@@ -6062,8 +6138,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     || (protectedZombie.isValid()
                     && world.getNearbyEntities(protectedZombie.getLocation(), 2, 2, 2)
                     .stream().noneMatch(entity -> entity instanceof org.bukkit.entity.Drowned));
+            // 小僵尸白天会被烧死：一旦骑手死掉，EntityMountEvent 就永远不会再触发，
+            // 探针只能看到一个「没被拦下」的假象（实测 jockey-valid=false）。
+            // 和上面两个转换探针一样，逐 tick 清火焰，让骑手活到判定那一刻。
+            if (protectedJockey.isValid()) protectedJockey.setFireTicks(0);
+            if (controlJockey.isValid()) controlJockey.setFireTicks(0);
             boolean protectedMountCancelled = false;
             if (!protectedChicken.getPassengers().contains(protectedJockey)) {
+                mountAttempts[0]++;
                 var protectedMount = new org.bukkit.event.entity.EntityMountEvent(
                         protectedJockey, protectedChicken);
                 getServer().getPluginManager().callEvent(protectedMount);
@@ -6102,6 +6184,42 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " allowed=" + jockeyEventAllowed
                         + " generic-prevented=" + genericMountPrevented
                         + " generic-allowed=" + genericMountAllowed
+                        // 失败时最需要知道的三个事实：骑手实例是否还在、该实例的
+                        // 防骑乘开关是否为真、以及它当时的实体类型是否真是 ZOMBIE
+                        // （preventsEntityMount 里对实体类型有硬判定）。
+                        + " jockey-instance=" + (protectedJockeyInstance != null)
+                        + " jockey-type=" + protectedJockey.getType()
+                        + " jockey-valid=" + protectedJockey.isValid()
+                        + " jockey-dead=" + protectedJockey.isDead()
+                        + " jockey-health=" + protectedJockey.getHealth()
+                        + " jockey-vehicle=" + (protectedJockey.getVehicle() == null
+                            ? "none" : protectedJockey.getVehicle().getType().name())
+                        + " jockey-block=" + protectedChicken.getLocation().getBlock().getType()
+                        + " jockey-passengers=" + protectedChicken.getPassengers().size()
+                        + " jockey-attempts=" + mountAttempts[0]
+                        // bind 返回非 null 却查不到实例，只有两种可能：实例没登记进
+                        // allImpl()，或它的 baseEntity 不是这只僵尸。这两项直接定论。
+                        + " jockey-inst-registered=" + (protectedJockeyInstance
+                            instanceof dev.helstera.runtime.instance.ModelInstanceImpl registeredImpl
+                            && instances().getInstance(registeredImpl.instanceId()).isPresent())
+                        // 对照：同一批里后绑的通用坐骑实例还在不在。
+                        // 若「先绑的没了、后绑的在」，说明登记表对同一模型只保留一份。
+                        + " generic-inst-registered=" + (protectedGenericPassengerInstance
+                            instanceof dev.helstera.runtime.instance.ModelInstanceImpl genericImpl
+                            && instances().getInstance(genericImpl.instanceId()).isPresent())
+                        + " inst-active=" + instances().activeCount()
+                        + " jockey-inst-base-match=" + (protectedJockeyInstance
+                            instanceof dev.helstera.runtime.instance.ModelInstanceImpl matchedImpl
+                            && matchedImpl.baseEntity().map(base -> base.getUniqueId().equals(
+                                protectedJockey.getUniqueId())).orElse(false))
+                        + " jockey-found=" + (findInstance(protectedJockey) != null)
+                        + " jockey-found-prevent=" + (findInstance(protectedJockey) != null
+                            && preventsEntityMount(findInstance(protectedJockey).options(),
+                                protectedJockey.getType()))
+                        + " jockey-ticks=" + ticks[0]
+                        + " jockey-passenger-types=" + protectedChicken.getPassengers().stream()
+                            .map(passenger -> passenger.getType().name())
+                            .collect(java.util.stream.Collectors.joining("|"))
                         + " passed=" + mountEventCompleted);
                 getLogger().info("mob-options-slime-split prevented=" + slimeSplitPrevented
                         + " allowed=" + slimeSplitAllowed
@@ -6625,6 +6743,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         if (inst != null && inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity living) {
             markPersistentMob(living, mobId, opts);
+            getLogger().info("instance-bind mob=" + mobId
+                    + " instance=" + inst.instanceId()
+                    + " entity=" + living.getUniqueId()
+                    + " type=" + living.getType()
+                    + " despawn-mode=" + opts.despawnMode()
+                    + " persistent=" + opts.persistent()
+                    + " valid=" + living.isValid()
+                    + " dead=" + living.isDead());
         }
 
         // 掉落表挂到实例上：死亡事件靠它找到该投哪张表，避免按模型 ID 反查 mobs 配置

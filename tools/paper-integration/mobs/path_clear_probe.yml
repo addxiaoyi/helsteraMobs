@@ -3,6 +3,7 @@ model: example/emberling
 entity:
   type: ZOMBIE
   silent: true
+  prevent-sunburn: true
 mob:
   despawn: PERSISTENT
 ai:

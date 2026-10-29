@@ -283,6 +283,10 @@ public final class AiController {
     private boolean selectorCanSwim = true;
     private boolean selectorCanOpenDoors;
     private boolean selectorAvoidSun;
+    /** 显式 `float` goal 才为 true；与档案 can-swim 语义分开。 */
+    private boolean selectorCanFloat;
+    /** `breakdoors` goal：沿路破坏阻挡门板的诉求，仅作诊断与寻路提示。 */
+    private boolean selectorCanBreakDoors;
     private boolean selectorHasExplicitGoalPriority;
     private boolean selectorHasExplicitTargets;
     private SelectorPlan selectorPlan = SelectorPlan.compile(null);
@@ -317,6 +321,11 @@ public final class AiController {
         selectorCanOpenDoors = policy.openDoors() || hasGoal("opendoor", "opendoors", "open_door", "open_doors");
         selectorAvoidSun = policy.avoidSun() || hasGoal("avoidsun", "avoid_sun", "restrictsun", "restrict_sun",
                 "fleesun", "flee_sun");
+        // `float` 与档案的 can-swim 分开：前者是「浮在水面」的原生能力，
+        // 后者是「不会淹死」。只有显式声明 float 才打开 Pathfinder 的浮水。
+        selectorCanFloat = policy.canFloat() || hasGoal("float");
+        selectorCanBreakDoors = policy.canBreakDoors()
+                || hasGoal("breakdoors", "break_door", "breakdoor");
         selectorAllowsPlayerTargets = policy.playerTargets();
         selectorTargetMode = policy.targetMode();
         selectorLooksAtPlayers = policy.lookAtPlayers()
@@ -373,15 +382,23 @@ public final class AiController {
             if (base instanceof org.bukkit.entity.Mob mob) {
                 com.destroystokyo.paper.entity.Pathfinder pathfinder = mob.getPathfinder();
                 if (pathfinder != null) {
-                    pathfinder.setCanFloat(selectorCanSwim);
+                    pathfinder.setCanFloat(selectorCanFloat);
                     pathfinder.setCanOpenDoors(selectorCanOpenDoors);
                     pathfinder.setCanPassDoors(selectorCanOpenDoors);
+                    // Paper 没有 setCanBreakDoors；vanilla 的破门能力由生物属性
+                    // 固定，只能记为诊断，不能假装已生效。
+                    if (selectorCanBreakDoors && !reportedSelectorWarnings.contains("goal-breakdoors")) {
+                        reportedSelectorWarnings.add("goal-breakdoors");
+                        org.bukkit.Bukkit.getLogger().warning(
+                                "AI goal 'breakdoors' has no public Pathfinder toggle;"
+                                        + " native mob attributes decide door breaking.");
+                    }
                     if (selectorTargetMode == AiProfile.TargetMode.NONE && !selectorCanPatrol) {
                         pathfinder.stopPathfinding();
                     }
                 }
             }
-            if (base instanceof LivingEntity living) living.setSwimming(selectorCanSwim && base.isInWater());
+            if (base instanceof LivingEntity living) living.setSwimming(selectorCanFloat && base.isInWater());
             if (selectorAvoidSun && base instanceof org.bukkit.entity.Mob mob && mob.isInDaylight()) moveToShade(mob, loc);
             if (selectorLooksAtPlayers) { Player player = nearestVisiblePlayer(loc); if (player != null) faceToward(player.getLocation()); }
             if (selectorLooksAtTarget) {
@@ -552,6 +569,7 @@ public final class AiController {
             return relationTarget(parentEntity(), false, loc);
         }
         if (selectorThreatPriority) return threatTargetEntity(loc);
+        if (selectorTargetMode == AiProfile.TargetMode.INSULTED) return insultedTarget(loc);
         if (selectorTargetMode == AiProfile.TargetMode.FACTION) return factionTarget(loc);
         if ((selectorAttackerFirst || selectorHurtByFirst) && validTarget(lastAttackerEntity)) {
             return lastAttackerEntity;
@@ -589,6 +607,7 @@ public final class AiController {
             case OWNER_TARGET -> relationTarget(ownerEntity(), false, origin);
             case PARENT_ATTACKER -> relationTarget(parentEntity(), true, origin);
             case PARENT_TARGET -> relationTarget(parentEntity(), false, origin);
+            case INSULTED -> insultedTarget(origin);
             case SPECIFIC_FACTION, OTHER_FACTION, OTHER_FACTION_MONSTERS ->
                     nearestConfiguredTarget(origin, rule, kind);
             default -> nearestConfiguredTarget(origin, rule, kind);
@@ -919,8 +938,41 @@ public final class AiController {
         return null;
     }
 
-    private LivingEntity ownerTarget(Location origin) {
-        Entity base = inst.entity();
+    /**
+     * Mythic 的 insultedTargets：只选中「主动攻击过本体」的实体。
+     *
+     * <p>候选池是仇恨表里已有记录的实体与最近攻击者，而不是场景内所有生物——
+     * 与 {@code nearestAttackableTarget} 的「谁离得近打谁」不同，这里不打近的目标。
+     * 未开启仇恨表时仅最近攻击者可能命中，这是该选择器在没有仇恨来源时的
+     * 天然上限，不做假数据补齐。</p>
+     */
+    private LivingEntity insultedTarget(Location origin) {
+        if (origin == null || origin.getWorld() == null) return null;
+        LivingEntity best = null;
+        double bestDistance = profile.sightRadius;
+        if (threat != null) {
+            for (UUID id : threat.snapshot().keySet()) {
+                Entity entity = org.bukkit.Bukkit.getEntity(id);
+                LivingEntity candidate = insultedCandidate(entity, origin, bestDistance);
+                if (candidate == null) continue;
+                double distance = safeDistance(origin, candidate.getLocation());
+                best = candidate;
+                bestDistance = distance;
+            }
+        }
+        LivingEntity fallback = insultedCandidate(lastAttackerEntity, origin, bestDistance);
+        return fallback != null ? fallback : best;
+    }
+
+    private LivingEntity insultedCandidate(Entity entity, Location origin, double maxDistance) {
+        if (!(entity instanceof LivingEntity living) || living == inst.entity()) return null;
+        if (!validTarget(living) || !withinSight(origin, living.getLocation())) return null;
+        if (dev.helstera.api.behavior.Factions.allied(inst.entity(), living)) return null;
+        double distance = safeDistance(origin, living.getLocation());
+        return distance >= 0 && distance <= maxDistance ? living : null;
+    }
+
+    private LivingEntity ownerTarget(Location origin) {        Entity base = inst.entity();
         Entity ownerEntity = dev.helstera.api.behavior.MobRelations.owner(base);
         if (ownerEntity == null && base instanceof org.bukkit.entity.Tameable tameable
                 && tameable.isTamed()) {
@@ -946,6 +998,10 @@ public final class AiController {
                     if (targetForRule(inst.location(), rule) == entity) return true;
                 } else if (kind == SelectorPlan.TargetKind.THREAT) {
                     if (threat != null && threat.contains(entity.getUniqueId())) return true;
+                } else if (kind == SelectorPlan.TargetKind.INSULTED) {
+                    // 只有仇恨表里有记录或就是最近攻击者的实体才算「被冒犯」。
+                    if (threat != null && threat.contains(entity.getUniqueId())) return true;
+                    if (entity == lastAttackerEntity) return true;
                 } else if (matchesConfiguredKind(entity, kind, rule, inst.location())) {
                     return true;
                 }
@@ -953,6 +1009,9 @@ public final class AiController {
             return false;
         }
         if (selectorTargetMode == AiProfile.TargetMode.THREAT) return threat != null && threat.contains(entity.getUniqueId());
+        if (selectorTargetMode == AiProfile.TargetMode.INSULTED) {
+            return (threat != null && threat.contains(entity.getUniqueId())) || entity == lastAttackerEntity;
+        }
         if (selectorTargetMode == AiProfile.TargetMode.FACTION) {
             if (dev.helstera.api.behavior.Factions.allied(inst.entity(), entity)) return false;
             String faction = dev.helstera.api.behavior.Factions.factionOf(entity);
@@ -981,7 +1040,7 @@ public final class AiController {
             case VILLAGERS -> entity instanceof org.bukkit.entity.Villager;
             case IRON_GOLEMS -> entity instanceof org.bukkit.entity.IronGolem;
             case OWNER, THREAT, FACTION, OWNER_ATTACKER, OWNER_TARGET,
-                    PARENT_ATTACKER, PARENT_TARGET -> false;
+                    PARENT_ATTACKER, PARENT_TARGET, INSULTED -> false;
         };
     }
 

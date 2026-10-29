@@ -87,6 +87,22 @@ public final class SpawnerService {
         private final double playersRadius;
         private final boolean enabled;
         private final double yRange;
+        /**
+         * 成组生成的规模区间（Mythic 的 GroupSize / group-size）。
+         *
+         * <p>1..1 表示关闭。成组只影响「一次生成尝试生成几只」，不影响存活/累计上限：
+         * 上限仍按实例逐只计入，所以 groupMin 超过 maxAlive 时会被上限自然截断，
+         * 而不是绕过上限。</p>
+         */
+        private final int groupMin;
+        private final int groupMax;
+        /**
+         * 间隔抖动（Mythic 的 Interval 区间 / 0%~50%）。
+         *
+         * <p>真实秒数落在 {@code interval * [1 - jitter, 1 + jitter]}，下一次生成重新掷。
+         * 取 0 时退化成固定间隔，与旧行为逐 tick 一致。</p>
+         */
+        private final double intervalJitter;
         /** 覆盖 mob 档案的 AI 配置；null 表示不覆盖，沿用 mob 自身档案。 */
         private final String aiProfile;
         private final RandomSpawnPool randomPool;
@@ -99,6 +115,16 @@ public final class SpawnerService {
                 double radius, int intervalTicks, int maxAlive, int maxSpawns,
                 int maxPerWorld, int maxPerPlayer, int minPlayers, double playersRadius,
                 boolean enabled, double yRange,
+                 String aiProfile, RandomSpawnPool randomPool, List<String> conditions) {
+            this(id, mobId, world, x, y, z, radius, intervalTicks, maxAlive, maxSpawns,
+                    maxPerWorld, maxPerPlayer, minPlayers, playersRadius,
+                    enabled, yRange, 1, 1, 0, aiProfile, randomPool, conditions);
+        }
+
+        Spawner(String id, String mobId, String world, double x, double y, double z,
+                double radius, int intervalTicks, int maxAlive, int maxSpawns,
+                int maxPerWorld, int maxPerPlayer, int minPlayers, double playersRadius,
+                boolean enabled, double yRange, int groupMin, int groupMax, double intervalJitter,
                  String aiProfile, RandomSpawnPool randomPool, List<String> conditions) {
             this.id = id;
             this.mobId = mobId;
@@ -116,6 +142,9 @@ public final class SpawnerService {
             this.playersRadius = Math.max(0, playersRadius);
             this.enabled = enabled;
             this.yRange = Math.max(0, yRange);
+            this.groupMin = Math.max(1, Math.min(groupMin, Math.max(1, groupMax)));
+            this.groupMax = Math.max(1, groupMax);
+            this.intervalJitter = Double.isFinite(intervalJitter) ? Math.max(0, Math.min(1, intervalJitter)) : 0;
             this.aiProfile = aiProfile == null || aiProfile.isBlank() ? null : aiProfile.trim();
             this.randomPool = randomPool;
             this.conditions = List.copyOf(conditions == null ? List.of() : conditions);
@@ -137,6 +166,21 @@ public final class SpawnerService {
         public int minPlayers() { return minPlayers; }
         public double playersRadius() { return playersRadius; }
         public double yRange() { return yRange; }
+        public int groupMin() { return groupMin; }
+        public int groupMax() { return groupMax; }
+        public double intervalJitter() { return intervalJitter; }
+        /** 一次生成尝试的目标只数（含随机化）；未配置 group-size 时恒为 1。 */
+        public int rollGroupSize(Random rnd) {
+            if (groupMax <= groupMin) return groupMin;
+            return groupMin + rnd.nextInt(groupMax - groupMin + 1);
+        }
+        /** 本次生成的等待 tick 数：interval 上下抖动 intervalJitter 比例，并保持 Spawner 的 20 tick 下限。 */
+        public int rollIntervalTicks(Random rnd) {
+            if (intervalJitter <= 0) return intervalTicks;
+            double span = intervalTicks * intervalJitter;
+            double rolled = intervalTicks + (rnd.nextDouble() * 2 - 1) * span;
+            return Math.max(20, (int) Math.round(rolled));
+        }
         public boolean enabled() { return enabled; }
         public int totalSpawned() { return totalSpawned; }
         /** 返回覆盖用的 AI 档案名；null 表示不覆盖。 */
@@ -311,6 +355,43 @@ public final class SpawnerService {
             if (intervalKey.equals("cooldown")) {
                 problems.add(where + " cooldown is accepted as the Mythic alias for interval.");
             }
+            // 抖动键名：优先 interval-jitter，其次 <interval 键名>-jitter（cooldown-jitter）。
+            String jitterKey = s.contains("interval-jitter") ? "interval-jitter"
+                    : s.contains("cooldown-jitter") ? "cooldown-jitter" : null;
+            if (jitterKey != null && !jitterKey.equals("interval-jitter")) {
+                problems.add(where + " " + jitterKey + " is accepted as the alias for interval-jitter.");
+            }
+            Object rawInterval = s.get(intervalKey);
+            double intervalJitter = 0;
+            if (rawInterval instanceof List<?> intervalList && intervalList.size() == 2) {
+                double lo = scalarDouble(intervalList.get(0));
+                double hi = scalarDouble(intervalList.get(1));
+                if (Double.isFinite(lo) && Double.isFinite(hi) && lo > 0 && hi >= lo) {
+                    interval = (int) Math.max(20, Math.round((lo + hi) / 2.0));
+                    // 半宽相对均值：抖动比 = (hi - lo) / (hi + lo)，落在 [0, 1)
+                    intervalJitter = Math.min(1.0, (hi - lo) / (lo + hi));
+                    problems.add(where + " interval 写成区间 [" + fmt(lo) + ", " + fmt(hi)
+                            + "]，已按均值 " + interval + " tick ±" + fmt(intervalJitter * 100) + "% 抖动执行。");
+                    // 区间写法已经隐含了抖动；此时再写 interval-jitter 会被下面的
+                    // 分支完全跳过——作者以为两处都生效，实际只有区间起作用。
+                    // 这类「写了但静默不生效」正是 YamlNums 要消灭的病根，必须报出来。
+                    if (jitterKey != null) {
+                        problems.add(where + " 同时配置了 " + jitterKey + " 与区间写法的 interval，"
+                                + jitterKey + " 已被忽略；如需自定义抖动请改用固定 interval 值。");
+                    }
+                } else {
+                    problems.add(where + " interval 区间非法（需为正数且上界不小于下界），已按默认值处理。");
+                }
+            } else if (jitterKey != null) {
+                // 支持两种写法：比例 0.3，或百分数 30%。后者不能交给
+                // YamlNums.chance —— 它只认纯数字，"30%" 会被判成非法值而静默回落 0，
+                // 表现就是「interval-jitter: 30% 写了完全不生效」。
+                intervalJitter = readJitter(s, jitterKey, problems, where);
+                if (intervalJitter <= 0) {
+                    problems.add(where + " " + jitterKey + " 必须为正比例（如 0.3 或 30%），已忽略。");
+                    intervalJitter = 0;
+                }
+            }
             int minPlayers = YamlNums.nonNegative(s, "min-players", 0, problems, where);
             double configuredX = coordinate(s, "x", 0, problems, where);
             double configuredY = coordinate(s, "y", 0, problems, where);
@@ -371,6 +452,34 @@ public final class SpawnerService {
             }
             int maxPerWorld = nonNegativeLimit(s, "max-per-world", "per-world-limit", problems, where);
             int maxPerPlayer = nonNegativeLimit(s, "max-per-player", "per-player-limit", problems, where);
+            // 成组生成：Mythic 的 GroupSize: 3 / GroupSize: 2-5 / group-size: 3。
+            // 非正数一律视为 1（= 关闭），而不是让整条刷怪点失效——作者写 0 的
+            // 本意多半是「别成组」。整数超过 maxAlive 时由上限自然截断，见 trySpawn。
+            int groupMin = 1;
+            int groupMax = 1;
+            Object rawGroup = s.contains("group-size") ? s.get("group-size")
+                    : s.contains("groupsize") ? s.get("groupsize")
+                    : s.contains("GroupSize") ? s.get("GroupSize")
+                    : s.contains("Group-Size") ? s.get("Group-Size") : null;
+            if (rawGroup != null) {
+                int[] range = parseRange(rawGroup);
+                if (range == null) {
+                    // 只有「读不懂」才告警：group-size = 两只 这类作者显然写错了。
+                    problems.add(where + " group-size = " + rawGroup
+                            + " 无法解析（应为 3 或 2-5），已按不成组处理。");
+                } else if (range[0] <= 0) {
+                    // 0 / 负数属于「别成组」的合法写法，静默按 1 处理，不必告警。
+                    groupMin = 1;
+                    groupMax = 1;
+                } else {
+                    groupMin = range[0];
+                    groupMax = range[1];
+                }
+            }
+            if (groupMax > 1 && groupMax > maxAlive * 4 && maxAlive > 0) {
+                problems.add(where + " group-size 上界 " + groupMax + " 远大于 max-alive " + maxAlive
+                        + "，每次尝试只会生成到上限为止，多余的会被丢弃。");
+            }
             Spawner sp = new Spawner(
                     id, mobId,
                     s.getString("world", ""),
@@ -389,6 +498,7 @@ public final class SpawnerService {
                     playersRadius,
                     s.getBoolean("enabled", true),
                     yRange,
+                    groupMin, groupMax, intervalJitter,
                     s.getString("ai-profile"), parseRandomPool(s, problems, where),
                     readConditions(s));
             spawners.put(id, sp);
@@ -628,18 +738,29 @@ public final class SpawnerService {
         if (!withinScopedLimits(sp, loc, owner)) return failForceSpawn(key, "scoped spawn limits reached");
         String mobId = sp.randomPool() == null ? sp.mobId() : sp.randomPool().choose(random);
         if (mobId == null || mobId.isBlank()) return failForceSpawn(key, "mob id is blank");
-        int instId = safeSpawn(mobId, loc, sp.aiProfile());
-        if (instId > 0) {
+        // 手动生成同样按 group-size 成组：否则「强制刷一群」会与定时生成行为不一致，
+        // 排查时看到的数量对不上。上限仍是逐只判定。
+        int attempts = sp.rollGroupSize(random);
+        int spawned = 0;
+        for (int i = 0; i < attempts; i++) {
+            if (i > 0) {
+                if (aliveCount(sp.id()) >= sp.maxAlive()) break;
+                if (!withinScopedLimits(sp, loc, owner)) break;
+            }
+            int instId = safeSpawn(mobId, loc, sp.aiProfile());
+            if (instId <= 0) break;
+            spawned++;
             alive.computeIfAbsent(sp.id(), k -> Collections.synchronizedList(new ArrayList<>()))
                     .add(instId);
             sp.totalSpawned++;
             sp.recordSpawn(mobId);
             recordScopedSpawn(sp, loc, owner);
-            forceSpawnFailures.remove(key);
-        } else {
-            return failForceSpawn(key, "spawn callback returned " + instId + " for " + mobId);
         }
-        return instId > 0;
+        if (spawned > 0) {
+            forceSpawnFailures.remove(key);
+            return true;
+        }
+        return failForceSpawn(key, "spawn callback returned failure for " + mobId);
     }
 
     private boolean failForceSpawn(String id, String reason) {
@@ -663,7 +784,7 @@ public final class SpawnerService {
             try {
                 if (!isActive(sp)) continue;
                 if (tickCounter < sp.nextSpawnTick) continue;
-                sp.nextSpawnTick = tickCounter + sp.intervalTicks;
+                sp.nextSpawnTick = tickCounter + sp.rollIntervalTicks(random);
                 trySpawn(sp);
             } catch (Throwable t) {
                 if (log != null) log.warning("[刷怪] " + sp.id() + " 生成异常: " + t);
@@ -822,8 +943,17 @@ public final class SpawnerService {
         Player owner = nearestPlayer(loc, sp.playersRadius());
         if (!withinScopedLimits(sp, loc, owner)) return;
         String mobId = sp.randomPool() == null ? sp.mobId() : sp.randomPool().choose(random);
-        int instId = safeSpawn(mobId, loc, sp.aiProfile());
-        if (instId > 0) {
+        // 成组生成：一次节拍尝试生成 rollGroupSize 只，但每只都必须单独过存活上限与
+        // world/player 作用域上限——否则 group-size 就成了绕过 max-alive 的后门。
+        // 生成成功后逐只计数，第一只失败即停止本次尝试（剩下的大概率也会失败）。
+        int attempts = sp.rollGroupSize(random);
+        for (int i = 0; i < attempts; i++) {
+            if (i > 0) {
+                if (aliveCount(sp.id()) >= sp.maxAlive()) break;
+                if (!withinScopedLimits(sp, loc, owner)) break;
+            }
+            int instId = safeSpawn(mobId, loc, sp.aiProfile());
+            if (instId <= 0) break;
             alive.computeIfAbsent(sp.id(), k -> Collections.synchronizedList(new ArrayList<>()))
                     .add(instId);
             sp.totalSpawned++;
@@ -836,6 +966,146 @@ public final class SpawnerService {
         return ConditionListParser.parse(section.get("conditions"));
     }
 
+    /**
+     * 光照门控：light-level / sky-light-level / light-level-from-blocks，
+     * 形如 {@code light-level-below=8}、{@code sky-light-level=15}、{@code light-level 0-7}。
+     *
+     * <p>与技能侧 SkillExtras 的同名条件语义保持一致（技能条件在主世界战斗里已经用这套
+     * 命名），但**这里不 import 技能模块**：刷怪点装载不需要装载整套技能注册表。
+     * 因此两边各有一份实现，改动时需同步。</p>
+     *
+     * <p>为什么值得补：刷怪点最常见的诉求就是「只在暗处刷」「只在地表白天刷」。
+     * 之前这两种条件未支持，会被当成 unsupported 条件直接拒绝生成——刷怪点一个怪都不出，
+     * 而配置看上去完全正常。返回 null 表示「不是光照条件」，交回原有判定链。</p>
+     */
+    public static Boolean lightCondition(String condition, Location location) {
+        if (condition == null) return null;
+        String text = condition.trim();
+        String kind;
+        String body;
+        int sep = indexOfSeparator(text);
+        if (sep < 0) {
+            kind = text;
+            body = "";
+        } else {
+            kind = text.substring(0, sep).trim();
+            body = text.substring(sep).trim();
+        }
+        String normalizedKind = kind.toLowerCase(Locale.ROOT).replace('_', '-').replace(' ', '-');
+        boolean sky = normalizedKind.equals("sky-light-level") || normalizedKind.equals("skylightlevel");
+        boolean block = normalizedKind.equals("light-level-from-blocks")
+                || normalizedKind.equals("block-light-level")
+                || normalizedKind.equals("blocklightlevel");
+        // Mythic 的 LightLevel 是含天空光的合成光照；这里把裸写形式也归入它。
+        boolean combined = normalizedKind.equals("light-level") || normalizedKind.equals("lightlevel");
+        if (!sky && !block && !combined) return null;
+        if (location == null || location.getWorld() == null) return false;
+        String rangeText = normalizeComparator(body);
+        if (rangeText.isEmpty()) return false;
+        try {
+            int level = sky ? location.getBlock().getLightFromSky()
+                    : block ? location.getBlock().getLightFromBlocks()
+                    : location.getBlock().getLightLevel();
+            return appliesTo(level, rangeText, sky || block);
+        } catch (Throwable t) {
+            // 区块未加载时 Bukkit 取光照可能抛异常：拒绝生成而不是放行，
+            // 避免刷怪点在未加载区域"盲刷"到玩家脚下。
+            return false;
+        }
+    }
+
+    /**
+     * 把光照参数归一成 "&lt;8" / "&gt;=10" / "0-7" / "15" 这类可判定形态。
+     *
+     * <p>覆盖三种写法：{@code 0-7}（区间）、{@code <=8}（符号）、
+     * {@code below 5} / {@code above 5} / {@code 5-}（Mythic 的比较词）。
+     * 注意先剥开头的 '-'：光强不会是负数，那是分隔符而不是负号。</p>
+     */
+    private static String normalizeComparator(String body) {
+        String text = body == null ? "" : body.trim();
+        // 只有当 '=' 本身就是分隔符（"=8"）时才剥掉；绝不能剥掉 "<=" / ">=" 的第二个字符。
+        if (text.startsWith("=") && !text.startsWith("==")) text = text.substring(1).trim();
+        else if (text.startsWith("-")) text = text.substring(1).trim();
+        String lower = text.toLowerCase(Locale.ROOT);
+        for (String word : new String[]{"below", "above", "at-most", "at-least", "less-than", "greater-than"}) {
+            if (lower.startsWith(word)) {
+                String rest = text.substring(word.length()).trim();
+                if (rest.startsWith("=")) rest = rest.substring(1).trim();
+                String op = switch (word) {
+                    case "below", "less-than" -> "<";
+                    case "above", "greater-than" -> ">";
+                    case "at-most" -> "<=";
+                    default -> ">=";
+                };
+                return op + rest;
+            }
+        }
+        return text;
+    }
+
+    /**
+     * 找出 kind 与参数的分隔位置。
+     *
+     * <p>支持 {@code light-level<8}（比较符贴着名字）、{@code light-level=8}、
+     * {@code light-level 8}（空格）与模板写的 {@code light-level-8}。
+     */
+    private static int indexOfSeparator(String text) {
+        String lower = text.toLowerCase(Locale.ROOT);
+        int nameEnd = -1;
+        for (String name : new String[]{"lightlevel", "light-level", "skylightlevel",
+                "sky-light-level", "blocklightlevel", "block-light-level",
+                "light-level-from-blocks"}) {
+            int at = lower.indexOf(name);
+            if (at >= 0 && at + name.length() > nameEnd) nameEnd = at + name.length();
+        }
+        // 比较词形态（light-level-above=2 / blocklightlevel below 20）：
+        // 名字后面紧跟 -below/-above/-at-most/-at-least。
+        // 必须排在符号判断**之前**：否则 "light-level-above=2" 会先按 '=' 切开，
+        // kind 得到 "light-level-above"，匹配不上任何光照类别而返回 null，
+        // 这条光照配置就被当成「不认识的条件」静默放行。
+        if (nameEnd > 0) {
+            String rest = lower.substring(nameEnd);
+            for (String word : new String[]{"-below", "-above", "-at-most", "-at-least",
+                    "-less-than", "-greater-than"}) {
+                if (rest.startsWith(word)) return nameEnd;
+            }
+        }
+        int best = -1;
+        for (char symbol : new char[]{'=', '<', '>'}) {
+            int at = text.indexOf(symbol);
+            if (at <= 0) continue;
+            if (nameEnd > 0 && at < nameEnd) continue;
+            if (best < 0 || at < best) best = at;
+        }
+        if (best > 0) return best;
+        int space = text.indexOf(' ');
+        // 空格只有出现在名字之后才算分隔符，否则 "light-level below 5" 的 kind 会被切断。
+        if (space > 0 && (nameEnd < 0 || space >= nameEnd)) return space;
+        // 名字-数字形态（模板把 '=' 写成 '-'）：连字符必须在名字之后且其后是数字。
+        int dash = text.lastIndexOf('-');
+        if (dash > 0 && dash < text.length() - 1 && (nameEnd < 0 || dash >= nameEnd)) {
+            char next = text.charAt(dash + 1);
+            if (Character.isDigit(next) || next == '<' || next == '>' || next == '=') return dash;
+        }
+        return -1;
+    }
+
+    private static boolean appliesTo(int level, String rangeText, boolean exact) {
+        String text = rangeText.trim();
+        if (text.startsWith("<=")) return level <= number(text.substring(2), Double.NaN);
+        if (text.startsWith(">=")) return level >= number(text.substring(2), Double.NaN);
+        if (text.startsWith("!=")) return level != number(text.substring(2), Double.NaN);
+        if (text.startsWith("<")) return level < number(text.substring(1), Double.NaN);
+        if (text.startsWith(">")) return level > number(text.substring(1), Double.NaN);
+        if (text.startsWith("=")) return level == number(text.substring(1), Double.NaN);
+        int[] range = parseRange(text);
+        if (range == null) return false;
+        // 单值形态（sky-light-level=15）语义是"等于"，区间形态（0-7）是闭区间。
+        // 拉平会让「只在满光地表刷」变成「任何 >=15 的光」，语义漂移且不告警。
+        if (range[0] == range[1] && exact) return level == range[0];
+        return level >= range[0] && level <= range[1];
+    }
+
     private boolean conditionsPass(Spawner sp, Location location) {
         if (sp.conditions().isEmpty()) return true;
         World world = location == null ? null : location.getWorld();
@@ -845,6 +1115,13 @@ public final class SpawnerService {
             String condition = raw.trim();
             boolean negate = condition.startsWith("!");
             if (negate) condition = condition.substring(1).trim();
+            // 光照条件带参数（light-level-above=-1），规范化会把负号也吃掉，
+            // 所以先按原样判定，命中就跳过下面的小写分支。
+            Boolean light = lightCondition(condition, location);
+            if (light != null) {
+                if (negate ? light : !light) return false;
+                continue;
+            }
             String normalized = condition.toLowerCase(Locale.ROOT);
             boolean passed;
             if (normalized.equals("day")) passed = world.getTime() < 12000;
@@ -923,6 +1200,88 @@ public final class SpawnerService {
     private static double number(String raw, double fallback) {
         try { return Double.parseDouble(raw.trim()); }
         catch (NumberFormatException ignored) { return fallback; }
+    }
+
+    /** 宽松标量解析：接受数字与 "30%" 形态；不可解析返回 NaN，交给调用方告警。 */
+    private static double scalarDouble(Object raw) {
+        if (raw instanceof Number n) return n.doubleValue();
+        if (raw == null) return Double.NaN;
+        String text = String.valueOf(raw).trim();
+        boolean percent = text.endsWith("%");
+        if (percent) text = text.substring(0, text.length() - 1).trim();
+        double value = number(text, Double.NaN);
+        return percent ? value / 100.0 : value;
+    }
+
+    /**
+     * 解析 "3"、"2-5"、"2~5"、"2,5" 这类数量区间，返回 {min, max}；无法解析返回 null。
+     *
+     * <p>只认整数：成组数量是只数，2.5 只没有意义。区间写成 "5-2" 时归一化，
+     * 不静默返回 0 让作者以为配置生效了。</p>
+     */
+    static int[] parseRange(Object raw) {
+        if (raw == null) return null;
+        if (raw instanceof Number n) {
+            int value = n.intValue();
+            return value == n.doubleValue() ? new int[]{value, value} : null;
+        }
+        String text = String.valueOf(raw).trim();
+        if (text.isEmpty()) return null;
+        String[] parts = text.split("\\s*[-~,]\\s*", -1);
+        if (parts.length == 0 || parts.length > 2) return null;
+        // 逗号分隔写法拆开后可能多出空段，逐段修剪。
+        int lo = parseInt(parts[0].trim());
+        int hi = parts.length == 2 ? parseInt(parts[1].trim()) : lo;
+        if (lo == Integer.MIN_VALUE || hi == Integer.MIN_VALUE) return null;
+        return lo <= hi ? new int[]{lo, hi} : new int[]{hi, lo};
+    }
+
+    private static int parseInt(String raw) {
+        try { return Integer.parseInt(raw.trim()); }
+        catch (NumberFormatException ignored) { return Integer.MIN_VALUE; }
+    }
+
+    /**
+     * 读抖动比例，认 {@code 0.3}（比例）与 {@code 30%}（百分数）两种写法。
+     *
+     * <p>百分数必须先转成比例再交给 {@link YamlNums#chance}：后者只做纯数字解析，
+     * "30%" 会被判成非法值并静默回落默认值 0——表现是「写了 interval-jitter: 30%
+     * 却完全不抖动」，且日志里只有一句「不是合法数值」，看不出该写百分数。
+     * </p>
+     */
+    private static double readJitter(ConfigurationSection s, String key,
+                                     List<String> problems, String where) {
+        Object raw = s.get(key);
+        if (raw instanceof String str) {
+            String t = str.trim();
+            if (t.endsWith("%")) {
+                String num = t.substring(0, t.length() - 1).trim();
+                try {
+                    // 百分数语义是「百分之几」，% 号之外仍是 [0,100] 的区间。
+                    return clampJitter(Double.parseDouble(num) / 100.0, problems, where, key);
+                } catch (NumberFormatException ignored) {
+                    // 落到下面统一走 YamlNums.chance 报错
+                }
+            }
+        }
+        return YamlNums.chance(s, key, 0, problems, where);
+    }
+
+    /** 百分数形态的抖动比例：超出 0..1 时钳制并留痕，与 {@link YamlNums#chance} 口径一致。 */
+    private static double clampJitter(double ratio, List<String> problems, String where, String key) {
+        if (ratio < 0 || ratio > 1) {
+            double clamped = Math.max(0, Math.min(1, ratio));
+            problems.add(where + " 的 " + key + " = " + fmt(ratio) + " 超出 0..1，已夹到 "
+                    + fmt(clamped) + "。抖动比例写错会让刷新间隔与预期差很远");
+            return clamped;
+        }
+        return ratio;
+    }
+
+    private static String fmt(double value) {
+        return Math.abs(value - Math.rint(value)) < 1e-9
+                ? String.valueOf((long) Math.rint(value))
+                : String.format(Locale.ROOT, "%.3f", value);
     }
 
     private static boolean timeBetween(long rawTime, String rawRange) {

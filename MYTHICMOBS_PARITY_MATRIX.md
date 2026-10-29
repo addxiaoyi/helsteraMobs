@@ -1186,9 +1186,10 @@ as `not-observed` instead of being silently omitted.
 
 The Maven quality gate passed with Apache Maven 3.9.16, including SpotBugs and
 the Paper report-contract profile. On 2026-10-21, the strict Paper 1.21.1-133
-release gate also passed against the archived official Paperclip: the report
-contains 214 observed probes, with 206 `passed` and 8 expected
-`observed-rejected` negative controls. The fixture is reproducible through
+release gate also passed against the archived official Paperclip: fixture
+`srv-paper-integration-final-r47` contains 224 observed probes, with 216
+`passed` and 8 expected `observed-rejected` negative controls. The fixture is
+reproducible through
 `tools/paper-integration/fetch-paper-1.21.1.ps1`, which verifies `version.json`
 and SHA-256 before writing `srv-1.21.1/paper.jar`.
 

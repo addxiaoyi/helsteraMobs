@@ -35,7 +35,9 @@ final class SelectorPlan {
         OTHER_FACTION,
         OTHER_FACTION_MONSTERS,
         SPECIFIC_FACTION,
-        CONDITIONAL
+        CONDITIONAL,
+        /** 只认主动攻击过本体的实体（Mythic 的 insultedTargets）。 */
+        INSULTED
     }
 
     record Rule(int priority, int order, String raw, String token, String argument) {
@@ -175,7 +177,11 @@ final class SelectorPlan {
                     "flee_wolf", "fleewolves", "flee_wolves", "runfromwolves", "run_from_wolves",
                     "fleefaction", "flee_faction", "runfromfaction", "run_from_faction", "tempt",
                     "followowner", "follow_owner", "gotoowner", "goto_owner",
-                    "gotoparent", "goto_parent", "clear", "reset" -> true;
+                    "gotoparent", "goto_parent", "clear", "reset",
+                    // 原生 Pathfinder goal 别名：映射到既有 chase / 攀爬 / 破门位
+                    "meleeattacktarget", "nearestattackabletarget", "targetofopportunity",
+                    "spider", "climb", "closedoor", "closedoors", "close_door", "close_doors",
+                    "breakdoors", "break_door", "breakdoor" -> true;
             default -> false;
         };
     }
@@ -198,7 +204,10 @@ final class SelectorPlan {
                     "specificfaction", "specific_faction", "faction", "hostile_to_faction",
                     "allied_to_faction", "nearestconditionaltarget", "nearest_conditional_target",
                     "nearestconditionalentity", "nearest_conditional_entity",
-                    "nearestconditionalplayer", "nearest_conditional_player", "clear", "reset" -> true;
+                    "nearestconditionalplayer", "nearest_conditional_player",
+                    "insultedtargets", "insulted_targets", "insultedtarget",
+                    "cleartarget", "cleartargets", "clear_target", "clear_targets",
+                    "clear", "reset" -> true;
             default -> false;
         };
     }
@@ -214,6 +223,11 @@ final class SelectorPlan {
             case "animals", "nearestanimal", "nearest_animal" -> TargetKind.ANIMALS;
             case "villagers", "villager", "nearestvillager", "nearest_villager" -> TargetKind.VILLAGERS;
             case "irongolem", "iron_golem", "irongolems", "iron_golems" -> TargetKind.IRON_GOLEMS;
+            // `cleartarget` 只清空目标，不重置整个目标表；在优先级序列里
+            // 它等价于「此处没有候选」，由 activeRules 的 clear 语义处理完
+            // 之后仍保留此分支，以便显式配置时也能表达空目标。
+            case "cleartarget", "cleartargets", "clear_target", "clear_targets" -> TargetKind.NONE;
+            case "insultedtargets", "insulted_targets", "insultedtarget" -> TargetKind.INSULTED;
             case "owner", "owner_target", "owner_targeter" -> TargetKind.OWNER;
             case "threat", "highest_threat", "threat_table" -> TargetKind.THREAT;
             case "attacker", "damager", "hurtbytarget", "hurt_by_target" -> TargetKind.ATTACKER;

@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 /**
  * 实例管理器实现。
@@ -33,6 +34,7 @@ public final class InstanceManagerImpl implements InstanceManager {
     private final HelsteraEventBus bus;
     private final InstanceRenderer renderer;
     private final Map<Integer, ModelInstanceImpl> instances = new ConcurrentHashMap<>();
+    private static final Logger LOGGER = Logger.getLogger(InstanceManagerImpl.class.getName());
     private final AtomicInteger idGen = new AtomicInteger(1);
     private final ConfigurationSection animMappingCfg;
 
@@ -122,6 +124,7 @@ public final class InstanceManagerImpl implements InstanceManager {
         ModelInstanceImpl inst = instances.remove(instanceId);
         if (inst == null) return false;
         inst.despawn();
+        logRemoval(inst, "manual");
         bus.post(new ModelRemoveEvent(inst, "manual"));
         return true;
     }
@@ -134,6 +137,7 @@ public final class InstanceManagerImpl implements InstanceManager {
             if (inst.model().id().equalsIgnoreCase(modelId)) {
                 it.remove();
                 inst.despawn();
+                logRemoval(inst, "model_unload");
                 bus.post(new ModelRemoveEvent(inst, "model_unload"));
                 n++;
             }
@@ -149,6 +153,7 @@ public final class InstanceManagerImpl implements InstanceManager {
             if (l != null && world.equals(l.getWorld())) {
                 it.remove();
                 inst.despawn();
+                logRemoval(inst, "world_unload");
                 bus.post(new ModelRemoveEvent(inst, "world_unload"));
             }
         }
@@ -170,8 +175,20 @@ public final class InstanceManagerImpl implements InstanceManager {
             if (!inst.isValid() || baseGone) {
                 it.remove();
                 if (inst.isValid()) inst.despawn();
+                logRemoval(inst, baseGone ? "base_entity_removed" : "invalid");
                 bus.post(new ModelRemoveEvent(inst, baseGone ? "base_entity_removed" : "invalid"));
             }
         }
+    }
+
+    private static void logRemoval(ModelInstanceImpl inst, String reason) {
+        Entity entity = inst == null ? null : inst.entity();
+        LOGGER.info("instance-remove reason=" + reason
+                + " instance=" + (inst == null ? -1 : inst.instanceId())
+                + " model=" + (inst == null || inst.model() == null ? "null" : inst.model().id())
+                + " entity=" + (entity == null ? "null" : entity.getUniqueId())
+                + " type=" + (entity == null ? "null" : entity.getType())
+                + " valid=" + (entity != null && entity.isValid())
+                + " dead=" + (entity != null && entity.isDead()));
     }
 }

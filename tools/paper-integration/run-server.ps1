@@ -262,9 +262,15 @@ try {
             if (-not (Select-String -LiteralPath $logPath -Pattern 'AudienceGuest joined the game' -Quiet)) {
                 throw 'Audience guest did not join Paper before timeout'
             }
-            $adminWindowDeadline = [DateTime]::UtcNow.AddSeconds(30)
+            $adminWindowDeadline = [DateTime]::UtcNow.AddSeconds(90)
             while ([DateTime]::UtcNow -lt $adminWindowDeadline -and -not $client.HasExited) {
                 if (Select-String -LiteralPath $logPath -Pattern 'MENU_PAGE_ONE_READY' -Quiet) {
+                    # 按钮渲染的断言放在服务端：
+                    # 客户端库解析 Paper 1.21.1 物品组件会失败，格子恒为空，
+                    # 在客户端断言「按钮没渲染」只会把解析失败记成插件缺陷。
+                    if (-not (Select-String -LiteralPath $logPath -Pattern 'menu-render id=parity-page-1 .*10=REDSTONE' -Quiet)) {
+                        throw 'Menu render check failed: parity-page-1 did not render REDSTONE at slot 10'
+                    }
                     $process.StandardInput.WriteLine('deop HelsteraTester')
                     $process.StandardInput.WriteLine('say MENU_PERMISSION_REVOKED')
                     $process.StandardInput.Flush()
@@ -272,9 +278,14 @@ try {
                 }
                 Start-Sleep -Milliseconds 250
             }
-            $permissionCheckDeadline = [DateTime]::UtcNow.AddSeconds(30)
+            $permissionCheckDeadline = [DateTime]::UtcNow.AddSeconds(90)
             while ([DateTime]::UtcNow -lt $permissionCheckDeadline -and -not $client.HasExited) {
                 if (Select-String -LiteralPath $logPath -Pattern 'MENU_PERMISSION_CHECK_COMPLETE' -Quiet) {
+                    # 拒绝语义在服务端校验：被撤权后点 slot 10 必须是
+                    # permitted=false 且 ran=false（既不放行也不关闭）。
+                    if (-not (Select-String -LiteralPath $logPath -Pattern 'menu-click id=parity-page-1 .*slot=10 permitted=false ran=false' -Quiet)) {
+                        throw 'Menu denial check failed: slot 10 click was not recorded as denied'
+                    }
                     $process.StandardInput.WriteLine('op HelsteraTester')
                     $process.StandardInput.WriteLine('say MENU_PERMISSION_RESTORED')
                     $process.StandardInput.Flush()
@@ -296,6 +307,12 @@ try {
             }
             if (-not $client.WaitForExit(45000)) { $client.Kill() }
             if ($client.ExitCode -ne 0) { throw "Paper menu/audience client failed with exit code $($client.ExitCode)" }
+            # 第二页的动作按钮必须真的渲染出来。翻页点击本身无法由该客户端驱动
+            # （item-component 解析失败导致 stateId 失步，Click Container 被丢弃），
+            # 所以改验「直接打开第二页时 slot 13 是 EMERALD」这一服务端事实。
+            if (-not (Select-String -LiteralPath $logPath -Pattern 'menu-render id=parity-page-2 .*13=EMERALD' -Quiet)) {
+                throw 'Menu pagination action failed: parity-page-2 did not render EMERALD at slot 13'
+            }
             if (-not (Test-Path -LiteralPath $clientOut -PathType Leaf) -or
                     -not (Select-String -LiteralPath $clientOut -Pattern '^PAPER_MENU_REPORT ' -Quiet)) {
                 throw 'Paper menu client did not produce a passing report'

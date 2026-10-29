@@ -188,7 +188,59 @@ public final class LootService {
 
     private List<Hit> rollPlan(DropTable t, double luck, Random rnd, int killerTier,
                                org.bukkit.Location location, Player killer) {
-        return rollPlan(t, luck, rnd, killerTier, new HashSet<>(), 0, location, killer);
+        List<Hit> hits = rollPlan(t, luck, rnd, killerTier, new HashSet<>(), 0, location, killer);
+        // 整表件数约束只在最外层生效：嵌套表由父表统一裁剪，否则子表的
+        // min-items 会与外层上限互相打架（补抽补到父表上限被撑破）。
+        if (t == null || !t.hasItemBounds()) return hits;
+        return clampItemCount(t, hits, luck, rnd, killerTier, location, killer);
+    }
+
+    /**
+     * 把整表实际掉出件数夹进 [minItems, maxItems]。
+     *
+     * <p>数量按 {@code Hit.amount()} 求和（一组 5 个算 5 件），与玩家背包里看到的件数一致。
+     * 超过上限时从尾部按件裁减；不足下限时反复重掷已掉出的条目，最多 64 次——
+     * 上限是为了防止「概率全是 1%」的表把服务端卡死，而不是追求精确命中下限。</p>
+     */
+    private List<Hit> clampItemCount(DropTable t, List<Hit> hits, double luck, Random rnd,
+                                     int killerTier, org.bukkit.Location location, Player killer) {
+        int max = t.maxItems() > 0 ? t.maxItems() : Integer.MAX_VALUE;
+        int min = t.minItems() > 0 ? Math.min(t.minItems(), max) : 0;
+        List<Hit> out = new ArrayList<>(hits);
+        // 先裁后补：先裁掉超出的部分，避免补抽又立刻被裁掉。
+        int total = countItems(out);
+        // 按「件」裁而不是按「条目」裁：一组 5 个、上限 3 时应留下 3 个，
+        // 而不是把整组删掉退回 0。只有末尾条目一件都留不下时才整条移除。
+        while (total > max && !out.isEmpty()) {
+            int index = out.size() - 1;
+            Hit last = out.get(index);
+            int excess = total - max;
+            if (last.amount() > excess) {
+                out.set(index, new Hit(last.entry(), last.amount() - excess));
+                total = max;
+                break;
+            }
+            out.remove(index);
+            total -= last.amount();
+        }
+        if (out.isEmpty() || total >= min) return List.copyOf(out);
+        // 补抽：只复制已掉出的条目，不重新扫整张表——否则 min-items 会变成
+        // 「把必掉表里没抽中的稀有条目也补进来」，违背原意。
+        List<DropTable.Entry> pool = new ArrayList<>();
+        for (Hit hit : out) pool.add(hit.entry());
+        for (int attempt = 0; attempt < 64 && total < min; attempt++) {
+            DropTable.Entry entry = pool.get(rnd.nextInt(pool.size()));
+            int amount = pickAmount(entry, rnd);
+            out.add(new Hit(entry, amount));
+            total += amount;
+        }
+        return List.copyOf(out);
+    }
+
+    private static int countItems(List<Hit> hits) {
+        int total = 0;
+        for (Hit hit : hits) total += hit.amount();
+        return total;
     }
 
     private List<Hit> rollPlan(DropTable t, double luck, Random rnd, int killerTier,
