@@ -159,6 +159,21 @@ public final class AiController {
     }
 
     /**
+     * Stable diagnostic for route self-tests and administration tooling.
+     * Coordinates use the configured integer waypoint form rather than the
+     * entity's floating-point position, so progression is directly auditable.
+     */
+    public String routeDiagnostic() {
+        SelectorPlan.RouteState route = routeState;
+        if (route == null) return "route=none";
+        SelectorPlan.RoutePoint point = route.current();
+        String waypoint = point == null ? "done"
+                : point.x() + "," + point.y() + "," + point.z();
+        return "route=" + route.token() + " waypoint=" + waypoint
+                + " finished=" + route.finished();
+    }
+
+    /**
      * 受到伤害。
      *
      * <p>{@code damage} 是事件结算后的实际扣血量（已过护甲与抗性）。

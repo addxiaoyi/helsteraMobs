@@ -5,25 +5,26 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
-the report contract passes with `224/224` probes observed (`216 passed` and `8`
-expected negative-control observations) in fixture `srv-paper-integration-final-r47`.
+the report contract passes with `230/230` probes observed (`219 passed` and
+`11 expected negative-control observations`) in fixture
+`srv-paper-integration-route-20261030`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
 ### Current Development Goals
 
 This checkpoint is a partial parity release. The matrix currently contains
-`38` rows marked `mapped-unverified`; that count was measured from
+`39` rows marked `mapped-unverified`; that count was measured from
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-10-31. The next work is ordered as
 follows:
 
 1. **Conditions, Mechanics, and Triggers**: finish the official catalog,
    aliases, malformed-input behavior, comparator edge cases, and strict Paper
    runtime probes.
-2. **AI**: keep `followroute`/`followpath` parsing and waypoint progression
-   covered, then add a Paper route probe. Native Pathfinder goal mutation and
-   pathfinding malus behavior must remain explicit when the public Paper API
-   cannot expose an equivalent operation.
+2. **AI**: `followroute`/`followpath` parsing, waypoint progression, and the
+   real managed-entity Paper route probe now pass; continue the remaining
+   native Pathfinder goal mutation and pathfinding malus audit, which must stay
+   explicit when the public Paper API cannot expose an equivalent operation.
 3. **Spawner**: extend natural scheduler timing and failed-spawn cooldown
    evidence to random terrain, player/world condition combinations, random
    pools, and drop-table behavior. Unloaded chunks and unreadable light must
@@ -34,9 +35,9 @@ follows:
    it complete.
 
 Current checkpoint evidence is deliberately narrow: the focused Java suite
-reports `170` tests with `0` failures and `0` errors, while the latest strict
-Paper run still reported `passed=62`, `observed-rejected=11`, and
-`not-observed=154`. These numbers describe the development checkpoint, not
+and the latest strict Paper run are green, while the latest strict report
+records `passed=219`, `observed-rejected=11`, and `incomplete=0` across 230
+registered probes. These numbers describe the development checkpoint, not
 full MythicMobs parity.
 
 ### Verified Progress
@@ -197,7 +198,7 @@ Many rows remain `mapped-unverified`; the project is not complete:
 1. Exploratory Paper 1.21.11 r136/r137 records real Potion consumption and natural short-effect expiry after hotbar re-arming; strict Paper 1.21.1-133 now passes the registered release probes, while optional native client potion consumption remains a separate compatibility gap.
 2. The Paper client workflow now auto-selects the matching Mineflayer protocol; the strict Paper 1.21.1-133 run verifies the full menu, Audience, player, and server-side probe contract.
 3. Complete official Conditions, Mechanics, placeholders, comparator edge cases, and grammar coverage.
-4. Extend the core selector set; the strict Paper 1.21.1-133 run now covers the registered player/monster/clear/owner/faction/conditional/native target paths, while route/premium selectors, native Pathfinder Goal mutation, and `AIPathfindingMalus` remain outside the public Paper API boundary and are preserved with warnings.
+4. Extend the core selector set; the strict Paper 1.21.1-133 run now covers the registered player/monster/clear/owner/faction/conditional/native target paths and the route waypoint path, while premium selectors, native Pathfinder Goal mutation, and `AIPathfindingMalus` remain outside the public Paper API boundary and are preserved with warnings.
 5. Expand the remaining legacy numeric ID/data families; `ItemModel` and `DamageType` are explicitly preserved because Paper 1.21.1 `ItemMeta` has no public component API for them.
 6. Strict Paper 1.21.1-133 now records the registered Creeper/Bee/Zombie and jockey mount-event probes; finish universal Mob Option ordering while natural AI jockey selection remains unverified.
 7. Add remaining Bukkit event, Audience version, and SkillTree lifecycle/restart evidence.

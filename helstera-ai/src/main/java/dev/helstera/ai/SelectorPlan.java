@@ -148,12 +148,15 @@ final class SelectorPlan {
                 continue;
             }
             boolean supported = target ? supportedTarget(rule.token()) : supportedGoal(rule.token());
+            if (!target && isRouteToken(rule.token())) {
+                RouteSpec route = parseRoute(rule.raw());
+                if (!route.valid()) {
+                    warnings.add("goal:" + rule.raw() + " (" + route.error() + ")");
+                    continue;
+                }
+            }
             if (!supported) {
                 String diagnostic = (target ? "target:" : "goal:") + rule.raw();
-                if (!target && isRouteToken(rule.token())) {
-                    RouteSpec route = parseRoute(rule.raw());
-                    if (!route.valid()) diagnostic += " (" + route.error() + ")";
-                }
                 warnings.add(diagnostic);
                 continue;
             }
@@ -295,6 +298,7 @@ final class SelectorPlan {
                     "fleefaction", "flee_faction", "runfromfaction", "run_from_faction", "tempt",
                     "followowner", "follow_owner", "gotoowner", "goto_owner",
                     "gotoparent", "goto_parent", "clear", "reset",
+                    "followroute", "followpath",
                     // 原生 Pathfinder goal 别名：映射到既有 chase / 攀爬 / 破门位
                     "meleeattacktarget", "nearestattackabletarget", "targetofopportunity",
                     "spider", "climb", "closedoor", "closedoors", "close_door", "close_doors",
