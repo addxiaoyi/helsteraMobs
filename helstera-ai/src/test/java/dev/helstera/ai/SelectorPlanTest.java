@@ -57,7 +57,7 @@ class SelectorPlanTest {
     }
 
     @Test
-    @DisplayName("unsupported selectors are preserved as diagnostics and do not become active rules")
+    @DisplayName("unsupported selectors are diagnosed while valid routes remain active")
     void unsupportedSelectorsAreDiagnosed() {
         AiProfile profile = new AiProfile("unsupported");
         profile.goals.add("0 followroute 1,2,3");
@@ -65,10 +65,10 @@ class SelectorPlanTest {
 
         SelectorPlan plan = SelectorPlan.compile(profile);
 
-        assertTrue(plan.goals().isEmpty());
+        assertEquals(List.of("followroute"),
+                plan.goals().stream().map(SelectorPlan.Rule::token).toList());
         assertTrue(plan.targets().isEmpty());
-        assertEquals(List.of("goal:0 followroute 1,2,3",
-                "target:0 nearestpremiumtarget hp-above 0.5"), plan.unsupported());
+        assertEquals(List.of("target:0 nearestpremiumtarget hp-above 0.5"), plan.unsupported());
     }
 
     @Test

@@ -6479,6 +6479,38 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " faction-holder=" + dev.helstera.api.behavior.Factions.factionOf(holder)
                         + " selector=" + controller.selectorDiagnostic()
                         + " passed=" + passed);
+
+                Location routeOrigin = base.getLocation().clone();
+                int routeY = routeOrigin.getBlockY();
+                int firstX = routeOrigin.getBlockX() + 3;
+                int firstZ = routeOrigin.getBlockZ();
+                int secondX = firstX + 2;
+                int secondZ = firstZ;
+                AiProfile routeProfile = new AiProfile("paper-selector-route");
+                routeProfile.canChase = false;
+                routeProfile.canAttack = false;
+                routeProfile.canPatrol = false;
+                routeProfile.moveSpeed = 0.25;
+                routeProfile.goals.add("0 followpath " + firstX + "," + routeY + "," + firstZ
+                        + ";" + secondX + "," + routeY + "," + secondZ);
+                routeProfile.targets.add("0 clear");
+                manager.attach(instance, routeProfile);
+                controller = manager.controllerById(instanceId);
+                controller.clearCombatTarget();
+                controller.tick();
+                String routeBefore = controller.routeDiagnostic();
+                boolean routeMoving = mob.getVelocity().lengthSquared() > 0.0001;
+                mob.teleport(new Location(base.getWorld(), firstX + 0.5, routeY, firstZ + 0.5));
+                controller.tick();
+                String routeAfter = controller.routeDiagnostic();
+                boolean routeActive = routeBefore.contains("route=followpath")
+                        && routeBefore.contains("waypoint=" + firstX + "," + routeY + "," + firstZ);
+                boolean routeAdvanced = routeAfter.contains("waypoint=" + secondX + "," + routeY + "," + secondZ);
+                boolean routePassed = routeActive && routeMoving && routeAdvanced;
+                getLogger().info("ai-route-probe token=followpath active-before=" + routeActive
+                        + " moving=" + routeMoving + " advanced=" + routeAdvanced
+                        + " waypoint-before=" + routeBefore + " waypoint-after=" + routeAfter
+                        + " passed=" + routePassed);
             } catch (Throwable failure) {
                 getLogger().warning("ai-selector-core error=" + failure.getClass().getSimpleName()
                         + " passed=false");

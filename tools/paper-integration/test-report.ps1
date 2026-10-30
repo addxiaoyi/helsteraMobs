@@ -105,6 +105,7 @@ try {
         '[Server thread/INFO]: ai-priority-probe attack-first=true flee-first=true attack-state=ATTACK flee-state=FLEE',
         '[Server thread/INFO]: ai-priority-detail probe=priority_attack_probe target-assigned=true target-valid=true health-ratio=0.5 attack-priority=0 flee-priority=1 selector=mode=PLAYERS can-attack=true can-chase=true can-flee=true target-matches=true',
         '[Server thread/INFO]: ai-selector-core goals=true player-target=true monster-target=true clear-no-fallback=true owner-target=true faction-target=true conditional-target=true native-target=true selector=mode=PLAYERS can-attack=true can-chase=false conditional=is-player=>is-player entity=PLAYER passed=true passed=true',
+        '[Server thread/INFO]: ai-route-probe token=followpath active-before=true moving=true advanced=true waypoint-before=route=followpath waypoint=103,64,0 finished=false waypoint-after=route=followpath waypoint=105,64,0 finished=false passed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] death-loot items=1 conditional-drop=true rejected-drop-absent=true dynamic-chance-drop=true experience=10',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawner-probe id=pass requested=true failure=null',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawner-probe id=reject requested=false failure=player gate closed',
@@ -179,6 +180,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'aiPriority').status -eq 'passed') 'AI selector priority arbitration probe'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriorityTargets').status -eq 'passed') 'AI priority probe target setup'
     Assert-True (($report.probes | Where-Object id -eq 'aiSelectorCore').status -eq 'passed') 'AI selector core Paper probe'
+    Assert-True (($report.probes | Where-Object id -eq 'aiRoute').status -eq 'passed') 'AI route waypoint Paper probe'
     Assert-True ($report.paperVersion -eq '1.21.1-test') 'Paper version extraction'
     Assert-True (($report.probes | Where-Object id -eq 'horse').status -eq 'passed') 'positive probe'
     Assert-True (($report.probes | Where-Object id -eq 'ageOptions').status -eq 'passed') 'age options probe'

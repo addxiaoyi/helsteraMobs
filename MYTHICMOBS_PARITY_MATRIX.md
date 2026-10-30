@@ -1145,7 +1145,8 @@ warning instead of silently becoming size 1.
 | Factions and threat targeting | mapped-unverified | `FactionService`, threat table and selector tests; fixture `srv-paper-integration-threat-faction-20261016` dispatches real `EntityDamageByEntityEvent` instances with 5 vs 20 damage, verifies `@threat` ordering, same-faction selection, and hostile-faction exclusion; native faction/threat composition beyond these filters remains open |
 | Basic goals and target selectors | mapped-unverified | `AiProfile` supports a subset including `panic`, `follow_owner`, and `tempt <material>`; strict Paper 1.21.1-133 now proves the registered player/monster/clear/owner/faction/conditional/native target paths and a live WHEAT tempt target; full Pathfinder equivalence remains unverified |
 | Ranged/leap/owner/faction selectors | mapped-unverified | implemented subset; numeric priority sorting, ordered `clear`, read-only ordered selector views, and category priority lookup have unit coverage; isolated Paper fixture `srv-paper-integration-ai-priority` verifies opposite configured priorities select `ATTACK` versus `FLEE` at 50% health, while native Pathfinder goal equivalence remains unverified |
-| Full AIGoalSelectors/AITargetSelectors | mapped-unverified | importer now accepts official `AITargetSelectors` alongside legacy `AIGoalTargets`; typed runtime plans now cover the core melee/ranged/leap/chase/patrol/look/door/swim/sun/flee goals, conditional target selectors backed by the shared SkillService condition catalog, and player/monster/villager/iron-golem/attacker/owner/parent/faction targets with deterministic priority/clear composition; strict Paper 1.21.1-133 completes the registered selector probe, while route/premium selectors remain open |
+| Full AIGoalSelectors/AITargetSelectors | mapped-unverified | importer now accepts official `AITargetSelectors` alongside legacy `AIGoalTargets`; typed runtime plans now cover the core melee/ranged/leap/chase/patrol/look/door/swim/sun/flee goals, conditional target selectors backed by the shared SkillService condition catalog, and player/monster/villager/iron-golem/attacker/owner/parent/faction targets with deterministic priority/clear composition; strict Paper 1.21.1-133 completes the registered selector probe and `srv-paper-integration-route-20261030` proves the route goal path, while premium selectors remain open |
+| `followroute` / `followpath` goals | mapped-unverified | valid integer waypoint routes are now active `SelectorPlan` goals instead of false unsupported diagnostics; malformed routes fail closed with actionable diagnostics, and `AiController` advances ordered waypoints while producing velocity. Strict Paper 1.21.1-133 fixture `srv-paper-integration-route-20261030` records `aiRoute=passed` from a real managed entity (`active-before=true moving=true advanced=true`); route looping, dynamic route mutation, and native Pathfinder goal equivalence remain open |
 | Pathfinding malus and native goal mutation | mapped-unverified | custom selector results synchronize to Paper `Mob#setTarget`; `AIPathfindingMalus` is now preserved with an explicit migration warning because Paper's public API does not expose native PathType malus mutation; fixture `srv-paper-integration-path-stop-20261016` still records real Paper `stop-calls=1`, while full native Goal composition and malus evidence remain open |
 
 Target state condition update: Mythic `targetIsGlowing` now maps to the Bukkit
@@ -1188,7 +1189,7 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-menu-20261030-r3` completes the registered report contract with 228 observed probes (217 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options, jockey mount, and Pathfinder-clear evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-route-20261030` completes the registered report contract with 230 observed probes (219 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options, jockey mount, Pathfinder-clear, and AI route waypoint evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 ## Release Gate
 
@@ -1210,6 +1211,12 @@ release gate also passed against the archived official Paperclip: fixture
 reproducible through
 `tools/paper-integration/fetch-paper-1.21.1.ps1`, which verifies `version.json`
 and SHA-256 before writing `srv-1.21.1/paper.jar`.
+
+The latest strict Paper 1.21.1-133 fixture `srv-paper-integration-route-20261030`
+passed with 230 observed probes: 219 `passed`, 11 expected
+`observed-rejected`, and zero incomplete. Its `aiRoute` probe uses a real
+managed entity and records an active `followpath` route, non-zero movement
+velocity, and progression from the first configured waypoint to the second.
 
 Latest Paper evidence: `srv-paper-integration-vehicle-fix-20261015` reconfirmed
 the implemented entity-option, condition, item, loot, spawner, and Audience

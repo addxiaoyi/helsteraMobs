@@ -2018,3 +2018,17 @@ the HeldBlock probe itself passing but had one unrelated online-player
 `hasItemCondition` observation missing; r47 observed that probe and passed the
 full gate.
 
+The strict fixture `srv-paper-integration-route-20261030` passed Paper
+1.21.1-133 with 230 observed probes: 219 `passed`, 11 expected
+`observed-rejected`, and zero incomplete. The new AI route observation is:
+
+```text
+ai-route-probe token=followpath active-before=true moving=true advanced=true waypoint-before=route=followpath waypoint=1005,53,1000 finished=false waypoint-after=route=followpath waypoint=1007,53,1000 finished=false passed=true
+```
+
+This verifies the production `SelectorPlan`/`AiController` path on a managed
+Paper entity: a valid `followpath` route is active, the controller emits
+movement velocity, and the route state advances after the entity reaches the
+first configured waypoint. It does not claim native Pathfinder goal or
+pathfinding-malus parity.
+
