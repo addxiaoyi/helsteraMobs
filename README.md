@@ -1,6 +1,6 @@
 # helsteraMobs
 
-## MythicMobs Parity Development Status (2026-10-17)
+## MythicMobs Parity Development Status (2026-10-31)
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
@@ -9,6 +9,35 @@ the report contract passes with `224/224` probes observed (`216 passed` and `8`
 expected negative-control observations) in fixture `srv-paper-integration-final-r47`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
+
+### Current Development Goals
+
+This checkpoint is a partial parity release. The matrix currently contains
+`38` rows marked `mapped-unverified`; that count was measured from
+`MYTHICMOBS_PARITY_MATRIX.md` on 2026-10-31. The next work is ordered as
+follows:
+
+1. **Conditions, Mechanics, and Triggers**: finish the official catalog,
+   aliases, malformed-input behavior, comparator edge cases, and strict Paper
+   runtime probes.
+2. **AI**: keep `followroute`/`followpath` parsing and waypoint progression
+   covered, then add a Paper route probe. Native Pathfinder goal mutation and
+   pathfinding malus behavior must remain explicit when the public Paper API
+   cannot expose an equivalent operation.
+3. **Spawner**: extend natural scheduler timing and failed-spawn cooldown
+   evidence to random terrain, player/world condition combinations, random
+   pools, and drop-table behavior. Unloaded chunks and unreadable light must
+   continue to fail closed.
+4. **Release gate**: add tests before implementation changes, keep the
+   focused Java suite green, require the report fixture and Python resolver to
+   pass, and record every strict Paper `not-observed` probe instead of calling
+   it complete.
+
+Current checkpoint evidence is deliberately narrow: the focused Java suite
+reports `170` tests with `0` failures and `0` errors, while the latest strict
+Paper run still reported `passed=62`, `observed-rejected=11`, and
+`not-observed=154`. These numbers describe the development checkpoint, not
+full MythicMobs parity.
 
 ### Verified Progress
 
