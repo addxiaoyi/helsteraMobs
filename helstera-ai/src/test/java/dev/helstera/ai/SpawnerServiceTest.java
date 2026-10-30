@@ -45,31 +45,56 @@ class SpawnerServiceTest {
         return s;
     }
 
+    private static SpawnerService automaticService(String yaml) {
+        World world = mock(World.class);
+        when(world.getName()).thenReturn("arena");
+        when(world.getMinHeight()).thenReturn(0);
+        when(world.getMaxHeight()).thenReturn(320);
+        when(world.isChunkLoaded(anyInt(), anyInt())).thenReturn(true);
+        when(world.getHighestBlockYAt(anyInt(), anyInt(), any())).thenReturn(64);
+        Block floor = mock(Block.class);
+        when(floor.isSolid()).thenReturn(true);
+        when(world.getBlockAt(anyInt(), anyInt(), anyInt())).thenReturn(floor);
+        org.bukkit.WorldBorder border = mock(org.bukkit.WorldBorder.class);
+        when(world.getWorldBorder()).thenReturn(border);
+        when(border.getCenter()).thenReturn(new Location(world, 0, 0, 0));
+        when(border.getSize()).thenReturn(1000.0);
+        when(border.isInside(any(Location.class))).thenReturn(true);
+
+        SpawnerService s = new SpawnerService(null, (mob, loc, aiProfile) -> 1,
+                ignored -> world);
+        s.load(YamlConfiguration.loadConfiguration(new StringReader(yaml))
+                .getConfigurationSection("spawners"));
+        return s;
+    }
+
     @Test
     @DisplayName("spawner diagnostics expose the remaining automatic cooldown")
     void exposesNextSpawnCooldown() {
-        SpawnerService service = service("""
+        SpawnerService automatic = automaticService("""
                 spawners:
                   arena:
                     mob: boss
+                    world: arena
                     x: 0
                     z: 0
                 """);
-        assertEquals(0, service.nextSpawnInTicks("arena"));
-        service.tickOnce();
-        assertEquals(200, service.nextSpawnInTicks("arena"));
-        service.tickOnce();
-        assertEquals(199, service.nextSpawnInTicks("arena"));
-        assertEquals(-1, service.nextSpawnInTicks("missing"));
+        assertEquals(0, automatic.nextSpawnInTicks("arena"));
+        automatic.tickOnce();
+        assertEquals(200, automatic.nextSpawnInTicks("arena"));
+        automatic.tickOnce();
+        assertEquals(199, automatic.nextSpawnInTicks("arena"));
+        assertEquals(-1, automatic.nextSpawnInTicks("missing"));
     }
 
     @Test
     @DisplayName("shared scheduler advances cooldown by real elapsed ticks")
     void sharedSchedulerUsesElapsedTicks() {
-        SpawnerService service = service("""
+        SpawnerService service = automaticService("""
                 spawners:
                   arena:
                     mob: boss
+                    world: arena
                     x: 0
                     z: 0
                     interval: 200
@@ -727,6 +752,70 @@ class SpawnerServiceTest {
         assertTrue(service.forceSpawn("arena", point));
         assertFalse(service.forceSpawn("arena", point));
         assertEquals(1, service.get("arena").totalSpawned());
+    }
+
+    @Test
+    @DisplayName("group spawn rechecks max-spawns for every member")
+    void groupSpawnRespectsMaxSpawnsPerAttempt() {
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        SpawnerService service = new SpawnerService(null, (mob, location, profile) -> calls.incrementAndGet());
+        service.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                spawners:
+                  arena:
+                    mob: boss
+                    x: 0
+                    z: 0
+                    interval: 20
+                    group-size: 3-5
+                    max-alive: 10
+                    max-spawns: 2
+                """)).getConfigurationSection("spawners"));
+        service.setAliveCheck(id -> true);
+
+        assertTrue(service.forceSpawn("arena", new org.bukkit.Location(null, 0, 64, 0)));
+        assertEquals(2, calls.get());
+        assertEquals(2, service.get("arena").totalSpawned());
+    }
+
+    @Test
+    @DisplayName("failed automatic spawn does not consume cooldown")
+    void failedAutomaticSpawnDoesNotAdvanceCooldown() {
+        SpawnerService service = new SpawnerService(null, (mob, location, profile) -> -1,
+                ignored -> null);
+        service.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                spawners:
+                  missing-world:
+                    mob: boss
+                    world: missing
+                    x: 0
+                    z: 0
+                    interval: 20
+                """)).getConfigurationSection("spawners"));
+
+        assertEquals(0, service.nextSpawnInTicks("missing-world"));
+        service.tickOnce();
+        assertEquals(0, service.nextSpawnInTicks("missing-world"));
+        assertEquals(0, service.get("missing-world").totalSpawned());
+    }
+
+    @Test
+    @DisplayName("callback exception is converted to a failed manual spawn")
+    void callbackExceptionDoesNotAdvanceCounters() {
+        SpawnerService service = new SpawnerService(null, (mob, location, profile) -> {
+            throw new IllegalStateException("spawn backend unavailable");
+        });
+        service.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                spawners:
+                  arena:
+                    mob: boss
+                    x: 0
+                    z: 0
+                """)).getConfigurationSection("spawners"));
+
+        assertFalse(service.forceSpawn("arena", new org.bukkit.Location(null, 0, 64, 0)));
+        assertEquals(0, service.get("arena").totalSpawned());
+        assertEquals(0, service.aliveCount("arena"));
+        assertTrue(service.forceSpawnFailure("arena").contains("callback"));
     }
 
 

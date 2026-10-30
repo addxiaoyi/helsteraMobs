@@ -744,7 +744,7 @@ public final class SpawnerService {
         int spawned = 0;
         for (int i = 0; i < attempts; i++) {
             if (i > 0) {
-                if (aliveCount(sp.id()) >= sp.maxAlive()) break;
+                if (!withinSpawnLimits(sp)) break;
                 if (!withinScopedLimits(sp, loc, owner)) break;
             }
             int instId = safeSpawn(mobId, loc, sp.aiProfile());
@@ -784,8 +784,9 @@ public final class SpawnerService {
             try {
                 if (!isActive(sp)) continue;
                 if (tickCounter < sp.nextSpawnTick) continue;
-                sp.nextSpawnTick = tickCounter + sp.rollIntervalTicks(random);
-                trySpawn(sp);
+                if (trySpawn(sp)) {
+                    sp.nextSpawnTick = tickCounter + sp.rollIntervalTicks(random);
+                }
             } catch (Throwable t) {
                 if (log != null) log.warning("[刷怪] " + sp.id() + " 生成异常: " + t);
             }
@@ -934,32 +935,35 @@ public final class SpawnerService {
         return nearbyPlayers >= minPlayers;
     }
 
-    private void trySpawn(Spawner sp) {
-        if (!withinSpawnLimits(sp)) return;
+    private boolean trySpawn(Spawner sp) {
+        if (!withinSpawnLimits(sp)) return false;
         Location loc = randomLocation(sp);
-        if (loc == null) return;
-        if (!conditionsPass(sp, loc)) return;
-        if (!playerGateOpen(sp, loc)) return;
+        if (loc == null) return false;
+        if (!conditionsPass(sp, loc)) return false;
+        if (!playerGateOpen(sp, loc)) return false;
         Player owner = nearestPlayer(loc, sp.playersRadius());
-        if (!withinScopedLimits(sp, loc, owner)) return;
+        if (!withinScopedLimits(sp, loc, owner)) return false;
         String mobId = sp.randomPool() == null ? sp.mobId() : sp.randomPool().choose(random);
         // 成组生成：一次节拍尝试生成 rollGroupSize 只，但每只都必须单独过存活上限与
         // world/player 作用域上限——否则 group-size 就成了绕过 max-alive 的后门。
         // 生成成功后逐只计数，第一只失败即停止本次尝试（剩下的大概率也会失败）。
         int attempts = sp.rollGroupSize(random);
+        int spawned = 0;
         for (int i = 0; i < attempts; i++) {
             if (i > 0) {
-                if (aliveCount(sp.id()) >= sp.maxAlive()) break;
+                if (!withinSpawnLimits(sp)) break;
                 if (!withinScopedLimits(sp, loc, owner)) break;
             }
             int instId = safeSpawn(mobId, loc, sp.aiProfile());
             if (instId <= 0) break;
+            spawned++;
             alive.computeIfAbsent(sp.id(), k -> Collections.synchronizedList(new ArrayList<>()))
                     .add(instId);
             sp.totalSpawned++;
             sp.recordSpawn(mobId);
             recordScopedSpawn(sp, loc, owner);
         }
+        return spawned > 0;
     }
 
     private List<String> readConditions(ConfigurationSection section) {
