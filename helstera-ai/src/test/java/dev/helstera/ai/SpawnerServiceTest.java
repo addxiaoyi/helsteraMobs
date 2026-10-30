@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1262,6 +1263,64 @@ class SpawnerServiceTest {
             assertTrue(ticks >= 100 && ticks <= 300, "rolled " + ticks);
         }
         assertTrue(service.warnings().stream().anyMatch(w -> w.contains("interval 写成区间")));
+    }
+
+    @Test
+    @DisplayName("group-size accepts integers, normalizes reverse ranges, and rejects malformed endpoints")
+    void parseRangeRejectsFractionalAndMalformedValues() {
+        SpawnerService service = service("""
+                spawners:
+                  integer:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: 3
+                  reverse:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: 5-2
+                  empty:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: 2-
+                  invalid:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: two
+                  fractional:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: 2.5
+                """);
+        assertEquals(3, service.get("integer").groupMax());
+        assertEquals(2, service.get("reverse").groupMin());
+        assertEquals(5, service.get("reverse").groupMax());
+        assertEquals(1, service.get("empty").groupMax());
+        assertEquals(1, service.get("invalid").groupMax());
+        assertEquals(1, service.get("fractional").groupMax());
+        assertTrue(service.warnings().stream().anyMatch(w -> w.contains("group-size = 2-")));
+        assertTrue(service.warnings().stream().anyMatch(w -> w.contains("group-size = two")));
+        assertTrue(service.warnings().stream().anyMatch(w -> w.contains("group-size = 2.5")));
+    }
+
+    @Test
+    @DisplayName("interval jitter rejects non-finite percent values and records a problem")
+    void intervalJitterRejectsNonFinitePercent() {
+        SpawnerService service = service("""
+                spawners:
+                  broken:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 100
+                    interval-jitter: NaN%
+                """);
+        assertEquals(0.0, service.get("broken").intervalJitter());
+        assertTrue(service.warnings().stream().anyMatch(w -> w.contains("interval-jitter")));
     }
 
     @Test
