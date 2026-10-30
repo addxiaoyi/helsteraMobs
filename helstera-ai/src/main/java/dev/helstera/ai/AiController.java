@@ -290,6 +290,8 @@ public final class AiController {
     private boolean selectorHasExplicitGoalPriority;
     private boolean selectorHasExplicitTargets;
     private SelectorPlan selectorPlan = SelectorPlan.compile(null);
+    private SelectorPlan.RouteState routeState;
+    private String routeStateSignature = "";
     private int selectorFleePriority = Integer.MAX_VALUE;
     private int selectorAttackPriority = Integer.MAX_VALUE;
     private int nativePathStopCalls;
@@ -303,9 +305,11 @@ public final class AiController {
     private void applySelectorProfile(Entity base, Location loc) {
         AiProfile.SelectorPolicy policy = profile.selectorPolicy();
         selectorPlan = SelectorPlan.compile(profile);
+        refreshRouteState();
         selectorCanChase = policy.chase() || selectorPlan.goals().stream().anyMatch(AiController::isChaseGoal);
         selectorCanAttack = policy.attack();
-        selectorCanPatrol = policy.patrol() || hasGoal("randomstroll", "random_stroll");
+        selectorCanPatrol = policy.patrol() || hasGoal("randomstroll", "random_stroll")
+                || (routeState != null && !routeState.finished());
         selectorCanFlee = policy.flee() || hasGoal("panic", "avoidentity", "avoid_entity",
                 "fleeplayers", "flee_players", "runfromplayers", "run_from_players",
                 "fleegolems", "flee_golems", "runfromgolems", "run_from_golems",
@@ -357,6 +361,15 @@ public final class AiController {
         }
         if (selectorTargetMode != AiProfile.TargetMode.PLAYERS) target = null;
         if (!selectorTargetMatches(combatTarget)) combatTarget = null;
+    }
+
+    private void refreshRouteState() {
+        SelectorPlan.RouteState next = SelectorPlan.routeState(profile.goals);
+        String signature = next == null ? "" : next.signature();
+        if (!signature.equals(routeStateSignature)) {
+            routeState = next;
+            routeStateSignature = signature;
+        }
     }
 
     private static boolean isChaseGoal(SelectorPlan.Rule rule) {
@@ -1261,6 +1274,7 @@ public final class AiController {
     }
 
     private void patrol(Location loc) {
+        if (patrolRoute(loc)) return;
         long now = System.currentTimeMillis();
         if (patrolTarget == null || now - lastPatrol > profile.patrolInterval * 1000L
                 || (patrolTarget.distance(loc) < 0.8)) {
@@ -1270,6 +1284,20 @@ public final class AiController {
             patrolTarget = home.clone().add(Math.cos(ang) * r, 0, Math.sin(ang) * r);
         }
         moveToward(loc, patrolTarget);
+    }
+
+    private boolean patrolRoute(Location loc) {
+        SelectorPlan.RouteState route = routeState;
+        if (route == null) return false;
+        SelectorPlan.RoutePoint point = route.current();
+        if (point == null) return true;
+        if (route.advanceIfReached(loc.getX(), loc.getY(), loc.getZ())) {
+            point = route.current();
+            if (point == null) return true;
+        }
+        Location target = new Location(loc.getWorld(), point.x() + 0.5, point.y(), point.z() + 0.5);
+        moveToward(loc, target);
+        return true;
     }
 
     /**

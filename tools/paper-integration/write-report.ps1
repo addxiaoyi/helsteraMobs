@@ -233,9 +233,13 @@ $probeSpecs = [ordered]@{
     # not the lifetime total.
     spawnerPlayerLimits = 'spawner-player-limits id=player_limit_probe first=true second=false total=[1-9][0-9]* player-limit=1 failure=scoped spawn limits reached'
     spawnerCooldown = 'spawner-cooldown id=cooldown_probe .*remaining-first=[1-9][0-9]* remaining-second=[0-9]+'
+    spawnerFailureCooldown = 'spawner-failure-cooldown id=failed_cooldown_probe before=0 after=0 total-before=0 total-after=0 rejected=true failure=no-valid-location'
+    spawnerNaturalTiming = 'spawner-natural-timing id=cooldown_probe mode=live-scheduler .*before-due=true .*after-due=true'
     spawnerLunar = 'spawner-lunar id=lunar_probe requested=true phase=FULL failure=null'
     spawnerHeightmap = 'spawner-heightmap id=heightmap_ground_pass requested=true surface=\S+ surface-y=-?\d+ failure=null'
     spawnerGroundRestored = 'spawner-ground id=ground_missing_fail requested=false failure=no valid spawn location restored=true saved-blocks=[1-9][0-9]*'
+    spawnerUnloadedChunk = 'spawner-unloaded-chunk id=unloaded_chunk_fail requested=false chunk-loaded=false failure=no valid spawn location restored=true'
+    spawnerLightFailClosed = 'spawner-light-fail-closed id=light_unloaded_fail requested=false chunk-loaded=false light-readable=false result=false restored=true'
     spawnerBorderClipped = 'spawner-border id=border_clipped_inside_pass requested=true configured-radius=16(?:\.0+)? effective-radius=10(?:\.0+)? border-size=20(?:\.0+)? restored=true failure=null'
     spawnerBorderOutside = 'spawner-border id=border_outside_fail requested=false configured-radius=0\.1 effective-radius=0(?:\.0+)? border-size=20(?:\.0+)? restored=true failure=no valid spawn location'
     tempt = 'tempt-probe .* native-target=true .*passed=true'

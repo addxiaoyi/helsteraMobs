@@ -3962,6 +3962,33 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " after-first=" + afterFirst + " after-second=" + afterSecond
                         + " remaining-first=" + remainingAfterFirst
                         + " remaining-second=" + remainingAfterSecond);
+
+                int naturalBefore = cooldownProbe.totalSpawned();
+                int naturalRemaining = sp.nextSpawnInTicks("cooldown_probe");
+                int naturalInterval = Math.max(20, cooldownProbe.intervalTicks());
+                int[] samples = {0};
+                int[] previous = {naturalBefore};
+                boolean[] waited = {false};
+                boolean[] spawned = {false};
+                org.bukkit.scheduler.BukkitTask[] timingTask = new org.bukkit.scheduler.BukkitTask[1];
+                int maxSamples = Math.max(80, naturalInterval * 3);
+                timingTask[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+                    int current = cooldownProbe.totalSpawned();
+                    int remaining = sp.nextSpawnInTicks("cooldown_probe");
+                    if (current == previous[0] && remaining > 0) waited[0] = true;
+                    if (current > naturalBefore) spawned[0] = true;
+                    previous[0] = current;
+                    samples[0]++;
+                    if (!spawned[0] && samples[0] < maxSamples) return;
+                    getLogger().info("spawner-natural-timing id=cooldown_probe"
+                            + " mode=live-scheduler before=" + naturalBefore
+                            + " samples=" + samples[0]
+                            + " spawned=" + current
+                            + " remaining-at-start=" + naturalRemaining
+                            + " before-due=" + waited[0]
+                            + " after-due=" + spawned[0]);
+                    timingTask[0].cancel();
+                }, 1L, 1L);
             }
             boolean requested = sp.forceSpawn(id, safeLocation);
             int direct = spawnMobAt("emberling", safeLocation, null);
@@ -4003,11 +4030,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     getLogger().warning("random-spawn probe missing: no configured random-mobs pool");
                 }
                 for (String candidate : sp.ids()) {
-                    if (candidate.equals(id)) continue;
+                    if (candidate.equals(id) || candidate.equals("cooldown_probe")) continue;
                     boolean naturalLocationProbe = candidate.equals("natural_ground_pass")
                             || candidate.equals("border_fail")
                             || candidate.equals("heightmap_ground_pass")
                             || candidate.equals("ground_missing_fail")
+                            || candidate.equals("unloaded_chunk_fail")
                             || candidate.equals("border_clipped_inside_pass")
                             || candidate.equals("border_outside_fail");
                     Location scopedLocation = getServer().getWorlds().stream()
@@ -4027,6 +4055,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             || candidate.equals("biome_plains_fail");
                     boolean heightmapProbe = candidate.equals("heightmap_ground_pass");
                     boolean missingGroundProbe = candidate.equals("ground_missing_fail");
+                    boolean unloadedChunkProbe = candidate.equals("unloaded_chunk_fail");
+                    boolean lightFailClosedProbe = candidate.equals("light_unloaded_fail");
+                    boolean failedCooldownProbe = candidate.equals("failed_cooldown_probe");
                     boolean borderInsideProbe = candidate.equals("border_clipped_inside_pass");
                     boolean borderOutsideProbe = candidate.equals("border_outside_fail");
                     boolean borderProbe = borderInsideProbe || borderOutsideProbe;
@@ -4045,13 +4076,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     double testBorderSize = 20.0;
                     var missingGroundStates = new java.util.ArrayList<org.bukkit.block.BlockState>();
                     var missingGroundLocation = (Location) null;
-                    if ((heightmapProbe || missingGroundProbe) && probeWorld != null) {
+                    var configuredProbeLocation = (Location) null;
+                    boolean probeChunkWasLoaded = false;
+                    int probeChunkX = 0;
+                    int probeChunkZ = 0;
+                    if ((heightmapProbe || missingGroundProbe || unloadedChunkProbe || lightFailClosedProbe)
+                            && probeWorld != null) {
                         var configured = sp.get(candidate);
                         if (configured != null) {
-                            missingGroundLocation = new Location(probeWorld,
+                            configuredProbeLocation = new Location(probeWorld,
                                     configured.x(), configured.y(), configured.z());
-                            probeWorld.getChunkAt(missingGroundLocation.getBlockX() >> 4,
-                                    missingGroundLocation.getBlockZ() >> 4);
+                            if (heightmapProbe || missingGroundProbe) {
+                                missingGroundLocation = configuredProbeLocation;
+                                probeWorld.getChunkAt(missingGroundLocation.getBlockX() >> 4,
+                                        missingGroundLocation.getBlockZ() >> 4);
+                            }
+                            if (unloadedChunkProbe || lightFailClosedProbe) {
+                                probeChunkX = configuredProbeLocation.getBlockX() >> 4;
+                                probeChunkZ = configuredProbeLocation.getBlockZ() >> 4;
+                                probeChunkWasLoaded = probeWorld.isChunkLoaded(probeChunkX, probeChunkZ);
+                                probeWorld.unloadChunk(probeChunkX, probeChunkZ, false);
+                            }
                         }
                     }
                     if (missingGroundProbe && probeWorld != null && missingGroundLocation != null) {
@@ -4092,10 +4137,30 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 + " player-limit=" + sp.get(candidate).maxPerPlayer());
                         continue;
                     }
+                    if (failedCooldownProbe) {
+                        var failedSpawner = sp.get(candidate);
+                        int beforeRemaining = sp.nextSpawnInTicks(candidate);
+                        int beforeTotal = failedSpawner == null ? -1 : failedSpawner.totalSpawned();
+                        sp.tickOnce();
+                        int afterRemaining = sp.nextSpawnInTicks(candidate);
+                        int afterTotal = failedSpawner == null ? -1 : failedSpawner.totalSpawned();
+                        boolean rejectedWithoutCooldown = failedSpawner != null
+                                && beforeRemaining == afterRemaining && beforeTotal == afterTotal;
+                        getLogger().info("spawner-failure-cooldown id=" + candidate
+                                + " before=" + beforeRemaining
+                                + " after=" + afterRemaining
+                                + " total-before=" + beforeTotal
+                                + " total-after=" + afterTotal
+                                + " rejected=" + rejectedWithoutCooldown
+                                + " failure=no-valid-location");
+                        continue;
+                    }
                     boolean accepted = naturalLocationProbe
                             ? sp.forceSpawn(candidate)
                             : sp.forceSpawn(candidate,
-                            candidate.equals("scoped_limit_probe") ? scopedLocation : safeLocation);
+                            candidate.equals("scoped_limit_probe") ? scopedLocation
+                                    : lightFailClosedProbe && configuredProbeLocation != null
+                                    ? configuredProbeLocation : safeLocation);
                     if (probeWorld != null) {
                         if (lunarProbe || timeWindowProbe) probeWorld.setFullTime(originalFullTime);
                         probeWorld.setStorm(originalStorm);
@@ -4124,6 +4189,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 + " requested=" + accepted + " failure=" + sp.forceSpawnFailure(candidate)
                                 + " restored=" + groundColumnRestored
                                 + " saved-blocks=" + missingGroundStates.size());
+                    }
+                    if (unloadedChunkProbe && configuredProbeLocation != null) {
+                        boolean chunkLoadedDuringProbe = probeWorld.isChunkLoaded(probeChunkX, probeChunkZ);
+                        boolean restored = restoreProbeChunk(probeWorld, probeChunkX, probeChunkZ,
+                                probeChunkWasLoaded);
+                        getLogger().info("spawner-unloaded-chunk id=" + candidate
+                                + " requested=" + accepted
+                                + " chunk-loaded=" + chunkLoadedDuringProbe
+                                + " failure=" + sp.forceSpawnFailure(candidate)
+                                + " restored=" + restored);
+                    }
+                    if (lightFailClosedProbe && configuredProbeLocation != null) {
+                        boolean chunkLoaded = probeWorld.isChunkLoaded(probeChunkX, probeChunkZ);
+                        Boolean lightResult = dev.helstera.ai.spawner.SpawnerService.lightCondition(
+                                "light-level-above=0", configuredProbeLocation);
+                        boolean restored = restoreProbeChunk(probeWorld, probeChunkX, probeChunkZ,
+                                probeChunkWasLoaded);
+                        getLogger().info("spawner-light-fail-closed id=" + candidate
+                                + " requested=" + accepted + " chunk-loaded=" + chunkLoaded
+                                + " light-readable=" + (chunkLoaded && lightResult != null)
+                                + " result=" + lightResult + " restored=" + restored);
                     }
                     if (borderProbe && clippedBorderSpawner != null) {
                         var currentBorderSpawner = sp.get(candidate);
@@ -6268,6 +6354,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }
+    }
+
+    private static boolean restoreProbeChunk(org.bukkit.World world, int chunkX, int chunkZ,
+                                             boolean wasLoaded) {
+        if (world == null) return false;
+        if (wasLoaded) {
+            world.getChunkAt(chunkX, chunkZ);
+            return world.isChunkLoaded(chunkX, chunkZ);
+        }
+        if (world.isChunkLoaded(chunkX, chunkZ)) {
+            world.unloadChunk(chunkX, chunkZ, false);
+        }
+        return !world.isChunkLoaded(chunkX, chunkZ);
     }
 
     /**

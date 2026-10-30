@@ -109,33 +109,21 @@
     -->
     <profiles>
         <profile>
-            <id>paper-integration-windows-shell</id>
-            <activation>
-                <os>
-                    <family>Windows</family>
-                </os>
-            </activation>
-            <properties>
-                <paper.integration.shell>powershell</paper.integration.shell>
-            </properties>
-        </profile>
-
-        <profile>
             <id>paper-integration</id>
             <properties>
                 <build.variant>full</build.variant>
             </properties>
             <dependencies>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-render-paper</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-resourcepack</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-ai</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-integrations</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-web</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-migration</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-platform</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-render-paper</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-resourcepack</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-ai</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-integrations</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-web</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-migration</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-platform</artifactId><scope>compile</scope></dependency>
             </dependencies>
             <build>
                 <plugins>
@@ -177,16 +165,16 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <dependencies>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-render-paper</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-resourcepack</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-ai</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-integrations</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-web</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-migration</artifactId></dependency>
-                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-platform</artifactId></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-api</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-core</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-runtime</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-render-paper</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-resourcepack</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-ai</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-integrations</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-web</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-migration</artifactId><scope>compile</scope></dependency>
+                <dependency><groupId>dev.helstera</groupId><artifactId>helstera-platform</artifactId><scope>compile</scope></dependency>
             </dependencies>
         </profile>
 

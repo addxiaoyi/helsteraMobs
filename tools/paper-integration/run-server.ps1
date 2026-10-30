@@ -9,6 +9,12 @@ $ErrorActionPreference = 'Stop'
 if ($Strict -and $Exploratory) {
     throw 'Exploratory mode cannot be combined with Strict mode.'
 }
+$pythonInfo = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
+if ($LASTEXITCODE -ne 0 -or $null -eq $pythonInfo) {
+    throw 'Python 3 with encodings/jsonschema is required for strict report validation.'
+}
+$pythonCommand = [string]$pythonInfo.Source
+$pythonPrefix = @($pythonInfo.Prefix)
 if ([double]::IsNaN($RandomSpawnTolerance) -or [double]::IsInfinity($RandomSpawnTolerance) -or
         $RandomSpawnTolerance -lt 0 -or $RandomSpawnTolerance -gt 1) {
     throw 'RandomSpawnTolerance must be finite and between 0 and 1.'
@@ -365,7 +371,7 @@ if ($Strict) {
     $strictReportPath = Join-Path $server 'integration-report.json'
     $schemaPath = Join-Path $PSScriptRoot 'integration-report.schema.json'
     $validatorPath = Join-Path $PSScriptRoot 'validate-report.py'
-    & python $validatorPath $schemaPath $strictReportPath
+    & $pythonCommand @pythonPrefix $validatorPath $schemaPath $strictReportPath
     if ($LASTEXITCODE -ne 0) {
         throw 'Paper integration strict gate rejected the report JSON schema'
     }

@@ -255,8 +255,24 @@ class SkillConditionsTest {
                 .test(ctx()));
         assertTrue(extraFactory("compare-values").create(List.of("2", "2", "EQUALS", "INTEGER"))
                 .test(ctx()));
+        assertTrue(extraFactory("compare-values").create(List.of("2", "2", "GREATER_THAN_OR_EQUAL", "INTEGER"))
+                .test(ctx()));
+        assertTrue(extraFactory("compare-values").create(List.of("2", "2", "LESS_THAN_OR_EQUAL", "INTEGER"))
+                .test(ctx()));
+        assertTrue(extraFactory("compare-values").create(List.of("2", "3", "NOT_EQUAL", "INTEGER"))
+                .test(ctx()));
         assertFalse(extraFactory("compare-values").create(List.of("2", "two", ">", "INTEGER"))
                 .test(ctx()));
+    }
+
+    @Test
+    @DisplayName("CompareValues 对 NaN 和 Infinity 失败关闭")
+    void officialCompareValuesRejectsNonFiniteNumbers() {
+        var factory = extraFactory("compare-values");
+
+        assertFalse(factory.create(List.of("NaN", "1", ">", "DOUBLE")).test(ctx()));
+        assertFalse(factory.create(List.of("1", "Infinity", "<", "DOUBLE")).test(ctx()));
+        assertFalse(factory.create(List.of("-Infinity", "1", "<", "DOUBLE")).test(ctx()));
     }
 
     @Test

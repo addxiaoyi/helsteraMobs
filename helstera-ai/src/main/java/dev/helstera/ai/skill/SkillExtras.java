@@ -1147,7 +1147,10 @@ public final class SkillExtras {
             if (type.isBlank() || type.equals("DOUBLE") || type.equals("FLOAT")
                     || type.equals("NUMBER")) {
                 try {
-                    ordering = Double.compare(Double.parseDouble(left.trim()), Double.parseDouble(right.trim()));
+                    double leftNumber = Double.parseDouble(left.trim());
+                    double rightNumber = Double.parseDouble(right.trim());
+                    if (!Double.isFinite(leftNumber) || !Double.isFinite(rightNumber)) return false;
+                    ordering = Double.compare(leftNumber, rightNumber);
                     return compareOrdering(ordering, operator);
                 } catch (NumberFormatException ignored) {
                     if (!type.isBlank()) return false;
@@ -1174,11 +1177,13 @@ public final class SkillExtras {
         String value = raw.trim().toUpperCase(Locale.ROOT).replace('_', ' ');
         return switch (value) {
             case "=", "==", "EQUALS", "EQUAL", "EQ", "EQL" -> "==";
-            case "!=", "NOT EQUALS", "NOTEQUALS", "NOTEQUAL", "NE", "NEQ", "NEQL" -> "!=";
+            case "!=", "NOT EQUAL", "NOT EQUALS", "NOTEQUALS", "NOTEQUAL", "NE", "NEQ", "NEQL" -> "!=";
             case ">", "GREATERTHAN", "GREATER THAN", "GTR", "GT" -> ">";
             case "<", "LESSTHAN", "LESS THAN", "LTR", "LT" -> "<";
-            case ">=", "GREATERTHANOREQUALS", "GREATER THAN OR EQUALS", "GTEO", "GTE" -> ">=";
-            case "<=", "LESSTHANOREQUALS", "LESS THAN OR EQUALS", "LTEO", "LTE" -> "<=";
+            case ">=", "GREATERTHANOREQUAL", "GREATERTHANOREQUALS",
+                    "GREATER THAN OR EQUAL", "GREATER THAN OR EQUALS", "GTEO", "GTE" -> ">=";
+            case "<=", "LESSTHANOREQUAL", "LESSTHANOREQUALS",
+                    "LESS THAN OR EQUAL", "LESS THAN OR EQUALS", "LTEO", "LTE" -> "<=";
             default -> null;
         };
     }
@@ -1498,6 +1503,22 @@ public final class SkillExtras {
                     return location != null && location.getWorld() != null
                             && location.getWorld().isThundering();
                 }),
+                Map.entry("day", timeAlias("day")),
+                Map.entry("daytime", timeAlias("daytime")),
+                Map.entry("dawn", timeAlias("dawn")),
+                Map.entry("dusk", timeAlias("dusk")),
+                Map.entry("sunset", timeAlias("sunset")),
+                Map.entry("morning", timeAlias("morning")),
+                Map.entry("noon", timeAlias("noon")),
+                Map.entry("midnight", timeAlias("midnight")),
+                Map.entry("nighttime", timeAlias("nighttime")),
+                Map.entry("sun", weatherAlias("sun")),
+                Map.entry("sunny", weatherAlias("sunny")),
+                Map.entry("clear", weatherAlias("clear")),
+                Map.entry("rain", weatherAlias("rain")),
+                Map.entry("storm", weatherAlias("storm")),
+                Map.entry("thunder", weatherAlias("thunder")),
+                Map.entry("thunderstorm", weatherAlias("thunderstorm")),
                 Map.entry("falling", (SkillCatalog.ConditionFactory) a -> ctx ->
                         selfLiving(ctx).map(entity -> !entity.isOnGround()
                                 && entity.getVelocity().getY() < -0.05).orElse(false)),
@@ -3299,6 +3320,14 @@ public final class SkillExtras {
         return compare(time, comparison);
     }
 
+    private static SkillCatalog.ConditionFactory timeAlias(String name) {
+        return ignored -> ctx -> {
+            Location location = selfLoc(ctx);
+            if (location == null || location.getWorld() == null) return false;
+            return matchesTime(name, location.getWorld().getTime());
+        };
+    }
+
     static boolean matchesWeather(String raw, boolean raining, boolean thundering) {
         String spec = raw == null ? "clear" : raw.trim().toLowerCase(Locale.ROOT);
         return switch (spec) {
@@ -3306,6 +3335,14 @@ public final class SkillExtras {
             case "rain", "raining" -> raining && !thundering;
             case "storm", "thunder", "thunderstorm", "thundering" -> thundering;
             default -> false;
+        };
+    }
+
+    private static SkillCatalog.ConditionFactory weatherAlias(String name) {
+        return ignored -> ctx -> {
+            Location location = selfLoc(ctx);
+            if (location == null || location.getWorld() == null) return false;
+            return matchesWeather(name, location.getWorld().hasStorm(), location.getWorld().isThundering());
         };
     }
 

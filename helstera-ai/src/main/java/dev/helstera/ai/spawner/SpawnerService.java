@@ -912,8 +912,21 @@ public final class SpawnerService {
         double nearestDistance = radius * radius;
         for (Player player : location.getWorld().getPlayers()) {
             if (player == null || !player.isOnline() || player.isDead()
-                    || player.getGameMode() == org.bukkit.GameMode.SPECTATOR) continue;
-            double distance = location.distanceSquared(player.getLocation());
+                    || player.getGameMode() == org.bukkit.GameMode.SPECTATOR
+                    || player.getGameMode() == org.bukkit.GameMode.CREATIVE) continue;
+            Location playerLocation;
+            try {
+                playerLocation = player.getLocation();
+            } catch (RuntimeException ignored) {
+                continue;
+            }
+            if (playerLocation == null) continue;
+            double distance;
+            try {
+                distance = location.distanceSquared(playerLocation);
+            } catch (RuntimeException ignored) {
+                continue;
+            }
             if (distance <= nearestDistance) {
                 nearest = player;
                 nearestDistance = distance;
@@ -1007,6 +1020,10 @@ public final class SpawnerService {
         String rangeText = normalizeComparator(body);
         if (rangeText.isEmpty()) return false;
         try {
+            World world = location.getWorld();
+            int chunkX = location.getBlockX() >> 4;
+            int chunkZ = location.getBlockZ() >> 4;
+            if (!world.isChunkLoaded(chunkX, chunkZ)) return false;
             int level = sky ? location.getBlock().getLightFromSky()
                     : block ? location.getBlock().getLightFromBlocks()
                     : location.getBlock().getLightLevel();
@@ -1552,7 +1569,9 @@ public final class SpawnerService {
         double r2 = radius * radius;
         try {
             for (Player p : loc.getWorld().getPlayers()) {
-                if (p.getGameMode() == org.bukkit.GameMode.SPECTATOR || p.getGameMode() == org.bukkit.GameMode.CREATIVE) {
+                if (p == null || !p.isOnline() || p.isDead()
+                        || p.getGameMode() == org.bukkit.GameMode.SPECTATOR
+                        || p.getGameMode() == org.bukkit.GameMode.CREATIVE) {
                     continue;
                 }
                 if (loc.getWorld().equals(p.getWorld()) && loc.distanceSquared(p.getLocation()) <= r2) {
