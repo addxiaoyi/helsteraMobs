@@ -1409,6 +1409,119 @@ class SpawnerServiceTest {
         assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level<8", broken));
     }
 
+    @Test
+    @DisplayName("interval jitter rejects naked non-finite values with zero and a warning")
+    void intervalJitterRejectsNonFiniteValues() {
+        SpawnerService service = service("""
+                spawners:
+                  nan:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 100
+                    interval-jitter: NaN
+                  infinity:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 100
+                    interval-jitter: Infinity
+                  negative-infinity:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 100
+                    interval-jitter: -Infinity
+                """);
+        assertEquals(0, service.get("nan").intervalJitter(), 1e-9);
+        assertEquals(0, service.get("infinity").intervalJitter(), 1e-9);
+        assertEquals(0, service.get("negative-infinity").intervalJitter(), 1e-9);
+        assertTrue(service.warnings().stream().filter(w -> w.contains("interval-jitter")).count() >= 3);
+    }
+
+    @Test
+    @DisplayName("interval jitter clamps out-of-range ratios and percentages with warnings")
+    void intervalJitterClampsOutOfRangeValues() {
+        SpawnerService service = service("""
+                spawners:
+                  ratio-high:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 100
+                    interval-jitter: 1.5
+                  ratio-low:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 100
+                    interval-jitter: -0.5
+                  percent-high:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 100
+                    interval-jitter: 150%
+                  percent-low:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    interval: 100
+                    interval-jitter: -20%
+                """);
+        assertEquals(1, service.get("ratio-high").intervalJitter(), 1e-9);
+        assertEquals(0, service.get("ratio-low").intervalJitter(), 1e-9);
+        assertEquals(1, service.get("percent-high").intervalJitter(), 1e-9);
+        assertEquals(0, service.get("percent-low").intervalJitter(), 1e-9);
+        assertTrue(service.warnings().stream().filter(w -> w.contains("超出 0..1")).count() >= 4);
+    }
+
+    @Test
+    @DisplayName("parseRange rejects missing left and right endpoints, empty, reverse, invalid and decimal forms")
+    void parseRangeRejectsMalformedBoundaries() {
+        SpawnerService service = service("""
+                spawners:
+                  left:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: "-2"
+                  empty:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: ""
+                  right:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: "2-"
+                  reverse:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: "5-2"
+                  invalid:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: nonsense
+                  decimal:
+                    mob: zombie
+                    x: 0
+                    z: 0
+                    group-size: "2.5"
+                """);
+        assertEquals(1, service.get("left").groupMax());
+        assertTrue(service.warnings().stream().anyMatch(w -> w.contains("group-size = -2")));
+        assertEquals(1, service.get("empty").groupMax());
+        assertEquals(1, service.get("right").groupMax());
+        assertEquals(2, service.get("reverse").groupMin());
+        assertEquals(5, service.get("reverse").groupMax());
+        assertEquals(1, service.get("invalid").groupMax());
+        assertEquals(1, service.get("decimal").groupMax());
+    }
+
     /** 伪造一个光照固定的方块位置（方块光/天空光以 int 存，Bukkit 返回 byte）。 */
     private static Location litLocation(String worldName, int combined, int sky, int blockLight) {
         World world = mock(World.class);

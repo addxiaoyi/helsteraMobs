@@ -1264,7 +1264,7 @@ public final class SpawnerService {
                 }
             }
         }
-        return YamlNums.chance(s, key, 0, problems, where);
+        return clampJitter(YamlNums.d(s, key, 0, problems, where), problems, where, key);
     }
 
     /** 百分数形态的抖动比例：超出 0..1 时钳制并留痕，与 {@link YamlNums#chance} 口径一致。 */
