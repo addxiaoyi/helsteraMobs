@@ -1269,6 +1269,10 @@ public final class SpawnerService {
 
     /** 百分数形态的抖动比例：超出 0..1 时钳制并留痕，与 {@link YamlNums#chance} 口径一致。 */
     private static double clampJitter(double ratio, List<String> problems, String where, String key) {
+        if (!Double.isFinite(ratio)) {
+            problems.add(where + " 的 " + key + " 必须为有限数值，已按 0 处理。");
+            return 0;
+        }
         if (ratio < 0 || ratio > 1) {
             double clamped = Math.max(0, Math.min(1, ratio));
             problems.add(where + " 的 " + key + " = " + fmt(ratio) + " 超出 0..1，已夹到 "
