@@ -6,6 +6,10 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitScheduler;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.Server;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -15,6 +19,8 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.mockito.ArgumentCaptor;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -104,6 +110,60 @@ class SpawnerServiceTest {
         assertEquals(200, service.nextSpawnInTicks("arena"));
         service.tickOnce(40);
         assertEquals(160, service.nextSpawnInTicks("arena"));
+    }
+
+    @Test
+    @DisplayName("shared scheduler waits for interval before the next natural spawn")
+    void sharedSchedulerHonorsNaturalSpawnInterval() {
+        Plugin plugin = mock(Plugin.class);
+        Server server = mock(Server.class);
+        BukkitScheduler scheduler = mock(BukkitScheduler.class);
+        BukkitTask task = mock(BukkitTask.class);
+        when(plugin.getServer()).thenReturn(server);
+        when(server.getScheduler()).thenReturn(scheduler);
+        when(scheduler.runTaskTimer(eq(plugin), any(Runnable.class), anyLong(), anyLong()))
+                .thenReturn(task);
+
+        World world = mock(World.class);
+        when(world.getName()).thenReturn("arena");
+        when(world.getMinHeight()).thenReturn(0);
+        when(world.getMaxHeight()).thenReturn(320);
+        when(world.isChunkLoaded(anyInt(), anyInt())).thenReturn(true);
+        when(world.getHighestBlockYAt(anyInt(), anyInt(), any())).thenReturn(64);
+        Block floor = mock(Block.class);
+        when(floor.isSolid()).thenReturn(true);
+        when(world.getBlockAt(anyInt(), anyInt(), anyInt())).thenReturn(floor);
+        org.bukkit.WorldBorder border = mock(org.bukkit.WorldBorder.class);
+        when(world.getWorldBorder()).thenReturn(border);
+        when(border.getCenter()).thenReturn(new Location(world, 0, 0, 0));
+        when(border.getSize()).thenReturn(1000.0);
+        when(border.isInside(any(Location.class))).thenReturn(true);
+
+        AtomicInteger spawns = new AtomicInteger();
+        SpawnerService service = new SpawnerService(plugin, null,
+                (mob, location, aiProfile) -> spawns.incrementAndGet(),
+                ignored -> world);
+        service.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                spawners:
+                  arena:
+                    mob: boss
+                    world: arena
+                    x: 0
+                    z: 0
+                    interval: 40
+                """)).getConfigurationSection("spawners"));
+
+        service.start();
+        ArgumentCaptor<Runnable> tick = ArgumentCaptor.forClass(Runnable.class);
+        verify(scheduler).runTaskTimer(eq(plugin), tick.capture(), eq(40L), eq(40L));
+
+        tick.getValue().run();
+        assertEquals(1, spawns.get());
+        assertEquals(40, service.nextSpawnInTicks("arena"));
+
+        tick.getValue().run();
+        assertEquals(2, spawns.get(), "scheduler period equals interval, so the next tick is due");
+        assertEquals(40, service.nextSpawnInTicks("arena"));
     }
 
     @Test
@@ -394,6 +454,88 @@ class SpawnerServiceTest {
         assertTrue(service.playerOwnerPresent("arena", new Location(world, 0, 64, 0)));
         when(player.getLocation()).thenReturn(new Location(world, 8, 64, 0));
         assertFalse(service.playerOwnerPresent("arena", new Location(world, 0, 64, 0)));
+    }
+
+    @Test
+    @DisplayName("player-scoped ownership ignores creative players")
+    void playerOwnerPresenceIgnoresCreativePlayers() {
+        World world = mock(World.class);
+        when(world.getName()).thenReturn("arena");
+        Player player = mock(Player.class);
+        when(player.isOnline()).thenReturn(true);
+        when(player.isDead()).thenReturn(false);
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.CREATIVE);
+        when(player.getLocation()).thenReturn(new Location(world, 2, 64, 0));
+        when(world.getPlayers()).thenReturn(List.of(player));
+
+        SpawnerService service = service("""
+                spawners:
+                  arena:
+                    mob: a
+                    x: 0
+                    z: 0
+                    max-per-player: 1
+                    players-radius: 4
+                """);
+
+        assertFalse(service.playerOwnerPresent("arena", new Location(world, 0, 64, 0)));
+    }
+
+    @Test
+    @DisplayName("player-scoped ownership fails closed when a player location is unavailable")
+    void playerOwnerPresenceFailsClosedWithoutPlayerLocation() {
+        World world = mock(World.class);
+        when(world.getName()).thenReturn("arena");
+        Player player = mock(Player.class);
+        when(player.isOnline()).thenReturn(true);
+        when(player.isDead()).thenReturn(false);
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        when(player.getLocation()).thenReturn(null);
+        when(world.getPlayers()).thenReturn(List.of(player));
+
+        SpawnerService service = service("""
+                spawners:
+                  arena:
+                    mob: a
+                    x: 0
+                    z: 0
+                    max-per-player: 1
+                    players-radius: 4
+                """);
+
+        assertFalse(service.playerOwnerPresent("arena", new Location(world, 0, 64, 0)));
+    }
+
+    @Test
+    @DisplayName("player gate ignores dead and offline players")
+    void playerGateIgnoresUnavailablePlayers() {
+        World world = mock(World.class);
+        Player player = mock(Player.class);
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        when(player.getWorld()).thenReturn(world);
+        when(player.getLocation()).thenReturn(new Location(world, 2, 64, 0));
+        when(world.getPlayers()).thenReturn(List.of(player));
+
+        SpawnerService service = service("""
+                spawners:
+                  arena:
+                    mob: boss
+                    x: 0
+                    z: 0
+                    min-players: 1
+                    players-radius: 4
+                """);
+        Location spawn = new Location(world, 0, 64, 0);
+
+        when(player.isOnline()).thenReturn(false);
+        when(player.isDead()).thenReturn(false);
+        assertFalse(service.forceSpawn("arena", spawn));
+        assertEquals("player gate closed", service.forceSpawnFailure("arena"));
+
+        when(player.isOnline()).thenReturn(true);
+        when(player.isDead()).thenReturn(true);
+        assertFalse(service.forceSpawn("arena", spawn));
+        assertEquals("player gate closed", service.forceSpawnFailure("arena"));
     }
 
     @Test
@@ -1499,6 +1641,21 @@ class SpawnerServiceTest {
     }
 
     @Test
+    @DisplayName("light gate rejects an unloaded chunk without reading its block")
+    void lightConditionRejectsUnloadedChunk() {
+        World world = mock(World.class);
+        when(world.isChunkLoaded(0, 0)).thenReturn(false);
+        Location location = mock(Location.class);
+        when(location.getWorld()).thenReturn(world);
+        when(location.getBlockX()).thenReturn(0);
+        when(location.getBlockZ()).thenReturn(0);
+
+        assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level<8", location));
+        verify(world).isChunkLoaded(0, 0);
+        verify(location, never()).getBlock();
+    }
+
+    @Test
     @DisplayName("interval jitter rejects naked non-finite values with zero and a warning")
     void intervalJitterRejectsNonFiniteValues() {
         SpawnerService service = service("""
@@ -1615,12 +1772,15 @@ class SpawnerServiceTest {
     private static Location litLocation(String worldName, int combined, int sky, int blockLight) {
         World world = mock(World.class);
         when(world.getName()).thenReturn(worldName);
+        when(world.isChunkLoaded(anyInt(), anyInt())).thenReturn(true);
         Block block = mock(Block.class);
         when(block.getLightLevel()).thenReturn((byte) combined);
         when(block.getLightFromSky()).thenReturn((byte) sky);
         when(block.getLightFromBlocks()).thenReturn((byte) blockLight);
         Location location = mock(Location.class);
         when(location.getWorld()).thenReturn(world);
+        when(location.getBlockX()).thenReturn(0);
+        when(location.getBlockZ()).thenReturn(0);
         when(location.getBlock()).thenReturn(block);
         return location;
     }

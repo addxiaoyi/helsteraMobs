@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SelectorPlanTest {
@@ -68,6 +69,63 @@ class SelectorPlanTest {
         assertTrue(plan.targets().isEmpty());
         assertEquals(List.of("goal:0 followroute 1,2,3",
                 "target:0 nearestpremiumtarget hp-above 0.5"), plan.unsupported());
+    }
+
+    @Test
+    @DisplayName("route coordinates preserve ordered integer waypoints")
+    void routeCoordinatesPreserveOrderedWaypoints() {
+        SelectorPlan.RouteSpec route = SelectorPlan.parseRoute(
+                "1 followpath 10,64,-2; 12,64,-2");
+
+        assertTrue(route.valid(), route.error());
+        assertEquals("followpath", route.token());
+        assertEquals(List.of(new SelectorPlan.RoutePoint(10, 64, -2),
+                new SelectorPlan.RoutePoint(12, 64, -2)), route.points());
+    }
+
+    @Test
+    @DisplayName("route coordinates reject empty endpoints, non-numbers, decimals, and wrong dimensions")
+    void routeCoordinatesRejectMalformedSegments() {
+        List<String> malformed = List.of(
+                "0 followroute",
+                "0 followroute ;1,64,2",
+                "0 followroute 1,64,2;",
+                "0 followroute one,64,2",
+                "0 followroute 1.5,64,2",
+                "0 followroute 1,64");
+
+        for (String raw : malformed) {
+            SelectorPlan.RouteSpec route = SelectorPlan.parseRoute(raw);
+            assertFalse(route.valid(), raw);
+            assertFalse(route.error().isBlank(), raw);
+        }
+    }
+
+    @Test
+    @DisplayName("route state selects the first priority route and advances waypoints in order")
+    void routeStateAdvancesWaypointsInOrder() {
+        SelectorPlan.RouteState state = SelectorPlan.routeState(List.of(
+                "2 followroute 10,64,-2;12,64,-2",
+                "1 followpath 20,70,5;22,70,5"));
+
+        assertEquals("followpath", state.token());
+        assertEquals(new SelectorPlan.RoutePoint(20, 70, 5), state.current());
+        assertTrue(state.advanceIfReached(20, 70, 5));
+        assertEquals(new SelectorPlan.RoutePoint(22, 70, 5), state.current());
+        assertTrue(state.advanceIfReached(22, 70, 5));
+        assertTrue(state.finished());
+    }
+
+    @Test
+    @DisplayName("malformed route keeps an actionable unsupported diagnostic")
+    void malformedRouteDiagnosticExplainsTheBoundary() {
+        AiProfile profile = new AiProfile("malformed-route");
+        profile.goals.add("0 followpath 1,64");
+
+        SelectorPlan plan = SelectorPlan.compile(profile);
+
+        assertEquals(List.of("goal:0 followpath 1,64 (route point requires x,y,z)"),
+                plan.unsupported());
     }
 
     @Test

@@ -13,6 +13,18 @@ Status values:
 
 Evidence baseline: 2026-10-21, Paper API 1.21.1-R0.1-SNAPSHOT.
 
+Incremental condition-boundary update: `compare-values` now rejects `NaN`,
+`Infinity`, and `-Infinity` for DOUBLE/FLOAT/NUMBER comparisons instead of
+letting `Double.compare` treat them as ordered values. The new regression test
+passes alongside the full `SkillConditionsTest`; this improves fail-closed
+coverage but does not establish Paper or complete-catalog parity.
+
+Incremental spawner-gate update: player-scoped ownership now applies the same
+online, alive, non-spectator, non-creative filter as the player-count gate and
+fails closed when a player location is unavailable. Focused regressions and the
+full `SpawnerServiceTest` pass; natural spawn timing and broader Paper
+combinations remain unverified.
+
 Incremental player-mechanic update: official `RemoveHeldItem` now has a
 dedicated canonical action and retains `disarm` as a compatibility alias. It
 removes only the active target's main-hand item. `SetMaterialCooldown` now
@@ -1051,6 +1063,12 @@ Direct condition alias update: official camel-case state names such as
 as their normalized forms. Runtime binding tests protect the direct hand-written
 skill path in addition to importer mappings.
 
+Time/weather catalog update: `day`, `daytime`, `dawn`, `morning`, `noon`, `dusk`,
+`sunset`, `midnight`, `nighttime`, `clear`, `sun`, `sunny`, `rain`, `storm`,
+`thunder`, and `thunderstorm` now have direct `SkillExtras` condition factories.
+`TimeWeatherConditionTest` verifies registration and fail-closed behavior without
+a context; the full Mythic condition catalog remains open.
+
 Shear update: `on-shear` now also consumes `PlayerShearEntityEvent`, preserving
 the player actor instead of relying only on `EntityTransformEvent`. The
 exploratory event self-test now verifies the configured action on a real
@@ -1170,7 +1188,7 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture completes the registered report contract with 224 observed probes (216 passed plus 8 expected negative controls in latest `srv-paper-integration-final-r47`); the suite covers Ageable and spawn-time entity options including Enderman HeldBlock, drop-prevention policies, Silverfish infection and Snow-Golem snow-formation prevention, family-aware Zombie/Skeleton conversion prevention, SlimeSplitEvent policy, SkillService mechanics/conditions and Bukkit tick scheduling, SkillTree persistence, Bukkit event dispatch, bounds, spawners, menu/Audience workflows, scoped limits and selectors; full Mythic catalog and broader natural/client semantics remain outside the gate |
+| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-menu-20261030-r3` completes the registered report contract with 228 observed probes (217 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options, jockey mount, and Pathfinder-clear evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 ## Release Gate
 

@@ -46,6 +46,53 @@ final class SelectorPlan {
         }
     }
 
+    record RoutePoint(int x, int y, int z) {
+    }
+
+    record RouteSpec(String token, List<RoutePoint> points, String error) {
+        boolean valid() {
+            return error == null || error.isBlank();
+        }
+    }
+
+    static final class RouteState {
+        private static final double REACH_RADIUS = 0.75;
+
+        private final RouteSpec spec;
+        private int index;
+
+        private RouteState(RouteSpec spec) {
+            this.spec = spec;
+        }
+
+        String token() {
+            return spec.token();
+        }
+
+        RoutePoint current() {
+            return index < spec.points().size() ? spec.points().get(index) : null;
+        }
+
+        boolean advanceIfReached(double x, double y, double z) {
+            RoutePoint point = current();
+            if (point == null) return false;
+            double dx = point.x() - x;
+            double dy = point.y() - y;
+            double dz = point.z() - z;
+            if (Math.sqrt(dx * dx + dy * dy + dz * dz) > REACH_RADIUS) return false;
+            index++;
+            return true;
+        }
+
+        boolean finished() {
+            return current() == null;
+        }
+
+        String signature() {
+            return spec.token() + "|" + spec.points();
+        }
+    }
+
     private final List<Rule> goals;
     private final List<Rule> targets;
     private final List<String> unsupported;
@@ -102,12 +149,82 @@ final class SelectorPlan {
             }
             boolean supported = target ? supportedTarget(rule.token()) : supportedGoal(rule.token());
             if (!supported) {
-                warnings.add((target ? "target:" : "goal:") + rule.raw());
+                String diagnostic = (target ? "target:" : "goal:") + rule.raw();
+                if (!target && isRouteToken(rule.token())) {
+                    RouteSpec route = parseRoute(rule.raw());
+                    if (!route.valid()) diagnostic += " (" + route.error() + ")";
+                }
+                warnings.add(diagnostic);
                 continue;
             }
             active.add(rule);
         }
         return active;
+    }
+
+    static RouteSpec parseRoute(String raw) {
+        Rule rule = parse(raw, 0);
+        if (rule == null || !isRouteToken(rule.token())) {
+            return new RouteSpec(rule == null ? "" : rule.token(), List.of(),
+                    "route selector is required");
+        }
+        String argument = rule.argument() == null ? "" : rule.argument().trim();
+        if (argument.isEmpty()) {
+            return new RouteSpec(rule.token(), List.of(), "coordinates required");
+        }
+
+        List<RoutePoint> points = new ArrayList<>();
+        String[] segments = argument.split(";", -1);
+        for (String segment : segments) {
+            String point = segment.trim();
+            if (point.isEmpty()) {
+                return new RouteSpec(rule.token(), List.of(), "empty route point");
+            }
+            String[] axes = point.split(",", -1);
+            if (axes.length != 3) {
+                return new RouteSpec(rule.token(), List.of(), "route point requires x,y,z");
+            }
+            int[] values = new int[3];
+            for (int i = 0; i < axes.length; i++) {
+                String axis = axes[i].trim();
+                if (axis.isEmpty()) {
+                    return new RouteSpec(rule.token(), List.of(), "empty coordinate");
+                }
+                try {
+                    values[i] = Integer.parseInt(axis);
+                } catch (NumberFormatException e) {
+                    return new RouteSpec(rule.token(), List.of(), "coordinate must be an integer");
+                }
+            }
+            points.add(new RoutePoint(values[0], values[1], values[2]));
+        }
+        return new RouteSpec(rule.token(), List.copyOf(points), "");
+    }
+
+    static RouteState routeState(List<String> source) {
+        if (source == null || source.isEmpty()) return null;
+        List<Rule> ordered = new ArrayList<>();
+        for (int i = 0; i < source.size(); i++) {
+            Rule parsed = parse(source.get(i), i);
+            if (parsed != null) ordered.add(parsed);
+        }
+        ordered.sort(Comparator.comparingInt(Rule::priority).thenComparingInt(Rule::order));
+
+        RouteSpec selected = null;
+        for (Rule rule : ordered) {
+            if (rule.is("clear") || rule.is("reset")) {
+                selected = null;
+                continue;
+            }
+            if (!isRouteToken(rule.token()) || selected != null) continue;
+            RouteSpec candidate = parseRoute(rule.raw());
+            if (candidate.valid()) selected = candidate;
+        }
+        return selected == null ? null : new RouteState(selected);
+    }
+
+    private static boolean isRouteToken(String token) {
+        return "followroute".equals(token) || "followpath".equals(token);
     }
 
     private static Rule parse(String raw, int order) {

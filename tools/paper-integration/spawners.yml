@@ -183,6 +183,20 @@ spawners:
     min-players: 0
     players-radius: 0.0
     enabled: true
+  failed_cooldown_probe:
+    mob: emberling
+    world: missing-world
+    x: 16.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 40
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: true
   lunar_probe:
     mob: emberling
     world: ""
@@ -329,6 +343,36 @@ spawners:
     max-spawns: 0
     min-players: 0
     players-radius: 0.0
+    enabled: false
+  unloaded_chunk_fail:
+    mob: emberling
+    world: ""
+    x: 512.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: false
+  light_unloaded_fail:
+    mob: emberling
+    world: ""
+    x: 528.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 12000
+    max-alive: 100
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - light-level-above=0
     enabled: false
   border_clipped_inside_pass:
     mob: emberling

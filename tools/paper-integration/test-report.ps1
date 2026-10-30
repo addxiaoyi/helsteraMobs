@@ -4,6 +4,13 @@ $temp = Join-Path ([System.IO.Path]::GetTempPath()) ('helstera-paper-report-' + 
 $logDirectory = Join-Path $temp 'logs'
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 
+$pythonInfo = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
+if ($LASTEXITCODE -ne 0 -or $null -eq $pythonInfo) {
+    throw 'Python 3 with encodings/jsonschema is required for report validation.'
+}
+$pythonCommand = [string]$pythonInfo.Source
+$pythonPrefix = @($pythonInfo.Prefix)
+
 function Assert-True([bool]$condition, [string]$message) {
     if (-not $condition) { throw "ASSERTION FAILED: $message" }
 }
@@ -105,15 +112,21 @@ try {
         '[Server thread/INFO]: spawner-scoped-limits id=scoped_limit_probe first=true second=false total=1 world-limit=1 failure=scoped spawn limits reached',
         '[Server thread/INFO]: spawner-player-limits id=player_limit_probe first=true second=false total=1 player-limit=1 failure=scoped spawn limits reached',
         '[Server thread/INFO]: spawner-cooldown id=cooldown_probe before=0 after-first=0 after-second=0 remaining-first=40 remaining-second=39',
+        '[Server thread/INFO]: spawner-failure-cooldown id=failed_cooldown_probe before=0 after=0 total-before=0 total-after=0 rejected=true failure=no-valid-location',
+        '[Server thread/INFO]: spawner-natural-timing id=cooldown_probe mode=live-scheduler before=1 early=1 due=2 remaining-at-start=20 before-due=true after-due=true',
         '[Server thread/INFO]: spawner-lunar id=lunar_probe requested=true phase=FULL failure=null',
         '[Server thread/INFO]: spawner-heightmap id=heightmap_ground_pass requested=true surface=STONE surface-y=64 failure=null',
         '[Server thread/INFO]: spawner-ground id=ground_missing_fail requested=false failure=no valid spawn location restored=true saved-blocks=384',
+        '[Server thread/INFO]: spawner-unloaded-chunk id=unloaded_chunk_fail requested=false chunk-loaded=false failure=no valid spawn location restored=true',
+        '[Server thread/INFO]: spawner-light-fail-closed id=light_unloaded_fail requested=false chunk-loaded=false light-readable=false result=false restored=true',
         '[Server thread/INFO]: spawner-border id=border_clipped_inside_pass requested=true configured-radius=16.0 effective-radius=10.0 border-size=20.0 restored=true failure=null',
         '[Server thread/INFO]: spawner-border id=border_outside_fail requested=false configured-radius=0.1 effective-radius=0.0 border-size=20.0 restored=true failure=no valid spawn location',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=border_clipped_inside_pass mode=natural-location requested=true failure=null',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=border_outside_fail mode=natural-location requested=false failure=no valid spawn location',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=heightmap_ground_pass mode=natural-location requested=true failure=null',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=ground_missing_fail mode=natural-location requested=false failure=no valid spawn location',
+        '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=unloaded_chunk_fail mode=natural-location requested=false failure=no valid spawn location',
+        '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=light_unloaded_fail mode=safe-override requested=false failure=conditions rejected location',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=weather_rain_pass mode=safe-override requested=true failure=null',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=weather_rain_fail mode=safe-override requested=false failure=conditions rejected location',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=time_window_pass mode=safe-override requested=true failure=null',
@@ -133,6 +146,9 @@ try {
     })
     $lines += '[Server thread/INFO]: random-spawn id=random_distribution_probe expected={a=0.5, b=0.5} observed={a=0.65, b=0.35} deviation={a=0.15, b=-0.15} max-abs-deviation=0.15 total=100'
     $lines += '[Server thread/INFO]: random-spawn id=random_distribution_probe expected={a=0.5, b=0.5} observed={a=0.650001, b=0.349999} deviation={a=0.150001, b=-0.150001} max-abs-deviation=0.150001 total=100'
+    $lines += '[Server thread/INFO]: menu-render id=parity-page-1 slot=10=REDSTONE'
+    $lines += '[Server thread/INFO]: menu-render id=parity-page-2 slot=13=EMERALD'
+    $lines += '[Server thread/INFO]: menu-click id=parity-page-1 slot=10 permitted=false ran=false'
     Set-Content -LiteralPath (Join-Path $logDirectory 'latest.log') -Value $lines -Encoding utf8
     Set-Content -LiteralPath (Join-Path $temp 'menu-client.stdout.log') -Value @(
         'PAPER_MENU_REPORT {"status":"passed","observations":{"permissionDeniedClickStayedOpen":true,"pageOne":true,"pageTwo":true,"actionClosedInventory":true,"allowedActionMessage":true,"deniedActionMessageAbsent":true}}'
@@ -145,7 +161,7 @@ try {
 
     $schemaPath = Join-Path $PSScriptRoot 'integration-report.schema.json'
     $reportPath = Join-Path $temp 'integration-report.json'
-    & python (Join-Path $PSScriptRoot 'validate-report.py') $schemaPath $reportPath
+    & $pythonCommand @pythonPrefix (Join-Path $PSScriptRoot 'validate-report.py') $schemaPath $reportPath
     if ($LASTEXITCODE -ne 0) { throw "JSON schema validation failed" }
 
     $report = Get-Content -LiteralPath $reportPath -Raw -Encoding utf8 |
@@ -306,11 +322,17 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'spawnerScopedLimits').status -eq 'passed') 'spawner scoped-limits probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerPlayerLimits').status -eq 'passed') 'spawner player-limits probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerCooldown').status -eq 'passed') 'spawner cooldown probe'
+    Assert-True (($report.probes | Where-Object id -eq 'spawnerFailureCooldown').status -eq 'passed') 'failed spawn does not consume cooldown probe'
+    Assert-True (($report.probes | Where-Object id -eq 'spawnerNaturalTiming').status -eq 'passed') 'spawner natural scheduler timing probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerLunar').status -eq 'passed') 'spawner lunar probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerHeightmap').status -eq 'passed') 'spawner heightmap probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerGroundRestored').status -eq 'passed') 'spawner missing-ground cleanup probe'
+    Assert-True (($report.probes | Where-Object id -eq 'spawnerUnloadedChunk').status -eq 'passed') 'unloaded chunk fail-closed probe'
+    Assert-True (($report.probes | Where-Object id -eq 'spawnerLightFailClosed').status -eq 'passed') 'light fail-closed probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawner:heightmap_ground_pass').status -eq 'passed') 'natural heightmap ground positive control'
+    Assert-True (($report.probes | Where-Object id -eq 'spawner:unloaded_chunk_fail').status -eq 'observed-rejected') 'unloaded chunk negative control'
     Assert-True (($report.probes | Where-Object id -eq 'spawner:ground_missing_fail').status -eq 'observed-rejected') 'natural no-ground negative control'
+    Assert-True (($report.probes | Where-Object id -eq 'spawner:light_unloaded_fail').status -eq 'observed-rejected') 'light fail-closed negative control'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerBorderClipped').status -eq 'passed') 'world border clipping positive probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerBorderOutside').status -eq 'passed') 'world border outside rejection probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawner:border_clipped_inside_pass').status -eq 'passed') 'in-border natural spawn probe'
