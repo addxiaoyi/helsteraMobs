@@ -5253,6 +5253,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean preventPickupOption = false;
                 boolean preventItemUseOption = false;
                 boolean interactableOption = false;
+                boolean interactableArmorStandOption = false;
                 boolean preventTeleportOption = false;
                 boolean preventSunburnOption = false;
                 boolean preventOtherDropsOption = false;
@@ -5509,6 +5510,35 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         getServer().getPluginManager().callEvent(interactableControlEvent);
                         interactableOption = nonInteractableEvent.isCancelled()
                                 && !interactableControlEvent.isCancelled();
+
+                        var nonInteractableStand = world.spawn(location.clone().add(20, 0, 2),
+                                org.bukkit.entity.ArmorStand.class);
+                        var interactableControlStand = world.spawn(location.clone().add(21, 0, 2),
+                                org.bukkit.entity.ArmorStand.class);
+                        var nonInteractableStandInstance = instances().bind("example/emberling",
+                                nonInteractableStand,
+                                dev.helstera.api.instance.SpawnOptions.defaults().interactable(false));
+                        var interactableControlStandInstance = instances().bind("example/emberling",
+                                interactableControlStand,
+                                dev.helstera.api.instance.SpawnOptions.defaults());
+                        tracked.add(nonInteractableStandInstance);
+                        tracked.add(interactableControlStandInstance);
+                        var standItem = new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND);
+                        var standEmpty = new org.bukkit.inventory.ItemStack(org.bukkit.Material.AIR);
+                        var nonInteractableStandEvent =
+                                new org.bukkit.event.player.PlayerArmorStandManipulateEvent(
+                                        eventActor, nonInteractableStand, standItem, standEmpty,
+                                        org.bukkit.inventory.EquipmentSlot.HEAD,
+                                        org.bukkit.inventory.EquipmentSlot.HAND);
+                        var interactableControlStandEvent =
+                                new org.bukkit.event.player.PlayerArmorStandManipulateEvent(
+                                        eventActor, interactableControlStand, standItem, standEmpty,
+                                        org.bukkit.inventory.EquipmentSlot.HEAD,
+                                        org.bukkit.inventory.EquipmentSlot.HAND);
+                        getServer().getPluginManager().callEvent(nonInteractableStandEvent);
+                        getServer().getPluginManager().callEvent(interactableControlStandEvent);
+                        interactableArmorStandOption = nonInteractableStandEvent.isCancelled()
+                                && !interactableControlStandEvent.isCancelled();
 
                         var protectedTeleportMob = world.spawn(location.clone().add(19, 0, 0),
                                 org.bukkit.entity.Sheep.class);
@@ -5781,6 +5811,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " prevent-pickup=" + preventPickupOption
                         + " prevent-item-use=" + preventItemUseOption
                         + " interactable=" + interactableOption
+                        + " interactable-armor-stand=" + interactableArmorStandOption
                         + " prevent-teleport=" + preventTeleportOption
                         + " prevent-sunburn=" + preventSunburnOption
                         + " prevent-other-drops=" + preventOtherDropsOption
