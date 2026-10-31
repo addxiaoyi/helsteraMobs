@@ -1066,6 +1066,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (damageProbeId > 0) instances().despawn(damageProbeId);
                 }
 
+                if (mobConfig("armor_probe") != null) {
+                    int armorProbeId = spawnMobAt("armor_probe", origin.clone().add(12, 0, 0), null);
+                    var armorProbe = armorProbeId > 0 ? instances().impl(armorProbeId) : null;
+                    var armorEntity = armorProbe == null ? null : armorProbe.baseEntity().orElse(null);
+                    var armorAttribute = armorEntity instanceof org.bukkit.entity.LivingEntity living
+                            ? living.getAttribute(resolveAttribute("ARMOR")) : null;
+                    double observedArmor = armorAttribute == null ? Double.NaN : armorAttribute.getBaseValue();
+                    boolean armorOptions = Math.abs(observedArmor - 8.0) < 1.0e-9;
+                    getLogger().info("[自检] armor-options result=" + armorOptions
+                            + " base=" + observedArmor);
+                    if (armorProbeId > 0) instances().despawn(armorProbeId);
+                }
+
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);
@@ -7027,6 +7040,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     cfg.getDouble("follow-range", cfg.getDouble("mob.follow-range", Double.NaN))));
             applyBaseAttribute(ent, "ATTACK_DAMAGE", cfg.getDouble("mob.attack-damage",
                     cfg.getDouble("attack-damage", Double.NaN)));
+            applyBaseAttribute(ent, "ARMOR", cfg.getDouble("mob.armor",
+                    cfg.getDouble("armor", Double.NaN)));
             ent.setCustomNameVisible(opts.showName());
             if (ent instanceof org.bukkit.entity.Mob mobEntity) {
                 mobEntity.setAware(!entitySec.getBoolean("no-ai", opts.noAi()));

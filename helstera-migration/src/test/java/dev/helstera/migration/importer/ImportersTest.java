@@ -1251,6 +1251,7 @@ class ImportersTest {
                 mobs:
                   Boss:
                     Type: HUSK
+                    Armor: 8
                     Options:
                       FollowRange: 40
                       MovementSpeed: 0.4
@@ -1272,6 +1273,7 @@ class ImportersTest {
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
         assertTrue(target.getBoolean("entity.silent"));
+        assertEquals(8, target.getDouble("mob.armor"), 1e-9);
         assertEquals(40, target.getDouble("mob.sight-radius"), 1e-9);
         assertEquals(0.4, target.getDouble("mob.move-speed"), 1e-9);
         assertEquals(0.75, target.getDouble("mob.knockback-resistance"), 1e-9);
