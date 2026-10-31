@@ -355,6 +355,20 @@ class TargeterOrderingTest {
     }
 
     @Test
+    @DisplayName("context targeter chains apply subsequent filters")
+    void contextTargeterChainAppliesFilters() {
+        var player = livingProxy(org.bukkit.entity.Player.class);
+        var context = BehaviorContext.continueExecution(null, player, 1, 2, 0,
+                "skill", null, null, List.of(player), null, null);
+        assertEquals(List.of(player), Targeters.select("@Target{} > @living{filter=players}",
+                context, List.of(player), List.of()));
+        assertEquals(List.of(), Targeters.select("@Target{} > @living{filter=mob}",
+                context, List.of(player), List.of()));
+        assertEquals(List.of(), Targeters.select("@Target{} > @unknown",
+                context, List.of(player), List.of()));
+    }
+
+    @Test
     @DisplayName("target targeter falls back to the first inherited target")
     void targetTargeterUsesInheritedTargetWhenScalarIsEmpty() {
         var target = livingProxy(org.bukkit.entity.LivingEntity.class);

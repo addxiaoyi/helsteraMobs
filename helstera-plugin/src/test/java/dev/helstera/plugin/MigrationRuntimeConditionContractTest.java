@@ -76,6 +76,12 @@ class MigrationRuntimeConditionContractTest {
         assertNotNull(chained, actions.get(1));
         assertTrue(registry.runAction(chained, context));
         verify(near, never()).damage(eq(7.0), any(org.bukkit.entity.Entity.class));
+        var playerContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, player, 1, 1, 0, "test", null, null, List.of(player), origin, null);
+        String filteredContext = skills.bindAction("damage{amount=8} @Target{} > @living{filter=mob}");
+        assertNotNull(filteredContext);
+        assertTrue(registry.runAction(filteredContext, playerContext));
+        verify(player, never()).damage(eq(8.0), any(org.bukkit.entity.Entity.class));
     }
 
     private static final Pattern EXPECTED_TRANSLATION = Pattern.compile(
