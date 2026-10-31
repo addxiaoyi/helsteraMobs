@@ -29,7 +29,9 @@ follows:
    failed-spawn cooldown preservation, random pools, terrain, player/world
    conditions including named-region rejection, unloaded chunks, and
    unreadable-light fail-closed behavior, plus natural instance recycling after
-   removal; continue broader natural spawn lifecycle and drop-table semantics.
+   removal; a separate Paper 1.21.1 two-boot fixture now proves lifetime
+   counters survive plugin restart; continue broader natural spawn lifecycle
+   and drop-table semantics.
 4. **Release gate**: add tests before implementation changes, keep the
    focused Java suite green, require the report fixture and Python resolver to
    pass, and record every strict Paper `not-observed` probe instead of calling
@@ -215,6 +217,7 @@ full MythicMobs parity.
 - Named Spawner region gates now have strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r28` records both the in-region success and the out-of-region rejection (`spawner-region-outside id=region_probe_outside requested=false region=integration_box failure=conditions rejected location`).
 - Mythic `Blocking`/`is-blocking` now has strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r27` keeps a real online player in a client-driven Shield-use window and records `stateBlocking=passed`.
 - Spawner natural recycling now has strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r28` records `released=true respawned=true alive=1` after removing a real tracked instance.
+- Spawner restart persistence now has Paper 1.21.1-133 evidence: fixture `srv-paper-spawner-restart-20261031-r2` performs two real plugin boots and records `stage=write before=0 after=1 generated=true result=true`, then `stage=verify before=1 after=1 restored=true result=true` from the same plugin data directory.
 - Vehicle enter/exit/dismount/eject/destroy trigger coverage is now lifecycle-independent from the online player probe; strict fixture `srv-paper-integration-exp-20261031-r17` records `vehicle-events enter=true exit=true dismount=true eject=true destroy=true`.
 
 ### Remaining Work

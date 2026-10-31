@@ -25,6 +25,20 @@ spawners:
     random-mobs:
       emberling: 1.0
       emberling_boss: 1.0
+  persistence_probe:
+    mob: emberling
+    world: ""
+    x: 20.5
+    y: 70
+    z: 6.5
+    radius: 1.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 1
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: false
   condition_pass:
     mob: emberling
     world: ""
