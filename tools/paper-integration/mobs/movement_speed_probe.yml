@@ -1,0 +1,7 @@
+name: Movement Speed Probe
+model: example/emberling
+mob:
+  move-speed: 0.4
+entity:
+  type: ZOMBIE
+  silent: true

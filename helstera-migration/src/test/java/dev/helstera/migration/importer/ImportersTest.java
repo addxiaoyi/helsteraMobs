@@ -1252,6 +1252,7 @@ class ImportersTest {
                   Boss:
                     Type: HUSK
                     Options:
+                      MovementSpeed: 0.4
                       Silent: true
                       NoAI: true
                       Invincible: true
@@ -1268,6 +1269,7 @@ class ImportersTest {
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
         assertTrue(target.getBoolean("entity.silent"));
+        assertEquals(0.4, target.getDouble("mob.move-speed"), 1e-9);
         assertTrue(target.getBoolean("entity.no-ai"));
         assertTrue(target.getBoolean("entity.invulnerable"));
         assertFalse(target.getBoolean("entity.gravity", true));

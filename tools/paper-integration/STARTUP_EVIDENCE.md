@@ -2141,7 +2141,7 @@ This reads back the configured `scale: 1.25` from the real
 The strict report catalog then contained 231 registered probes because this
 configuration-to-instance assertion was part of the release gate.
 
-The latest strict fixture `srv-paper-integration-health-20261031-r3` passed
+The preceding strict fixture `srv-paper-integration-health-20261031-r3` passed
 with 232 observed probes: 222 `passed`, 10 expected `observed-rejected`, and
 zero incomplete. Its Health option line is:
 
@@ -2154,6 +2154,21 @@ This reads back the configured `mob.health: 42` from the real
 and `Damageable#getMaxHealth()` matched the configured value. The strict
 report catalog now contains 232 registered probes because this
 configuration-to-instance assertion is part of the release gate.
+
+The latest strict fixture
+`srv-paper-integration-movement-speed-20261031-r6` passed with 233 observed
+probes: 222 `passed`, 11 expected `observed-rejected`, and zero incomplete.
+Its MovementSpeed option line is:
+
+```text
+movement-speed-options result=true base=0.4
+```
+
+This reads back the configured `mob.move-speed: 0.4` from the real
+`mobs/movement_speed_probe.yml` through `spawnMobCore`; the production Bukkit
+`MOVEMENT_SPEED` base attribute matched the configured value. The strict
+report catalog now contains 233 registered probes because this
+configuration-to-entity assertion is part of the release gate.
 
 The strict fixture `srv-paper-integration-adult-20261031-r2` passed with 230
 observed probes: 219 `passed`, 11 expected `observed-rejected`, and zero

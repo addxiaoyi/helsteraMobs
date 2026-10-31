@@ -1008,6 +1008,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (healthProbeId > 0) instances().despawn(healthProbeId);
                 }
 
+                if (mobConfig("movement_speed_probe") != null) {
+                    int movementSpeedProbeId = spawnMobAt("movement_speed_probe", origin.clone().add(8, 0, 0), null);
+                    var movementSpeedProbe = movementSpeedProbeId > 0
+                            ? instances().impl(movementSpeedProbeId) : null;
+                    var movementSpeedEntity = movementSpeedProbe == null
+                            ? null : movementSpeedProbe.baseEntity().orElse(null);
+                    var movementSpeedAttribute = movementSpeedEntity instanceof org.bukkit.entity.LivingEntity living
+                            ? living.getAttribute(resolveAttribute("MOVEMENT_SPEED")) : null;
+                    double observedMovementSpeed = movementSpeedAttribute == null
+                            ? Double.NaN : movementSpeedAttribute.getBaseValue();
+                    boolean movementSpeedOptions = Math.abs(observedMovementSpeed - 0.4) < 1.0e-9;
+                    getLogger().info("[自检] movement-speed-options result=" + movementSpeedOptions
+                            + " base=" + observedMovementSpeed);
+                    if (movementSpeedProbeId > 0) instances().despawn(movementSpeedProbeId);
+                }
+
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);
@@ -6963,6 +6979,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             ent.setCustomName(opts.displayName());
             applyKnockbackResistance(ent, opts.knockbackResistance());
             applyBaseAttribute(ent, "ATTACK_SPEED", cfg.getDouble("entity.attack-speed", cfg.getDouble("attack-speed", Double.NaN)));
+            applyBaseAttribute(ent, "MOVEMENT_SPEED", cfg.getDouble("mob.move-speed",
+                    cfg.getDouble("move-speed", cfg.getDouble("movement-speed", Double.NaN))));
             ent.setCustomNameVisible(opts.showName());
             if (ent instanceof org.bukkit.entity.Mob mobEntity) {
                 mobEntity.setAware(!entitySec.getBoolean("no-ai", opts.noAi()));
