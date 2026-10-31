@@ -1143,6 +1143,39 @@ class SpawnerServiceTest {
     }
 
     @Test
+    @DisplayName("reloading a newer state snapshot replaces old random spawn counts")
+    void reloadStateReplacesRemovedMobCounts() throws Exception {
+        SpawnerService service = new SpawnerService(null, (mob, location, profile) -> 1);
+        service.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                spawners:
+                  arena:
+                    mob: fallback
+                    x: 0
+                    z: 0
+                """)).getConfigurationSection("spawners"));
+        var state = Files.createTempFile("spawner-state-reload", ".yml").toFile();
+        YamlConfiguration first = new YamlConfiguration();
+        first.set("schema-version", 1);
+        first.set("spawners.arena.total-spawned", 1);
+        first.set("spawners.arena.mob-counts.zombie", 1);
+        first.save(state);
+        service.loadState(state);
+        assertEquals(Map.of("zombie", 1), service.get("arena").mobSpawnCounts());
+
+        YamlConfiguration newer = YamlConfiguration.loadConfiguration(state);
+        newer.set("spawners.arena.total-spawned", 2);
+        newer.set("spawners.arena.mob-counts.zombie", null);
+        newer.set("spawners.arena.mob-counts.skeleton", 2);
+        newer.save(state);
+        service.loadState(state);
+
+        assertEquals(2, service.get("arena").totalSpawned());
+        assertEquals(Map.of("skeleton", 2), service.get("arena").mobSpawnCounts());
+        Files.deleteIfExists(state.toPath());
+        Files.deleteIfExists(new java.io.File(state.getPath() + ".bak").toPath());
+    }
+
+    @Test
     @DisplayName("corrupt spawner state falls back to the backup file")
     void corruptStateUsesBackup() throws Exception {
         SpawnerService first = service("""
