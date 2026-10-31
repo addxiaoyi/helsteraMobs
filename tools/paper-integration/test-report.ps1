@@ -511,6 +511,30 @@ try {
     }
     Assert-True $emptyTargetRejected 'strict gate rejects a report with no probe evidence'
 
+    foreach ($chainState in @('false', 'missing')) {
+        $chainTemp = Join-Path $temp "context-chain-$chainState"
+        New-Item -ItemType Directory -Path (Join-Path $chainTemp 'logs') -Force | Out-Null
+        $chainField = if ($chainState -eq 'false') { 'context-chain-action=false ' } else { '' }
+        Set-Content -LiteralPath (Join-Path $chainTemp 'logs/latest.log') -Encoding utf8 -Value @(
+            'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+            '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+            "[Server thread/INFO]: ai-selector-core player-target=true monster-target=true clear-no-fallback=true owner-target=true faction-target=true conditional-target=true players-in-world=true mobs-in-world=true world-chain-filtered=true nearest-living=true nearest-mob=true set-target-mechanic=true clear-target-mechanic=true ${chainField}native-target=true passed=true",
+            '[Server thread/INFO]: Done (1.000s)! For help, type "help"'
+        )
+        & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $chainTemp | Out-Null
+        $chainReportPath = Join-Path $chainTemp 'integration-report.json'
+        $chainReport = Get-Content -LiteralPath $chainReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+        $chainProbe = @($chainReport.probes | Where-Object id -eq 'aiSelectorCore')
+        Assert-True ($chainProbe.Count -eq 1 -and $chainProbe[0].status -eq 'not-observed') "context chain $chainState is not passing evidence"
+        $chainRejected = $false
+        try {
+            & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $chainReportPath -RequireTargetPaperVersion
+        } catch {
+            $chainRejected = $_.Exception.Message -match 'aiSelectorCore=not-observed'
+        }
+        Assert-True $chainRejected "strict gate rejects context chain $chainState"
+    }
+
     $noClientTemp = Join-Path $temp 'no-client-fixture'
     New-Item -ItemType Directory -Path (Join-Path $noClientTemp 'logs') -Force | Out-Null
     Set-Content -LiteralPath (Join-Path $noClientTemp 'logs/latest.log') -Encoding utf8 -Value @(
