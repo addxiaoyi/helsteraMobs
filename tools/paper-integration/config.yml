@@ -7,6 +7,8 @@ debug:
   self-test-loot: true
   self-test-death-loot: true
   self-test-spawner: true
+  self-test-spawner-persistence: false
+  self-test-spawner-persistence-stage: write
   self-test-events: true
   trace-triggers: true
   self-test-audience: true

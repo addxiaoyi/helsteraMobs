@@ -2384,3 +2384,20 @@ The probe removes a real tracked instance, observes the runtime cleanup release
 the `max-alive=1` slot, and then observes the shared scheduler create the next
 instance before disabling and cleaning the fixture probe.
 
+The separate two-boot fixture `srv-paper-spawner-restart-20261031-r2` also
+passed Paper 1.21.1-133. Boot one generated the disabled `persistence_probe`
+through the production `SpawnerService` and shut down normally:
+
+```text
+spawner-persistence stage=write before=0 after=1 generated=true result=true
+```
+
+Boot two reused the same plugin data directory and restored the persisted
+lifetime counter exactly once:
+
+```text
+spawner-persistence stage=verify before=1 after=1 restored=true result=true
+```
+
+The dedicated script is `tools/paper-integration/test-spawner-restart.ps1`.
+

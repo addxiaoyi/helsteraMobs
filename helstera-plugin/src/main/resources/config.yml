@@ -199,6 +199,8 @@ debug:
   self-test-loot: false
   self-test-death-loot: false
   self-test-spawner: false
+  self-test-spawner-persistence: false
+  self-test-spawner-persistence-stage: write
   self-test-events: false
   self-test-audience: false
   self-test-skilltree-persistence: false

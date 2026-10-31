@@ -132,6 +132,15 @@ if ($env:PAPER_SKILLTREE_STAGE) {
         "  self-test-skilltree-stage: $env:PAPER_SKILLTREE_STAGE")
     Set-Content -LiteralPath $pluginConfig -Value $yaml -Encoding utf8
 }
+if ($env:PAPER_SPAWNER_PERSISTENCE_STAGE) {
+    $pluginConfig = Join-Path $pluginData 'config.yml'
+    $yaml = Get-Content -LiteralPath $pluginConfig -Raw
+    $yaml = [regex]::Replace($yaml, '(?m)^  self-test-spawner-persistence:.*$',
+        '  self-test-spawner-persistence: true')
+    $yaml = [regex]::Replace($yaml, '(?m)^  self-test-spawner-persistence-stage:.*$',
+        "  self-test-spawner-persistence-stage: $env:PAPER_SPAWNER_PERSISTENCE_STAGE")
+    Set-Content -LiteralPath $pluginConfig -Value $yaml -Encoding utf8
+}
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'loot.yml') -Destination (Join-Path $pluginData 'loot.yml') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'items.yml') -Destination (Join-Path $pluginData 'items.yml') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'spawners.yml') -Destination (Join-Path $pluginData 'spawners.yml') -Force

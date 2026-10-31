@@ -49,6 +49,17 @@ The natural scheduler path is separately covered by
 Natural instance recycling is covered by
 `spawner-recycle id=recycle_probe before=2 after=3 released=true respawned=true alive=1 interval=40`.
 
+Spawner counter persistence across a real plugin restart is verified separately:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/paper-integration/test-spawner-restart.ps1
+```
+
+The two boots share one plugin data directory. The first boot generates
+`persistence_probe` and lets the normal plugin shutdown write
+`spawner-state.yml`; the second boot verifies `before=1 after=1` after loading
+the state, proving the lifetime counter is restored without duplicate loading.
+
 Named region gating is covered by
 `spawner-region id=region_probe requested=true region=integration_box failure=null`.
 

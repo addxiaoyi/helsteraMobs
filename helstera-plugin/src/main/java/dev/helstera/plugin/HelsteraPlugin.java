@@ -620,6 +620,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (getConfig().getBoolean("debug.self-test-spawner", false)) {
             runSpawnerSelfTest();
         }
+        if (getConfig().getBoolean("debug.self-test-spawner-persistence", false)) {
+            runSpawnerPersistenceSelfTest();
+        }
         if (getConfig().getBoolean("debug.self-test-events", false)) {
             runEventSelfTest();
             runSelectorSelfTest();
@@ -4178,6 +4181,43 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 .anyMatch(candidate -> entityId.equals(candidate.boundEntityId().orElse(null)));
     }
 
+    /**
+     * Verifies the persisted Spawner counters across a real plugin shutdown.
+     * Live entity ids are intentionally not restored; only lifetime counters
+     * and cooldown metadata belong to the state file.
+     */
+    private void runSpawnerPersistenceSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            if (!(spawnerService instanceof dev.helstera.ai.spawner.SpawnerService sp)) {
+                getLogger().warning("spawner-persistence stage=missing result=false");
+                return;
+            }
+            var probe = sp.get("persistence_probe");
+            if (probe == null) {
+                getLogger().warning("spawner-persistence stage=missing result=false");
+                return;
+            }
+            String stage = getConfig().getString(
+                    "debug.self-test-spawner-persistence-stage", "write");
+            Location location = getServer().getWorlds().isEmpty()
+                    ? null : getServer().getWorlds().get(0).getSpawnLocation().clone().add(0, 2, 0);
+            int before = probe.totalSpawned();
+            boolean generated = "write".equalsIgnoreCase(stage)
+                    && before == 0 && location != null && sp.forceSpawn("persistence_probe", location);
+            int after = probe.totalSpawned();
+            if ("write".equalsIgnoreCase(stage)) {
+                getLogger().info("spawner-persistence stage=write before=" + before
+                        + " after=" + after + " generated=" + generated
+                        + " result=" + (generated && after == 1));
+                return;
+            }
+            boolean restored = "verify".equalsIgnoreCase(stage) && before == 1;
+            getLogger().info("spawner-persistence stage=verify before=" + before
+                    + " after=" + after + " restored=" + restored
+                    + " result=" + restored);
+        }, Math.max(1, getConfig().getLong("debug.self-test-delay-ticks", 40L)));
+    }
+
     private void runSpawnerSelfTest() {
         getServer().getScheduler().runTaskLater(this, () -> {
             if (!(spawnerService instanceof dev.helstera.ai.spawner.SpawnerService sp) || sp.ids().isEmpty()) {
@@ -4338,7 +4378,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
                 for (String candidate : sp.ids()) {
                     if (candidate.equals(id) || candidate.equals("cooldown_probe")
-                            || candidate.equals("natural_group_probe")) continue;
+                            || candidate.equals("natural_group_probe")
+                            || candidate.equals("persistence_probe")) continue;
                     boolean naturalLocationProbe = candidate.equals("natural_ground_pass")
                             || candidate.equals("border_fail")
                             || candidate.equals("heightmap_ground_pass")
