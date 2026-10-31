@@ -5,9 +5,9 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
-the report contract passes with `231/231` probes observed (`220 passed` and
-`11 expected negative-control observations`) in fixture
-`srv-paper-integration-scale-20261031-r2`.
+the report contract passes with `232/232` probes observed (`222 passed` and
+`10 expected negative-control observations`) in fixture
+`srv-paper-integration-health-20261031-r3`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -36,7 +36,7 @@ follows:
 
 Current checkpoint evidence is deliberately narrow: the focused Java suite
 and the latest strict Paper run are green, while the latest strict report
-records `passed=220`, `observed-rejected=11`, and `incomplete=0` across 231
+records `passed=222`, `observed-rejected=10`, and `incomplete=0` across 232
 registered probes. These numbers describe the development checkpoint, not
 full MythicMobs parity.
 
@@ -199,6 +199,7 @@ full MythicMobs parity.
 - Mythic `Options.HorseArmor` now maps to `entity.horse-armor` and uses the existing ItemStack/custom-item resolver through Paper's `ArmoredHorseInventory`; strict fixture `srv-paper-integration-horse-armor-20261031` reads back a real `DIAMOND_HORSE_ARMOR` item alongside the saddle.
 - Mythic `Options.CarryingChest` now maps to `entity.carrying-chest` for Horse/ChestedHorse entities; strict fixture `srv-paper-integration-horse-chest-20261031-r2` reads back `chest=true` from a real Donkey through the production option path.
 - Mythic `Options.Scale` now has strict configuration-to-instance evidence: fixture `srv-paper-integration-scale-20261031-r2` reads back `scale=1.25` from a real configured `mobs/scale_probe.yml` spawn.
+- Mythic `Options.Health` now has strict configuration-to-instance evidence: fixture `srv-paper-integration-health-20261031-r3` reads back `health=42.0 max-health=42.0` from a real configured `mobs/health_probe.yml` spawn through the production entity path.
 
 ### Remaining Work
 
