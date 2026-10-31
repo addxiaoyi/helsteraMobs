@@ -33,6 +33,10 @@ public final class Targeters {
 
     static {
         BUILTIN.put("nearest", Targeters::nearest);
+        BUILTIN.put("nearestentity", Targeters::nearest);
+        BUILTIN.put("nearestliving", Targeters::nearest);
+        BUILTIN.put("nearestlivingentity", Targeters::nearest);
+        BUILTIN.put("nearestmob", Targeters::nearestMonster);
         BUILTIN.put("nearestplayer", Targeters::nearestPlayer);
         BUILTIN.put("nearestmonster", Targeters::nearestMonster);
         BUILTIN.put("nearestanimal", Targeters::nearestAnimal);
