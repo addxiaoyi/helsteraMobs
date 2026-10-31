@@ -675,6 +675,45 @@ class SpawnerServiceTest {
     }
 
     @Test
+    @DisplayName("named region gates accept inside locations and reject outside locations")
+    void namedRegionGateRejectsOutsideLocation() {
+        AtomicInteger spawned = new AtomicInteger();
+        SpawnerService service = new SpawnerService(null, (mob, location, aiProfile) -> {
+            spawned.incrementAndGet();
+            return 1;
+        });
+        service.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                regions:
+                  arena:
+                    world: arena-world
+                    x1: -10
+                    y1: 0
+                    z1: -10
+                    x2: 10
+                    y2: 100
+                    z2: 10
+                spawners:
+                  gate:
+                    mob: boss
+                    x: 0
+                    y: 64
+                    z: 0
+                    conditions:
+                      - region=arena
+                """)));
+
+        World world = mock(World.class);
+        when(world.getName()).thenReturn("arena-world");
+        Location inside = new Location(world, 0, 64, 0);
+        Location outside = new Location(world, 11, 64, 0);
+
+        assertTrue(service.forceSpawn("gate", inside));
+        assertFalse(service.forceSpawn("gate", outside));
+        assertEquals("conditions rejected location", service.forceSpawnFailure("gate"));
+        assertEquals(1, spawned.get());
+    }
+
+    @Test
     @DisplayName("null 节与空节安全返回，不抛异常")
     void toleratesNullAndEmpty() {
         SpawnerService s = new SpawnerService(null, (m, l, a) -> -1);

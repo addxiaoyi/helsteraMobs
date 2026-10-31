@@ -309,7 +309,14 @@ public final class SpawnerService {
         ConfigurationSection source = root;
         ConfigurationSection nested = root.getConfigurationSection("spawners");
         if (nested != null && !root.contains("mob")) source = nested;
-        loadRegions(source.getConfigurationSection("regions"));
+        // A full spawners.yml keeps named regions beside the `spawners` map;
+        // a direct section load may keep them on the section itself. Resolve
+        // both shapes before iterating only the actual spawner entries.
+        ConfigurationSection regionSection = root.getConfigurationSection("regions");
+        if (regionSection == null && source != root) {
+            regionSection = source.getConfigurationSection("regions");
+        }
+        loadRegions(regionSection);
         for (String key : source.getKeys(false)) {
             if (key.equalsIgnoreCase("regions")) continue;
             ConfigurationSection s = source.getConfigurationSection(key);

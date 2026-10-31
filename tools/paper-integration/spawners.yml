@@ -182,7 +182,23 @@ spawners:
     x: 0.5
     y: 70
     z: 0.5
-    radius: 0.0
+    radius: 6.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 2
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - region=integration_box
+    enabled: false
+  region_probe_outside:
+    mob: emberling
+    world: ""
+    x: 2000.5
+    y: 70
+    z: 2000.5
+    radius: 6.0
     y-range: 0.0
     interval: 200
     max-alive: 2

@@ -125,6 +125,7 @@ try {
         '[Server thread/INFO]: spawner-group id=group_probe requested=true alive=2 total=2 max-alive=2 group-min=3 group-max=5 limit=true',
         '[Server thread/INFO]: spawner-natural-group id=natural_group_probe mode=live-scheduler before=0 after=2 alive=2 max-alive=2 group-min=3 group-max=5 limit=true',
         '[Server thread/INFO]: spawner-region id=region_probe requested=true region=integration_box failure=null',
+        '[Server thread/INFO]: spawner-region-outside id=region_probe_outside requested=false region=integration_box failure=conditions rejected location',
         '[Server thread/INFO]: spawner-scoped-limits id=scoped_limit_probe first=true second=false total=1 world-limit=1 failure=scoped spawn limits reached',
         '[Server thread/INFO]: spawner-player-limits id=player_limit_probe first=true second=false total=1 player-limit=1 failure=scoped spawn limits reached',
         '[Server thread/INFO]: spawner-cooldown id=cooldown_probe before=0 after-first=0 after-second=0 remaining-first=40 remaining-second=39',
@@ -342,6 +343,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'spawnerGroup').status -eq 'passed') 'spawner group limit probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerNaturalGroup').status -eq 'passed') 'natural spawner group limit probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerRegion').status -eq 'passed') 'spawner region probe'
+    Assert-True (($report.probes | Where-Object id -eq 'spawnerRegionOutside').status -eq 'passed') 'spawner region outside negative probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerScopedLimits').status -eq 'passed') 'spawner scoped-limits probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerPlayerLimits').status -eq 'passed') 'spawner player-limits probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerCooldown').status -eq 'passed') 'spawner cooldown probe'
