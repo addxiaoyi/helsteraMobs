@@ -6914,6 +6914,24 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean conditionalTarget = controller.targetEntity() == holder
                         && mob.getTarget() == holder;
 
+                boolean setTargetMechanic = false;
+                boolean clearTargetMechanic = false;
+                if (skillService instanceof dev.helstera.ai.skill.SkillService targetSkills
+                        && behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry targetBehaviors) {
+                    var targetContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            instance, monster, 1.0, 3.0, 0, "integration");
+                    boolean setDispatched = runIntegrationAction(targetSkills, targetBehaviors,
+                            "set-target", targetContext);
+                    setTargetMechanic = setDispatched && controller.targetEntity() == monster
+                            && mob.getTarget() == monster;
+                    boolean clearDispatched = runIntegrationAction(targetSkills, targetBehaviors,
+                            "clear-target", targetContext);
+                    clearTargetMechanic = clearDispatched && controller.targetEntity() == null
+                            && mob.getTarget() == null;
+                    controller.setCombatTarget(holder);
+                    controller.tick();
+                }
+
                 var worldTargetContext = dev.helstera.api.behavior.BehaviorContext.of(
                         instance, holder, 1.0, 2.0, 0, "integration");
                 var playersInWorld = dev.helstera.api.behavior.Targeters.select(
@@ -6930,6 +6948,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean passed = playerTarget && monsterTarget && clearNoFallback
                         && ownerTarget && factionTarget && conditionalTarget
                         && worldPlayerTarget && worldMobTarget
+                        && setTargetMechanic && clearTargetMechanic
                         && mob.getTarget() == holder;
                 getLogger().info("ai-selector-core goals=" + goals
                         + " player-target=" + playerTarget
@@ -6940,6 +6959,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " conditional-target=" + conditionalTarget
                         + " players-in-world=" + worldPlayerTarget
                         + " mobs-in-world=" + worldMobTarget
+                        + " set-target-mechanic=" + setTargetMechanic
+                        + " clear-target-mechanic=" + clearTargetMechanic
                         + " native-target=" + (mob.getTarget() == holder)
                         + " faction-source=" + dev.helstera.api.behavior.Factions.factionOf(base)
                         + " faction-holder=" + dev.helstera.api.behavior.Factions.factionOf(holder)
