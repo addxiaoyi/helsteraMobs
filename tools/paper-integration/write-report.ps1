@@ -216,7 +216,7 @@ $probeSpecs = [ordered]@{
     pathfinderStopCalls = 'pathfinder-clear .*stop-calls=[1-9][0-9]*'
     aiPriority = 'ai-priority-probe attack-first=true flee-first=true attack-state=ATTACK flee-state=FLEE'
     aiPriorityTargets = 'ai-priority-detail probe=priority_attack_probe target-assigned=true target-valid=true health-ratio=0.5 attack-priority=0 flee-priority=1 selector=mode=PLAYERS can-attack=true can-chase=true can-flee=true target-matches=true'
-    aiSelectorCore = 'ai-selector-core .*player-target=true .*monster-target=true .*clear-no-fallback=true .*owner-target=true .*faction-target=true .*conditional-target=true .*players-in-world=true .*mobs-in-world=true .*nearest-living=true .*nearest-mob=true .*set-target-mechanic=true .*clear-target-mechanic=true .*native-target=true .*passed=true'
+    aiSelectorCore = 'ai-selector-core .*player-target=true .*monster-target=true .*clear-no-fallback=true .*owner-target=true .*faction-target=true .*conditional-target=true .*players-in-world=true .*mobs-in-world=true .*world-chain-filtered=true .*nearest-living=true .*nearest-mob=true .*set-target-mechanic=true .*clear-target-mechanic=true .*native-target=true .*passed=true'
     aiRoute = 'ai-route-probe token=followpath .*active-before=true .*moving=true .*advanced=true .*passed=true'
     skillTrigger = 'skill-trigger .*damage=true .*teleport=true .*bukkit-attacked=true'
     damageCauseCondition = 'skill-trigger .*damage-cause-condition=true .*damage-amount-condition=true .*bow-tension-condition=true'

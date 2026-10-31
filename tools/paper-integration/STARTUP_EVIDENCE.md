@@ -2424,3 +2424,9 @@ Its managed selector probe records `nearest-living=true nearest-mob=true`:
 the selected living entity is the nearer of two candidates, and the mob
 selector returns the non-player candidate as a single result.
 
+Strict fixture `srv-paper-world-chain-20261031-r1` passed Paper 1.21.1-133
+with 250 observed probes (238 passed, 12 expected rejected, zero incomplete).
+Its managed selector probe records `world-chain-filtered=true` after selecting
+players in the source world and chaining to world entities; the real monster
+candidate remains excluded.
+
