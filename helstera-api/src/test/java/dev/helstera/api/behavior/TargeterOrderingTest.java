@@ -139,6 +139,7 @@ class TargeterOrderingTest {
         assertEquals(List.of(player), Targeters.select("@nearestliving", source, candidates, List.of()));
         assertEquals(List.of(player), Targeters.select("@nearestlivingentity", source, candidates, List.of()));
         assertEquals(List.of(living), Targeters.select("@nearestmob", source, candidates, List.of()));
+        assertEquals(List.of(living), Targeters.select("@Nearest_Mob", source, candidates, List.of()));
         assertEquals(List.of(monster), Targeters.select("@nearestmonster", source, candidates, List.of()));
     }
 

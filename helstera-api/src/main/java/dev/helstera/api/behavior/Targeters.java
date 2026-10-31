@@ -576,9 +576,9 @@ public final class Targeters {
             String value = raw == null ? "" : raw.trim();
             if (value.startsWith("@")) value = value.substring(1);
             int open = value.indexOf('{');
-            if (open < 0) return new ParsedSpec(value.toLowerCase(Locale.ROOT), List.of(), null, null, null, null, true);
+            if (open < 0) return new ParsedSpec(canonicalName(value), List.of(), null, null, null, null, true);
             int close = value.lastIndexOf('}');
-            if (close < open) return new ParsedSpec(value.substring(0, open).toLowerCase(Locale.ROOT), List.of(), null, null, null, null, false);
+            if (close < open) return new ParsedSpec(canonicalName(value.substring(0, open)), List.of(), null, null, null, null, false);
             List<String> args = new ArrayList<>();
             Integer limit = null;
             Double radius = null;
@@ -616,8 +616,18 @@ public final class Targeters {
                     }
                 } else args.add(token);
             }
-            return new ParsedSpec(value.substring(0, open).toLowerCase(Locale.ROOT), args,
+            return new ParsedSpec(canonicalName(value.substring(0, open)), args,
                     limit, radius, filter, sort, valid);
+        }
+
+        private static String canonicalName(String raw) {
+            String normalized = raw.trim().toLowerCase(Locale.ROOT);
+            String compact = normalized.replace("_", "").replace("-", "");
+            return switch (compact) {
+                case "nearestentity", "nearestliving", "nearestlivingentity", "nearestmob",
+                        "playersinworld", "mobsinworld", "entitiesinworld", "livingentitiesinworld" -> compact;
+                default -> normalized;
+            };
         }
     }
 
