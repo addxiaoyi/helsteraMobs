@@ -523,7 +523,7 @@ public final class Targeters {
             List<LivingEntity> current = new ArrayList<>(candidates == null ? List.of() : candidates);
             for (int i = 0; i < chain.size(); i++) {
                 String part = chain.get(i);
-                current = select(part, source, current, fallbackArgs);
+                current = selectScoped(part, source, current, fallbackArgs, i == 0);
                 if (current.isEmpty()) break;
                 if (i + 1 < chain.size()) {
                     // A chained targeter narrows the current set; positional targeters
@@ -534,15 +534,21 @@ public final class Targeters {
             return List.copyOf(current);
         }
 
+        return selectScoped(spec, source, candidates, fallbackArgs, true);
+    }
+
+    private static List<LivingEntity> selectScoped(String spec, ModelInstance source,
+                                                    Collection<? extends LivingEntity> candidates,
+                                                    List<String> fallbackArgs, boolean expandWorld) {
         ParsedSpec parsed = ParsedSpec.parse(spec);
         Collection<? extends LivingEntity> scoped = candidates == null ? List.of() : candidates;
-        if (WORLD_TARGETERS.contains(parsed.name()) && source != null) {
-            Location origin = source.location();
-            if (origin != null && origin.getWorld() != null) {
-                // World-scoped Mythic targeters must not inherit the nearby
-                // candidate snapshot assembled for radius targeters.
-                scoped = origin.getWorld().getLivingEntities();
-            }
+        if (WORLD_TARGETERS.contains(parsed.name())) {
+            Location origin = source == null ? null : source.location();
+            if (origin == null || origin.getWorld() == null) return List.of();
+            // Only the first stage may expand the local candidate snapshot.
+            if (expandWorld) scoped = origin.getWorld().getLivingEntities();
+            else scoped = scoped.stream().filter(entity -> entity != null
+                    && origin.getWorld().equals(entity.getWorld())).toList();
         }
         if (parsed.radius() != null && parsed.radius() >= 0) {
             double radius = parsed.radius();

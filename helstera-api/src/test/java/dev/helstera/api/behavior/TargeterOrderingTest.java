@@ -204,15 +204,29 @@ class TargeterOrderingTest {
     @Test
     @DisplayName("world targeters replace the nearby candidate snapshot")
     void worldTargetersUseAllLivingEntitiesInSourceWorld() {
-        var player = livingProxy(org.bukkit.entity.Player.class);
+        var worldRef = new org.bukkit.World[1];
+        var player = (org.bukkit.entity.Player) Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Player.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getWorld" -> worldRef[0];
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    default -> defaultValue(method.getReturnType());
+                });
         var mob = livingProxy(org.bukkit.entity.LivingEntity.class);
         var nearby = livingProxy(org.bukkit.entity.LivingEntity.class);
         var worldEntities = List.of(player, mob);
         var world = (org.bukkit.World) Proxy.newProxyInstance(
                 org.bukkit.World.class.getClassLoader(),
                 new Class<?>[]{org.bukkit.World.class},
-                (proxy, method, args) -> method.getName().equals("getLivingEntities")
-                        ? worldEntities : defaultValue(method.getReturnType()));
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getLivingEntities" -> worldEntities;
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    default -> defaultValue(method.getReturnType());
+                });
+        worldRef[0] = world;
         var origin = new org.bukkit.Location(world, 0, 64, 0);
         var source = (dev.helstera.api.instance.ModelInstance) Proxy.newProxyInstance(
                 dev.helstera.api.instance.ModelInstance.class.getClassLoader(),
@@ -224,6 +238,10 @@ class TargeterOrderingTest {
                 List.of(nearby), List.of()));
         assertEquals(List.of(mob), Targeters.select("@MobsInWorld", source,
                 List.of(nearby), List.of()));
+        assertEquals(List.of(player), Targeters.select(
+                "@PlayersInWorld > @EntitiesInWorld", source, List.of(nearby), List.of()));
+        assertEquals(List.of(), Targeters.select("@PlayersInWorld",
+                (dev.helstera.api.instance.ModelInstance) null, List.of(player), List.of()));
     }
 
     @Test
