@@ -1,0 +1,8 @@
+name: Scale Probe
+model: example/emberling
+scale: 1.25
+entity:
+  type: ZOMBIE
+  silent: true
+mob:
+  despawn: PERSISTENT

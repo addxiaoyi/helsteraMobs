@@ -1184,12 +1184,12 @@ restores the player's prior glowing state.
 
 | Area | Status | Evidence / remaining work |
 | --- | --- | --- |
-| Mob Options mapping and preservation | mapped-unverified | Broad mapping with unsupported preservation; fixed Mythic `Options.Size` maps to `entity.size`, positive inclusive ranges (`2-5`/`2to5`) map to `entity.size-min/max` and are sampled once during Slime/MagmaCube/Phantom option application, while invalid/reversed ranges remain visible with migration warnings. `ImportersTest` covers these projections and strict Paper 1.21.1-133 `entitySizeRange` samples the production Slime path 64 times within 2..5; the complete Mythic Mob Options catalog remains unverified |
+| Mob Options mapping and preservation | mapped-unverified | Broad mapping with unsupported preservation; fixed Mythic `Options.Size` maps to `entity.size`, positive inclusive ranges (`2-5`/`2to5`) map to `entity.size-min/max` and are sampled once during Slime/MagmaCube/Phantom option application, while invalid/reversed ranges remain visible with migration warnings. `Options.Scale` maps to the production model `SpawnOptions.scale` path, and strict Paper 1.21.1-133 fixture `srv-paper-integration-scale-20261031-r2` reads back `scale-options result=true scale=1.25` from `mobs/scale_probe.yml`; `ImportersTest` covers these projections and strict Paper `entitySizeRange` samples the production Slime path 64 times within 2..5; the complete Mythic Mob Options catalog remains unverified |
 | Equipment/Items/Attributes mapping | mapped-unverified | importer and runtime tests cover equipment, item metadata, and mob drop-experience field preservation/consumption; complete Mythic catalog not covered |
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-horse-chest-20261031-r2` completes the registered report contract with 230 observed probes (220 passed plus 10 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-scale-20261031-r2` completes the registered report contract with 231 observed probes (220 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 ## Release Gate
 
@@ -1212,14 +1212,20 @@ reproducible through
 `tools/paper-integration/fetch-paper-1.21.1.ps1`, which verifies `version.json`
 and SHA-256 before writing `srv-1.21.1/paper.jar`.
 
-The latest strict Paper 1.21.1-133 fixture `srv-paper-integration-horse-chest-20261031-r2`
+The earlier strict Paper 1.21.1-133 fixture `srv-paper-integration-horse-chest-20261031-r2`
 passed with 230 observed probes: 220 `passed`, 10 expected
 `observed-rejected`, and zero incomplete. Its Horse probe records
 `horse-options result=true saddled=true armor=true chest=true` through the
 production option and equipment paths; `HorseArmor` is read back through
 `ArmoredHorseInventory#getArmor`, and `CarryingChest` is read back from a real
-Donkey through `ChestedHorse#isCarryingChest`. The same run retains Adult,
-PatrolSpawnPoint, Armor Stand, Interactable/Armor Stand event, and
+Donkey through `ChestedHorse#isCarryingChest`.
+
+The latest strict Paper 1.21.1-133 fixture `srv-paper-integration-scale-20261031-r2`
+passed with 231 observed probes: 220 `passed`, 11 expected
+`observed-rejected`, and zero incomplete. Its Scale probe records
+`scale-options result=true scale=1.25` from the real configured
+`mobs/scale_probe.yml` path. The same run retains Horse, Adult,
+PatrolSpawnPoint, Armor Stand, Interactable/Armor Stand event, vehicle, and
 `aiRoute=passed` evidence.
 
 Latest Paper evidence: `srv-paper-integration-vehicle-fix-20261015` reconfirmed
