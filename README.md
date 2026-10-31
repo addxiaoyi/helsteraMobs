@@ -5,9 +5,9 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
-the report contract passes with `230/230` probes observed (`219 passed` and
-`11 expected negative-control observations`) in fixture
-`srv-paper-integration-interactable-20261031`.
+the report contract passes with `230/230` probes observed (`220 passed` and
+`10 expected negative-control observations`) in fixture
+`srv-paper-integration-armor-stand-20261031`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -190,7 +190,7 @@ full MythicMobs parity.
 - Trigger dispatch audit now requires every `wired=true` trigger to have an auditable direct-event, derived-sampler, condition-sampler, potion-event, or signal-bus source; `TriggerDispatchAuditTest` covers the classification.
 - Exploratory Paper 1.21.11 SkillTree restart fixture `srv-paper-skilltree-restart-034f7c7c184b48a9b2c57db5453effdb` now passes a two-boot persistent-chunk/entity/snapshot workflow; persistent chunk retention is released after the last managed persistent mob dies.
 - Exploratory Paper 1.21.11 player fixture `srv-paper-integration-exploratory-20261020-target-glowing-client` now records `targetStateConditions=passed` after setting and restoring a real player's glowing state; strict Paper 1.21.1 evidence remains pending.
-- Mythic `Options.Interactable` now maps to the managed runtime policy with its documented imported default, and strict Paper 1.21.1 fixture `srv-paper-integration-interactable-20261031` records the protected/control player interaction pair as `interactable=true`.
+- Mythic `Options.Interactable` now maps to the managed runtime policy with its documented imported default, and strict Paper 1.21.1 fixture `srv-paper-integration-armor-stand-20261031` records protected/control player interaction and Armor Stand manipulation pairs as `interactable=true` and `interactable-armor-stand=true`.
 
 ### Remaining Work
 

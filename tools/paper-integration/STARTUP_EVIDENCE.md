@@ -2047,3 +2047,16 @@ event is cancelled and the control remains allowed. This is server-side event
 evidence and does not claim natural client timing or complete Armor Stand
 manipulation parity.
 
+The latest strict fixture `srv-paper-integration-armor-stand-20261031` passed
+with 230 observed probes: 220 `passed`, 10 expected `observed-rejected`, and
+zero incomplete. Its event line extends the assertion with:
+
+```text
+interactable=true interactable-armor-stand=true
+```
+
+The second flag comes from Paper's dedicated
+`PlayerArmorStandManipulateEvent` path, using protected and control Armor
+Stands bound to the same production instance manager. Natural client timing
+remains outside this server-side evidence.
+

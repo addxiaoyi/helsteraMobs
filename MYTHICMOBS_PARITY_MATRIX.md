@@ -1111,7 +1111,7 @@ native target route: `tempt=passed`, `entityTargetBukkit=passed`, and
 | Area | Status | Evidence / remaining work |
 | --- | --- | --- |
 | Universal options | mapped-unverified | `SpawnOptions` and entity application cover many fields; reason/cause options accept both YAML lists and Mythic delimited scalar values; strict fixtures r36/r37/r41 verify vanilla and killer-owned drop prevention, including custom victim loot suppression; r42/r43 verify Silverfish block infection and Snow Golem snow formation guards; r44 verifies family-aware `PreventConversion`; r47 verifies Enderman `HeldBlock` maps into `entity.held-block` and production `setCarriedBlock` reads OBSIDIAN back; `PreventSunburn` strict fixture verifies sunlight-only cancellation; event probes cover leash/rename/target/projectile/explosion/drowning/fall/fire/pickup/item-use/teleport/mount/transformation policies and cause allowlists; r38 spawn-option runtime probe verifies pickup precedence, random gear clearing while retaining explicit equipment, and `NoDamageTicks`; broader natural event ordering remains unverified |
-| Interactable | mapped-unverified | Mythic `Options.Interactable` maps to `mob.interactable`, applying the documented Mythic default `false` on imported configs; managed entity and Armor Stand manipulation events are denied when false, while `PreventItemUse` continues to deny item interactions independently. Strict Paper 1.21.1-133 fixture `srv-paper-integration-interactable-20261031` dispatches real-player interaction events against a non-interactable managed Wolf and an interactable control, recording `interactable=true`; broader client/Armor Stand timing remains open |
+| Interactable | mapped-unverified | Mythic `Options.Interactable` maps to `mob.interactable`, applying the documented Mythic default `false` on imported configs; managed entity and Armor Stand manipulation events are denied when false, while `PreventItemUse` continues to deny item interactions independently. Strict Paper 1.21.1-133 fixture `srv-paper-integration-armor-stand-20261031` dispatches real-player interaction and Armor Stand manipulation events against protected/control pairs, recording `interactable=true interactable-armor-stand=true`; broader client timing remains open |
 | Age, Baby, AgeLock | mapped-unverified | `Ageable` setter path and proxy tests; strict Paper 1.21.1-133 fixture `srv-paper-integration-final-r18` applies `age=-24000`, `baby=true`, and `age-lock=true` through the production path on a real Sheep and records `age-options result=true`; non-Ageable entity-specific baby APIs remain separate |
 | Angry, Tamed, Raider flags | mapped-unverified | Wolf/PigZombie/Raider/Tameable setters and tests; strict Paper 1.21.1-133 fixture `srv-paper-integration-final-r19` applies and reads back real Wolf `Tamed`/`Angry` and Pillager `PatrolLeader`, while `CanJoinRaid` is verified as a successful production setter call because Paper 1.21.1 exposes no getter |
 | Size, Slime split | mapped-unverified | fixed Mythic `Options.Size` and inclusive positive integer ranges now migrate to fixed `entity.size` or `entity.size-min`/`size-max`; Paper applies the range once at spawn to Slime/MagmaCube/Phantom. `PreventSlimeSplit` maps to the production `SlimeSplitEvent` cancellation path, with strict Paper 1.21.1-133 `mobOptionsSlimeSplit` verifying protected cancellation and control allowance; end-to-end natural split-size distribution remains open |
@@ -1189,7 +1189,7 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-interactable-20261031` completes the registered report contract with 230 observed probes (219 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-armor-stand-20261031` completes the registered report contract with 230 observed probes (220 passed plus 10 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 ## Release Gate
 
@@ -1212,12 +1212,13 @@ reproducible through
 `tools/paper-integration/fetch-paper-1.21.1.ps1`, which verifies `version.json`
 and SHA-256 before writing `srv-1.21.1/paper.jar`.
 
-The latest strict Paper 1.21.1-133 fixture `srv-paper-integration-interactable-20261031`
-passed with 230 observed probes: 219 `passed`, 11 expected
+The latest strict Paper 1.21.1-133 fixture `srv-paper-integration-armor-stand-20261031`
+passed with 230 observed probes: 220 `passed`, 10 expected
 `observed-rejected`, and zero incomplete. Its `events` probe records
-`interactable=true` after a real online player interaction is cancelled for a
-non-interactable managed Wolf and allowed for an interactable control; the same
-run also retains the `aiRoute=passed` waypoint evidence.
+`interactable=true interactable-armor-stand=true` after real online-player
+interaction and Armor Stand manipulation events are cancelled for protected
+managed entities and allowed for controls; the same run retains the
+`aiRoute=passed` waypoint evidence.
 
 Latest Paper evidence: `srv-paper-integration-vehicle-fix-20261015` reconfirmed
 the implemented entity-option, condition, item, loot, spawner, and Audience
