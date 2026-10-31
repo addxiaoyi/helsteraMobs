@@ -1052,6 +1052,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (followRangeProbeId > 0) instances().despawn(followRangeProbeId);
                 }
 
+                if (mobConfig("damage_probe") != null) {
+                    int damageProbeId = spawnMobAt("damage_probe", origin.clone().add(11, 0, 0), null);
+                    var damageProbe = damageProbeId > 0 ? instances().impl(damageProbeId) : null;
+                    var damageEntity = damageProbe == null ? null : damageProbe.baseEntity().orElse(null);
+                    var damageAttribute = damageEntity instanceof org.bukkit.entity.LivingEntity living
+                            ? living.getAttribute(resolveAttribute("ATTACK_DAMAGE")) : null;
+                    double observedAttackDamage = damageAttribute == null
+                            ? Double.NaN : damageAttribute.getBaseValue();
+                    boolean damageOptions = Math.abs(observedAttackDamage - 12.0) < 1.0e-9;
+                    getLogger().info("[自检] damage-options result=" + damageOptions
+                            + " base=" + observedAttackDamage);
+                    if (damageProbeId > 0) instances().despawn(damageProbeId);
+                }
+
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);
@@ -7011,6 +7025,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     cfg.getDouble("move-speed", cfg.getDouble("movement-speed", Double.NaN))));
             applyBaseAttribute(ent, "FOLLOW_RANGE", cfg.getDouble("mob.sight-radius",
                     cfg.getDouble("follow-range", cfg.getDouble("mob.follow-range", Double.NaN))));
+            applyBaseAttribute(ent, "ATTACK_DAMAGE", cfg.getDouble("mob.attack-damage",
+                    cfg.getDouble("attack-damage", Double.NaN)));
             ent.setCustomNameVisible(opts.showName());
             if (ent instanceof org.bukkit.entity.Mob mobEntity) {
                 mobEntity.setAware(!entitySec.getBoolean("no-ai", opts.noAi()));
