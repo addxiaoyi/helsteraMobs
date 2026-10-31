@@ -1038,6 +1038,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (knockbackProbeId > 0) instances().despawn(knockbackProbeId);
                 }
 
+                if (mobConfig("follow_range_probe") != null) {
+                    int followRangeProbeId = spawnMobAt("follow_range_probe", origin.clone().add(10, 0, 0), null);
+                    var followRangeProbe = followRangeProbeId > 0 ? instances().impl(followRangeProbeId) : null;
+                    var followRangeEntity = followRangeProbe == null ? null : followRangeProbe.baseEntity().orElse(null);
+                    var followRangeAttribute = followRangeEntity instanceof org.bukkit.entity.LivingEntity living
+                            ? living.getAttribute(resolveAttribute("FOLLOW_RANGE")) : null;
+                    double observedFollowRange = followRangeAttribute == null
+                            ? Double.NaN : followRangeAttribute.getBaseValue();
+                    boolean followRangeOptions = Math.abs(observedFollowRange - 40.0) < 1.0e-9;
+                    getLogger().info("[自检] follow-range-options result=" + followRangeOptions
+                            + " base=" + observedFollowRange);
+                    if (followRangeProbeId > 0) instances().despawn(followRangeProbeId);
+                }
+
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);
@@ -6995,6 +7009,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             applyBaseAttribute(ent, "ATTACK_SPEED", cfg.getDouble("entity.attack-speed", cfg.getDouble("attack-speed", Double.NaN)));
             applyBaseAttribute(ent, "MOVEMENT_SPEED", cfg.getDouble("mob.move-speed",
                     cfg.getDouble("move-speed", cfg.getDouble("movement-speed", Double.NaN))));
+            applyBaseAttribute(ent, "FOLLOW_RANGE", cfg.getDouble("mob.sight-radius",
+                    cfg.getDouble("follow-range", cfg.getDouble("mob.follow-range", Double.NaN))));
             ent.setCustomNameVisible(opts.showName());
             if (ent instanceof org.bukkit.entity.Mob mobEntity) {
                 mobEntity.setAware(!entitySec.getBoolean("no-ai", opts.noAi()));

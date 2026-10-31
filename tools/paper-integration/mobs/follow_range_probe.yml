@@ -1,0 +1,7 @@
+name: Follow Range Probe
+model: example/emberling
+mob:
+  sight-radius: 40
+entity:
+  type: ZOMBIE
+  silent: true
