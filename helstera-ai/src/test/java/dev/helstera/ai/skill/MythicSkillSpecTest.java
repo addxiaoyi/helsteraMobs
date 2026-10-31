@@ -46,6 +46,13 @@ class MythicSkillSpecTest {
         assertEquals(List.of("health{h=1}"), spec.inlineConditions());
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage @target >"));
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage @target > missing"));
+        for (String separator : List.of(">", " >", "> ", " > ")) {
+            var chained = MythicSkillSpec.parse("damage @living{filter=players}" + separator + "@nearestmob");
+            assertEquals("living{filter=players} > @nearestmob", chained.targeter());
+            assertEquals(List.of(), chained.positional());
+        }
+        var comparison = MythicSkillSpec.parse("damage @nearestConditionalTarget{conditions=[health{h=>5}]} > @nearest");
+        assertEquals("nearestConditionalTarget{conditions=[health{h=>5}]} > @nearest", comparison.targeter());
     }
 
     @Test

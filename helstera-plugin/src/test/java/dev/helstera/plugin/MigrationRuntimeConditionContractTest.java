@@ -82,6 +82,13 @@ class MigrationRuntimeConditionContractTest {
         assertNotNull(filteredContext);
         assertTrue(registry.runAction(filteredContext, playerContext));
         verify(player, never()).damage(eq(8.0), any(org.bukkit.entity.Entity.class));
+        for (String separator : List.of(">", " >", "> ")) {
+            String compactChain = skills.bindAction(
+                    "damage{amount=9} @Target{}" + separator + "@living{filter=mob}");
+            assertNotNull(compactChain);
+            assertTrue(registry.runAction(compactChain, playerContext));
+        }
+        verify(player, never()).damage(eq(9.0), any(org.bukkit.entity.Entity.class));
     }
 
     private static final Pattern EXPECTED_TRANSLATION = Pattern.compile(
