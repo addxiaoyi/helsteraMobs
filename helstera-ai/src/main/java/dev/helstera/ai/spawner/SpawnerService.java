@@ -689,6 +689,24 @@ public final class SpawnerService {
         return list.size();
     }
 
+    /**
+     * Returns the currently live instance IDs tracked by a spawner.
+     *
+     * <p>The snapshot is intentionally read-only and prunes invalid instances
+     * through the same injected liveness check as {@link #aliveCount(String)}.
+     * The plugin uses it for lifecycle diagnostics without exposing the
+     * mutable tracking list.</p>
+     */
+    public List<Integer> trackedInstanceIds(String id) {
+        if (id == null) return List.of();
+        List<Integer> list = alive.get(id.toLowerCase(Locale.ROOT));
+        if (list == null) return List.of();
+        synchronized (list) {
+            list.removeIf(i -> i == null || !isAlive(i));
+            return List.copyOf(list);
+        }
+    }
+
     /** 实例是否仍存活；由插件层注入实例存活判定，避免 ai 模块依赖实例实现。 */
     private java.util.function.IntPredicate aliveCheck = id -> false;
 

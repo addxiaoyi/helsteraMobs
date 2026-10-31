@@ -176,6 +176,20 @@ spawners:
     min-players: 0
     players-radius: 0.0
     enabled: true
+  recycle_probe:
+    mob: emberling
+    world: ""
+    x: 20.5
+    y: 70
+    z: 0.5
+    radius: 6.0
+    y-range: 0.0
+    interval: 40
+    max-alive: 1
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: true
   region_probe:
     mob: emberling
     world: ""

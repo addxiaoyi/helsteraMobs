@@ -1210,7 +1210,7 @@ restores the player's prior glowing state.
 
 | Area | Status | Evidence / remaining work |
 | --- | --- | --- |
-| Spawner parsing, cooldown, max-alive, persistence | mapped-unverified | `SpawnerServiceTest`, state file and diagnostic APIs; Mythic `cooldown` now aliases `interval`; `max-per-world`/`max-per-player` plus `per-world-limit`/`per-player-limit` aliases enforce lifetime scoped quotas, scoped counters survive state round trips, and config reload retains alive-instance tracking; shared scheduler cooldowns now advance by real elapsed server ticks instead of multiplying the configured interval by the scheduler period; strict fixture `srv-paper-integration-armor-stand-20261031` verifies live scheduler timing (`spawnerNaturalTiming`), failed-spawn cooldown preservation, scoped quotas, and max-spawns; broader restart/natural lifecycle semantics remain open |
+| Spawner parsing, cooldown, max-alive, persistence | mapped-unverified | `SpawnerServiceTest`, state file and diagnostic APIs; Mythic `cooldown` now aliases `interval`; `max-per-world`/`max-per-player` plus `per-world-limit`/`per-player-limit` aliases enforce lifetime scoped quotas, scoped counters survive state round trips, and config reload retains alive-instance tracking; shared scheduler cooldowns now advance by real elapsed server ticks instead of multiplying the configured interval by the scheduler period; strict fixture `srv-paper-integration-exp-20261031-r28` verifies live scheduler timing (`spawnerNaturalTiming`), failed-spawn cooldown preservation, scoped quotas, max-spawns, and natural instance recycling (`spawnerRecycle`); broader restart/natural lifecycle semantics remain open |
 | Random weighted mob pools | mapped-unverified | `RandomSpawnPoolTest` plus strict fixture `srv-paper-integration-armor-stand-20261031`, which records 100 production samples near the expected 0.5/0.5 distribution with max deviation 0.02; broader sample sizes and drop-table coupling remain unverified |
 | Spawner conditions and regions | mapped-unverified | condition/region hooks and composite `all{}` evaluation exist; scalar/list condition parsing preserves range and coordinate commas; strict fixture `srv-paper-integration-exp-20261031-r27` proves passing/rejected weather, time, biome, composite, world/Y, player/world, and named-region gates with fail-closed results; broader randomized combinations remain unverified |
 | Heightmap, ground, border and player gates | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-armor-stand-20261031` proves natural ground spawn, heightmap surface selection, border clipping/rejection, closed player-gate rejection, player-scoped limit rejection, unloaded-chunk rejection, unreadable-light rejection, and `max-spawns=1`; `player-distance` is accepted as a runtime alias for `players-radius`, while broader randomized terrain combinations remain unverified |
@@ -1226,10 +1226,10 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-exp-20261031-r27` completes the registered report contract with 248 observed probes (237 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, real client-driven Shield `is-blocking`, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, Armor, root Exp, `Options.Despawn`/`Persistent`, `VisibleByDefault`/`Invisible`/`AlwaysShowName`, manual and natural-scheduler Spawner group-limit enforcement, named-region positive/negative gates, and the complete managed vehicle lifecycle, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-exp-20261031-r28` completes the registered report contract with 250 observed probes (239 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, real client-driven Shield `is-blocking`, natural Spawner recycling, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, Armor, root Exp, `Options.Despawn`/`Persistent`, `VisibleByDefault`/`Invisible`/`AlwaysShowName`, manual and natural-scheduler Spawner group-limit enforcement, named-region positive/negative gates, and the complete managed vehicle lifecycle, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 The current latest report superseding the historical row summary is strict
-fixture `srv-paper-integration-exp-20261031-r27`: 248 probes, 237 passed,
+fixture `srv-paper-integration-exp-20261031-r28`: 250 probes, 239 passed,
 11 expected negative controls, and zero incomplete, including positive and
 negative named-region gates.
 
@@ -1258,6 +1258,12 @@ line `spawner-region id=region_probe requested=true region=integration_box
 failure=null` and the negative line
 `spawner-region-outside id=region_probe_outside requested=false
 region=integration_box failure=conditions rejected location`.
+
+Strict fixture `srv-paper-integration-exp-20261031-r28` adds natural Spawner
+instance recycling, recording `before=2 after=3 released=true respawned=true
+alive=1 interval=40`. The probe removes a real tracked instance, observes the
+`max-alive=1` slot release, and verifies the shared scheduler creates the next
+instance.
 
 ## Release Gate
 

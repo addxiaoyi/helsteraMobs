@@ -5,9 +5,9 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
-the report contract passes with `248/248` probes observed (`237 passed` and
+the report contract passes with `250/250` probes observed (`239 passed` and
 `11 expected negative-control observations`) in fixture
-`srv-paper-integration-exp-20261031-r27`.
+`srv-paper-integration-exp-20261031-r28`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -28,8 +28,8 @@ follows:
 3. **Spawner**: the latest strict fixture now proves natural scheduler timing,
    failed-spawn cooldown preservation, random pools, terrain, player/world
    conditions including named-region rejection, unloaded chunks, and
-   unreadable-light fail-closed behavior; continue broader natural spawn
-   lifecycle and drop-table semantics.
+   unreadable-light fail-closed behavior, plus natural instance recycling after
+   removal; continue broader natural spawn lifecycle and drop-table semantics.
 4. **Release gate**: add tests before implementation changes, keep the
    focused Java suite green, require the report fixture and Python resolver to
    pass, and record every strict Paper `not-observed` probe instead of calling
@@ -212,8 +212,9 @@ full MythicMobs parity.
 - Mythic `VisibleByDefault`, `Invisible`, and `AlwaysShowName` now have a dedicated real-entity config-to-instance probe; strict fixture `srv-paper-integration-exp-20261031-r19` records `visibility-options result=true visible-by-default=true invisible=true show-name=true`.
 - Spawner group limits now have strict Paper evidence: `group-size=3-5` with `max-alive=2` produces `alive=2 total=2` and reports `limit=true` in fixture `srv-paper-integration-exp-20261031-r20`.
 - Natural scheduler group limits now have strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r21` records `before=2 after=4 alive=2 max-alive=2 group-min=3 group-max=5 limit=true`.
-- Named Spawner region gates now have strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r27` records both the in-region success and the out-of-region rejection (`spawner-region-outside id=region_probe_outside requested=false region=integration_box failure=conditions rejected location`).
+- Named Spawner region gates now have strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r28` records both the in-region success and the out-of-region rejection (`spawner-region-outside id=region_probe_outside requested=false region=integration_box failure=conditions rejected location`).
 - Mythic `Blocking`/`is-blocking` now has strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r27` keeps a real online player in a client-driven Shield-use window and records `stateBlocking=passed`.
+- Spawner natural recycling now has strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r28` records `released=true respawned=true alive=1` after removing a real tracked instance.
 - Vehicle enter/exit/dismount/eject/destroy trigger coverage is now lifecycle-independent from the online player probe; strict fixture `srv-paper-integration-exp-20261031-r17` records `vehicle-events enter=true exit=true dismount=true eject=true destroy=true`.
 
 ### Remaining Work

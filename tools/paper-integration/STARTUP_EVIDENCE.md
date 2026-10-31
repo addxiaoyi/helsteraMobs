@@ -2368,6 +2368,19 @@ looking-at-condition-details positive=true negative=true
 The menu client keeps `HelsteraTester` in a real Shield-use window; the
 production self-test then evaluates `Player#isBlocking` without rewriting the
 client's active-use inventory state. Historical exploratory fixtures r43 and
-r126 remain as evidence of the earlier timing failure, while r27 is the
-current release evidence.
+r126 remain as evidence of the earlier timing failure; r27 is the strict
+condition evidence and r28 is the current overall release fixture.
+
+The latest strict fixture `srv-paper-integration-exp-20261031-r28` passed
+Paper 1.21.1-133 with 250 observed probes: 239 `passed`, 11 expected
+`observed-rejected`, and zero incomplete. It adds the natural Spawner recycle
+probe:
+
+```text
+spawner-recycle id=recycle_probe before=2 after=3 released=true respawned=true alive=1 interval=40 passed=true
+```
+
+The probe removes a real tracked instance, observes the runtime cleanup release
+the `max-alive=1` slot, and then observes the shared scheduler create the next
+instance before disabling and cleaning the fixture probe.
 

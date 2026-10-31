@@ -124,6 +124,7 @@ try {
         '[Server thread/INFO]: spawner-max-spawns id=max_spawn_probe first=true second=false total=1 failure=max spawns reached',
         '[Server thread/INFO]: spawner-group id=group_probe requested=true alive=2 total=2 max-alive=2 group-min=3 group-max=5 limit=true',
         '[Server thread/INFO]: spawner-natural-group id=natural_group_probe mode=live-scheduler before=0 after=2 alive=2 max-alive=2 group-min=3 group-max=5 limit=true',
+        '[Server thread/INFO]: spawner-recycle id=recycle_probe before=1 after=2 released=true respawned=true alive=1 interval=40',
         '[Server thread/INFO]: spawner-region id=region_probe requested=true region=integration_box failure=null',
         '[Server thread/INFO]: spawner-region-outside id=region_probe_outside requested=false region=integration_box failure=conditions rejected location',
         '[Server thread/INFO]: spawner-scoped-limits id=scoped_limit_probe first=true second=false total=1 world-limit=1 failure=scoped spawn limits reached',
@@ -343,6 +344,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'spawnerMaxSpawns').status -eq 'passed') 'spawner max-spawns probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerGroup').status -eq 'passed') 'spawner group limit probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerNaturalGroup').status -eq 'passed') 'natural spawner group limit probe'
+    Assert-True (($report.probes | Where-Object id -eq 'spawnerRecycle').status -eq 'passed') 'spawner natural recycle probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerRegion').status -eq 'passed') 'spawner region probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerRegionOutside').status -eq 'passed') 'spawner region outside negative probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerScopedLimits').status -eq 'passed') 'spawner scoped-limits probe'
