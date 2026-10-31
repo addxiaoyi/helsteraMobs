@@ -2893,6 +2893,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean targeterNegativeFilter = dev.helstera.api.behavior.Targeters.select(
                         "@living{filter=!mob}", modelInstance,
                         java.util.List.of(nearTarget, farTarget), java.util.List.of()).isEmpty();
+                boolean targeterInvalidLimits = dev.helstera.api.behavior.Targeters.select(
+                        "@living{limit=invalid}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of()).isEmpty()
+                        && dev.helstera.api.behavior.Targeters.select(
+                        "@living{radius=NaN}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of()).isEmpty()
+                        && dev.helstera.api.behavior.Targeters.select(
+                        "@living{limit=1}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of()).size() == 1;
                 boolean spatialTargeters = sphereTargeter && ringTargeter && coneTargeter
                         && lineOfSightTargeter && lineTargeter && lineNamedTargeter
                         && monsterCategoryTargeter && animalCategoryTargeter
@@ -2932,6 +2941,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " targeter-controls=" + targeterControls
                         + " targeter-limit-zero=" + targeterLimitZero
                         + " targeter-negative-filter=" + targeterNegativeFilter
+                        + " targeter-invalid-limits=" + targeterInvalidLimits
                         + " lineofsight-blocked=" + lineOfSightBlocked
                         + " sphere-boundary=" + sphereBoundary
                         + " ring-boundary=" + ringBoundary
