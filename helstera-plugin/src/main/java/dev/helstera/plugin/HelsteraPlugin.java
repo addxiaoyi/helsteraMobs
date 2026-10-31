@@ -6942,12 +6942,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && playersInWorld.stream().noneMatch(candidate -> !(candidate instanceof org.bukkit.entity.Player));
                 boolean worldMobTarget = mobsInWorld.contains(monster)
                         && mobsInWorld.stream().noneMatch(candidate -> candidate instanceof org.bukkit.entity.Player);
+                var nearestCandidates = List.<org.bukkit.entity.LivingEntity>of(holder, monster);
+                var nearestLiving = dev.helstera.api.behavior.Targeters.select(
+                        "@NearestLivingEntity", worldTargetContext, nearestCandidates, List.of());
+                var nearestMob = dev.helstera.api.behavior.Targeters.select(
+                        "@NearestMob", worldTargetContext, nearestCandidates, List.of());
+                double holderDistance = instance.location().distanceSquared(holder.getLocation());
+                double monsterDistance = instance.location().distanceSquared(monster.getLocation());
+                boolean nearestLivingTarget = nearestLiving.size() == 1
+                        && nearestLiving.get(0) == (holderDistance <= monsterDistance ? holder : monster);
+                boolean nearestMobTarget = nearestMob.size() == 1 && nearestMob.get(0) == monster;
 
                 boolean goals = controller.selectorDiagnostic().contains("can-attack=false")
                         || controller.selectorDiagnostic().contains("can-chase=false");
                 boolean passed = playerTarget && monsterTarget && clearNoFallback
                         && ownerTarget && factionTarget && conditionalTarget
                         && worldPlayerTarget && worldMobTarget
+                        && nearestLivingTarget && nearestMobTarget
                         && setTargetMechanic && clearTargetMechanic
                         && mob.getTarget() == holder;
                 getLogger().info("ai-selector-core goals=" + goals
@@ -6959,6 +6970,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " conditional-target=" + conditionalTarget
                         + " players-in-world=" + worldPlayerTarget
                         + " mobs-in-world=" + worldMobTarget
+                        + " nearest-living=" + nearestLivingTarget
+                        + " nearest-mob=" + nearestMobTarget
                         + " set-target-mechanic=" + setTargetMechanic
                         + " clear-target-mechanic=" + clearTargetMechanic
                         + " native-target=" + (mob.getTarget() == holder)

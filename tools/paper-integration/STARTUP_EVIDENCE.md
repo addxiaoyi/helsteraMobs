@@ -2418,3 +2418,9 @@ spawner-persistence stage=verify before=1 after=1 restored=true result=true
 
 The dedicated script is `tools/paper-integration/test-spawner-restart.ps1`.
 
+Strict Paper 1.21.1-133 fixture `srv-paper-nearest-20261031-r1` recorded
+251 observed probes (239 passed, 12 expected rejected, zero incomplete).
+Its managed selector probe records `nearest-living=true nearest-mob=true`:
+the selected living entity is the nearer of two candidates, and the mob
+selector returns the non-player candidate as a single result.
+
