@@ -185,6 +185,15 @@ class MythicAgeOptionsTest {
     }
 
     @Test
+    void appliesSaddledOptionThroughSteerableApi() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var steerable = proxy(org.bukkit.entity.Steerable.class, calls);
+        HelsteraPlugin.applyEntitySpecificOptions(steerable,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("saddled: true")));
+        assertEquals(true, calls.get("setSaddle"), calls.toString());
+    }
+
+    @Test
     void appliesAngryStateToWolvesAndZombifiedPiglins() {
         Map<String, Object> wolfCalls = new LinkedHashMap<>();
         Map<String, Object> piglinCalls = new LinkedHashMap<>();

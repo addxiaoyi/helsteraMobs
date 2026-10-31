@@ -956,13 +956,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 horse.setMaxDomestication(20);
                 horse.setDomestication(5);
                 horse.setJumpStrength(0.8);
+                var horseSaddleOptions = new org.bukkit.configuration.file.YamlConfiguration();
+                horseSaddleOptions.set("saddled", true);
+                applyEntitySpecificOptions(horse, horseSaddleOptions);
                 entities.add(horse);
+                boolean horseSaddled = horse.getInventory().getSaddle() != null
+                        && horse.getInventory().getSaddle().getType() == org.bukkit.Material.SADDLE;
                 getLogger().info("[自检] horse-options result="
                         + (horse.getColor() == org.bukkit.entity.Horse.Color.WHITE
                         && horse.getStyle() == org.bukkit.entity.Horse.Style.WHITE_DOTS
                         && horse.getMaxDomestication() == 20
                         && horse.getDomestication() == 5
-                        && Math.abs(horse.getJumpStrength() - 0.8) < 1.0e-9));
+                        && Math.abs(horse.getJumpStrength() - 0.8) < 1.0e-9
+                        && horseSaddled)
+                        + " saddled=" + horseSaddled);
 
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
@@ -9046,6 +9053,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean angry = options.getBoolean("angry");
             if (entity instanceof org.bukkit.entity.Wolf wolf) wolf.setAngry(angry);
             else if (entity instanceof org.bukkit.entity.PigZombie pigZombie) pigZombie.setAngry(angry);
+        }
+        if (options.contains("saddled")) {
+            boolean saddled = options.getBoolean("saddled");
+            if (entity instanceof org.bukkit.entity.Steerable steerable) {
+                steerable.setSaddle(saddled);
+            } else if (entity instanceof org.bukkit.entity.AbstractHorse horse) {
+                horse.getInventory().setSaddle(saddled
+                        ? new org.bukkit.inventory.ItemStack(org.bukkit.Material.SADDLE) : null);
+            }
         }
         if (entity instanceof org.bukkit.entity.Bee bee) {
             if (options.contains("has-nectar")) bee.setHasNectar(options.getBoolean("has-nectar"));

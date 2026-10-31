@@ -2073,7 +2073,7 @@ target block at the real Pillager's spawn location after production option
 application. `CanJoinRaid` remains setter-only because Paper 1.21.1 has no
 corresponding public getter.
 
-The latest strict fixture `srv-paper-integration-armor-options-20261031-r3`
+The earlier strict fixture `srv-paper-integration-armor-options-20261031-r3`
 passed with 230 observed probes: 219 `passed`, 11 expected
 `observed-rejected`, and zero incomplete. Its Armor Stand option line is:
 
@@ -2087,6 +2087,18 @@ Stand fields, while importer aliases `HasArms`, `HasBasePlate`, `Marker`,
 production equipment path reads back the six canonical `Item*` slots as
 DIAMOND_CHESTPLATE, DIAMOND_BOOTS, DIAMOND_SWORD, SHIELD, DIAMOND_HELMET,
 and DIAMOND_LEGGINGS.
+
+The latest strict fixture `srv-paper-integration-saddled-20261031-r2` passed
+with 230 observed probes: 219 `passed`, 11 expected `observed-rejected`, and
+zero incomplete. Its Horse option line is:
+
+```text
+horse-options result=true saddled=true
+```
+
+This verifies the production `Saddled` option through Paper's
+`AbstractHorseInventory#setSaddle`; the runtime also supports `Steerable`
+entities such as Pig through `setSaddle(boolean)`.
 
 The strict fixture `srv-paper-integration-adult-20261031-r2` passed with 230
 observed probes: 219 `passed`, 11 expected `observed-rejected`, and zero

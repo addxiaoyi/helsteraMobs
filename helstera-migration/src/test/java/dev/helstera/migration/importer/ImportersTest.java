@@ -1957,6 +1957,7 @@ class ImportersTest {
                       AgeLock: true
                       Adult: true
                       Baby: true
+                      Saddled: true
                       CanJoinRaid: false
                       PatrolLeader: true
                       PatrolSpawnPoint: true
@@ -1988,6 +1989,7 @@ class ImportersTest {
         assertTrue(target.getBoolean("entity.age-lock"));
         assertTrue(target.getBoolean("entity.adult"));
         assertTrue(target.getBoolean("entity.baby"));
+        assertTrue(target.getBoolean("entity.saddled"));
         assertFalse(target.getBoolean("entity.can-join-raid", true));
         assertTrue(target.getBoolean("entity.patrol-leader"));
         assertTrue(target.getBoolean("entity.patrol-spawn-point"));
