@@ -1,0 +1,7 @@
+name: Damage Probe
+model: example/emberling
+mob:
+  attack-damage: 12
+entity:
+  type: ZOMBIE
+  silent: true

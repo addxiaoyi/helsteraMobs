@@ -5,9 +5,9 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
-the report contract passes with `235/235` probes observed (`224 passed` and
-`11 expected negative-control observations`) in fixture
-`srv-paper-integration-follow-range-20261031-r9`.
+the report contract passes with `236/236` probes observed (`226 passed` and
+`10 expected negative-control observations`) in fixture
+`srv-paper-integration-damage-20261031-r10`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -36,7 +36,7 @@ follows:
 
 Current checkpoint evidence is deliberately narrow: the focused Java suite
 and the latest strict Paper run are green, while the latest strict report
-records `passed=224`, `observed-rejected=11`, and `incomplete=0` across 235
+records `passed=226`, `observed-rejected=10`, and `incomplete=0` across 236
 registered probes. These numbers describe the development checkpoint, not
 full MythicMobs parity.
 
@@ -203,6 +203,7 @@ full MythicMobs parity.
 - Mythic `Options.MovementSpeed` now applies the migrated `mob.move-speed` value to the real Bukkit `MOVEMENT_SPEED` base attribute; strict fixture `srv-paper-integration-movement-speed-20261031-r6` reads back `base=0.4` from `mobs/movement_speed_probe.yml`.
 - Mythic `Options.KnockbackResistance` now maps to the production `mob.knockback-resistance` path and applies Bukkit `KNOCKBACK_RESISTANCE`; strict fixture `srv-paper-integration-knockback-resistance-20261031-r8` reads back `base=0.75` from `mobs/knockback_resistance_probe.yml`.
 - Mythic `Options.FollowRange` now applies the migrated `mob.sight-radius` value to Bukkit `FOLLOW_RANGE`; strict fixture `srv-paper-integration-follow-range-20261031-r9` reads back `base=40.0` from `mobs/follow_range_probe.yml`.
+- Mythic `Options.Damage` now applies the migrated `mob.attack-damage` value to Bukkit `ATTACK_DAMAGE`; strict fixture `srv-paper-integration-damage-20261031-r10` reads back `base=12.0` from `mobs/damage_probe.yml`.
 
 ### Remaining Work
 

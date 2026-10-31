@@ -2185,7 +2185,7 @@ Bukkit `KNOCKBACK_RESISTANCE` base attribute matched the configured value. The
 strict report catalog now contains 234 registered probes because this
 configuration-to-entity assertion is part of the release gate.
 
-The latest strict fixture
+The preceding strict fixture
 `srv-paper-integration-follow-range-20261031-r9` passed with 235 observed
 probes: 224 `passed`, 11 expected `observed-rejected`, and zero incomplete.
 Its FollowRange option line is:
@@ -2198,6 +2198,21 @@ This reads back the configured `mob.sight-radius: 40` from the real
 `mobs/follow_range_probe.yml` through `spawnMobCore`; the production Bukkit
 `FOLLOW_RANGE` base attribute matched the configured value. The strict report
 catalog now contains 235 registered probes because this
+configuration-to-entity assertion is part of the release gate.
+
+The latest strict fixture
+`srv-paper-integration-damage-20261031-r10` passed with 236 observed probes:
+226 `passed`, 10 expected `observed-rejected`, and zero incomplete. Its Damage
+option line is:
+
+```text
+damage-options result=true base=12.0
+```
+
+This reads back the configured `mob.attack-damage: 12` from the real
+`mobs/damage_probe.yml` through `spawnMobCore`; the production Bukkit
+`ATTACK_DAMAGE` base attribute matched the configured value. The strict report
+catalog now contains 236 registered probes because this
 configuration-to-entity assertion is part of the release gate.
 
 The strict fixture `srv-paper-integration-adult-20261031-r2` passed with 230
