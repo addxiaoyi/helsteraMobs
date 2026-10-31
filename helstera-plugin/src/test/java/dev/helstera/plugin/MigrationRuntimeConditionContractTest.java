@@ -6,6 +6,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -20,9 +21,56 @@ import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.*;
 
 /** Cross-module contract for translated conditions and mechanics used by migration tests. */
 class MigrationRuntimeConditionContractTest {
+
+    @Test
+    @DisplayName("migrated nearest mob targeter executes against the nearest non-player")
+    void migratedNearestMobSelectsTarget(@TempDir Path root) throws Exception {
+        Path source = root.resolve("Skills/target.yml");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                skills:
+                  target:
+                    Skills:
+                      - damage{amount=5} @Nearest_Mob
+                """);
+        var entries = new dev.helstera.migration.importer.MythicMobsImporter().convert(source);
+        String yaml = String.valueOf(entries.stream().filter(e -> e.containsKey("target-file"))
+                .findFirst().orElseThrow().get("content"));
+        String action = YamlConfiguration.loadConfiguration(new java.io.StringReader(yaml))
+                .getStringList("skills.target.on-decision").get(0);
+
+        var world = mock(org.bukkit.World.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var player = mock(org.bukkit.entity.Player.class);
+        var near = mock(org.bukkit.entity.LivingEntity.class);
+        var far = mock(org.bukkit.entity.LivingEntity.class);
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var origin = new org.bukkit.Location(world, 0, 64, 0);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(origin);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(player.getLocation()).thenReturn(new org.bukkit.Location(world, 1, 64, 0));
+        when(near.getLocation()).thenReturn(new org.bukkit.Location(world, 2, 64, 0));
+        when(far.getLocation()).thenReturn(new org.bukkit.Location(world, 5, 64, 0));
+        when(near.getWorld()).thenReturn(world);
+        when(near.getMaxHealth()).thenReturn(20.0);
+        when(near.getHealth()).thenReturn(20.0);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, null, 1, -1, 0, "test", null, null,
+                List.of(player, far, near), origin, null);
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+        String key = skills.bindAction(action);
+        assertNotNull(key, action);
+        assertTrue(registry.runAction(key, context));
+        verify(near).damage(5.0, caster);
+        verify(far, never()).damage(anyDouble(), any(org.bukkit.entity.Entity.class));
+        verify(player, never()).damage(anyDouble(), any(org.bukkit.entity.Entity.class));
+    }
 
     private static final Pattern EXPECTED_TRANSLATION = Pattern.compile(
             "assertEquals\\(\\\"([^\\\"]+)\\\"\\s*,\\s*t\\(");
