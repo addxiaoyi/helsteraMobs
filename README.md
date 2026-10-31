@@ -7,7 +7,7 @@ This compatibility effort is still in progress on Paper 1.21.1. The detailed aud
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
 the report contract passes with `251/251` probes observed (`240 passed` and
 `11 expected negative-control observations`) in fixture
-`srv-paper-integration-targeters-20261031-r2`.
+`srv-paper-integration-targeters-20261031-r3`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -218,6 +218,7 @@ full MythicMobs parity.
 - Mythic `Blocking`/`is-blocking` now has strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r27` keeps a real online player in a client-driven Shield-use window and records `stateBlocking=passed`.
 - Spawner natural recycling now has strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r28` records `released=true respawned=true alive=1` after removing a real tracked instance.
 - Spawner restart persistence now has Paper 1.21.1-133 evidence: fixture `srv-paper-spawner-restart-20261031-r2` performs two real plugin boots and records `stage=write before=0 after=1 generated=true result=true`, then `stage=verify before=1 after=1 restored=true result=true` from the same plugin data directory.
+- `set-target` and `clear-target` mechanics now have strict Paper evidence: fixture `srv-paper-integration-targeters-20261031-r3` records `set-target-mechanic=true clear-target-mechanic=true` after dispatching both actions through the production `SkillService` to a managed Bukkit Mob.
 - Vehicle enter/exit/dismount/eject/destroy trigger coverage is now lifecycle-independent from the online player probe; strict fixture `srv-paper-integration-exp-20261031-r17` records `vehicle-events enter=true exit=true dismount=true eject=true destroy=true`.
 
 ### Remaining Work

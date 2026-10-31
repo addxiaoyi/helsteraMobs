@@ -25,11 +25,15 @@ powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 
 
 The latest Paper 1.21.1-133 strict fixture completes 251 registered probes: 240
 positive observations and 11 expected negative-control observations. The
-current release evidence is `srv-paper-integration-targeters-20261031-r2`; earlier
+current release evidence is `srv-paper-integration-targeters-20261031-r3`; earlier
 fixture counts in this document are historical checkpoints.
 
 The follow-up fixture also verifies the root Mythic `Exp` path through
 `exp-options result=true experience=13 event=true`.
+
+The AI selector probe also dispatches the production `set-target` and
+`clear-target` mechanics and records both target mutation and cleanup on the
+managed Bukkit Mob.
 
 It also records the complete managed vehicle lifecycle probe:
 `vehicle-events enter=true exit=true dismount=true eject=true destroy=true`.
