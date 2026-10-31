@@ -233,7 +233,7 @@ $probeSpecs = [ordered]@{
     threatActions = 'skill-targeter .*threat-actions=true'
     blockEvents = 'block-events (?:.*break=true .*place=true|.*synthetic-break=true synthetic-place=true) .*player=\S+'
     itemPickup = 'item-pickup trigger=true player=\S+'
-    vehicleEvents = 'vehicle-events .*enter=true .*exit=true .*dismount=true .*player=\S+'
+    vehicleEvents = 'vehicle-events .*enter=true .*exit=true .*dismount=true .*destroy=true .*player=\S+'
     ejectPassenger = 'vehicle-events .*eject=true .*player=\S+'
     environmentalDamage = 'environmental-damage trigger=true fire-ticks=-?[0-9]+'
     spawnerMaxSpawns = 'spawner-max-spawns id=max_spawn_probe first=true second=false total=1'

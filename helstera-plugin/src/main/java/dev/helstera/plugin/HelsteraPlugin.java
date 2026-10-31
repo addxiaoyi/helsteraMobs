@@ -4641,7 +4641,6 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                     + " player=" + holder.getName());
                             if (pickupItem.isValid()) pickupItem.remove();
                         }, 10L);
-                        var blockProbeForDismount = blockProbe;
                         getServer().getScheduler().runTaskLater(this, () -> {
                             boolean itemPickup = "\u00a7aITEM_PICKUP_OK".equals(holder.getCustomName());
                             getLogger().info("item-pickup trigger=" + itemPickup
@@ -4665,32 +4664,54 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             } catch (RuntimeException ignored) {
                                 // Keep the vehicle probe isolated from player respawn timing.
                             }
+                            // Use an independent managed passenger. The online player is
+                            // intentionally exercised by other probes and may die or be
+                            // rebound before this delayed vehicle workflow runs.
+                            var vehiclePassengerEntity = world.spawnEntity(
+                                    holder.getLocation().clone().add(0, 0, 2),
+                                    org.bukkit.entity.EntityType.ARMOR_STAND);
+                            if (!(vehiclePassengerEntity instanceof org.bukkit.entity.LivingEntity vehiclePassenger)) {
+                                if (vehiclePassengerEntity.isValid()) vehiclePassengerEntity.remove();
+                                getLogger().warning("vehicle-events probe could not create a living passenger");
+                                return;
+                            }
+                            var vehicleProbeForEvents = instances().bind("example/emberling",
+                                    vehiclePassenger,
+                                    dev.helstera.api.instance.SpawnOptions.defaults());
+                            var vehicleProfile = new dev.helstera.ai.AiProfile("paper-vehicle-probe");
+                            vehicleProfile.triggers.put("on-vehicle-enter", vehicleEnterSpec);
+                            vehicleProfile.triggers.put("on-vehicle-exit", vehicleExitSpec);
+                            vehicleProfile.triggers.put("on-vehicle-destroy", vehicleDestroySpec);
+                            aiManager.attach((dev.helstera.runtime.instance.ModelInstanceImpl)
+                                    vehicleProbeForEvents, vehicleProfile);
                             // Paper 1.21.11 no longer accepts the Boat interface
                             // as a reflective spawn class; use a concrete entity type.
                             var spawnedBoat = world.spawnEntity(
-                                    holder.getLocation().clone().add(0, 0, 2),
+                                    vehiclePassenger.getLocation(),
                                     org.bukkit.entity.EntityType.BOAT);
                             if (!(spawnedBoat instanceof org.bukkit.entity.Boat boat)) {
+                                if (vehiclePassenger.isValid()) vehiclePassenger.remove();
+                                instances().despawn(vehicleProbeForEvents.instanceId());
                                 getLogger().warning("vehicle-events probe could not create a BOAT");
                                 return;
                             }
-                            boat.addPassenger(holder);
-                            boolean vehicleEnter = "\u00a7bVEHICLE_ENTER_OK".equals(holder.getCustomName());
+                            boat.addPassenger(vehiclePassenger);
+                            boolean vehicleEnter = "\u00a7bVEHICLE_ENTER_OK".equals(vehiclePassenger.getCustomName());
                             var dismountContext = dev.helstera.api.behavior.BehaviorContext.of(
-                                    blockProbeForDismount, holder, 1.0, 1.0, 0, "integration");
+                                    vehicleProbeForEvents, vehiclePassenger, 1.0, 1.0, 0, "integration");
                             boolean dismountAction = runIntegrationAction(skills, behaviors,
                                     "dismount", dismountContext);
-                            boolean dismounted = dismountAction && !boat.getPassengers().contains(holder);
-                            boolean vehicleExit = "\u00a79VEHICLE_EXIT_OK".equals(holder.getCustomName());
+                            boolean dismounted = dismountAction && !boat.getPassengers().contains(vehiclePassenger);
+                            boolean vehicleExit = "\u00a79VEHICLE_EXIT_OK".equals(vehiclePassenger.getCustomName());
                             // Paper does not consistently emit a natural
                             // VehicleDestroyEvent for a server-side test boat;
                             // call the real Bukkit event once to verify the
                             // managed dispatch path independently of client
                             // attack timing.
                             getServer().getPluginManager().callEvent(
-                                    new org.bukkit.event.vehicle.VehicleDestroyEvent(boat, holder));
+                                    new org.bukkit.event.vehicle.VehicleDestroyEvent(boat, vehiclePassenger));
                             boolean vehicleDestroyEvent =
-                                    "\u00a7cVEHICLE_DESTROY_OK".equals(holder.getCustomName());
+                                    "\u00a7cVEHICLE_DESTROY_OK".equals(vehiclePassenger.getCustomName());
                             var ejectBoatEntity = world.spawnEntity(
                                     holder.getLocation().clone().add(0, 0, 4),
                                     org.bukkit.entity.EntityType.BOAT);
@@ -4711,11 +4732,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 ejectPassenger = ejectAction
                                         && !ejectBoat.getPassengers().contains(ejectPassengerEntity);
                             }
+                            final var vehicleProbeForEventsFinal = vehicleProbeForEvents;
+                            final var vehiclePassengerFinal = vehiclePassenger;
                             final dev.helstera.api.instance.ModelInstance ejectInstanceFinal = ejectInstance;
                             final boolean ejectPassengerResult = ejectPassenger;
                             getServer().getScheduler().runTaskLater(this, () -> {
                                 boolean vehicleDestroy = vehicleDestroyEvent
-                                        || "\u00a7cVEHICLE_DESTROY_OK".equals(holder.getCustomName());
+                                        || "\u00a7cVEHICLE_DESTROY_OK".equals(vehiclePassengerFinal.getCustomName());
                                 getLogger().info("vehicle-events enter=" + vehicleEnter
                                     + " exit=" + vehicleExit + " dismount=" + dismounted
                                     + " eject=" + ejectPassengerResult + " destroy=" + vehicleDestroy
@@ -4726,9 +4749,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 if (ejectInstanceFinal != null && instances() != null) {
                                     instances().despawn(ejectInstanceFinal.instanceId());
                                 }
-                                if (instances() != null && blockProbeForDismount != null) {
-                                    instances().despawn(blockProbeForDismount.instanceId());
+                                if (instances() != null && vehicleProbeForEventsFinal != null) {
+                                    instances().despawn(vehicleProbeForEventsFinal.instanceId());
                                 }
+                                if (vehiclePassengerFinal.isValid()) vehiclePassengerFinal.remove();
                         }, 240L);
                         }, 160L);
                         getServer().getScheduler().runTaskLater(this, () -> {
