@@ -2307,3 +2307,14 @@ visibility-options result=true visible-by-default=true invisible=true show-name=
 This reads `VisibleByDefault`, `Invisible`, and `AlwaysShowName` from a real
 configured Zombie through the production spawn path.
 
+The latest strict fixture `srv-paper-integration-exp-20261031-r20` passed
+Paper 1.21.1-133 with 244 observed probes: 233 `passed`, 11 expected
+`observed-rejected`, and zero incomplete. It adds the Spawner group-limit line:
+
+```text
+spawner-group id=group_probe requested=true alive=2 total=2 max-alive=2 group-min=3 group-max=5 limit=true
+```
+
+This proves the production group spawn path stops at `max-alive` instead of
+materializing the full requested group.
+
