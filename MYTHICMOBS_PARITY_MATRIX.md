@@ -133,6 +133,12 @@ Strict Paper 1.21.1-133 fixture `srv-paper-integration-exp-20261031-r16`
 records `vehicle-events enter=true exit=true dismount=true eject=true
 destroy=true`.
 
+Incremental mob-option update: `Options.Despawn`/`Persistent` now has a
+dedicated Paper fixture and self-test path that reads the managed instance's
+normalized `PERSISTENT` mode, zero despawn distance, and Bukkit persistent flag.
+The importer already maps `Options.Persistent` to `mob.despawn`, with regression
+coverage; the new strict evidence is pending the next rebuilt fixture.
+
 Migration compatibility update: common Mythic mechanic mappings now preserve
 positional arguments as well as keyed arguments for item/equipment, player
 inventory/experience/oxygen, block, entity-state, movement, explosion, potion,
@@ -1212,7 +1218,12 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-exp-20261031-r16` completes the registered report contract with 240 observed probes (230 passed plus 10 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, Armor, root Exp, and the complete managed vehicle lifecycle, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-exp-20261031-r17` completes the registered report contract with 240 observed probes (229 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, Armor, root Exp, `Options.Despawn`/`Persistent`, and the complete managed vehicle lifecycle, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+
+Strict fixture `srv-paper-integration-exp-20261031-r17` adds
+`despawnOptions` for the production `Options.Despawn`/`Persistent`
+configuration-to-instance path and records
+`despawn-options result=true mode=PERSISTENT distance=0.0 persistent=true`.
 
 ## Release Gate
 

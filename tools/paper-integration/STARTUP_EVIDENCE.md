@@ -2284,3 +2284,15 @@ The vehicle workflow now uses an independent managed ArmorStand passenger, so
 the online player's unrelated death/respawn probes cannot remove the binding
 before the delayed Boat event sequence runs.
 
+The latest strict fixture `srv-paper-integration-exp-20261031-r17` passed
+Paper 1.21.1-133 with 240 observed probes: 229 `passed`, 11 expected
+`observed-rejected`, and zero incomplete. It adds the configuration-to-instance
+Mob Option line:
+
+```text
+despawn-options result=true mode=PERSISTENT distance=0.0 persistent=true
+```
+
+This reads the normalized `SpawnOptions` mode/distance and the real Bukkit
+entity persistence flag from `mobs/despawn_probe.yml`.
+
