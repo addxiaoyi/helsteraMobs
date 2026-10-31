@@ -229,6 +229,14 @@ public final class Targeters {
                                             Collection<? extends LivingEntity> candidates,
                                             List<String> fallbackArgs) {
         if (context == null) return List.of();
+        List<String> chain = splitTargeterChain(spec);
+        if (chain.size() > 1) {
+            List<LivingEntity> current = select(chain.get(0), context, candidates, fallbackArgs);
+            for (int i = 1; i < chain.size() && !current.isEmpty(); i++) {
+                current = selectScoped(chain.get(i), context.instance(), current, fallbackArgs, false);
+            }
+            return List.copyOf(current);
+        }
         String name = spec == null ? "" : spec.trim().toLowerCase(Locale.ROOT);
         if (name.startsWith("@")) name = name.substring(1);
         int brace = name.indexOf('{');
