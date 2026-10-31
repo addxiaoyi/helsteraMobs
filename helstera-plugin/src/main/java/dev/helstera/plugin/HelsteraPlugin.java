@@ -1024,6 +1024,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (movementSpeedProbeId > 0) instances().despawn(movementSpeedProbeId);
                 }
 
+                if (mobConfig("knockback_resistance_probe") != null) {
+                    int knockbackProbeId = spawnMobAt("knockback_resistance_probe", origin.clone().add(9, 0, 0), null);
+                    var knockbackProbe = knockbackProbeId > 0 ? instances().impl(knockbackProbeId) : null;
+                    var knockbackEntity = knockbackProbe == null ? null : knockbackProbe.baseEntity().orElse(null);
+                    var knockbackAttribute = knockbackEntity instanceof org.bukkit.entity.LivingEntity living
+                            ? living.getAttribute(resolveAttribute("KNOCKBACK_RESISTANCE")) : null;
+                    double observedKnockbackResistance = knockbackAttribute == null
+                            ? Double.NaN : knockbackAttribute.getBaseValue();
+                    boolean knockbackOptions = Math.abs(observedKnockbackResistance - 0.75) < 1.0e-9;
+                    getLogger().info("[自检] knockback-resistance-options result=" + knockbackOptions
+                            + " base=" + observedKnockbackResistance);
+                    if (knockbackProbeId > 0) instances().despawn(knockbackProbeId);
+                }
+
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);

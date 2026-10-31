@@ -1184,12 +1184,12 @@ restores the player's prior glowing state.
 
 | Area | Status | Evidence / remaining work |
 | --- | --- | --- |
-| Mob Options mapping and preservation | mapped-unverified | Broad mapping with unsupported preservation; fixed Mythic `Options.Size` maps to `entity.size`, positive inclusive ranges (`2-5`/`2to5`) map to `entity.size-min/max` and are sampled once during Slime/MagmaCube/Phantom option application, while invalid/reversed ranges remain visible with migration warnings. `Options.Scale` maps to the production model `SpawnOptions.scale` path, and strict Paper 1.21.1-133 fixture `srv-paper-integration-scale-20261031-r2` reads back `scale-options result=true scale=1.25` from `mobs/scale_probe.yml`; `Options.Health` uses the production entity health/max-health path, and strict fixture `srv-paper-integration-health-20261031-r3` reads back `health-options result=true health=42.0 max-health=42.0` from `mobs/health_probe.yml`; `Options.MovementSpeed` maps to `mob.move-speed` and is applied to the production Bukkit `MOVEMENT_SPEED` base attribute, with strict fixture `srv-paper-integration-movement-speed-20261031-r6` reading back `movement-speed-options result=true base=0.4` from `mobs/movement_speed_probe.yml`; `ImportersTest` covers these projections and strict Paper `entitySizeRange` samples the production Slime path 64 times within 2..5; the complete Mythic Mob Options catalog remains unverified |
+| Mob Options mapping and preservation | mapped-unverified | Broad mapping with unsupported preservation; fixed Mythic `Options.Size` maps to `entity.size`, positive inclusive ranges (`2-5`/`2to5`) map to `entity.size-min/max` and are sampled once during Slime/MagmaCube/Phantom option application, while invalid/reversed ranges remain visible with migration warnings. `Options.Scale` maps to the production model `SpawnOptions.scale` path, and strict Paper 1.21.1-133 fixture `srv-paper-integration-scale-20261031-r2` reads back `scale-options result=true scale=1.25` from `mobs/scale_probe.yml`; `Options.Health` uses the production entity health/max-health path, and strict fixture `srv-paper-integration-health-20261031-r3` reads back `health-options result=true health=42.0 max-health=42.0` from `mobs/health_probe.yml`; `Options.MovementSpeed` maps to `mob.move-speed` and is applied to the production Bukkit `MOVEMENT_SPEED` base attribute, with strict fixture `srv-paper-integration-movement-speed-20261031-r6` reading back `movement-speed-options result=true base=0.4` from `mobs/movement_speed_probe.yml`; `Options.KnockbackResistance` maps to `mob.knockback-resistance` and is applied to Bukkit `KNOCKBACK_RESISTANCE`, with latest strict fixture `srv-paper-integration-knockback-resistance-20261031-r8` reading back `knockback-resistance-options result=true base=0.75` from `mobs/knockback_resistance_probe.yml`; `ImportersTest` covers these projections and strict Paper `entitySizeRange` samples the production Slime path 64 times within 2..5; the complete Mythic Mob Options catalog remains unverified |
 | Equipment/Items/Attributes mapping | mapped-unverified | importer and runtime tests cover equipment, item metadata, and mob drop-experience field preservation/consumption; complete Mythic catalog not covered |
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-movement-speed-20261031-r6` completes the registered report contract with 233 observed probes (222 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, and MovementSpeed, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-knockback-resistance-20261031-r8` completes the registered report contract with 234 observed probes (224 passed plus 10 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, and KnockbackResistance, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 ## Release Gate
 
@@ -1241,7 +1241,7 @@ This reads back the configured `mob.health: 42` from the real
 `mobs/health_probe.yml` through `spawnMobCore`, including both the entity's
 current and maximum health values.
 
-The latest strict Paper 1.21.1-133 fixture
+The preceding strict Paper 1.21.1-133 fixture
 `srv-paper-integration-movement-speed-20261031-r6` passed with 233 observed
 probes: 222 `passed`, 11 expected `observed-rejected`, and zero incomplete.
 Its MovementSpeed option line is:
@@ -1253,6 +1253,19 @@ movement-speed-options result=true base=0.4
 This reads back the configured `mob.move-speed: 0.4` from the real
 `mobs/movement_speed_probe.yml` through `spawnMobCore` and Bukkit's
 `MOVEMENT_SPEED` attribute.
+
+The latest strict Paper 1.21.1-133 fixture
+`srv-paper-integration-knockback-resistance-20261031-r8` passed with 234
+observed probes: 224 `passed`, 10 expected `observed-rejected`, and zero
+incomplete. Its KnockbackResistance option line is:
+
+```text
+knockback-resistance-options result=true base=0.75
+```
+
+This reads back the configured `mob.knockback-resistance: 0.75` from the real
+`mobs/knockback_resistance_probe.yml` through `spawnMobCore` and Bukkit's
+`KNOCKBACK_RESISTANCE` attribute.
 
 Latest Paper evidence: `srv-paper-integration-vehicle-fix-20261015` reconfirmed
 the implemented entity-option, condition, item, loot, spawner, and Audience

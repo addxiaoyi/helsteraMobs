@@ -1,0 +1,7 @@
+name: Knockback Resistance Probe
+model: example/emberling
+mob:
+  knockback-resistance: 0.75
+entity:
+  type: ZOMBIE
+  silent: true
