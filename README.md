@@ -5,9 +5,9 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
-the report contract passes with `251/251` probes observed (`240 passed` and
-`11 expected negative-control observations`) in fixture
-`srv-paper-runtime-alias-20261031-r2`.
+the report contract passes with `251/251` probes observed (`239 passed` and
+`12 expected negative-control observations`) in fixture
+`srv-paper-context-chain-20261031-r1`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -39,7 +39,7 @@ follows:
 
 Current checkpoint evidence is deliberately narrow: the focused Java suite
 and the latest strict Paper run are green, while the latest strict report
-records `passed=240`, `observed-rejected=11`, and `incomplete=0` across 251
+records `passed=239`, `observed-rejected=12`, and `incomplete=0` across 251
 registered probes. These numbers describe the development checkpoint, not
 full MythicMobs parity.
 
