@@ -83,7 +83,7 @@ try {
         '[Server thread/INFO]: player-kill-trigger natural=true victim-player=true victim-death-observed=true action-observed=true player-kills-positive=true player-kills-negative=true passed=true',
         '[Server thread/INFO]: tempt-probe-delayed entity-target-trigger=true target-events=1 target-find-misses=0',
         '[Server thread/INFO]: item-pickup trigger=true player=HelsteraTester',
-        '[Server thread/INFO]: vehicle-events enter=true exit=true dismount=true eject=true destroy=false player=HelsteraTester',
+        '[Server thread/INFO]: vehicle-events enter=true exit=true dismount=true eject=true destroy=true player=HelsteraTester',
         '[Server thread/INFO]: environmental-damage trigger=true fire-ticks=0',
         '[Server thread/INFO]: [helsteraMobs] [trigger-debug] player-potion-consume event=true player=HelsteraTester item=POTION',
         '[Server thread/INFO]: player-potion-natural-expiry=true expired=true action-observed=true',

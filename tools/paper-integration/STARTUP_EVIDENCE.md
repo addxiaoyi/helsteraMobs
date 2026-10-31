@@ -2272,3 +2272,15 @@ experience override. The fixture uses `mobs/exp_probe.yml`; fixed and ranged
 `drops.experience*` precedence and missing-table fallback are covered by unit
 tests, while broader natural death/drop semantics remain outside this probe.
 
+The latest strict fixture `srv-paper-integration-exp-20261031-r16` passed
+Paper 1.21.1-133 with 240 observed probes: 230 `passed`, 10 expected
+`observed-rejected`, and zero incomplete. Its current-code vehicle line is:
+
+```text
+vehicle-events enter=true exit=true dismount=true eject=true destroy=true player=HelsteraTester
+```
+
+The vehicle workflow now uses an independent managed ArmorStand passenger, so
+the online player's unrelated death/respawn probes cannot remove the binding
+before the delayed Boat event sequence runs.
+
