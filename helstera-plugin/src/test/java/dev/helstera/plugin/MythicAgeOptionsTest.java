@@ -88,6 +88,11 @@ class MythicAgeOptionsTest {
         assertEquals(-1, calls.get("setAge"));
         assertEquals(true, calls.get("setBaby"), calls.toString());
         assertEquals(true, calls.get("setAgeLock"));
+
+        calls.clear();
+        HelsteraPlugin.applyAgeOptions(entity,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("adult: true")));
+        assertEquals(true, calls.get("setAdult"), calls.toString());
     }
 
     @Test

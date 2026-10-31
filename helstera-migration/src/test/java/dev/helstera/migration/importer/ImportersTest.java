@@ -1955,6 +1955,7 @@ class ImportersTest {
                       PreventSnowFormation: true
                       Age: -1
                       AgeLock: true
+                      Adult: true
                       Baby: true
                       CanJoinRaid: false
                       PatrolLeader: true
@@ -1985,6 +1986,7 @@ class ImportersTest {
         assertTrue(target.getBoolean("mob.prevent-snow-formation"));
         assertEquals(-1, target.getInt("entity.age"));
         assertTrue(target.getBoolean("entity.age-lock"));
+        assertTrue(target.getBoolean("entity.adult"));
         assertTrue(target.getBoolean("entity.baby"));
         assertFalse(target.getBoolean("entity.can-join-raid", true));
         assertTrue(target.getBoolean("entity.patrol-leader"));

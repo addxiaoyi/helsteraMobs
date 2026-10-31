@@ -2073,3 +2073,16 @@ target block at the real Pillager's spawn location after production option
 application. `CanJoinRaid` remains setter-only because Paper 1.21.1 has no
 corresponding public getter.
 
+The strict fixture `srv-paper-integration-adult-20261031-r2` passed with 230
+observed probes: 219 `passed`, 11 expected `observed-rejected`, and zero
+incomplete. Its Ageable line is:
+
+```text
+age-options result=true age=-24000 baby=true adult=true age-lock=true
+```
+
+The production Ageable path therefore verifies Mythic `Age`, `Baby`, `Adult`,
+and `AgeLock` independently on real Sheep entities. The initial adult fixture
+was discarded from release evidence because an unrelated `LookingAt` probe was
+not observed; r2 observed the full report contract without weakening it.
+
