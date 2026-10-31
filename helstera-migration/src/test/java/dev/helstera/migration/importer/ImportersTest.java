@@ -1851,6 +1851,25 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("legacy sugar cane and book IDs preserve their distinct materials")
+    void mythicLegacySugarCaneAndBookIds(@TempDir Path root) throws Exception {
+        Path file = write(root, "Items/legacy-distinct.yml", """
+                items:
+                  cane: {Id: 338}
+                  sugar: {Id: 353}
+                  writable: {Id: 386}
+                  written: {Id: 387}
+                """);
+        var result = plan(new MythicMobsImporter().convert(file)).orElseThrow();
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(result.get("content"))));
+        assertEquals("SUGAR_CANE", target.getString("items.cane.id"));
+        assertEquals("SUGAR", target.getString("items.sugar.id"));
+        assertEquals("WRITABLE_BOOK", target.getString("items.writable.id"));
+        assertEquals("WRITTEN_BOOK", target.getString("items.written.id"));
+    }
+
+    @Test
     @DisplayName("all converted legacy equipment IDs resolve to Paper Materials")
     void mythicLegacyEquipmentMaterialNamesExistInPaper(@TempDir Path root) throws Exception {
         StringBuilder yaml = new StringBuilder("items:\n");
