@@ -1229,10 +1229,10 @@ restores the player's prior glowing state.
 | Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-targeters-20261031-r3` completes the registered report contract with 251 observed probes (240 passed plus 11 expected negative controls); it extends r2 with production `set-target`/`clear-target` mechanic dispatch evidence on a real managed Bukkit Mob while retaining world-scoped AI targeters, dual-client menu/Audience reports, real client-driven Shield `is-blocking`, natural Spawner recycling, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options, root Exp, visibility, Spawner limits and recycling, named-region gates, managed vehicle lifecycle, entity flags, entity-specific setters, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 The current latest report superseding the historical row summary is strict
-fixture `srv-paper-integration-targeters-20261031-r3`: 251 probes, 240 passed,
-11 expected negative controls, and zero incomplete, including positive and
-negative named-region gates, world-scoped AI targeter evidence, and target
-mechanic dispatch evidence.
+fixture `srv-paper-nearest-20261031-r1`: 251 probes, 239 passed,
+12 expected negative controls, and zero incomplete. The real-entity selector
+probe also records `nearest-living=true nearest-mob=true` for single-result
+selection and non-player filtering.
 
 Strict fixture `srv-paper-integration-exp-20261031-r17` adds
 `despawnOptions` for the production `Options.Despawn`/`Persistent`
