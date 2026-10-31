@@ -4176,6 +4176,30 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     .filter(candidate -> sp.get(candidate) != null && sp.get(candidate).enabled())
                     .findFirst().orElse(sp.ids().iterator().next());
             Location safeLocation = getServer().getWorlds().get(0).getSpawnLocation().clone().add(0, 2, 0);
+            var naturalGroupProbe = sp.get("natural_group_probe");
+            if (naturalGroupProbe != null) {
+                int naturalGroupBefore = naturalGroupProbe.totalSpawned();
+                int naturalGroupInterval = Math.max(20, naturalGroupProbe.intervalTicks());
+                int[] naturalGroupSamples = {0};
+                org.bukkit.scheduler.BukkitTask[] naturalGroupTask = {null};
+                naturalGroupTask[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+                    int after = naturalGroupProbe.totalSpawned();
+                    naturalGroupSamples[0]++;
+                    if (after <= naturalGroupBefore && naturalGroupSamples[0] < naturalGroupInterval * 3) return;
+                    int alive = sp.aliveCount("natural_group_probe");
+                    boolean limit = after > naturalGroupBefore
+                            && alive <= naturalGroupProbe.maxAlive()
+                            && after - naturalGroupBefore <= naturalGroupProbe.maxAlive();
+                    getLogger().info("spawner-natural-group id=natural_group_probe"
+                            + " mode=live-scheduler before=" + naturalGroupBefore
+                            + " after=" + after + " alive=" + alive
+                            + " max-alive=" + naturalGroupProbe.maxAlive()
+                            + " group-min=" + naturalGroupProbe.groupMin()
+                            + " group-max=" + naturalGroupProbe.groupMax()
+                            + " limit=" + limit);
+                    naturalGroupTask[0].cancel();
+                }, 1L, 1L);
+            }
             var cooldownProbe = sp.get("cooldown_probe");
             if (cooldownProbe != null) {
                 int before = cooldownProbe.totalSpawned();
@@ -4257,7 +4281,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     getLogger().warning("random-spawn probe missing: no configured random-mobs pool");
                 }
                 for (String candidate : sp.ids()) {
-                    if (candidate.equals(id) || candidate.equals("cooldown_probe")) continue;
+                    if (candidate.equals(id) || candidate.equals("cooldown_probe")
+                            || candidate.equals("natural_group_probe")) continue;
                     boolean naturalLocationProbe = candidate.equals("natural_ground_pass")
                             || candidate.equals("border_fail")
                             || candidate.equals("heightmap_ground_pass")
