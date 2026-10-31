@@ -5252,6 +5252,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean preventFireCausesOption = false;
                 boolean preventPickupOption = false;
                 boolean preventItemUseOption = false;
+                boolean interactableOption = false;
                 boolean preventTeleportOption = false;
                 boolean preventSunburnOption = false;
                 boolean preventOtherDropsOption = false;
@@ -5487,6 +5488,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         preventItemUseOption = protectedItemUseEvent.isCancelled()
                                 && !allowedItemUseEvent.isCancelled();
                         eventActor.getInventory().setItemInMainHand(itemUseHand);
+
+                        var nonInteractableMob = world.spawn(location.clone().add(18, 0, 2),
+                                org.bukkit.entity.Wolf.class);
+                        var nonInteractableInstance = instances().bind("example/emberling",
+                                nonInteractableMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults().interactable(false));
+                        var interactableControlMob = world.spawn(location.clone().add(19, 0, 2),
+                                org.bukkit.entity.Wolf.class);
+                        var interactableControlInstance = instances().bind("example/emberling",
+                                interactableControlMob,
+                                dev.helstera.api.instance.SpawnOptions.defaults());
+                        tracked.add(nonInteractableInstance);
+                        tracked.add(interactableControlInstance);
+                        var nonInteractableEvent = new org.bukkit.event.player.PlayerInteractEntityEvent(
+                                eventActor, nonInteractableMob, org.bukkit.inventory.EquipmentSlot.HAND);
+                        var interactableControlEvent = new org.bukkit.event.player.PlayerInteractEntityEvent(
+                                eventActor, interactableControlMob, org.bukkit.inventory.EquipmentSlot.HAND);
+                        getServer().getPluginManager().callEvent(nonInteractableEvent);
+                        getServer().getPluginManager().callEvent(interactableControlEvent);
+                        interactableOption = nonInteractableEvent.isCancelled()
+                                && !interactableControlEvent.isCancelled();
 
                         var protectedTeleportMob = world.spawn(location.clone().add(19, 0, 0),
                                 org.bukkit.entity.Sheep.class);
@@ -5758,6 +5780,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " prevent-fire-causes=" + preventFireCausesOption
                         + " prevent-pickup=" + preventPickupOption
                         + " prevent-item-use=" + preventItemUseOption
+                        + " interactable=" + interactableOption
                         + " prevent-teleport=" + preventTeleportOption
                         + " prevent-sunburn=" + preventSunburnOption
                         + " prevent-other-drops=" + preventOtherDropsOption
