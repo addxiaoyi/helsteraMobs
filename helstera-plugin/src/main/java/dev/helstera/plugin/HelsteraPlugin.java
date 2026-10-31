@@ -6942,6 +6942,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && playersInWorld.stream().noneMatch(candidate -> !(candidate instanceof org.bukkit.entity.Player));
                 boolean worldMobTarget = mobsInWorld.contains(monster)
                         && mobsInWorld.stream().noneMatch(candidate -> candidate instanceof org.bukkit.entity.Player);
+                var worldChain = dev.helstera.api.behavior.Targeters.select(
+                        "@PlayersInWorld > @EntitiesInWorld", worldTargetContext, List.of(monster), List.of());
+                boolean worldChainFiltered = worldChain.equals(playersInWorld)
+                        && worldChain.contains(holder) && !worldChain.contains(monster);
                 var nearestCandidates = List.<org.bukkit.entity.LivingEntity>of(holder, monster);
                 var nearestLiving = dev.helstera.api.behavior.Targeters.select(
                         "@NearestLivingEntity", worldTargetContext, nearestCandidates, List.of());
@@ -6957,7 +6961,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         || controller.selectorDiagnostic().contains("can-chase=false");
                 boolean passed = playerTarget && monsterTarget && clearNoFallback
                         && ownerTarget && factionTarget && conditionalTarget
-                        && worldPlayerTarget && worldMobTarget
+                        && worldPlayerTarget && worldMobTarget && worldChainFiltered
                         && nearestLivingTarget && nearestMobTarget
                         && setTargetMechanic && clearTargetMechanic
                         && mob.getTarget() == holder;
@@ -6970,6 +6974,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " conditional-target=" + conditionalTarget
                         + " players-in-world=" + worldPlayerTarget
                         + " mobs-in-world=" + worldMobTarget
+                        + " world-chain-filtered=" + worldChainFiltered
                         + " nearest-living=" + nearestLivingTarget
                         + " nearest-mob=" + nearestMobTarget
                         + " set-target-mechanic=" + setTargetMechanic
