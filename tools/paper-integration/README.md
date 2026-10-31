@@ -23,8 +23,13 @@ $env:PAPER_MENU_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-The current Paper 1.21.1-133 fixture completes 224 registered probes: 216
-positive observations and 8 expected negative-control observations.
+The latest Paper 1.21.1-133 strict fixture completes 239 registered probes: 228
+positive observations and 11 expected negative-control observations. The
+current release evidence is `srv-paper-integration-exp-20261031-r14`; earlier
+fixture counts in this document are historical checkpoints.
+
+The follow-up fixture also verifies the root Mythic `Exp` path through
+`exp-options result=true experience=13 event=true`.
 
 The default server jar path is `srv-1.21.1/paper.jar`. If the Paper jar is
 stored elsewhere, set an explicit override before running the fixture:

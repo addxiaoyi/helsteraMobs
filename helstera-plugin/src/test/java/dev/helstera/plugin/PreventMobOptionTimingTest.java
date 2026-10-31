@@ -6,8 +6,10 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PreventMobOptionTimingTest {
@@ -80,6 +82,27 @@ class PreventMobOptionTimingTest {
         HelsteraPlugin.applyMobKillDropPolicy(event, SpawnOptions.defaults().preventMobKillDrops(true));
         org.junit.jupiter.api.Assertions.assertTrue(drops.isEmpty());
         org.junit.jupiter.api.Assertions.assertEquals(0, event.getDroppedExp());
+    }
+
+    @Test
+    void explicitExperienceOverridesVanillaPolicyAndRollsInclusiveRanges() {
+        var drops = new ArrayList<org.bukkit.inventory.ItemStack>();
+        var victim = proxy(org.bukkit.entity.LivingEntity.class);
+        var event = new org.bukkit.event.entity.EntityDeathEvent(victim, null, drops, 7);
+
+        HelsteraPlugin.applyOtherDropPolicy(event, SpawnOptions.defaults().preventOtherDrops(true));
+        HelsteraPlugin.applyExperienceOverride(event, 13);
+        org.junit.jupiter.api.Assertions.assertEquals(13, event.getDroppedExp());
+
+        assertEquals(-1, HelsteraPlugin.rollExperienceOverride(-1, 4, new Random(1)));
+        assertEquals(-1, HelsteraPlugin.rollExperienceOverride(8, 4, new Random(1)));
+        assertEquals(4, HelsteraPlugin.rollExperienceOverride(4, 4, new Random(1)));
+        assertEquals(Integer.MAX_VALUE,
+                HelsteraPlugin.rollExperienceOverride(Integer.MAX_VALUE, Integer.MAX_VALUE, new Random(1)));
+        for (int i = 0; i < 32; i++) {
+            int value = HelsteraPlugin.rollExperienceOverride(4, 8, new Random(i));
+            assertTrue(value >= 4 && value <= 8);
+        }
     }
 
     @Test

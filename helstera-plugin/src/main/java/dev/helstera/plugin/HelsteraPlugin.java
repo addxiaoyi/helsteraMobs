@@ -1098,6 +1098,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (entityFlagsProbeId > 0) instances().despawn(entityFlagsProbeId);
                 }
 
+                if (mobConfig("exp_probe") != null) {
+                    int expProbeId = spawnMobAt("exp_probe", origin.clone().add(14, 0, 0), null);
+                    var expProbe = expProbeId > 0 ? instances().impl(expProbeId) : null;
+                    var expEntity = expProbe == null ? null : expProbe.baseEntity().orElse(null);
+                    int observedExperience = -1;
+                    boolean expEventObserved = false;
+                    if (expProbe != null && expEntity instanceof org.bukkit.entity.LivingEntity living) {
+                        var expDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>();
+                        var damageSource = org.bukkit.damage.DamageSource.builder(
+                                org.bukkit.damage.DamageType.GENERIC).build();
+                        var expEvent = new org.bukkit.event.entity.EntityDeathEvent(
+                                living, damageSource, expDrops, 0);
+                        getServer().getPluginManager().callEvent(expEvent);
+                        observedExperience = expEvent.getDroppedExp();
+                        expEventObserved = true;
+                    }
+                    boolean expOptions = expEventObserved && observedExperience == 13;
+                    getLogger().info("[自检] exp-options result=" + expOptions
+                            + " experience=" + observedExperience + " event=" + expEventObserved);
+                    if (expProbeId > 0) instances().despawn(expProbeId);
+                }
+
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);
@@ -7116,6 +7138,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " dead=" + living.isDead());
         }
 
+        // Mythic's root Exp value is an experience override even when the mob
+        // does not reference a custom loot table. An explicit drops.experience
+        // section below remains more specific and replaces this default.
+        if (inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl
+                && cfg.contains("mob.exp")) {
+            int exp = Math.max(0, cfg.getInt("mob.exp"));
+            impl.lootExperienceMin = exp;
+            impl.lootExperienceMax = exp;
+        }
+
         // 掉落表挂到实例上：死亡事件靠它找到该投哪张表，避免按模型 ID 反查 mobs 配置
         org.bukkit.configuration.ConfigurationSection dropsSec = cfg.getConfigurationSection("drops");
         if (dropsSec != null && inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl) {
@@ -7501,9 +7533,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (inst == null) return;
         // PreventOtherDrops is meaningful even when no custom loot table is configured.
         applyOtherDropPolicy(e, inst.options());
+        int experienceOverride = rollExperienceOverride(inst);
+        applyExperienceOverride(e, experienceOverride);
         // Drop-prevention options must work even when loot.yml is disabled.
-        if (lootService == null) return;
-        if (inst.lootTable == null || inst.lootTable.isBlank()) return;
+        if (lootService == null) {
+            return;
+        }
+        if (inst.lootTable == null || inst.lootTable.isBlank()) {
+            return;
+        }
 
         var loot = (dev.helstera.ai.loot.LootService) lootService;
         if (loot.table(inst.lootTable) == null) {
@@ -7531,16 +7569,33 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             int mobLevel = (inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl)
                     && impl.level > 0 ? impl.level : 0;
             loot.rollAndDrop(ent.getLocation(), inst.lootTable, luck, e.getEntity().getKiller(), mobLevel);
-            int experience = inst.lootExperienceMin >= 0
-                    ? inst.lootExperienceMin == inst.lootExperienceMax
-                    ? inst.lootExperienceMin
-                    : java.util.concurrent.ThreadLocalRandom.current().nextInt(
-                            inst.lootExperienceMin, inst.lootExperienceMax + 1)
+            int experience = experienceOverride >= 0
+                    ? experienceOverride
                     : loot.experience(inst.lootTable);
             e.setDroppedExp(experience);
         } catch (Throwable t) {
             getLogger().warning("掉落投掷失败: " + t);
         }
+    }
+
+    static void applyExperienceOverride(org.bukkit.event.entity.EntityDeathEvent event, int experience) {
+        if (event == null || experience < 0) return;
+        event.setDroppedExp(experience);
+    }
+
+    private static int rollExperienceOverride(dev.helstera.runtime.instance.ModelInstanceImpl inst) {
+        if (inst == null) return -1;
+        return rollExperienceOverride(inst.lootExperienceMin, inst.lootExperienceMax,
+                java.util.concurrent.ThreadLocalRandom.current());
+    }
+
+    static int rollExperienceOverride(int min, int max, java.util.Random random) {
+        if (random == null || min < 0 || max < min) return -1;
+        long width = (long) max - min + 1L;
+        if (width <= Integer.MAX_VALUE) {
+            return min + random.nextInt((int) width);
+        }
+        return (int) (min + Math.floorMod(random.nextLong(), width));
     }
 
     static void applyMobKillDropPolicy(org.bukkit.event.entity.EntityDeathEvent event,

@@ -1252,6 +1252,7 @@ class ImportersTest {
                   Boss:
                     Type: HUSK
                     Armor: 8
+                    Exp: 13
                     Options:
                       FollowRange: 40
                       MovementSpeed: 0.4
@@ -1274,6 +1275,7 @@ class ImportersTest {
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
         assertTrue(target.getBoolean("entity.silent"));
         assertEquals(8, target.getDouble("mob.armor"), 1e-9);
+        assertEquals(13, target.getDouble("mob.exp"), 1e-9);
         assertEquals(40, target.getDouble("mob.sight-radius"), 1e-9);
         assertEquals(0.4, target.getDouble("mob.move-speed"), 1e-9);
         assertEquals(0.75, target.getDouble("mob.knockback-resistance"), 1e-9);

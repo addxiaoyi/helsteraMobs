@@ -1,0 +1,7 @@
+name: Experience Probe
+model: example/emberling
+mob:
+  exp: 13
+entity:
+  type: ZOMBIE
+  silent: true
