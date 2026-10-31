@@ -1184,12 +1184,12 @@ restores the player's prior glowing state.
 
 | Area | Status | Evidence / remaining work |
 | --- | --- | --- |
-| Mob Options mapping and preservation | mapped-unverified | Broad mapping with unsupported preservation; fixed Mythic `Options.Size` maps to `entity.size`, positive inclusive ranges (`2-5`/`2to5`) map to `entity.size-min/max` and are sampled once during Slime/MagmaCube/Phantom option application, while invalid/reversed ranges remain visible with migration warnings. `Options.Scale` maps to the production model `SpawnOptions.scale` path, and strict Paper 1.21.1-133 fixture `srv-paper-integration-scale-20261031-r2` reads back `scale-options result=true scale=1.25` from `mobs/scale_probe.yml`; `Options.Health` uses the production entity health/max-health path, and strict fixture `srv-paper-integration-health-20261031-r3` reads back `health-options result=true health=42.0 max-health=42.0` from `mobs/health_probe.yml`; `Options.MovementSpeed` maps to `mob.move-speed` and is applied to the production Bukkit `MOVEMENT_SPEED` base attribute, with strict fixture `srv-paper-integration-movement-speed-20261031-r6` reading back `movement-speed-options result=true base=0.4` from `mobs/movement_speed_probe.yml`; `Options.KnockbackResistance` maps to `mob.knockback-resistance` and is applied to Bukkit `KNOCKBACK_RESISTANCE`, with strict fixture `srv-paper-integration-knockback-resistance-20261031-r8` reading back `knockback-resistance-options result=true base=0.75` from `mobs/knockback_resistance_probe.yml`; `Options.FollowRange` maps to `mob.sight-radius` and is applied to Bukkit `FOLLOW_RANGE`, with strict fixture `srv-paper-integration-follow-range-20261031-r9` reading back `follow-range-options result=true base=40.0` from `mobs/follow_range_probe.yml`; `Options.Damage` maps to `mob.attack-damage` and is applied to Bukkit `ATTACK_DAMAGE`, with strict fixture `srv-paper-integration-damage-20261031-r10` reading back `damage-options result=true base=12.0` from `mobs/damage_probe.yml`; root `Armor` maps to `mob.armor` and is applied to Bukkit `ARMOR`, with latest strict fixture `srv-paper-integration-armor-20261031-r11` reading back `armor-options result=true base=8.0` from `mobs/armor_probe.yml`; `ImportersTest` covers these projections and strict Paper `entitySizeRange` samples the production Slime path 64 times within 2..5; the complete Mythic Mob Options catalog remains unverified |
+| Mob Options mapping and preservation | mapped-unverified | Broad mapping with unsupported preservation; fixed Mythic `Options.Size` maps to `entity.size`, positive inclusive ranges (`2-5`/`2to5`) map to `entity.size-min/max` and are sampled once during Slime/MagmaCube/Phantom option application, while invalid/reversed ranges remain visible with migration warnings. `Options.Scale` maps to the production model `SpawnOptions.scale` path, and strict Paper 1.21.1-133 fixture `srv-paper-integration-scale-20261031-r2` reads back `scale-options result=true scale=1.25` from `mobs/scale_probe.yml`; `Options.Health` uses the production entity health/max-health path, and strict fixture `srv-paper-integration-health-20261031-r3` reads back `health-options result=true health=42.0 max-health=42.0` from `mobs/health_probe.yml`; `Options.MovementSpeed` maps to `mob.move-speed` and is applied to the production Bukkit `MOVEMENT_SPEED` base attribute, with strict fixture `srv-paper-integration-movement-speed-20261031-r6` reading back `movement-speed-options result=true base=0.4` from `mobs/movement_speed_probe.yml`; `Options.KnockbackResistance` maps to `mob.knockback-resistance` and is applied to Bukkit `KNOCKBACK_RESISTANCE`, with strict fixture `srv-paper-integration-knockback-resistance-20261031-r8` reading back `knockback-resistance-options result=true base=0.75` from `mobs/knockback_resistance_probe.yml`; `Options.FollowRange` maps to `mob.sight-radius` and is applied to Bukkit `FOLLOW_RANGE`, with strict fixture `srv-paper-integration-follow-range-20261031-r9` reading back `follow-range-options result=true base=40.0` from `mobs/follow_range_probe.yml`; `Options.Damage` maps to `mob.attack-damage` and is applied to Bukkit `ATTACK_DAMAGE`, with strict fixture `srv-paper-integration-damage-20261031-r10` reading back `damage-options result=true base=12.0` from `mobs/damage_probe.yml`; root `Armor` maps to `mob.armor` and is applied to Bukkit `ARMOR`, with strict fixture `srv-paper-integration-armor-20261031-r11` reading back `armor-options result=true base=8.0` from `mobs/armor_probe.yml`; configured entity flags `NoAI`, `Invincible`, `Silent`, `Gravity`, and `Collidable` are read back by strict fixture `srv-paper-integration-entity-flags-20261031-r12`; `ImportersTest` covers these projections and strict Paper `entitySizeRange` samples the production Slime path 64 times within 2..5; the complete Mythic Mob Options catalog remains unverified |
 | Equipment/Items/Attributes mapping | mapped-unverified | importer and runtime tests cover equipment, item metadata, and mob drop-experience field preservation/consumption; complete Mythic catalog not covered |
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-armor-20261031-r11` completes the registered report contract with 237 observed probes (227 passed plus 10 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, and Armor, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-entity-flags-20261031-r12` completes the registered report contract with 238 observed probes (227 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, and Armor, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 ## Release Gate
 
@@ -1293,7 +1293,7 @@ This reads back the configured `mob.attack-damage: 12` from the real
 `mobs/damage_probe.yml` through `spawnMobCore` and Bukkit's `ATTACK_DAMAGE`
 attribute.
 
-The latest strict Paper 1.21.1-133 fixture
+The preceding strict Paper 1.21.1-133 fixture
 `srv-paper-integration-armor-20261031-r11` passed with 237 observed probes:
 227 `passed`, 10 expected `observed-rejected`, and zero incomplete. Its Armor
 option line is:
@@ -1304,6 +1304,19 @@ armor-options result=true base=8.0
 
 This reads back the configured root `Armor: 8` from the real
 `mobs/armor_probe.yml` through `spawnMobCore` and Bukkit's `ARMOR` attribute.
+
+The latest strict Paper 1.21.1-133 fixture
+`srv-paper-integration-entity-flags-20261031-r12` passed with 238 observed
+probes: 227 `passed`, 11 expected `observed-rejected`, and zero incomplete.
+Its configured entity flag line is:
+
+```text
+entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false
+```
+
+This reads back the configured `entity.no-ai`, `entity.invulnerable`,
+`entity.silent`, `entity.gravity`, and `entity.collidable` values from the real
+`mobs/entity_flags_probe.yml` through `spawnMobCore`.
 
 Latest Paper evidence: `srv-paper-integration-vehicle-fix-20261015` reconfirmed
 the implemented entity-option, condition, item, loot, spawner, and Audience

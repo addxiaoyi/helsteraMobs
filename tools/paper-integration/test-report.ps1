@@ -97,6 +97,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] follow-range-options result=true base=40',
         '[Server thread/INFO]: [helsteraMobs] [自检] damage-options result=true base=12',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-options result=true base=8',
+        '[Server thread/INFO]: [helsteraMobs] [自检] entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true',

@@ -1079,6 +1079,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (armorProbeId > 0) instances().despawn(armorProbeId);
                 }
 
+                if (mobConfig("entity_flags_probe") != null) {
+                    int entityFlagsProbeId = spawnMobAt("entity_flags_probe", origin.clone().add(13, 0, 0), null);
+                    var entityFlagsProbe = entityFlagsProbeId > 0 ? instances().impl(entityFlagsProbeId) : null;
+                    var entityFlagsEntity = entityFlagsProbe == null ? null
+                            : entityFlagsProbe.baseEntity().orElse(null);
+                    boolean noAi = entityFlagsEntity instanceof org.bukkit.entity.Mob mob && !mob.hasAI();
+                    boolean invulnerable = entityFlagsEntity != null && entityFlagsEntity.isInvulnerable();
+                    boolean silent = entityFlagsEntity != null && entityFlagsEntity.isSilent();
+                    boolean gravity = entityFlagsEntity != null && entityFlagsEntity.hasGravity();
+                    boolean collidable = entityFlagsEntity instanceof org.bukkit.entity.LivingEntity living
+                            && living.isCollidable();
+                    boolean entityConfigFlags = noAi && invulnerable && silent && !gravity && !collidable;
+                    getLogger().info("[自检] entity-config-flags result=" + entityConfigFlags
+                            + " no-ai=" + noAi + " invulnerable=" + invulnerable
+                            + " silent=" + silent + " gravity=" + gravity
+                            + " collidable=" + collidable);
+                    if (entityFlagsProbeId > 0) instances().despawn(entityFlagsProbeId);
+                }
+
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);

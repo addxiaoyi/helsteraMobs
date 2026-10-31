@@ -1,0 +1,9 @@
+name: Entity Flags Probe
+model: example/emberling
+entity:
+  type: ZOMBIE
+  no-ai: true
+  invulnerable: true
+  silent: true
+  gravity: false
+  collidable: false

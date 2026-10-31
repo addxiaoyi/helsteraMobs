@@ -54,6 +54,7 @@ $probeSpecs = [ordered]@{
     followRangeOptions = 'follow-range-options result=true base=40(?:\.0+)?'
     damageOptions = 'damage-options result=true base=12(?:\.0+)?'
     armorOptions = 'armor-options result=true base=8(?:\.0+)?'
+    entityConfigFlags = 'entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false'
     sheep = 'sheep-options result=true'
     armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false .*items=true'
     cat = 'cat-options result=true'
