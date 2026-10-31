@@ -7,7 +7,7 @@ This compatibility effort is still in progress on Paper 1.21.1. The detailed aud
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
 the report contract passes with `230/230` probes observed (`220 passed` and
 `10 expected negative-control observations`) in fixture
-`srv-paper-integration-armor-options-20261031-r2`.
+`srv-paper-integration-armor-options-20261031-r3`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -193,8 +193,8 @@ full MythicMobs parity.
 - Mythic `Options.Interactable` now maps to the managed runtime policy with its documented imported default, and strict Paper 1.21.1 fixture `srv-paper-integration-armor-stand-20261031` records protected/control player interaction and Armor Stand manipulation pairs as `interactable=true` and `interactable-armor-stand=true`.
 - Mythic `Options.PatrolSpawnPoint` now maps to Raider patrol target blocks, and strict Paper 1.21.1 fixture `srv-paper-integration-patrol-spawn-20261031` reads back a real Pillager patrol target at its spawn block.
 - Mythic `Options.Adult` now maps to the Ageable adult setter independently of `Age`; strict Paper 1.21.1 fixture `srv-paper-integration-adult-20261031-r2` records `age-options result=true` with both baby and adult controls.
-- Official Armor Stand options `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` now map through the migration/runtime path; strict Paper 1.21.1 fixture `srv-paper-integration-armor-options-20261031-r2` reads back the production can-move/can-tick state.
-- Official Armor Stand item options `ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`, `ItemHead`, and `ItemLegs` now resolve through the existing ItemStack/custom-item path; the strict Armor Options fixture reads back all six equipment slots.
+- Official Armor Stand options `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` now map through the migration/runtime path; strict Paper 1.21.1 fixture `srv-paper-integration-armor-options-20261031-r3` reads back the production can-move/can-tick state.
+- Official Armor Stand item options `ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`, `ItemHead`, and `ItemLegs` now resolve through the existing ItemStack/custom-item path; strict fixture `srv-paper-integration-armor-options-20261031-r3` reads back all six equipment slots.
 
 ### Remaining Work
 
