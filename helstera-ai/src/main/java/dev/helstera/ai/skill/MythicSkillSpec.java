@@ -105,10 +105,20 @@ public record MythicSkillSpec(
         StringBuilder current = new StringBuilder();
         boolean quoted = false;
         int braces = 0;
-        for (char c : value.toCharArray()) {
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
             if (c == '"') quoted = !quoted;
             if (!quoted && c == '{') braces++;
             if (!quoted && c == '}') braces--;
+            boolean targeterSeparator = !quoted && braces == 0 && c == '>'
+                    && (current.length() > 0 && current.charAt(0) == '@'
+                    || current.length() == 0 && !out.isEmpty()
+                    && out.get(out.size() - 1).startsWith("@"));
+            if (targeterSeparator) {
+                if (current.length() > 0) { out.add(current.toString()); current.setLength(0); }
+                out.add(">");
+                continue;
+            }
             if (!quoted && braces == 0 && Character.isWhitespace(c)) {
                 if (current.length() > 0) { out.add(current.toString()); current.setLength(0); }
             } else current.append(c);
