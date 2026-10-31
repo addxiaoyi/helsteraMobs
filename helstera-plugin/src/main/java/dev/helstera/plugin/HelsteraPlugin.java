@@ -3279,8 +3279,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 skills.bindCondition("looking-at{block=STONE;distance=6}"), stateContext);
                         // Remove the exact probe block before the negative check;
                         // unrelated terrain must not satisfy the ray trace.
-                        rayTargetBlock.setType(org.bukkit.Material.AIR, false);
-                        permissionProbe.setRotation(90f, 0f);
+                        // Keep the same cleared ray and replace only the target
+                        // with a non-STONE block, so the negative assertion is
+                        // independent of whatever terrain lies behind the player.
+                        rayTargetBlock.setType(org.bukkit.Material.DIRT, false);
                         boolean lookingNegative = !behaviors.testCondition(
                                 skills.bindCondition("looking-at{block=STONE;distance=6}"), stateContext);
                         lookingAtCondition = lookingPositive && lookingNegative;
@@ -3516,22 +3518,32 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     var blockingMainHand = permissionProbe.getInventory().getItemInMainHand();
                     var blockingOffHand = permissionProbe.getInventory().getItemInOffHand();
                     int blockingDelay = permissionProbe.getShieldBlockingDelay();
-                    permissionProbe.getInventory().setItemInMainHand(
-                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
-                    permissionProbe.getInventory().setItemInOffHand(
-                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
-                    permissionProbe.updateInventory();
-                    // Paper's default shield delay intentionally keeps
-                    // isBlocking false for the first few ticks. Set it to
-                    // zero for this synchronous condition assertion, then
-                    // restore the player's configured value below.
-                    permissionProbe.setShieldBlockingDelay(0);
-                    permissionProbe.startUsingItem(org.bukkit.inventory.EquipmentSlot.HAND);
-                    stateBlocking = behaviors.testCondition(skills.bindCondition("is-blocking"), stateContext);
-                    permissionProbe.clearActiveItem();
-                    permissionProbe.setShieldBlockingDelay(blockingDelay);
-                    permissionProbe.getInventory().setItemInMainHand(blockingMainHand);
-                    permissionProbe.getInventory().setItemInOffHand(blockingOffHand);
+                    if (permissionProbe.isBlocking()) {
+                        // A real client may already be holding the Shield. Do
+                        // not rewrite its inventory or active-use state before
+                        // evaluating the condition, because that cancels the
+                        // protocol-driven blocking window.
+                        stateBlocking = behaviors.testCondition(
+                                skills.bindCondition("is-blocking"), stateContext);
+                    } else {
+                        permissionProbe.getInventory().setItemInMainHand(
+                                new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+                        permissionProbe.getInventory().setItemInOffHand(
+                                new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+                        permissionProbe.updateInventory();
+                        // Paper's default shield delay intentionally keeps
+                        // isBlocking false for the first few ticks. Set it to
+                        // zero for this synchronous condition assertion, then
+                        // restore the player's configured value below.
+                        permissionProbe.setShieldBlockingDelay(0);
+                        permissionProbe.startUsingItem(org.bukkit.inventory.EquipmentSlot.HAND);
+                        stateBlocking = behaviors.testCondition(
+                                skills.bindCondition("is-blocking"), stateContext);
+                        permissionProbe.clearActiveItem();
+                        permissionProbe.setShieldBlockingDelay(blockingDelay);
+                        permissionProbe.getInventory().setItemInMainHand(blockingMainHand);
+                        permissionProbe.getInventory().setItemInOffHand(blockingOffHand);
+                    }
                     var spyglassPreviousHand = permissionProbe.getInventory().getItemInMainHand();
                     permissionProbe.getInventory().setItemInMainHand(
                             new org.bukkit.inventory.ItemStack(org.bukkit.Material.SPYGLASS));

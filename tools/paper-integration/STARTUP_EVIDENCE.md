@@ -366,13 +366,15 @@ The report passed schema validation.
 The same real Zombie/model context also set `Entity#setInvulnerable(true)`
 and recorded `invulnerable-condition=true`, then restored the flag.
 
-`is-blocking` remains unverified because it requires a real shield-use input
-workflow; it is not inferred from merely equipping a shield.
-The follow-up shield workflow reached Paper but recorded `state-blocking=false`;
+In this historical workflow, `is-blocking` was unverified because it requires a
+real shield-use input workflow; it is not inferred from merely equipping a
+shield. The follow-up shield workflow reached Paper but recorded
+`state-blocking=false`;
 Mineflayer `activateItem()` did not produce a stable shield-use state, so this
 remains an honest negative observation rather than a passing claim.
-The final probe also ran in Survival mode with a preloaded shield and repeated
-outgoing `use_item` packets; Paper still reported `state-blocking=false`.
+The final historical probe also ran in Survival mode with a preloaded shield
+and repeated outgoing `use_item` packets; Paper still reported
+`state-blocking=false`.
 The same run verified targeter control semantics with
 `targeter-controls=true`: chained filtering, `count=1`, `limit=1`, mob
 filtering, and farthest sorting. Negative controls also passed with
@@ -814,7 +816,7 @@ unchanged, proving the caster exclusion on the live Paper path. The same run
 retained `dotMechanic=passed` and `threatActions=passed`; this remains
 exploratory Paper 1.21.11 evidence.
 
-Fixture `srv-paper-integration-exploratory-1.21.11-r43` reran the shield
+Historical fixture `srv-paper-integration-exploratory-1.21.11-r43` reran the shield
 workflow after keeping a Shield equipped through the `is-blocking` evaluation;
 the client emitted repeated `use_item` packets, but Paper still reported
 `state-blocking=false`. The Bukkit condition and mocked `Player#isBlocking`
@@ -1674,8 +1676,8 @@ Exploratory fixture `srv-paper-integration-exploratory-1.21.11-r126` records
 revives and temporarily protects the online player, who had been killed by an
 earlier natural probe. The same run records
 `stateConditions=passed state-flying=true state-sneaking=true state-gliding=true`.
-`stateBlocking` remains not observed because a stable client-driven Shield-use
-window is still unavailable in the fixture.
+In that historical fixture, `stateBlocking` remained not observed because a
+stable client-driven Shield-use window was still unavailable.
 
 Exploratory fixture `srv-paper-integration-exploratory-1.21.11-r127` records
 `item-pickup trigger=true` and `environmental-damage trigger=true`. The event
@@ -2340,7 +2342,7 @@ spawner-region id=region_probe requested=true region=integration_box failure=nul
 This verifies the built-in coordinate region lookup through the production
 Spawner condition gate.
 
-The latest strict fixture `srv-paper-integration-exp-20261031-r25` passed
+Earlier strict fixture `srv-paper-integration-exp-20261031-r25` passed
 Paper 1.21.1-133 with 248 observed probes: 237 `passed`, 11 expected
 `observed-rejected`, and zero incomplete. It extends the named-region probe
 with an explicit outside control:
@@ -2352,4 +2354,20 @@ spawner-region-outside id=region_probe_outside requested=false region=integratio
 
 The production Spawner gate therefore accepts a location inside the configured
 coordinate region and rejects the same condition at a location outside it.
+
+The latest strict fixture `srv-paper-integration-exp-20261031-r27` passed
+Paper 1.21.1-133 with 248 observed probes: 237 `passed`, 11 expected
+`observed-rejected`, and zero incomplete. It closes the previous real-client
+Shield timing gap while retaining the strict report contract:
+
+```text
+state-blocking=true
+looking-at-condition-details positive=true negative=true
+```
+
+The menu client keeps `HelsteraTester` in a real Shield-use window; the
+production self-test then evaluates `Player#isBlocking` without rewriting the
+client's active-use inventory state. Historical exploratory fixtures r43 and
+r126 remain as evidence of the earlier timing failure, while r27 is the
+current release evidence.
 

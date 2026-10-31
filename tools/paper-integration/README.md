@@ -318,8 +318,9 @@ passed; strict Paper 1.21.1 evidence remains pending.
 
 Exploratory fixture r126 isolates the online player before the AI priority and
 state checks. It records `aiPriority=passed`, `aiPriorityTargets=passed`, and
-`stateConditions=passed`; `stateBlocking` remains a client Shield-use timing
-gap rather than a server-side condition claim.
+`stateConditions=passed`; strict Paper 1.21.1-133 fixture
+`srv-paper-integration-exp-20261031-r27` now records `stateBlocking=passed`
+from a real Mineflayer Shield-use window.
 
 Exploratory fixture r127 extends that isolation through the scheduled event
 workflow and records `itemPickup=passed` and `environmentalDamage=passed`.

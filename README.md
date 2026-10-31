@@ -7,7 +7,7 @@ This compatibility effort is still in progress on Paper 1.21.1. The detailed aud
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
 the report contract passes with `248/248` probes observed (`237 passed` and
 `11 expected negative-control observations`) in fixture
-`srv-paper-integration-exp-20261031-r25`.
+`srv-paper-integration-exp-20261031-r27`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -177,7 +177,7 @@ full MythicMobs parity.
 - Mob Options, Spawners, Random Spawn, Audience, Custom Menu, SkillTree, and AI have focused Paper or unit evidence recorded in the parity matrix.
 - Exploratory Paper r55 now records natural Creeper fuse, Bee stinger restoration, Zombie conversion prevention, and jockey mount-event probes as passed; strict Paper 1.21.1 evidence and natural AI jockey selection remain open.
 - AI selector core is represented by a typed priority/`clear` plan with core goal/target aliases, relation/faction target resolution, conditional selectors, native `Mob#setTarget` synchronization, and an exploratory Paper `ai-selector-core` probe. Paper 1.21.1 release evidence is still required.
-- Exploratory Paper 1.21.11 r126 records `aiPriority=passed` and `aiPriorityTargets=passed` after the self-test revives and protects the online player before arbitration; `stateConditions=passed` now covers real flying/sneaking/gliding state. `stateBlocking` remains a client Shield-use timing gap.
+- Exploratory Paper 1.21.11 r126 records `aiPriority=passed` and `aiPriorityTargets=passed` after the self-test revives and protects the online player before arbitration; `stateConditions=passed` covers real flying/sneaking/gliding state. The historical client Shield-use gap is closed by strict Paper r27, which records `stateBlocking=passed` from a real Mineflayer Shield-use window.
 - Exploratory Paper 1.21.11 r127 records independent `itemPickup=passed` and `environmentalDamage=passed` probes after isolating the managed player from earlier natural damage and binding a dedicated no-attacker damage profile.
 - Exploratory Paper 1.21.11 r128 records `lootDynamicChance=passed` with a deterministic runtime `<random.1to1>` expression; the probe no longer depends on a flaky random hit.
 - Raw Potion follow-ups r129-r132 received the Potion in protocol slot 37 and sent delayed `use_item`/real-position `RELEASE_USE_ITEM` packets, but did not reproduce `PlayerItemConsumeEvent`; server-side potion add/remove events remain passed. The remaining consumption evidence is explicitly tracked as a client/server protocol handshake gap.
@@ -212,7 +212,8 @@ full MythicMobs parity.
 - Mythic `VisibleByDefault`, `Invisible`, and `AlwaysShowName` now have a dedicated real-entity config-to-instance probe; strict fixture `srv-paper-integration-exp-20261031-r19` records `visibility-options result=true visible-by-default=true invisible=true show-name=true`.
 - Spawner group limits now have strict Paper evidence: `group-size=3-5` with `max-alive=2` produces `alive=2 total=2` and reports `limit=true` in fixture `srv-paper-integration-exp-20261031-r20`.
 - Natural scheduler group limits now have strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r21` records `before=2 after=4 alive=2 max-alive=2 group-min=3 group-max=5 limit=true`.
-- Named Spawner region gates now have strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r25` records both the in-region success and the out-of-region rejection (`spawner-region-outside id=region_probe_outside requested=false region=integration_box failure=conditions rejected location`).
+- Named Spawner region gates now have strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r27` records both the in-region success and the out-of-region rejection (`spawner-region-outside id=region_probe_outside requested=false region=integration_box failure=conditions rejected location`).
+- Mythic `Blocking`/`is-blocking` now has strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r27` keeps a real online player in a client-driven Shield-use window and records `stateBlocking=passed`.
 - Vehicle enter/exit/dismount/eject/destroy trigger coverage is now lifecycle-independent from the online player probe; strict fixture `srv-paper-integration-exp-20261031-r17` records `vehicle-events enter=true exit=true dismount=true eject=true destroy=true`.
 
 ### Remaining Work

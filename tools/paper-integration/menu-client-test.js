@@ -7,6 +7,7 @@ const [host = '127.0.0.1', rawPort = '25731', reportPath = '', audienceReportPat
 const port = Number(rawPort);
 const timeoutMs = 30000;
 const events = [];
+let shieldTimer = null;
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`Invalid Paper port: ${rawPort}`);
@@ -87,6 +88,25 @@ bot.on('windowOpen', window => events.push(`open:${titleText(window)}`));
 bot.on('windowClose', window => events.push(`close:${titleText(window)}`));
 guest.on('message', message => guestEvents.push(`chat:${message.toString()}`));
 guest.on('error', error => guestEvents.push(`error:${error.message}`));
+
+// Keep the real player in a client-driven Shield use window while the delayed
+// server self-test evaluates Player#isBlocking.
+bot.once('spawn', () => {
+  setTimeout(async () => {
+    try {
+      const shield = bot.inventory.items().find(stack => stack.name === 'shield');
+      if (!shield) return;
+      await bot.equip(shield, 'hand');
+      bot.activateItem();
+      shieldTimer = setInterval(() => {
+        if (!bot.ended) bot.activateItem();
+      }, 250);
+      process.stdout.write('PAPER_SHIELD_BLOCKING_ACTIVE\n');
+    } catch (error) {
+      process.stderr.write(`Shield workflow failed: ${error.stack || error.message}\n`);
+    }
+  }, 750);
+});
 
 function hasEvent(list, marker) {
   return list.some(event => event.includes(marker));
@@ -270,6 +290,7 @@ run().catch(error => {
   // Keep the primary player online briefly after the menu assertions so the
   // server-side skill/event self-tests can finish before the fixture tears it down.
   await new Promise(resolve => setTimeout(resolve, 30000));
+  if (shieldTimer) clearInterval(shieldTimer);
   bot.quit('integration complete');
   guest.quit('integration complete');
 });
