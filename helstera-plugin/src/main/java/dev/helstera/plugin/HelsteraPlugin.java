@@ -966,6 +966,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && horse.getInventory().getSaddle().getType() == org.bukkit.Material.SADDLE;
                 boolean horseArmor = horse.getInventory().getArmor() != null
                         && horse.getInventory().getArmor().getType() == org.bukkit.Material.DIAMOND_HORSE_ARMOR;
+                var chestHorse = world.spawn(origin.clone().add(1, 0, 0), org.bukkit.entity.Donkey.class);
+                var horseChestOptions = new org.bukkit.configuration.file.YamlConfiguration();
+                horseChestOptions.set("carrying-chest", true);
+                applyEntitySpecificOptions(chestHorse, horseChestOptions);
+                entities.add(chestHorse);
+                boolean horseChest = chestHorse.isCarryingChest();
                 getLogger().info("[自检] horse-options result="
                         + (horse.getColor() == org.bukkit.entity.Horse.Color.WHITE
                         && horse.getStyle() == org.bukkit.entity.Horse.Style.WHITE_DOTS
@@ -973,8 +979,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && horse.getDomestication() == 5
                         && Math.abs(horse.getJumpStrength() - 0.8) < 1.0e-9
                         && horseSaddled
-                        && horseArmor)
-                        + " saddled=" + horseSaddled + " armor=" + horseArmor);
+                        && horseArmor
+                        && horseChest)
+                        + " saddled=" + horseSaddled + " armor=" + horseArmor + " chest=" + horseChest);
 
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
@@ -9097,6 +9104,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             } else if (entity instanceof org.bukkit.entity.AbstractHorse horse) {
                 horse.getInventory().setSaddle(saddled
                         ? new org.bukkit.inventory.ItemStack(org.bukkit.Material.SADDLE) : null);
+            }
+        }
+        if (options.contains("carrying-chest")) {
+            boolean carryingChest = options.getBoolean("carrying-chest");
+            if (entity instanceof org.bukkit.entity.Horse horse) {
+                horse.setCarryingChest(carryingChest);
+            } else if (entity instanceof org.bukkit.entity.ChestedHorse chestedHorse) {
+                chestedHorse.setCarryingChest(carryingChest);
             }
         }
         if (entity instanceof org.bukkit.entity.Bee bee) {

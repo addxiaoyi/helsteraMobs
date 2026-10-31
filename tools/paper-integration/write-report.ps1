@@ -46,7 +46,7 @@ $paperMatch = [regex]::Match($logText,
     'This server is running Paper version (.+?) \(Implementing API version (.+?)\)')
 $probeSpecs = [ordered]@{
     modelDisplay = '结果=通过.*Display实体数=[1-9][0-9]*.*实例有效=true'
-    horse = 'horse-options result=true saddled=true .*armor=true'
+    horse = 'horse-options result=true saddled=true .*armor=true .*chest=true'
     sheep = 'sheep-options result=true'
     armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false .*items=true'
     cat = 'cat-options result=true'
