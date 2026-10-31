@@ -2114,7 +2114,7 @@ Paper's `ArmoredHorseInventory#setArmor`; the configured
 `NONE` values clear the armor slot, while invalid or unsupported values fail
 closed and preserve the existing item.
 
-The latest strict fixture `srv-paper-integration-horse-chest-20261031-r2`
+The earlier strict fixture `srv-paper-integration-horse-chest-20261031-r2`
 passed with 230 observed probes: 220 `passed`, 10 expected
 `observed-rejected`, and zero incomplete. Its Horse option line is:
 
@@ -2127,6 +2127,19 @@ This verifies `Saddled` and `HorseArmor` on a real Horse, and
 Donkey implementing Paper's `ChestedHorse` API. The armor item is read back
 through `ArmoredHorseInventory#getArmor`; the chest state is read back through
 `ChestedHorse#isCarryingChest`.
+
+The latest strict fixture `srv-paper-integration-scale-20261031-r2` passed
+with 231 observed probes: 220 `passed`, 11 expected `observed-rejected`, and
+zero incomplete. Its Scale option line is:
+
+```text
+scale-options result=true scale=1.25
+```
+
+This reads back the configured `scale: 1.25` from the real
+`mobs/scale_probe.yml` through `spawnMobCore` and `ModelInstance#getScale`.
+The strict report catalog now contains 231 registered probes because this
+configuration-to-instance assertion is part of the release gate.
 
 The strict fixture `srv-paper-integration-adult-20261031-r2` passed with 230
 observed probes: 219 `passed`, 11 expected `observed-rejected`, and zero

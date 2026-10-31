@@ -983,6 +983,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && horseChest)
                         + " saddled=" + horseSaddled + " armor=" + horseArmor + " chest=" + horseChest);
 
+                if (mobConfig("scale_probe") != null) {
+                    int scaleProbeId = spawnMobAt("scale_probe", origin.clone().add(6, 0, 0), null);
+                    var scaleProbe = scaleProbeId > 0 ? instances().impl(scaleProbeId) : null;
+                    double observedScale = scaleProbe == null ? Double.NaN : scaleProbe.getScale();
+                    boolean scaleOptions = Math.abs(observedScale - 1.25) < 1.0e-9;
+                    getLogger().info("[自检] scale-options result=" + scaleOptions
+                            + " scale=" + observedScale);
+                    if (scaleProbeId > 0) instances().despawn(scaleProbeId);
+                }
+
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);
