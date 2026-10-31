@@ -2215,7 +2215,7 @@ This reads back the configured `mob.attack-damage: 12` from the real
 catalog now contains 236 registered probes because this
 configuration-to-entity assertion is part of the release gate.
 
-The latest strict fixture
+The preceding strict fixture
 `srv-paper-integration-armor-20261031-r11` passed with 237 observed probes:
 227 `passed`, 10 expected `observed-rejected`, and zero incomplete. Its Armor
 option line is:
@@ -2229,6 +2229,21 @@ This reads back the configured root `Armor: 8` from the real
 base attribute matched the configured value. The strict report catalog now
 contains 237 registered probes because this configuration-to-entity assertion
 is part of the release gate.
+
+The latest strict fixture
+`srv-paper-integration-entity-flags-20261031-r12` passed with 238 observed
+probes: 227 `passed`, 11 expected `observed-rejected`, and zero incomplete.
+Its configured entity flag line is:
+
+```text
+entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false
+```
+
+This reads back the configured `entity.no-ai`, `entity.invulnerable`,
+`entity.silent`, `entity.gravity`, and `entity.collidable` values from the real
+`mobs/entity_flags_probe.yml` through `spawnMobCore`. The strict report catalog
+now contains 238 registered probes because this configuration-to-entity
+assertion is part of the release gate.
 
 The strict fixture `srv-paper-integration-adult-20261031-r2` passed with 230
 observed probes: 219 `passed`, 11 expected `observed-rejected`, and zero
