@@ -2032,3 +2032,18 @@ movement velocity, and the route state advances after the entity reaches the
 first configured waypoint. It does not claim native Pathfinder goal or
 pathfinding-malus parity.
 
+The latest strict fixture `srv-paper-integration-interactable-20261031` kept
+the 230-probe gate green with 219 `passed`, 11 expected `observed-rejected`,
+and zero incomplete. Its real-player event line includes:
+
+```text
+events ... prevent-item-use=true interactable=true prevent-teleport=true ...
+```
+
+The `interactable=true` assertion is produced by dispatching the production
+`PlayerInteractEntityEvent` path for a managed Wolf with `interactable=false`
+and an otherwise equivalent control with `interactable=true`; the protected
+event is cancelled and the control remains allowed. This is server-side event
+evidence and does not claim natural client timing or complete Armor Stand
+manipulation parity.
+
