@@ -1644,6 +1644,14 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "nearestanimal" -> "nearestanimal";
             case "nearestvillager" -> "nearestvillager";
             case "nearesttamed" -> "nearesttamed";
+            case "nearestentity" -> "nearestentity";
+            case "nearestliving" -> "nearestliving";
+            case "nearestlivingentity" -> "nearestlivingentity";
+            case "nearestmob" -> "nearestmob";
+            case "playersinworld" -> "playersinworld";
+            case "mobsinworld" -> "mobsinworld";
+            case "entitiesinworld" -> "entitiesinworld";
+            case "livingentitiesinworld" -> "livingentitiesinworld";
             case "los", "lineofsight" -> "lineofsight";
             default -> rawName.toLowerCase(Locale.ROOT);
         };
