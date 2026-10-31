@@ -51,8 +51,20 @@ public record MythicSkillSpec(
         String trigger = null;
         Double chance = null;
         List<String> conditions = new ArrayList<>();
-        for (String token : tokens) {
-            if (token.startsWith("@") && token.length() > 1) targeter = token.substring(1);
+        for (int i = 0; i < tokens.size(); i++) {
+            String token = tokens.get(i);
+            if (token.startsWith("@") && token.length() > 1) {
+                targeter = token.substring(1);
+                while (i + 1 < tokens.size() && tokens.get(i + 1).equals(">")) {
+                    if (i + 2 >= tokens.size() || !tokens.get(i + 2).startsWith("@")
+                            || tokens.get(i + 2).length() == 1) {
+                        throw new IllegalArgumentException("incomplete targeter chain");
+                    }
+                    targeter += " > " + tokens.get(i + 2);
+                    i += 2;
+                }
+            }
+            else if (token.equals(">")) throw new IllegalArgumentException("incomplete targeter chain");
             else if (token.startsWith("~on") && token.length() > 3) trigger = token.substring(3);
             else if (token.startsWith("?") && token.length() > 1) conditions.add(token.substring(1));
             else {
