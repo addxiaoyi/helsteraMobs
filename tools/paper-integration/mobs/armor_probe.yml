@@ -1,0 +1,7 @@
+name: Armor Probe
+model: example/emberling
+mob:
+  armor: 8
+entity:
+  type: ZOMBIE
+  silent: true
