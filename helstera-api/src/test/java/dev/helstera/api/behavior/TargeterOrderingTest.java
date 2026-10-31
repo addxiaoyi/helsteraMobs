@@ -120,7 +120,8 @@ class TargeterOrderingTest {
                 "sphere", "ring", "cone", "lineofsight", "los",
                 "nearestconditionaltarget", "nearestplayer", "nearestmonster", "nearestanimal",
                 "nearestvillager", "nearesttamed", "entitiesinradius", "monstersinradius", "animalsinradius",
-                "villagersinradius", "tamedinradius")));
+                "villagersinradius", "tamedinradius", "playersinworld", "mobsinworld",
+                "entitiesinworld")));
         assertTrue(Targeters.byName("cone") != null);
         assertTrue(Targeters.byName("ring") != null);
     }
@@ -182,6 +183,31 @@ class TargeterOrderingTest {
                 "@living{count=0}", (dev.helstera.api.instance.ModelInstance) null, candidates, List.of()));
         assertEquals(List.of(player), Targeters.select(
                 "@living{filter=players} > @nearest{count=1}", (dev.helstera.api.instance.ModelInstance) null, candidates, List.of()));
+    }
+
+    @Test
+    @DisplayName("world targeters replace the nearby candidate snapshot")
+    void worldTargetersUseAllLivingEntitiesInSourceWorld() {
+        var player = livingProxy(org.bukkit.entity.Player.class);
+        var mob = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var nearby = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var worldEntities = List.of(player, mob);
+        var world = (org.bukkit.World) Proxy.newProxyInstance(
+                org.bukkit.World.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.World.class},
+                (proxy, method, args) -> method.getName().equals("getLivingEntities")
+                        ? worldEntities : defaultValue(method.getReturnType()));
+        var origin = new org.bukkit.Location(world, 0, 64, 0);
+        var source = (dev.helstera.api.instance.ModelInstance) Proxy.newProxyInstance(
+                dev.helstera.api.instance.ModelInstance.class.getClassLoader(),
+                new Class<?>[]{dev.helstera.api.instance.ModelInstance.class},
+                (proxy, method, args) -> method.getName().equals("location")
+                        ? origin : defaultValue(method.getReturnType()));
+
+        assertEquals(List.of(player), Targeters.select("@PlayersInWorld", source,
+                List.of(nearby), List.of()));
+        assertEquals(List.of(mob), Targeters.select("@MobsInWorld", source,
+                List.of(nearby), List.of()));
     }
 
     @Test
