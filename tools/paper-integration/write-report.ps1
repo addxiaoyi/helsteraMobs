@@ -240,6 +240,7 @@ $probeSpecs = [ordered]@{
     environmentalDamage = 'environmental-damage trigger=true fire-ticks=-?[0-9]+'
     spawnerMaxSpawns = 'spawner-max-spawns id=max_spawn_probe first=true second=false total=1'
     spawnerGroup = 'spawner-group id=group_probe requested=true alive=[12] total=[12] max-alive=2 group-min=3 group-max=5 limit=true'
+    spawnerNaturalGroup = 'spawner-natural-group id=natural_group_probe mode=live-scheduler before=[0-9]+ after=[1-9][0-9]* alive=2 max-alive=2 group-min=3 group-max=5 limit=true'
     spawnerScopedLimits = 'spawner-scoped-limits id=scoped_limit_probe first=true second=false total=1 world-limit=1 failure=scoped spawn limits reached'
     # The fixture may have an earlier automatic spawn for this id; the
     # player-limit assertion is the first/second result and explicit failure,

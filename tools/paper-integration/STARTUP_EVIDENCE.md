@@ -2318,3 +2318,14 @@ spawner-group id=group_probe requested=true alive=2 total=2 max-alive=2 group-mi
 This proves the production group spawn path stops at `max-alive` instead of
 materializing the full requested group.
 
+The latest strict fixture `srv-paper-integration-exp-20261031-r21` passed
+Paper 1.21.1-133 with 245 observed probes: 235 `passed`, 10 expected
+`observed-rejected`, and zero incomplete. Its live scheduler group line is:
+
+```text
+spawner-natural-group id=natural_group_probe mode=live-scheduler before=2 after=4 alive=2 max-alive=2 group-min=3 group-max=5 limit=true
+```
+
+This is separate from the manual `forceSpawn` group probe and proves the
+interval-driven scheduler path applies the same per-attempt alive cap.
+

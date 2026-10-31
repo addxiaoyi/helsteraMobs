@@ -152,6 +152,21 @@ spawners:
     min-players: 0
     players-radius: 0.0
     enabled: false
+  natural_group_probe:
+    mob: emberling
+    world: ""
+    x: 4.5
+    y: 70
+    z: 2.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 2
+    group-size: 3-5
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    enabled: true
   scoped_limit_probe:
     mob: emberling
     world: ""
