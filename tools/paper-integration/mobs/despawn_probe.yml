@@ -1,0 +1,9 @@
+name: Despawn Probe
+model: example/emberling
+persistent: true
+mob:
+  despawn: PERSISTENT
+  despawn-distance: 0
+entity:
+  type: ZOMBIE
+  silent: true

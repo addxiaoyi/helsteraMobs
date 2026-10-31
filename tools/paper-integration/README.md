@@ -23,9 +23,9 @@ $env:PAPER_MENU_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-The latest Paper 1.21.1-133 strict fixture completes 240 registered probes: 230
-positive observations and 10 expected negative-control observations. The
-current release evidence is `srv-paper-integration-exp-20261031-r16`; earlier
+The latest Paper 1.21.1-133 strict fixture completes 240 registered probes: 229
+positive observations and 11 expected negative-control observations. The
+current release evidence is `srv-paper-integration-exp-20261031-r17`; earlier
 fixture counts in this document are historical checkpoints.
 
 The follow-up fixture also verifies the root Mythic `Exp` path through
@@ -33,6 +33,9 @@ The follow-up fixture also verifies the root Mythic `Exp` path through
 
 It also records the complete managed vehicle lifecycle probe:
 `vehicle-events enter=true exit=true dismount=true eject=true destroy=true`.
+
+The strict fixture also verifies `mobs/despawn_probe.yml` through
+`despawn-options result=true mode=PERSISTENT distance=0.0 persistent=true`.
 
 The default server jar path is `srv-1.21.1/paper.jar`. If the Paper jar is
 stored elsewhere, set an explicit override before running the fixture:

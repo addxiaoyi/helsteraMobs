@@ -1120,6 +1120,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (expProbeId > 0) instances().despawn(expProbeId);
                 }
 
+                if (mobConfig("despawn_probe") != null) {
+                    int despawnProbeId = spawnMobAt("despawn_probe", origin.clone().add(15, 0, 0), null);
+                    var despawnProbe = despawnProbeId > 0 ? instances().impl(despawnProbeId) : null;
+                    var despawnOptions = despawnProbe == null ? null : despawnProbe.options();
+                    var despawnEntity = despawnProbe == null ? null
+                            : despawnProbe.baseEntity().orElse(null);
+                    String observedMode = despawnOptions == null ? "missing" : despawnOptions.despawnMode();
+                    double observedDistance = despawnOptions == null
+                            ? Double.NaN : despawnOptions.despawnDistance();
+                    boolean observedPersistent = despawnEntity instanceof org.bukkit.entity.LivingEntity living
+                            && living.isPersistent();
+                    boolean despawnOptionsResult = "PERSISTENT".equalsIgnoreCase(observedMode)
+                            && Math.abs(observedDistance) < 1.0e-9 && observedPersistent;
+                    getLogger().info("[自检] despawn-options result=" + despawnOptionsResult
+                            + " mode=" + observedMode + " distance=" + observedDistance
+                            + " persistent=" + observedPersistent);
+                    if (despawnProbeId > 0) instances().despawn(despawnProbeId);
+                }
+
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);

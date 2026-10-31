@@ -5,9 +5,9 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
-the report contract passes with `240/240` probes observed (`230 passed` and
-`10 expected negative-control observations`) in fixture
-`srv-paper-integration-exp-20261031-r16`.
+the report contract passes with `240/240` probes observed (`229 passed` and
+`11 expected negative-control observations`) in fixture
+`srv-paper-integration-exp-20261031-r17`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -36,7 +36,7 @@ follows:
 
 Current checkpoint evidence is deliberately narrow: the focused Java suite
 and the latest strict Paper run are green, while the latest strict report
-records `passed=230`, `observed-rejected=10`, and `incomplete=0` across 240
+records `passed=229`, `observed-rejected=11`, and `incomplete=0` across 240
 registered probes. These numbers describe the development checkpoint, not
 full MythicMobs parity.
 
@@ -207,6 +207,7 @@ full MythicMobs parity.
 - Mythic root `Armor` now applies the migrated `mob.armor` value to Bukkit `ARMOR`; strict fixture `srv-paper-integration-armor-20261031-r11` reads back `base=8.0` from `mobs/armor_probe.yml`.
 - Entity option configuration now has strict real-entity coverage for `NoAI`, `Invincible`, `Silent`, `Gravity`, and `Collidable`; fixture `srv-paper-integration-entity-flags-20261031-r12` reads back all five configured states.
 - Mythic root `Exp` now maps to an explicit mob death-experience override, including fixed and ranged `drops.experience*` values; strict fixture `srv-paper-integration-exp-20261031-r16` records `exp-options result=true experience=13 event=true`.
+- Mythic `Options.Despawn`/`Persistent` now has a dedicated production config-to-instance probe; strict fixture `srv-paper-integration-exp-20261031-r17` reads back `mode=PERSISTENT`, `distance=0`, and the real entity's persistent flag.
 - Vehicle enter/exit/dismount/eject/destroy trigger coverage is now lifecycle-independent from the online player probe; strict fixture `srv-paper-integration-exp-20261031-r16` records `vehicle-events enter=true exit=true dismount=true eject=true destroy=true`.
 
 ### Remaining Work
