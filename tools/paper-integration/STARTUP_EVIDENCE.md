@@ -2430,3 +2430,9 @@ Its managed selector probe records `world-chain-filtered=true` after selecting
 players in the source world and chaining to world entities; the real monster
 candidate remains excluded.
 
+Strict fixture `srv-paper-targeter-limits-20261031-r1` passed Paper
+1.21.1-133 with 250 observed probes (239 passed, 11 expected rejected, zero
+incomplete). Its real-entity probe records `targeter-invalid-limits=true`:
+invalid count and non-finite radius select nothing, while a valid count
+selects one entity.
+

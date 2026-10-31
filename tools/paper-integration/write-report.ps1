@@ -191,7 +191,7 @@ $probeSpecs = [ordered]@{
     spatialTargetersBoundaries = 'spatial-targeter-details .*sphere-boundary=true .*ring-boundary=true .*cone-boundary=true'
     lineTargeterParameters = 'spatial-targeter-details .*line-named=true .*line-width-boundary=true .*line-length-boundary=true'
     targeterControls = 'spatial-targeter-details .*targeter-controls=true'
-    targeterControlsNegative = 'spatial-targeter-details .*targeter-limit-zero=true .*targeter-negative-filter=true'
+    targeterControlsNegative = 'spatial-targeter-details .*targeter-limit-zero=true .*targeter-negative-filter=true .*targeter-invalid-limits=true'
     deathLootItems = 'death-loot items=[1-9][0-9]*'
     deathLootExperience = 'death-loot .*experience=[1-9][0-9]*'
     deathLootConditions = 'death-loot .*conditional-drop=true.*rejected-drop-absent=true'
