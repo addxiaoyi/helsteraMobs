@@ -192,6 +192,7 @@ full MythicMobs parity.
 - Exploratory Paper 1.21.11 player fixture `srv-paper-integration-exploratory-20261020-target-glowing-client` now records `targetStateConditions=passed` after setting and restoring a real player's glowing state; strict Paper 1.21.1 evidence remains pending.
 - Mythic `Options.Interactable` now maps to the managed runtime policy with its documented imported default, and strict Paper 1.21.1 fixture `srv-paper-integration-armor-stand-20261031` records protected/control player interaction and Armor Stand manipulation pairs as `interactable=true` and `interactable-armor-stand=true`.
 - Mythic `Options.PatrolSpawnPoint` now maps to Raider patrol target blocks, and strict Paper 1.21.1 fixture `srv-paper-integration-patrol-spawn-20261031` reads back a real Pillager patrol target at its spawn block.
+- Mythic `Options.Adult` now maps to the Ageable adult setter independently of `Age`; strict Paper 1.21.1 fixture `srv-paper-integration-adult-20261031-r2` records `age-options result=true` with both baby and adult controls.
 
 ### Remaining Work
 

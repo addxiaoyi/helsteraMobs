@@ -973,10 +973,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 ageConfig.set("baby", true);
                 ageConfig.set("age-lock", true);
                 applyAgeOptions(sheep, ageConfig);
+                var adultSheep = world.spawn(origin.clone().add(3, 0, 0), org.bukkit.entity.Sheep.class);
+                entities.add(adultSheep);
+                var adultConfig = new org.bukkit.configuration.file.YamlConfiguration();
+                adultConfig.set("adult", true);
+                applyAgeOptions(adultSheep, adultConfig);
                 getLogger().info("[自检] age-options result="
-                        + (sheep.getAge() == -24000 && !sheep.isAdult() && sheep.getAgeLock())
+                        + (sheep.getAge() == -24000 && !sheep.isAdult() && sheep.getAgeLock()
+                        && adultSheep.isAdult())
                         + " age=" + sheep.getAge()
                         + " baby=" + !sheep.isAdult()
+                        + " adult=" + adultSheep.isAdult()
                         + " age-lock=" + sheep.getAgeLock());
                 getLogger().info("[自检] sheep-options result="
                         + (sheep.getColor() == org.bukkit.DyeColor.RED && sheep.isSheared()));
@@ -8921,6 +8928,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 org.bukkit.configuration.ConfigurationSection options) {
         if (!(entity instanceof org.bukkit.entity.Ageable ageable) || options == null) return;
         if (options.contains("age")) ageable.setAge(options.getInt("age"));
+        if (options.contains("adult")) {
+            if (options.getBoolean("adult")) ageable.setAdult();
+            else ageable.setBaby();
+        }
         if (options.contains("baby")) {
             if (options.getBoolean("baby")) ageable.setBaby();
             else ageable.setAdult();
