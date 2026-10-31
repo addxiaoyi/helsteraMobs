@@ -2442,3 +2442,9 @@ incomplete). Its `ai-selector-core` line passes while using the runtime alias
 forms `@Players_In_World`, `@Mobs_In_World`, `@Nearest_Living_Entity`, and
 `@Nearest_Mob`.
 
+Strict fixture `srv-paper-context-chain-20261031-r1` passed Paper 1.21.1-133
+with 251 observed probes: 239 passed and 12 expected rejected. Its
+`context-chain-action=true` assertion dispatches an `add-tag` skill through
+`@Target{} > @living{filter=mob}`: a player target is rejected, a zombie target
+receives the tag, and the temporary tag is removed.
+

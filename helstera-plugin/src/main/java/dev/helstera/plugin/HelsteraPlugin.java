@@ -6926,6 +6926,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
                 boolean setTargetMechanic = false;
                 boolean clearTargetMechanic = false;
+                boolean contextChainAction = false;
                 if (skillService instanceof dev.helstera.ai.skill.SkillService targetSkills
                         && behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry targetBehaviors) {
                     var targetContext = dev.helstera.api.behavior.BehaviorContext.of(
@@ -6938,6 +6939,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             "clear-target", targetContext);
                     clearTargetMechanic = clearDispatched && controller.targetEntity() == null
                             && mob.getTarget() == null;
+                    String chainTag = "helstera_chain_" + java.util.UUID.randomUUID().toString().replace("-", "");
+                    try {
+                        var playerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                instance, holder, 1.0, 2.0, 0, "integration");
+                        String action = "add-tag " + chainTag + " @Target{} > @living{filter=mob}";
+                        boolean rejectedDispatch = runIntegrationAction(targetSkills, targetBehaviors, action, playerContext);
+                        boolean rejected = !holder.getScoreboardTags().contains(chainTag);
+                        boolean acceptedDispatch = runIntegrationAction(targetSkills, targetBehaviors, action, targetContext);
+                        contextChainAction = rejectedDispatch && rejected && acceptedDispatch
+                                && monster.getScoreboardTags().contains(chainTag);
+                    } finally {
+                        holder.removeScoreboardTag(chainTag);
+                        monster.removeScoreboardTag(chainTag);
+                    }
                     controller.setCombatTarget(holder);
                     controller.tick();
                 }
@@ -6973,7 +6988,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && ownerTarget && factionTarget && conditionalTarget
                         && worldPlayerTarget && worldMobTarget && worldChainFiltered
                         && nearestLivingTarget && nearestMobTarget
-                        && setTargetMechanic && clearTargetMechanic
+                        && setTargetMechanic && clearTargetMechanic && contextChainAction
                         && mob.getTarget() == holder;
                 getLogger().info("ai-selector-core goals=" + goals
                         + " player-target=" + playerTarget
@@ -6989,6 +7004,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " nearest-mob=" + nearestMobTarget
                         + " set-target-mechanic=" + setTargetMechanic
                         + " clear-target-mechanic=" + clearTargetMechanic
+                        + " context-chain-action=" + contextChainAction
                         + " native-target=" + (mob.getTarget() == holder)
                         + " faction-source=" + dev.helstera.api.behavior.Factions.factionOf(base)
                         + " faction-holder=" + dev.helstera.api.behavior.Factions.factionOf(holder)

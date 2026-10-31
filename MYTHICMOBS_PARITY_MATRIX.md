@@ -1229,10 +1229,11 @@ restores the player's prior glowing state.
 | Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-runtime-alias-20261031-r2` completes the registered report contract with 251 observed probes (240 passed plus 11 expected negative controls); it retains targeter chains, nearest targeters, runtime underscore aliases, production `set-target`/`clear-target` dispatch, dual-client menu/Audience, real client-driven Shield `is-blocking`, natural Spawner recycling, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options, root Exp, visibility, Spawner limits and recycling, named-region gates, managed vehicle lifecycle, entity flags, entity-specific setters, Pathfinder-clear, AI route waypoint, Interactable/Armor Stand evidence, and fail-closed invalid targeter parameters. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 The current latest report superseding the historical row summary is strict
-fixture `srv-paper-runtime-alias-20261031-r2`: 251 probes, 240 passed,
-11 expected negative controls, and zero incomplete. Real-entity selector
-probes include chained filtering, nearest selection, runtime underscore aliases,
-and fail-closed invalid `limit`/`radius` parameters.
+fixture `srv-paper-context-chain-20261031-r1`: 251 probes, 239 passed,
+12 expected negative controls, and zero incomplete. Real-entity selector
+probes include a `SkillService` action dispatched through a context targeter
+chain, nearest selection, runtime underscore aliases, and fail-closed invalid
+`limit`/`radius` parameters.
 
 Strict fixture `srv-paper-integration-exp-20261031-r17` adds
 `despawnOptions` for the production `Options.Despawn`/`Persistent`
