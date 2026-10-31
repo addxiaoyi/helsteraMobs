@@ -194,6 +194,15 @@ class MythicAgeOptionsTest {
     }
 
     @Test
+    void appliesCarryingChestOptionThroughChestedHorseApi() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var chestedHorse = proxy(org.bukkit.entity.ChestedHorse.class, calls);
+        HelsteraPlugin.applyEntitySpecificOptions(chestedHorse,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("carrying-chest: true")));
+        assertEquals(true, calls.get("setCarryingChest"), calls.toString());
+    }
+
+    @Test
     void appliesAngryStateToWolvesAndZombifiedPiglins() {
         Map<String, Object> wolfCalls = new LinkedHashMap<>();
         Map<String, Object> piglinCalls = new LinkedHashMap<>();
@@ -319,6 +328,7 @@ class MythicAgeOptionsTest {
                 horse-max-domestication: 20
                 horse-domestication: 5
                 horse-jump-strength: 0.8
+                carrying-chest: true
                 cat-type: SIAMESE
                 cat-sitting: true
                 cat-collar-color: BLUE
@@ -341,6 +351,7 @@ class MythicAgeOptionsTest {
         assertEquals(20, horseCalls.get("setMaxDomestication"));
         assertEquals(5, horseCalls.get("setDomestication"));
         assertEquals(0.8, horseCalls.get("setJumpStrength"));
+        assertEquals(true, horseCalls.get("setCarryingChest"));
         assertEquals(org.bukkit.DyeColor.RED, sheepCalls.get("setColor"));
         assertEquals(true, sheepCalls.get("setSheared"));
         assertEquals(true, standCalls.get("setArms"));

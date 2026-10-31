@@ -1959,6 +1959,7 @@ class ImportersTest {
                       Baby: true
                       Saddled: true
                       HorseArmor: DIAMOND_HORSE_ARMOR
+                      CarryingChest: true
                       CanJoinRaid: false
                       PatrolLeader: true
                       PatrolSpawnPoint: true
@@ -1993,6 +1994,8 @@ class ImportersTest {
         assertTrue(target.getBoolean("entity.saddled"));
         assertEquals("DIAMOND_HORSE_ARMOR", target.getString("entity.horse-armor"));
         assertFalse(target.contains("mob.unsupported.Options.HorseArmor"));
+        assertTrue(target.getBoolean("entity.carrying-chest"));
+        assertFalse(target.contains("mob.unsupported.Options.CarryingChest"));
         assertFalse(target.getBoolean("entity.can-join-raid", true));
         assertTrue(target.getBoolean("entity.patrol-leader"));
         assertTrue(target.getBoolean("entity.patrol-spawn-point"));

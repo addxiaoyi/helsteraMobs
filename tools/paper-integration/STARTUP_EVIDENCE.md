@@ -2100,7 +2100,7 @@ This verifies the production `Saddled` option through Paper's
 `AbstractHorseInventory#setSaddle`; the runtime also supports `Steerable`
 entities such as Pig through `setSaddle(boolean)`.
 
-The latest strict fixture `srv-paper-integration-horse-armor-20261031` passed
+The earlier strict fixture `srv-paper-integration-horse-armor-20261031` passed
 with 230 observed probes: 220 `passed`, 10 expected `observed-rejected`, and
 zero incomplete. Its Horse option line is:
 
@@ -2113,6 +2113,20 @@ Paper's `ArmoredHorseInventory#setArmor`; the configured
 `DIAMOND_HORSE_ARMOR` is read back from the real Horse inventory. Blank and
 `NONE` values clear the armor slot, while invalid or unsupported values fail
 closed and preserve the existing item.
+
+The latest strict fixture `srv-paper-integration-horse-chest-20261031-r2`
+passed with 230 observed probes: 220 `passed`, 10 expected
+`observed-rejected`, and zero incomplete. Its Horse option line is:
+
+```text
+horse-options result=true saddled=true armor=true chest=true
+```
+
+This verifies `Saddled` and `HorseArmor` on a real Horse, and
+`CarryingChest` through the same production entity-option path on a real
+Donkey implementing Paper's `ChestedHorse` API. The armor item is read back
+through `ArmoredHorseInventory#getArmor`; the chest state is read back through
+`ChestedHorse#isCarryingChest`.
 
 The strict fixture `srv-paper-integration-adult-20261031-r2` passed with 230
 observed probes: 219 `passed`, 11 expected `observed-rejected`, and zero
