@@ -313,6 +313,7 @@ class ImportersTest {
                       - message{m=Mob} @Nearest_Mob
                       - message{m=Living} @Nearest-Living-Entity
                       - message{m=World} @Players_In_World{limit=2}
+                      - message{m=Chain} @Players_In_World{limit=2} > @Nearest_Mob
                 """);
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(
@@ -326,6 +327,7 @@ class ImportersTest {
         assertTrue(actions.contains("message-target \"Mob\" @nearestmob"), actions.toString());
         assertTrue(actions.contains("message-target \"Living\" @nearestlivingentity"), actions.toString());
         assertTrue(actions.contains("message-target \"World\" @playersinworld{limit=2}"), actions.toString());
+        assertTrue(actions.contains("message-target \"Chain\" @playersinworld{limit=2} > @nearestmob"), actions.toString());
     }
 
     @Test

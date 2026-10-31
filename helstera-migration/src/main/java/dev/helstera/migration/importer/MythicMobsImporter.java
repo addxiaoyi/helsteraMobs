@@ -1624,14 +1624,29 @@ public final class MythicMobsImporter implements MigrationImporter {
 
     private static String normalizeTargeterSuffix(String suffix) {
         if (suffix == null || suffix.isBlank()) return "";
-        int at = suffix.indexOf('@');
-        if (at < 0) return " " + suffix;
-        int start = at + 1;
-        int end = start;
-        while (end < suffix.length() && suffix.charAt(end) != '{'
-                && !Character.isWhitespace(suffix.charAt(end))) end++;
-        String rawName = suffix.substring(start, end);
-        String normalized = switch (rawName.toLowerCase(Locale.ROOT).replace("_", "").replace("-", "")) {
+        StringBuilder normalizedSuffix = new StringBuilder();
+        int depth = 0;
+        for (int i = 0; i < suffix.length(); i++) {
+            char current = suffix.charAt(i);
+            if (current == '{') depth++;
+            if (current == '}') depth = Math.max(0, depth - 1);
+            if (current != '@' || depth != 0) {
+                normalizedSuffix.append(current);
+                continue;
+            }
+            normalizedSuffix.append('@');
+            int start = i + 1;
+            int end = start;
+            while (end < suffix.length() && suffix.charAt(end) != '{'
+                    && suffix.charAt(end) != '>' && !Character.isWhitespace(suffix.charAt(end))) end++;
+            normalizedSuffix.append(canonicalTargeterName(suffix.substring(start, end)));
+            i = end - 1;
+        }
+        return " " + normalizedSuffix;
+    }
+
+    private static String canonicalTargeterName(String rawName) {
+        return switch (rawName.toLowerCase(Locale.ROOT).replace("_", "").replace("-", "")) {
             case "pir", "playersinradius" -> "playersinradius";
             case "eir", "entitiesinradius", "livingentitiesinradius" -> "livingentitiesinradius";
             case "mir", "mobsinradius" -> "mobsinradius";
@@ -1655,7 +1670,6 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "los", "lineofsight" -> "lineofsight";
             default -> rawName.toLowerCase(Locale.ROOT);
         };
-        return " " + suffix.substring(0, at + 1) + normalized + suffix.substring(end);
     }
 
     private static int mechanicClose(String raw, int open) {
