@@ -895,7 +895,30 @@ class SpawnerServiceTest {
         assertTrue(service.forceSpawn("arena", new org.bukkit.Location(null, 0, 64, 0)));
         assertEquals(List.of("boss:aggressive"), calls);
         assertEquals(1, service.aliveCount("arena"));
+        assertEquals(List.of(42), service.trackedInstanceIds("arena"));
         assertEquals(1, service.get("arena").totalSpawned());
+    }
+
+    @Test
+    @DisplayName("tracked spawner instances prune entities that are no longer alive")
+    void trackedInstanceIdsPruneInvalidInstances() {
+        AtomicInteger alive = new AtomicInteger(1);
+        SpawnerService service = new SpawnerService(null, (mob, location, profile) -> 42);
+        service.setAliveCheck(id -> alive.get() == 1 && id == 42);
+        service.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                spawners:
+                  arena:
+                    mob: boss
+                    x: 0
+                    z: 0
+                """)).getConfigurationSection("spawners"));
+
+        assertTrue(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+        assertEquals(List.of(42), service.trackedInstanceIds("arena"));
+
+        alive.set(0);
+        assertEquals(List.of(), service.trackedInstanceIds("arena"));
+        assertEquals(0, service.aliveCount("arena"));
     }
 
     @Test

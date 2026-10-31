@@ -4212,6 +4212,50 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     naturalGroupTask[0].cancel();
                 }, 1L, 1L);
             }
+            var recycleProbe = sp.get("recycle_probe");
+            if (recycleProbe != null && instances() != null) {
+                int recycleBefore = recycleProbe.totalSpawned();
+                List<Integer> tracked = sp.trackedInstanceIds("recycle_probe");
+                // The natural scheduler normally seeds this probe before the
+                // self-test. Seed it manually only when terrain generation or
+                // startup ordering left no live instance to recycle.
+                if (tracked.isEmpty() && sp.forceSpawn("recycle_probe", safeLocation)) {
+                    recycleBefore = recycleProbe.totalSpawned();
+                    tracked = sp.trackedInstanceIds("recycle_probe");
+                }
+                int recycleId = tracked.isEmpty() ? -1 : tracked.get(0);
+                var recycleInstance = recycleId > 0 ? instances().impl(recycleId) : null;
+                var recycleEntity = recycleInstance == null
+                        ? null : recycleInstance.baseEntity().orElse(null);
+                boolean removed = recycleEntity != null && recycleEntity.isValid();
+                if (removed) recycleEntity.remove();
+
+                final int recycleBaseline = recycleBefore;
+                int[] samples = {0};
+                boolean[] released = {false};
+                boolean[] respawned = {false};
+                int maxSamples = Math.max(120, recycleProbe.intervalTicks() * 4);
+                org.bukkit.scheduler.BukkitTask[] recycleTask = {null};
+                recycleTask[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+                    int alive = sp.aliveCount("recycle_probe");
+                    int total = recycleProbe.totalSpawned();
+                    if (alive == 0) released[0] = true;
+                    if (released[0] && total > recycleBaseline) respawned[0] = true;
+                    samples[0]++;
+                    if (!respawned[0] && samples[0] < maxSamples) return;
+                    boolean passed = removed && released[0] && respawned[0] && alive == 1;
+                    getLogger().info("spawner-recycle id=recycle_probe before=" + recycleBaseline
+                            + " after=" + total + " released=" + released[0]
+                            + " respawned=" + respawned[0] + " alive=" + alive
+                            + " interval=" + recycleProbe.intervalTicks()
+                            + " passed=" + passed);
+                    if (recycleProbe.enabled()) sp.toggle("recycle_probe");
+                    for (int instanceId : sp.trackedInstanceIds("recycle_probe")) {
+                        if (instances().impl(instanceId) != null) instances().despawn(instanceId);
+                    }
+                    recycleTask[0].cancel();
+                }, 1L, 1L);
+            }
             var cooldownProbe = sp.get("cooldown_probe");
             if (cooldownProbe != null) {
                 int before = cooldownProbe.totalSpawned();
