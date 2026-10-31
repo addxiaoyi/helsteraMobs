@@ -7,7 +7,7 @@ This compatibility effort is still in progress on Paper 1.21.1. The detailed aud
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
 the report contract passes with `230/230` probes observed (`220 passed` and
 `10 expected negative-control observations`) in fixture
-`srv-paper-integration-armor-options-20261031-r3`.
+`srv-paper-integration-horse-armor-20261031`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -196,6 +196,7 @@ full MythicMobs parity.
 - Official Armor Stand options `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` now map through the migration/runtime path; strict Paper 1.21.1 fixture `srv-paper-integration-armor-options-20261031-r3` reads back the production can-move/can-tick state.
 - Official Armor Stand item options `ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`, `ItemHead`, and `ItemLegs` now resolve through the existing ItemStack/custom-item path; strict fixture `srv-paper-integration-armor-options-20261031-r3` reads back all six equipment slots.
 - Mythic `Options.Saddled` now applies through Paper `Steerable` and `AbstractHorse` APIs; strict fixture `srv-paper-integration-saddled-20261031-r2` reads back a real Horse saddle.
+- Mythic `Options.HorseArmor` now maps to `entity.horse-armor` and uses the existing ItemStack/custom-item resolver through Paper's `ArmoredHorseInventory`; strict fixture `srv-paper-integration-horse-armor-20261031` reads back a real `DIAMOND_HORSE_ARMOR` item alongside the saddle.
 
 ### Remaining Work
 
