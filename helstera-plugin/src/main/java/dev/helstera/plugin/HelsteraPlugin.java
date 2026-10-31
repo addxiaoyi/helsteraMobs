@@ -6945,22 +6945,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var worldTargetContext = dev.helstera.api.behavior.BehaviorContext.of(
                         instance, holder, 1.0, 2.0, 0, "integration");
                 var playersInWorld = dev.helstera.api.behavior.Targeters.select(
-                        "@playersinworld", worldTargetContext, List.of(monster), List.of());
+                        "@Players_In_World", worldTargetContext, List.of(monster), List.of());
                 var mobsInWorld = dev.helstera.api.behavior.Targeters.select(
-                        "@mobsinworld", worldTargetContext, List.of(holder), List.of());
+                        "@Mobs_In_World", worldTargetContext, List.of(holder), List.of());
                 boolean worldPlayerTarget = playersInWorld.contains(holder)
                         && playersInWorld.stream().noneMatch(candidate -> !(candidate instanceof org.bukkit.entity.Player));
                 boolean worldMobTarget = mobsInWorld.contains(monster)
                         && mobsInWorld.stream().noneMatch(candidate -> candidate instanceof org.bukkit.entity.Player);
                 var worldChain = dev.helstera.api.behavior.Targeters.select(
-                        "@PlayersInWorld > @EntitiesInWorld", worldTargetContext, List.of(monster), List.of());
+                        "@Players_In_World > @Entities_In_World", worldTargetContext, List.of(monster), List.of());
                 boolean worldChainFiltered = worldChain.equals(playersInWorld)
                         && worldChain.contains(holder) && !worldChain.contains(monster);
                 var nearestCandidates = List.<org.bukkit.entity.LivingEntity>of(holder, monster);
                 var nearestLiving = dev.helstera.api.behavior.Targeters.select(
-                        "@NearestLivingEntity", worldTargetContext, nearestCandidates, List.of());
+                        "@Nearest_Living_Entity", worldTargetContext, nearestCandidates, List.of());
                 var nearestMob = dev.helstera.api.behavior.Targeters.select(
-                        "@NearestMob", worldTargetContext, nearestCandidates, List.of());
+                        "@Nearest_Mob", worldTargetContext, nearestCandidates, List.of());
                 double holderDistance = instance.location().distanceSquared(holder.getLocation());
                 double monsterDistance = instance.location().distanceSquared(monster.getLocation());
                 boolean nearestLivingTarget = nearestLiving.size() == 1

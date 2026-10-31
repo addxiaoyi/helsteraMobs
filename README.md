@@ -5,9 +5,9 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
-the report contract passes with `250/250` probes observed (`239 passed` and
+the report contract passes with `251/251` probes observed (`240 passed` and
 `11 expected negative-control observations`) in fixture
-`srv-paper-targeter-limits-20261031-r1`.
+`srv-paper-runtime-alias-20261031-r2`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -39,7 +39,7 @@ follows:
 
 Current checkpoint evidence is deliberately narrow: the focused Java suite
 and the latest strict Paper run are green, while the latest strict report
-records `passed=239`, `observed-rejected=11`, and `incomplete=0` across 250
+records `passed=240`, `observed-rejected=11`, and `incomplete=0` across 251
 registered probes. These numbers describe the development checkpoint, not
 full MythicMobs parity.
 
@@ -192,6 +192,7 @@ full MythicMobs parity.
 - Spawner natural recycling now has strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r28` records `released=true respawned=true alive=1` after removing a real tracked instance.
 - Spawner restart persistence now has Paper 1.21.1-133 evidence: fixture `srv-paper-spawner-restart-20261031-r2` performs two real plugin boots and records `stage=write before=0 after=1 generated=true result=true`, then `stage=verify before=1 after=1 restored=true result=true` from the same plugin data directory.
 - `set-target` and `clear-target` mechanics now have strict Paper evidence: fixture `srv-paper-integration-targeters-20261031-r3` records `set-target-mechanic=true clear-target-mechanic=true` after dispatching both actions through the production `SkillService` to a managed Bukkit Mob.
+- Runtime targeter aliases now have strict Paper evidence: fixture `srv-paper-runtime-alias-20261031-r2` executes `@Players_In_World`, `@Mobs_In_World`, `@Nearest_Living_Entity`, and `@Nearest_Mob` and records the complete `ai-selector-core` probe as passed.
 - Vehicle enter/exit/dismount/eject/destroy trigger coverage is now lifecycle-independent from the online player probe; strict fixture `srv-paper-integration-exp-20261031-r17` records `vehicle-events enter=true exit=true dismount=true eject=true destroy=true`.
 
 ### Remaining Work

@@ -2436,3 +2436,9 @@ incomplete). Its real-entity probe records `targeter-invalid-limits=true`:
 invalid count and non-finite radius select nothing, while a valid count
 selects one entity.
 
+The latest strict fixture `srv-paper-runtime-alias-20261031-r2` passed Paper
+1.21.1-133 with 251 observed probes (240 passed, 11 expected rejected, zero
+incomplete). Its `ai-selector-core` line passes while using the runtime alias
+forms `@Players_In_World`, `@Mobs_In_World`, `@Nearest_Living_Entity`, and
+`@Nearest_Mob`.
+
