@@ -2296,3 +2296,14 @@ despawn-options result=true mode=PERSISTENT distance=0.0 persistent=true
 This reads the normalized `SpawnOptions` mode/distance and the real Bukkit
 entity persistence flag from `mobs/despawn_probe.yml`.
 
+The latest strict fixture `srv-paper-integration-exp-20261031-r19` passed
+Paper 1.21.1-133 with 241 observed probes: 231 `passed`, 10 expected
+`observed-rejected`, and zero incomplete. It adds the visibility option line:
+
+```text
+visibility-options result=true visible-by-default=true invisible=true show-name=true
+```
+
+This reads `VisibleByDefault`, `Invisible`, and `AlwaysShowName` from a real
+configured Zombie through the production spawn path.
+

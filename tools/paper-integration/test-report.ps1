@@ -100,6 +100,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false',
         '[Server thread/INFO]: [helsteraMobs] [自检] exp-options result=true experience=13 event=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] despawn-options result=true mode=PERSISTENT distance=0 persistent=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true',
@@ -198,6 +199,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'entityFlagOptions').status -eq 'passed') 'entity flag options probe'
     Assert-True (($report.probes | Where-Object id -eq 'expOptions').status -eq 'passed') 'experience option probe'
     Assert-True (($report.probes | Where-Object id -eq 'despawnOptions').status -eq 'passed') 'despawn option probe'
+    Assert-True (($report.probes | Where-Object id -eq 'visibilityOptions').status -eq 'passed') 'visibility option probe'
     Assert-True (($report.probes | Where-Object id -eq 'endermanHeldBlock').status -eq 'passed') 'Enderman held block option probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnOptionRuntime').status -eq 'passed') 'spawn option runtime probe'
     Assert-True (($report.probes | Where-Object id -eq 'sheep').status -eq 'not-observed') 'missing probe'

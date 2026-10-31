@@ -137,7 +137,8 @@ Incremental mob-option update: `Options.Despawn`/`Persistent` now has a
 dedicated Paper fixture and self-test path that reads the managed instance's
 normalized `PERSISTENT` mode, zero despawn distance, and Bukkit persistent flag.
 The importer already maps `Options.Persistent` to `mob.despawn`, with regression
-coverage; the new strict evidence is pending the next rebuilt fixture.
+coverage; strict fixture `srv-paper-integration-exp-20261031-r17` records
+`despawn-options result=true mode=PERSISTENT distance=0.0 persistent=true`.
 
 Migration compatibility update: common Mythic mechanic mappings now preserve
 positional arguments as well as keyed arguments for item/equipment, player
@@ -1218,12 +1219,17 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-exp-20261031-r17` completes the registered report contract with 240 observed probes (229 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, Armor, root Exp, `Options.Despawn`/`Persistent`, and the complete managed vehicle lifecycle, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-exp-20261031-r19` completes the registered report contract with 241 observed probes (231 passed plus 10 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, Armor, root Exp, `Options.Despawn`/`Persistent`, `VisibleByDefault`/`Invisible`/`AlwaysShowName`, and the complete managed vehicle lifecycle, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 Strict fixture `srv-paper-integration-exp-20261031-r17` adds
 `despawnOptions` for the production `Options.Despawn`/`Persistent`
 configuration-to-instance path and records
 `despawn-options result=true mode=PERSISTENT distance=0.0 persistent=true`.
+
+Strict fixture `srv-paper-integration-exp-20261031-r19` adds
+`visibilityOptions` for `VisibleByDefault`, `Invisible`, and `AlwaysShowName`,
+recording `visibility-options result=true visible-by-default=true
+invisible=true show-name=true` on a real configured Zombie.
 
 ## Release Gate
 

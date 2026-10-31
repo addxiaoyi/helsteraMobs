@@ -1139,6 +1139,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (despawnProbeId > 0) instances().despawn(despawnProbeId);
                 }
 
+                if (mobConfig("visibility_probe") != null) {
+                    int visibilityProbeId = spawnMobAt("visibility_probe", origin.clone().add(16, 0, 0), null);
+                    var visibilityProbe = visibilityProbeId > 0 ? instances().impl(visibilityProbeId) : null;
+                    var visibilityEntity = visibilityProbe == null ? null
+                            : visibilityProbe.baseEntity().orElse(null);
+                    boolean visibleByDefault = visibilityEntity != null
+                            && !visibilityEntity.isVisibleByDefault();
+                    boolean invisible = visibilityEntity != null && visibilityEntity.isInvisible();
+                    boolean showName = visibilityEntity != null && visibilityEntity.isCustomNameVisible();
+                    boolean visibilityOptions = visibleByDefault && invisible && showName;
+                    getLogger().info("[自检] visibility-options result=" + visibilityOptions
+                            + " visible-by-default=" + visibleByDefault
+                            + " invisible=" + invisible + " show-name=" + showName);
+                    if (visibilityProbeId > 0) instances().despawn(visibilityProbeId);
+                }
+
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);
