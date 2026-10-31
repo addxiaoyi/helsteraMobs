@@ -958,18 +958,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 horse.setJumpStrength(0.8);
                 var horseSaddleOptions = new org.bukkit.configuration.file.YamlConfiguration();
                 horseSaddleOptions.set("saddled", true);
+                horseSaddleOptions.set("horse-armor", "DIAMOND_HORSE_ARMOR");
                 applyEntitySpecificOptions(horse, horseSaddleOptions);
+                applyEntityEquipment(horse, horseSaddleOptions);
                 entities.add(horse);
                 boolean horseSaddled = horse.getInventory().getSaddle() != null
                         && horse.getInventory().getSaddle().getType() == org.bukkit.Material.SADDLE;
+                boolean horseArmor = horse.getInventory().getArmor() != null
+                        && horse.getInventory().getArmor().getType() == org.bukkit.Material.DIAMOND_HORSE_ARMOR;
                 getLogger().info("[自检] horse-options result="
                         + (horse.getColor() == org.bukkit.entity.Horse.Color.WHITE
                         && horse.getStyle() == org.bukkit.entity.Horse.Style.WHITE_DOTS
                         && horse.getMaxDomestication() == 20
                         && horse.getDomestication() == 5
                         && Math.abs(horse.getJumpStrength() - 0.8) < 1.0e-9
-                        && horseSaddled)
-                        + " saddled=" + horseSaddled);
+                        && horseSaddled
+                        && horseArmor)
+                        + " saddled=" + horseSaddled + " armor=" + horseArmor);
 
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
@@ -7638,6 +7643,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }
+        if (ent instanceof org.bukkit.entity.AbstractHorse horse) {
+            applyHorseArmorOption(horse, sec);
+        }
         if (ent instanceof org.bukkit.entity.ArmorStand armorStand) {
             applyArmorStandOptionItem(armorStand, sec, "armor-stand-item-body", org.bukkit.inventory.EquipmentSlot.CHEST);
             applyArmorStandOptionItem(armorStand, sec, "armor-stand-item-feet", org.bukkit.inventory.EquipmentSlot.FEET);
@@ -7669,6 +7677,34 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + ", amplifier=" + amplifier + "）: " + e.getMessage());
                 }
             }
+        }
+    }
+
+    private void applyHorseArmorOption(org.bukkit.entity.AbstractHorse horse,
+                                       org.bukkit.configuration.ConfigurationSection section) {
+        if (horse == null || section == null || !section.contains("horse-armor")) return;
+        if (!(horse.getInventory() instanceof org.bukkit.inventory.ArmoredHorseInventory armored)) {
+            getLogger().warning("[HorseArmor] 实体没有装甲槽，跳过配置");
+            return;
+        }
+        String raw = section.getString("horse-armor", "");
+        if (raw == null || raw.isBlank() || raw.trim().equalsIgnoreCase("NONE")) {
+            armored.setArmor(null);
+            return;
+        }
+        String requested = raw.trim();
+        org.bukkit.inventory.ItemStack stack = parseItemStack(requested);
+        if (stack == null) {
+            stack = resolveCustomItem((dev.helstera.api.integration.IntegrationRegistry) integrations, requested);
+        }
+        if (stack == null || stack.getType() == org.bukkit.Material.AIR) {
+            getLogger().warning("[HorseArmor] 无法解析物品，保持原装甲: " + requested);
+            return;
+        }
+        try {
+            armored.setArmor(stack);
+        } catch (Exception e) {
+            getLogger().warning("[HorseArmor] 写入物品失败，保持原装甲: " + requested + " (" + e.getMessage() + ")");
         }
     }
 
