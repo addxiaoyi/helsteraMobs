@@ -2329,3 +2329,14 @@ spawner-natural-group id=natural_group_probe mode=live-scheduler before=2 after=
 This is separate from the manual `forceSpawn` group probe and proves the
 interval-driven scheduler path applies the same per-attempt alive cap.
 
+The latest strict fixture `srv-paper-integration-exp-20261031-r23` passed
+Paper 1.21.1-133 with 246 observed probes: 236 `passed`, 10 expected
+`observed-rejected`, and zero incomplete. Its named-region line is:
+
+```text
+spawner-region id=region_probe requested=true region=integration_box failure=null
+```
+
+This verifies the built-in coordinate region lookup through the production
+Spawner condition gate.
+

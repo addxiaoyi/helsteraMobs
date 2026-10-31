@@ -4428,6 +4428,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 + " group-max=" + (groupSpawner == null ? -1 : groupSpawner.groupMax())
                                 + " limit=" + groupLimit);
                     }
+                    if (candidate.equals("region_probe")) {
+                        getLogger().info("spawner-region id=region_probe requested=" + accepted
+                                + " region=integration_box failure=" + sp.forceSpawnFailure(candidate));
+                    }
                     if (probeWorld != null) {
                         if (lunarProbe || timeWindowProbe) probeWorld.setFullTime(originalFullTime);
                         probeWorld.setStorm(originalStorm);
