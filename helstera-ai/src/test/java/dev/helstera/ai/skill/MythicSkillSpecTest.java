@@ -36,6 +36,19 @@ class MythicSkillSpecTest {
     }
 
     @Test
+    void preservesTargeterChainAndExecutionMetadata() {
+        var spec = MythicSkillSpec.parse(
+                "damage{amount=5} @PlayersInWorld{limit=2} > @NearestMob ~onAttack 25% ?health{h=1}");
+        assertEquals("PlayersInWorld{limit=2} > @NearestMob", spec.targeter());
+        assertEquals(List.of(), spec.positional());
+        assertEquals("Attack", spec.trigger());
+        assertEquals(25d, spec.chance());
+        assertEquals(List.of("health{h=1}"), spec.inlineConditions());
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage @target >"));
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage @target > missing"));
+    }
+
+    @Test
     void rejectsMalformedInput() {
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage{amount=5"));
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage 101%"));

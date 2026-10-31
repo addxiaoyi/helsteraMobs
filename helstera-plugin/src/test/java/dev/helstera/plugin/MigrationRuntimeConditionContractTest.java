@@ -36,12 +36,14 @@ class MigrationRuntimeConditionContractTest {
                   target:
                     Skills:
                       - damage{amount=5} @Nearest_Mob
+                      - damage{amount=7} @living{filter=players} > @Nearest_Mob
                 """);
         var entries = new dev.helstera.migration.importer.MythicMobsImporter().convert(source);
         String yaml = String.valueOf(entries.stream().filter(e -> e.containsKey("target-file"))
                 .findFirst().orElseThrow().get("content"));
-        String action = YamlConfiguration.loadConfiguration(new java.io.StringReader(yaml))
-                .getStringList("skills.target.on-decision").get(0);
+        var actions = YamlConfiguration.loadConfiguration(new java.io.StringReader(yaml))
+                .getStringList("skills.target.on-decision");
+        String action = actions.get(0);
 
         var world = mock(org.bukkit.World.class);
         var caster = mock(org.bukkit.entity.LivingEntity.class);
@@ -70,6 +72,10 @@ class MigrationRuntimeConditionContractTest {
         verify(near).damage(5.0, caster);
         verify(far, never()).damage(anyDouble(), any(org.bukkit.entity.Entity.class));
         verify(player, never()).damage(anyDouble(), any(org.bukkit.entity.Entity.class));
+        String chained = skills.bindAction(actions.get(1));
+        assertNotNull(chained, actions.get(1));
+        assertTrue(registry.runAction(chained, context));
+        verify(near, never()).damage(eq(7.0), any(org.bukkit.entity.Entity.class));
     }
 
     private static final Pattern EXPECTED_TRANSLATION = Pattern.compile(
