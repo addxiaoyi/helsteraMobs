@@ -2062,6 +2062,12 @@ class ImportersTest {
                       CanMove: false
                       CanTick: false
                       HasGravity: false
+                      ItemBody: DIAMOND_CHESTPLATE
+                      ItemFeet: DIAMOND_BOOTS
+                      ItemHand: DIAMOND_SWORD
+                      ItemOffhand: SHIELD
+                      ItemHead: DIAMOND_HELMET
+                      ItemLegs: DIAMOND_LEGGINGS
                 """);
         YamlConfiguration target = converted(file);
 
@@ -2072,6 +2078,12 @@ class ImportersTest {
         assertFalse(target.getBoolean("entity.armor-stand-can-move", true));
         assertFalse(target.getBoolean("entity.armor-stand-can-tick", true));
         assertFalse(target.getBoolean("entity.gravity", true));
+        assertEquals("DIAMOND_CHESTPLATE", target.getString("entity.armor-stand-item-body"));
+        assertEquals("DIAMOND_BOOTS", target.getString("entity.armor-stand-item-feet"));
+        assertEquals("DIAMOND_SWORD", target.getString("entity.armor-stand-item-hand"));
+        assertEquals("SHIELD", target.getString("entity.armor-stand-item-offhand"));
+        assertEquals("DIAMOND_HELMET", target.getString("entity.armor-stand-item-head"));
+        assertEquals("DIAMOND_LEGGINGS", target.getString("entity.armor-stand-item-legs"));
         assertFalse(target.contains("mob.unsupported.Options"));
     }
 

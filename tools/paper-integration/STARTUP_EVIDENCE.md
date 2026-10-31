@@ -2073,8 +2073,8 @@ target block at the real Pillager's spawn location after production option
 application. `CanJoinRaid` remains setter-only because Paper 1.21.1 has no
 corresponding public getter.
 
-The latest strict fixture `srv-paper-integration-armor-options-20261031`
-passed with 230 observed probes: 219 `passed`, 11 expected
+The latest strict fixture `srv-paper-integration-armor-options-20261031-r2`
+passed with 230 observed probes: 220 `passed`, 10 expected
 `observed-rejected`, and zero incomplete. Its Armor Stand option line is:
 
 ```text
@@ -2083,7 +2083,10 @@ armor-stand-options result=true can-move=false can-tick=false
 
 The production `applyEntitySpecificOptions` path applies the canonical Armor
 Stand fields, while importer aliases `HasArms`, `HasBasePlate`, `Marker`,
-`Small`, `CanMove`, and `CanTick` project into those fields.
+`Small`, `CanMove`, and `CanTick` project into those fields. The same
+production equipment path reads back the six canonical `Item*` slots as
+DIAMOND_CHESTPLATE, DIAMOND_BOOTS, DIAMOND_SWORD, SHIELD, DIAMOND_HELMET,
+and DIAMOND_LEGGINGS.
 
 The strict fixture `srv-paper-integration-adult-20261031-r2` passed with 230
 observed probes: 219 `passed`, 11 expected `observed-rejected`, and zero
