@@ -115,6 +115,16 @@ effect-only/visual mode and targeter support. Importer, unit, self-test, and
 report-contract coverage are included. Exploratory Paper 1.21.4 fixture r135
 and strict Paper 1.21.1-133 both record `lightningMechanic=passed`.
 
+Incremental mob-drop update: Mythic root `Exp` now maps to a managed instance
+experience override, while explicit `drops.experience` and
+`drops.experience-min/max` values take precedence over the root default. The
+death hook applies fixed or inclusive ranged values even when no loot table is
+configured or the referenced table is missing. Importer, overflow-safe range,
+drop-policy, and report-contract tests are included. Strict Paper 1.21.1-133
+fixture `srv-paper-integration-exp-20261031-r14` records
+`exp-options result=true experience=13 event=true` in a 239-probe release
+report with zero incomplete probes.
+
 Migration compatibility update: common Mythic mechanic mappings now preserve
 positional arguments as well as keyed arguments for item/equipment, player
 inventory/experience/oxygen, block, entity-state, movement, explosion, potion,
@@ -1135,8 +1145,13 @@ warning instead of silently becoming size 1.
 | Legacy numeric IDs and data | mapped-unverified | common tools, armor, stable item IDs through 452, `minecraft:` namespaced vanilla material normalization, music discs `2256–2267`, numeric `ID:DATA` shorthand, common legacy spawn eggs (`383:DATA`), known potion/tipped/splash/lingering encodings with ordinary/long/strong `PotionType` output, classic water/lava and piston IDs, base blocks, colored Shulker/Glazed Terracotta blocks, colors, flowers, leaves (including decay bits), fish, banners, infested blocks, quartz, prismarine, logs, stairs, slabs, double plants and durability-bearing fishing rods/shears/shields/elytra are covered; unknown spawn-egg ids and unknown/invalid potion data remain explicit under `unsupported.legacy-id/data`, and the legacy table is still incomplete |
 | Item Options and PDC identity | implemented-runtime | ItemMeta/PDC proxy tests; anvil and inventory behavior unverified. MythicMobs `ItemModel` and `DamageType` remain under `unsupported.options`: Paper 1.21.1 `ItemMeta` exposes no public component API for either value, so conversion requires a future version-gated adapter |
 | Entity and item attributes | mapped-unverified | alias/slot/operation normalization and stable UUID deduplication exist; fixture `srv-paper-integration-item-attributes-50ba050d42e7442db9a58584ae06270e` proves Paper entity base 3.0 -> value 3.3 with one `ADD_SCALAR` modifier and one ItemMeta modifier, while full attribute catalog and client coverage remain unverified |
-| Drops and DropTables | mapped-unverified | amount ranges, weighted tiers, luck scaling, nested table expansion with cycle protection, entry conditions, table/mob experience ranges, explicit dynamic-chance evaluator hooks, and isolated Paper LootService plus EntityDeathEvent item/experience evidence are implemented; `MythicDropSpec` and `MythicDropTableProjection` are wired into importer list Drops, safe entries generate `loot.yml` tables and mob references, unsafe/external entries remain unsupported, r36/r37/r41 verify native drop filtering, killer-owned filtering, and custom-table suppression before optional loot materialization, and MigrationServiceImpl merges same-target YAML entries; full Mythic placeholder expressions and broader natural death/drop parity remain incomplete |
+| Drops and DropTables | mapped-unverified | amount ranges, weighted tiers, luck scaling, nested table expansion with cycle protection, entry conditions, table/mob experience ranges, root `Exp` overrides, explicit dynamic-chance evaluator hooks, and isolated Paper LootService plus EntityDeathEvent item/experience evidence are implemented; fixed and ranged mob experience overrides remain effective without a usable loot table, while `MythicDropSpec` and `MythicDropTableProjection` are wired into importer list Drops, safe entries generate `loot.yml` tables and mob references, unsafe/external entries remain unsupported, r36/r37/r41 verify native drop filtering, killer-owned filtering, and custom-table suppression before optional loot materialization, and strict fixture `srv-paper-integration-exp-20261031-r14` verifies the real `Exp` event path; full Mythic placeholder expressions and broader natural death/drop parity remain incomplete |
 | External drop types | blocked-by-external-plugin | Vault, MythicCrucible, MMOItems and other integrations require their plugins |
+
+The strict follow-up `srv-paper-integration-exp-20261031-r14` supersedes the
+older 238-probe checkpoint for release evidence. It adds the root `Exp` event
+probe and contains 239 observed probes: 228 passed, 11 expected negative
+controls, and zero incomplete.
 
 ## 4. Custom AI
 
@@ -1189,7 +1204,7 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-entity-flags-20261031-r12` completes the registered report contract with 238 observed probes (227 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, and Armor, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-exp-20261031-r14` completes the registered report contract with 239 observed probes (228 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, Armor, and root Exp, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 ## Release Gate
 
@@ -1317,6 +1332,14 @@ entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity
 This reads back the configured `entity.no-ai`, `entity.invulnerable`,
 `entity.silent`, `entity.gravity`, and `entity.collidable` values from the real
 `mobs/entity_flags_probe.yml` through `spawnMobCore`.
+
+The strict follow-up fixture `srv-paper-integration-exp-20261031-r14` passed
+with 239 observed probes: 228 `passed`, 11 expected `observed-rejected`, and
+zero incomplete. Its additional root-`Exp` line is:
+
+```text
+exp-options result=true experience=13 event=true
+```
 
 Latest Paper evidence: `srv-paper-integration-vehicle-fix-20261015` reconfirmed
 the implemented entity-option, condition, item, loot, spawner, and Audience

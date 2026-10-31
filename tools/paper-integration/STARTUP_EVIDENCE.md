@@ -2258,3 +2258,17 @@ and `AgeLock` independently on real Sheep entities. The initial adult fixture
 was discarded from release evidence because an unrelated `LookingAt` probe was
 not observed; r2 observed the full report contract without weakening it.
 
+The follow-up strict fixture `srv-paper-integration-exp-20261031-r14` passed
+Paper 1.21.1-133 with 239 observed probes: 228 `passed`, 11 expected
+`observed-rejected`, and zero incomplete. It adds the root Mythic `Exp` probe:
+
+```text
+exp-options result=true experience=13 event=true
+```
+
+The production `spawnMobCore` path applies `mob.exp` to the managed instance,
+and the real Bukkit `EntityDeathEvent` dispatch reads back the configured
+experience override. The fixture uses `mobs/exp_probe.yml`; fixed and ranged
+`drops.experience*` precedence and missing-table fallback are covered by unit
+tests, while broader natural death/drop semantics remain outside this probe.
+
