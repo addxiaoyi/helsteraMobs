@@ -1,0 +1,8 @@
+name: Visibility Probe
+model: example/emberling
+show-name: true
+entity:
+  type: ZOMBIE
+  visible-by-default: false
+  invisible: true
+  silent: true
