@@ -319,6 +319,8 @@ class MythicAgeOptionsTest {
                 armor-stand-baseplate: false
                 armor-stand-marker: true
                 armor-stand-small: true
+                armor-stand-can-move: false
+                armor-stand-can-tick: false
                 """));
 
         HelsteraPlugin.applyEntitySpecificOptions(proxy(Horse.class, horseCalls), options);
@@ -336,6 +338,8 @@ class MythicAgeOptionsTest {
         assertEquals(false, standCalls.get("setBasePlate"));
         assertEquals(true, standCalls.get("setMarker"));
         assertEquals(true, standCalls.get("setSmall"));
+        assertEquals(false, standCalls.get("setCanMove"));
+        assertEquals(false, standCalls.get("setCanTick"));
     }
 
     @Test

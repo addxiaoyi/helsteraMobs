@@ -2060,7 +2060,7 @@ The second flag comes from Paper's dedicated
 Stands bound to the same production instance manager. Natural client timing
 remains outside this server-side evidence.
 
-The latest strict fixture `srv-paper-integration-patrol-spawn-20261031` passed
+The earlier strict fixture `srv-paper-integration-patrol-spawn-20261031` passed
 with 230 observed probes: 219 `passed`, 11 expected `observed-rejected`, and
 zero incomplete. The Raider option line includes:
 
@@ -2072,6 +2072,18 @@ The `patrol-spawn-point=true` result reads back the Paper `Raider` patrol
 target block at the real Pillager's spawn location after production option
 application. `CanJoinRaid` remains setter-only because Paper 1.21.1 has no
 corresponding public getter.
+
+The latest strict fixture `srv-paper-integration-armor-options-20261031`
+passed with 230 observed probes: 219 `passed`, 11 expected
+`observed-rejected`, and zero incomplete. Its Armor Stand option line is:
+
+```text
+armor-stand-options result=true can-move=false can-tick=false
+```
+
+The production `applyEntitySpecificOptions` path applies the canonical Armor
+Stand fields, while importer aliases `HasArms`, `HasBasePlate`, `Marker`,
+`Small`, `CanMove`, and `CanTick` project into those fields.
 
 The strict fixture `srv-paper-integration-adult-20261031-r2` passed with 230
 observed probes: 219 `passed`, 11 expected `observed-rejected`, and zero
