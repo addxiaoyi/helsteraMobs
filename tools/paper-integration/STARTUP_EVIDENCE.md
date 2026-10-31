@@ -2384,6 +2384,20 @@ The probe removes a real tracked instance, observes the runtime cleanup release
 the `max-alive=1` slot, and then observes the shared scheduler create the next
 instance before disabling and cleaning the fixture probe.
 
+The latest strict fixture `srv-paper-integration-targeters-20261031-r2`
+supersedes r28 as the overall report evidence. It passed Paper 1.21.1-133 with
+251 observed probes: 240 `passed`, 11 expected `observed-rejected`, and zero
+incomplete. The managed AI selector probe now also verifies world-scoped
+targeters against the real Paper world:
+
+```text
+ai-selector-core goals=true player-target=true monster-target=true clear-no-fallback=true owner-target=true faction-target=true conditional-target=true players-in-world=true mobs-in-world=true native-target=true ... passed=true
+```
+
+`@PlayersInWorld` and `@MobsInWorld` replace the nearby candidate snapshot with
+all living entities from the source entity's world before applying category
+selection.
+
 The separate two-boot fixture `srv-paper-spawner-restart-20261031-r2` also
 passed Paper 1.21.1-133. Boot one generated the disabled `persistence_probe`
 through the production `SpawnerService` and shut down normally:

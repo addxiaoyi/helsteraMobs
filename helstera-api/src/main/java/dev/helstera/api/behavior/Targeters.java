@@ -26,6 +26,8 @@ import java.util.Map;
 public final class Targeters {
 
     private static final Map<String, Targeter> BUILTIN = new LinkedHashMap<>();
+    private static final java.util.Set<String> WORLD_TARGETERS = java.util.Set.of(
+            "playersinworld", "mobsinworld", "entitiesinworld", "livingentitiesinworld");
     private static final List<String> CONTEXT_TARGETERS = List.of(
             "nearestconditionaltarget", "nearestconditionalentity", "nearestconditionalplayer");
 
@@ -48,6 +50,10 @@ public final class Targeters {
         BUILTIN.put("mobsinradius", Targeters::mobsOnly);
         BUILTIN.put("entitiesinradius", Targeters::living);
         BUILTIN.put("livingentitiesinradius", Targeters::living);
+        BUILTIN.put("playersinworld", Targeters::playersOnly);
+        BUILTIN.put("mobsinworld", Targeters::mobsOnly);
+        BUILTIN.put("entitiesinworld", Targeters::living);
+        BUILTIN.put("livingentitiesinworld", Targeters::living);
         BUILTIN.put("monstersinradius", Targeters::monstersOnly);
         BUILTIN.put("animalsinradius", Targeters::animalsOnly);
         BUILTIN.put("villagersinradius", Targeters::villagersOnly);
@@ -526,6 +532,14 @@ public final class Targeters {
 
         ParsedSpec parsed = ParsedSpec.parse(spec);
         Collection<? extends LivingEntity> scoped = candidates == null ? List.of() : candidates;
+        if (WORLD_TARGETERS.contains(parsed.name()) && source != null) {
+            Location origin = source.location();
+            if (origin != null && origin.getWorld() != null) {
+                // World-scoped Mythic targeters must not inherit the nearby
+                // candidate snapshot assembled for radius targeters.
+                scoped = origin.getWorld().getLivingEntities();
+            }
+        }
         if (parsed.radius() != null && parsed.radius() >= 0) {
             double radius = parsed.radius();
             scoped = scoped.stream().filter(entity -> distance(source, entity) <= radius).toList();

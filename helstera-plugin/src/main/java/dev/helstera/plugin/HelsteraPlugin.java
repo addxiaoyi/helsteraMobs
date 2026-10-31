@@ -6914,10 +6914,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean conditionalTarget = controller.targetEntity() == holder
                         && mob.getTarget() == holder;
 
+                var worldTargetContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        instance, holder, 1.0, 2.0, 0, "integration");
+                var playersInWorld = dev.helstera.api.behavior.Targeters.select(
+                        "@playersinworld", worldTargetContext, List.of(monster), List.of());
+                var mobsInWorld = dev.helstera.api.behavior.Targeters.select(
+                        "@mobsinworld", worldTargetContext, List.of(holder), List.of());
+                boolean worldPlayerTarget = playersInWorld.contains(holder)
+                        && playersInWorld.stream().noneMatch(candidate -> !(candidate instanceof org.bukkit.entity.Player));
+                boolean worldMobTarget = mobsInWorld.contains(monster)
+                        && mobsInWorld.stream().noneMatch(candidate -> candidate instanceof org.bukkit.entity.Player);
+
                 boolean goals = controller.selectorDiagnostic().contains("can-attack=false")
                         || controller.selectorDiagnostic().contains("can-chase=false");
                 boolean passed = playerTarget && monsterTarget && clearNoFallback
                         && ownerTarget && factionTarget && conditionalTarget
+                        && worldPlayerTarget && worldMobTarget
                         && mob.getTarget() == holder;
                 getLogger().info("ai-selector-core goals=" + goals
                         + " player-target=" + playerTarget
@@ -6926,6 +6938,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " owner-target=" + ownerTarget
                         + " faction-target=" + factionTarget
                         + " conditional-target=" + conditionalTarget
+                        + " players-in-world=" + worldPlayerTarget
+                        + " mobs-in-world=" + worldMobTarget
                         + " native-target=" + (mob.getTarget() == holder)
                         + " faction-source=" + dev.helstera.api.behavior.Factions.factionOf(base)
                         + " faction-holder=" + dev.helstera.api.behavior.Factions.factionOf(holder)

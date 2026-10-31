@@ -23,9 +23,9 @@ $env:PAPER_MENU_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-The latest Paper 1.21.1-133 strict fixture completes 250 registered probes: 239
+The latest Paper 1.21.1-133 strict fixture completes 251 registered probes: 240
 positive observations and 11 expected negative-control observations. The
-current release evidence is `srv-paper-integration-exp-20261031-r28`; earlier
+current release evidence is `srv-paper-integration-targeters-20261031-r2`; earlier
 fixture counts in this document are historical checkpoints.
 
 The follow-up fixture also verifies the root Mythic `Exp` path through
