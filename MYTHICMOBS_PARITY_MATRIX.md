@@ -1221,6 +1221,11 @@ restores the player's prior glowing state.
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
 | Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-exp-20261031-r21` completes the registered report contract with 245 observed probes (235 passed plus 10 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, Armor, root Exp, `Options.Despawn`/`Persistent`, `VisibleByDefault`/`Invisible`/`AlwaysShowName`, manual and natural-scheduler Spawner group-limit enforcement, and the complete managed vehicle lifecycle, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
+The current latest report superseding the historical row summary is strict
+fixture `srv-paper-integration-exp-20261031-r23`: 246 probes, 236 passed,
+10 expected negative controls, and zero incomplete, including the named region
+gate.
+
 Strict fixture `srv-paper-integration-exp-20261031-r17` adds
 `despawnOptions` for the production `Options.Despawn`/`Persistent`
 configuration-to-instance path and records
@@ -1239,6 +1244,10 @@ Incremental Spawner evidence update: strict fixture
 Strict fixture `srv-paper-integration-exp-20261031-r21` extends this to the
 live scheduler path, recording `before=2 after=4 alive=2 max-alive=2
 group-min=3 group-max=5 limit=true`.
+
+Strict fixture `srv-paper-integration-exp-20261031-r23` verifies the named
+region condition through the production Spawner gate, recording
+`spawner-region id=region_probe requested=true region=integration_box failure=null`.
 
 ## Release Gate
 

@@ -1,4 +1,13 @@
 spawners:
+  regions:
+    integration_box:
+      world: ""
+      x1: -1000
+      y1: 0
+      z1: -1000
+      x2: 1000
+      y2: 256
+      z2: 1000
   integration_test:
     mob: emberling
     world: ""
@@ -167,6 +176,22 @@ spawners:
     min-players: 0
     players-radius: 0.0
     enabled: true
+  region_probe:
+    mob: emberling
+    world: ""
+    x: 0.5
+    y: 70
+    z: 0.5
+    radius: 0.0
+    y-range: 0.0
+    interval: 200
+    max-alive: 2
+    max-spawns: 0
+    min-players: 0
+    players-radius: 0.0
+    conditions:
+      - region=integration_box
+    enabled: false
   scoped_limit_probe:
     mob: emberling
     world: ""
