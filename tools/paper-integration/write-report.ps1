@@ -51,6 +51,7 @@ $probeSpecs = [ordered]@{
     healthOptions = 'health-options result=true health=42(?:\.0)? max-health=42(?:\.0)?'
     movementSpeedOptions = 'movement-speed-options result=true base=0\.4(?:0+)?'
     knockbackResistanceOptions = 'knockback-resistance-options result=true base=0\.75(?:0+)?'
+    followRangeOptions = 'follow-range-options result=true base=40(?:\.0+)?'
     sheep = 'sheep-options result=true'
     armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false .*items=true'
     cat = 'cat-options result=true'
