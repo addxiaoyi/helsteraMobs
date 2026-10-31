@@ -213,6 +213,7 @@ public final class SpawnerService {
         }
         void restoreStats(int total, Map<String, Integer> counts) {
             totalSpawned = Math.max(0, total);
+            mobSpawnCounts.clear();
             if (counts != null) {
                 counts.forEach((mob, count) -> {
                     if (mob != null && count != null && count > 0) mobSpawnCounts.put(mob, count);
@@ -543,6 +544,12 @@ public final class SpawnerService {
             }
             ConfigurationSection root = state.getConfigurationSection("spawners");
             if (root == null) return;
+            // A state file is a snapshot. Reloading it must replace prior
+            // scoped counters instead of retaining entries removed from the
+            // newer snapshot.
+            worldSpawnCounts.clear();
+            playerSpawnCounts.clear();
+            for (Spawner sp : spawners.values()) sp.restoreStats(0, Map.of());
             ConfigurationSection worldCounts = state.getConfigurationSection("world-spawn-counts");
             if (worldCounts != null) for (String world : worldCounts.getKeys(false)) {
                 worldSpawnCounts.put(world.toLowerCase(Locale.ROOT), Math.max(0, worldCounts.getInt(world, 0)));
