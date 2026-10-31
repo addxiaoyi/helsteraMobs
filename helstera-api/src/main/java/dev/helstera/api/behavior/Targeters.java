@@ -33,10 +33,10 @@ public final class Targeters {
 
     static {
         BUILTIN.put("nearest", Targeters::nearest);
-        BUILTIN.put("nearestentity", Targeters::nearest);
-        BUILTIN.put("nearestliving", Targeters::nearest);
-        BUILTIN.put("nearestlivingentity", Targeters::nearest);
-        BUILTIN.put("nearestmob", Targeters::nearestMonster);
+        BUILTIN.put("nearestentity", Targeters::nearestLiving);
+        BUILTIN.put("nearestliving", Targeters::nearestLiving);
+        BUILTIN.put("nearestlivingentity", Targeters::nearestLiving);
+        BUILTIN.put("nearestmob", Targeters::nearestMob);
         BUILTIN.put("nearestplayer", Targeters::nearestPlayer);
         BUILTIN.put("nearestmonster", Targeters::nearestMonster);
         BUILTIN.put("nearestanimal", Targeters::nearestAnimal);
@@ -975,6 +975,18 @@ public final class Targeters {
                                                     Collection<? extends LivingEntity> candidates,
                                                     List<String> args) {
         return nearestMatching(src, candidates, entity -> entity instanceof Player);
+    }
+
+    private static List<LivingEntity> nearestLiving(ModelInstance src,
+                                                   Collection<? extends LivingEntity> candidates,
+                                                   List<String> args) {
+        return nearestMatching(src, candidates, entity -> true);
+    }
+
+    private static List<LivingEntity> nearestMob(ModelInstance src,
+                                                Collection<? extends LivingEntity> candidates,
+                                                List<String> args) {
+        return nearestMatching(src, candidates, entity -> !(entity instanceof Player));
     }
 
     private static List<LivingEntity> nearestMonster(ModelInstance src,

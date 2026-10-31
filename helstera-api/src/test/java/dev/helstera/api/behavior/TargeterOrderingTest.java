@@ -135,12 +135,11 @@ class TargeterOrderingTest {
         var monster = livingProxy(org.bukkit.entity.Monster.class);
         var candidates = List.of(player, living, monster);
         var source = (dev.helstera.api.instance.ModelInstance) null;
-        assertEquals(Targeters.select("@nearest", source, candidates, List.of()),
-                Targeters.select("@nearestentity", source, candidates, List.of()));
-        assertEquals(Targeters.select("@nearest", source, candidates, List.of()),
-                Targeters.select("@nearestlivingentity", source, candidates, List.of()));
-        assertEquals(Targeters.select("@nearestmonster", source, candidates, List.of()),
-                Targeters.select("@nearestmob", source, candidates, List.of()));
+        assertEquals(List.of(player), Targeters.select("@nearestentity", source, candidates, List.of()));
+        assertEquals(List.of(player), Targeters.select("@nearestliving", source, candidates, List.of()));
+        assertEquals(List.of(player), Targeters.select("@nearestlivingentity", source, candidates, List.of()));
+        assertEquals(List.of(living), Targeters.select("@nearestmob", source, candidates, List.of()));
+        assertEquals(List.of(monster), Targeters.select("@nearestmonster", source, candidates, List.of()));
     }
 
     @Test
