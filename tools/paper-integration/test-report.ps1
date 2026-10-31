@@ -93,6 +93,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] scale-options result=true scale=1.25',
         '[Server thread/INFO]: [helsteraMobs] [自检] health-options result=true health=42 max-health=42',
         '[Server thread/INFO]: [helsteraMobs] [自检] movement-speed-options result=true base=0.4',
+        '[Server thread/INFO]: [helsteraMobs] [自检] knockback-resistance-options result=true base=0.75',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true',
