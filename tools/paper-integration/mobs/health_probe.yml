@@ -1,0 +1,7 @@
+name: Health Probe
+model: example/emberling
+mob:
+  health: 42
+entity:
+  type: ZOMBIE
+  silent: true

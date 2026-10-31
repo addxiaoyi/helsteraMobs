@@ -2128,7 +2128,7 @@ Donkey implementing Paper's `ChestedHorse` API. The armor item is read back
 through `ArmoredHorseInventory#getArmor`; the chest state is read back through
 `ChestedHorse#isCarryingChest`.
 
-The latest strict fixture `srv-paper-integration-scale-20261031-r2` passed
+The preceding strict fixture `srv-paper-integration-scale-20261031-r2` passed
 with 231 observed probes: 220 `passed`, 11 expected `observed-rejected`, and
 zero incomplete. Its Scale option line is:
 
@@ -2138,7 +2138,21 @@ scale-options result=true scale=1.25
 
 This reads back the configured `scale: 1.25` from the real
 `mobs/scale_probe.yml` through `spawnMobCore` and `ModelInstance#getScale`.
-The strict report catalog now contains 231 registered probes because this
+The strict report catalog then contained 231 registered probes because this
+configuration-to-instance assertion was part of the release gate.
+
+The latest strict fixture `srv-paper-integration-health-20261031-r3` passed
+with 232 observed probes: 222 `passed`, 10 expected `observed-rejected`, and
+zero incomplete. Its Health option line is:
+
+```text
+health-options result=true health=42.0 max-health=42.0
+```
+
+This reads back the configured `mob.health: 42` from the real
+`mobs/health_probe.yml` through `spawnMobCore`; both `Damageable#getHealth()`
+and `Damageable#getMaxHealth()` matched the configured value. The strict
+report catalog now contains 232 registered probes because this
 configuration-to-instance assertion is part of the release gate.
 
 The strict fixture `srv-paper-integration-adult-20261031-r2` passed with 230

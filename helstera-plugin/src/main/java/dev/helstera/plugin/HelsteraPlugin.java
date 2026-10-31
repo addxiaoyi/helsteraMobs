@@ -993,6 +993,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (scaleProbeId > 0) instances().despawn(scaleProbeId);
                 }
 
+                if (mobConfig("health_probe") != null) {
+                    int healthProbeId = spawnMobAt("health_probe", origin.clone().add(7, 0, 0), null);
+                    var healthProbe = healthProbeId > 0 ? instances().impl(healthProbeId) : null;
+                    var healthEntity = healthProbe == null ? null : healthProbe.baseEntity().orElse(null);
+                    double observedHealth = healthEntity instanceof org.bukkit.entity.Damageable damageable
+                            ? damageable.getHealth() : Double.NaN;
+                    double observedMaxHealth = healthEntity instanceof org.bukkit.entity.Damageable damageable
+                            ? damageable.getMaxHealth() : Double.NaN;
+                    boolean healthOptions = Math.abs(observedHealth - 42.0) < 1.0e-9
+                            && Math.abs(observedMaxHealth - 42.0) < 1.0e-9;
+                    getLogger().info("[自检] health-options result=" + healthOptions
+                            + " health=" + observedHealth + " max-health=" + observedMaxHealth);
+                    if (healthProbeId > 0) instances().despawn(healthProbeId);
+                }
+
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
                 sheep.setSheared(true);
