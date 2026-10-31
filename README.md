@@ -493,6 +493,7 @@ Paper 1.21.1 release evidence 仍待匹配 server jar。
 | 名字 | 排序依据 |
 | --- | --- |
 | `nearest` / `farthest` | 距离由近到远 / 由远到近 |
+| `nearestentity` / `nearestliving` / `nearestlivingentity` / `nearestmob` | `nearest` 或怪物筛选的兼容别名 |
 | `random` | 随机打乱（不排序，避免可预测行为） |
 | `players` / `mobs` / `living` | 类型过滤后按距离 |
 | `lowest-health` / `highest-health` | **绝对血量** |

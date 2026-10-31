@@ -118,12 +118,29 @@ class TargeterOrderingTest {
     void spatialTargetersAreRegistered() {
         assertTrue(Targeters.names().containsAll(List.of(
                 "sphere", "ring", "cone", "lineofsight", "los",
-                "nearestconditionaltarget", "nearestplayer", "nearestmonster", "nearestanimal",
+                "nearestconditionaltarget", "nearestentity", "nearestliving", "nearestlivingentity",
+                "nearestmob", "nearestplayer", "nearestmonster", "nearestanimal",
                 "nearestvillager", "nearesttamed", "entitiesinradius", "monstersinradius", "animalsinradius",
                 "villagersinradius", "tamedinradius", "playersinworld", "mobsinworld",
                 "entitiesinworld")));
         assertTrue(Targeters.byName("cone") != null);
         assertTrue(Targeters.byName("ring") != null);
+    }
+
+    @Test
+    @DisplayName("nearest living and mob aliases resolve to the canonical selectors")
+    void nearestAliasesResolve() {
+        var player = livingProxy(org.bukkit.entity.Player.class);
+        var living = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var monster = livingProxy(org.bukkit.entity.Monster.class);
+        var candidates = List.of(player, living, monster);
+        var source = (dev.helstera.api.instance.ModelInstance) null;
+        assertEquals(Targeters.select("@nearest", source, candidates, List.of()),
+                Targeters.select("@nearestentity", source, candidates, List.of()));
+        assertEquals(Targeters.select("@nearest", source, candidates, List.of()),
+                Targeters.select("@nearestlivingentity", source, candidates, List.of()));
+        assertEquals(Targeters.select("@nearestmonster", source, candidates, List.of()),
+                Targeters.select("@nearestmob", source, candidates, List.of()));
     }
 
     @Test
