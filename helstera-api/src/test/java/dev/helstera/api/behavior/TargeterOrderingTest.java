@@ -202,6 +202,19 @@ class TargeterOrderingTest {
     }
 
     @Test
+    @DisplayName("invalid explicit targeter limits fail closed")
+    void invalidTargeterLimitsFailClosed() {
+        var player = livingProxy(org.bukkit.entity.Player.class);
+        var source = (dev.helstera.api.instance.ModelInstance) null;
+        for (String spec : List.of("@living{limit=typo}", "@living{count=1.5}",
+                "@living{radius=typo}", "@living{r=-1}", "@living{r=NaN}",
+                "@living{r=Infinity}", "@living{limit=1")) {
+            assertEquals(List.of(), Targeters.select(spec, source, List.of(player), List.of()), spec);
+        }
+        assertEquals(List.of(player), Targeters.select("@living{count=1}", source, List.of(player), List.of()));
+    }
+
+    @Test
     @DisplayName("world targeters replace the nearby candidate snapshot")
     void worldTargetersUseAllLivingEntitiesInSourceWorld() {
         var worldRef = new org.bukkit.World[1];
@@ -438,6 +451,9 @@ class TargeterOrderingTest {
                     new org.bukkit.Location(null, 0, 0, 0), null);
             assertEquals(List.of(high), Targeters.select(
                     "@nearestConditionalTarget{conditions=[health-above 0.5];count=1}",
+                    context, candidates, List.of()));
+            assertEquals(List.of(), Targeters.select(
+                    "@nearestConditionalTarget{conditions=[health-above 0.5];radius=NaN}",
                     context, candidates, List.of()));
         } finally {
             Targeters.conditionProvider(null);

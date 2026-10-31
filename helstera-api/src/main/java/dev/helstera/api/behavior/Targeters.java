@@ -329,6 +329,7 @@ public final class Targeters {
         ConditionProvider provider = conditionProvider;
         if (provider == null) return List.of();
         ParsedSpec parsed = ParsedSpec.parse(spec);
+        if (!parsed.valid()) return List.of();
         List<String> conditions = conditionalConditions(parsed.args());
         if (conditions.isEmpty()) return List.of();
 
@@ -541,6 +542,7 @@ public final class Targeters {
                                                     Collection<? extends LivingEntity> candidates,
                                                     List<String> fallbackArgs, boolean expandWorld) {
         ParsedSpec parsed = ParsedSpec.parse(spec);
+        if (!parsed.valid()) return List.of();
         Collection<? extends LivingEntity> scoped = candidates == null ? List.of() : candidates;
         if (WORLD_TARGETERS.contains(parsed.name())) {
             Location origin = source == null ? null : source.location();
@@ -569,19 +571,20 @@ public final class Targeters {
     }
 
     private record ParsedSpec(String name, List<String> args, Integer limit, Double radius,
-                              String filter, String sort) {
+                              String filter, String sort, boolean valid) {
         static ParsedSpec parse(String raw) {
             String value = raw == null ? "" : raw.trim();
             if (value.startsWith("@")) value = value.substring(1);
             int open = value.indexOf('{');
-            if (open < 0) return new ParsedSpec(value.toLowerCase(Locale.ROOT), List.of(), null, null, null, null);
+            if (open < 0) return new ParsedSpec(value.toLowerCase(Locale.ROOT), List.of(), null, null, null, null, true);
             int close = value.lastIndexOf('}');
-            if (close < open) return new ParsedSpec(value.substring(0, open).toLowerCase(Locale.ROOT), List.of(), null, null, null, null);
+            if (close < open) return new ParsedSpec(value.substring(0, open).toLowerCase(Locale.ROOT), List.of(), null, null, null, null, false);
             List<String> args = new ArrayList<>();
             Integer limit = null;
             Double radius = null;
             String filter = null;
             String sort = null;
+            boolean valid = true;
             for (String part : splitSpecArguments(value.substring(open + 1, close))) {
                 String token = part.trim();
                 if (token.isEmpty()) continue;
@@ -594,6 +597,7 @@ public final class Targeters {
                             limit = Integer.valueOf(rawValue);
                         } else if (key.equalsIgnoreCase("r") || key.equalsIgnoreCase("radius")) {
                             radius = Double.valueOf(rawValue);
+                            if (!Double.isFinite(radius) || radius < 0) valid = false;
                         } else if (key.equalsIgnoreCase("filter") || key.equalsIgnoreCase("type")) {
                             filter = rawValue;
                         } else if (key.equalsIgnoreCase("sort")) {
@@ -603,7 +607,8 @@ public final class Targeters {
                             args.add(token);
                         }
                     } catch (NumberFormatException ignored) {
-                        // Keep valid targeter arguments usable when an optional filter is malformed.
+                        if (key.equalsIgnoreCase("limit") || key.equalsIgnoreCase("count")
+                                || key.equalsIgnoreCase("r") || key.equalsIgnoreCase("radius")) valid = false;
                         if (!key.equalsIgnoreCase("limit") && !key.equalsIgnoreCase("count")
                                 && !key.equalsIgnoreCase("r") && !key.equalsIgnoreCase("radius")
                                 && !key.equalsIgnoreCase("filter") && !key.equalsIgnoreCase("type")
@@ -612,7 +617,7 @@ public final class Targeters {
                 } else args.add(token);
             }
             return new ParsedSpec(value.substring(0, open).toLowerCase(Locale.ROOT), args,
-                    limit, radius, filter, sort);
+                    limit, radius, filter, sort, valid);
         }
     }
 
