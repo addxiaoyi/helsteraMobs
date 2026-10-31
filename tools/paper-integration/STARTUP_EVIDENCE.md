@@ -2340,3 +2340,16 @@ spawner-region id=region_probe requested=true region=integration_box failure=nul
 This verifies the built-in coordinate region lookup through the production
 Spawner condition gate.
 
+The latest strict fixture `srv-paper-integration-exp-20261031-r25` passed
+Paper 1.21.1-133 with 248 observed probes: 237 `passed`, 11 expected
+`observed-rejected`, and zero incomplete. It extends the named-region probe
+with an explicit outside control:
+
+```text
+spawner-region id=region_probe requested=true region=integration_box failure=null
+spawner-region-outside id=region_probe_outside requested=false region=integration_box failure=conditions rejected location
+```
+
+The production Spawner gate therefore accepts a location inside the configured
+coordinate region and rejects the same condition at a location outside it.
+

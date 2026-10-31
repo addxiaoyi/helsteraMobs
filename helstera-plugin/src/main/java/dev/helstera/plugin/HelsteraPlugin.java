@@ -4312,6 +4312,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean failedCooldownProbe = candidate.equals("failed_cooldown_probe");
                     boolean borderInsideProbe = candidate.equals("border_clipped_inside_pass");
                     boolean borderOutsideProbe = candidate.equals("border_outside_fail");
+                    boolean regionOutsideProbe = candidate.equals("region_probe_outside");
                     boolean borderProbe = borderInsideProbe || borderOutsideProbe;
                     org.bukkit.World probeWorld = safeLocation.getWorld();
                     long originalFullTime = probeWorld == null ? 0L : probeWorld.getFullTime();
@@ -4411,6 +4412,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             ? sp.forceSpawn(candidate)
                             : sp.forceSpawn(candidate,
                             candidate.equals("scoped_limit_probe") ? scopedLocation
+                                    : regionOutsideProbe ? safeLocation.clone().add(2000, 0, 2000)
                                     : lightFailClosedProbe && configuredProbeLocation != null
                                     ? configuredProbeLocation : safeLocation);
                     if (candidate.equals("group_probe")) {
@@ -4430,6 +4432,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     }
                     if (candidate.equals("region_probe")) {
                         getLogger().info("spawner-region id=region_probe requested=" + accepted
+                                + " region=integration_box failure=" + sp.forceSpawnFailure(candidate));
+                    }
+                    if (candidate.equals("region_probe_outside")) {
+                        getLogger().info("spawner-region-outside id=region_probe_outside requested=" + accepted
                                 + " region=integration_box failure=" + sp.forceSpawnFailure(candidate));
                     }
                     if (probeWorld != null) {
