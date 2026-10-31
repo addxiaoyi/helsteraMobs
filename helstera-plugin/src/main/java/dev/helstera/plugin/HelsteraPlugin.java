@@ -996,13 +996,29 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 standOptions.set("armor-stand-small", true);
                 standOptions.set("armor-stand-can-move", false);
                 standOptions.set("armor-stand-can-tick", false);
+                standOptions.set("armor-stand-item-body", "DIAMOND_CHESTPLATE");
+                standOptions.set("armor-stand-item-feet", "DIAMOND_BOOTS");
+                standOptions.set("armor-stand-item-hand", "DIAMOND_SWORD");
+                standOptions.set("armor-stand-item-offhand", "SHIELD");
+                standOptions.set("armor-stand-item-head", "DIAMOND_HELMET");
+                standOptions.set("armor-stand-item-legs", "DIAMOND_LEGGINGS");
                 applyEntitySpecificOptions(stand, standOptions);
+                applyEntityEquipment(stand, standOptions);
                 entities.add(stand);
+                var standEquipment = stand.getEquipment();
+                boolean armorStandItems = standEquipment != null
+                        && standEquipment.getChestplate().getType() == org.bukkit.Material.DIAMOND_CHESTPLATE
+                        && standEquipment.getBoots().getType() == org.bukkit.Material.DIAMOND_BOOTS
+                        && standEquipment.getItemInMainHand().getType() == org.bukkit.Material.DIAMOND_SWORD
+                        && standEquipment.getItemInOffHand().getType() == org.bukkit.Material.SHIELD
+                        && standEquipment.getHelmet().getType() == org.bukkit.Material.DIAMOND_HELMET
+                        && standEquipment.getLeggings().getType() == org.bukkit.Material.DIAMOND_LEGGINGS;
                 getLogger().info("[自检] armor-stand-options result="
                         + (stand.hasArms() && !stand.hasBasePlate() && stand.isMarker() && stand.isSmall()
-                        && !stand.canMove() && !stand.canTick())
+                        && !stand.canMove() && !stand.canTick() && armorStandItems)
                         + " can-move=" + stand.canMove()
-                        + " can-tick=" + stand.canTick());
+                        + " can-tick=" + stand.canTick()
+                        + " items=" + armorStandItems);
 
                 var cat = world.spawn(origin.clone().add(6, 0, 0), org.bukkit.entity.Cat.class);
                 cat.setCatType(org.bukkit.entity.Cat.Type.SIAMESE);
@@ -7615,6 +7631,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }
+        if (ent instanceof org.bukkit.entity.ArmorStand armorStand) {
+            applyArmorStandOptionItem(armorStand, sec, "armor-stand-item-body", org.bukkit.inventory.EquipmentSlot.CHEST);
+            applyArmorStandOptionItem(armorStand, sec, "armor-stand-item-feet", org.bukkit.inventory.EquipmentSlot.FEET);
+            applyArmorStandOptionItem(armorStand, sec, "armor-stand-item-hand", org.bukkit.inventory.EquipmentSlot.HAND);
+            applyArmorStandOptionItem(armorStand, sec, "armor-stand-item-offhand", org.bukkit.inventory.EquipmentSlot.OFF_HAND);
+            applyArmorStandOptionItem(armorStand, sec, "armor-stand-item-head", org.bukkit.inventory.EquipmentSlot.HEAD);
+            applyArmorStandOptionItem(armorStand, sec, "armor-stand-item-legs", org.bukkit.inventory.EquipmentSlot.LEGS);
+        }
         // ---- 药水效果 ----
         org.bukkit.configuration.ConfigurationSection potionsSec = sec.getConfigurationSection("potions");
         if (potionsSec != null) {
@@ -7638,6 +7662,24 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + ", amplifier=" + amplifier + "）: " + e.getMessage());
                 }
             }
+        }
+    }
+
+    private void applyArmorStandOptionItem(org.bukkit.entity.ArmorStand stand,
+                                           org.bukkit.configuration.ConfigurationSection section,
+                                           String key, org.bukkit.inventory.EquipmentSlot slot) {
+        if (stand == null || section == null || !section.contains(key) || stand.getEquipment() == null) return;
+        String raw = section.getString(key, "").trim();
+        if (raw.isBlank() || raw.equalsIgnoreCase("NONE")) {
+            stand.getEquipment().setItem(slot, null);
+            return;
+        }
+        org.bukkit.inventory.ItemStack stack = parseItemStack(raw);
+        if (stack == null) {
+            stack = resolveCustomItem((dev.helstera.api.integration.IntegrationRegistry) integrations, raw);
+        }
+        if (stack != null && stack.getType() != org.bukkit.Material.AIR) {
+            stand.getEquipment().setItem(slot, stack);
         }
     }
 

@@ -48,7 +48,7 @@ $probeSpecs = [ordered]@{
     modelDisplay = '结果=通过.*Display实体数=[1-9][0-9]*.*实例有效=true'
     horse = 'horse-options result=true'
     sheep = 'sheep-options result=true'
-    armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false'
+    armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false .*items=true'
     cat = 'cat-options result=true'
     fallingBlock = 'falling-block-options result=true'
     creeper = 'creeper-options result=true'
