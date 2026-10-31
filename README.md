@@ -5,9 +5,9 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
-the report contract passes with `230/230` probes observed (`220 passed` and
-`10 expected negative-control observations`) in fixture
-`srv-paper-integration-armor-stand-20261031`.
+the report contract passes with `230/230` probes observed (`219 passed` and
+`11 expected negative-control observations`) in fixture
+`srv-paper-integration-patrol-spawn-20261031`.
 Earlier bullets that say strict evidence is pending describe historical
 exploratory runs.
 
@@ -25,10 +25,10 @@ follows:
    real managed-entity Paper route probe now pass; continue the remaining
    native Pathfinder goal mutation and pathfinding malus audit, which must stay
    explicit when the public Paper API cannot expose an equivalent operation.
-3. **Spawner**: extend natural scheduler timing and failed-spawn cooldown
-   evidence to random terrain, player/world condition combinations, random
-   pools, and drop-table behavior. Unloaded chunks and unreadable light must
-   continue to fail closed.
+3. **Spawner**: the latest strict fixture now proves natural scheduler timing,
+   failed-spawn cooldown preservation, random pools, terrain, player/world
+   conditions, unloaded chunks, and unreadable-light fail-closed behavior;
+   continue broader natural spawn lifecycle and drop-table semantics.
 4. **Release gate**: add tests before implementation changes, keep the
    focused Java suite green, require the report fixture and Python resolver to
    pass, and record every strict Paper `not-observed` probe instead of calling
@@ -36,7 +36,7 @@ follows:
 
 Current checkpoint evidence is deliberately narrow: the focused Java suite
 and the latest strict Paper run are green, while the latest strict report
-records `passed=219`, `observed-rejected=11`, and `incomplete=0` across 230
+records `passed=220`, `observed-rejected=10`, and `incomplete=0` across 230
 registered probes. These numbers describe the development checkpoint, not
 full MythicMobs parity.
 
@@ -191,6 +191,7 @@ full MythicMobs parity.
 - Exploratory Paper 1.21.11 SkillTree restart fixture `srv-paper-skilltree-restart-034f7c7c184b48a9b2c57db5453effdb` now passes a two-boot persistent-chunk/entity/snapshot workflow; persistent chunk retention is released after the last managed persistent mob dies.
 - Exploratory Paper 1.21.11 player fixture `srv-paper-integration-exploratory-20261020-target-glowing-client` now records `targetStateConditions=passed` after setting and restoring a real player's glowing state; strict Paper 1.21.1 evidence remains pending.
 - Mythic `Options.Interactable` now maps to the managed runtime policy with its documented imported default, and strict Paper 1.21.1 fixture `srv-paper-integration-armor-stand-20261031` records protected/control player interaction and Armor Stand manipulation pairs as `interactable=true` and `interactable-armor-stand=true`.
+- Mythic `Options.PatrolSpawnPoint` now maps to Raider patrol target blocks, and strict Paper 1.21.1 fixture `srv-paper-integration-patrol-spawn-20261031` reads back a real Pillager patrol target at its spawn block.
 
 ### Remaining Work
 

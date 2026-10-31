@@ -2547,6 +2547,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 flagConfig.set("angry", true);
                 flagConfig.set("can-join-raid", false);
                 flagConfig.set("patrol-leader", true);
+                flagConfig.set("patrol-spawn-point", true);
                 applyEntitySpecificOptions(wolf, flagConfig);
                 applyEntitySpecificOptions(pillager, flagConfig);
                 boolean canJoinRaidSetter = false;
@@ -2557,12 +2558,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 } catch (RuntimeException ignored) {
                     // Some Paper versions expose the setter without a readable flag.
                 }
+                boolean patrolSpawnPoint = raiderView.getPatrolTarget() != null
+                        && raiderView.getPatrolTarget().getX() == pillager.getLocation().getBlockX()
+                        && raiderView.getPatrolTarget().getY() == pillager.getLocation().getBlockY()
+                        && raiderView.getPatrolTarget().getZ() == pillager.getLocation().getBlockZ();
                 boolean entityFlagOptions = wolf.isTamed() && wolf.isAngry()
-                        && raiderView.isPatrolLeader() && canJoinRaidSetter;
+                        && raiderView.isPatrolLeader() && canJoinRaidSetter && patrolSpawnPoint;
                 getLogger().info("[自检] entity-flag-options result=" + entityFlagOptions
                         + " tamed=" + wolf.isTamed() + " angry=" + wolf.isAngry()
                         + " can-join-raid-setter=" + canJoinRaidSetter
-                        + " patrol-leader=" + raiderView.isPatrolLeader());
+                        + " patrol-leader=" + raiderView.isPatrolLeader()
+                        + " patrol-spawn-point=" + patrolSpawnPoint);
                 var wolfContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, wolf, 1.0, 5.0, 0, "integration");
                 var sheepContext = dev.helstera.api.behavior.BehaviorContext.of(
@@ -8967,6 +8973,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             if (options.contains("patrol-leader")) {
                 raider.setPatrolLeader(options.getBoolean("patrol-leader"));
+            }
+            if (options.contains("patrol-spawn-point")) {
+                raider.setPatrolTarget(options.getBoolean("patrol-spawn-point")
+                        ? entity.getLocation().getBlock() : null);
             }
         }
         if (entity instanceof org.bukkit.entity.Tameable tameable && options.contains("tamed")) {

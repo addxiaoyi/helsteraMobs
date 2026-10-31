@@ -2032,7 +2032,7 @@ movement velocity, and the route state advances after the entity reaches the
 first configured waypoint. It does not claim native Pathfinder goal or
 pathfinding-malus parity.
 
-The latest strict fixture `srv-paper-integration-interactable-20261031` kept
+The earlier strict fixture `srv-paper-integration-interactable-20261031` kept
 the 230-probe gate green with 219 `passed`, 11 expected `observed-rejected`,
 and zero incomplete. Its real-player event line includes:
 
@@ -2047,7 +2047,7 @@ event is cancelled and the control remains allowed. This is server-side event
 evidence and does not claim natural client timing or complete Armor Stand
 manipulation parity.
 
-The latest strict fixture `srv-paper-integration-armor-stand-20261031` passed
+The earlier strict fixture `srv-paper-integration-armor-stand-20261031` passed
 with 230 observed probes: 220 `passed`, 10 expected `observed-rejected`, and
 zero incomplete. Its event line extends the assertion with:
 
@@ -2059,4 +2059,17 @@ The second flag comes from Paper's dedicated
 `PlayerArmorStandManipulateEvent` path, using protected and control Armor
 Stands bound to the same production instance manager. Natural client timing
 remains outside this server-side evidence.
+
+The latest strict fixture `srv-paper-integration-patrol-spawn-20261031` passed
+with 230 observed probes: 219 `passed`, 11 expected `observed-rejected`, and
+zero incomplete. The Raider option line includes:
+
+```text
+entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true
+```
+
+The `patrol-spawn-point=true` result reads back the Paper `Raider` patrol
+target block at the real Pillager's spawn location after production option
+application. `CanJoinRaid` remains setter-only because Paper 1.21.1 has no
+corresponding public getter.
 

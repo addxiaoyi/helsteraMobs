@@ -55,7 +55,7 @@ $probeSpecs = [ordered]@{
     bee = 'bee-options result=true'
     entitySizeRange = 'entity-size-range result=true samples=64 configured=2\.\.5 observed=[2-5]\.\.[2-5]'
     ageOptions = 'age-options result=true'
-    entityFlagOptions = 'entity-flag-options result=true'
+    entityFlagOptions = 'entity-flag-options result=true .*patrol-spawn-point=true'
     endermanHeldBlock = 'enderman-held-block result=true material=OBSIDIAN'
     spawnOptionRuntime = 'spawn-option-runtime result=true pickup-disabled=true explicit-pickup-overrides-fallback=true random-equipment-cleared=true explicit-equipment-preserved=true no-damage-ticks=true'
     attributes = 'attribute-options result=true modifiers=1'
