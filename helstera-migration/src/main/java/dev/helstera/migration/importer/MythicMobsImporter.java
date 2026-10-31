@@ -710,6 +710,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapPersistentDespawn(options, srcFile, entries, target);
             mapOption(options, srcFile, entries, target, "Gravity", "entity.gravity");
             mapOptionInvertedBoolean(options, srcFile, entries, target, "NoGravity", "entity.gravity");
+            mapOption(options, srcFile, entries, target, "HasGravity", "entity.gravity");
             mapOption(options, srcFile, entries, target, "Collidable", "entity.collidable");
             mapOption(options, srcFile, entries, target, "PreventItemPickup", "entity.prevent-item-pickup");
             mapOption(options, srcFile, entries, target, "PreventOtherDrops", "entity.prevent-other-drops");
@@ -784,6 +785,12 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "ArmorStandBasePlate", "entity.armor-stand-baseplate");
             mapOption(options, srcFile, entries, target, "ArmorStandMarker", "entity.armor-stand-marker");
             mapOption(options, srcFile, entries, target, "ArmorStandSmall", "entity.armor-stand-small");
+            mapOption(options, srcFile, entries, target, "HasArms", "entity.armor-stand-arms");
+            mapOption(options, srcFile, entries, target, "HasBasePlate", "entity.armor-stand-baseplate");
+            mapOption(options, srcFile, entries, target, "Marker", "entity.armor-stand-marker");
+            mapOption(options, srcFile, entries, target, "Small", "entity.armor-stand-small");
+            mapOption(options, srcFile, entries, target, "CanMove", "entity.armor-stand-can-move");
+            mapOption(options, srcFile, entries, target, "CanTick", "entity.armor-stand-can-tick");
             mapOption(options, srcFile, entries, target, "FallingBlockData", "entity.falling-block-data");
             mapOption(options, srcFile, entries, target, "BlockData", "entity.falling-block-data");
             mapOption(options, srcFile, entries, target, "FallingBlockDropItem", "entity.falling-block-drop-item");
@@ -797,8 +804,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "ProjectilePierce", "ProjectileTracking", "ProjectileTrackingTicks", "ThreatTable",
                     "UseThreatTable", "SpawningDistance",
                     "Scale", "ShowHealth", "Silent", "NoAI",
-                    "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "Gravity", "NoGravity", "Collidable", "PreventItemPickup",
-                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Angry", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops")) {
+                    "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "Gravity", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
+                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Angry", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick")) {
                 removeIgnoreCase(leftover, mapped);
             }
             if (preventConversionMapped) removeIgnoreCase(leftover, "PreventConversion");

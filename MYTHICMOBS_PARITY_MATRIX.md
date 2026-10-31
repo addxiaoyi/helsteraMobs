@@ -1118,7 +1118,7 @@ native target route: `tempt=passed`, `entityTargetBukkit=passed`, and
 | Creeper options | mapped-unverified | explosion radius, fuse, powered setters, and Creeper-only `PreventSuicide` event cancellation are implemented; strict Paper 1.21.1-133 records the natural fuse probe as passed; broader option ordering remains open |
 | Bee options | mapped-unverified | nectar/stung setters; strict Paper 1.21.1-133 runs protected/control Bees through real attack ticks and records stinger restoration as passed; broader option ordering remains open |
 | Zombie/Skeleton conversion and jockey mounts | mapped-unverified | Mythic `PreventConversion` now maps by entity family: Zombie-family entities map DROWNED/CURED/INFECTION, Skeleton maps FROZEN, and unsupported families remain visible for manual handling; unit/importer tests validate enum reasons and unsupported preservation; strict r44 verifies a Skeleton FROZEN event is cancelled while CURED remains allowed, alongside protected/control Zombie conversion; natural AI jockey selection remains unverified |
-| Remaining entity-specific options | mapped-unverified | Enderman `HeldBlock` migrates to `entity.held-block` and is applied as Bukkit BlockData; strict r47 confirms carried block reads back as OBSIDIAN. Horse, ArmorStand, Cat, Sheep, Wolf/Tameable, Raider, Snow Golem and FallingBlock paths exist; strict spawn-option evidence proves pickup precedence, random gear clearing while retaining explicit gear, and configured `NoDamageTicks`; r42/r43 prove Silverfish/Snow-Golem guards; full mob-config spawn verification remains incomplete |
+| Remaining entity-specific options | mapped-unverified | Enderman `HeldBlock` migrates to `entity.held-block` and is applied as Bukkit BlockData; strict r47 confirms carried block reads back as OBSIDIAN. Horse, ArmorStand, Cat, Sheep, Wolf/Tameable, Raider, Snow Golem and FallingBlock paths exist; official Armor Stand aliases `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` now map to production setters, with strict fixture `srv-paper-integration-armor-options-20261031` reading back `can-move=false can-tick=false`; strict spawn-option evidence proves pickup precedence, random gear clearing while retaining explicit gear, and configured `NoDamageTicks`; r42/r43 prove Silverfish/Snow-Golem guards; full mob-config spawn verification remains incomplete |
 
 Mythic `Options.Size` migration now accepts a positive integer range such as
 `2-5` or `2to5`, emitting `entity.size-min`/`entity.size-max`. The spawn-time
@@ -1189,7 +1189,7 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-patrol-spawn-20261031` completes the registered report contract with 230 observed probes (219 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including PatrolSpawnPoint, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-armor-options-20261031` completes the registered report contract with 230 observed probes (219 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Adult/PatrolSpawnPoint/Armor Stand setters, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 ## Release Gate
 
@@ -1212,12 +1212,12 @@ reproducible through
 `tools/paper-integration/fetch-paper-1.21.1.ps1`, which verifies `version.json`
 and SHA-256 before writing `srv-1.21.1/paper.jar`.
 
-The latest strict Paper 1.21.1-133 fixture `srv-paper-integration-patrol-spawn-20261031`
+The latest strict Paper 1.21.1-133 fixture `srv-paper-integration-armor-options-20261031`
 passed with 230 observed probes: 219 `passed`, 11 expected
 `observed-rejected`, and zero incomplete. Its `entityFlagOptions` probe reads
-back `patrol-spawn-point=true` on a real Pillager at its configured spawn
-block; the same run retains the Interactable/Armor Stand event and
-`aiRoute=passed` evidence.
+back Armor Stand `can-move=false can-tick=false` through production option
+application; the same run retains Adult, PatrolSpawnPoint, Interactable/Armor
+Stand event, and `aiRoute=passed` evidence.
 
 Latest Paper evidence: `srv-paper-integration-vehicle-fix-20261015` reconfirmed
 the implemented entity-option, condition, item, loot, spawner, and Audience

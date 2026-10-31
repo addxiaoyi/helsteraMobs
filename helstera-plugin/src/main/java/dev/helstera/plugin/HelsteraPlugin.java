@@ -989,13 +989,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + (sheep.getColor() == org.bukkit.DyeColor.RED && sheep.isSheared()));
 
                 var stand = world.spawn(origin.clone().add(4, 0, 0), org.bukkit.entity.ArmorStand.class);
-                stand.setArms(true);
-                stand.setBasePlate(false);
-                stand.setMarker(true);
-                stand.setSmall(true);
+                var standOptions = new org.bukkit.configuration.file.YamlConfiguration();
+                standOptions.set("armor-stand-arms", true);
+                standOptions.set("armor-stand-baseplate", false);
+                standOptions.set("armor-stand-marker", true);
+                standOptions.set("armor-stand-small", true);
+                standOptions.set("armor-stand-can-move", false);
+                standOptions.set("armor-stand-can-tick", false);
+                applyEntitySpecificOptions(stand, standOptions);
                 entities.add(stand);
                 getLogger().info("[自检] armor-stand-options result="
-                        + (stand.hasArms() && !stand.hasBasePlate() && stand.isMarker() && stand.isSmall()));
+                        + (stand.hasArms() && !stand.hasBasePlate() && stand.isMarker() && stand.isSmall()
+                        && !stand.canMove() && !stand.canTick())
+                        + " can-move=" + stand.canMove()
+                        + " can-tick=" + stand.canTick());
 
                 var cat = world.spawn(origin.clone().add(6, 0, 0), org.bukkit.entity.Cat.class);
                 cat.setCatType(org.bukkit.entity.Cat.Type.SIAMESE);
@@ -9035,6 +9042,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (options.contains("armor-stand-baseplate")) armorStand.setBasePlate(options.getBoolean("armor-stand-baseplate"));
             if (options.contains("armor-stand-marker")) armorStand.setMarker(options.getBoolean("armor-stand-marker"));
             if (options.contains("armor-stand-small")) armorStand.setSmall(options.getBoolean("armor-stand-small"));
+            if (options.contains("armor-stand-can-move")) armorStand.setCanMove(options.getBoolean("armor-stand-can-move"));
+            if (options.contains("armor-stand-can-tick")) armorStand.setCanTick(options.getBoolean("armor-stand-can-tick"));
         }
     }
 

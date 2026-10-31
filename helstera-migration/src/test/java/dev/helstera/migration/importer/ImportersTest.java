@@ -2048,6 +2048,34 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("official Armor Stand option names map to runtime fields")
+    void mythicMapsOfficialArmorStandOptions(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/armor-stand-options.yml", """
+                mobs:
+                  Dummy:
+                    Type: ARMOR_STAND
+                    Options:
+                      HasArms: true
+                      HasBasePlate: false
+                      Marker: true
+                      Small: true
+                      CanMove: false
+                      CanTick: false
+                      HasGravity: false
+                """);
+        YamlConfiguration target = converted(file);
+
+        assertTrue(target.getBoolean("entity.armor-stand-arms"));
+        assertFalse(target.getBoolean("entity.armor-stand-baseplate", true));
+        assertTrue(target.getBoolean("entity.armor-stand-marker"));
+        assertTrue(target.getBoolean("entity.armor-stand-small"));
+        assertFalse(target.getBoolean("entity.armor-stand-can-move", true));
+        assertFalse(target.getBoolean("entity.armor-stand-can-tick", true));
+        assertFalse(target.getBoolean("entity.gravity", true));
+        assertFalse(target.contains("mob.unsupported.Options"));
+    }
+
+    @Test
     @DisplayName("Mythic Interactable option maps explicitly and applies its documented default")
     void mythicMapsInteractableAndDefault(@TempDir Path root) throws Exception {
         Path explicitFile = write(root, "Mobs/interactable-explicit.yml", """
