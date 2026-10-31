@@ -65,8 +65,7 @@ full MythicMobs parity.
 - Mythic `OwnerIsOnline` now checks resolved Bukkit/PDC owner availability separately from `ownerIsPlayer`.
 - Exploratory Paper r52 verifies `OwnerIsOnline` for a real online PDC-backed owner.
 - Mythic `HasFreeInventorySlot`/`HasFreeSlot` now use Bukkit inventory empty-slot semantics, including full-inventory rejection.
-- Exploratory Paper r53 verifies the positive and full-inventory-negative `HasFreeInventorySlot` paths on a real online player; strict Paper 1.21.1 evidence remains pending.
-- Exploratory Paper r56 verifies the positive and negative `HasItem` paths after restoring a real online player's inventory state; strict Paper 1.21.1 evidence remains pending.
+- Strict fixture `srv-paper-integration-targeters-20261031-r3` verifies the positive and full-inventory-negative `HasFreeInventorySlot` paths and the positive/negative `HasItem` paths on a real online player, with inventory state restored.
 - Exploratory Paper r59 verifies target water/lava conditions across real Paper ticks; the report uses the delayed probe because same-tick fluid-cache evaluation is false by design.
 - Official `LivingInRadius`, `MobsInChunk`, and `Dimension` conditions now map to Bukkit living-entity, chunk mob, and world-environment evaluators; exploratory Paper r60 covers them through `conditionUtilityAliases`.
 - Official `Height`, `HeightAbove`, `HeightBelow`, `Pitch`, `Yaw`, and `OnBlock` conditions now support Mythic numeric ranges, Bukkit entity orientation, and exact block-material lists; exploratory Paper r64 verifies the live paths.
@@ -83,17 +82,11 @@ full MythicMobs parity.
 - Official `IsUsingSpyglass` now reads a target Player's active Bukkit item and matches SPYGLASS; exploratory Paper r76 verifies active-item positive/negative paths.
 - Official `EnderDragonAlive` now checks for a valid EnderDragon in the target world's entity set; exploratory Paper r77 keeps the utility probe passed.
 - Official `PlayerKills` now uses a lifetime counter owned by each managed mob instance and increments only when that instance is resolved as the killer of a real Player death; `playerKills`/`player-kills` aliases, range syntax, teardown cleanup, and migration coverage are implemented. Exploratory Paper 1.21.4 killprobe records both `playerKillTrigger=passed` and `playerKillsCondition=passed` after a deterministic real Player death; strict Paper 1.21.1 evidence remains pending.
-- Official `Absorption` now reads Bukkit `Damageable#getAbsorptionAmount()` with exact and comparator forms, defaulting to a positive-absorption check; migration aliases and fail-closed runtime tests are included. Exploratory Paper 1.21.4 r8 records the condition path passed; strict Paper 1.21.1 evidence remains pending.
-- Official `HasPotionEffect` now matches Bukkit potion type, amplifier level, and remaining duration ranges, with `ANY` type support; migration and runtime tests cover type-only and detailed forms. Exploratory Paper 1.21.4 r8 records the independent `potionEffectCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
-- Official `HasAuraStacks` now adapts Bukkit potion amplifier values to 1-based stack ranges, with aura/type aliases and `ANY` support. Exploratory Paper 1.21.4 r8 records the independent `auraStacksCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
-- Official `Level` now reads the managed model instance's MythicMob level, defaults unset instances to level 1, and fails closed without a managed instance. Exploratory Paper 1.21.4 r8 records the independent `levelCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
-- `Health` and `HealthPercent` now preserve Mythic `includeabsorption`/`ia`, adding Bukkit absorption to raw and percentage comparisons; migration, runtime, and condition-catalog self-test coverage are included. Exploratory Paper 1.21.4 r8 records the inclusive condition path passed; strict Paper 1.21.1 evidence remains pending.
-- Official `LunarPhase` now follows the existing vanilla eight-day `World#getFullTime()` cycle and supports numeric phase lists. Exploratory Paper 1.21.4 r8 records the independent `lunarPhaseCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Strict fixture `srv-paper-integration-targeters-20261031-r3` verifies `Absorption`, `HasPotionEffect`, `HasAuraStacks`, managed `Level`, health-with-absorption comparisons, and `LunarPhase` alongside their importer and runtime tests.
 - Official `LastSignal` now tracks the most recent signal delivered to each managed instance, clears it on teardown, and supports the Mythic `signal`/`s` aliases. Exploratory Paper 1.21.4 r3 records the independent `signalMechanics` probe passed; strict Paper 1.21.1 evidence remains pending.
 - Official `LineOfSightFromOrigin` now ray-traces from `BehaviorContext.origin()` to the target eye location using Bukkit block collision. Exploratory Paper 1.21.4 r2 records the independent `lineOfSightFromOriginCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
 - Official `BowTension` now reads `EntityShootBowEvent#getForce()` from the `on-entity-shoot` context, constrained to the 0..1 range. Exploratory Paper 1.21.4 r3 records the independent `bowTensionCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
-- Official `StringEquals` now compares two resolved string values with `value1/value2` and Mythic aliases. Exploratory Paper 1.21.4 r8 records the independent `stringEqualsCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
-- Official `StringEmpty` / `StringNotEmpty` now check resolved text values with Mythic value aliases. Exploratory Paper 1.21.4 r8 records the independent `stringEmptyCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
+- Strict fixture `srv-paper-integration-targeters-20261031-r3` verifies `StringEquals`, `StringEmpty`/`StringNotEmpty`, `CompareValues`, `GlobalScore`, and `Score` condition paths.
 - Official `LookingAt` now uses a Player target's Bukkit block/entity ray trace with type and distance arguments; migration and runtime tests cover the path. Exploratory Paper 1.21.4 r2 records the independent `lookingAtCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
 - Official `Structure` now uses Paper's structure registry and `World#hasStructureAt`, supporting namespaced values and `*` wildcards; migration and fail-closed runtime coverage are included. Exploratory Paper 1.21.11 r123 records the independent positive/wildcard/negative `structureCondition=passed` probe against a real Mineshaft; strict Paper 1.21.1 evidence remains pending.
 - Official `EntityItemType` / `EntityMaterialType` now read the Bukkit Item trigger's carried material in `on-item-pickup` contexts, with fail-closed non-Item contexts. Exploratory Paper 1.21.4 r2 records the independent `entityItemTypeCondition` probe passed; strict Paper 1.21.1 evidence remains pending.
@@ -494,7 +487,7 @@ Paper 1.21.1 release evidence 仍待匹配 server jar。
 | 名字 | 排序依据 |
 | --- | --- |
 | `nearest` / `farthest` | 距离由近到远 / 由远到近 |
-| `nearestentity` / `nearestliving` / `nearestlivingentity` / `nearestmob` | `nearest` 或怪物筛选的兼容别名 |
+| `nearestentity` / `nearestliving` / `nearestlivingentity` / `nearestmob` | 最近的一个生物；`nearestmob` 排除玩家 |
 | `random` | 随机打乱（不排序，避免可预测行为） |
 | `players` / `mobs` / `living` | 类型过滤后按距离 |
 | `lowest-health` / `highest-health` | **绝对血量** |
