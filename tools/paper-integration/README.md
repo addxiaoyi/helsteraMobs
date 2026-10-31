@@ -23,9 +23,9 @@ $env:PAPER_MENU_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-The latest Paper 1.21.1-133 strict fixture completes 241 registered probes: 231
-positive observations and 10 expected negative-control observations. The
-current release evidence is `srv-paper-integration-exp-20261031-r19`; earlier
+The latest Paper 1.21.1-133 strict fixture completes 244 registered probes: 233
+positive observations and 11 expected negative-control observations. The
+current release evidence is `srv-paper-integration-exp-20261031-r20`; earlier
 fixture counts in this document are historical checkpoints.
 
 The follow-up fixture also verifies the root Mythic `Exp` path through
@@ -39,6 +39,9 @@ The strict fixture also verifies `mobs/despawn_probe.yml` through
 
 It also verifies the visibility option fixture through
 `visibility-options result=true visible-by-default=true invisible=true show-name=true`.
+
+The Spawner catalog also verifies group-limit enforcement through
+`spawner-group id=group_probe requested=true alive=2 total=2 max-alive=2 group-min=3 group-max=5 limit=true`.
 
 The default server jar path is `srv-1.21.1/paper.jar`. If the Paper jar is
 stored elsewhere, set an explicit override before running the fixture:

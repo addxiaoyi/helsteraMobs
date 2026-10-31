@@ -4388,6 +4388,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             candidate.equals("scoped_limit_probe") ? scopedLocation
                                     : lightFailClosedProbe && configuredProbeLocation != null
                                     ? configuredProbeLocation : safeLocation);
+                    if (candidate.equals("group_probe")) {
+                        var groupSpawner = sp.get(candidate);
+                        int groupAlive = sp.aliveCount(candidate);
+                        int groupTotal = groupSpawner == null ? -1 : groupSpawner.totalSpawned();
+                        boolean groupLimit = groupSpawner != null && accepted
+                                && groupAlive <= groupSpawner.maxAlive()
+                                && groupTotal <= groupSpawner.maxAlive();
+                        getLogger().info("spawner-group id=" + candidate
+                                + " requested=" + accepted + " alive=" + groupAlive
+                                + " total=" + groupTotal + " max-alive="
+                                + (groupSpawner == null ? -1 : groupSpawner.maxAlive())
+                                + " group-min=" + (groupSpawner == null ? -1 : groupSpawner.groupMin())
+                                + " group-max=" + (groupSpawner == null ? -1 : groupSpawner.groupMax())
+                                + " limit=" + groupLimit);
+                    }
                     if (probeWorld != null) {
                         if (lunarProbe || timeWindowProbe) probeWorld.setFullTime(originalFullTime);
                         probeWorld.setStorm(originalStorm);
