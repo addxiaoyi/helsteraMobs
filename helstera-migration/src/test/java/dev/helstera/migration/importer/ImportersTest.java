@@ -1958,6 +1958,7 @@ class ImportersTest {
                       Baby: true
                       CanJoinRaid: false
                       PatrolLeader: true
+                      PatrolSpawnPoint: true
                       Tamed: true
                       PreventTeleport: true
                       PreventPickup: true
@@ -1987,6 +1988,7 @@ class ImportersTest {
         assertTrue(target.getBoolean("entity.baby"));
         assertFalse(target.getBoolean("entity.can-join-raid", true));
         assertTrue(target.getBoolean("entity.patrol-leader"));
+        assertTrue(target.getBoolean("entity.patrol-spawn-point"));
         assertTrue(target.getBoolean("entity.tamed"));
         assertTrue(target.getBoolean("mob.prevent-teleport"));
         assertTrue(target.getBoolean("mob.prevent-pickup"));

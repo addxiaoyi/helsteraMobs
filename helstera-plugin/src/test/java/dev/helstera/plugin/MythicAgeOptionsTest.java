@@ -116,11 +116,23 @@ class MythicAgeOptionsTest {
     @Test
     void appliesRaidAndTameOptionsOnlyThroughMatchingBukkitInterfaces() {
         Map<String, Object> calls = new LinkedHashMap<>();
+        var patrolBlock = Proxy.newProxyInstance(org.bukkit.block.Block.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.block.Block.class}, (proxy, method, args) -> {
+                    Class<?> type = method.getReturnType();
+                    if (type == boolean.class) return false;
+                    if (type == int.class) return 0;
+                    return null;
+                });
+        var patrolWorld = Proxy.newProxyInstance(org.bukkit.World.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.World.class}, (proxy, method, args) ->
+                        method.getName().equals("getBlockAt") ? patrolBlock : null);
+        var patrolLocation = new org.bukkit.Location((org.bukkit.World) patrolWorld, 0, 64, 0);
         Raider raider = (Raider) Proxy.newProxyInstance(Raider.class.getClassLoader(),
                 new Class<?>[]{Raider.class}, (proxy, method, args) -> {
                     if (method.getName().startsWith("set")) {
                         calls.put(method.getName(), args == null || args.length == 0 ? true : args[0]);
                     }
+                    if (method.getName().equals("getLocation")) return patrolLocation;
                     Class<?> type = method.getReturnType();
                     if (type == boolean.class) return false;
                     if (type == int.class) return 0;
@@ -139,6 +151,7 @@ class MythicAgeOptionsTest {
         var options = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
                 can-join-raid: false
                 patrol-leader: true
+                patrol-spawn-point: true
                 tamed: true
                 """));
 
@@ -147,6 +160,7 @@ class MythicAgeOptionsTest {
 
         assertEquals(false, calls.get("setCanJoinRaid"));
         assertEquals(true, calls.get("setPatrolLeader"));
+        assertTrue(calls.get("setPatrolTarget") == patrolBlock);
         assertEquals(true, calls.get("setTamed"));
     }
 

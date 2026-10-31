@@ -91,7 +91,7 @@ try {
         '[Server thread/INFO]: projectile-has-ended=true observed=true ticks=3 projectile=00000000-0000-0000-0000-000000000000',
         '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true age-lock=true',
-        '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true patrol-leader=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
         '[Server thread/INFO]: attribute-options result=true modifiers=1',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawn-option-runtime result=true pickup-disabled=true explicit-pickup-overrides-fallback=true random-equipment-cleared=true explicit-equipment-preserved=true no-damage-ticks=true',
