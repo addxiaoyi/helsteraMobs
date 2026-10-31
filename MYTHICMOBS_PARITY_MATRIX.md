@@ -960,9 +960,10 @@ the complete mechanic catalog remain unverified.
 
 Exploratory Paper 1.21.11 r126 records `stateConditions=passed` for real
 flying, sneaking, and gliding state after isolating the player from earlier
-natural damage probes. `stateBlocking` remains unverified because Paper's
-`Player#isBlocking` requires a client-driven Shield use window; mocked/API
-coverage remains separate.
+natural damage probes. The historical `stateBlocking` gap was caused by the
+fixture cancelling the client's active-use state before evaluation; strict
+Paper fixture `srv-paper-integration-exp-20261031-r27` now keeps a real
+Mineflayer Shield-use window and records `stateBlocking=passed`.
 
 Incremental condition update: `is-collidable`, `has-offhand`,
 `target-is-collidable`, and `target-has-offhand` now have Bukkit evaluators,
@@ -1126,6 +1127,12 @@ derived sampling, condition sampling, potion-event mapping, or the signal bus.
 This prevents a newly marked trigger from appearing supported without an event,
 bus subscription, or sampler route.
 
+Current strict condition evidence supersedes the historical exploratory
+`stateBlocking=false` observations above: fixture
+`srv-paper-integration-exp-20261031-r27` records `stateBlocking=passed` from a
+real client-driven Shield-use window, and `lookingAtCondition=passed` after a
+deterministic positive/negative ray control.
+
 Exploratory Paper 1.21.11 r142 records the real tempt selector and delayed
 native target route: `tempt=passed`, `entityTargetBukkit=passed`, and
 `entityTargetDelayed=passed`, with a Survival player holding WHEAT and Paper
@@ -1205,7 +1212,7 @@ restores the player's prior glowing state.
 | --- | --- | --- |
 | Spawner parsing, cooldown, max-alive, persistence | mapped-unverified | `SpawnerServiceTest`, state file and diagnostic APIs; Mythic `cooldown` now aliases `interval`; `max-per-world`/`max-per-player` plus `per-world-limit`/`per-player-limit` aliases enforce lifetime scoped quotas, scoped counters survive state round trips, and config reload retains alive-instance tracking; shared scheduler cooldowns now advance by real elapsed server ticks instead of multiplying the configured interval by the scheduler period; strict fixture `srv-paper-integration-armor-stand-20261031` verifies live scheduler timing (`spawnerNaturalTiming`), failed-spawn cooldown preservation, scoped quotas, and max-spawns; broader restart/natural lifecycle semantics remain open |
 | Random weighted mob pools | mapped-unverified | `RandomSpawnPoolTest` plus strict fixture `srv-paper-integration-armor-stand-20261031`, which records 100 production samples near the expected 0.5/0.5 distribution with max deviation 0.02; broader sample sizes and drop-table coupling remain unverified |
-| Spawner conditions and regions | mapped-unverified | condition/region hooks and composite `all{}` evaluation exist; scalar/list condition parsing preserves range and coordinate commas; strict fixture `srv-paper-integration-exp-20261031-r25` proves passing/rejected weather, time, biome, composite, world/Y, player/world, and named-region gates with fail-closed results; broader randomized combinations remain unverified |
+| Spawner conditions and regions | mapped-unverified | condition/region hooks and composite `all{}` evaluation exist; scalar/list condition parsing preserves range and coordinate commas; strict fixture `srv-paper-integration-exp-20261031-r27` proves passing/rejected weather, time, biome, composite, world/Y, player/world, and named-region gates with fail-closed results; broader randomized combinations remain unverified |
 | Heightmap, ground, border and player gates | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-armor-stand-20261031` proves natural ground spawn, heightmap surface selection, border clipping/rejection, closed player-gate rejection, player-scoped limit rejection, unloaded-chunk rejection, unreadable-light rejection, and `max-spawns=1`; `player-distance` is accepted as a runtime alias for `players-radius`, while broader randomized terrain combinations remain unverified |
 | Custom menu pagination and visibility | mapped-unverified | parser/pagination tests plus an isolated Mineflayer + Paper workflow proving permission denial, page navigation, command dispatch and close behavior; player navigation history now clears on `PlayerQuitEvent`, and button/pagination visibility now supports separated positive clauses plus `!`/`-` exclusions for permission/world/faction/region, while broader Mythic menu conditions and client versions remain unverified |
 | Mythic Random Spawns and DropTables | mapped-unverified | weighted random pools and nested loot expansion exist; Spawner conditions now include vanilla lunar phase aliases with unit coverage, and Paper fixture `srv-paper-integration-lunar` verifies `lunar-phase-is=FULL` accepts a real spawn request; full condition combinations, experience and broader Paper spawn/drop semantics remain incomplete |
@@ -1219,10 +1226,10 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-exp-20261031-r25` completes the registered report contract with 248 observed probes (237 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, Armor, root Exp, `Options.Despawn`/`Persistent`, `VisibleByDefault`/`Invisible`/`AlwaysShowName`, manual and natural-scheduler Spawner group-limit enforcement, named-region positive/negative gates, and the complete managed vehicle lifecycle, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-integration-exp-20261031-r27` completes the registered report contract with 248 observed probes (237 passed plus 11 expected negative controls); the run includes dual-client menu/Audience reports, real client-driven Shield `is-blocking`, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options including Scale, Health, MovementSpeed, KnockbackResistance, FollowRange, Damage, Armor, root Exp, `Options.Despawn`/`Persistent`, `VisibleByDefault`/`Invisible`/`AlwaysShowName`, manual and natural-scheduler Spawner group-limit enforcement, named-region positive/negative gates, and the complete managed vehicle lifecycle, configured entity flags, Adult/PatrolSpawnPoint/Armor Stand setters and item slots, Saddled, HorseArmor, CarryingChest, jockey mount, Pathfinder-clear, AI route waypoint, and Interactable/Armor Stand event evidence. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
 
 The current latest report superseding the historical row summary is strict
-fixture `srv-paper-integration-exp-20261031-r25`: 248 probes, 237 passed,
+fixture `srv-paper-integration-exp-20261031-r27`: 248 probes, 237 passed,
 11 expected negative controls, and zero incomplete, including positive and
 negative named-region gates.
 
@@ -1245,7 +1252,7 @@ Strict fixture `srv-paper-integration-exp-20261031-r21` extends this to the
 live scheduler path, recording `before=2 after=4 alive=2 max-alive=2
 group-min=3 group-max=5 limit=true`.
 
-Strict fixture `srv-paper-integration-exp-20261031-r25` verifies the named
+Earlier strict fixture `srv-paper-integration-exp-20261031-r25` verifies the named
 region condition through the production Spawner gate, recording the positive
 line `spawner-region id=region_probe requested=true region=integration_box
 failure=null` and the negative line
