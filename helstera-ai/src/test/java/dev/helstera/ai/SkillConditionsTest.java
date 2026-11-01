@@ -1069,7 +1069,27 @@ class SkillConditionsTest {
     void officialBlockAndBiomeConditionsAreRegistered() {
         assertFalse(extraFactory("block-type-is").create(List.of("STONE")).test(ctx()));
         assertFalse(extraFactory("biome-type-is").create(List.of("plains", "true")).test(ctx()));
+        assertFalse(extraFactory("biome-type-is").create(List.of("plains", "false")).test(ctx()));
         assertFalse(extraFactory("biome-is").create(List.of("plains", "true")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("BiomeType non-exact mode matches documented biome categories")
+    void biomeTypeConditionMatchesCategoriesAndAlternatives() {
+        World world = mock(World.class);
+        Block block = mock(Block.class);
+        when(world.getBlockAt(any(Location.class))).thenReturn(block);
+        when(block.getBiome()).thenReturn(org.bukkit.block.Biome.SUNFLOWER_PLAINS);
+        Location location = new Location(world, 0, 64, 0);
+        BehaviorContext context = BehaviorContext.continueExecution(null, null, 1.0, 1.0, 0,
+                "IDLE", null, null, List.of(), location, null);
+
+        assertTrue(extraFactory("biome-type-is").create(List.of("plains", "false")).test(context));
+        assertTrue(extraFactory("biome-type-is").create(List.of("forest,plains", "false")).test(context));
+        assertFalse(extraFactory("biome-type-is").create(List.of("forest", "false")).test(context));
+        assertTrue(extraFactory("biome-type-is").create(List.of("sunflower_plains", "true"))
+                .test(context));
+        assertFalse(extraFactory("biome-type-is").create(List.of("plains", "false")).test(ctx()));
     }
 
     @Test

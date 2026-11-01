@@ -2543,3 +2543,15 @@ deliberate suffix mismatch is rejected. The structured server log records
 `biomeCondition` and `conditionUtilityAliases` pass in the report at
 `srv-paper-biome-condition-strict-20261101-r1/integration-report.json`.
 
+Strict fixture `srv-paper-biome-type-category-strict-20261101-r1` passed Paper
+1.21.1-133 with 254 observed probes (243 passed, 11 expected negative
+controls rejected, zero incomplete). Its `biomeCondition` release probe checks
+non-exact `BiomeType` category matching against a real `DESERT` biome:
+`desert` matches, `plains` rejects, and comma-separated alternatives match
+when one category matches. The probe also checks exact biome matching,
+negative exact/category cases, missing location context, and restores the
+original biome. The report requires
+`spatial-condition-details .*biome-type-category=true`; both `biomeCondition`
+and `conditionUtilityAliases` pass in
+`srv-paper-biome-type-category-strict-20261101-r1/integration-report.json`.
+

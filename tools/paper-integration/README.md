@@ -68,6 +68,14 @@ assertions.
 The follow-up fixture also verifies the root Mythic `Exp` path through
 `exp-options result=true experience=13 event=true`.
 
+Strict biome-category fixture `srv-paper-biome-type-category-strict-20261101-r1`
+completes 254 probes: 243 passed, 11 expected negative controls rejected, and
+zero incomplete. The `biomeCondition` release probe verifies `BiomeType` with
+`exact=false` against a real `DESERT` biome (`desert` matches and `plains`
+rejects), comma-separated category alternatives, exact mode, and biome
+restoration. It also verifies that the category extension retains the existing
+exact `BiomeType` behavior.
+
 Run `pwsh -NoProfile -File tools/paper-integration/audit-evidence.ps1` before
 publishing evidence. It scans the root README, parity matrix, Paper README, and
 startup evidence document and reports documented `srv-*` fixture directories

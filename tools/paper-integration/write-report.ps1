@@ -133,7 +133,7 @@ $probeSpecs = [ordered]@{
     targetKillMechanic = 'skill-actions .*target-kill=true'
     damageMeleeMechanic = 'skill-actions .*damage-melee=true'
     conditionUtilityAliases = 'skill-actions .*condition-utility=true .*block-type-radius-condition=true .*biome-condition=true'
-    biomeCondition = 'spatial-condition-details .*biome-exact=true .*biome-partial=true .*biome-reject=true'
+    biomeCondition = 'spatial-condition-details .*biome-exact=true .*biome-partial=true .*biome-reject=true .*biome-type-category=true'
     playerRadiusConditions = 'skill-actions .*player-radius-conditions=true'
     cooldownMechanics = 'skill-actions .*cooldown-mechanics=true'
     lastDamageCauseCondition = 'skill-actions .*last-damage-cause=true'
