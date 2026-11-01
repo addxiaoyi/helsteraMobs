@@ -38,6 +38,7 @@ final class MythicMobsModelMechanics {
     private final Map<String, String> registered = new LinkedHashMap<>();
     private final Map<String, MechanicBody> bodies = new LinkedHashMap<>();
     private final List<String> problems = new ArrayList<>();
+    private volatile boolean active = true;
 
     MythicMobsModelMechanics(InstanceManagerImpl instances, dev.helstera.api.model.ModelRegistry registry) {
         this.instances = instances;
@@ -56,6 +57,10 @@ final class MythicMobsModelMechanics {
 
     boolean anyRegistered() {
         return !registered.isEmpty();
+    }
+
+    void disable() {
+        active = false;
     }
 
     /**
@@ -293,6 +298,7 @@ final class MythicMobsModelMechanics {
             String mn = method.getName();
             switch (mn) {
                 case "isMet", "castAt", "execute" -> {
+                    if (!active) return defaultFor(method.getReturnType(), false);
                     Entity entity = findEntity(args);
                     List<String> params = findStringList(args);
                     boolean wantsResult = "isMet".equals(mn)
