@@ -42,10 +42,17 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
 
     @Override public String pluginName() { return "MythicMobs"; }
 
-    @Override public String supportedVersions() { return "5.3.x - 5.7.x"; }
+    static boolean isSupportedVersion(String version) {
+        return version != null && version.matches("^5\\.[3-7](?:\\.|-|$).*");
+    }
+
+    @Override public String supportedVersions() {
+        return "5.3.x - 5.7.x declared; installed-plugin runtime compatibility is not CI-verified";
+    }
 
     @Override
     public Set<Capability> capabilities() {
+        if (!connected) return Set.of();
         // SKILLS/CONDITIONS 只在 mechanic 真的注册成功后才对外声明：
         // 声明不实会让第三方插件做出错误的能力判断。
         if (mechanics != null && mechanics.anyRegistered()) {
@@ -67,10 +74,19 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
 
     @Override
     public boolean enable(Plugin host) {
+        if (mechanics != null) mechanics.disable();
+        mechanics = null;
+        connected = false;
+        report = null;
         this.host = host;
         Plugin mm = Bukkit.getPluginManager().getPlugin("MythicMobs");
         if (mm == null || !mm.isEnabled()) {
             report = "MythicMobs 未安装或未启用——核心模型功能不受影响，MythicMobs 技能/条件不可用。";
+            return false;
+        }
+        String version = mm.getDescription().getVersion();
+        if (!isSupportedVersion(version)) {
+            report = "MythicMobs " + version + " is outside the declared 5.3.x-5.7.x adapter range.";
             return false;
         }
         try {
@@ -103,7 +119,7 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
                 mechNote.append("模型 mechanic 注册异常: ").append(t);
             }
 
-            host.getLogger().info("已连接 MythicMobs " + mm.getDescription().getVersion()
+            host.getLogger().info("已连接 MythicMobs " + version
                     + "（生物模型绑定已启用）· " + mechNote);
             return true;
         } catch (ClassNotFoundException cnf) {
@@ -119,6 +135,8 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
     public void disable() {
         HandlerList.unregisterAll(this);
         connected = false;
+        if (mechanics != null) mechanics.disable();
+        mechanics = null;
     }
 
     /** 反射事件执行器：MythicMobSpawnEvent -> getMobName() -> 绑定模型。 */

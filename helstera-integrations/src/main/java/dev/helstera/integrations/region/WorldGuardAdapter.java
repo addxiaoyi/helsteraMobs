@@ -20,17 +20,33 @@ public final class WorldGuardAdapter implements IntegrationAdapter {
     private Method adaptLocation;
 
     @Override public String pluginName() { return "WorldGuard"; }
-    @Override public String supportedVersions() { return "7.x"; }
-    @Override public Set<Capability> capabilities() { return Set.of(Capability.REGION_QUERY); }
+
+    static boolean isSupportedVersion(String version) {
+        return version != null && version.matches("^7(?:\\.|-|$).*");
+    }
+
+    @Override public String supportedVersions() {
+        return "7.x API shape probed by reflection; installed-plugin runtime compatibility is not CI-verified";
+    }
+    @Override public Set<Capability> capabilities() {
+        return connected ? Set.of(Capability.REGION_QUERY) : Set.of();
+    }
     @Override public boolean isConnected() { return connected; }
     @Override public String statusReport() { return report; }
 
     @Override
     public boolean enable(Plugin host) {
+        disable();
+        report = null;
         try {
             Plugin plugin = Bukkit.getPluginManager().getPlugin("WorldGuard");
             if (plugin == null || !plugin.isEnabled()) {
                 report = "WorldGuard is not installed or enabled.";
+                return false;
+            }
+            String version = plugin.getDescription().getVersion();
+            if (!isSupportedVersion(version)) {
+                report = "WorldGuard " + version + " is outside the declared 7.x adapter range.";
                 return false;
             }
             Class<?> wgClass = Class.forName("com.sk89q.worldguard.WorldGuard");
@@ -55,7 +71,14 @@ public final class WorldGuardAdapter implements IntegrationAdapter {
         }
     }
 
-    @Override public void disable() { connected = false; regionContainer = null; }
+    @Override public void disable() {
+        connected = false;
+        regionContainer = null;
+        getRegionManager = null;
+        getRegion = null;
+        contains = null;
+        adaptLocation = null;
+    }
 
     @Override
     public Boolean containsRegion(String region, Location location) {
