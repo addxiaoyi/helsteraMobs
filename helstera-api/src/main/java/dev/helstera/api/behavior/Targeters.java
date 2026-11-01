@@ -555,10 +555,12 @@ public final class Targeters {
         if (WORLD_TARGETERS.contains(parsed.name())) {
             Location origin = source == null ? null : source.location();
             if (origin == null || origin.getWorld() == null) return List.of();
+            org.bukkit.entity.Entity sourceEntity = source.baseEntity().orElse(null);
             // Only the first stage may expand the local candidate snapshot.
             if (expandWorld) scoped = origin.getWorld().getLivingEntities();
-            else scoped = scoped.stream().filter(entity -> entity != null
-                    && origin.getWorld().equals(entity.getWorld())).toList();
+            scoped = scoped.stream().filter(entity -> entity != null && entity.isValid() && !entity.isDead()
+                    && origin.getWorld().equals(entity.getWorld()) && entity != sourceEntity
+                    && !Factions.allied(sourceEntity, entity)).toList();
         }
         if (parsed.radius() != null && parsed.radius() >= 0) {
             double radius = parsed.radius();

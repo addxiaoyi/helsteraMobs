@@ -1226,14 +1226,14 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-runtime-alias-20261031-r2` completes the registered report contract with 251 observed probes (240 passed plus 11 expected negative controls); it retains targeter chains, nearest targeters, runtime underscore aliases, production `set-target`/`clear-target` dispatch, dual-client menu/Audience, real client-driven Shield `is-blocking`, natural Spawner recycling, condition utility aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options, root Exp, visibility, Spawner limits and recycling, named-region gates, managed vehicle lifecycle, entity flags, entity-specific setters, Pathfinder-clear, AI route waypoint, Interactable/Armor Stand evidence, and fail-closed invalid targeter parameters. The suite still does not establish the complete Mythic catalog or broader natural/client semantics, so this row remains mapped-unverified |
+| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-world-target-validity-20261101-r2` completes the registered report contract with 250 observed probes (238 passed plus 12 expected negative controls); it retains targeter chains, nearest targeters, runtime underscore aliases, source-caster exclusion for world targeters, production target mechanics, dual-client menu/Audience, real client-driven Shield `is-blocking`, Spawner lifecycle, condition aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options, root Exp, visibility, scoped spawn limits, managed vehicle lifecycle, entity-specific setters, Pathfinder-clear, AI route waypoint, Interactable/Armor Stand evidence, and fail-closed invalid targeter parameters. The complete Mythic catalog and broader natural/client semantics remain open |
 
 The current latest report superseding the historical row summary is strict
-fixture `srv-paper-context-chain-20261031-r1`: 251 probes, 239 passed,
-12 expected negative controls, and zero incomplete. Real-entity selector
-probes include a `SkillService` action dispatched through a context targeter
-chain, nearest selection, runtime underscore aliases, and fail-closed invalid
-`limit`/`radius` parameters.
+fixture `srv-paper-world-target-validity-20261101-r2`: 250 probes, 238 passed,
+12 expected negative controls, and zero incomplete. Its real-world selector
+probe confirms that the source managed entity is excluded from world target
+results, alongside context-chain action dispatch, nearest selection, runtime
+underscore aliases, and fail-closed invalid `limit`/`radius` parameters.
 
 Strict fixture `srv-paper-integration-exp-20261031-r17` adds
 `despawnOptions` for the production `Options.Despawn`/`Persistent`

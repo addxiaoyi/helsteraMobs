@@ -6964,9 +6964,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var mobsInWorld = dev.helstera.api.behavior.Targeters.select(
                         "@Mobs_In_World", worldTargetContext, List.of(holder), List.of());
                 boolean worldPlayerTarget = playersInWorld.contains(holder)
-                        && playersInWorld.stream().noneMatch(candidate -> !(candidate instanceof org.bukkit.entity.Player));
+                        && playersInWorld.stream().allMatch(candidate -> candidate instanceof org.bukkit.entity.Player
+                        && candidate.isValid() && !candidate.isDead());
                 boolean worldMobTarget = mobsInWorld.contains(monster)
-                        && mobsInWorld.stream().noneMatch(candidate -> candidate instanceof org.bukkit.entity.Player);
+                        && mobsInWorld.stream().allMatch(candidate -> !(candidate instanceof org.bukkit.entity.Player)
+                        && candidate.isValid() && !candidate.isDead());
+                boolean worldCasterExcluded = !mobsInWorld.contains(base);
                 var worldChain = dev.helstera.api.behavior.Targeters.select(
                         "@Players_In_World > @Entities_In_World", worldTargetContext, List.of(monster), List.of());
                 boolean worldChainFiltered = worldChain.equals(playersInWorld)
@@ -6986,7 +6989,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         || controller.selectorDiagnostic().contains("can-chase=false");
                 boolean passed = playerTarget && monsterTarget && clearNoFallback
                         && ownerTarget && factionTarget && conditionalTarget
-                        && worldPlayerTarget && worldMobTarget && worldChainFiltered
+                        && worldPlayerTarget && worldMobTarget && worldCasterExcluded && worldChainFiltered
                         && nearestLivingTarget && nearestMobTarget
                         && setTargetMechanic && clearTargetMechanic && contextChainAction
                         && mob.getTarget() == holder;
@@ -6999,6 +7002,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " conditional-target=" + conditionalTarget
                         + " players-in-world=" + worldPlayerTarget
                         + " mobs-in-world=" + worldMobTarget
+                        + " world-caster-excluded=" + worldCasterExcluded
                         + " world-chain-filtered=" + worldChainFiltered
                         + " nearest-living=" + nearestLivingTarget
                         + " nearest-mob=" + nearestMobTarget
