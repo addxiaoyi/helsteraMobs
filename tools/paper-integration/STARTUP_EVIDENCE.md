@@ -2247,6 +2247,12 @@ This reads back the configured `entity.no-ai`, `entity.invulnerable`,
 now contains 238 registered probes because this configuration-to-entity
 assertion is part of the release gate.
 
+Diagnostic fixture `srv-paper-mob-attack-speed-20261101-r1` confirmed that a
+real configured Zombie has no Paper `ATTACK_SPEED` attribute (`base=NaN`). The
+importer now preserves Mythic `Options.AttackSpeed` as unsupported instead of
+claiming the configuration was applied; the diagnostic is not release-pass
+evidence.
+
 The strict fixture `srv-paper-integration-adult-20261031-r2` passed with 230
 observed probes: 219 `passed`, 11 expected `observed-rejected`, and zero
 incomplete. Its Ageable line is:

@@ -678,7 +678,6 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "MovementSpeed", "mob.move-speed");
             mapOption(options, srcFile, entries, target, "KnockbackResistance", "mob.knockback-resistance");
             mapOption(options, srcFile, entries, target, "MaxCombatDistance", "mob.max-combat-distance");
-            mapOption(options, srcFile, entries, target, "AttackSpeed", "entity.attack-speed");
             mapOption(options, srcFile, entries, target, "Despawn", "mob.despawn");
             mapOption(options, srcFile, entries, target, "Health", "mob.health");
             mapOption(options, srcFile, entries, target, "Damage", "mob.attack-damage");
@@ -808,7 +807,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "FallingBlockHurtEntities", "entity.falling-block-hurt-entities");
             mapOption(options, srcFile, entries, target, "FallingBlockCancelDrop", "entity.falling-block-cancel-drop");
             Map<String, Object> leftover = new LinkedHashMap<>(options.getValues(true));
-            for (String mapped : List.of("FollowRange", "MovementSpeed", "KnockbackResistance", "MaxCombatDistance", "AttackSpeed",
+            for (String mapped : List.of("FollowRange", "MovementSpeed", "KnockbackResistance", "MaxCombatDistance",
                     "Despawn", "Health", "Damage", "RangedAttack", "RangedAttackRange", "ProjectileSpeed",
                     "ProjectileDamage", "ProjectileType", "RangedHitSkill", "ProjectileGravity",
                     "ProjectileFireTicks", "ProjectileExplosion", "ProjectileMaxHits", "ProjectilePotion",
