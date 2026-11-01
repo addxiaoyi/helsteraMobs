@@ -34,6 +34,14 @@ the menu workflow disconnects and the same player reconnects for a real drink.
 The older 250-probe fixture remains the baseline evidence for its original
 catalog; r5 is additive and specifically closes strict player Potion consumption.
 
+Strict Potion natural-expiry fixture `srv-paper-potion-expiry-strict-20261101-r1`
+completes 255 probes on Paper 1.21.1-133. It records both
+`playerPotionConsume=passed` and `playerPotionNaturalExpiry=passed`; the real
+player's short effect expires and executes the configured action. When
+`PAPER_RAW_POTION_SHORT=true` is requested with the raw Potion workflow, the
+report requires the natural-expiry probe and emits `not-observed` if its event
+is absent.
+
 Strict Mob Options follow-up `srv-paper-mob-max-combat-distance-20261101-r5`
 completes 253 probes: 241 passed, 12 expected negative controls rejected, and
 zero incomplete. It verifies `Options.MaxCombatDistance=8` through production

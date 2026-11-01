@@ -464,7 +464,17 @@ The runner then re-armed hotbar slot 1 immediately before use. Fixture
 `srv-paper-integration-exploratory-1.21.11-r137` recorded both
 `playerPotionConsume=passed` and `playerPotionNaturalExpiry=passed` with
 `expired=true action-observed=true`. This restores stable exploratory
-1.21.11 evidence; strict Paper 1.21.1 evidence remains pending.
+1.21.11 evidence; strict Paper 1.21.1 evidence is now available from
+`srv-paper-potion-expiry-strict-20261101-r1`.
+
+That strict Paper 1.21.1-133 fixture completes 255 probes and records
+`potionEffectEndTrigger`, `potionNaturalExpiry`, `playerPotionConsume`, and
+`playerPotionNaturalExpiry` as passed. The raw protocol client drinks the
+server-equipped short-effect Potion; the log observes
+`player-potion-natural-expiry=true expired=true action-observed=true` for the
+real online player. With both `PAPER_RAW_POTION_WORKFLOW=true` and
+`PAPER_RAW_POTION_SHORT=true`, the report requires this dynamic probe and
+retains a `not-observed` result if the expiry action does not run.
 
 Fixture `srv-paper-integration-native-target-20261016-r2` used the corrected
 non-`no-ai` trigger probe. Paper selected the online player as the native mob

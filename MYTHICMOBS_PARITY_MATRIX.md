@@ -1161,6 +1161,11 @@ native target route: `tempt=passed`, `entityTargetBukkit=passed`, and
 `entityTargetDelayed=passed`, with a Survival player holding WHEAT and Paper
 `target-reason=TEMPT`.
 
+Strict Paper 1.21.1-133 fixture `srv-paper-potion-expiry-strict-20261101-r1`
+records managed and real-player natural potion expiry as passed. This closes
+the version-specific expiry evidence gap in the Trigger catalog; autonomous
+lava-tick timing and other uncovered natural-event paths remain open.
+
 ## 2. Mob Options
 
 | Area | Status | Evidence / remaining work |
