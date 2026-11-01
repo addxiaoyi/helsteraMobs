@@ -1069,6 +1069,27 @@ class SkillConditionsTest {
     void officialBlockAndBiomeConditionsAreRegistered() {
         assertFalse(extraFactory("block-type-is").create(List.of("STONE")).test(ctx()));
         assertFalse(extraFactory("biome-type-is").create(List.of("plains", "true")).test(ctx()));
+        assertFalse(extraFactory("biome-is").create(List.of("plains", "true")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("Biome honors namespaced exact matches, prefix matches, and comma-separated alternatives")
+    void biomeConditionUsesNamespacedKeysAndExactFlag() {
+        World world = mock(World.class);
+        Block block = mock(Block.class);
+        when(world.getBlockAt(any(Location.class))).thenReturn(block);
+        when(block.getBiome()).thenReturn(org.bukkit.block.Biome.SUNFLOWER_PLAINS);
+        Location location = new Location(world, 0, 64, 0);
+        BehaviorContext context = BehaviorContext.continueExecution(null, null, 1.0, 1.0, 0,
+                "IDLE", null, null, List.of(), location, null);
+
+        assertTrue(extraFactory("biome-is").create(
+                List.of("minecraft:sunflower_plains", "true")).test(context));
+        assertTrue(extraFactory("biome-is").create(List.of("plains", "false")).test(context));
+        assertTrue(extraFactory("biome-is").create(
+                List.of("minecraft:desert,sunflower_plains", "true")).test(context));
+        assertFalse(extraFactory("biome-is").create(List.of("plains", "true")).test(context));
+        assertFalse(extraFactory("biome-is").create(List.of("example:plains", "false")).test(context));
     }
 
     @Test

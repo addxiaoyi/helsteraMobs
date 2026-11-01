@@ -1719,6 +1719,13 @@ MMOItem names and
 exploratory Paper `srv-paper-integration-exploratory-1.21.11-r66` records the
 exact `block-type=true biome-type=true` path.
 
+Official `Biome` conditions now preserve namespaced and comma-separated biome
+IDs plus the `exact`/`e` flag through migration. Runtime matching defaults
+unqualified IDs to `minecraft`, and non-exact mode matches a biome key
+substring within the same namespace. Malformed IDs fail closed; `BiomeType`
+category matching remains separate. Paper runtime evidence for this `Biome`
+condition path is still pending.
+
 Server/player state condition update: official `ServerIsPaper` now recognizes
 Paper-family server identity from Bukkit name/version metadata, while
 `IsInSurvivalMode` checks only an explicit target Player in survival mode.

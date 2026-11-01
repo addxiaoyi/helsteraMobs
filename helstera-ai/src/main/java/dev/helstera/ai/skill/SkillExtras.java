@@ -1139,6 +1139,30 @@ public final class SkillExtras {
         return false;
     }
 
+    private static boolean biomeMatches(Location location, String wanted, boolean exact) {
+        if (location == null || location.getWorld() == null || wanted == null || wanted.isBlank()) return false;
+        try {
+            org.bukkit.NamespacedKey actual = location.getBlock().getBiome().getKey();
+            if (actual == null) return false;
+            String actualNamespace = actual.getNamespace();
+            String actualKey = actual.getKey();
+            for (String raw : wanted.split(",")) {
+                String candidate = raw.trim().toLowerCase(Locale.ROOT);
+                if (candidate.isEmpty()) continue;
+                int separator = candidate.indexOf(':');
+                String namespace = separator < 0 ? "minecraft" : candidate.substring(0, separator);
+                String key = separator < 0 ? candidate : candidate.substring(separator + 1);
+                if (namespace.isBlank() || key.isBlank()
+                        || (separator >= 0 && candidate.indexOf(':', separator + 1) >= 0)) continue;
+                if (!actualNamespace.equals(namespace)) continue;
+                if (exact ? actualKey.equals(key) : actualKey.contains(key)) return true;
+            }
+        } catch (Throwable ignored) {
+            SkillFaults.swallow("SkillExtras#biomeMatches");
+        }
+        return false;
+    }
+
     private static boolean isUndeadEntity(LivingEntity entity) {
         if (entity == null || entity.getType() == null) return false;
         return Set.of("ZOMBIE", "HUSK", "DROWNED", "ZOMBIFIED_PIGLIN",
@@ -1483,17 +1507,9 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("biome-is", (SkillCatalog.ConditionFactory) a -> {
-                    String want = str(a, 0, "");
-                    return ctx -> {
-                        Location l = selfLoc(ctx);
-                        if (l == null) return false;
-                        try {
-                            return l.getBlock().getBiome().getKey().getKey()
-                                    .equalsIgnoreCase(want);
-                        } catch (Throwable t) {
-                            return false;
-                        }
-                    };
+                    String wanted = str(a, 0, "minecraft:plains");
+                    boolean exact = bool(a, 1, true);
+                    return ctx -> biomeMatches(conditionLocation(ctx), wanted, exact);
                 }),
                 Map.entry("time-is", (SkillCatalog.ConditionFactory) a -> {
                     String want = str(a, 0, "day");

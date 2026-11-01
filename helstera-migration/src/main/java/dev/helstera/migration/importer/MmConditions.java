@@ -119,8 +119,28 @@ public final class MmConditions {
                 || "hasabsorption".equals(name)) {
             return numericCondition(body, "absorption", s, "amount", "a", "absorption", "value");
         }
+        if ("biome".equals(name) || "biomeis".equals(name)) {
+            String value = firstArgument(body, "biome", "name", "value", "b");
+            if (value == null) value = normalizeScalar(body);
+            if (value == null || value.isBlank()) value = "minecraft:plains";
+            String exact = keyedArgument(body, "exact", "e");
+            if (exact == null) exact = "true";
+            if (!"true".equalsIgnoreCase(exact) && !"false".equalsIgnoreCase(exact)) {
+                return new Mapped(s, false);
+            }
+            for (String biome : value.split(",")) {
+                String candidate = biome.trim();
+                int separator = candidate.indexOf(':');
+                String namespace = separator < 0 ? "minecraft" : candidate.substring(0, separator);
+                String key = separator < 0 ? candidate : candidate.substring(separator + 1);
+                if (namespace.isBlank() || key.isBlank() || candidate.contains("*")
+                        || (separator >= 0 && candidate.indexOf(':', separator + 1) >= 0)) {
+                    return new Mapped(s, false);
+                }
+            }
+            return new Mapped("biome-is " + value + " " + exact.toLowerCase(Locale.ROOT), true);
+        }
         if ("world".equals(name) || "worldis".equals(name)
-                || "biome".equals(name) || "biomeis".equals(name)
                 || "weather".equals(name) || "weatheris".equals(name)
                 || "time".equals(name) || "timeis".equals(name)) {
             String value = firstArgument(body, name.startsWith("world") ? "world" :
@@ -129,7 +149,6 @@ public final class MmConditions {
             if (value == null) value = normalizeScalar(body);
             if (value == null) return new Mapped(s, false);
             String runtime = name.startsWith("world") ? "world-is"
-                    : name.startsWith("biome") ? "biome-is"
                     : name.startsWith("weather") ? "weather-is" : "time-is";
             return new Mapped(runtime + " " + value, true);
         }

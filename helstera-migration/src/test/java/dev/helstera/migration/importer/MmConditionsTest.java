@@ -980,7 +980,9 @@ class MmConditionsTest {
     void commonWorldAndHealthConditionsMap() {
         assertEquals("world-is arena", t("?world{world=arena}"));
         assertEquals("world-is arena", t("?world-is arena"));
-        assertEquals("biome-is plains", t("?biome{value=plains}"));
+        assertEquals("biome-is plains true", t("?biome{value=plains}"));
+        assertEquals("biome-is minecraft:plains,false false", t("?biome{b=minecraft:plains,false;e=false}"));
+        assertEquals("biome-is minecraft:plains true", t("?biome"));
         assertEquals("weather-is rain", t("?weather{type=rain}"));
         assertEquals("time-is night", t("?time{value=night}"));
         assertEquals("health-percent >=50", t("?healthPercent{p=>=50%}"));
