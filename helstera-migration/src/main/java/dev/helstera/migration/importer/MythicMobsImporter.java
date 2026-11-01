@@ -346,7 +346,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                                 : "Legacy skull ID/data converted to modern skull Material.");
             } else if (sourceId != null) {
                 target.set(path + ".id", rawId);
-                if (isInteger(legacyIdText) && !isKnownLegacyItemId(Integer.parseInt(legacyIdText))) {
+                if (isDecimalInteger(legacyIdText) && (!isInteger(legacyIdText)
+                        || !isKnownLegacyItemId(Integer.parseInt(legacyIdText)))) {
                     target.set(path + ".unsupported.legacy-id", sourceId);
                     note(entries, file.toString(), "Items." + key + ".Id",
                             path + ".unsupported.legacy-id", sourceId, "unsupported",
@@ -1866,8 +1867,9 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
             int legacyId = isInteger(sourceMaterial) ? parseInteger(sourceMaterial, Integer.MIN_VALUE)
                     : Integer.MIN_VALUE;
-            if (isInteger(sourceMaterial) && numericMaterial == null
-                    && !isKnownLegacyItemId(legacyId)) {
+            boolean unsupportedLegacyId = isDecimalInteger(sourceMaterial) && numericMaterial == null
+                    && (!isInteger(sourceMaterial) || !isKnownLegacyItemId(legacyId));
+            if (unsupportedLegacyId) {
                 target.set(itemPath + ".unsupported.legacy-id", rawSourceMaterial);
                 unsupported.add(spec);
                 note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".unsupported.legacy-id",
@@ -1894,13 +1896,13 @@ public final class MythicMobsImporter implements MigrationImporter {
                         parsed.unsupportedTrailing(), "unsupported",
                         "Unrecognized trailing Equipment metadata was preserved in the source entry.", "WARN");
             }
-            if (parsed.inline().isEmpty() && legacyData == null) {
+            if (parsed.inline().isEmpty() && legacyData == null && !unsupportedLegacyId) {
                 target.set(itemPath, itemMaterial);
                 if (legacyBlockStates != null) target.set(itemPath + ".block-states", legacyBlockStates);
             } else {
                 target.set(itemPath + ".item", itemMaterial);
                 if (legacyBlockStates != null) target.set(itemPath + ".block-states", legacyBlockStates);
-                if (parsed.inline().isEmpty()) {
+                if (parsed.inline().isEmpty() && legacyData != null) {
                     if (legacyPotionType != null || skullMaterial != null || legacyVariantMaterial(sourceMaterial, legacyData) != null
                             || isNeutralLegacyData(sourceMaterial, legacyData, numericMaterial)) {
                         note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".item",
@@ -2072,7 +2074,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
         String id = value.substring(0, separator).trim();
         String data = value.substring(separator + 1).trim();
-        return isInteger(id) && isInteger(data)
+        return isDecimalInteger(id) && isDecimalInteger(data)
                 ? new LegacyIdData(id, data)
                 : new LegacyIdData(rawId, rawData);
     }
@@ -2096,6 +2098,10 @@ public final class MythicMobsImporter implements MigrationImporter {
         } catch (NumberFormatException ignored) {
             return false;
         }
+    }
+
+    private static boolean isDecimalInteger(String value) {
+        return value != null && value.trim().matches("[+-]?[0-9]+");
     }
 
     private static boolean isKnownLegacyItemId(int id) {
