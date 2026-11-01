@@ -17,6 +17,7 @@ import org.bukkit.block.data.type.Farmland;
 import org.bukkit.Location;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -838,10 +839,58 @@ class SkillConditionsTest {
 
         assertTrue(extraFactory("block-type-in-radius").create(
                 List.of("STONE", ">0", "0")).test(context));
+        assertTrue(extraFactory("block-type-in-radius").create(
+                List.of("ST*", ">0", "0")).test(context));
         assertFalse(extraFactory("block-type-in-radius").create(
                 List.of("DIRT", ">0", "0")).test(context));
         assertFalse(extraFactory("block-type-in-radius").create(
-                List.of("#minecraft:stone", ">0", "1")).test(context));
+                List.of("#minecraft:missing_tag", ">0", "1")).test(context));
+    }
+
+    @Test
+    @DisplayName("BlockType 与 OnBlock 支持 Bukkit block tags 并拒绝未知 tag")
+    void officialBlockConditionsResolveTagsAndWildcards() throws ReflectiveOperationException {
+        World world = mock(World.class);
+        Block block = mock(Block.class);
+        Location location = new Location(world, 0, 64, 0);
+        when(world.getBlockAt(location)).thenReturn(block);
+        when(world.getBlockAt(new Location(world, 0, 63, 0))).thenReturn(block);
+        when(block.getType()).thenReturn(org.bukkit.Material.STONE);
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getLocation()).thenReturn(location);
+        var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+
+        assertTrue(extraFactory("block-type-is").create(List.of("ST*")).test(context));
+        assertTrue(extraFactory("on-block").create(List.of("ST*")).test(context));
+
+        var serverField = org.bukkit.Bukkit.class.getDeclaredField("server");
+        serverField.setAccessible(true);
+        Object originalServer = serverField.get(null);
+        org.bukkit.Server server = mock(org.bukkit.Server.class);
+        serverField.set(null, server);
+        try {
+            org.bukkit.Tag<org.bukkit.Material> tag = new org.bukkit.Tag<>() {
+                @Override public org.bukkit.NamespacedKey getKey() {
+                    return org.bukkit.NamespacedKey.minecraft("logs");
+                }
+                @Override public boolean isTagged(org.bukkit.Material material) {
+                    return material == org.bukkit.Material.STONE;
+                }
+                @Override public Set<org.bukkit.Material> getValues() {
+                    return Set.of(org.bukkit.Material.STONE);
+                }
+            };
+            when(server.getTag(org.bukkit.Tag.REGISTRY_BLOCKS,
+                    org.bukkit.NamespacedKey.minecraft("logs"), org.bukkit.Material.class)).thenReturn(tag);
+            assertTrue(extraFactory("block-type-is").create(
+                    List.of("#minecraft:logs")).test(context));
+            assertTrue(extraFactory("on-block").create(
+                    List.of("#minecraft:logs")).test(context));
+            assertFalse(extraFactory("block-type-is").create(
+                    List.of("#minecraft:missing_tag")).test(context));
+        } finally {
+            serverField.set(null, originalServer);
+        }
     }
 
     @Test

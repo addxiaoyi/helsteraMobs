@@ -5,11 +5,12 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest local strict release evidence: Paper `1.21.1-133` boots the full plugin
-and fixture `srv-paper-spawning-distance-runtime-20261101-r4` records 254 probe
-observations (`242 passed`, `12 expected negative-control observations`,
-`0 incomplete`). The report contract covers the registered release probes; it
-does not establish complete MythicMobs catalog parity. Earlier 250/252/253
-probe counts are historical checkpoints.
+and fixture `srv-paper-block-selector-strict-20261101-r2` records 253 probe
+observations (`242 passed`, `11 expected negative-control observations`,
+`0 incomplete`). It adds isolated Paper block-tag and material-wildcard
+assertions to the spatial condition probe. The report contract covers
+registered release probes; it does not establish complete MythicMobs catalog
+parity. Earlier 250/252/253/254 probe runs are historical checkpoints.
 
 ### Current Development Goals
 

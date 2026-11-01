@@ -2494,3 +2494,24 @@ scheduler despawns its instance and removes the Bukkit entity after it is moved
 outside the configured radius. The report records
 `spawning-distance-runtime result=true inside-retained=true outside-removed=true`.
 
+Strict fixture `srv-paper-block-tag-strict-20261101` passed Paper 1.21.1-133
+with 254 observed probes (243 passed, 11 expected rejected, zero incomplete).
+It first established the Paper block-tag path; its combined `STONE,ST*` input
+did not independently establish wildcard matching. The follow-up below
+isolates that assertion.
+
+Strict fixture `srv-paper-block-selector-strict-20261101-r2` passed Paper
+1.21.1-133 with 253 observed probes (242 passed, 11 expected rejected, zero
+incomplete). Its `conditionUtilityAliases` release probe requires and passes
+separate material, tag, and wildcard checks. The server log records:
+
+```text
+spatial-condition-details height=true orientation=true on-block=true on-block-tag=true block-type=true block-wildcard=true block-tag=true biome-type=true
+```
+
+The fixture temporarily sets the real target body and supporting block to
+STONE, then evaluates Mythic `OnBlock`, `BlockType`, and `BlockTypeInRadius`
+with `#minecraft:base_stone_overworld` and standalone `ST*` selectors through
+the production `SkillService`. The report is retained at
+`srv-paper-block-selector-strict-20261101-r2/integration-report.json`.
+

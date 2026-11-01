@@ -923,13 +923,7 @@ public final class SkillExtras {
         Location location = entity.getLocation();
         if (location.getWorld() == null) return false;
         Location below = location.clone().add(0, -1, 0);
-        String actual = location.getWorld().getBlockAt(below).getType().name();
-        for (String raw : wanted.split(",")) {
-            String expected = raw.trim().toUpperCase(Locale.ROOT);
-            if (expected.indexOf('*') >= 0 || expected.startsWith("#")) return false;
-            if (actual.equals(expected)) return true;
-        }
-        return false;
+        return matchesBlockType(location.getWorld().getBlockAt(below).getType(), wanted);
     }
 
     private static Location conditionLocation(BehaviorContext ctx) {
@@ -1020,32 +1014,81 @@ public final class SkillExtras {
         if (location == null || location.getWorld() == null || wanted == null || wanted.isBlank()) {
             return false;
         }
-        String actual = location.getBlock().getType().name();
-        for (String raw : wanted.split(",")) {
-            String expected = raw.trim().toUpperCase(Locale.ROOT);
-            if (expected.indexOf('*') >= 0 || expected.startsWith("#")) return false;
-            if (actual.equals(expected)) return true;
-        }
-        return false;
+        return matchesBlockType(location.getBlock().getType(), wanted);
     }
 
-    /** Counts exact Bukkit materials inside a spherical block radius. */
+    private static boolean matchesBlockType(Material actual, String wanted) {
+        Set<Material> materials = resolveBlockTypes(wanted);
+        return actual != null && materials != null && materials.contains(actual);
+    }
+
+    private static Set<Material> resolveBlockTypes(String wanted) {
+        if (wanted == null || wanted.isBlank()) return null;
+        Set<Material> materials = new java.util.HashSet<>();
+        for (String raw : wanted.split(",", -1)) {
+            String selector = raw.trim().toUpperCase(Locale.ROOT);
+            if (selector.isBlank()) return null;
+            if (selector.startsWith("#")) {
+                try {
+                    org.bukkit.NamespacedKey key = org.bukkit.NamespacedKey.fromString(
+                            selector.substring(1).toLowerCase(Locale.ROOT));
+                    if (key == null) return null;
+                    org.bukkit.Tag<Material> tag = org.bukkit.Bukkit.getTag(
+                            org.bukkit.Tag.REGISTRY_BLOCKS, key, Material.class);
+                    if (tag == null) return null;
+                    materials.addAll(tag.getValues());
+                } catch (Throwable ignored) {
+                    SkillFaults.swallow("SkillExtras#resolveBlockTypes");
+                    return null;
+                }
+                continue;
+            }
+            if (selector.startsWith("MINECRAFT:")) selector = selector.substring("MINECRAFT:".length());
+            else if (selector.contains(":")) return null;
+            if (selector.indexOf('*') >= 0) {
+                for (Material material : Material.values()) {
+                    if (matchesGlob(material.name(), selector)) materials.add(material);
+                }
+                continue;
+            }
+            try {
+                materials.add(Material.valueOf(selector));
+            } catch (IllegalArgumentException ignored) {
+                return null;
+            }
+        }
+        return materials;
+    }
+
+    private static boolean matchesGlob(String value, String pattern) {
+        int valueIndex = 0;
+        int patternIndex = 0;
+        int starIndex = -1;
+        int retryIndex = -1;
+        while (valueIndex < value.length()) {
+            if (patternIndex < pattern.length() && pattern.charAt(patternIndex) == value.charAt(valueIndex)) {
+                valueIndex++;
+                patternIndex++;
+            } else if (patternIndex < pattern.length() && pattern.charAt(patternIndex) == '*') {
+                starIndex = patternIndex++;
+                retryIndex = valueIndex;
+            } else if (starIndex >= 0) {
+                patternIndex = starIndex + 1;
+                valueIndex = ++retryIndex;
+            } else {
+                return false;
+            }
+        }
+        while (patternIndex < pattern.length() && pattern.charAt(patternIndex) == '*') patternIndex++;
+        return patternIndex == pattern.length();
+    }
+
+    /** Counts selected Bukkit materials inside a spherical block radius. */
     private static int countBlocksInRadius(Location center, double radius, String wanted) {
         if (center == null || center.getWorld() == null || wanted == null || wanted.isBlank()
                 || !Double.isFinite(radius) || radius < 0 || radius > 64) return -1;
-        Set<String> materials = new java.util.HashSet<>();
-        for (String raw : wanted.split(",")) {
-            String name = raw.trim().toUpperCase(Locale.ROOT);
-            if (name.startsWith("MINECRAFT:")) name = name.substring("MINECRAFT:".length());
-            if (name.isBlank() || name.startsWith("#") || name.contains("*")) return -1;
-            try {
-                Material material = Material.valueOf(name);
-                materials.add(material.name());
-            } catch (IllegalArgumentException ignored) {
-                return -1;
-            }
-        }
-        if (materials.isEmpty()) return -1;
+        Set<Material> materials = resolveBlockTypes(wanted);
+        if (materials == null) return -1;
         int minX = (int) Math.floor(center.getX() - radius);
         int maxX = (int) Math.floor(center.getX() + radius);
         int minY = Math.max(center.getWorld().getMinHeight(),
@@ -1064,8 +1107,7 @@ public final class SkillExtras {
                         double dy = y + 0.5 - center.getY();
                         double dz = z + 0.5 - center.getZ();
                         if (dx * dx + dy * dy + dz * dz > radiusSquared) continue;
-                        if (materials.contains(center.getWorld().getBlockAt(x, y, z)
-                                .getType().name())) count++;
+                        if (materials.contains(center.getWorld().getBlockAt(x, y, z).getType())) count++;
                     }
                 }
             }
