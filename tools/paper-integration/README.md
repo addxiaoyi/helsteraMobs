@@ -341,11 +341,11 @@ The structured log records `potion-effect-condition=true`; a fresh Paper
 fixture r8 records the independent `potionEffectCondition` probe passed; strict
 Paper 1.21.1 evidence remains pending.
 
-The same temporary SPEED effect is checked through `HasAuraStacks`; Bukkit
-amplifier 0 must satisfy the one-stack range and the structured log records
-`aura-stacks-condition=true`. Exploratory fixture r8 records the independent
-`auraStacksCondition` probe passed; strict Paper 1.21.1 evidence remains
-pending.
+The same temporary SPEED effect is checked through the internal
+`has-aura-stacks` evaluator; Bukkit amplifier 0 must satisfy the one-stack
+range and the structured log records `aura-stacks-condition=true`. Exploratory
+fixture r8 records the independent `auraStacksCondition` probe passed; this
+exercises Bukkit PotionEffect data only and does not verify Mythic Aura parity.
 
 The managed model's existing level path is also checked by the condition
 catalog: `level >=1` passes and `level <1` rejects, recorded as
