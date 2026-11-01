@@ -443,7 +443,10 @@ public final class AiManager implements Listener {
                 try {
                     ModelInstanceImpl inst = instances.impl(entry.getKey());
                     if (shouldDespawn(inst)) {
-                        instances.despawn(entry.getKey());
+                        Entity entity = inst.entity();
+                        if (instances.despawn(entry.getKey()) && entity != null && entity.isValid()) {
+                            entity.remove();
+                        }
                         continue;
                     }
                     if (inst != null && !chunkLoaded(inst) && !tickInUnloadedChunk(inst.options().despawnMode())) {

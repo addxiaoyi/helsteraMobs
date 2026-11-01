@@ -2482,7 +2482,15 @@ incomplete). Its production configuration-to-instance line is:
 spawning-distance-options result=true mode=NORMAL distance=8.0
 ```
 
-The fixture loads `mobs/spawning_distance_probe.yml` through the normal mob
-loader and confirms Mythic's legacy `Options.SpawningDistance` reaches
-`SpawnOptions.despawnDistance`; natural removal timing remains separate.
+That configuration-only checkpoint loads `mobs/spawning_distance_probe.yml`
+through the normal mob loader and confirms Mythic's legacy
+`Options.SpawningDistance` reaches `SpawnOptions.despawnDistance`.
+
+Strict fixture `srv-paper-spawning-distance-runtime-20261101-r4` passed Paper
+1.21.1-133 with 254 observed probes (242 passed, 12 expected rejected, zero
+incomplete). Its new `spawningDistanceRuntime` probe uses a real online player:
+the configured mob remains managed within eight blocks, then the production AI
+scheduler despawns its instance and removes the Bukkit entity after it is moved
+outside the configured radius. The report records
+`spawning-distance-runtime result=true inside-retained=true outside-removed=true`.
 
