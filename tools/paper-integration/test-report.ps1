@@ -103,6 +103,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false',
         '[Server thread/INFO]: [helsteraMobs] [自检] exp-options result=true experience=13 event=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] despawn-options result=true mode=PERSISTENT distance=0 persistent=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-options result=true mode=NORMAL distance=8',
         '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',

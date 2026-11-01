@@ -2018,6 +2018,22 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("MythicMobs Options.SpawningDistance maps to the legacy mob despawn radius")
+    void mythicMapsSpawningDistanceOption(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/spawning-distance.yml", """
+                mobs:
+                  Wandering:
+                    Type: ZOMBIE
+                    Options:
+                      SpawningDistance: 8
+                """);
+        YamlConfiguration target = converted(file);
+
+        assertEquals(8.0, target.getDouble("mob.spawning-distance"), 1e-9);
+        assertFalse(target.contains("mob.unsupported.Options.SpawningDistance"));
+    }
+
+    @Test
     @DisplayName("MythicMobs option aliases and ThreatTable module use runtime paths")
     void mythicMapsOptionAliasesAndModules(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/aliases.yml", """

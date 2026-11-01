@@ -41,6 +41,12 @@ zero incomplete. It verifies `Options.MaxCombatDistance=8` through production
 spawn and Bukkit damage dispatch, allowing the 7-block control and cancelling
 the 9-block hit; menu/Audience and real player Potion consumption also pass.
 
+Strict legacy Mob Options follow-up `srv-paper-mob-spawning-distance-20261101-r2`
+also completes 253 probes: 241 passed, 12 expected negative controls rejected,
+and zero incomplete. It reads `SpawningDistance=8` through the normal mob
+loader as `mode=NORMAL distance=8.0`; natural out-of-range removal timing is
+not folded into this configuration-to-instance probe.
+
 The follow-up fixture also verifies the root Mythic `Exp` path through
 `exp-options result=true experience=13 event=true`.
 
