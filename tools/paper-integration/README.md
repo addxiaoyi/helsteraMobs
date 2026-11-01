@@ -28,6 +28,13 @@ positive observations and 12 expected negative-control observations. The
 current release evidence is `srv-paper-world-target-validity-20261101-r2`; earlier
 fixture counts in this document are historical checkpoints.
 
+Strict Potion-consumption follow-up `srv-paper-strict-potion-20261101-r5`
+completes 252 probes: 241 passed and 11 expected negative controls rejected.
+It records `playerPotionConsume=passed` from a raw 1.21.1 protocol client after
+the menu workflow disconnects and the same player reconnects for a real drink.
+The older 250-probe fixture remains the baseline evidence for its original
+catalog; r5 is additive and specifically closes strict player Potion consumption.
+
 The follow-up fixture also verifies the root Mythic `Exp` path through
 `exp-options result=true experience=13 event=true`.
 
@@ -132,8 +139,8 @@ powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 
 This keeps `HelsteraTester` online without opening a menu or asserting menu
 behavior.
 
-For a real potion-consumption probe without Mineflayer's potion-component
-decoder, use the opt-in raw protocol client:
+For a standalone real potion-consumption probe without Mineflayer's
+potion-component decoder, use the opt-in exploratory raw protocol client:
 
 ```powershell
 $env:PAPER_PLAYER_WORKFLOW = 'true'
@@ -142,8 +149,19 @@ $env:PAPER_SKIP_PLAYER_POTION = 'false'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 48 -Exploratory
 ```
 
-This path is exploratory compatibility evidence and must not be promoted to
-the Paper 1.21.1 strict release gate.
+For the strict Paper 1.21.1 gate, run the required menu workflow first and set
+`PAPER_RAW_POTION_WORKFLOW=true`. After the menu client completes, the runner
+waits for it to disconnect, reconnects the same player with the raw protocol
+client, equips a server-issued potion, and requires the real consume event. A
+requested but unobserved event remains in the report as `not-observed`, so the
+strict gate fails instead of silently dropping this probe.
+
+```powershell
+$env:PAPER_MENU_WORKFLOW = 'true'
+$env:PAPER_RAW_POTION_WORKFLOW = 'true'
+$env:PAPER_SKIP_PLAYER_POTION = 'false'
+powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
+```
 
 The event self-test also runs the server-owned `ai-selector-core` probe. It
 does not require Mineflayer: it exercises player/monster target selection,

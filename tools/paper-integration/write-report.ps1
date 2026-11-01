@@ -367,22 +367,34 @@ $probes += [ordered]@{
 
 # The raw potion client is opt-in. Register its probe only when the log proves
 # the event, so ordinary release catalogs do not acquire a permanent missing ID.
+$playerPotionConsumeRequested = $env:PAPER_RAW_POTION_WORKFLOW -eq 'true'
 $playerPotionConsumeObserved = $logText -match 'player-potion-consume event=true.*item=POTION(?:\s|$)'
-if ($playerPotionConsumeObserved) {
+if ($playerPotionConsumeRequested) {
+    $playerPotionConsumeObservationList = [System.Collections.Generic.List[string]]::new()
+    if ($playerPotionConsumeObserved) {
+        foreach ($match in [regex]::Matches($logText, '.*player-potion-consume event=true.*item=POTION.*')) {
+            $playerPotionConsumeObservationList.Add($match.Value.Trim())
+        }
+    } else {
+        $playerPotionConsumeObservationList.Add(
+            'raw player potion workflow was requested but no consume event was observed')
+    }
+    $playerPotionConsumeObservations = $playerPotionConsumeObservationList.ToArray()
     $probes += [ordered]@{
         id = 'playerPotionConsume'
-        status = 'passed'
-        observations = @([regex]::Matches($logText, '.*player-potion-consume event=true.*item=POTION.*') |
-            ForEach-Object { $_.Value.Trim() })
+        status = if ($playerPotionConsumeObserved) { 'passed' } else { 'not-observed' }
+        observations = $playerPotionConsumeObservations
     }
 }
 $playerPotionNaturalExpiryObserved = $logText -match 'player-potion-natural-expiry=true'
 if ($playerPotionNaturalExpiryObserved) {
+    $playerPotionNaturalExpiryObservations = [string[]]@(
+        [regex]::Matches($logText, '.*player-potion-natural-expiry=true.*') |
+            ForEach-Object { $_.Value.Trim() })
     $probes += [ordered]@{
         id = 'playerPotionNaturalExpiry'
         status = 'passed'
-        observations = @([regex]::Matches($logText, '.*player-potion-natural-expiry=true.*') |
-            ForEach-Object { $_.Value.Trim() })
+        observations = $playerPotionNaturalExpiryObservations
     }
 }
 
@@ -478,7 +490,7 @@ $report = [ordered]@{
     expectedProbeIds = @($probeSpecs.Keys) + @(
         'custom-menu-player-workflow', 'audience-player-delivery',
         'audience-filter-delivery', 'random-spawn-distribution',
-        'skillTeleportCoordinates') + $(if ($playerPotionConsumeObserved) {
+        'skillTeleportCoordinates') + $(if ($playerPotionConsumeRequested) {
             @('playerPotionConsume')
         } else { @() }) + $(if ($playerPotionNaturalExpiryObserved) {
             @('playerPotionNaturalExpiry')

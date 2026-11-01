@@ -1,4 +1,6 @@
 $ErrorActionPreference = 'Stop'
+$previousRawPotionWorkflow = $env:PAPER_RAW_POTION_WORKFLOW
+$env:PAPER_RAW_POTION_WORKFLOW = 'false'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $temp = Join-Path ([System.IO.Path]::GetTempPath()) ('helstera-paper-report-' + [guid]::NewGuid())
 $logDirectory = Join-Path $temp 'logs'
@@ -176,7 +178,9 @@ try {
         'PAPER_AUDIENCE_REPORT {"status":"passed","observations":{"message":true,"title":true,"actionbar":true,"particle":true}}',
         'PAPER_AUDIENCE_FILTER_REPORT {"status":"passed","observations":{"radiusIncludedTester":true,"radiusIncludedGuest":true,"radiusExcludedTester":true,"radiusExcludedGuest":true,"permissionIncludedTester":true,"permissionIncludedGuest":true,"factionIncludedTester":true,"factionIncludedGuest":true,"factionExcludedTester":true,"factionExcludedGuest":true}}'
     ) -Encoding utf8
+    $env:PAPER_RAW_POTION_WORKFLOW = 'true'
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp | Out-Null
+    $env:PAPER_RAW_POTION_WORKFLOW = 'false'
 
     $schemaPath = Join-Path $PSScriptRoot 'integration-report.schema.json'
     $reportPath = Join-Path $temp 'integration-report.json'
@@ -511,6 +515,42 @@ try {
     }
     Assert-True $emptyTargetRejected 'strict gate rejects a report with no probe evidence'
 
+    $rawPotionTemp = Join-Path $temp 'raw-potion-fixture'
+    New-Item -ItemType Directory -Path (Join-Path $rawPotionTemp 'logs') -Force | Out-Null
+    $env:PAPER_RAW_POTION_WORKFLOW = 'true'
+    Set-Content -LiteralPath (Join-Path $rawPotionTemp 'logs/latest.log') -Encoding utf8 -Value @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: player-potion-consume event=true player=HelsteraTester item=POTION',
+        '[Server thread/INFO]: Done (1.000s)! For help, type "help"'
+    )
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $rawPotionTemp | Out-Null
+    $rawPotionReportPath = Join-Path $rawPotionTemp 'integration-report.json'
+    $rawPotionReport = Get-Content -LiteralPath $rawPotionReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $rawPotionProbe = @($rawPotionReport.probes | Where-Object id -eq 'playerPotionConsume')
+    Assert-True ($rawPotionProbe.Count -eq 1 -and $rawPotionProbe[0].status -eq 'passed') 'raw potion consume evidence is registered when observed'
+    Assert-True ($rawPotionReport.expectedProbeIds -contains 'playerPotionConsume') 'observed raw potion probe is required'
+
+    Set-Content -LiteralPath (Join-Path $rawPotionTemp 'logs/latest.log') -Encoding utf8 -Value @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: Done (1.000s)! For help, type "help"'
+    )
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $rawPotionTemp | Out-Null
+    $rawPotionMissing = Get-Content -LiteralPath $rawPotionReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $missingPotionProbe = @($rawPotionMissing.probes | Where-Object id -eq 'playerPotionConsume')
+    Assert-True ($missingPotionProbe.Count -eq 1 -and $missingPotionProbe[0].status -eq 'not-observed') 'requested raw potion probe remains explicit when absent'
+    Assert-True ($rawPotionMissing.expectedProbeIds -contains 'playerPotionConsume') 'requested raw potion probe remains in the strict catalog when absent'
+    $missingPotionRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $rawPotionReportPath `
+            -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+    } catch {
+        $missingPotionRejected = $_.Exception.Message -match 'playerPotionConsume=not-observed'
+    }
+    Assert-True $missingPotionRejected 'strict gate rejects a requested raw potion probe without a consume event'
+    $env:PAPER_RAW_POTION_WORKFLOW = $previousRawPotionWorkflow
+
     foreach ($chainState in @('false', 'missing')) {
         $chainTemp = Join-Path $temp "context-chain-$chainState"
         New-Item -ItemType Directory -Path (Join-Path $chainTemp 'logs') -Force | Out-Null
@@ -586,6 +626,7 @@ try {
     Assert-True $invalidToleranceRejected 'random tolerance rejects values outside zero to one'
     Write-Host 'Paper integration report tests passed.'
 } finally {
+    $env:PAPER_RAW_POTION_WORKFLOW = $previousRawPotionWorkflow
     $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
     $tempPath = [System.IO.Path]::GetFullPath($temp)
     $isOwnedTemp = $tempPath.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase) -and

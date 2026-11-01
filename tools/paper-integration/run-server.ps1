@@ -184,6 +184,7 @@ if (Test-Path -LiteralPath $logPath -PathType Leaf) {
 }
 if (-not $process.Start()) { throw 'Failed to start Paper process' }
 $client = $null
+$potionClient = $null
 
 try {
     $startupDeadline = [DateTime]::UtcNow.AddSeconds(120)
@@ -222,15 +223,22 @@ try {
                 Join-Path $PSScriptRoot 'menu-client-test.js'
             }
             $client = $null
+            $clientArguments = if ($playerOnly -and $rawPotion) {
+                @($clientScript, '127.0.0.1', '25731', $clientOut, 'HelsteraTester')
+            } else {
+                @($clientScript, '127.0.0.1', '25731', $clientOut, $audienceOut)
+            }
             $joinDeadline = [DateTime]::UtcNow.AddSeconds(30)
             while ([DateTime]::UtcNow -lt $joinDeadline) {
                 if ($null -eq $client -or $client.HasExited) {
-                    $client = Start-Process -FilePath 'node' -ArgumentList @(
-                        $clientScript, '127.0.0.1', '25731', $clientOut, $audienceOut
-                    ) -WorkingDirectory $PSScriptRoot -NoNewWindow -PassThru
+                    $client = Start-Process -FilePath 'node' -ArgumentList $clientArguments `
+                        -WorkingDirectory $PSScriptRoot -NoNewWindow -PassThru
                 }
                 if (Select-String -LiteralPath $logPath -Pattern 'HelsteraTester joined the game' -Quiet) {
                     if ($playerOnly -and $env:PAPER_SKIP_PLAYER_POTION -ne 'true') {
+                        if ($rawPotion) {
+                            $process.StandardInput.WriteLine('gamemode survival HelsteraTester')
+                        }
                         $potionComponent = if ($env:PAPER_RAW_POTION_SHORT -eq 'true') {
                             'minecraft:potion_contents={custom_effects:[{id:"minecraft:speed",duration:40,amplifier:0}]}'
                         } else {
@@ -349,6 +357,52 @@ try {
                 throw 'Paper menu, audience delivery, or audience filter assertions failed'
             }
             }
+            if ($rawPotion -and -not $playerOnly) {
+                $potionOut = Join-Path $server 'raw-potion-client.stdout.log'
+                $potionErr = Join-Path $server 'raw-potion-client.stderr.log'
+                $potionDeadline = [DateTime]::UtcNow.AddSeconds(35)
+                while ([DateTime]::UtcNow -lt $potionDeadline) {
+                    if (Select-String -LiteralPath $logPath -Pattern 'HelsteraTester left the game' -Quiet) { break }
+                    Start-Sleep -Milliseconds 250
+                }
+                if (-not (Select-String -LiteralPath $logPath -Pattern 'HelsteraTester left the game' -Quiet)) {
+                    throw 'Menu player did not disconnect before the raw potion client was started'
+                }
+                $joinCountBeforePotion = @(Select-String -LiteralPath $logPath `
+                    -Pattern 'HelsteraTester joined the game').Count
+                $potionClient = Start-Process -FilePath 'node' -ArgumentList @(
+                    (Join-Path $PSScriptRoot 'raw-potion-client.js'), '127.0.0.1', '25731',
+                    $potionOut, 'HelsteraTester'
+                ) -WorkingDirectory $PSScriptRoot -NoNewWindow -PassThru
+                $potionJoinDeadline = [DateTime]::UtcNow.AddSeconds(30)
+                $potionPlayerJoined = $false
+                while ([DateTime]::UtcNow -lt $potionJoinDeadline -and -not $potionClient.HasExited) {
+                    $joinCount = @(Select-String -LiteralPath $logPath `
+                        -Pattern 'HelsteraTester joined the game').Count
+                    if ($joinCount -gt $joinCountBeforePotion) {
+                        $potionPlayerJoined = $true
+                        $potionComponent = if ($env:PAPER_RAW_POTION_SHORT -eq 'true') {
+                            'minecraft:potion_contents={custom_effects:[{id:"minecraft:speed",duration:40,amplifier:0}]}'
+                        } else {
+                            'minecraft:potion_contents={potion:"minecraft:swiftness"}'
+                        }
+                        $process.StandardInput.WriteLine('gamemode survival HelsteraTester')
+                        $process.StandardInput.WriteLine(
+                            "item replace entity HelsteraTester hotbar.1 with minecraft:potion[$potionComponent] 1")
+                        $process.StandardInput.Flush()
+                        break
+                    }
+                    Start-Sleep -Milliseconds 250
+                }
+                if (-not $potionPlayerJoined) {
+                    throw 'Raw potion client did not rejoin Paper before timeout'
+                }
+                $consumeDeadline = [DateTime]::UtcNow.AddSeconds(25)
+                while ([DateTime]::UtcNow -lt $consumeDeadline -and -not $potionClient.HasExited) {
+                    if (Select-String -LiteralPath $logPath -Pattern 'player-potion-consume event=true.*item=POTION' -Quiet) { break }
+                    Start-Sleep -Milliseconds 250
+                }
+            }
         }
     }
 
@@ -357,6 +411,9 @@ try {
         $process.WaitForExit($remaining) | Out-Null
     }
 } finally {
+    if ($null -ne $potionClient -and -not $potionClient.HasExited) {
+        try { $potionClient.Kill() } catch { }
+    }
     if ($null -ne $client -and -not $client.HasExited) {
         try { $client.Kill() } catch { }
     }
