@@ -833,6 +833,12 @@ the client emitted repeated `use_item` packets, but Paper still reported
 path remain covered; real client blocking remains an honest protocol/timing
 evidence gap and is not promoted to strict release evidence.
 
+This exploratory result is superseded by strict Paper fixture
+`srv-paper-integration-exp-20261031-r27`, which keeps a real Mineflayer client
+inside an active Shield-use window and records `stateBlocking=passed` on Paper
+1.21.1-133. The strict report includes all registered probes and no incomplete
+evidence.
+
 Fixture `srv-paper-integration-exploratory-1.21.11-r44` records
 `conditionUtilityAliases=passed`. The live self-test evaluated `incombat`,
 `targetcount`, `mobsinradius`, and deterministic `randomchance 100` against
