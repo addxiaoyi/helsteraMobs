@@ -50,6 +50,12 @@ not folded into this configuration-to-instance probe.
 The follow-up fixture also verifies the root Mythic `Exp` path through
 `exp-options result=true experience=13 event=true`.
 
+Run `pwsh -NoProfile -File tools/paper-integration/audit-evidence.ps1` before
+publishing evidence. It scans the root README, parity matrix, Paper README, and
+startup evidence document and reports documented `srv-*` fixture directories
+that are absent from the workspace. Historical references are informational;
+use `-RequirePresent` only for a deliberately self-contained fixture catalog.
+
 The AI selector probe also dispatches the production `set-target` and
 `clear-target` mechanics and records both target mutation and cleanup on the
 managed Bukkit Mob.
