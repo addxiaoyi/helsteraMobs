@@ -1,47 +1,70 @@
 # helsteraMobs
 
-## MythicMobs Parity Development Status (2026-10-31)
+## MythicMobs Parity Development Status (2026-11-01)
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict release gate: official Paper `1.21.1-133` boots the full plugin and
-the report contract passes with `250/250` probes observed (`238 passed` and
-`12 expected negative-control observations`) in fixture
-`srv-paper-world-target-validity-20261101-r2`.
-Remaining strict and exploratory-only gaps are listed under Remaining Work;
-the strict probe report covers the currently registered release contract.
+Latest local strict release evidence: Paper `1.21.1-133` boots the full plugin
+and fixture `srv-paper-spawning-distance-runtime-20261101-r4` records 254 probe
+observations (`242 passed`, `12 expected negative-control observations`,
+`0 incomplete`). The report contract covers the registered release probes; it
+does not establish complete MythicMobs catalog parity. Earlier 250/252/253
+probe counts are historical checkpoints.
 
 ### Current Development Goals
 
-This checkpoint is a partial parity release. The matrix currently contains
-`39` rows marked `mapped-unverified`; that count was measured from
-`MYTHICMOBS_PARITY_MATRIX.md` on 2026-10-31. The next work is ordered as
-follows:
+This is a partial parity release. The matrix currently has `41`
+`mapped-unverified` rows (counted from `MYTHICMOBS_PARITY_MATRIX.md` on
+2026-11-01). The full remaining work is:
 
-1. **Conditions, Mechanics, and Triggers**: finish the official catalog,
-   aliases, malformed-input behavior, comparator edge cases, and strict Paper
-   runtime probes.
-2. **AI**: `followroute`/`followpath` parsing, waypoint progression, and the
-   real managed-entity Paper route probe now pass; continue the remaining
-   native Pathfinder goal mutation and pathfinding malus audit, which must stay
-   explicit when the public Paper API cannot expose an equivalent operation.
-3. **Spawner**: the latest strict fixture now proves natural scheduler timing,
-   failed-spawn cooldown preservation, random pools, terrain, player/world
-   conditions including named-region rejection, unloaded chunks, and
-   unreadable-light fail-closed behavior, plus natural instance recycling after
-   removal; a separate Paper 1.21.1 two-boot fixture now proves lifetime
-   counters survive plugin restart; continue broader natural spawn lifecycle
-   and drop-table semantics.
-4. **Release gate**: add tests before implementation changes, keep the
-   focused Java suite green, require the report fixture and Python resolver to
-   pass, and record every strict Paper `not-observed` probe instead of calling
-   it complete.
+1. **Matrix and evidence audit**: reconcile every row with source configuration,
+   target field, runtime consumer, tests, Paper evidence, and known boundary;
+   remove stale claims and keep README, matrix, and strict report consistent.
+2. **Conditions and grammar**: audit the official condition and placeholder
+   catalogs, aliases, comparators, defaults, malformed input, and composition;
+   add mapping, fail-closed, runtime, and applicable strict Paper coverage.
+3. **Mechanics and Skills**: verify official parameters, defaults, positional
+   syntax, targets, placeholders, event context, cancellation, repetition, and
+   importer-to-runtime consumers.
+4. **Targeters and AI**: complete names, filters, ordering, limits, chaining,
+   and boundaries; verify Bukkit-expressible behavior and preserve warnings
+   for Pathfinder operations unavailable through public APIs.
+5. **Triggers and natural events**: verify event context, priority,
+   cancellation, timing, and cleanup; distinguish natural server/client
+   evidence from synthetic event dispatch.
+6. **Mob Options**: cover remaining options, entity-specific defaults,
+   application order, and interactions. `MaxCombatDistance` and the
+   `SpawningDistance` near/far removal lifecycle now have strict evidence.
+7. **Spawner and Random Spawn**: extend natural location, combined conditions,
+   cooldowns, limits, player range, world border, restart, and random-pool / loot
+   coupling coverage.
+8. **Drops and DropTables**: verify placeholders, ranges, conditions, nested
+   tables, chance, experience, and natural death timing; identify deterministic
+   probes separately from natural-death evidence.
+9. **Items, equipment, attributes, and legacy data**: expand metadata,
+   attribute combinations, slots, operations, and numeric ID/data coverage;
+   preserve unsupported components such as `ItemModel` and `DamageType` with
+   explicit migration warnings where Paper 1.21.1 lacks public APIs.
+10. **Audience and Custom Menus**: extend filter combinations, client protocol
+    coverage, conditions, pagination, reconnect, and action semantics.
+11. **SkillTree persistence**: cover restart, death, chunk unload/load, config
+    reload, prerequisites, and client display.
+12. **External integrations**: define versions and contracts for Vault,
+    MythicCrucible, MMOItems, ModelEngine, ItemAdder, CraftEngine, MythicMobs,
+    and WorldGuard; require installed-plugin runtime evidence or retain the
+    `blocked-by-external-plugin` status.
+13. **Version matrix**: declare supported Paper/Minecraft combinations and run
+    key strict workflows per combination; Paper 1.21.1 evidence does not imply
+    compatibility with other versions or servers.
+14. **Strict release gate**: require every claimed supported capability to be
+    represented in the report contract, reject missing evidence, and preserve
+    reproducible fixtures and logs alongside Maven, schema, and Paper checks.
 
-Current checkpoint evidence is deliberately narrow: the focused Java suite
-and the latest strict Paper run are green, while the latest strict report
-records `passed=238`, `observed-rejected=12`, and `incomplete=0` across 250
-registered probes. These numbers describe the development checkpoint, not
-full MythicMobs parity.
+Completion requires no unexplained `mapped-unverified` rows, explicit
+technical reasons and preserved source values for unsupported behavior,
+documented external-plugin prerequisites, and passing applicable quality
+gates. A passing strict report proves only its registered probe catalog, not
+the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
