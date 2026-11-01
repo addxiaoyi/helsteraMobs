@@ -24,7 +24,20 @@ class MythicTargeterSpecTest {
     }
 
     @Test
+    void preservesSeparatorsInsideQuotedAndNestedValues() {
+        MythicTargeterSpec spec = MythicTargeterSpec.parse(
+                "@NearestConditionalTarget{conditions=[is-player;health{h=>5}],label='a;b',quoted=\"x\\\";y\"}");
+        assertEquals("[is-player;health{h=>5}]", spec.arguments().get("conditions"));
+        assertEquals("a;b", spec.arguments().get("label"));
+        assertEquals("x\";y", spec.arguments().get("quoted"));
+    }
+
+    @Test
     void rejectsMalformedTargeters() {
         assertThrows(IllegalArgumentException.class, () -> MythicTargeterSpec.parse("@PlayersInRadius{r=8"));
+        assertThrows(IllegalArgumentException.class,
+                () -> MythicTargeterSpec.parse("@Target{filter=[players)}"));
+        assertThrows(IllegalArgumentException.class,
+                () -> MythicTargeterSpec.parse("@Target{filter='players}"));
     }
 }
