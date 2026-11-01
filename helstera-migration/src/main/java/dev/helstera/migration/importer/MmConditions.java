@@ -1429,7 +1429,7 @@ public final class MmConditions {
 
     private static boolean isBiomeCategory(String value) {
         return switch (value) {
-            case "none", "taiga", "extreme_hills", "jungle", "mesa", "plains", "savanna",
+            case "taiga", "extreme_hills", "jungle", "mesa", "plains", "savanna",
                     "icy", "the_end", "beach", "forest", "ocean", "desert", "river", "swamp",
                     "mushroom", "nether", "underground", "mountain" -> true;
             default -> false;
