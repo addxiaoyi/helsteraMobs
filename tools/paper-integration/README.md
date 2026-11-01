@@ -52,9 +52,10 @@ Strict legacy Mob Options follow-up `srv-paper-mob-spawning-distance-20261101-r2
 also completes 253 probes: 241 passed, 12 expected negative controls rejected,
 and zero incomplete. It reads `SpawningDistance=8` through the normal mob
 loader as `mode=NORMAL distance=8.0`. The separate strict fixture
-`srv-paper-spawning-distance-runtime-20261101-r4` verifies nearby retention and
+`srv-paper-spawning-distance-runtime-20261101-r5` verifies nearby retention and
 production removal of both the managed instance and Bukkit entity beyond the
-configured radius.
+configured radius. Its strict release report observes 254 probes with zero
+incomplete; the `spawningDistanceRuntime` probe passes.
 
 Strict block-selector follow-up `srv-paper-block-selector-strict-20261101-r2`
 completes 253 probes: 242 passed, 11 expected negative controls rejected, and

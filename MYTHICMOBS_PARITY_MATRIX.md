@@ -23,10 +23,12 @@ cancelled (`maxCombatDistance=passed`).
 Incremental legacy-option update: Mythic `Options.SpawningDistance` is retained
 as `mob.spawning-distance` and consumed as the normal despawn radius fallback.
 Strict Paper fixture `srv-paper-mob-spawning-distance-20261101-r2` reads the
-production instance as `mode=NORMAL distance=8.0`. Follow-up strict fixture
-`srv-paper-spawning-distance-runtime-20261101-r4` verifies a real-player
+production instance as `mode=NORMAL distance=8.0`. Follow-up strict fixtures
+`srv-paper-spawning-distance-runtime-20261101-r4` and
+`srv-paper-spawning-distance-runtime-20261101-r5` verify a real-player
 nearby-retention check and the production AI scheduler removing both the
 managed instance and Bukkit entity after it moves beyond the configured radius.
+The latest r5 report records 254 observed probes with zero incomplete.
 
 Incremental condition-boundary update: `compare-values` now rejects `NaN`,
 `Infinity`, and `-Infinity` for DOUBLE/FLOAT/NUMBER comparisons instead of

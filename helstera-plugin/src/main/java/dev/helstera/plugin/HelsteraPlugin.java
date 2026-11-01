@@ -1436,7 +1436,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var player = getServer().getOnlinePlayers().stream()
                 .filter(candidate -> candidate.isOnline() && !candidate.isDead()
                         && candidate.getGameMode() != org.bukkit.GameMode.SPECTATOR)
-                .findFirst().orElse(null);
+                .min(java.util.Comparator.comparing(candidate ->
+                        !candidate.getName().equalsIgnoreCase("HelsteraTester")))
+                .orElse(null);
         if (player == null) {
             getLogger().info("[自检] spawning-distance-runtime result=false reason=no-player");
             return;
