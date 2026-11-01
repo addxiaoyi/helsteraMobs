@@ -1982,6 +1982,26 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("MythicMobs Options.AttackSpeed is preserved when Paper entities lack that attribute")
+    void mythicPreservesAttackSpeedOption(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/attack-speed.yml", """
+                mobs:
+                  Swift:
+                    Type: ZOMBIE
+                    Options:
+                      AttackSpeed: 1.75
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = converted(file);
+
+        assertEquals(1.75, target.getDouble("mob.unsupported.Options.AttackSpeed"), 1e-9);
+        assertFalse(target.contains("entity.attack-speed"));
+        assertTrue(entries.stream().anyMatch(entry ->
+                "unsupported".equals(entry.get("status"))
+                        && "mob.unsupported.Options".equals(entry.get("target-key"))));
+    }
+
+    @Test
     @DisplayName("MythicMobs option aliases and ThreatTable module use runtime paths")
     void mythicMapsOptionAliasesAndModules(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/aliases.yml", """
