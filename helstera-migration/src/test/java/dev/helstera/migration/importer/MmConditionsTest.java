@@ -770,6 +770,7 @@ class MmConditionsTest {
         assertTrue(translated("?blockTypeInRadius{m=ST*}"));
         assertTrue(translated("?biomeType{t=forest;e=false}"));
         assertFalse(translated("?biomeType{t=forestish;e=false}"));
+        assertFalse(translated("?biomeType{t=none;e=false}"));
         assertFalse(translated("?biomeType{t=forest;e=maybe}"));
     }
 
