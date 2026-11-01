@@ -66,4 +66,5 @@ class ExternalItemAdapterContractTest {
         assertTrue(adapter.supportedVersions().contains("not CI-verified"));
         assertTrue(adapter.balance(null).isEmpty());
     }
+
 }

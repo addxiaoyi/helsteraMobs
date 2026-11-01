@@ -49,18 +49,12 @@ public final class VaultEconomyAdapter implements IntegrationAdapter {
                 report = "Vault 已安装，但没有注册 Economy provider；HasCurrency 条件将 fail-closed。";
                 return false;
             }
-            economy = registration.getProvider();
-            if (economy == null) {
+            Object provider = registration.getProvider();
+            if (provider == null) {
                 report = "Vault Economy registration 未提供服务；HasCurrency 条件将 fail-closed。";
                 return false;
             }
-            try {
-                getBalance = economyType.getMethod("getBalance", OfflinePlayer.class);
-                offlinePlayerArgument = true;
-            } catch (NoSuchMethodException ignored) {
-                getBalance = economyType.getMethod("getBalance", String.class);
-                offlinePlayerArgument = false;
-            }
+            bindProvider(provider, economyType);
             report = "已连接 Vault Economy provider " + economy.getClass().getName() + ".";
             host.getLogger().info(report);
             return true;
@@ -72,6 +66,21 @@ public final class VaultEconomyAdapter implements IntegrationAdapter {
             host.getLogger().warning(report);
             return false;
         }
+    }
+
+    void bindProvider(Object provider, Class<?> economyType) throws NoSuchMethodException {
+        Method balanceMethod;
+        boolean takesOfflinePlayer;
+        try {
+            balanceMethod = economyType.getMethod("getBalance", OfflinePlayer.class);
+            takesOfflinePlayer = true;
+        } catch (NoSuchMethodException ignored) {
+            balanceMethod = economyType.getMethod("getBalance", String.class);
+            takesOfflinePlayer = false;
+        }
+        economy = provider;
+        getBalance = balanceMethod;
+        offlinePlayerArgument = takesOfflinePlayer;
     }
 
     public OptionalDouble balance(Player player) {
