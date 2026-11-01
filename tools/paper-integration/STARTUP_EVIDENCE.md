@@ -2448,3 +2448,9 @@ with 251 observed probes: 239 passed and 12 expected rejected. Its
 `@Target{} > @living{filter=mob}`: a player target is rejected, a zombie target
 receives the tag, and the temporary tag is removed.
 
+Strict fixture `srv-paper-world-target-validity-20261101-r2` passed Paper
+1.21.1-133 with 250 observed probes (238 passed, 12 expected rejected, zero
+incomplete). Its `ai-selector-core` probe confirms `world-caster-excluded=true`:
+the world-scoped mob result contains the intended monster but not the managed
+source entity, and all returned entities are valid and alive.
+

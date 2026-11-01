@@ -219,18 +219,22 @@ class TargeterOrderingTest {
     @DisplayName("world targeters replace the nearby candidate snapshot")
     void worldTargetersUseAllLivingEntitiesInSourceWorld() {
         var worldRef = new org.bukkit.World[1];
-        var player = (org.bukkit.entity.Player) Proxy.newProxyInstance(
-                org.bukkit.entity.Player.class.getClassLoader(),
-                new Class<?>[]{org.bukkit.entity.Player.class},
-                (proxy, method, args) -> switch (method.getName()) {
-                    case "getWorld" -> worldRef[0];
-                    case "equals" -> proxy == args[0];
-                    case "hashCode" -> System.identityHashCode(proxy);
-                    default -> defaultValue(method.getReturnType());
-                });
-        var mob = livingProxy(org.bukkit.entity.LivingEntity.class);
+        java.util.function.BiFunction<Class<?>, Boolean, org.bukkit.entity.LivingEntity> entity = (type, valid) ->
+                (org.bukkit.entity.LivingEntity) Proxy.newProxyInstance(type.getClassLoader(),
+                        new Class<?>[]{type}, (proxy, method, args) -> switch (method.getName()) {
+                            case "getWorld" -> worldRef[0];
+                            case "isValid" -> valid;
+                            case "isDead" -> false;
+                            case "equals" -> proxy == args[0];
+                            case "hashCode" -> System.identityHashCode(proxy);
+                            default -> defaultValue(method.getReturnType());
+                        });
+        var player = (org.bukkit.entity.Player) entity.apply(org.bukkit.entity.Player.class, true);
+        var mob = entity.apply(org.bukkit.entity.LivingEntity.class, true);
+        var invalid = entity.apply(org.bukkit.entity.LivingEntity.class, false);
+        var caster = entity.apply(org.bukkit.entity.LivingEntity.class, true);
         var nearby = livingProxy(org.bukkit.entity.LivingEntity.class);
-        var worldEntities = List.of(player, mob);
+        var worldEntities = List.of(player, mob, invalid, caster);
         var world = (org.bukkit.World) Proxy.newProxyInstance(
                 org.bukkit.World.class.getClassLoader(),
                 new Class<?>[]{org.bukkit.World.class},
@@ -245,8 +249,11 @@ class TargeterOrderingTest {
         var source = (dev.helstera.api.instance.ModelInstance) Proxy.newProxyInstance(
                 dev.helstera.api.instance.ModelInstance.class.getClassLoader(),
                 new Class<?>[]{dev.helstera.api.instance.ModelInstance.class},
-                (proxy, method, args) -> method.getName().equals("location")
-                        ? origin : defaultValue(method.getReturnType()));
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "location" -> origin;
+                    case "baseEntity" -> java.util.Optional.of(caster);
+                    default -> defaultValue(method.getReturnType());
+                });
 
         assertEquals(List.of(player), Targeters.select("@PlayersInWorld", source,
                 List.of(nearby), List.of()));
