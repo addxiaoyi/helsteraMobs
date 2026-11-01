@@ -47,6 +47,7 @@ $paperMatch = [regex]::Match($logText,
 $probeSpecs = [ordered]@{
     modelDisplay = '结果=通过.*Display实体数=[1-9][0-9]*.*实例有效=true'
     horse = 'horse-options result=true saddled=true .*armor=true .*chest=true'
+    maxCombatDistance = 'max-combat-distance result=true inside-allowed=true outside-blocked=true'
     scaleOptions = 'scale-options result=true scale=1\.25'
     healthOptions = 'health-options result=true health=42(?:\.0)? max-health=42(?:\.0)?'
     movementSpeedOptions = 'movement-speed-options result=true base=0\.4(?:0+)?'

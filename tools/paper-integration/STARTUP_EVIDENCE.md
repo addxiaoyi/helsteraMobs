@@ -2460,3 +2460,17 @@ incomplete). Its `ai-selector-core` probe confirms `world-caster-excluded=true`:
 the world-scoped mob result contains the intended monster but not the managed
 source entity, and all returned entities are valid and alive.
 
+Strict fixture `srv-paper-mob-max-combat-distance-20261101-r5` passed Paper
+1.21.1-133 with 253 observed probes (241 passed, 12 expected rejected, zero
+incomplete). It adds this production mob-option boundary line:
+
+```text
+max-combat-distance result=true inside-allowed=true outside-blocked=true
+```
+
+The fixture loads `mobs/max_combat_distance_probe.yml` through the normal mob
+loader, spawns the managed Zombie with an eight-block limit, then dispatches
+real Bukkit melee damage events from seven and nine blocks. The protected event
+is cancelled while the in-range control remains allowed. The same strict run
+also retains dual-client menu/Audience and `playerPotionConsume=passed`.
+

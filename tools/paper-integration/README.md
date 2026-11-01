@@ -35,6 +35,12 @@ the menu workflow disconnects and the same player reconnects for a real drink.
 The older 250-probe fixture remains the baseline evidence for its original
 catalog; r5 is additive and specifically closes strict player Potion consumption.
 
+Strict Mob Options follow-up `srv-paper-mob-max-combat-distance-20261101-r5`
+completes 253 probes: 241 passed, 12 expected negative controls rejected, and
+zero incomplete. It verifies `Options.MaxCombatDistance=8` through production
+spawn and Bukkit damage dispatch, allowing the 7-block control and cancelling
+the 9-block hit; menu/Audience and real player Potion consumption also pass.
+
 The follow-up fixture also verifies the root Mythic `Exp` path through
 `exp-options result=true experience=13 event=true`.
 

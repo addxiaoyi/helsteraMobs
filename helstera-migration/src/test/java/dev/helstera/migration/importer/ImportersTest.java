@@ -2002,6 +2002,22 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("MythicMobs Options.MaxCombatDistance maps to the mob distance guard")
+    void mythicMapsMaxCombatDistanceOption(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/combat-distance.yml", """
+                mobs:
+                  Guarded:
+                    Type: ZOMBIE
+                    Options:
+                      MaxCombatDistance: 8
+                """);
+        YamlConfiguration target = converted(file);
+
+        assertEquals(8.0, target.getDouble("mob.max-combat-distance"), 1e-9);
+        assertFalse(target.contains("mob.unsupported.Options.MaxCombatDistance"));
+    }
+
+    @Test
     @DisplayName("MythicMobs option aliases and ThreatTable module use runtime paths")
     void mythicMapsOptionAliasesAndModules(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/aliases.yml", """
