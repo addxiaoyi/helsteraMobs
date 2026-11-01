@@ -92,6 +92,7 @@ try {
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true looking-at-condition=true item-recharging-condition=true variable-contains-condition=true before=1.00,2.00,3.00 after=1.00,2.00,3.00 offset-distance=1.000 moved-distance=0.000',
         '[Server thread/INFO]: projectile-has-ended=true observed=true ticks=3 projectile=00000000-0000-0000-0000-000000000000',
         '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true saddled=true armor=true chest=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] max-combat-distance result=true inside-allowed=true outside-blocked=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] scale-options result=true scale=1.25',
         '[Server thread/INFO]: [helsteraMobs] [自检] health-options result=true health=42 max-health=42',
         '[Server thread/INFO]: [helsteraMobs] [自检] movement-speed-options result=true base=0.4',

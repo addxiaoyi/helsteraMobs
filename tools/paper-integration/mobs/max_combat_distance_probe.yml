@@ -1,0 +1,7 @@
+name: Max Combat Distance Probe
+model: example/emberling
+mob:
+  max-combat-distance: 8
+entity:
+  type: ZOMBIE
+  silent: true

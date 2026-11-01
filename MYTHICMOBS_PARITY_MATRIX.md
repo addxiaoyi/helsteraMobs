@@ -13,6 +13,13 @@ Status values:
 
 Evidence baseline: 2026-10-21, Paper API 1.21.1-R0.1-SNAPSHOT.
 
+Incremental mob-option update: Mythic `Options.MaxCombatDistance` is mapped to
+the per-mob AI profile and cancels melee damage beyond the configured radius.
+Strict Paper fixture `srv-paper-mob-max-combat-distance-20261101-r5` exercises
+the production spawn path and Bukkit damage dispatch at 7 and 9 blocks around
+an 8-block limit; the in-range hit is allowed and the out-of-range hit is
+cancelled (`maxCombatDistance=passed`).
+
 Incremental condition-boundary update: `compare-values` now rejects `NaN`,
 `Infinity`, and `-Infinity` for DOUBLE/FLOAT/NUMBER comparisons instead of
 letting `Double.compare` treat them as ordered values. The new regression test
@@ -1226,7 +1233,7 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-world-target-validity-20261101-r2` completes the registered report contract with 250 observed probes (238 passed plus 12 expected negative controls); it retains targeter chains, nearest targeters, runtime underscore aliases, source-caster exclusion for world targeters, production target mechanics, dual-client menu/Audience, real client-driven Shield `is-blocking`, Spawner lifecycle, condition aggregate, player-kill, Structure, LookingAt, target-fluid, Mob Options, root Exp, visibility, scoped spawn limits, managed vehicle lifecycle, entity-specific setters, Pathfinder-clear, AI route waypoint, Interactable/Armor Stand evidence, and fail-closed invalid targeter parameters. The complete Mythic catalog and broader natural/client semantics remain open |
+| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-mob-max-combat-distance-20261101-r5` completes 253 probes (241 passed, 12 expected negative controls, zero incomplete); adds production `Options.MaxCombatDistance` boundary evidence to the menu/Audience, raw player Potion-consumption and registered release contract. Earlier 250-probe fixture `srv-paper-world-target-validity-20261101-r2` remains baseline evidence for its original catalog. The complete Mythic catalog and broader natural/client semantics remain open |
 
 The current latest report superseding the historical row summary is strict
 fixture `srv-paper-world-target-validity-20261101-r2`: 250 probes, 238 passed,

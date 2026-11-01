@@ -986,6 +986,36 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && horseChest)
                         + " saddled=" + horseSaddled + " armor=" + horseArmor + " chest=" + horseChest);
 
+                if (mobConfig("max_combat_distance_probe") != null) {
+                    int combatProbeId = spawnMobAt("max_combat_distance_probe", origin.clone().add(15, 0, 0), null);
+                    var combatProbe = combatProbeId > 0 ? instances().impl(combatProbeId) : null;
+                    var combatEntity = combatProbe == null ? null : combatProbe.baseEntity().orElse(null);
+                    boolean insideAllowed = false;
+                    boolean outsideBlocked = false;
+                    if (combatEntity != null) {
+                        var insideAttacker = world.spawn(combatEntity.getLocation().clone().add(7, 0, 0),
+                                org.bukkit.entity.Zombie.class);
+                        var outsideAttacker = world.spawn(combatEntity.getLocation().clone().add(9, 0, 0),
+                                org.bukkit.entity.Zombie.class);
+                        entities.add(insideAttacker);
+                        entities.add(outsideAttacker);
+                        var insideEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                                insideAttacker, combatEntity,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0);
+                        var outsideEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                                outsideAttacker, combatEntity,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0);
+                        getServer().getPluginManager().callEvent(insideEvent);
+                        getServer().getPluginManager().callEvent(outsideEvent);
+                        insideAllowed = !insideEvent.isCancelled();
+                        outsideBlocked = outsideEvent.isCancelled();
+                    }
+                    getLogger().info("[自检] max-combat-distance result="
+                            + (insideAllowed && outsideBlocked)
+                            + " inside-allowed=" + insideAllowed + " outside-blocked=" + outsideBlocked);
+                    if (combatProbeId > 0) instances().despawn(combatProbeId);
+                }
+
                 if (mobConfig("scale_probe") != null) {
                     int scaleProbeId = spawnMobAt("scale_probe", origin.clone().add(6, 0, 0), null);
                     var scaleProbe = scaleProbeId > 0 ? instances().impl(scaleProbeId) : null;
