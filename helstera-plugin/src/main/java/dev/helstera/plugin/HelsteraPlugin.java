@@ -1536,6 +1536,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean damageMeleeMechanic = false;
             boolean conditionUtilityAliases = false;
             boolean blockTypeRadiusWildcardCondition = false;
+            boolean biomeCondition = false;
             boolean playerRadiusConditions = false;
             boolean cooldownMechanics = false;
             boolean lastDamageCauseCondition = false;
@@ -2445,14 +2446,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("on-block STONE"), conditionContext);
                     boolean spatialOnBlockTag = behaviors.testCondition(
                             skills.bindCondition("on-block #minecraft:base_stone_overworld"), conditionContext);
-                    String actualBiome = conditionTarget.getLocation().getBlock().getBiome()
-                            .getKey().getKey();
+                    var actualBiomeKey = conditionTarget.getLocation().getBlock().getBiome().getKey();
+                    String actualBiome = actualBiomeKey.getKey();
+                    String actualBiomeId = actualBiomeKey.toString();
                     boolean spatialBlockType = behaviors.testCondition(
                             skills.bindCondition("block-type-is STONE"), conditionContext);
                     boolean spatialBlockWildcard = behaviors.testCondition(
                             skills.bindCondition("block-type-is ST*"), conditionContext);
                     boolean spatialBlockTag = behaviors.testCondition(
                             skills.bindCondition("block-type-is #minecraft:base_stone_overworld"), conditionContext);
+                    String biomePartialKey = actualBiome.length() > 1 ? actualBiome.substring(1) : actualBiome;
+                    String biomeMismatchId = actualBiomeKey.getNamespace() + ":" + actualBiome + "_missing";
+                    boolean biomeExact = behaviors.testCondition(
+                            skills.bindCondition("biome-is " + actualBiomeId + " true"), conditionContext)
+                            && behaviors.testCondition(skills.bindCondition(
+                            "biome-is minecraft:desert," + actualBiomeId + " true"), conditionContext);
+                    boolean biomePartial = behaviors.testCondition(
+                            skills.bindCondition("biome-is " + biomePartialKey + " false"), conditionContext)
+                            && !behaviors.testCondition(
+                            skills.bindCondition("biome-is " + biomePartialKey + " true"), conditionContext);
+                    boolean biomeReject = !behaviors.testCondition(
+                            skills.bindCondition("biome-is " + biomeMismatchId + " true"), conditionContext);
+                    biomeCondition = biomeExact && biomePartial && biomeReject;
                     lineOfSightFromOriginCondition = behaviors.testCondition(
                             skills.bindCondition("line-of-sight-from-origin"), conditionContext);
                     Location targetCoordinates = conditionTarget.getLocation();
@@ -2493,13 +2508,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("biome-type-is " + actualBiome + " true"), conditionContext);
                     officialSpatialConditions = spatialHeight && spatialOrientation && spatialOnBlock
                             && spatialOnBlockTag && spatialBlockType && spatialBlockWildcard && spatialBlockTag
-                            && spatialBiomeType && lineOfSightFromOriginCondition;
+                            && spatialBiomeType && biomeCondition && lineOfSightFromOriginCondition;
                     getLogger().info("spatial-condition-details height=" + spatialHeight
                             + " orientation=" + spatialOrientation + " on-block=" + spatialOnBlock
                             + " on-block-tag=" + spatialOnBlockTag
                             + " block-type=" + spatialBlockType + " block-wildcard=" + spatialBlockWildcard
                             + " block-tag=" + spatialBlockTag
                             + " biome-type=" + spatialBiomeType
+                            + " biome-exact=" + biomeExact + " biome-partial=" + biomePartial
+                            + " biome-reject=" + biomeReject
                             + " y=" + conditionTarget.getLocation().getY()
                             + " pitch=" + conditionTarget.getLocation().getPitch()
                             + " yaw=" + conditionTarget.getLocation().getYaw()
@@ -3896,6 +3913,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " moisture-conditions=" + moistureConditions
                         + " mob-size-condition=" + mobSizeCondition
                         + " block-type-radius-condition=" + blockTypeRadiusCondition
+                        + " biome-condition=" + biomeCondition
                         + " inside-outside-conditions=" + insideOutsideConditions
                         + " distance-from-location-condition=" + distanceFromLocationCondition
                         + " coordinate-difference-condition=" + coordinateDifferenceCondition

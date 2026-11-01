@@ -1723,8 +1723,11 @@ Official `Biome` conditions now preserve namespaced and comma-separated biome
 IDs plus the `exact`/`e` flag through migration. Runtime matching defaults
 unqualified IDs to `minecraft`, and non-exact mode matches a biome key
 substring within the same namespace. Malformed IDs fail closed; `BiomeType`
-category matching remains separate. Paper runtime evidence for this `Biome`
-condition path is still pending.
+category matching remains separate. Strict Paper 1.21.1-133 fixture
+`srv-paper-biome-condition-strict-20261101-r1` verifies the namespaced exact,
+comma-alternative, non-exact substring, exact rejection, and mismatched-key
+paths through the production `SkillService`; its `biomeCondition` and
+`conditionUtilityAliases` report probes pass with zero incomplete probes.
 
 Server/player state condition update: official `ServerIsPaper` now recognizes
 Paper-family server identity from Bukkit name/version metadata, while

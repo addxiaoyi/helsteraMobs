@@ -2525,3 +2525,14 @@ with `#minecraft:base_stone_overworld` and standalone `ST*` selectors through
 the production `SkillService`. The report is retained at
 `srv-paper-block-selector-strict-20261101-r2/integration-report.json`.
 
+Strict fixture `srv-paper-biome-condition-strict-20261101-r1` passed Paper
+1.21.1-133 with 254 observed probes (242 passed, 12 expected rejected, zero
+incomplete). Its dedicated `biomeCondition` probe checks the actual target
+biome through the production `SkillService`: the namespaced exact key and a
+comma-separated alternative list match; a strict substring does not match in
+exact mode; the same substring matches with `exact=false`; and a key with a
+deliberate suffix mismatch is rejected. The structured server log records
+`biome-exact=true biome-partial=true biome-reject=true`, and both
+`biomeCondition` and `conditionUtilityAliases` pass in the report at
+`srv-paper-biome-condition-strict-20261101-r1/integration-report.json`.
+
