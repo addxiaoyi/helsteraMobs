@@ -229,11 +229,6 @@ public final class MmConditions {
                     ? new Mapped("drowning <=0", true)
                     : new Mapped("drowning " + normalizeScalar(body), true);
         }
-        if ("hasauras".equals(name) || "haspotion".equals(name)) {
-            String effect = firstArgument(body, "effect", "potion", "type", "a");
-            return effect == null ? new Mapped("has-auras", true)
-                    : new Mapped("has-auras " + effect, true);
-        }
         if ("ismounted".equals(name) || "isriding".equals(name)
                 || "riding".equals(name)) {
             return new Mapped("mounted", true);
@@ -784,8 +779,7 @@ public final class MmConditions {
             if (duration != null) mapped += " " + duration;
             return new Mapped(mapped, true);
         }
-        if ("hasaurastacks".equals(name) || "hasbuffstacks".equals(name)
-                || "hasdebuffstacks".equals(name) || "aurastacks".equals(name)
+        if ("hasbuffstacks".equals(name) || "hasdebuffstacks".equals(name)
                 || "buffstacks".equals(name) || "debuffstacks".equals(name)) {
             String aura = firstArgument(body, "aura", "auraname", "type", "t", "name", "n");
             if (aura == null) aura = normalizeScalar(body);
@@ -1050,11 +1044,6 @@ public final class MmConditions {
             String effect = firstArgument(body, "effect", "potion", "type", "e");
             return effect == null ? new Mapped(s, false)
                     : new Mapped("target-potion-effect-active " + effect, true);
-        }
-        if ("targethasauras".equals(name)) {
-            String effect = firstArgument(body, "effect", "potion", "type", "e");
-            return effect == null ? new Mapped("target-has-auras", true)
-                    : new Mapped("target-has-auras " + effect, true);
         }
         if ("holding".equals(name)) {
             String item = normalizeScalar(body);

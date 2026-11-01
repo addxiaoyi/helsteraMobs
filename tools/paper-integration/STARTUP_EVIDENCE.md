@@ -1130,10 +1130,11 @@ the caster retaining those states. This is exploratory Paper 1.21.11 evidence;
 the Paper 1.21.1 release target remains open.
 
 Follow-up fixture `srv-paper-integration-exploratory-1.21.11-r30` repeats that
-probe after adding strict `target-has-auras`, `target-holding`, and
-`target-wearing` checks. The aggregate `target-state-conditions=true` passed
-with a real online player and still failed closed for the no-target context;
-this remains exploratory Paper 1.21.11 evidence.
+probe after adding internal PotionEffect-backed `target-has-auras`,
+`target-holding`, and `target-wearing` checks. The aggregate
+`target-state-conditions=true` passed with a real online player and still
+failed closed for the no-target context; this remains exploratory Paper
+1.21.11 evidence and does not verify Mythic Aura parity.
 
 Fixture `srv-paper-integration-exploratory-1.21.11-r31` reran the same checks
 from the rebuilt full plugin jar. It again recorded
@@ -1379,10 +1380,10 @@ temporary real-player SPEED effect with amplifier 0 and duration 20 ticks;
 pending.
 
 The same self-test adapts the temporary SPEED amplifier 0 to one aura stack;
-`has-aura-stacks SPEED >=1` passes and the structured log records
-`aura-stacks-condition=true`. Exploratory fixture r8 records the independent
-`auraStacksCondition` probe passed; strict Paper 1.21.1 evidence remains
-pending.
+the internal Bukkit PotionEffect evaluator `has-aura-stacks SPEED >=1` passes
+and the structured log records `aura-stacks-condition=true`. Exploratory
+fixture r8 records the independent `auraStacksCondition` probe passed; this
+does not verify Mythic Aura parity.
 
 The same self-test checks the managed model's existing level field:
 `level >=1` passes and `level <1` rejects, with structured output

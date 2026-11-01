@@ -96,8 +96,8 @@ class MmConditionsTest {
         assertEquals("random-chance 25", t("?chance{chance=25}"));
         assertEquals("falling", t("?falling"));
         assertEquals("drowning <=0", t("?drowning"));
-        assertEquals("has-auras", t("?hasAuras"));
-        assertEquals("has-auras SPEED", t("?hasAuras{effect=SPEED}"));
+        assertFalse(translated("?hasAuras"));
+        assertFalse(translated("?hasAuras{effect=SPEED}"));
         assertEquals("mounted", t("?isRiding"));
         assertEquals("is-vehicle", t("?isVehicle"));
         assertEquals("target-is-vehicle", t("?targetIsVehicle"));
@@ -697,11 +697,11 @@ class MmConditionsTest {
     }
 
     @Test
-    void officialHasAuraStacksConditionMapsAuraAndStackRange() {
-        assertEquals("has-aura-stacks SPEED >3",
-                t("?hasAuraStacks{n=SPEED;s=>3}"));
-        assertEquals("has-aura-stacks ANY >=1", t("?hasAuraStacks"));
-        assertFalse(translated("?hasAuraStacks{n=SPEED;s=invalid}"));
+    void officialAuraConditionsRemainUnmappedWithoutAuraDataProvider() {
+        assertFalse(translated("?hasAuraStacks{n=SPEED;s=>3}"));
+        assertFalse(translated("?hasAuraStacks"));
+        assertFalse(translated("?hasAuraType{aura=SPEED}"));
+        assertFalse(translated("?hasAura{aura=SPEED}"));
     }
 
     @Test
@@ -972,8 +972,8 @@ class MmConditionsTest {
         assertEquals("target-has-item SHIELD >=1", t("?targetHasItem{item=SHIELD;amount=>=1}"));
         assertEquals("target-potion-effect-active SPEED", t("?targetPotionEffectActive{effect=SPEED}"));
         assertEquals("target-potion-effect-active SPEED", t("?targetHasPotionEffect{effect=SPEED}"));
-        assertEquals("target-has-auras SPEED", t("?targetHasAuras{effect=SPEED}"));
-        assertEquals("target-has-auras", t("?targetHasAuras"));
+        assertFalse(translated("?targetHasAuras{effect=SPEED}"));
+        assertFalse(translated("?targetHasAuras"));
         assertEquals("holding DIAMOND", t("?holding{item=DIAMOND}"));
         assertEquals("wearing IRON_HELMET", t("?wearing{item=IRON_HELMET}"));
         assertEquals("target-holding DIAMOND", t("?targetHolding{item=DIAMOND}"));

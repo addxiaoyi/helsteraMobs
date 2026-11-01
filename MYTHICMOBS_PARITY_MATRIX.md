@@ -197,12 +197,14 @@ coverage are included. Exploratory Paper 1.21.4 fixture r8 and strict Paper
 1.21.1-133 fixture `srv-paper-integration-final-r8` record
 `potionEffectCondition=passed`.
 
-Incremental condition update: official `HasAuraStacks` now maps Bukkit potion
-amplifier `0` to one stack, accepts aura/type aliases and numeric stack ranges,
-and fails closed for missing effects. Migration, binder, unit, and condition
-catalog self-test coverage are included. Exploratory Paper 1.21.4 fixture r8 and
-strict Paper 1.21.1-133 fixture `srv-paper-integration-final-r8` record
-`auraStacksCondition=passed`.
+Parity correction: Mythic `HasAura`, `HasAuraStacks`, `HasAuraType`, and
+target Aura conditions are not Bukkit potion-effect conditions. Their importer
+mappings were removed; source conditions are now preserved verbatim with a
+migration warning until an Aura data provider and matching runtime contract
+exist. Existing Helstera `has-aura-stacks` and `target-has-auras` runtime names
+remain internal Bukkit PotionEffect checks and do not establish Mythic Aura
+parity. Historical `auraStacksCondition` and target-state Paper probes verify
+only those PotionEffect paths.
 
 Incremental condition update: official `Level` now reads the managed instance
 level used by the existing mob scaling system, falls back to level 1 when no
@@ -428,9 +430,10 @@ Exploratory Paper 1.21.4 fixture r3 records `signalMechanics=passed`; strict
 Paper 1.21.1 evidence remains pending.
 
 Incremental condition update: common environment and state aliases now include
-`night`, `raining`, `thundering`, `falling`, `drowning`, `has-auras`, and
-`target-within`; importer mappings and unit coverage are included, while the
-complete Mythic condition catalog remains open.
+`night`, `raining`, `thundering`, `falling`, `drowning`, and `target-within`;
+importer mappings and unit coverage are included, while the complete Mythic
+condition catalog remains open. The internal `has-auras` Bukkit PotionEffect
+condition is not an importer equivalent for Mythic Aura conditions.
 
 Incremental comparator update: migration now preserves Mythic `=`/`==`/`!=`
 comparators for health, target health, distance, and light-level leaves;
@@ -569,10 +572,11 @@ fail closed when no explicit target exists and never read the caster as a
 fallback; unit, migration, and exploratory Paper 1.21.11 r28 coverage protect
 the distinction from the corresponding caster conditions.
 
-The same target-only family now includes `targetHasPotionEffect`,
-`targetHasAuras`, `targetHolding`, and `targetWearing`, with dedicated
-canonical names, importer regression coverage, and exploratory Paper 1.21.11
-r30 evidence through the aggregate target-state probe.
+The same target-only family includes `targetHasPotionEffect`, `targetHolding`,
+and `targetWearing`, with dedicated canonical names, importer regression
+coverage, and exploratory Paper 1.21.11 r30 evidence through the aggregate
+target-state probe. `targetHasAuras` remains unmapped: the historical runtime
+probe covered Bukkit potion effects only, not Mythic Aura data.
 
 Faction condition update: Mythic `faction`, `targetfaction`, `samefaction`, and
 `differentfaction` now map to caster/target exact faction evaluators. Exact

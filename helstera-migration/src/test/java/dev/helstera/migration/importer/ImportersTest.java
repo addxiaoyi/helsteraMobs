@@ -1205,7 +1205,9 @@ class ImportersTest {
                 UnknownCondition:
                   TargetConditions:
                     - isLiving
-                    - customCondition
+                    - '?hasAuraStacks{n=SPEED;s=>2}'
+                  TriggerConditions:
+                    - '?targetHasAuras{aura=FURY}'
                   Skills:
                     - message{m=hello}
                 """);
@@ -1214,10 +1216,14 @@ class ImportersTest {
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
 
-        assertEquals(List.of("is-living", "customCondition"),
+        assertEquals(List.of("is-living", "?hasAuraStacks{n=SPEED;s=>2}"),
                 target.getStringList("skills.unknowncondition.target-conditions"));
+        assertEquals(List.of("?targetHasAuras{aura=FURY}"),
+                target.getStringList("skills.unknowncondition.trigger-conditions"));
         assertTrue(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))
                 && String.valueOf(e.get("source-key")).contains("TargetConditions.unmapped")));
+        assertTrue(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))
+                && String.valueOf(e.get("source-key")).contains("TriggerConditions.unmapped")));
     }
 
     @Test
