@@ -51,10 +51,12 @@ the 9-block hit; menu/Audience and real player Potion consumption also pass.
 Strict legacy Mob Options follow-up `srv-paper-mob-spawning-distance-20261101-r2`
 also completes 253 probes: 241 passed, 12 expected negative controls rejected,
 and zero incomplete. It reads `SpawningDistance=8` through the normal mob
-loader as `mode=NORMAL distance=8.0`; natural out-of-range removal timing is
-not folded into this configuration-to-instance probe.
+loader as `mode=NORMAL distance=8.0`. The separate strict fixture
+`srv-paper-spawning-distance-runtime-20261101-r4` verifies nearby retention and
+production removal of both the managed instance and Bukkit entity beyond the
+configured radius.
 
-The latest strict follow-up `srv-paper-block-selector-strict-20261101-r2`
+Strict block-selector follow-up `srv-paper-block-selector-strict-20261101-r2`
 completes 253 probes: 242 passed, 11 expected negative controls rejected, and
 zero incomplete. Its `conditionUtilityAliases` probe independently checks
 exact materials, material globs, and Paper block tags through `BlockType`,
