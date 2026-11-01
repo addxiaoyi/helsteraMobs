@@ -8,8 +8,8 @@ Latest strict release gate: official Paper `1.21.1-133` boots the full plugin an
 the report contract passes with `250/250` probes observed (`238 passed` and
 `12 expected negative-control observations`) in fixture
 `srv-paper-world-target-validity-20261101-r2`.
-Earlier bullets that say strict evidence is pending describe historical
-exploratory runs.
+Remaining strict and exploratory-only gaps are listed under Remaining Work;
+the strict probe report covers the currently registered release contract.
 
 ### Current Development Goals
 
