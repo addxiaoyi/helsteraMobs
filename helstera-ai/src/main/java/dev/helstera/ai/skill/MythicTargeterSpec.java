@@ -1,6 +1,8 @@
 package dev.helstera.ai.skill;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -46,26 +48,66 @@ public record MythicTargeterSpec(String name, Map<String, String> arguments, Lis
     private static List<String> split(String body) {
         List<String> parts = new ArrayList<>();
         StringBuilder current = new StringBuilder();
-        boolean quoted = false;
-        int nested = 0;
+        char quote = 0;
+        boolean escaped = false;
+        Deque<Character> nested = new ArrayDeque<>();
         for (char c : body.toCharArray()) {
-            if (c == '"') quoted = !quoted;
-            if (!quoted && (c == '[' || c == '(')) nested++;
-            if (!quoted && (c == ']' || c == ')')) nested = Math.max(0, nested - 1);
-            if (!quoted && nested == 0 && (c == ';' || c == ',')) {
+            if (quote != 0) {
+                if (escaped) {
+                    escaped = false;
+                } else if (c == '\\') {
+                    escaped = true;
+                } else if (c == quote) {
+                    quote = 0;
+                }
+            } else if (c == '"' || c == '\'') {
+                quote = c;
+            } else if (c == '[' || c == '(' || c == '{') {
+                nested.push(c);
+            } else if (c == ']' || c == ')' || c == '}') {
+                if (nested.isEmpty() || !matches(nested.pop(), c)) {
+                    throw new IllegalArgumentException("malformed targeter arguments");
+                }
+            }
+            if (quote == 0 && nested.isEmpty() && (c == ';' || c == ',')) {
                 parts.add(current.toString());
                 current.setLength(0);
             } else {
                 current.append(c);
             }
         }
-        if (quoted || nested != 0) throw new IllegalArgumentException("malformed targeter arguments");
+        if (quote != 0 || escaped || !nested.isEmpty()) {
+            throw new IllegalArgumentException("malformed targeter arguments");
+        }
         parts.add(current.toString());
         return parts;
     }
 
+    private static boolean matches(char opening, char closing) {
+        return opening == '[' && closing == ']'
+                || opening == '(' && closing == ')'
+                || opening == '{' && closing == '}';
+    }
+
     private static String unquote(String value) {
-        return value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")
-                ? value.substring(1, value.length() - 1) : value;
+        if (value.length() < 2) return value;
+        char quote = value.charAt(0);
+        if ((quote != '"' && quote != '\'') || value.charAt(value.length() - 1) != quote) {
+            return value;
+        }
+        StringBuilder unquoted = new StringBuilder(value.length() - 2);
+        for (int i = 1; i < value.length() - 1; i++) {
+            char c = value.charAt(i);
+            if (c == '\\' && i + 1 < value.length() - 1) {
+                char next = value.charAt(i + 1);
+                if (next == quote || next == '\\') {
+                    unquoted.append(next);
+                    i++;
+                    continue;
+                }
+            }
+            unquoted.append(c);
+        }
+        return unquoted.toString();
     }
 }

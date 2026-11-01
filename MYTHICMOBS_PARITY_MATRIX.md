@@ -977,8 +977,11 @@ branch-gated skill logic to be expressed in normal condition chains.
 
 Incremental targeter update: skill-side `@nearestConditionalTarget`/
 `@nearestConditionalEntity` now preserve nested condition arguments and use the
-same bound condition catalog as AI selectors; broader targeter parity remains
-open.
+same bound condition catalog as AI selectors. `MythicTargeterSpec` now parses
+both quote styles, escaped quote characters, and strictly paired `[]`, `()`,
+and `{}` nesting so delimiters inside arguments are not split accidentally;
+focused parser and selector tests cover the behavior. Broader targeter parity
+remains open.
 
 Incremental state-mechanic update: common Mythic player/entity state actions now
 include `set-sneaking`, `set-gliding`, `set-swimming`, `set-sprinting`,
