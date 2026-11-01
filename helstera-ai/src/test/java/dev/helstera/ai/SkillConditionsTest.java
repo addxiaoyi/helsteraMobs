@@ -17,6 +17,7 @@ import org.bukkit.block.data.type.Farmland;
 import org.bukkit.Location;
 
 import java.util.List;
+import java.util.OptionalDouble;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1071,6 +1072,24 @@ class SkillConditionsTest {
         assertFalse(extraFactory("biome-type-is").create(List.of("plains", "true")).test(ctx()));
         assertFalse(extraFactory("biome-type-is").create(List.of("plains", "false")).test(ctx()));
         assertFalse(extraFactory("biome-is").create(List.of("plains", "true")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("HasCurrency checks the online target balance and fails closed without Vault")
+    void hasCurrencyUsesOptionalEconomyBalance() {
+        Player player = mock(Player.class);
+        BehaviorContext context = BehaviorContext.continueExecution(null, player, 1.0, -1, 0,
+                "IDLE", null, null, List.of(player), null, null);
+        var condition = extraFactory("has-currency").create(List.of(">=1000"));
+
+        SkillExtras.currencyBalance(null);
+        assertFalse(condition.test(context));
+        SkillExtras.currencyBalance(ignored -> OptionalDouble.of(1500));
+        assertTrue(condition.test(context));
+        assertFalse(extraFactory("has-currency").create(List.of("<1000")).test(context));
+        SkillExtras.currencyBalance(ignored -> OptionalDouble.empty());
+        assertFalse(condition.test(context));
+        SkillExtras.currencyBalance(null);
     }
 
     @Test

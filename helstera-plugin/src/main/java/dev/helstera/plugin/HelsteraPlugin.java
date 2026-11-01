@@ -481,6 +481,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         // ---- 外部插件集成（helstera-integrations）----
         try {
             IntegrationRegistryImpl ir = new IntegrationRegistryImpl();
+            var vaultEconomy = new dev.helstera.integrations.economy.VaultEconomyAdapter();
+            if (getConfig().getBoolean("compatibility.vault", true)) ir.register(vaultEconomy);
             if (getConfig().getBoolean("compatibility.mythicmobs", true)) {
                 ir.register(new MythicMobsAdapter((InstanceManagerImpl) instances, registry, integrationsCfg));
             }
@@ -492,6 +494,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             ir.register(new WorldGuardAdapter());
             int connected = ir.enableAll(this);
+            dev.helstera.ai.skill.SkillExtras.currencyBalance(vaultEconomy::balance);
             getLogger().info("外部插件适配器: " + connected + "/" + ir.all().size() + " 已连接");
             this.integrations = ir;
             // 掉落表的自定义物品解析：借适配器的 CUSTOM_ITEM_RESOLVE 能力。

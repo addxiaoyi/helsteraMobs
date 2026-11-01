@@ -15,5 +15,7 @@ public enum Capability {
     /** 资源包合并。 */
     RESOURCEPACK_MERGE,
     /** External region lookup such as WorldGuard. */
-    REGION_QUERY
+    REGION_QUERY,
+    /** Read a player's economy balance through a registered provider. */
+    ECONOMY_BALANCE
 }

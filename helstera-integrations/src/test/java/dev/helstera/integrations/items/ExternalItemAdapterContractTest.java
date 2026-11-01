@@ -3,6 +3,7 @@ package dev.helstera.integrations.items;
 import dev.helstera.api.integration.Capability;
 import dev.helstera.integrations.mythicmobs.MythicMobsAdapter;
 import dev.helstera.integrations.region.WorldGuardAdapter;
+import dev.helstera.integrations.economy.VaultEconomyAdapter;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
@@ -53,5 +54,16 @@ class ExternalItemAdapterContractTest {
         assertNull(adapter.containsRegion("spawn", null));
         adapter.disable();
         assertTrue(adapter.capabilities().isEmpty());
+    }
+
+    @Test
+    void vaultDoesNotClaimBalanceCapabilityUntilAnEconomyProviderConnects() {
+        var adapter = new VaultEconomyAdapter();
+
+        assertFalse(adapter.isConnected());
+        assertTrue(adapter.capabilities().isEmpty());
+        assertFalse(adapter.hasCapability(Capability.ECONOMY_BALANCE));
+        assertTrue(adapter.supportedVersions().contains("not CI-verified"));
+        assertTrue(adapter.balance(null).isEmpty());
     }
 }

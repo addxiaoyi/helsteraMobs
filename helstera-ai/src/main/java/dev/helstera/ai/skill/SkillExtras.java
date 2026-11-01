@@ -86,6 +86,7 @@ public final class SkillExtras {
     private static volatile java.util.function.BiFunction<BehaviorContext, LivingEntity, String> damageCause;
     private static volatile java.util.function.Function<String, ItemStack> itemResolver;
     private static volatile java.util.function.Predicate<String> skillLookup;
+    private static volatile java.util.function.Function<Player, java.util.OptionalDouble> currencyBalance;
     @FunctionalInterface
     public interface FactionSetter {
         void set(Entity entity, String faction);
@@ -159,6 +160,12 @@ public final class SkillExtras {
     /** Bridges IsSkill to the host's loaded named-skill registry. */
     public static void skillLookup(java.util.function.Predicate<String> lookup) {
         skillLookup = lookup;
+    }
+
+    /** Connects HasCurrency to an optional economy provider; empty means unavailable. */
+    public static void currencyBalance(
+            java.util.function.Function<Player, java.util.OptionalDouble> lookup) {
+        currencyBalance = lookup;
     }
 
     public static void factionSetter(FactionSetter setter) {
@@ -266,6 +273,7 @@ public final class SkillExtras {
         damageCause = null;
         itemResolver = null;
         skillLookup = null;
+        currencyBalance = null;
         factionSetter = null;
         globalScoreLookup = null;
         scoreLookup = null;
@@ -2300,6 +2308,25 @@ public final class SkillExtras {
                 Map.entry("has-free-inventory-slot", (SkillCatalog.ConditionFactory) a ->
                         ctx -> conditionEntity(ctx) instanceof Player player
                                 && player.getInventory().firstEmpty() >= 0),
+                Map.entry("has-currency", (SkillCatalog.ConditionFactory) a -> {
+                    String rawAmount = keyedArg(a, "amount", "a", "value", "v");
+                    if (rawAmount == null) rawAmount = str(a, 0, "");
+                    Comparison required = comparison(List.of(rawAmount), 0, ">=");
+                    return ctx -> {
+                        LivingEntity target = targetOnlyEntity(ctx);
+                        if (!(target instanceof Player player) || currencyBalance == null
+                                || !Double.isFinite(required.value())) {
+                            return false;
+                        }
+                        try {
+                            java.util.OptionalDouble balance = currencyBalance.apply(player);
+                            return balance != null && balance.isPresent()
+                                    && compare(balance.getAsDouble(), required);
+                        } catch (Throwable ignored) {
+                            return false;
+                        }
+                    };
+                }),
                 Map.entry("target-has-item", (SkillCatalog.ConditionFactory) a -> {
                     String itemName = str(a, 0, "");
                     Comparison amount = comparison(a, 1, ">=");
