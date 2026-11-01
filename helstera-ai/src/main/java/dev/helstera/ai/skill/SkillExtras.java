@@ -1130,13 +1130,47 @@ public final class SkillExtras {
     }
 
     private static boolean biomeTypeMatches(Location location, String wanted, boolean exact) {
-        if (!exact || location == null || location.getWorld() == null
-                || wanted == null || wanted.isBlank()) return false;
-        String actual = location.getBlock().getBiome().getKey().getKey();
-        for (String raw : wanted.split(",")) {
-            if (actual.equalsIgnoreCase(raw.trim())) return true;
+        if (location == null || location.getWorld() == null || wanted == null || wanted.isBlank()) return false;
+        try {
+            String actual = location.getBlock().getBiome().getKey().getKey().toLowerCase(Locale.ROOT);
+            for (String raw : wanted.split(",")) {
+                String candidate = raw.trim().toLowerCase(Locale.ROOT);
+                if (candidate.isEmpty()) continue;
+                if (exact ? actual.equals(candidate) : matchesBiomeCategory(actual, candidate)) return true;
+            }
+        } catch (Throwable ignored) {
+            SkillFaults.swallow("SkillExtras#biomeTypeMatches");
         }
         return false;
+    }
+
+    private static boolean matchesBiomeCategory(String biome, String category) {
+        return switch (category) {
+            case "none" -> false;
+            case "taiga" -> biome.contains("taiga");
+            case "extreme_hills" -> biome.contains("hills") || biome.equals("extreme_hills");
+            case "jungle" -> biome.contains("jungle");
+            case "mesa" -> biome.contains("badlands") || biome.contains("mesa");
+            case "plains" -> biome.contains("plains");
+            case "savanna" -> biome.contains("savanna");
+            case "icy" -> biome.contains("snow") || biome.contains("frozen") || biome.contains("ice_spikes");
+            case "the_end" -> biome.equals("the_end") || biome.startsWith("end_");
+            case "beach" -> biome.contains("beach");
+            case "forest" -> biome.contains("forest") || biome.equals("pale_garden");
+            case "ocean" -> biome.contains("ocean");
+            case "desert" -> biome.contains("desert");
+            case "river" -> biome.contains("river");
+            case "swamp" -> biome.contains("swamp");
+            case "mushroom" -> biome.contains("mushroom");
+            case "nether" -> biome.contains("nether") || biome.equals("soul_sand_valley")
+                    || biome.equals("crimson_forest") || biome.equals("warped_forest")
+                    || biome.equals("basalt_deltas");
+            case "underground" -> biome.equals("deep_dark") || biome.equals("dripstone_caves")
+                    || biome.equals("lush_caves");
+            case "mountain" -> biome.contains("hills") || biome.contains("peaks")
+                    || biome.equals("meadow") || biome.equals("grove") || biome.equals("snowy_slopes");
+            default -> false;
+        };
     }
 
     private static boolean biomeMatches(Location location, String wanted, boolean exact) {

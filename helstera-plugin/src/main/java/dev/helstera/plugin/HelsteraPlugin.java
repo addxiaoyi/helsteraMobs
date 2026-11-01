@@ -2469,7 +2469,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("biome-is " + biomePartialKey + " true"), conditionContext);
                     boolean biomeReject = !behaviors.testCondition(
                             skills.bindCondition("biome-is " + biomeMismatchId + " true"), conditionContext);
-                    biomeCondition = biomeExact && biomePartial && biomeReject;
+                    var biomeCheckLocation = conditionTarget.getLocation();
+                    var biomeCheckWorld = biomeCheckLocation.getWorld();
+                    int biomeCheckX = biomeCheckLocation.getBlockX();
+                    int biomeCheckZ = biomeCheckLocation.getBlockZ();
+                    var biomeCheckOriginal = biomeCheckWorld.getBiome(biomeCheckX, biomeCheckZ);
+                    boolean biomeTypeCategory;
+                    try {
+                        biomeCheckWorld.setBiome(biomeCheckX, biomeCheckZ, org.bukkit.block.Biome.DESERT);
+                        boolean categoryMatch = behaviors.testCondition(
+                                skills.bindCondition("biome-type-is desert false"), conditionContext);
+                        boolean categoryReject = !behaviors.testCondition(
+                                skills.bindCondition("biome-type-is plains false"), conditionContext);
+                        boolean categoryAlternative = behaviors.testCondition(
+                                skills.bindCondition("biome-type-is forest,desert false"), conditionContext);
+                        boolean exactMatch = behaviors.testCondition(
+                                skills.bindCondition("biome-type-is desert true"), conditionContext);
+                        biomeTypeCategory = categoryMatch && categoryReject && categoryAlternative && exactMatch;
+                    } finally {
+                        biomeCheckWorld.setBiome(biomeCheckX, biomeCheckZ, biomeCheckOriginal);
+                    }
+                    biomeCondition = biomeExact && biomePartial && biomeReject && biomeTypeCategory;
                     lineOfSightFromOriginCondition = behaviors.testCondition(
                             skills.bindCondition("line-of-sight-from-origin"), conditionContext);
                     Location targetCoordinates = conditionTarget.getLocation();
@@ -2518,7 +2538,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " block-tag=" + spatialBlockTag
                             + " biome-type=" + spatialBiomeType
                             + " biome-exact=" + biomeExact + " biome-partial=" + biomePartial
-                            + " biome-reject=" + biomeReject
+                            + " biome-reject=" + biomeReject + " biome-type-category=" + biomeTypeCategory
                             + " y=" + conditionTarget.getLocation().getY()
                             + " pitch=" + conditionTarget.getLocation().getPitch()
                             + " yaw=" + conditionTarget.getLocation().getYaw()

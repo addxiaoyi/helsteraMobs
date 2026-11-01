@@ -527,12 +527,23 @@ public final class MmConditions {
                     + " " + amount + " " + radius, true);
         }
         if ("biometype".equals(name) || "biomecategory".equals(name)) {
-            String value = rawValue(body, "type", "t");
+            String value = keyedValue(body, "type", "t");
+            if (value == null) value = positionalSection(body, 0);
             String exact = keyedArgument(body, "exact", "e");
             if (value == null) value = "ocean";
-            if (value.contains("*") || value.startsWith("#")
-                    || (exact != null && !Boolean.parseBoolean(exact))) return new Mapped(s, false);
-            return new Mapped("biome-type-is " + value + " true", true);
+            if (exact == null) exact = "true";
+            if (!"true".equalsIgnoreCase(exact) && !"false".equalsIgnoreCase(exact)) {
+                return new Mapped(s, false);
+            }
+            String[] categories = value.split(",");
+            for (String category : categories) {
+                String normalized = category.trim().toLowerCase(Locale.ROOT);
+                if (normalized.isEmpty() || normalized.contains("*") || normalized.startsWith("#")
+                        || (!Boolean.parseBoolean(exact) && !isBiomeCategory(normalized))) {
+                    return new Mapped(s, false);
+                }
+            }
+            return new Mapped("biome-type-is " + value + " " + exact.toLowerCase(Locale.ROOT), true);
         }
         if ("isliving".equals(name)) return new Mapped("is-living", true);
         if ("isplayer".equals(name)) return new Mapped("is-player", true);
@@ -1414,6 +1425,15 @@ public final class MmConditions {
         } catch (NumberFormatException ignored) {
             return false;
         }
+    }
+
+    private static boolean isBiomeCategory(String value) {
+        return switch (value) {
+            case "none", "taiga", "extreme_hills", "jungle", "mesa", "plains", "savanna",
+                    "icy", "the_end", "beach", "forest", "ocean", "desert", "river", "swamp",
+                    "mushroom", "nether", "underground", "mountain" -> true;
+            default -> false;
+        };
     }
 
     private static boolean validBowForceRange(String raw) {

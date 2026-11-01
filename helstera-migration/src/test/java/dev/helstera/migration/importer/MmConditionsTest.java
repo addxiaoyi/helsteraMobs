@@ -755,6 +755,8 @@ class MmConditionsTest {
     void officialBlockAndBiomeTypeConditionsMapExactForms() {
         assertEquals("block-type-is DIRT,STONE", t("?blockType{type=DIRT,STONE}"));
         assertEquals("biome-type-is jungle,ocean true", t("?biomeType{t=jungle,ocean}"));
+        assertEquals("biome-type-is forest,desert false", t("?biomeType{t=forest,desert;e=false}"));
+        assertEquals("biome-type-is ocean false", t("?biomeCategory{e=false}"));
         assertTrue(translated("?blockType{m=STONE}"));
         assertEquals("block-type-is #MINECRAFT:LOGS", t("?blockType{m=#minecraft:logs}"));
         assertEquals("block-type-is OAK_*", t("?blockType{m=OAK_*}"));
@@ -766,7 +768,9 @@ class MmConditionsTest {
         assertTrue(translated("?blockType{m=OAK_*}"));
         assertTrue(translated("?onBlock{m=#minecraft:logs}"));
         assertTrue(translated("?blockTypeInRadius{m=ST*}"));
-        assertFalse(translated("?biomeType{t=forest;e=false}"));
+        assertTrue(translated("?biomeType{t=forest;e=false}"));
+        assertFalse(translated("?biomeType{t=forestish;e=false}"));
+        assertFalse(translated("?biomeType{t=forest;e=maybe}"));
     }
 
     @Test
