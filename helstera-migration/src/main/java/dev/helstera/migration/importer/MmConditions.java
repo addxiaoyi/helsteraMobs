@@ -813,6 +813,12 @@ public final class MmConditions {
             return body == null || body.isBlank()
                     ? new Mapped(s, false) : new Mapped("has-item " + normalizeItemArgs(body), true);
         }
+        if ("hascurrency".equals(name)) {
+            String amount = firstArgument(body, "amount", "a", "value", "v");
+            if (amount == null) amount = normalizeScalar(body);
+            return amount == null || !validNumberRange(amount)
+                    ? new Mapped(s, false) : new Mapped("has-currency " + amount, true);
+        }
         if ("hasenchantment".equals(name) || "hasenchant".equals(name)) {
             String enchantment = firstArgument(body, "enchantment", "type", "ench", "e", "t");
             String level = firstArgument(body, "level", "lvl", "l");

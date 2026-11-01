@@ -775,6 +775,14 @@ class MmConditionsTest {
     }
 
     @Test
+    void vaultCurrencyConditionMapsAmountAndRejectsMalformedValues() {
+        assertEquals("has-currency 1000", t("?hasCurrency{amount=1000}"));
+        assertEquals("has-currency >250", t("?hasCurrency{a=>250}"));
+        assertFalse(translated("?hasCurrency{amount=lots}"));
+        assertFalse(translated("?hasCurrency"));
+    }
+
+    @Test
     void officialServerAndSurvivalConditionsMap() {
         assertEquals("server-is-paper", t("?serverIsPaper"));
         assertEquals("server-is-paper", t("?isPaper"));
