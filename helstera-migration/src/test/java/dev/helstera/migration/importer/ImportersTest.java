@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -1444,6 +1445,40 @@ class ImportersTest {
         assertEquals("FISHING_ROD", target.getString("entity.items.main-hand.item"));
         assertEquals(12, target.getInt("entity.items.main-hand.durability"));
         assertFalse(target.contains("entity.items.chestplate.unsupported.legacy-id"));
+    }
+
+    @Test
+    @DisplayName("out-of-range legacy numeric IDs and data remain visible")
+    void mythicPreservesOutOfRangeLegacyNumbers(@TempDir Path root) throws Exception {
+        Path items = write(root, "Items/overflow.yml", """
+                items:
+                  huge_id: {Id: '99999999999999999999'}
+                  huge_data: {Id: '35:99999999999999999999'}
+                  huge_both: {Id: '99999999999999999999:12'}
+                """);
+        var entries = new MythicMobsImporter().convert(items);
+        var target = YamlConfiguration.loadConfiguration(new StringReader(
+                String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals("99999999999999999999", target.getString("items.huge_id.unsupported.legacy-id"));
+        assertEquals("99999999999999999999", target.getString("items.huge_data.unsupported.legacy-data"));
+        assertEquals("99999999999999999999:12", target.getString("items.huge_both.unsupported.legacy-id"));
+        assertEquals("12", target.getString("items.huge_both.unsupported.legacy-data"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "items.huge_id.unsupported.legacy-id".equals(entry.get("target-key"))));
+
+        Path mobs = write(root, "Mobs/overflow.yml", """
+                mobs:
+                  Boss:
+                    Equipment:
+                      - '99999999999999999999 HAND'
+                      - '35:99999999999999999999 CHEST'
+                """);
+        var equipment = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(
+                plan(new MythicMobsImporter().convert(mobs)).orElseThrow().get("content"))));
+        assertEquals("99999999999999999999", equipment.getString("entity.items.main-hand.item"));
+        assertEquals("99999999999999999999", equipment.getString("entity.items.main-hand.unsupported.legacy-id"));
+        assertEquals("35:99999999999999999999", equipment.getString("entity.items.chestplate.item"));
+        assertEquals("99999999999999999999", equipment.getString("entity.items.chestplate.unsupported.data"));
     }
 
     @Test
