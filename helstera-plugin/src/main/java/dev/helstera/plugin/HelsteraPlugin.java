@@ -1189,6 +1189,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + spawningDistanceOptionsResult + " mode=" + spawningDistanceMode
                             + " distance=" + spawningDistance);
                     if (spawningDistanceProbeId > 0) instances().despawn(spawningDistanceProbeId);
+                    scheduleSpawningDistanceRuntimeProbe();
                 }
 
                 if (mobConfig("visibility_probe") != null) {
@@ -1429,6 +1430,55 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 20L);
+    }
+
+    private void scheduleSpawningDistanceRuntimeProbe() {
+        var player = getServer().getOnlinePlayers().stream()
+                .filter(candidate -> candidate.isOnline() && !candidate.isDead()
+                        && candidate.getGameMode() != org.bukkit.GameMode.SPECTATOR)
+                .findFirst().orElse(null);
+        if (player == null) {
+            getLogger().info("[自检] spawning-distance-runtime result=false reason=no-player");
+            return;
+        }
+
+        int instanceId = spawnMobAt("spawning_distance_probe",
+                player.getLocation().clone().add(2, 0, 0), null);
+        var instance = instanceId > 0 ? instances().impl(instanceId) : null;
+        var entity = instance == null ? null : instance.baseEntity().orElse(null);
+        if (instance == null || entity == null) {
+            getLogger().info("[自检] spawning-distance-runtime result=false reason=spawn-failed");
+            return;
+        }
+
+        java.util.UUID playerId = player.getUniqueId();
+        getServer().getScheduler().runTaskLater(this, () -> {
+            try {
+                var onlinePlayer = getServer().getPlayer(playerId);
+                boolean retainedInside = instances().impl(instanceId) != null
+                        && entity.isValid() && onlinePlayer != null && onlinePlayer.isOnline()
+                        && onlinePlayer.getWorld().equals(entity.getWorld())
+                        && onlinePlayer.getLocation().distanceSquared(entity.getLocation()) <= 64.0;
+                if (retainedInside) {
+                    Location outside = onlinePlayer.getLocation().clone().add(12, 0, 0);
+                    entity.teleport(outside);
+                }
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    try {
+                        boolean removedOutside = retainedInside
+                                && instances().impl(instanceId) == null && !entity.isValid();
+                        getLogger().info("[自检] spawning-distance-runtime result=" + removedOutside
+                                + " inside-retained=" + retainedInside
+                                + " outside-removed=" + (instances().impl(instanceId) == null));
+                    } finally {
+                        if (instances().impl(instanceId) != null) instances().despawn(instanceId);
+                    }
+                }, 20L);
+            } catch (Throwable failure) {
+                getLogger().warning("[自检] spawning-distance-runtime failed: " + failure);
+                if (instances().impl(instanceId) != null) instances().despawn(instanceId);
+            }
+        }, 1L);
     }
 
     private void runItemEffectsSelfTest() {

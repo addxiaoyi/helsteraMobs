@@ -23,10 +23,9 @@ $env:PAPER_MENU_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-The latest Paper 1.21.1-133 strict fixture completes 250 observed probes: 238
-positive observations and 12 expected negative-control observations. The
-current release evidence is `srv-paper-world-target-validity-20261101-r2`; earlier
-fixture counts in this document are historical checkpoints.
+Paper 1.21.1-133 strict baseline `srv-paper-world-target-validity-20261101-r2`
+completed 250 probes: 238 positive observations and 12 expected negative
+controls. Later strict follow-ups below supersede that baseline.
 
 Strict Potion-consumption follow-up `srv-paper-strict-potion-20261101-r5`
 completes 252 probes: 241 passed and 11 expected negative controls rejected.
@@ -47,14 +46,24 @@ and zero incomplete. It reads `SpawningDistance=8` through the normal mob
 loader as `mode=NORMAL distance=8.0`; natural out-of-range removal timing is
 not folded into this configuration-to-instance probe.
 
+The latest strict follow-up `srv-paper-spawning-distance-runtime-20261101-r4`
+completes 254 probes: 242 passed, 12 expected negative controls rejected, and
+zero incomplete. Its real-player `spawningDistanceRuntime` probe confirms
+nearby retention and removal of both the managed instance and Bukkit entity
+after the mob crosses the configured radius.
+
 The follow-up fixture also verifies the root Mythic `Exp` path through
 `exp-options result=true experience=13 event=true`.
 
 Run `pwsh -NoProfile -File tools/paper-integration/audit-evidence.ps1` before
 publishing evidence. It scans the root README, parity matrix, Paper README, and
 startup evidence document and reports documented `srv-*` fixture directories
-that are absent from the workspace. Historical references are informational;
-use `-RequirePresent` only for a deliberately self-contained fixture catalog.
+that are absent from the workspace, including each source document and line.
+Versioned fixture names such as `srv-1.21.1` are treated as a single reference.
+Historical references are informational; use `-RequirePresent` only for a
+deliberately self-contained fixture catalog. Run
+`pwsh -NoProfile -File tools/paper-integration/test-audit-evidence.ps1` to
+exercise version parsing, source locations, and required-presence failure.
 
 The AI selector probe also dispatches the production `set-target` and
 `clear-target` mechanics and records both target mutation and cleanup on the

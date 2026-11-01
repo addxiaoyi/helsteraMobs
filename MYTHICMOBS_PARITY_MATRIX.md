@@ -23,8 +23,10 @@ cancelled (`maxCombatDistance=passed`).
 Incremental legacy-option update: Mythic `Options.SpawningDistance` is retained
 as `mob.spawning-distance` and consumed as the normal despawn radius fallback.
 Strict Paper fixture `srv-paper-mob-spawning-distance-20261101-r2` reads the
-production instance as `mode=NORMAL distance=8.0`; natural out-of-range removal
-timing remains a separate lifecycle probe.
+production instance as `mode=NORMAL distance=8.0`. Follow-up strict fixture
+`srv-paper-spawning-distance-runtime-20261101-r4` verifies a real-player
+nearby-retention check and the production AI scheduler removing both the
+managed instance and Bukkit entity after it moves beyond the configured radius.
 
 Incremental condition-boundary update: `compare-values` now rejects `NaN`,
 `Infinity`, and `-Infinity` for DOUBLE/FLOAT/NUMBER comparisons instead of
@@ -1239,14 +1241,14 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixtures `srv-paper-mob-max-combat-distance-20261101-r5` and `srv-paper-mob-spawning-distance-20261101-r2` each complete 253 probes (241 passed, 12 expected negative controls, zero incomplete); they add production `Options.MaxCombatDistance` boundary and legacy `Options.SpawningDistance` configuration evidence to the menu/Audience, raw player Potion-consumption and registered release contract. Earlier 250-probe fixture `srv-paper-world-target-validity-20261101-r2` remains baseline evidence for its original catalog. The complete Mythic catalog and broader natural/client semantics remain open |
+| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-spawning-distance-runtime-20261101-r4` completes 254 probes (242 passed, 12 expected negative controls, zero incomplete), adding production legacy `Options.SpawningDistance` near/far lifecycle evidence to the existing menu/Audience, raw player Potion-consumption and release probes. Prior 250/253-probe runs are historical checkpoints. The complete Mythic catalog and broader natural/client semantics remain open |
 
 The current latest report superseding the historical row summary is strict
-fixture `srv-paper-world-target-validity-20261101-r2`: 250 probes, 238 passed,
-12 expected negative controls, and zero incomplete. Its real-world selector
-probe confirms that the source managed entity is excluded from world target
-results, alongside context-chain action dispatch, nearest selection, runtime
-underscore aliases, and fail-closed invalid `limit`/`radius` parameters.
+fixture `srv-paper-spawning-distance-runtime-20261101-r4`: 254 probes, 242
+passed, 12 expected negative controls, and zero incomplete. It includes the
+legacy SpawningDistance production despawn lifecycle plus the existing
+world-target validity, context-chain, nearest-selection, runtime-alias, and
+fail-closed parameter probes.
 
 Strict fixture `srv-paper-integration-exp-20261031-r17` adds
 `despawnOptions` for the production `Options.Despawn`/`Persistent`
