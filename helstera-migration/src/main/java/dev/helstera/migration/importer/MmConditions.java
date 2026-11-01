@@ -473,7 +473,6 @@ public final class MmConditions {
         if ("onblock".equals(name)) {
             String value = rawValue(body, "material", "types", "type", "t", "mat", "m", "block", "b");
             if (value == null) value = "STONE";
-            if (value.contains("*") || value.startsWith("#")) return new Mapped(s, false);
             return new Mapped("on-block " + value.toUpperCase(Locale.ROOT), true);
         }
         if ("moist".equals(name) || "ismoist".equals(name)) {
@@ -489,7 +488,6 @@ public final class MmConditions {
         if ("blocktype".equals(name)) {
             String value = rawValue(body, "types", "type", "t", "material", "mat", "m", "block", "b");
             if (value == null) value = "DIRT";
-            if (value.contains("*") || value.startsWith("#")) return new Mapped(s, false);
             return new Mapped("block-type-is " + value.toUpperCase(Locale.ROOT), true);
         }
         if ("blocktypeinradius".equals(name)) {
@@ -499,9 +497,7 @@ public final class MmConditions {
             if (types == null) types = "DIRT";
             if (radius == null) radius = "8";
             if (amount == null) amount = ">0";
-            if (types.contains("*") || types.startsWith("#") || !validNumberRange(amount)) {
-                return new Mapped(s, false);
-            }
+            if (!validNumberRange(amount)) return new Mapped(s, false);
             try {
                 double parsedRadius = Double.parseDouble(radius);
                 if (!Double.isFinite(parsedRadius) || parsedRadius < 0) return new Mapped(s, false);

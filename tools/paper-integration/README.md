@@ -46,11 +46,13 @@ and zero incomplete. It reads `SpawningDistance=8` through the normal mob
 loader as `mode=NORMAL distance=8.0`; natural out-of-range removal timing is
 not folded into this configuration-to-instance probe.
 
-The latest strict follow-up `srv-paper-spawning-distance-runtime-20261101-r4`
-completes 254 probes: 242 passed, 12 expected negative controls rejected, and
-zero incomplete. Its real-player `spawningDistanceRuntime` probe confirms
-nearby retention and removal of both the managed instance and Bukkit entity
-after the mob crosses the configured radius.
+The latest strict follow-up `srv-paper-block-selector-strict-20261101-r2`
+completes 253 probes: 242 passed, 11 expected negative controls rejected, and
+zero incomplete. Its `conditionUtilityAliases` probe independently checks
+exact materials, material globs, and Paper block tags through `BlockType`,
+`OnBlock`, and `BlockTypeInRadius`, alongside the real-player
+`spawningDistanceRuntime` nearby-retention and out-of-range entity-removal
+assertions.
 
 The follow-up fixture also verifies the root Mythic `Exp` path through
 `exp-options result=true experience=13 event=true`.

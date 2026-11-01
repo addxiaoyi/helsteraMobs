@@ -34,6 +34,14 @@ letting `Double.compare` treat them as ordered values. The new regression test
 passes alongside the full `SkillConditionsTest`; this improves fail-closed
 coverage but does not establish Paper or complete-catalog parity.
 
+Incremental block-condition update: Mythic `BlockType`, `OnBlock`, and
+`BlockTypeInRadius` now preserve exact material lists, Bukkit block tags
+(`#namespace:tag`), and `*` material-name globs through migration. Runtime
+resolves tags from Paper's block registry and fails closed for malformed or
+unknown tags. Strict fixture `srv-paper-block-selector-strict-20261101-r2`
+passes the production spatial condition probe with isolated real Paper tag and
+wildcard checks (`on-block-tag=true block-wildcard=true block-tag=true`).
+
 Incremental spawner-gate update: player-scoped ownership now applies the same
 online, alive, non-spectator, non-creative filter as the player-count gate and
 fails closed when a player location is unavailable. Focused regressions and the
@@ -1244,14 +1252,14 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-spawning-distance-runtime-20261101-r4` completes 254 probes (242 passed, 12 expected negative controls, zero incomplete), adding production legacy `Options.SpawningDistance` near/far lifecycle evidence to the existing menu/Audience, raw player Potion-consumption and release probes. Prior 250/253-probe runs are historical checkpoints. The complete Mythic catalog and broader natural/client semantics remain open |
+| Paper integration suite | mapped-unverified | latest strict Paper 1.21.1-133 fixture `srv-paper-block-selector-strict-20261101-r2` completes 253 probes (242 passed, 11 expected negative controls, zero incomplete), including isolated production block-tag/wildcard condition checks and the earlier `Options.SpawningDistance` near/far lifecycle, menu/Audience, raw player Potion-consumption, and release probes. Prior probe counts are historical checkpoints. The complete Mythic catalog and broader natural/client semantics remain open |
 
 The current latest report superseding the historical row summary is strict
-fixture `srv-paper-spawning-distance-runtime-20261101-r4`: 254 probes, 242
-passed, 12 expected negative controls, and zero incomplete. It includes the
-legacy SpawningDistance production despawn lifecycle plus the existing
-world-target validity, context-chain, nearest-selection, runtime-alias, and
-fail-closed parameter probes.
+fixture `srv-paper-block-selector-strict-20261101-r2`: 253 probes, 242 passed,
+11 expected negative controls, and zero incomplete. It includes isolated Paper
+block-tag and wildcard condition checks plus the legacy SpawningDistance
+production despawn lifecycle, world-target validity, context-chain,
+nearest-selection, runtime-alias, and fail-closed parameter probes.
 
 Strict fixture `srv-paper-integration-exp-20261031-r17` adds
 `despawnOptions` for the production `Options.Despawn`/`Persistent`
@@ -1695,12 +1703,14 @@ syntax. Migration and unit coverage protect aliases and ranges; exploratory
 Paper `srv-paper-integration-exploratory-1.21.11-r65` keeps the aggregate
 `conditionUtilityAliases` probe passed.
 
-Official block/biome condition update: exact `BlockType` and `BiomeType` list
-forms now map to active Bukkit block/biome keys. Wildcards, block tags, MMOItem
-names, and `BiomeType exact=false` category semantics remain explicitly
-unmapped. Migration/runtime tests cover exact forms, and exploratory Paper
-`srv-paper-integration-exploratory-1.21.11-r66` records
-`block-type=true biome-type=true` with the existing spatial condition passes.
+Official block/biome condition update: `BlockType` supports exact material
+lists, Bukkit block tags, and material-name globs through migration and runtime.
+Strict Paper fixture `srv-paper-block-selector-strict-20261101-r2` records the
+aggregate spatial condition probe passed with isolated tag and wildcard checks.
+MMOItem names and
+`BiomeType exact=false` category semantics remain explicitly unmapped;
+exploratory Paper `srv-paper-integration-exploratory-1.21.11-r66` records the
+exact `block-type=true biome-type=true` path.
 
 Server/player state condition update: official `ServerIsPaper` now recognizes
 Paper-family server identity from Bukkit name/version metadata, while

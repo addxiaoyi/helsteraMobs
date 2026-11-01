@@ -326,7 +326,7 @@ class MmConditionsTest {
         assertEquals("pitch -45to45", t("?pitch{p=-45to45}"));
         assertEquals("yaw 90to180 true", t("?yaw{y=90to180;c=true}"));
         assertEquals("on-block DIRT,STONE", t("?onBlock{m=DIRT,STONE}"));
-        assertFalse(translated("?onBlock{m=#minecraft:logs}"));
+        assertTrue(translated("?onBlock{m=#minecraft:logs}"));
     }
 
     @Test
@@ -372,7 +372,7 @@ class MmConditionsTest {
                 t("?blockTypeInRadius{type=STONE;amount=>10;radius=3}"));
         assertEquals("block-type-in-radius DIRT >0 8", t("?blockTypeInRadius"));
         assertTrue(translated("?blockTypeInRadius{t=STONE;a=>1;r=2}"));
-        assertFalse(translated("?blockTypeInRadius{type=#minecraft:logs}"));
+        assertTrue(translated("?blockTypeInRadius{type=#minecraft:logs}"));
     }
 
     @Test
@@ -756,7 +756,16 @@ class MmConditionsTest {
         assertEquals("block-type-is DIRT,STONE", t("?blockType{type=DIRT,STONE}"));
         assertEquals("biome-type-is jungle,ocean true", t("?biomeType{t=jungle,ocean}"));
         assertTrue(translated("?blockType{m=STONE}"));
-        assertFalse(translated("?blockType{m=#minecraft:logs}"));
+        assertEquals("block-type-is #MINECRAFT:LOGS", t("?blockType{m=#minecraft:logs}"));
+        assertEquals("block-type-is OAK_*", t("?blockType{m=OAK_*}"));
+        assertEquals("on-block #MINECRAFT:LOGS", t("?onBlock{m=#minecraft:logs}"));
+        assertEquals("block-type-in-radius #MINECRAFT:LOGS >0 8",
+                t("?blockTypeInRadius{m=#minecraft:logs}"));
+        assertEquals("block-type-in-radius ST* >0 8", t("?blockTypeInRadius{m=ST*}"));
+        assertTrue(translated("?blockType{m=#minecraft:logs}"));
+        assertTrue(translated("?blockType{m=OAK_*}"));
+        assertTrue(translated("?onBlock{m=#minecraft:logs}"));
+        assertTrue(translated("?blockTypeInRadius{m=ST*}"));
         assertFalse(translated("?biomeType{t=forest;e=false}"));
     }
 
