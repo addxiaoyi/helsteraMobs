@@ -120,7 +120,7 @@ public final class MmConditions {
             return numericCondition(body, "absorption", s, "amount", "a", "absorption", "value");
         }
         if ("biome".equals(name) || "biomeis".equals(name)) {
-            String value = firstArgument(body, "biome", "name", "value", "b");
+            String value = rawValue(body, "biome", "name", "value", "b");
             if (value == null) value = normalizeScalar(body);
             if (value == null || value.isBlank()) value = "minecraft:plains";
             String exact = keyedArgument(body, "exact", "e");

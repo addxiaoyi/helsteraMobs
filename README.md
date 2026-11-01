@@ -5,12 +5,13 @@
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Latest local strict release evidence: Paper `1.21.1-133` boots the full plugin
-and fixture `srv-paper-block-selector-strict-20261101-r2` records 253 probe
-observations (`242 passed`, `11 expected negative-control observations`,
-`0 incomplete`). It adds isolated Paper block-tag and material-wildcard
-assertions to the spatial condition probe. The report contract covers
-registered release probes; it does not establish complete MythicMobs catalog
-parity. Earlier 250/252/253/254 probe runs are historical checkpoints.
+and fixture `srv-paper-biome-condition-strict-20261101-r1` records 254 probe
+observations (`242 passed`, `12 expected negative-control observations`,
+`0 incomplete`). The spatial condition probe verifies namespaced exact biome
+matching, non-exact key substring matching, and a negative mismatch through
+the production `SkillService`. The report contract covers registered release
+probes; it does not establish complete MythicMobs catalog parity. Earlier
+250/252/253/254 probe runs are historical checkpoints.
 
 ### Current Development Goals
 
@@ -164,6 +165,7 @@ the entire MythicMobs feature catalog.
 - Strict Paper 1.21.1-133 fixture `srv-paper-potion-expiry-strict-20261101-r1` completes 255 probes and records both `playerPotionConsume=passed` and `playerPotionNaturalExpiry=passed`; the short-effect player event is observed as `expired=true action-observed=true`.
 - Strict Paper follow-up `srv-paper-mob-max-combat-distance-20261101-r5` verifies imported per-mob `MaxCombatDistance=8`: a production-spawned Zombie allows the 7-block damage control and cancels the 9-block event. The complete 253-probe report has 241 passed, 12 expected negative controls rejected, and zero incomplete; raw player Potion consumption also passed.
 - Strict Paper fixtures `srv-paper-mob-spawning-distance-20261101-r2` and `srv-paper-spawning-distance-runtime-20261101-r4` verify imported legacy `SpawningDistance=8` reaches a production instance and controls its real lifecycle: nearby retention passes and the managed instance plus Bukkit entity are removed beyond the configured radius. Their 253- and 254-probe reports respectively have zero incomplete probes.
+- Strict Paper 1.21.1-133 fixture `srv-paper-biome-condition-strict-20261101-r1` verifies `Biome` exact namespaced matching, non-exact key substring matching, comma-separated alternatives, exact-mode rejection of the substring, and a negative mismatched key. Its 254-probe report has 242 passed, 12 expected negative controls, and zero incomplete.
 - Raw Potion r136/r137 re-arm hotbar slot 1 immediately before use; r136 records `playerPotionConsume=passed` with `item=POTION`, and r137 records both `playerPotionConsume=passed` and `playerPotionNaturalExpiry=passed`.
 - Exploratory Paper 1.21.11 r133 records `vehicleEvents=passed` and `ejectPassenger=passed`; the fixture now exercises a real Bukkit `VehicleDestroyEvent` dispatch in addition to enter/exit/dismount/eject coverage.
 - Exploratory Paper 1.21.11 r138 records `blockEvents=passed` through immediate synthetic Bukkit `BlockBreakEvent`/`BlockPlaceEvent` dispatch; natural Mineflayer block timing remains separately unverified.
