@@ -20,6 +20,12 @@ the production spawn path and Bukkit damage dispatch at 7 and 9 blocks around
 an 8-block limit; the in-range hit is allowed and the out-of-range hit is
 cancelled (`maxCombatDistance=passed`).
 
+Incremental legacy-option update: Mythic `Options.SpawningDistance` is retained
+as `mob.spawning-distance` and consumed as the normal despawn radius fallback.
+Strict Paper fixture `srv-paper-mob-spawning-distance-20261101-r2` reads the
+production instance as `mode=NORMAL distance=8.0`; natural out-of-range removal
+timing remains a separate lifecycle probe.
+
 Incremental condition-boundary update: `compare-values` now rejects `NaN`,
 `Infinity`, and `-Infinity` for DOUBLE/FLOAT/NUMBER comparisons instead of
 letting `Double.compare` treat them as ordered values. The new regression test

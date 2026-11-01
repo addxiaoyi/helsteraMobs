@@ -1172,6 +1172,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (despawnProbeId > 0) instances().despawn(despawnProbeId);
                 }
 
+                if (mobConfig("spawning_distance_probe") != null) {
+                    int spawningDistanceProbeId = spawnMobAt("spawning_distance_probe",
+                            origin.clone().add(17, 0, 0), null);
+                    var spawningDistanceProbe = spawningDistanceProbeId > 0
+                            ? instances().impl(spawningDistanceProbeId) : null;
+                    var spawningDistanceOptions = spawningDistanceProbe == null
+                            ? null : spawningDistanceProbe.options();
+                    String spawningDistanceMode = spawningDistanceOptions == null
+                            ? "missing" : spawningDistanceOptions.despawnMode();
+                    double spawningDistance = spawningDistanceOptions == null
+                            ? Double.NaN : spawningDistanceOptions.despawnDistance();
+                    boolean spawningDistanceOptionsResult = "NORMAL".equals(spawningDistanceMode)
+                            && Math.abs(spawningDistance - 8.0) < 1.0e-9;
+                    getLogger().info("[自检] spawning-distance-options result="
+                            + spawningDistanceOptionsResult + " mode=" + spawningDistanceMode
+                            + " distance=" + spawningDistance);
+                    if (spawningDistanceProbeId > 0) instances().despawn(spawningDistanceProbeId);
+                }
+
                 if (mobConfig("visibility_probe") != null) {
                     int visibilityProbeId = spawnMobAt("visibility_probe", origin.clone().add(16, 0, 0), null);
                     var visibilityProbe = visibilityProbeId > 0 ? instances().impl(visibilityProbeId) : null;

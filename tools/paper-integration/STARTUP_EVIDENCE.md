@@ -2474,3 +2474,15 @@ real Bukkit melee damage events from seven and nine blocks. The protected event
 is cancelled while the in-range control remains allowed. The same strict run
 also retains dual-client menu/Audience and `playerPotionConsume=passed`.
 
+Strict fixture `srv-paper-mob-spawning-distance-20261101-r2` passed Paper
+1.21.1-133 with 253 observed probes (241 passed, 12 expected rejected, zero
+incomplete). Its production configuration-to-instance line is:
+
+```text
+spawning-distance-options result=true mode=NORMAL distance=8.0
+```
+
+The fixture loads `mobs/spawning_distance_probe.yml` through the normal mob
+loader and confirms Mythic's legacy `Options.SpawningDistance` reaches
+`SpawnOptions.despawnDistance`; natural removal timing remains separate.
+

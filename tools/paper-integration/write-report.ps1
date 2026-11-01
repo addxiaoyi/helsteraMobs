@@ -58,6 +58,7 @@ $probeSpecs = [ordered]@{
     entityConfigFlags = 'entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false'
     expOptions = 'exp-options result=true experience=13 event=true'
     despawnOptions = 'despawn-options result=true mode=PERSISTENT distance=0(?:\.0+)? persistent=true'
+    spawningDistanceOptions = 'spawning-distance-options result=true mode=NORMAL distance=8(?:\.0+)?'
     visibilityOptions = 'visibility-options result=true visible-by-default=true invisible=true show-name=true'
     sheep = 'sheep-options result=true'
     armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false .*items=true'
