@@ -389,14 +389,20 @@ if ($playerPotionConsumeRequested) {
         observations = $playerPotionConsumeObservations
     }
 }
+$playerPotionNaturalExpiryRequested = $env:PAPER_RAW_POTION_WORKFLOW -eq 'true' -and
+    $env:PAPER_RAW_POTION_SHORT -eq 'true'
 $playerPotionNaturalExpiryObserved = $logText -match 'player-potion-natural-expiry=true'
-if ($playerPotionNaturalExpiryObserved) {
+if ($playerPotionNaturalExpiryRequested -or $playerPotionNaturalExpiryObserved) {
     $playerPotionNaturalExpiryObservations = [string[]]@(
         [regex]::Matches($logText, '.*player-potion-natural-expiry=true.*') |
             ForEach-Object { $_.Value.Trim() })
+    if (-not $playerPotionNaturalExpiryObserved) {
+        $playerPotionNaturalExpiryObservations = [string[]]@(
+            'short raw Potion workflow was requested but natural expiry was not observed')
+    }
     $probes += [ordered]@{
         id = 'playerPotionNaturalExpiry'
-        status = 'passed'
+        status = if ($playerPotionNaturalExpiryObserved) { 'passed' } else { 'not-observed' }
         observations = $playerPotionNaturalExpiryObservations
     }
 }
@@ -495,7 +501,7 @@ $report = [ordered]@{
         'audience-filter-delivery', 'random-spawn-distribution',
         'skillTeleportCoordinates') + $(if ($playerPotionConsumeRequested) {
             @('playerPotionConsume')
-        } else { @() }) + $(if ($playerPotionNaturalExpiryObserved) {
+        } else { @() }) + $(if ($playerPotionNaturalExpiryRequested -or $playerPotionNaturalExpiryObserved) {
             @('playerPotionNaturalExpiry')
         } else { @() }) + @(
         $spawnObservations.Keys | ForEach-Object { "spawner:$($_)" })

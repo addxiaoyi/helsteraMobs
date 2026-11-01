@@ -1,6 +1,8 @@
 $ErrorActionPreference = 'Stop'
 $previousRawPotionWorkflow = $env:PAPER_RAW_POTION_WORKFLOW
+$previousRawPotionShort = $env:PAPER_RAW_POTION_SHORT
 $env:PAPER_RAW_POTION_WORKFLOW = 'false'
+$env:PAPER_RAW_POTION_SHORT = 'false'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $temp = Join-Path ([System.IO.Path]::GetTempPath()) ('helstera-paper-report-' + [guid]::NewGuid())
 $logDirectory = Join-Path $temp 'logs'
@@ -552,7 +554,23 @@ try {
         $missingPotionRejected = $_.Exception.Message -match 'playerPotionConsume=not-observed'
     }
     Assert-True $missingPotionRejected 'strict gate rejects a requested raw potion probe without a consume event'
+
+    $env:PAPER_RAW_POTION_SHORT = 'true'
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $rawPotionTemp | Out-Null
+    $shortPotionMissing = Get-Content -LiteralPath $rawPotionReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $missingExpiryProbe = @($shortPotionMissing.probes | Where-Object id -eq 'playerPotionNaturalExpiry')
+    Assert-True ($missingExpiryProbe.Count -eq 1 -and $missingExpiryProbe[0].status -eq 'not-observed') 'requested short Potion expiry remains explicit when absent'
+    Assert-True ($shortPotionMissing.expectedProbeIds -contains 'playerPotionNaturalExpiry') 'requested short Potion expiry remains in the strict catalog when absent'
+    $missingExpiryRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $rawPotionReportPath `
+            -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+    } catch {
+        $missingExpiryRejected = $_.Exception.Message -match 'playerPotionNaturalExpiry=not-observed'
+    }
+    Assert-True $missingExpiryRejected 'strict gate rejects a requested raw Potion without natural-expiry evidence'
     $env:PAPER_RAW_POTION_WORKFLOW = $previousRawPotionWorkflow
+    $env:PAPER_RAW_POTION_SHORT = $previousRawPotionShort
 
     foreach ($chainState in @('false', 'missing')) {
         $chainTemp = Join-Path $temp "context-chain-$chainState"
@@ -630,6 +648,7 @@ try {
     Write-Host 'Paper integration report tests passed.'
 } finally {
     $env:PAPER_RAW_POTION_WORKFLOW = $previousRawPotionWorkflow
+    $env:PAPER_RAW_POTION_SHORT = $previousRawPotionShort
     $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
     $tempPath = [System.IO.Path]::GetFullPath($temp)
     $isOwnedTemp = $tempPath.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase) -and
