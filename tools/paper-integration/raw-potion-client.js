@@ -4,7 +4,8 @@ const fs = require('fs');
 const [host = '127.0.0.1', rawPort = '25731'] = process.argv.slice(2);
 const port = Number(rawPort);
 const reportPath = process.argv[4];
-const version = process.env.PAPER_MINEFLAYER_VERSION || '1.21.11';
+const username = process.argv[5] || 'HelsteraTester';
+const version = process.env.PAPER_MINEFLAYER_VERSION || '1.21.1';
 const report = line => {
   process.stdout.write(`${line}\n`);
   if (reportPath) fs.appendFileSync(reportPath, `${line}\n`);
@@ -17,7 +18,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 const client = minecraft.createClient({
   host,
   port,
-  username: 'HelsteraTester',
+  username,
   version,
   auth: 'offline'
 });
@@ -30,11 +31,13 @@ client.on('packet', (data, meta) => {
       && Number.isFinite(data.x) && Number.isFinite(data.y) && Number.isFinite(data.z)) {
     lastPosition = { x: data.x, y: data.y, z: data.z };
   }
-  if (meta && meta.name === 'set_slot' && slotReports < 8) {
-    slotReports += 1;
+  if (meta && meta.name === 'set_slot') {
     const item = data && data.item ? data.item : {};
     if (data.slot === 37 && (item.itemId ?? item.type) !== 0) potionSlotObserved = true;
-    report(`PAPER_RAW_SLOT slot=${data.slot} item-id=${item.itemId ?? item.type ?? 'unknown'}`);
+    if (slotReports < 8) {
+      slotReports += 1;
+      report(`PAPER_RAW_SLOT slot=${data.slot} item-id=${item.itemId ?? item.type ?? 'unknown'}`);
+    }
   }
 });
 
@@ -75,15 +78,13 @@ const sendPotionUse = () => {
 
 client.once('login', () => {
   report('PAPER_RAW_POTION_READY');
-  // The runner gives the potion immediately after the join log appears.
-  // The integration self-test switches the player from the server's default
-  // creative mode to survival before exercising player state.  Wait until that
-  // setup has completed so this packet represents a normal drink action.
-  const waitForPotion = () => {
-    if (potionSlotObserved || client.ended) return sendPotionUse();
-    setTimeout(waitForPotion, 250);
-  };
-  setTimeout(waitForPotion, 11000);
+  // The runner equips the potion after its self-test inventory setup. Keep
+  // slot observation diagnostic, but do not let a missing packet hide the
+  // use attempt from the server-side strict evidence probe.
+  setTimeout(() => {
+    if (!potionSlotObserved) report('PAPER_RAW_POTION_SLOT observed=false');
+    sendPotionUse();
+  }, 11000);
 });
 client.on('error', error => process.stderr.write(`${error.stack || error.message}\n`));
 client.on('end', () => process.exit(0));
