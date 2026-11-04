@@ -4,16 +4,17 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-target-filters-20261104-r1` completes 339
-probes (320 passed and 19 expected rejections). Its `targeterArgumentValidation`
-probe checks `target=players`, `ignore=players`, an invalid-filter rejection,
-and valid chain/control cases against real Paper entities. API tests also cover
-animal and monster categories, quoted comma lists, invalid and duplicate filter
-arguments, and `targetself` inclusion/exclusion. This implementation covers
-Bukkit `LivingEntity` categories and entity types; Mythic-specific ground,
-water, flight, game-mode, NPC and MythicMob filters remain open. Report:
-`tools/paper-integration/reports/paper-1.21.1-target-filters-strict-20261104-r1.json`.
-The exact plugin JAR SHA-256 is `1f9089352bc60431cf9627bce2c4fc188ad1f12f14ff04ba6ed4342a40c59ff7`.
+Latest strict fixture `srv-paper-target-state-filters-strict-20261104-r9`
+completes 339 probes (320 passed and 19 expected rejections). Its
+`targeterArgumentValidation` probe verifies real Paper `target=` and `ignore=`
+selection for grounded and waterborne living entities, plus fail-closed
+rejection of `flying`. Ground means on-ground and dry; water means in-water and
+not on-ground, so overlapping states match neither. API tests cover both
+directions, combined filters, ambiguous states, and invalid arguments. Report:
+`tools/paper-integration/reports/paper-1.21.1-target-state-filters-strict-20261104-r9.json`.
+The exact plugin SHA-256 is
+`e63c666e2ba3226eff88af4c48bf0966fe0caeced43e56288a04b6e6cbd16f58`.
+Flying, game-mode, non-living, NPC and MythicMob filters remain open.
 
 The same strict run verifies `locationTargeterDispatch` through production
 `set-block` for SelfLocation and all five `@SelfEyeLocation` aliases, alongside
@@ -549,7 +550,7 @@ Many rows remain `mapped-unverified`; the project is not complete:
 1. Complete official Conditions, Mechanics, placeholders, comparator edge cases, and grammar coverage.
 2. Drops: `TotalItems`, paired `MinItems`/`MaxItems`, or either Bonus option enable weighted entry selection; single bounds without bonuses retain ordered selection. Fractional Bonus multipliers add the integer part plus one line probabilistically at the fractional remainder. Strict natural-death evidence covers level/Luck combinations and dropper conditions; the earlier single-bound ordering assertion is invalid and is being replaced. Standalone `DropTables/` files project supported settings with an importer-to-runtime contract, and `exp`/`xp`/`experience` rows have natural-death coverage. Remaining work includes `BiasStat`, Mythic custom Luck enchantment/curses inputs, broader placeholders and the complete official catalog.
 3. Pin conditions resolve through the plugin's own `pins.yml`; location-valued `@Pin` resolves every configured point or one random point, `@BlocksInPinRegion` enumerates inclusive cuboids up to 16,384 blocks, and `MovePin` updates single-point pins in memory. Strict Paper fixture `srv-paper-pin-targeters-strict-20261102-r2` passes the required `pinTargeters` probe on Paper 1.21.1-133: multi-point/random dispatch, single-point movement, multi-point movement rejection, real cuboid `set-block`/`break-block` with block restoration, and fail-closed rejection of a 16,385-block region before action dispatch. Compatibility with Mythic pack pin-file formats remains unverified; in-memory movement resets when the plugin reloads its own `pins.yml`.
-4. Extend the core selector set; the strict Paper 1.21.1-133 run now covers the registered player/monster/clear/owner/faction/conditional/native target paths and the route waypoint path, while premium selectors, native Pathfinder Goal mutation, and `AIPathfindingMalus` remain outside the public Paper API boundary and are preserved with warnings.
+4. Complete the official targeter/filter catalog: ground and water state filters now have API and strict Paper coverage; flying semantics, non-living targets, game-mode/NPC/MythicMob filters, premium selectors, and native Pathfinder Goal mutation remain open or outside the public Paper API boundary.
 5. Expand the remaining legacy numeric ID/data families; `ItemModel` and `DamageType` are explicitly preserved because Paper 1.21.1 `ItemMeta` has no public component API for them.
 6. Strict Paper 1.21.1-133 now records the registered Creeper/Bee/Zombie and jockey mount-event probes; finish universal Mob Option ordering while natural AI jockey selection remains unverified.
 7. Add remaining Bukkit event, Audience version, and SkillTree lifecycle/restart evidence.

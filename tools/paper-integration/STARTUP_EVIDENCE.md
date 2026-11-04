@@ -1,15 +1,17 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-target-filters-20261104-r1` passed the complete strict gate
-on Paper 1.21.1-133: 339 probes, 320 passed and 19 expected rejections.
-`targeterArgumentValidation` verifies a real online player is selected by
-`target=players`, excluded by `ignore=players`, and that invalid filters are
-rejected while valid chain/control cases pass. API tests also cover category
-filters, quoted lists, malformed and duplicate values, and `targetself`
-inclusion/exclusion. Mythic-specific ground/water/flight, game-mode, NPC and
-MythicMob filters remain outside this implementation. Report and compressed
-server/client logs are listed in `release-evidence.json`; plugin SHA-256:
-`1f9089352bc60431cf9627bce2c4fc188ad1f12f14ff04ba6ed4342a40c59ff7`.
+Fixture `srv-paper-target-state-filters-strict-20261104-r9` passed the complete
+strict gate on Paper 1.21.1-133: 339 probes, 320 passed and 19 expected
+rejections. `targeterArgumentValidation` verifies real grounded and waterborne
+living entities are included and excluded by `target=ground`/`water` and
+`ignore=ground`/`water`, and that unsupported `flying` is rejected. Ground is
+on-ground and dry; water is in-water and not on-ground, so overlapping states
+match neither. API tests also cover category filters, quoted lists, malformed
+and duplicate values, and `targetself` inclusion/exclusion. Flying, game-mode,
+non-living, NPC and MythicMob filters remain outside this implementation.
+Report and compressed server/client logs are listed in `release-evidence.json`;
+plugin SHA-256:
+`e63c666e2ba3226eff88af4c48bf0966fe0caeced43e56288a04b6e6cbd16f58`.
 
 Fixture `srv-paper-self-eye-location-strict-20261104-r1` passed the complete
 strict gate on Paper 1.21.1-133: 339 probes, 320 passed and 19 expected

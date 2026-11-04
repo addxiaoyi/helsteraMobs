@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-target-state-filters-strict-20261104-r9",
+    "report": "tools/paper-integration/reports/paper-1.21.1-target-state-filters-strict-20261104-r9.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-target-state-filters-strict-20261104-r9.log.gz",
+    "logSha256": "25a5aba9be4b387519dbb7566170181778dedd67931acba8ca924eba6210401a",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-target-state-filters-strict-20261104-r9-client-logs.tar.gz",
+    "clientLogSha256": "b7ee7ce43a5a30fbb0a211e6cfdbbe8f6bfc880d3a21adfdfe4dce09df497ea4",
+    "pluginSha256": "e63c666e2ba3226eff88af4c48bf0966fe0caeced43e56288a04b6e6cbd16f58",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-target-filters-20261104-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-target-filters-strict-20261104-r1.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-target-filters-strict-20261104-r1.log.gz",

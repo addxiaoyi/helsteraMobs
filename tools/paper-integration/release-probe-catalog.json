@@ -155,7 +155,7 @@
     {
       "id": "targeterArgumentValidation",
       "status": "passed",
-      "requiredObservation": "targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true invalid-filter=true"
+      "requiredObservation": "targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true flying-rejected=true"
     },
     {
       "id": "locationTargeterDispatch",

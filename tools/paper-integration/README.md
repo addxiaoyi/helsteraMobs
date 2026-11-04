@@ -26,18 +26,20 @@ $env:PAPER_RAW_POTION_SHORT = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-target-filters-20261104-r1` passed
-339 probes (320 passed, 19 expected rejections). Its `targeterArgumentValidation`
-probe verifies real-player inclusion with `target=players`, exclusion with
-`ignore=players`, rejection of an invalid filter, and valid chain/control cases.
-API tests also cover animal/monster categories, quoted comma lists, invalid and
-duplicate filter values, and `targetself`. The implementation is limited to
-Bukkit `LivingEntity` categories and entity types; Mythic-specific ground,
-water, flight, game-mode, NPC and MythicMob filters remain unsupported.
-Report: `reports/paper-1.21.1-target-filters-strict-20261104-r1.json`; server log:
-`reports/paper-1.21.1-target-filters-strict-20261104-r1.log.gz`; client logs:
-`reports/paper-1.21.1-target-filters-strict-20261104-r1-client-logs.tar.gz`.
-The plugin SHA-256 is `1f9089352bc60431cf9627bce2c4fc188ad1f12f14ff04ba6ed4342a40c59ff7`.
+Latest strict fixture `srv-paper-target-state-filters-strict-20261104-r9`
+passed 339 probes (320 passed, 19 expected rejections). Its
+`targeterArgumentValidation` probe verifies real Paper inclusion/exclusion for
+ground and water state filters, and rejects the unsupported `flying` filter.
+Ground means on-ground and dry; water means in-water and not on-ground, with
+overlap excluded from both. API tests cover state combinations, ambiguous
+states, animal/monster categories, quoted lists, duplicate values,
+`targetself`, and fail-closed invalid arguments. Non-living, game-mode, NPC and
+MythicMob filters remain unsupported. Report:
+`reports/paper-1.21.1-target-state-filters-strict-20261104-r9.json`; server log:
+`reports/paper-1.21.1-target-state-filters-strict-20261104-r9.log.gz`; client
+logs: `reports/paper-1.21.1-target-state-filters-strict-20261104-r9-client-logs.tar.gz`.
+The plugin SHA-256 is
+`e63c666e2ba3226eff88af4c48bf0966fe0caeced43e56288a04b6e6cbd16f58`.
 
 Earlier strict fixture `srv-paper-self-eye-location-strict-20261104-r1` passed
 339 probes (320 passed, 19 expected rejections). `locationTargeterDispatch`

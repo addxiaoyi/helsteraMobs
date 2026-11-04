@@ -245,7 +245,7 @@ $probeSpecs = [ordered]@{
     targeterControlsNegative = 'spatial-targeter-details .*targeter-skip-index=true .*targeter-limit-zero=true .*targeter-negative-filter=true .*targeter-invalid-limits=true'
     contextTargeterControls = 'context-targeter-controls order=true radius=true invalid-rejected=true'
     contextTargeterChain = 'context-targeter-chain targets=true trigger=true excluded=true condition=true'
-    targeterArgumentValidation = 'targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true invalid-filter=true'
+    targeterArgumentValidation = 'targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true flying-rejected=true'
     locationTargeterDispatch = 'location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true'
     variableLocationDispatch = 'variable-location-dispatch valid=true invalid-rejected=true import-preserved=true'
     explosionLocationDispatch = 'explosion-location-dispatch valid=true missing-rejected=true'

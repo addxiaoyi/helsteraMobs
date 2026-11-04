@@ -305,6 +305,33 @@ class TargeterOrderingTest {
     }
 
     @Test
+    @DisplayName("ground and water filters use mutually exclusive Bukkit states and reject unknown flight state")
+    void mythicGroundAndWaterFilters() {
+        var grounded = stateLivingProxy(true, false);
+        var aquatic = stateLivingProxy(false, true);
+        var airborne = stateLivingProxy(false, false);
+        var ambiguous = stateLivingProxy(true, true);
+        List<LivingEntity> candidates = List.of(grounded, aquatic, airborne, ambiguous);
+        var source = (dev.helstera.api.instance.ModelInstance) null;
+
+        assertEquals(List.of(grounded), Targeters.select(
+                "@living{target=ground}", source, candidates, List.of()));
+        assertEquals(List.of(aquatic), Targeters.select(
+                "@living{target=water}", source, candidates, List.of()));
+        assertEquals(List.of(grounded, aquatic), Targeters.select(
+                "@living{target=ground,water}", source, candidates, List.of()));
+        assertEquals(List.of(aquatic, airborne, ambiguous), Targeters.select(
+                "@living{ignore=ground}", source, candidates, List.of()));
+        assertEquals(List.of(grounded, airborne, ambiguous), Targeters.select(
+                "@living{ignore=water}", source, candidates, List.of()));
+        assertEquals(List.of(aquatic), Targeters.select(
+                "@living{target=water;ignore=ground}", source, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{target=flying}", source, candidates, List.of()),
+                "The documented flying filter has no verified Bukkit-equivalent classification yet");
+    }
+
+    @Test
     @DisplayName("target limits sort first, skip an index, then apply the result limit")
     void targeterSkipIndexAndAlias() {
         var first = livingProxy(org.bukkit.entity.LivingEntity.class);
@@ -794,6 +821,20 @@ class TargeterOrderingTest {
                     if (method.getName().equals("getLocation")) return new org.bukkit.Location(null, 0, 0, 0);
                     return defaultValue(method.getReturnType());
                 }));
+    }
+
+    private static org.bukkit.entity.LivingEntity stateLivingProxy(boolean onGround, boolean inWater) {
+        return (org.bukkit.entity.LivingEntity) Proxy.newProxyInstance(
+                org.bukkit.entity.LivingEntity.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.LivingEntity.class}, (proxy, method, args) -> switch (method.getName()) {
+                    case "getType" -> org.bukkit.entity.EntityType.ZOMBIE;
+                    case "getLocation" -> new org.bukkit.Location(null, 0, 0, 0);
+                    case "isOnGround" -> onGround;
+                    case "isInWater" -> inWater;
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    default -> defaultValue(method.getReturnType());
+                });
     }
 
     private static org.bukkit.entity.Wolf tameableProxy(boolean tamed) {
