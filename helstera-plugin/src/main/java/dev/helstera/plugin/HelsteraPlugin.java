@@ -1833,6 +1833,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             Location location = world.getSpawnLocation().clone().add(0, 3, 0);
             org.bukkit.entity.Zombie zombie = null;
+            org.bukkit.entity.LivingEntity targetGroundProbeEntity = null;
+            org.bukkit.entity.Zombie targetWaterProbeEntity = null;
             org.bukkit.entity.Zombie conditionTarget = null;
             org.bukkit.entity.Zombie locationProbeTarget = null;
             org.bukkit.entity.LivingEntity meleeProbeTarget = null;
@@ -1840,6 +1842,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             org.bukkit.block.BlockState conditionTargetBlockState = null;
             org.bukkit.block.BlockState conditionTargetHeadBlockState = null;
             org.bukkit.block.BlockState blockMechanicState = null;
+            var targetFilterBlockStates = new java.util.ArrayList<org.bukkit.block.BlockState>();
             Location blockMechanicLocation = null;
             boolean pinTargeters = false;
             boolean pinConditions = false;
@@ -4146,10 +4149,111 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean invalidEntityFilterRejected = dev.helstera.api.behavior.Targeters.select(
                         "@living{target=players,unknown-filter}", modelInstance,
                         filterCandidates, java.util.List.of()).isEmpty();
-                getLogger().info("targeter-argument-validation rejected=" + argumentsRejected
-                        + " chain=" + chainArgumentsRejected + " control=" + argumentsControl
-                        + " target-players=" + targetPlayersFilter + " ignore-players=" + ignorePlayersFilter
-                        + " invalid-filter=" + invalidEntityFilterRejected);
+                var targetWaterFilterBlock = world.getBlockAt(
+                        location.getBlockX() + 66, location.getBlockY(), location.getBlockZ());
+                var targetGroundFilterBlock = world.getBlockAt(
+                        location.getBlockX() + 64, location.getBlockY() - 1, location.getBlockZ());
+                targetFilterBlockStates.add(targetGroundFilterBlock.getState());
+                targetGroundFilterBlock.setType(org.bukkit.Material.STONE, false);
+                targetGroundProbeEntity = world.spawn(
+                        targetGroundFilterBlock.getLocation().clone().add(0.5, 1.5, 0.5),
+                        org.bukkit.entity.ArmorStand.class);
+                ((org.bukkit.entity.ArmorStand) targetGroundProbeEntity).setVisible(false);
+                targetGroundProbeEntity.setInvulnerable(true);
+                targetGroundProbeEntity.setVelocity(new org.bukkit.util.Vector(0, -0.75, 0));
+                for (int waterLevel = 0; waterLevel < 3; waterLevel++) {
+                    var waterBlock = world.getBlockAt(targetWaterFilterBlock.getX(),
+                            targetWaterFilterBlock.getY() + waterLevel, targetWaterFilterBlock.getZ());
+                    targetFilterBlockStates.add(waterBlock.getState());
+                    waterBlock.setType(org.bukkit.Material.WATER, false);
+                }
+                targetWaterProbeEntity = world.spawn(
+                        targetWaterFilterBlock.getLocation().clone().add(0.5, 0.5, 0.5),
+                        org.bukkit.entity.Zombie.class);
+                targetWaterProbeEntity.setAI(false);
+                targetWaterProbeEntity.setGravity(false);
+                targetWaterProbeEntity.setInvulnerable(true);
+                var groundFilterTarget = targetGroundProbeEntity;
+                var waterFilterTarget = targetWaterProbeEntity;
+                boolean syntaxRejected = argumentsRejected;
+                boolean chainRejected = chainArgumentsRejected;
+                boolean controlAccepted = argumentsControl;
+                boolean playersAccepted = targetPlayersFilter;
+                boolean invalidFilterRejected = invalidEntityFilterRejected;
+                var originalFilterBlocks = java.util.List.copyOf(targetFilterBlockStates);
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    try {
+                        var stateFilterCandidates = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
+                        stateFilterCandidates.addAll(getServer().getOnlinePlayers());
+                        stateFilterCandidates.add(groundFilterTarget);
+                        stateFilterCandidates.add(waterFilterTarget);
+                        var groundFilterExpected = stateFilterCandidates.stream()
+                                .filter(entity -> entity.isOnGround() && !entity.isInWater()).toList();
+                        var waterFilterExpected = stateFilterCandidates.stream()
+                                .filter(entity -> entity.isInWater() && !entity.isOnGround()).toList();
+                        var groundFilterSelected = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=ground}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        boolean targetGroundFilter = groundFilterTarget.isOnGround()
+                                && !groundFilterTarget.isInWater()
+                                && groundFilterSelected.size() == groundFilterExpected.size()
+                                && groundFilterSelected.containsAll(groundFilterExpected)
+                                && groundFilterSelected.contains(groundFilterTarget);
+                        var groundIgnored = dev.helstera.api.behavior.Targeters.select(
+                                "@living{ignore=ground}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        var groundIgnoreExpected = stateFilterCandidates.stream()
+                                .filter(entity -> !entity.isOnGround() || entity.isInWater()).toList();
+                        boolean ignoreGroundFilter = groundIgnored.size() == groundIgnoreExpected.size()
+                                && groundIgnored.containsAll(groundIgnoreExpected);
+                        var waterFilterSelected = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=water}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        boolean targetWaterFilter = waterFilterTarget.isInWater()
+                                && !waterFilterTarget.isOnGround()
+                                && waterFilterSelected.size() == waterFilterExpected.size()
+                                && waterFilterSelected.containsAll(waterFilterExpected)
+                                && waterFilterExpected.contains(waterFilterTarget);
+                        var waterIgnored = dev.helstera.api.behavior.Targeters.select(
+                                "@living{ignore=water}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        var waterIgnoreExpected = stateFilterCandidates.stream()
+                                .filter(entity -> !entity.isInWater() || entity.isOnGround()).toList();
+                        boolean ignoreWaterFilter = waterIgnored.size() == waterIgnoreExpected.size()
+                                && waterIgnored.containsAll(waterIgnoreExpected)
+                                && !waterIgnored.contains(waterFilterTarget);
+                        boolean unsupportedFlightFilterRejected = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=flying}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates,
+                                java.util.List.of()).isEmpty();
+                        getLogger().info("targeter-argument-validation rejected=" + syntaxRejected
+                                + " chain=" + chainRejected + " control=" + controlAccepted
+                                + " target-players=" + playersAccepted + " ignore-players=" + ignorePlayersFilter
+                                + " invalid-filter=" + invalidFilterRejected
+                                + " target-ground=" + targetGroundFilter + " ignore-ground=" + ignoreGroundFilter
+                                + " target-water=" + targetWaterFilter + " ignore-water=" + ignoreWaterFilter
+                                + " flying-rejected=" + unsupportedFlightFilterRejected
+                                + " ground-probe-on-ground=" + groundFilterTarget.isOnGround()
+                                + " ground-probe-at=" + formatProbeLocation(groundFilterTarget.getLocation())
+                                + " ground-probe-support=" + targetGroundFilterBlock.getType()
+                                + " ground-probe-below=" + world.getBlockAt(
+                                groundFilterTarget.getLocation().clone().subtract(0, 0.1, 0)).getType()
+                                + " water-probe-in-water=" + waterFilterTarget.isInWater()
+                                + " water-probe-on-ground=" + waterFilterTarget.isOnGround());
+                    } finally {
+                        groundFilterTarget.remove();
+                        waterFilterTarget.remove();
+                        for (var originalFilterBlock : originalFilterBlocks) originalFilterBlock.update(true, false);
+                    }
+                }, 3L);
+                targetFilterBlockStates.clear();
+                targetGroundProbeEntity = null;
+                targetWaterProbeEntity = null;
                 boolean targeterSorts = highestHealthTargets.equals(java.util.List.of(farTarget, nearTarget))
                         && oldestTargets.equals(java.util.List.of(nearTarget, farTarget))
                         && invalidSortTargets.isEmpty();
@@ -5164,6 +5268,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 world.setWeatherDuration(originalWeatherDuration);
                 world.setThunderDuration(originalThunderDuration);
                 if (zombie != null) zombie.remove();
+                if (targetGroundProbeEntity != null) targetGroundProbeEntity.remove();
+                if (targetWaterProbeEntity != null) targetWaterProbeEntity.remove();
                 if (conditionTarget != null) conditionTarget.remove();
                 if (locationProbeTarget != null) locationProbeTarget.remove();
                 if (meleeProbeTarget != null) meleeProbeTarget.remove();
@@ -5175,6 +5281,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 if (conditionTargetBlockState != null) conditionTargetBlockState.update(true, false);
                 if (conditionTargetHeadBlockState != null) conditionTargetHeadBlockState.update(true, false);
                 if (blockMechanicState != null) blockMechanicState.update(true, false);
+                for (var filterBlockState : targetFilterBlockStates) filterBlockState.update(true, false);
                 if (conditionTarget != null && conditionTarget.isValid()
                         && boundsOriginalTargetLocation != null) {
                     conditionTarget.teleport(boundsOriginalTargetLocation);

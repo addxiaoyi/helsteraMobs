@@ -769,7 +769,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'targeterArgumentValidation'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'targeterArgumentValidation'; status = 'passed'; observations = @('targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true invalid-filter=true')
+        id = 'targeterArgumentValidation'; status = 'passed'; observations = @('targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true flying-rejected=true')
     }
     $fullCatalogReport.expectedProbeIds += 'locationTargeterDispatch'
     $fullCatalogReport.probes += [pscustomobject]@{

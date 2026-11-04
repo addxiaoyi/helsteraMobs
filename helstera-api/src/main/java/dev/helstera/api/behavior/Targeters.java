@@ -1032,7 +1032,7 @@ public final class Targeters {
     }
 
     private static boolean isSupportedEntityFilter(String filter) {
-        if (java.util.Set.of("player", "players", "mob", "mobs", "nonplayer", "nonplayers",
+        if (java.util.Set.of("ground", "water", "player", "players", "mob", "mobs", "nonplayer", "nonplayers",
                 "living", "entity", "entities", "animal", "animals", "monster", "monsters",
                 "creature", "creatures", "villager", "villagers", "tamed", "self", "caster")
                 .contains(filter)) return true;
@@ -1046,6 +1046,8 @@ public final class Targeters {
 
     private static boolean matchesEntityFilter(String filter, LivingEntity entity, ModelInstance source) {
         return switch (filter) {
+            case "ground" -> entity.isOnGround() && !entity.isInWater();
+            case "water" -> entity.isInWater() && !entity.isOnGround();
             case "player", "players" -> entity instanceof Player;
             case "mob", "mobs", "nonplayer", "nonplayers" -> !(entity instanceof Player);
             case "living", "entity", "entities" -> true;
