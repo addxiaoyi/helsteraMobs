@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 掉落表定义（loot.yml 的 {@code tables.<name>} 节）。
@@ -33,7 +34,7 @@ public final class DropTable {
 
         /** 权重必须为正：非正权重会让该档位永远抽不中，且分母为零时抛异常。 */
         public boolean valid() {
-            return weight > 0 && !Double.isNaN(weight)
+            return weight > 0 && Double.isFinite(weight)
                     && amountMin > 0 && amountMax >= amountMin;
         }
     }
@@ -66,6 +67,10 @@ public final class DropTable {
         public boolean hasTiers() {
             return tiers != null && !tiers.isEmpty();
         }
+
+        public boolean isExperienceDrop() {
+            return Set.of("exp", "xp", "experience").contains(itemId.toLowerCase(Locale.ROOT));
+        }
     }
 
     private final String name;
@@ -73,25 +78,44 @@ public final class DropTable {
     private final List<Entry> entries;
     private final int experienceMin;
     private final int experienceMax;
-    /** 整表掉落件数下限；0 表示不约束。 */
+    private final List<String> triggerConditions;
+    private final List<String> conditions;
+    /** Fixed generated drop-line count; 0 means unset. */
+    private final int totalItems;
+    /** Generated drop-line lower bound; 0 means unset. */
     private final int minItems;
-    /** 整表掉落件数上限；0 表示不约束。 */
+    /** Generated drop-line upper bound; 0 means unset. */
     private final int maxItems;
+    private final double bonusLevelItemsMin;
+    private final double bonusLevelItemsMax;
+    private final double bonusLuckItemsMin;
+    private final double bonusLuckItemsMax;
 
     private DropTable(String name, double luckFactor, List<Entry> entries,
                       int experienceMin, int experienceMax) {
-        this(name, luckFactor, entries, experienceMin, experienceMax, 0, 0);
+        this(name, luckFactor, entries, experienceMin, experienceMax, 0, 0, 0,
+                0, 0, 0, 0, List.of(), List.of());
     }
 
     private DropTable(String name, double luckFactor, List<Entry> entries,
-                      int experienceMin, int experienceMax, int minItems, int maxItems) {
+                      int experienceMin, int experienceMax, int totalItems, int minItems, int maxItems,
+                      double bonusLevelItemsMin, double bonusLevelItemsMax,
+                      double bonusLuckItemsMin, double bonusLuckItemsMax,
+                      List<String> triggerConditions, List<String> conditions) {
         this.name = name;
         this.luckFactor = luckFactor;
         this.entries = List.copyOf(entries);
         this.experienceMin = experienceMin;
         this.experienceMax = experienceMax;
+        this.triggerConditions = List.copyOf(triggerConditions);
+        this.conditions = List.copyOf(conditions);
+        this.totalItems = Math.max(0, totalItems);
         this.minItems = Math.max(0, minItems);
         this.maxItems = Math.max(0, maxItems);
+        this.bonusLevelItemsMin = bonusLevelItemsMin;
+        this.bonusLevelItemsMax = bonusLevelItemsMax;
+        this.bonusLuckItemsMin = bonusLuckItemsMin;
+        this.bonusLuckItemsMax = bonusLuckItemsMax;
     }
 
     public String name() {
@@ -110,14 +134,40 @@ public final class DropTable {
 
     public int experienceMax() { return experienceMax; }
 
-    /** 整表掉落件数下限；0 表示不约束。 */
+    /** Killer-side conditions required before this table can roll. */
+    public List<String> triggerConditions() { return triggerConditions; }
+
+    /** Dropper-side conditions checked against the entity whose loot is rolling. */
+    public List<String> conditions() { return conditions; }
+
+    /** Fixed generated drop-line count; 0 means unset. */
+    public int totalItems() { return totalItems; }
+
+    /** Generated drop-line lower bound; 0 means unset. */
     public int minItems() { return minItems; }
 
-    /** 整表掉落件数上限；0 表示不约束。 */
+    /** Generated drop-line upper bound; 0 means unset. */
     public int maxItems() { return maxItems; }
 
-    /** 是否配置了整表件数约束。 */
+    public double bonusLevelItemsMin() { return bonusLevelItemsMin; }
+
+    public double bonusLevelItemsMax() { return bonusLevelItemsMax; }
+
+    public double bonusLuckItemsMin() { return bonusLuckItemsMin; }
+
+    public double bonusLuckItemsMax() { return bonusLuckItemsMax; }
+
+    public boolean hasBonusLevelItems() { return bonusLevelItemsMax > 0; }
+
+    public boolean hasBonusLuckItems() { return bonusLuckItemsMax > 0; }
+
+    /** Whether the table has a count bound or fixed line count. */
     public boolean hasItemBounds() { return minItems > 0 || maxItems > 0; }
+
+    public boolean usesWeightedSelection() {
+        return totalItems > 0 || (minItems > 0 && maxItems > 0)
+                || hasBonusLevelItems() || hasBonusLuckItems();
+    }
 
     public boolean isEmpty() {
         return entries.isEmpty();
@@ -146,12 +196,35 @@ public final class DropTable {
         }
         if (sec != null) {
             int idx = 0;
+            List<?> configuredEntries = sec.getList("entries", List.of());
+            if (configuredEntries.isEmpty()) {
+                ConfigurationSection indexedEntries = sec.getConfigurationSection("entries");
+                if (indexedEntries != null) {
+                    List<String> keys = new ArrayList<>(indexedEntries.getKeys(false));
+                    keys.sort(java.util.Comparator
+                            .comparingInt((String key) -> {
+                                try { return Integer.parseInt(key); }
+                                catch (NumberFormatException ignored) { return Integer.MAX_VALUE; }
+                            }).thenComparing(String::compareTo));
+                    List<Object> indexed = new ArrayList<>(keys.size());
+                    for (String key : keys) indexed.add(indexedEntries.get(key));
+                    configuredEntries = indexed;
+                }
+            }
             // Bukkit 的 YAML 里「列表中的映射」不是 ConfigurationSection，而是 List<Map>。
-            // 只 instanceof ConfigurationSection 会让整张表静默变空——掉落全都不生效，
-            // 而且没有任何报错。所以两种形态都要接。
-            for (Object o : sec.getList("entries", List.of())) {
+            // 迁移器历史上还会输出带数字键的 ConfigurationSection，保持两种形式都可消费。
+            for (Object o : configuredEntries) {
                 idx++;
                 ConfigurationSection es;
+                boolean nullChance = o instanceof Map<?, ?> map
+                        && map.containsKey("chance") && map.get("chance") == null;
+                boolean nullConditions = o instanceof Map<?, ?> map
+                        && map.containsKey("conditions") && map.get("conditions") == null;
+                boolean nullExpression = o instanceof Map<?, ?> map
+                        && ((map.containsKey("chance-expression") && map.get("chance-expression") == null)
+                        || (map.containsKey("dynamic-chance") && map.get("dynamic-chance") == null));
+                boolean nullMinTier = o instanceof Map<?, ?> map
+                        && map.containsKey("min-tier-level") && map.get("min-tier-level") == null;
                 if (o instanceof ConfigurationSection cs) {
                     es = cs;
                 } else if (o instanceof Map<?, ?> map) {
@@ -174,13 +247,33 @@ public final class DropTable {
                 // （都是默认的 1.0，即 100% 必掉），amount_chance 拼错也同样变成必掉。
                 // 真服实测这两项都完全静默。
                 String where = "掉落表 " + name + " 第 " + idx + " 条";
-                int min = Math.max(1, YamlNums.i(es, "amount-min", 1, problems, where));
+                boolean hasExpression = es.contains("chance-expression");
+                boolean hasDynamic = es.contains("dynamic-chance");
+                Object expressionValue = hasExpression ? es.get("chance-expression") : es.get("dynamic-chance");
+                if (nullExpression || (hasExpression && hasDynamic)
+                        || ((hasExpression || hasDynamic) && (!(expressionValue instanceof String value)
+                        || value.isBlank() || value.equals(dev.helstera.api.util.ConditionListParser.INVALID_CONDITION)))) {
+                    problems.add(where + " has an invalid or ambiguous dynamic chance expression; entry skipped");
+                    continue;
+                }
+                int amount = es.contains("amount") ? YamlNums.i(es, "amount", 1, problems, where) : 1;
+                if (amount < 1) {
+                    problems.add(where + " amount 必须为正数，已使用 1");
+                    amount = 1;
+                }
+                int min = Math.max(1, YamlNums.i(es, "amount-min", amount, problems, where));
                 int max = Math.max(1, YamlNums.i(es, "amount-max", min, problems, where));
                 if (max < min) {
                     problems.add(where + " amount-max < amount-min，已交换");
                     int t = min;
                     min = max;
                     max = t;
+                }
+                if (nullChance || (es.contains("chance")
+                        && !Double.isFinite(YamlNums.d(es, "chance", Double.NaN, null, where)))) {
+                    problems.add(where + " chance = " + (nullChance ? "null" : es.get("chance"))
+                            + " 不是有效的有限数值，已跳过该掉落");
+                    continue;
                 }
                 double chance = YamlNums.chance(es, "chance", 1.0, problems, where);
                 Map<String, Integer> ench = new LinkedHashMap<>();
@@ -212,6 +305,11 @@ public final class DropTable {
                 // 分层权重：同样是「列表项里的映射」，沿用上面的形态兼容处理
                 List<Tier> tiers = new ArrayList<>();
                 for (Object to : secList(es, "tiers")) {
+                    if (to instanceof Map<?, ?> tierMap
+                            && tierMap.containsKey("weight") && tierMap.get("weight") == null) {
+                        problems.add(where + " 的 tiers weight = null 不是有效的有限数值，已跳过该档位");
+                        continue;
+                    }
                     ConfigurationSection ts = to instanceof ConfigurationSection cs
                             ? cs
                             : (to instanceof Map<?, ?> m ? asSection(m) : null);
@@ -219,31 +317,49 @@ public final class DropTable {
                         problems.add("掉落表 " + name + " 第 " + idx + " 条的 tiers 项不是映射，已跳过");
                         continue;
                     }
-                    int tMin = Math.max(1, ts.getInt("amount-min", 1));
-                    int tMax = Math.max(tMin, ts.getInt("amount-max", tMin));
-                    Tier tier = new Tier(tMin, tMax, ts.getDouble("weight", 1.0), ts.getString("note"));
+                    boolean nullRange = to instanceof Map<?, ?> tierMap
+                            && ((tierMap.containsKey("amount-min") && tierMap.get("amount-min") == null)
+                            || (tierMap.containsKey("amount-max") && tierMap.get("amount-max") == null));
+                    double rawMin = YamlNums.d(ts, "amount-min", ts.contains("amount-min") ? Double.NaN : 1, null, where);
+                    double rawMax = YamlNums.d(ts, "amount-max", ts.contains("amount-max") ? Double.NaN : rawMin, null, where);
+                    if (nullRange || !Double.isFinite(rawMin) || !Double.isFinite(rawMax)
+                            || rawMin < 1 || rawMax < rawMin || rawMax > Integer.MAX_VALUE
+                            || rawMin != Math.rint(rawMin) || rawMax != Math.rint(rawMax)) {
+                        problems.add(where + " 的 tiers amount range is invalid; tier skipped");
+                        continue;
+                    }
+                    int tMin = (int) rawMin;
+                    int tMax = (int) rawMax;
+                    double weight = YamlNums.d(ts, "weight", ts.contains("weight") ? Double.NaN : 1.0,
+                            null, where);
+                    if (!Double.isFinite(weight)) {
+                        problems.add(where + " 的 tiers weight = " + ts.get("weight")
+                                + " 不是有效的有限数值，已跳过该档位");
+                        continue;
+                    }
+                    Tier tier = new Tier(tMin, tMax, weight, ts.getString("note"));
                     if (!tier.valid()) {
-                        problems.add("掉落表 " + name + " 第 " + idx + " 条的档位 weight<=0 或区间非法，已跳过");
+                        problems.add("掉落表 " + name + " 第 " + idx + " 条的档位 weight<=0、非有限或区间非法，已跳过");
                         continue;
                     }
                     tiers.add(tier);
                 }
                 Integer minTier = null;
-                if (es.contains("min-tier-level")) {
-                    int v = es.getInt("min-tier-level");
-                    if (v > 0) minTier = v;
-                    else problems.add("掉落表 " + name + " 第 " + idx + " 条 min-tier-level 非正数，已忽略该门槛");
-                }
-                List<String> conditions = new ArrayList<>();
-                Object conditionRaw = es.get("conditions");
-                if (conditionRaw instanceof List<?> list) {
-                    for (Object condition : list) {
-                        if (condition != null && !String.valueOf(condition).isBlank()) {
-                            conditions.add(String.valueOf(condition).trim());
-                        }
+                if (nullMinTier || es.contains("min-tier-level")) {
+                    int v = nullMinTier ? Integer.MIN_VALUE
+                            : YamlNums.i(es, "min-tier-level", Integer.MIN_VALUE, null, where);
+                    if (v <= 0) {
+                        problems.add(where + " min-tier-level is invalid; entry skipped");
+                        continue;
                     }
-                } else if (conditionRaw != null && !String.valueOf(conditionRaw).isBlank()) {
-                    conditions.add(String.valueOf(conditionRaw).trim());
+                    minTier = v;
+                }
+                List<String> conditions;
+                if (nullConditions) {
+                    problems.add(where + " conditions contains an invalid condition; it will fail closed");
+                    conditions = List.of("");
+                } else {
+                    conditions = readConditions(es, "conditions", problems, where);
                 }
                 entries.add(new Entry(
                         item.trim(), min, max, chance,
@@ -258,8 +374,14 @@ public final class DropTable {
                         chanceExpression(es)));
             }
         }
-        int minItems = readItems(sec, "min-items", "minItems", problems, name);
-        int maxItems = readItems(sec, "max-items", "maxItems", problems, name);
+        int totalItems = readItems(sec, problems, name, "total-items", "totalItems", "TotalItems");
+        int minItems = readItems(sec, problems, name, "min-items", "minItems", "MinItems");
+        int maxItems = readItems(sec, problems, name, "max-items", "maxItems", "MaxItems");
+        double[] bonusLevelItems = readMultiplier(sec, problems, name,
+                "bonus-level-items", "bonusLevelItems", "BonusLevelItems");
+        double[] bonusLuckItems = readMultiplier(sec, problems, name,
+                "bonus-luck-items", "bonusLuckItems", "BonusLuckItems");
+        if (totalItems > 0 && maxItems == 0) maxItems = totalItems;
         if (minItems > 0 && maxItems > 0 && minItems > maxItems) {
             problems.add("掉落表 " + name + " min-items (" + minItems + ") > max-items ("
                     + maxItems + ")，已交换");
@@ -267,17 +389,73 @@ public final class DropTable {
             minItems = maxItems;
             maxItems = swap;
         }
+        if ((bonusLevelItems[1] > 0 || bonusLuckItems[1] > 0)
+                && totalItems == 0 && minItems == 0 && maxItems == 0) {
+            problems.add("掉落表 " + name + " BonusLevelItems/BonusLuckItems 需要配置 total-items、min-items 或 max-items；原值已保留，不应用加成");
+            bonusLevelItems = new double[] {0, 0};
+            bonusLuckItems = new double[] {0, 0};
+        }
         return new DropTable(name, luckFactor, entries, experienceMin, experienceMax,
-                minItems, maxItems);
+                totalItems, minItems, maxItems, bonusLevelItems[0], bonusLevelItems[1],
+                bonusLuckItems[0], bonusLuckItems[1],
+                readConditions(sec, "trigger-conditions", problems, "掉落表 " + name),
+                readConditions(sec, "conditions", problems, "掉落表 " + name));
+    }
+
+    private static double[] readMultiplier(ConfigurationSection sec, List<String> problems,
+                                           String tableName, String... keys) {
+        if (sec == null) return new double[] {0, 0};
+        String key = configuredKey(sec, keys);
+        if (key == null) return new double[] {0, 0};
+        String raw = String.valueOf(sec.get(key)).trim();
+        String[] parts = raw.split("(?i)to", -1);
+        if (parts.length < 1 || parts.length > 2) {
+            problems.add("掉落表 " + tableName + " " + key + " 范围格式无效，已忽略");
+            return new double[] {0, 0};
+        }
+        try {
+            double min = Double.parseDouble(parts[0].trim());
+            double max = parts.length == 1 ? min : Double.parseDouble(parts[1].trim());
+            if (!Double.isFinite(min) || !Double.isFinite(max) || min < 0 || max < min) {
+                throw new NumberFormatException("out of range");
+            }
+            return new double[] {min, max};
+        } catch (NumberFormatException ex) {
+            problems.add("掉落表 " + tableName + " " + key + " 必须是非负有限数值或递增范围，已忽略");
+            return new double[] {0, 0};
+        }
+    }
+
+    private static List<String> readConditions(ConfigurationSection sec, String path,
+                                               List<String> problems, String where) {
+        if (sec == null) return List.of();
+        List<String> conditions = new ArrayList<>();
+        Object raw = sec.get(path);
+        List<?> values = raw instanceof List<?> list ? list : raw == null ? List.of() : List.of(raw);
+        for (Object value : values) {
+            if (!(value instanceof String text) || text.isBlank()) {
+                problems.add(where + " " + path + " contains an invalid condition; it will fail closed");
+                conditions.add("");
+            } else {
+                List<String> parsed = dev.helstera.api.util.ConditionListParser.parseFailClosed(text);
+                for (String condition : parsed) {
+                    if (dev.helstera.api.util.ConditionListParser.INVALID_CONDITION.equals(condition)) {
+                        problems.add(where + " " + path + " contains an invalid condition; it will fail closed");
+                        conditions.add("");
+                    } else conditions.add(condition);
+                }
+            }
+        }
+        return List.copyOf(conditions);
     }
 
     /** 读整表件数约束；负数与非数字折成 0（= 不限制）并留告警。 */
-    private static int readItems(ConfigurationSection sec, String primary, String alias,
-                                 List<String> problems, String tableName) {
+    private static int readItems(ConfigurationSection sec, List<String> problems,
+                                 String tableName, String... keys) {
         // 空节（loot.yml 里只写了表名没写内容）应当按「不限制」处理，
         // 而不是让 contains() 抛 NPE 把整份掉落表带崩。
         if (sec == null) return 0;
-        String key = sec.contains(primary) ? primary : sec.contains(alias) ? alias : null;
+        String key = configuredKey(sec, keys);
         if (key == null) return 0;
         int value = YamlNums.i(sec, key, 0, problems, "掉落表 " + tableName);
         if (value < 0) {
@@ -285,6 +463,13 @@ public final class DropTable {
             return 0;
         }
         return value;
+    }
+
+    private static String configuredKey(ConfigurationSection sec, String... keys) {
+        for (String key : keys) {
+            if (sec.contains(key)) return key;
+        }
+        return null;
     }
 
     private static String chanceExpression(ConfigurationSection sec) {

@@ -46,13 +46,13 @@ class PluginRuntimeHookCleanupAuditTest {
     void persistentMobDeathReleasesRetainedChunk() throws Exception {
         String source = Files.readString(Path.of(
                 "src/main/java/dev/helstera/plugin/HelsteraPlugin.java"));
-        int death = source.indexOf("public void onEntityDeathForLoot(");
+        int death = source.indexOf("public void onConfirmedEntityDeath(");
         assertTrue(death >= 0, "death handler is missing");
         int bodyEnd = source.indexOf("\n    /**", death);
         assertTrue(bodyEnd > death, "death handler boundary is missing");
         String body = source.substring(death, bodyEnd);
         assertTrue(body.contains("releasePersistentMobChunk(e.getEntity())"),
-                "death must release the force-loaded chunk before loot early returns");
+                "confirmed death must release the force-loaded chunk");
 
         int release = source.indexOf("private void releasePersistentMobChunk(");
         assertTrue(release >= 0, "persistent chunk release helper is missing");

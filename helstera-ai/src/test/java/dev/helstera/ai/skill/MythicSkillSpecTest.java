@@ -3,6 +3,7 @@ package dev.helstera.ai.skill;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,6 +27,16 @@ class MythicSkillSpecTest {
         MythicSkillSpec spec = MythicSkillSpec.parse("message{m=\"hello; world\";loc=1,2,3}");
         assertEquals("hello; world", spec.arguments().get("m"));
         assertEquals("1,2,3", spec.arguments().get("loc"));
+    }
+
+    @Test
+    void escapedQuotedValuesPreserveDelimitersAndTargeter() {
+        var spec = MythicSkillSpec.parse("message{m=\"Say \\\"hello; x=1\\\" } C:\\\\home \\q\";delay=2} @trigger");
+        assertEquals("Say \"hello; x=1\" } C:\\home \\q", spec.arguments().get("m"));
+        assertEquals("2", spec.arguments().get("delay"));
+        assertEquals("trigger", spec.targeter());
+        var positional = MythicSkillSpec.parse("message-target \"Say \\\"hello\\\" C:\\\\home\" @trigger");
+        assertEquals(List.of("Say \"hello\" C:\\home"), positional.positional());
     }
 
     @Test
@@ -58,7 +69,38 @@ class MythicSkillSpecTest {
     @Test
     void rejectsMalformedInput() {
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage{amount=5"));
+        assertThrows(IllegalArgumentException.class,
+                () -> MythicSkillSpec.parse("damage{amount=5}garbage"));
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage 101%"));
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage -1%"));
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage NaN%"));
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage @self @target"));
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage 0% 100%"));
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage ~onAttack ~onDeath"));
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage ~on"));
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage ~unknown"));
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage 4 ?"));
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage 4 @"));
+        assertEquals("Attack", MythicSkillSpec.parse("damage ~ONAttack").trigger());
+    }
+
+    @Test
+    void acceptsFiniteDecimalAndScientificChancePercentages() {
+        assertEquals(0.5d, MythicSkillSpec.parse("damage .5%").chance());
+        assertEquals(10d, MythicSkillSpec.parse("damage 1e1%").chance());
+        assertEquals(100d, MythicSkillSpec.parse("damage +100%").chance());
+    }
+
+    @Test
+    void constructorEnforcesFiniteChanceBounds() {
+        for (double chance : List.of(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, -1d, 101d)) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new MythicSkillSpec("damage", Map.of(), List.of(), null, null, chance, List.of()));
+        }
+        for (double chance : List.of(0d, 50d, 100d)) {
+            assertEquals(chance,
+                    new MythicSkillSpec("damage", Map.of(), List.of(), null, null, chance, List.of()).chance());
+        }
     }
 }
 

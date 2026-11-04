@@ -33,6 +33,7 @@ public final class ModelInstanceImpl implements ModelInstance {
     private final SpawnOptions options;
     private volatile boolean valid = true;
     private Location lastLocation;
+    private Location spawnLocation;
 
     /** 当前采样姿态（boneName -> pose），由调度线程写、渲染线程读。 */
     private volatile Map<String, BonePose> pose = Map.of();
@@ -87,8 +88,17 @@ public final class ModelInstanceImpl implements ModelInstance {
         this.lastLocation = loc.clone();
     }
 
+    public void spawnLocationSet(Location location) {
+        this.spawnLocation = location == null ? null : location.clone();
+    }
+
     public Location lastLocation() {
         return lastLocation;
+    }
+
+    @Override
+    public Optional<Location> spawnLocation() {
+        return Optional.ofNullable(spawnLocation == null ? null : spawnLocation.clone());
     }
 
     /** 调度器同步落地状态到动画状态机。 */

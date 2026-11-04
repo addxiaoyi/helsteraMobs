@@ -113,6 +113,48 @@ class SkillActionsTest {
     }
 
     @Test
+    @DisplayName("block mechanics consume a location-valued target")
+    void blockActionsUseExplicitLocationTarget() {
+        World world = mock(World.class);
+        var block = mock(org.bukkit.block.Block.class);
+        when(world.getBlockAt(org.mockito.ArgumentMatchers.any(Location.class))).thenReturn(block);
+        BehaviorContext context = BehaviorContext.execution(null, null, 1, -1, 0,
+                "skill", null, null, List.of(), new Location(world, 0, 0, 0))
+                .withLocationTarget(new Location(world, 4.5, 5, 6.9));
+
+        SkillExtras.actions().get("set-block").create(List.of("STONE")).accept(context);
+        verify(block).setType(org.bukkit.Material.STONE, false);
+    }
+
+    @Test
+    void teleportActionsRejectInvalidLocationAndUseValidDestination() {
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(LivingEntity.class);
+        var target = mock(LivingEntity.class);
+        var world = mock(World.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        var context = BehaviorContext.continueExecution(instance, target, 1, 0, 0,
+                "skill", null, target, List.of(target), new Location(world, 0, 64, 0), null);
+
+        for (String name : List.of("teleport", "teleport-caster", "teleport-targets")) {
+            var action = name.equals("teleport-targets") ? factory(name) : SkillExtras.actions().get(name);
+            action.create(List.of("@location{x=NaN;y=2;z=3}")).accept(context);
+            action.create(List.of("@location{x=1;x=4;y=2;z=3}")).accept(context);
+        }
+        org.mockito.Mockito.verify(caster, org.mockito.Mockito.never())
+                .teleport(org.mockito.ArgumentMatchers.any(Location.class));
+        org.mockito.Mockito.verify(target, org.mockito.Mockito.never())
+                .teleport(org.mockito.ArgumentMatchers.any(Location.class));
+
+        SkillExtras.actions().get("teleport").create(List.of("@location{x=1;y=2;z=3}")).accept(context);
+        SkillExtras.actions().get("teleport-caster").create(List.of("@location{x=1;y=2;z=3}")).accept(context);
+        factory("teleport-targets").create(List.of("@location{x=1;y=2;z=3}")).accept(context);
+        verify(caster, org.mockito.Mockito.times(2)).teleport(new Location(world, 1, 2, 3));
+        verify(target).teleport(new Location(world, 1, 2, 3));
+    }
+
+    @Test
     @DisplayName("world weather and time mechanics use Bukkit world APIs")
     void worldMechanicsWriteWeatherAndTime() {
         var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);

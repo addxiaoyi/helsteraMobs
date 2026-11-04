@@ -99,10 +99,19 @@ public final class HelsteraCommand implements TabExecutor {
                     return;
                 }
             }
-            case "config" -> plugin.reloadConfig();
+            case "config" -> {
+                if (!plugin.reloadRuntimeConfig()) {
+                    s.sendMessage("§c配置重载失败，请检查 config.yml。");
+                    return;
+                }
+            }
             case "packs" -> plugin.buildResourcePack(true);
-            case "loot" -> plugin.reloadLootAndSpawners();
-            case "spawners" -> plugin.reloadLootAndSpawners();
+            case "loot", "spawners" -> {
+                if (!plugin.reloadLootAndSpawners()) {
+                    s.sendMessage("§c掉落表或刷怪点重载失败，请检查服务器日志。");
+                    return;
+                }
+            }
             case "items" -> plugin.reloadCustomItems();
             case "menus" -> {
                 if (!plugin.reloadCustomMenus()) {
@@ -116,7 +125,10 @@ public final class HelsteraCommand implements TabExecutor {
             // 那句话是错的——reload 既没有 skills 分支，all 里也不含它。
             case "skills" -> plugin.reloadSkills("命令行");
             case "all" -> {
-                plugin.reloadConfig();
+                if (!plugin.reloadRuntimeConfig()) {
+                    s.sendMessage("§c配置重载失败，请检查 config.yml。");
+                    return;
+                }
                 // reloadModels() 内部会在模型加载完成（whenComplete）时构建资源包，
                 //
                 // 此处**不能**再调 buildResourcePack(true)：一是重复（每次 reload 都会
@@ -125,7 +137,10 @@ public final class HelsteraCommand implements TabExecutor {
                 // 真服日志里能直接看到这个现象：12 文件与 2 文件各构建一次。
                 // 下发给在线玩家由 reloadModels(true) 在正确的时机做。
                 plugin.reloadModels(true);
-                plugin.reloadLootAndSpawners();
+                if (!plugin.reloadLootAndSpawners()) {
+                    s.sendMessage("§c掉落表或刷怪点重载失败，请检查服务器日志。");
+                    return;
+                }
                 plugin.reloadCustomMenus();
                 plugin.reloadCustomItems();
                 // skills.yml 同样要进 all：它是独立文件，前面的 reload config
@@ -1498,7 +1513,10 @@ var ai = plugin.ai();
                 return;
             }
             case "reload" -> {
-                plugin.reloadLootAndSpawners();
+                if (!plugin.reloadLootAndSpawners()) {
+                    s.sendMessage("§c掉落表或刷怪点重载失败，请检查服务器日志。");
+                    return;
+                }
                 s.sendMessage("§a已重载 spawners.yml，当前 " + service.size() + " 个刷怪点");
                 return;
             }

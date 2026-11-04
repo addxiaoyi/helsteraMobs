@@ -1,0 +1,1423 @@
+{
+  "catalogVersion": 1,
+  "paperVersion": "1.21.1",
+  "probes": [
+    {
+      "id": "webSpawnerReload",
+      "status": "passed",
+      "requiredObservation": "web-reload invalid=false restored=true server-thread=true"
+    },
+    {
+      "id": "absorptionCondition",
+      "status": "passed"
+    },
+    {
+      "id": "ageOptions",
+      "status": "passed"
+    },
+    {
+      "id": "aiPriority",
+      "status": "passed"
+    },
+    {
+      "id": "aiPriorityTargets",
+      "status": "passed"
+    },
+    {
+      "id": "aiRoute",
+      "status": "passed"
+    },
+    {
+      "id": "aiSelectorCore",
+      "status": "passed",
+      "requiredObservationContains": "targeter-syntax=true"
+    },
+    {
+      "id": "airLevelCondition",
+      "status": "passed"
+    },
+    {
+      "id": "armorOptions",
+      "status": "passed"
+    },
+    {
+      "id": "armorStand",
+      "status": "passed"
+    },
+    {
+      "id": "attackerTargeter",
+      "status": "passed"
+    },
+    {
+      "id": "attributes",
+      "status": "passed"
+    },
+    {
+      "id": "audience-filter-delivery",
+      "status": "passed"
+    },
+    {
+      "id": "audience-player-delivery",
+      "status": "passed"
+    },
+    {
+      "id": "audienceDispatch",
+      "status": "passed"
+    },
+    {
+      "id": "auraStacksCondition",
+      "status": "passed"
+    },
+    {
+      "id": "bedLifecycle",
+      "status": "passed"
+    },
+    {
+      "id": "bee",
+      "status": "passed"
+    },
+    {
+      "id": "biomeCondition",
+      "status": "passed"
+    },
+    {
+      "id": "biomeImported",
+      "status": "passed"
+    },
+    {
+      "id": "invalidConditionsImported",
+      "status": "passed"
+    },
+    {
+      "id": "blockBreakAction",
+      "status": "passed"
+    },
+    {
+      "id": "blockEvents",
+      "status": "passed"
+    },
+    {
+      "id": "blockSetAction",
+      "status": "passed"
+    },
+    {
+      "id": "boundingBoxOverlapCondition",
+      "status": "passed"
+    },
+    {
+      "id": "boundsCondition",
+      "status": "passed"
+    },
+    {
+      "id": "bowTensionCondition",
+      "status": "passed"
+    },
+    {
+      "id": "cancelledCondition",
+      "status": "passed"
+    },
+    {
+      "id": "casterPermission",
+      "status": "passed"
+    },
+    {
+      "id": "cat",
+      "status": "passed"
+    },
+    {
+      "id": "chanceCondition",
+      "status": "passed"
+    },
+    {
+      "id": "clearFireAction",
+      "status": "passed"
+    },
+    {
+      "id": "clearInventoryMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "compareValuesCondition",
+      "status": "passed"
+    },
+    {
+      "id": "conditionCatalog",
+      "status": "passed"
+    },
+    {
+      "id": "contextTargeterChain",
+      "status": "passed"
+    },
+    {
+      "id": "contextTargeterControls",
+      "status": "passed"
+    },
+    {
+      "id": "targeterArgumentValidation",
+      "status": "passed",
+      "requiredObservation": "targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true invalid-filter=true"
+    },
+    {
+      "id": "locationTargeterDispatch",
+      "status": "passed",
+      "requiredObservation": "location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true"
+    },
+    {
+      "id": "variableLocationDispatch",
+      "status": "passed",
+      "requiredObservation": "variable-location-dispatch valid=true invalid-rejected=true import-preserved=true"
+    },
+    {
+      "id": "explosionLocationDispatch",
+      "status": "passed",
+      "requiredObservation": "explosion-location-dispatch valid=true missing-rejected=true"
+    },
+    {
+      "id": "dropItemLocation",
+      "status": "passed",
+      "requiredObservation": "drop-item-location valid=true invalid-rejected=true missing-rejected=true"
+    },
+    {
+      "id": "dropItemImported",
+      "status": "passed",
+      "requiredObservation": "drop-item-import valid=true missing-rejected=true invalid-preserved=true"
+    },
+    {
+      "id": "dropItemNaturalImported",
+      "status": "passed",
+      "requiredObservation": "drop-item-natural-import exact=true invalid-preserved=true"
+    },
+    {
+      "id": "dropItemInlineImported",
+      "status": "passed",
+      "requiredObservation": "drop-item-inline-import valid=true invalid-preserved=true dynamic=true missing-rejected=true"
+    },
+    {
+      "id": "dropItemListImported",
+      "status": "passed",
+      "requiredObservation": "drop-item-list-import valid=true invalid-preserved=true"
+    },
+    {
+      "id": "importedMessageClient",
+      "status": "passed",
+      "requiredObservation": "imported-message-client dispatched=true client-exact=true"
+    },
+    {
+      "id": "importedEscapedMessageClient",
+      "status": "passed",
+      "requiredObservation": "imported-escaped-message-client dispatched=true client-exact=true"
+    },
+    {
+      "id": "importedSkillReference",
+      "status": "passed",
+      "requiredObservation": "imported-skill-reference valid=true rejected=true preserved=true warnings=true"
+    },
+    {
+      "id": "importedSkillTiming",
+      "status": "passed",
+      "requiredObservation": "imported-skill-timing submitted=true before-delay=true first=true repeated=true invalid-rejected=true preserved=true warnings=true duplicate-rejected=true mechanic-preserved=true positional-chance=true positional-condition=true suffix-rejected=true"
+    },
+    {
+      "id": "unroutedEventSuffix",
+      "status": "passed",
+      "requiredObservation": "unrouted-event-suffix rejected=true warnings=true"
+    },
+    {
+      "id": "eventSuffixVariants",
+      "status": "passed",
+      "requiredObservation": "event-suffix-variants rejected=true warnings=true literal=true"
+    },
+    {
+      "id": "orphanSuffix",
+      "status": "passed",
+      "requiredObservation": "orphan-suffix preserved=true warnings=true rejected=true unchanged=true"
+    },
+    {
+      "id": "conditionFailureClosed",
+      "status": "passed",
+      "requiredObservation": "condition-failure-closed bound=true blocked=true control=true"
+    },
+    {
+      "id": "namedConditionFailureClosed",
+      "status": "passed",
+      "requiredObservation": "named-condition-failure-closed bound=true blocked=true control=true"
+    },
+    {
+      "id": "namedSkillReload",
+      "status": "passed",
+      "requiredObservation": "named-skill-reload bound=true initial=true blocked=true restored=true"
+    },
+    {
+      "id": "namedSkillReference",
+      "status": "passed",
+      "requiredObservation": "named-skill-reference forward=true missing-rejected=true cycle-blocked=true"
+    },
+    {
+      "id": "conditionComposition",
+      "status": "passed"
+    },
+    {
+      "id": "conditionHasOwner",
+      "status": "passed"
+    },
+    {
+      "id": "conditionHasTag",
+      "status": "passed"
+    },
+    {
+      "id": "conditionIsChild",
+      "status": "passed"
+    },
+    {
+      "id": "conditionLeashed",
+      "status": "passed"
+    },
+    {
+      "id": "conditionMobility",
+      "status": "passed"
+    },
+    {
+      "id": "conditionUtilityAliases",
+      "status": "passed"
+    },
+    {
+      "id": "consumeSlotMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "cooldownMechanics",
+      "status": "passed"
+    },
+    {
+      "id": "creeper",
+      "status": "passed"
+    },
+    {
+      "id": "creeperNaturalFuse",
+      "status": "passed"
+    },
+    {
+      "id": "creeperPrimedCondition",
+      "status": "passed"
+    },
+    {
+      "id": "custom-menu-player-workflow",
+      "status": "passed"
+    },
+    {
+      "id": "customItemResolver",
+      "status": "passed"
+    },
+    {
+      "id": "customOwnerRelation",
+      "status": "passed"
+    },
+    {
+      "id": "damageCauseCondition",
+      "status": "passed"
+    },
+    {
+      "id": "damageMeleeMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "damageOptions",
+      "status": "passed"
+    },
+    {
+      "id": "damageTagCondition",
+      "status": "passed"
+    },
+    {
+      "id": "deathLootBonuses",
+      "status": "passed"
+    },
+    {
+      "id": "deathLootConditions",
+      "status": "passed"
+    },
+    {
+      "id": "deathLootDropperConditions",
+      "status": "passed"
+    },
+    {
+      "id": "deathLootDynamicChance",
+      "status": "passed"
+    },
+    {
+      "id": "deathLootExperience",
+      "status": "passed"
+    },
+    {
+      "id": "deathLootGeneratedLines",
+      "status": "passed"
+    },
+    {
+      "id": "deathLootImportedDropTable",
+      "status": "passed"
+    },
+    {
+      "id": "deathLootItems",
+      "status": "passed"
+    },
+    {
+      "id": "dropNullConditions",
+      "status": "passed",
+      "requiredObservation": "drop-null-conditions rejected=true warnings=true sibling=true"
+    },
+    {
+      "id": "dropUnsafeReferences",
+      "status": "passed",
+      "requiredObservation": "drop-unsafe-references warnings=true stale-rejected=true"
+    },
+    {
+      "id": "dropMergedNull",
+      "status": "passed",
+      "requiredObservation": "drop-merged-null rejected=true warnings=true stale-rejected=true"
+    },
+    {
+      "id": "dropChanceImported",
+      "status": "passed",
+      "requiredObservation": "drop-chance-imported rejected=true warnings=true"
+    },
+    {
+      "id": "dropNativeNullConditions",
+      "status": "passed",
+      "requiredObservation": "drop-native-null-conditions rejected=true sibling=true warnings=true"
+    },
+    {
+      "id": "dropNativeNullNumeric",
+      "status": "passed",
+      "requiredObservation": "drop-native-null-numeric rejected=true fallback=true overrides=true warnings=true"
+    },
+    {
+      "id": "dropNativeDynamic",
+      "status": "passed",
+      "requiredObservation": "drop-native-dynamic rejected=true warnings=true"
+    },
+    {
+      "id": "dropNativeTier",
+      "status": "passed",
+      "requiredObservation": "drop-native-tier rejected=true warnings=true"
+    },
+    {
+      "id": "dropNativeTierRange",
+      "status": "passed",
+      "requiredObservation": "drop-native-tier-range valid=true fallback=true warnings=true"
+    },
+    {
+      "id": "deathLootTriggerConditions",
+      "status": "passed"
+    },
+    {
+      "id": "despawnOptions",
+      "status": "passed"
+    },
+    {
+      "id": "distanceFromSpawnCondition",
+      "status": "passed"
+    },
+    {
+      "id": "dotMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "dynamicPlaceholderAction",
+      "status": "passed"
+    },
+    {
+      "id": "ejectPassenger",
+      "status": "passed"
+    },
+    {
+      "id": "enderDragonAliveCondition",
+      "status": "passed"
+    },
+    {
+      "id": "enderDragonPhaseCondition",
+      "status": "passed"
+    },
+    {
+      "id": "endermanHeldBlock",
+      "status": "passed"
+    },
+    {
+      "id": "entityConfigFlags",
+      "status": "passed"
+    },
+    {
+      "id": "entityFlagOptions",
+      "status": "passed"
+    },
+    {
+      "id": "entityItemSimilarCondition",
+      "status": "passed"
+    },
+    {
+      "id": "entityItemTypeCondition",
+      "status": "passed"
+    },
+    {
+      "id": "entitySizeRange",
+      "status": "passed"
+    },
+    {
+      "id": "entityStateConditions",
+      "status": "passed"
+    },
+    {
+      "id": "entityTargetBukkit",
+      "status": "passed"
+    },
+    {
+      "id": "entityTargetDelayed",
+      "status": "passed"
+    },
+    {
+      "id": "entityTargetSynthetic",
+      "status": "passed"
+    },
+    {
+      "id": "environmentalDamage",
+      "status": "passed"
+    },
+    {
+      "id": "events",
+      "status": "passed"
+    },
+    {
+      "id": "expNaturalDeath",
+      "status": "passed",
+      "requiredObservation": "exp-natural-death result=true dead=true experience=13 cause=BukkitDamage"
+    },
+    {
+      "id": "expOptions",
+      "status": "passed"
+    },
+    {
+      "id": "expTierDeath",
+      "status": "passed",
+      "requiredObservation": "exp-tier-death result=true low=2 qualified=7 low-dead=true qualified-dead=true low-bread=4 qualified-bread=4"
+    },
+    {
+      "id": "reviveNatural",
+      "status": "passed"
+    },
+    {
+      "id": "reviveLate",
+      "status": "passed"
+    },
+    {
+      "id": "damageImported",
+      "status": "passed"
+    },
+    {
+      "id": "immunityImported",
+      "status": "passed",
+      "requiredObservation": "immunity-imported result=true reduced=true condition-rejected=true invalid-rejected=true"
+    },
+    {
+      "id": "immunityNativeInvalid",
+      "status": "passed",
+      "requiredObservation": "immunity-native-invalid result=true false-rejected=true null-rejected=true unknown-rejected=true null-modifier-rejected=true"
+    },
+    {
+      "id": "immunityInvalidFields",
+      "status": "passed",
+      "requiredObservation": "immunity-invalid-fields null-immunity=true null-modifier-field=true unknown-modifier-field=true invalid-immune=true null-immune=true"
+    },
+    {
+      "id": "immunityPreservation",
+      "status": "passed",
+      "requiredObservation": "immunity-preservation nested-preserved=true nested-closed=true list-null-preserved=true list-null-closed=true"
+    },
+    {
+      "id": "conditionArguments",
+      "status": "passed",
+      "requiredObservation": "condition-arguments living-rejected=true baby-valid=true baby-rejected=true frozen-valid=true frozen-rejected=true warnings=true"
+    },
+    {
+      "id": "conditionStateArguments",
+      "status": "passed",
+      "requiredObservation": "condition-state-arguments valid=true movement-rejected=true category-rejected=true alive-rejected=true negated-rejected=true preserved=true warnings=true"
+    },
+    {
+      "id": "targetSneakingMob",
+      "status": "passed",
+      "requiredObservation": "target-sneaking-mob false-rejected=true true-passed=true"
+    },
+    {
+      "id": "timeWeatherArguments",
+      "status": "passed",
+      "requiredObservation": "time-weather-arguments time-valid=true time-opposite=true weather-valid=true weather-opposite=true time-rejected=true rain-rejected=true negated-rejected=true preserved=true warnings=true"
+    },
+    {
+      "id": "visibilityStateArguments",
+      "status": "passed",
+      "requiredObservation": "visibility-state-arguments valid=true rejected=true preserved=true warnings=true"
+    },
+    {
+      "id": "factionConditions",
+      "status": "passed"
+    },
+    {
+      "id": "factionMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "fallingBlock",
+      "status": "passed"
+    },
+    {
+      "id": "fishTrigger",
+      "status": "passed"
+    },
+    {
+      "id": "followRangeOptions",
+      "status": "passed"
+    },
+    {
+      "id": "foodLevelCondition",
+      "status": "passed"
+    },
+    {
+      "id": "foodSaturationCondition",
+      "status": "passed"
+    },
+    {
+      "id": "forcePullMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "freeInventorySlotCondition",
+      "status": "passed"
+    },
+    {
+      "id": "frozenCondition",
+      "status": "passed"
+    },
+    {
+      "id": "gameplayPlaceholders",
+      "status": "passed"
+    },
+    {
+      "id": "giveItemAction",
+      "status": "passed"
+    },
+    {
+      "id": "globalScoreCondition",
+      "status": "passed"
+    },
+    {
+      "id": "hasItemCondition",
+      "status": "passed"
+    },
+    {
+      "id": "healthAbsorptionCondition",
+      "status": "passed"
+    },
+    {
+      "id": "healthImportedCondition",
+      "status": "passed"
+    },
+    {
+      "id": "healthRangeImportedCondition",
+      "status": "passed"
+    },
+    {
+      "id": "comparisonBoundaryImportedCondition",
+      "status": "passed"
+    },
+    {
+      "id": "targetHealthImportedCondition",
+      "status": "passed"
+    },
+    {
+      "id": "environmentImportedCondition",
+      "status": "passed"
+    },
+    {
+      "id": "healthOptions",
+      "status": "passed"
+    },
+    {
+      "id": "horse",
+      "status": "passed"
+    },
+    {
+      "id": "invulnerableCondition",
+      "status": "passed"
+    },
+    {
+      "id": "isSkillCondition",
+      "status": "passed"
+    },
+    {
+      "id": "itemAttributes",
+      "status": "passed"
+    },
+    {
+      "id": "itemLifecycle",
+      "status": "passed"
+    },
+    {
+      "id": "itemPickup",
+      "status": "passed"
+    },
+    {
+      "id": "itemRechargingCondition",
+      "status": "passed"
+    },
+    {
+      "id": "itemSimilarCondition",
+      "status": "passed"
+    },
+    {
+      "id": "itemTypeCondition",
+      "status": "passed"
+    },
+    {
+      "id": "jumpMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "killTrigger",
+      "status": "passed"
+    },
+    {
+      "id": "knockbackResistanceOptions",
+      "status": "passed"
+    },
+    {
+      "id": "lastDamageCauseCondition",
+      "status": "passed"
+    },
+    {
+      "id": "leashLifecycle",
+      "status": "passed"
+    },
+    {
+      "id": "levelCondition",
+      "status": "passed"
+    },
+    {
+      "id": "levelMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "lightningMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "lineOfSightFromOriginCondition",
+      "status": "passed"
+    },
+    {
+      "id": "lineTargeterParameters",
+      "status": "passed"
+    },
+    {
+      "id": "lookAtAction",
+      "status": "passed"
+    },
+    {
+      "id": "lookingAtCondition",
+      "status": "passed"
+    },
+    {
+      "id": "lootDynamicChance",
+      "status": "passed"
+    },
+    {
+      "id": "lootMaterialization",
+      "status": "passed"
+    },
+    {
+      "id": "lunarPhaseCondition",
+      "status": "passed"
+    },
+    {
+      "id": "materialCooldownMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "maxCombatDistance",
+      "status": "passed"
+    },
+    {
+      "id": "mobOptionsMountEvent",
+      "status": "passed"
+    },
+    {
+      "id": "mobOptionsNatural",
+      "status": "passed"
+    },
+    {
+      "id": "mobOptionsSlimeSplit",
+      "status": "passed"
+    },
+    {
+      "id": "mobPickupOption",
+      "status": "passed"
+    },
+    {
+      "id": "mobsInChunkCondition",
+      "status": "passed"
+    },
+    {
+      "id": "modelDisplay",
+      "status": "passed"
+    },
+    {
+      "id": "motionConditions",
+      "status": "passed"
+    },
+    {
+      "id": "movementSpeedOptions",
+      "status": "passed"
+    },
+    {
+      "id": "mythicMobTypeCondition",
+      "status": "passed"
+    },
+    {
+      "id": "nameCondition",
+      "status": "passed"
+    },
+    {
+      "id": "originLocationCondition",
+      "status": "passed"
+    },
+    {
+      "id": "ownerOnlineCondition",
+      "status": "passed"
+    },
+    {
+      "id": "ownerTargeter",
+      "status": "passed"
+    },
+    {
+      "id": "oxygenMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "parentDerivedConditions",
+      "status": "passed"
+    },
+    {
+      "id": "parentRelation",
+      "status": "passed"
+    },
+    {
+      "id": "pathfinderClear",
+      "status": "passed"
+    },
+    {
+      "id": "pathfinderStopCalls",
+      "status": "passed"
+    },
+    {
+      "id": "pinConditions",
+      "status": "passed"
+    },
+    {
+      "id": "pinTargeters",
+      "status": "passed"
+    },
+    {
+      "id": "playerActions",
+      "status": "passed"
+    },
+    {
+      "id": "playerExperienceMechanics",
+      "status": "passed"
+    },
+    {
+      "id": "playerKillTrigger",
+      "status": "passed"
+    },
+    {
+      "id": "playerKillsCondition",
+      "status": "passed"
+    },
+    {
+      "id": "playerPotionConsume",
+      "status": "passed"
+    },
+    {
+      "id": "playerPotionEvents",
+      "status": "passed"
+    },
+    {
+      "id": "playerPotionNaturalExpiry",
+      "status": "passed"
+    },
+    {
+      "id": "playerRadiusConditions",
+      "status": "passed"
+    },
+    {
+      "id": "potionEffectCondition",
+      "status": "passed"
+    },
+    {
+      "id": "potionEffectEndTrigger",
+      "status": "passed"
+    },
+    {
+      "id": "potionNaturalExpiry",
+      "status": "passed"
+    },
+    {
+      "id": "projectileHasEndedCondition",
+      "status": "passed"
+    },
+    {
+      "id": "quitTrigger",
+      "status": "passed"
+    },
+    {
+      "id": "raiderPatrolLeaderCondition",
+      "status": "passed"
+    },
+    {
+      "id": "random-spawn-distribution",
+      "status": "passed"
+    },
+    {
+      "id": "rawExperienceMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "removeHeldItemMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "rotationAction",
+      "status": "passed"
+    },
+    {
+      "id": "scaleOptions",
+      "status": "passed"
+    },
+    {
+      "id": "scoreCondition",
+      "status": "passed"
+    },
+    {
+      "id": "scoreMechanics",
+      "status": "passed"
+    },
+    {
+      "id": "scoreboardTagMechanics",
+      "status": "passed"
+    },
+    {
+      "id": "setAbsorptionMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "setAiAction",
+      "status": "passed"
+    },
+    {
+      "id": "setArmorMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "setCollidableAction",
+      "status": "passed"
+    },
+    {
+      "id": "setFireAction",
+      "status": "passed"
+    },
+    {
+      "id": "setGameModeMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "setGravityAction",
+      "status": "passed"
+    },
+    {
+      "id": "setOffhandMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "setSilentAction",
+      "status": "passed"
+    },
+    {
+      "id": "shearTrigger",
+      "status": "passed"
+    },
+    {
+      "id": "sheep",
+      "status": "passed"
+    },
+    {
+      "id": "signalMechanics",
+      "status": "passed"
+    },
+    {
+      "id": "skillDropItem",
+      "status": "passed"
+    },
+    {
+      "id": "skillEquipment",
+      "status": "passed"
+    },
+    {
+      "id": "skillPotion",
+      "status": "passed"
+    },
+    {
+      "id": "skillScheduling",
+      "status": "passed"
+    },
+    {
+      "id": "skillTeleport",
+      "status": "passed"
+    },
+    {
+      "id": "skillTeleportCoordinates",
+      "status": "passed"
+    },
+    {
+      "id": "skillTreeBranches",
+      "status": "passed"
+    },
+    {
+      "id": "skillTreeCastPersistence",
+      "status": "passed"
+    },
+    {
+      "id": "skillTreeQueueSnapshot",
+      "status": "passed"
+    },
+    {
+      "id": "skillLifecycleCleanup",
+      "status": "passed"
+    },
+    {
+      "id": "skillTrigger",
+      "status": "passed"
+    },
+    {
+      "id": "spatialTargeters",
+      "status": "passed"
+    },
+    {
+      "id": "spatialTargetersBoundaries",
+      "status": "passed"
+    },
+    {
+      "id": "spatialTargetersNegative",
+      "status": "passed"
+    },
+    {
+      "id": "spawnOptionRuntime",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:biome_desert_pass",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:biome_plains_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:border_clipped_inside_pass",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:border_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "no valid spawn location"
+    },
+    {
+      "id": "spawner:border_outside_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "no valid spawn location"
+    },
+    {
+      "id": "spawner:condition_combo_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:condition_combo_pass",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:condition_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:condition_pass",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:null_condition_base",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:null_condition_merged",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:null_condition_override",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:ground_missing_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "no valid spawn location"
+    },
+    {
+      "id": "spawner:group_probe",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:heightmap_ground_pass",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:integration_test",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:light_unloaded_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:lunar_probe",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:max_spawn_probe",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:negated_height_pass",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:negated_invalid_height_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:negated_invalid_light_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:negated_invalid_biome_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:negated_invalid_moon_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:negated_invalid_world_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:negated_named_world_pass",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:natural_ground_pass",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:player_gate_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "player gate closed"
+    },
+    {
+      "id": "spawner:player_limit_probe",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:random_distribution_probe",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:recycle_probe",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:region_probe",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:region_probe_outside",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:scoped_limit_probe",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:time_window_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:time_window_pass",
+      "status": "passed"
+    },
+    {
+      "id": "spawner:unloaded_chunk_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "no valid spawn location"
+    },
+    {
+      "id": "spawner:weather_rain_fail",
+      "status": "observed-rejected",
+      "rejectionReason": "conditions rejected location"
+    },
+    {
+      "id": "spawner:weather_rain_pass",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerBorderClipped",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerBorderOutside",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerCooldown",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerFailureCooldown",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerGroundRestored",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerGroup",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerHeightmap",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerLightFailClosed",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerLunar",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerMaxSpawns",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerNaturalGroup",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerNaturalTiming",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerPlayerLimits",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerRecycle",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerRegion",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerRegionOutside",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerScopedLimits",
+      "status": "passed"
+    },
+    {
+      "id": "spawnerUnloadedChunk",
+      "status": "passed"
+    },
+    {
+      "id": "spawningDistanceOptions",
+      "status": "passed"
+    },
+    {
+      "id": "spawningDistanceRuntime",
+      "status": "passed"
+    },
+    {
+      "id": "spyglassCondition",
+      "status": "passed"
+    },
+    {
+      "id": "stateBlocking",
+      "status": "passed"
+    },
+    {
+      "id": "stateConditions",
+      "status": "passed"
+    },
+    {
+      "id": "stringEmptyCondition",
+      "status": "passed"
+    },
+    {
+      "id": "stringEqualsCondition",
+      "status": "passed"
+    },
+    {
+      "id": "structureCondition",
+      "status": "passed"
+    },
+    {
+      "id": "survivalModeCondition",
+      "status": "passed"
+    },
+    {
+      "id": "takeItemAction",
+      "status": "passed"
+    },
+    {
+      "id": "tameBreed",
+      "status": "passed"
+    },
+    {
+      "id": "targetBlockedCondition",
+      "status": "passed"
+    },
+    {
+      "id": "targetCategories",
+      "status": "passed"
+    },
+    {
+      "id": "targetEnvironmentalConditions",
+      "status": "passed"
+    },
+    {
+      "id": "targetFluidConditions",
+      "status": "passed"
+    },
+    {
+      "id": "targetHasTagCondition",
+      "status": "passed"
+    },
+    {
+      "id": "targetHealthComparators",
+      "status": "passed"
+    },
+    {
+      "id": "targetInvulnerable",
+      "status": "passed"
+    },
+    {
+      "id": "targetKillMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "targetStateConditions",
+      "status": "passed"
+    },
+    {
+      "id": "targeterControls",
+      "status": "passed"
+    },
+    {
+      "id": "targeterControlsNegative",
+      "status": "passed"
+    },
+    {
+      "id": "targeterSorts",
+      "status": "passed"
+    },
+    {
+      "id": "targetsCondition",
+      "status": "passed"
+    },
+    {
+      "id": "tempt",
+      "status": "passed"
+    },
+    {
+      "id": "threatActions",
+      "status": "passed"
+    },
+    {
+      "id": "threatFactionFilters",
+      "status": "passed"
+    },
+    {
+      "id": "threatTargeter",
+      "status": "passed"
+    },
+    {
+      "id": "timeMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "timeWeather",
+      "status": "passed"
+    },
+    {
+      "id": "tradeTrigger",
+      "status": "passed"
+    },
+    {
+      "id": "triggerBlockTypeCondition",
+      "status": "passed"
+    },
+    {
+      "id": "variableContainsCondition",
+      "status": "passed"
+    },
+    {
+      "id": "vehicleEvents",
+      "status": "passed"
+    },
+    {
+      "id": "visibilityOptions",
+      "status": "passed"
+    },
+    {
+      "id": "weatherMechanic",
+      "status": "passed"
+    },
+    {
+      "id": "worldBiome",
+      "status": "passed"
+    },
+    {
+      "id": "worldBiomeReject",
+      "status": "passed"
+    }
+  ]
+}

@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -115,6 +116,26 @@ class EntityStateConditionTest {
     }
 
     @Test
+    void targetIsLeashedChecksTheExplicitTarget() {
+        Wolf wolf = mock(Wolf.class);
+        when(wolf.isLeashed()).thenReturn(true);
+        assertTrue(condition("target-is-leashed").test(context(wolf)));
+        when(wolf.isLeashed()).thenReturn(false);
+        assertFalse(condition("target-is-leashed").test(context(wolf)));
+        assertFalse(condition("target-is-leashed").test(context(null)));
+    }
+
+    @Test
+    void targetIsSneakingChecksNonPlayerLivingEntities() {
+        Wolf wolf = mock(Wolf.class);
+        when(wolf.isSneaking()).thenReturn(true);
+        assertTrue(condition("target-is-sneaking").test(context(wolf)));
+        when(wolf.isSneaking()).thenReturn(false);
+        assertFalse(condition("target-is-sneaking").test(context(wolf)));
+        assertFalse(condition("target-is-sneaking").test(context(null)));
+    }
+
+    @Test
     void hasOwnerChecksVanillaTameableOwnership() {
         Wolf wolf = mock(Wolf.class);
         when(wolf.getOwner()).thenReturn(mock(org.bukkit.entity.AnimalTamer.class));
@@ -123,6 +144,17 @@ class EntityStateConditionTest {
         when(wolf.getOwner()).thenReturn(null);
         assertFalse(condition("has-owner").test(context(wolf)));
         assertFalse(condition("has-owner").test(context(null)));
+    }
+
+    @Test
+    void targetOwnerConditionsUseTheExplicitTarget() {
+        Wolf wolf = mock(Wolf.class);
+        org.bukkit.entity.Player player = mock(org.bukkit.entity.Player.class);
+        when(wolf.getOwner()).thenReturn(player);
+        assertTrue(condition("target-has-owner").test(context(wolf)));
+        assertTrue(condition("target-owner-is-player").test(context(wolf)));
+        assertFalse(condition("target-has-owner").test(context(null)));
+        assertFalse(condition("target-owner-is-player").test(context(null)));
     }
 
     @Test
@@ -221,6 +253,22 @@ class EntityStateConditionTest {
         assertTrue(condition("falling").test(ctx));
         assertTrue(condition("drowning").test(ctx));
         assertTrue(condition("has-auras").test(ctx));
+    }
+
+    @Test
+    void drowningComparatorValidatesAtBindAndEvaluatesRemainingAir() {
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity entity = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(entity));
+        when(entity.getRemainingAir()).thenReturn(80);
+        BehaviorContext ctx = BehaviorContext.of(instance, (LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+
+        assertTrue(SkillExtras.conditions().get("drowning").create(List.of("<=100")).test(ctx));
+        assertFalse(SkillExtras.conditions().get("drowning").create(List.of(">100")).test(ctx));
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillExtras.conditions().get("drowning").create(List.of(">NaN")));
     }
 
     @Test

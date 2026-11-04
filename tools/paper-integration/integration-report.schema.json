@@ -24,6 +24,7 @@
     "paperVersion": { "type": ["string", "null"] },
     "paperApiVersion": { "type": ["string", "null"] },
     "pluginEnabled": { "type": "boolean" },
+    "pluginSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "log": { "type": "string", "minLength": 1 },
     "expectedProbeIds": {
       "type": "array",

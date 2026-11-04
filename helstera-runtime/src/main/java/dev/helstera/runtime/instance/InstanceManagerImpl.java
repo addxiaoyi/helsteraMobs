@@ -52,6 +52,7 @@ public final class InstanceManagerImpl implements InstanceManager {
         ModelInstanceImpl inst = createInstance((ModelDefinitionImpl) def, null, options);
         Location loc = location.clone();
         inst.lastLocationSet(loc);
+        inst.spawnLocationSet(loc);
         renderer.createVisuals(inst, loc, options);
         renderer.updateTransforms(inst);
         // 不在这里 post ModelSpawnEvent：spawnMobCore 会在 ai().attach() 之后统一派发，
@@ -64,6 +65,7 @@ public final class InstanceManagerImpl implements InstanceManager {
         ModelDefinition def = requireModel(modelId);
         ModelInstanceImpl inst = createInstance((ModelDefinitionImpl) def, entity, options);
         inst.lastLocationSet(entity.getLocation());
+        inst.spawnLocationSet(entity.getLocation());
         renderer.createVisuals(inst, entity.getLocation(), options);
         renderer.updateTransforms(inst);
         // 同上：不在这里 post ModelSpawnEvent

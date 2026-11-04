@@ -3,6 +3,7 @@ package dev.helstera.migration.importer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * MythicMobs 条件叶子 → helstera 条件名的映射。
@@ -13,8 +14,8 @@ import java.util.Locale;
  * 「AI 子系统缺失时迁移中心也跟着加载失败」——而迁移恰好是最需要
  * AI 起不来时也能救场的功能。</p>
  *
- * <p><b>为什么必须有这张表</b>：MM 写的是 {@code ?health{<50%}}，
- * helstera 认的是 {@code health-below 0.5}。不翻译就直接搬运的话，
+ * <p><b>为什么必须有这张表</b>：MM 写的是 {@code ?healthpercent{<50%}}，
+ * helstera 认的是 {@code health-percent <50}。不翻译就直接搬运的话，
  * 迁移出来的条件<b>永远匹配不到任何注册条件</b>，而免疫规则的条件求值
  * 是 fail-closed——表现为「配了条件免疫，永远不免疫」，且没有任何报错。
  * 这与「没迁移」对用户完全等价，却让他以为已经迁移成功。</p>
@@ -23,6 +24,32 @@ import java.util.Locale;
  * 丢掉的话用户在报告里看不到任何痕迹，只能靠对比原文件才发现少了东西。</p>
  */
 public final class MmConditions {
+
+    private static final Set<String> ENDER_DRAGON_PHASES = Set.of(
+            "BREATH_ATTACK", "CHARGE_PLAYER", "CIRCLING", "DYING", "FLY_TO_PORTAL",
+            "HOVER", "LAND_ON_PORTAL", "LEAVE_PORTAL", "ROAR_BEFORE_ATTACK",
+            "SEARCH_FOR_BREATH_ATTACK_TARGET", "STRAFING");
+    private static final Set<String> NO_ARGUMENT_CONDITIONS = Set.of(
+            "hastarget", "night", "nighttime", "raining", "israining", "thundering", "isthundering",
+            "day", "daytime", "dawn", "dusk", "sunset", "morning", "noon", "midnight",
+            "clear", "sun", "sunny", "rain", "storm", "thunder", "thunderstorm",
+            "isliving", "isplayer", "ismob", "ismonster", "isanimal", "isvillager", "istameable", "israider",
+            "isbaby", "ischild", "isadult", "istamed", "issheared", "issaddled", "ispowered", "ischarged",
+            "charged", "climbing", "isclimbing", "invisible", "isinvisible", "glowing", "isglowing",
+            "falling", "isfalling", "targetisclimbing", "targetisinvisible", "targetisglowing",
+            "targetisfrozen", "targetfrozen",
+            "targetisbaby", "targetischild", "targetisadult", "targetistamed", "targetissheared",
+            "targetissaddled", "targetispowered", "targetischarged",
+            "issneaking", "crouching", "issprinting", "sprinting", "isflying", "flying",
+            "isblocking", "blocking", "isgliding", "gliding", "isswimming", "swimming",
+            "inwater", "inlava", "onfire", "isburning", "burning", "inair", "airborne",
+            "targetissneaking", "targetissprinting", "targetisflying", "targetisblocking",
+            "targetisgliding", "targetisswimming", "targetinwater", "targetinlava",
+            "targetonfire", "targetburning", "targetinair", "targetairborne",
+            "targetisplayer", "targetisliving", "targetismob", "targetismonster", "targetisanimal",
+            "targetisvillager", "targetistameable", "targetisraider", "hasai", "hasgravity",
+            "issilent", "isdead", "isalive", "isvalid", "targethasai", "targethasgravity",
+            "targetissilent", "targetisdead", "targetisalive", "targetisvalid");
 
     private MmConditions() {
     }
@@ -48,15 +75,22 @@ public final class MmConditions {
         // 剥掉 MM 的 ? / ~ 前缀与触发器冒号写法
         String t = s;
         if (t.startsWith("?") || t.startsWith("~")) t = t.substring(1).trim();
+        if (t.startsWith("!")) {
+            Mapped nested = translate(t.substring(1).trim());
+            return nested.translated() && nested.condition() != null
+                    ? new Mapped("!" + nested.condition(), true)
+                    : new Mapped(s, false);
+        }
 
         // 去掉 {…} 参数块，只留条件名参与匹配
         String head = t;
         String body = null;
         int brace = t.indexOf('{');
-        if (brace >= 0) {
+        if (brace >= 0 || t.indexOf('}') >= 0) {
+            if (!hasBalancedParameterBlock(t, brace)) return new Mapped(s, false);
             head = t.substring(0, brace).trim();
             int close = t.lastIndexOf('}');
-            body = close > brace ? t.substring(brace + 1, close).trim() : "";
+            body = t.substring(brace + 1, close).trim();
         } else {
             int separator = t.indexOf(' ');
             if (separator > 0) {
@@ -65,23 +99,32 @@ public final class MmConditions {
             }
         }
         String name = head.toLowerCase(Locale.ROOT).replace("_", "").replace("-", "");
+        if (body != null && !body.isBlank() && NO_ARGUMENT_CONDITIONS.contains(name)) {
+            return new Mapped(s, false);
+        }
 
         // ---- 比较式：?health{<50%} / ?health{>50%} ----
         if ("health".equals(name) && body != null) {
-            return compareWithAbsorption(body, "health", "health", "h", "amount", "a");
+            Mapped result = compareWithAbsorption(body, "health", "health", "h", "amount", "a");
+            return result.translated() ? result : new Mapped(s, false);
         }
         if ("targetdistance".equals(name) && body != null) {
-            return compare(body, "distance");
+            Mapped result = compare(body, "distance");
+            return result.translated() ? result : new Mapped(s, false);
         }
         if ("targethealth".equals(name) && body != null) {
-            return compare(body, "target-health");
+            Mapped result = compare(body, "target-health");
+            return result.translated() ? result : new Mapped(s, false);
         }
         if ("targethealthpercent".equals(name) || "targethealthpercentage".equals(name)) {
-            return body == null ? new Mapped(s, false) : compare(body, "target-health-percent");
+            if (body == null) return new Mapped(s, false);
+            Mapped result = compare(body, "target-health-percent");
+            return result.translated() ? result : new Mapped(s, false);
         }
-        if ("healthpercent".equals(name) || "healthpercentage".equals(name)) {
-            return body == null ? new Mapped(s, false)
-                    : compareWithAbsorption(body, "health-percent", "percent", "p", "healthpercent", "hp");
+        if ("healthpercent".equals(name) || "healthpercentage".equals(name) || "hppercent".equals(name)) {
+            if (body == null) return new Mapped(s, false);
+            Mapped result = compareWithAbsorption(body, "health-percent", "percent", "p", "healthpercent", "hp");
+            return result.translated() ? result : new Mapped(s, false);
         }
         if ("level".equals(name) || "moblevel".equals(name)) {
             String value = firstArgument(body, "level", "l");
@@ -90,13 +133,16 @@ public final class MmConditions {
                     : new Mapped("level " + value, true);
         }
         if ("isfrozen".equals(name) || "frozen".equals(name)) {
-            return new Mapped("is-frozen", true);
+            return body == null || body.isBlank() ? new Mapped("is-frozen", true) : new Mapped(s, false);
         }
         if ("lunarphase".equals(name) || "moonphase".equals(name)) {
+            String keyedPhases = keyedArgument(body, "phases", "p", "phase");
+            if (keyedPhases != null && keyedPhases.isBlank()) return new Mapped(s, false);
             String phases = rawValue(body, "phases", "p", "phase");
             if (phases == null) phases = normalizeScalar(body);
             if (phases == null) phases = "0";
-            for (String token : phases.split(",")) {
+            for (String token : phases.split(",", -1)) {
+                if (token.isBlank()) return new Mapped(s, false);
                 try {
                     int phase = Integer.parseInt(token.trim());
                     if (phase < 0 || phase > 7) return new Mapped(s, false);
@@ -107,53 +153,102 @@ public final class MmConditions {
             return new Mapped("lunar-phase " + phases, true);
         }
         if ("lastsignal".equals(name)) {
-            String signal = firstArgument(body, "signal", "s");
-            if (signal == null) signal = normalizeScalar(body);
-            if (signal == null) signal = "DEFAULT";
+            String signal = "DEFAULT";
+            if (body != null && !body.isBlank()) {
+                if (body.indexOf(';') >= 0 || body.indexOf(',') >= 0) return new Mapped(s, false);
+                int equals = body.indexOf('=');
+                if (equals >= 0) {
+                    String key = body.substring(0, equals).trim();
+                    if (!key.equalsIgnoreCase("signal") && !key.equalsIgnoreCase("s")) return new Mapped(s, false);
+                    signal = body.substring(equals + 1).trim();
+                } else {
+                    signal = body.trim();
+                }
+                if (signal.isBlank() || signal.chars().anyMatch(Character::isWhitespace)
+                        || signal.indexOf('=') >= 0) return new Mapped(s, false);
+            }
             return new Mapped("last-signal " + signal, true);
         }
+        if ("distancefrompin".equals(name) || "origindistancefrompin".equals(name)) {
+            String pin = firstArgument(body, "pin", "p");
+            String distance = firstArgument(body, "distance", "d");
+            if (pin == null || pin.isBlank() || distance == null || !validPinDistanceRange(distance)) {
+                return new Mapped(s, false);
+            }
+            return new Mapped(("distancefrompin".equals(name) ? "distance-from-pin" : "origin-distance-from-pin")
+                    + " pin=\"" + pin + "\" distance=" + distance.trim(), true);
+        }
+        if ("inpinregion".equals(name)) {
+            String pin1 = firstArgument(body, "pin1", "p1");
+            String pin2 = firstArgument(body, "pin2", "p2");
+            if (pin1 == null || pin1.isBlank() || pin2 == null || pin2.isBlank()) return new Mapped(s, false);
+            return new Mapped("in-pin-region pin1=\"" + pin1 + "\" pin2=\"" + pin2 + "\"", true);
+        }
         if ("projectilehasended".equals(name)) {
-            return new Mapped("projectile-has-ended", true);
+            return body == null || body.isBlank() ? new Mapped("projectile-has-ended", true) : new Mapped(s, false);
         }
         if ("absorption".equals(name) || "absorptionamount".equals(name)
                 || "hasabsorption".equals(name)) {
             return numericCondition(body, "absorption", s, "amount", "a", "absorption", "value");
         }
         if ("biome".equals(name) || "biomeis".equals(name)) {
-            String value = rawValue(body, "biome", "name", "value", "b");
-            if (value == null) value = normalizeScalar(body);
-            if (value == null || value.isBlank()) value = "minecraft:plains";
-            String exact = keyedArgument(body, "exact", "e");
+            String value = null;
+            String exact = null;
+            if (body != null && !body.isBlank()) {
+                for (String section : body.split(";", -1)) {
+                    String part = section.trim();
+                    if (part.isEmpty()) return new Mapped(s, false);
+                    int equals = part.indexOf('=');
+                    if (equals < 0) {
+                        if (value != null) return new Mapped(s, false);
+                        value = part;
+                    } else {
+                        String key = part.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                        String argument = part.substring(equals + 1).trim();
+                        if (argument.isEmpty()) return new Mapped(s, false);
+                        if (Set.of("biome", "name", "value", "b").contains(key)) {
+                            if (value != null) return new Mapped(s, false);
+                            value = argument;
+                        } else if (Set.of("exact", "e").contains(key)) {
+                            if (exact != null) return new Mapped(s, false);
+                            exact = argument;
+                        } else return new Mapped(s, false);
+                    }
+                }
+            }
+            if (value == null) value = "minecraft:plains";
             if (exact == null) exact = "true";
             if (!"true".equalsIgnoreCase(exact) && !"false".equalsIgnoreCase(exact)) {
                 return new Mapped(s, false);
             }
-            for (String biome : value.split(",")) {
+            List<String> biomes = new ArrayList<>();
+            for (String biome : value.split(",", -1)) {
                 String candidate = biome.trim();
                 int separator = candidate.indexOf(':');
                 String namespace = separator < 0 ? "minecraft" : candidate.substring(0, separator);
                 String key = separator < 0 ? candidate : candidate.substring(separator + 1);
-                if (namespace.isBlank() || key.isBlank() || candidate.contains("*")
+                if (!namespace.toLowerCase(Locale.ROOT).matches("[a-z0-9._-]+")
+                        || !key.toLowerCase(Locale.ROOT).matches("[a-z0-9/._-]+")
                         || (separator >= 0 && candidate.indexOf(':', separator + 1) >= 0)) {
                     return new Mapped(s, false);
                 }
+                biomes.add(candidate);
             }
-            return new Mapped("biome-is " + value + " " + exact.toLowerCase(Locale.ROOT), true);
+            return new Mapped("biome-is " + String.join(",", biomes) + " " + exact.toLowerCase(Locale.ROOT), true);
         }
         if ("world".equals(name) || "worldis".equals(name)
                 || "weather".equals(name) || "weatheris".equals(name)
                 || "time".equals(name) || "timeis".equals(name)) {
-            String value = firstArgument(body, name.startsWith("world") ? "world" :
-                    name.startsWith("biome") ? "biome" : name.startsWith("weather") ? "weather" : "time",
-                    "name", "value", "w", "b", "t");
-            if (value == null) value = normalizeScalar(body);
+            String value = singleEnvironmentArgument(body, name.startsWith("world") ? "world" :
+                    name.startsWith("weather") ? "weather" : "time");
             if (value == null) return new Mapped(s, false);
             String runtime = name.startsWith("world") ? "world-is"
                     : name.startsWith("weather") ? "weather-is" : "time-is";
             return new Mapped(runtime + " " + value, true);
         }
         if ("lightlevel".equals(name) && body != null) {
-            return compare(body, "light-level");
+            Mapped result = compare(body, "light-level");
+            return result.translated() ? result : new Mapped(s, false);
         }
         if ("worldtime".equals(name)) {
             String value = firstArgument(body, "time", "t");
@@ -186,9 +281,20 @@ public final class MmConditions {
         if ("dusk".equals(name) || "sunset".equals(name)) {
             return new Mapped("time-is dusk", true);
         }
-        if ("sunny".equals(name)) return new Mapped("weather-is clear", true);
+        if ("morning".equals(name)) return new Mapped("time-is morning", true);
+        if ("noon".equals(name)) return new Mapped("time-is noon", true);
+        if ("midnight".equals(name)) return new Mapped("time-is midnight", true);
+        if ("clear".equals(name) || "sun".equals(name) || "sunny".equals(name)) {
+            return new Mapped("weather-is clear", true);
+        }
+        if ("rain".equals(name)) {
+            return new Mapped("weather-is rain", true);
+        }
         if ("raining".equals(name) || "israining".equals(name)) {
             return new Mapped("raining", true);
+        }
+        if ("storm".equals(name) || "thunder".equals(name) || "thunderstorm".equals(name)) {
+            return new Mapped("weather-is thunder", true);
         }
         if ("thundering".equals(name) || "isthundering".equals(name)) {
             return new Mapped("thundering", true);
@@ -218,16 +324,19 @@ public final class MmConditions {
         if ("chance".equals(name)) {
             String value = firstArgument(body, "chance", "percent", "value", "c");
             if (value == null) value = normalizeScalar(body);
-            return value == null ? new Mapped(s, false)
+            return !validChance(value) ? new Mapped(s, false)
                     : new Mapped("random-chance " + value, true);
         }
         if ("falling".equals(name) || "isfalling".equals(name)) {
             return new Mapped("falling", true);
         }
         if ("drowning".equals(name) || "isdrowning".equals(name)) {
-            return body == null || body.isBlank()
-                    ? new Mapped("drowning <=0", true)
-                    : new Mapped("drowning " + normalizeScalar(body), true);
+            if (body == null || body.isBlank()) return new Mapped("drowning <=0", true);
+            String value = firstArgument(body, "air", "amount", "value", "a");
+            if (value == null) value = normalizeScalar(body);
+            return validComparison(value)
+                    ? new Mapped("drowning " + value.trim(), true)
+                    : new Mapped(s, false);
         }
         if ("ismounted".equals(name) || "isriding".equals(name)
                 || "riding".equals(name)) {
@@ -315,8 +424,14 @@ public final class MmConditions {
         if ("enderdragonphase".equals(name) || "edragonphase".equals(name)) {
             String phase = rawValue(body, "phase", "phases", "p");
             if (phase == null) phase = normalizeScalar(body);
-            return phase == null || phase.isBlank() ? new Mapped(s, false)
-                    : new Mapped("ender-dragon-phase " + phase, true);
+            if (phase == null || phase.isBlank()) return new Mapped(s, false);
+            List<String> phases = new ArrayList<>();
+            for (String token : phase.split(",", -1)) {
+                String normalized = token.trim().toUpperCase(Locale.ROOT);
+                if (!ENDER_DRAGON_PHASES.contains(normalized)) return new Mapped(s, false);
+                phases.add(normalized);
+            }
+            return new Mapped("ender-dragon-phase " + String.join(",", phases), true);
         }
         if ("distancefromspawn".equals(name)) {
             return rangeCondition(body, "distance-from-spawn", s, "distance", "d");
@@ -395,7 +510,7 @@ public final class MmConditions {
         if ("randomchance".equals(name)) {
             String chance = firstArgument(body, "chance", "percent", "value", "c");
             if (chance == null) chance = normalizeScalar(body);
-            return chance == null ? new Mapped(s, false)
+            return !validChance(chance) ? new Mapped(s, false)
                     : new Mapped("random-chance " + chance, true);
         }
         if ("targets".equals(name)) {
@@ -664,6 +779,17 @@ public final class MmConditions {
             if (value == null || value.isBlank()) return new Mapped("damage-amount >0", true);
             return !validNumberRange(value) ? new Mapped(s, false)
                     : new Mapped("damage-amount " + value, true);
+        }
+        if ("damagetag".equals(name) || "damagehastag".equals(name)) {
+            String tag = keyedArgument(body, "tag", "t");
+            if (tag == null && body != null && body.indexOf('=') < 0) tag = normalizeScalar(body);
+            String value = keyedArgument(body, "value", "val", "v", "b", "bool", "boolean");
+            if (tag == null || tag.isBlank() || (value != null
+                    && !value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false"))) {
+                return new Mapped(s, false);
+            }
+            return new Mapped("damage-tag tag=" + tag.trim()
+                    + (value == null ? "" : " value=" + value.trim().toLowerCase(Locale.ROOT)), true);
         }
         if ("lastdamagecause".equals(name)) {
             String cause = firstArgument(body, "damagecause", "cause", "c");
@@ -978,10 +1104,16 @@ public final class MmConditions {
         if ("isleashed".equals(name) || "leashed".equals(name)) {
             return new Mapped("is-leashed", true);
         }
+        if ("targetisleashed".equals(name) || "targetleashed".equals(name)) {
+            return new Mapped("target-is-leashed", true);
+        }
         if ("hasowner".equals(name)) return new Mapped("has-owner", true);
         if ("ownerisplayer".equals(name)) return new Mapped("owner-is-player", true);
         if ("ownerisonline".equals(name)) return new Mapped("owner-is-online", true);
         if ("owner".equals(name) || "isowner".equals(name)) return new Mapped("is-owner", true);
+        if ("targethasowner".equals(name)) return new Mapped("target-has-owner", true);
+        if ("targetownerisplayer".equals(name)) return new Mapped("target-owner-is-player", true);
+        if ("targetownerisonline".equals(name)) return new Mapped("target-owner-is-online", true);
         if ("hasparent".equals(name)) return new Mapped("has-parent", true);
         if ("children".equals(name)) {
             String amount = firstArgument(body, "amount", "a");
@@ -1199,6 +1331,9 @@ public final class MmConditions {
         if ("targetisglowing".equals(name)) return new Mapped("target-is-glowing", true);
         if ("targetisinvisible".equals(name)) return new Mapped("target-is-invisible", true);
         if ("targetisclimbing".equals(name)) return new Mapped("target-is-climbing", true);
+        if ("targetisfrozen".equals(name) || "targetfrozen".equals(name)) {
+            return new Mapped("target-is-frozen", true);
+        }
         if ("targetisblocked".equals(name)) return new Mapped("target-is-blocked", true);
         if ("inside".equals(name)) return new Mapped("inside", true);
         if ("outside".equals(name)) return new Mapped("outside", true);
@@ -1215,12 +1350,23 @@ public final class MmConditions {
         return new Mapped(s, false);
     }
 
+    private static boolean hasBalancedParameterBlock(String text, int firstOpen) {
+        if (firstOpen <= 0 || !text.endsWith("}")) return false;
+        int depth = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '{') depth++;
+            else if (c == '}') {
+                if (--depth < 0 || (depth == 0 && i != text.length() - 1)) return false;
+            }
+        }
+        return depth == 0;
+    }
+
     /**
      * 解析比较式 {@code <50%} / {@code >0.3} / {@code >=50} / {@code !=10}。
      *
-     * <p>MM 允许把百分号写进参数（{@code <50%}），而 helstera 统一用 0..1 的
-     * 比值。不处理百分号会让 {@code health-below 50} 恒假——
-     * 条件永不成立，规则永不生效，同样没有任何报错。</p>
+     * <p>Health uses absolute values; health-percent uses percentages at runtime.</p>
      */
     private static Mapped compare(String body, String kind) {
         String s = body.trim();
@@ -1270,24 +1416,21 @@ public final class MmConditions {
         } catch (NumberFormatException e) {
             return new Mapped(body, false);
         }
-        // 只有血量才需要换算：MM 允许百分号（<50%），helstera 统一 0..1。
-        // 不换算会让 health-below 50 恒假——条件永不成立，规则永不生效，且无任何报错。
-        //
-        // 距离【绝不】换算：它是格数不是百分比。把 >1 当百分数会让「5 格」
-        // 变成 0.05 格，条件恒真——免疫范围从 5 格悄悄缩到 1/20 格，
-        // 看起来完全正常，只是 Boss 变得异常脆弱。
-        if ("health".equals(kind) && (percent || v > 1.0)) v = v / 100.0;
-        if ("light-level".equals(kind) && percent) return new Mapped(body, false);
+        if (!Double.isFinite(v)) return new Mapped(body, false);
+        if (("health".equals(kind) || "target-health".equals(kind)) && percent) return new Mapped(body, false);
+        if (("health-percent".equals(kind) || "target-health-percent".equals(kind)) && !percent) v *= 100.0;
+        if (!Double.isFinite(v)) return new Mapped(body, false);
+        if (("light-level".equals(kind) || "distance".equals(kind)) && percent) return new Mapped(body, false);
         if ("target-health".equals(kind) || "target-health-percent".equals(kind)) {
             return new Mapped(kind + " " + operator + fmt(v), true);
         }
-        if ("health".equals(kind) && (operator.equals("=") || operator.equals("!="))) {
+        if ("health".equals(kind)) {
             return new Mapped("health " + operator + fmt(v), true);
         }
-        if ("distance".equals(kind) && (operator.equals("=") || operator.equals("!="))) {
+        if ("distance".equals(kind)) {
             return new Mapped("distance " + operator + fmt(v), true);
         }
-        if ("light-level".equals(kind) && (operator.equals("=") || operator.equals("!="))) {
+        if ("light-level".equals(kind)) {
             return new Mapped("light-level " + operator + fmt(v), true);
         }
         String prefix = "health".equals(kind) ? "health-"
@@ -1296,27 +1439,83 @@ public final class MmConditions {
         if ("health-percent".equals(kind)) {
             return new Mapped(prefix + operator + fmt(v), true);
         }
-        // helstera 的 health-below/above 是闭区间（<= / >=），
-        // MM 的严格不等号无法逐字保留；此处按同值处理并在调用方报告里说明，
-        // 而不是悄悄改动语义——临界点差一个取值比明说更危险。
         return new Mapped(prefix + (operator.startsWith("<") ? "below " : "above ") + fmt(v), true);
     }
 
     /** Preserves Mythic's optional absorption flag through the canonical condition text. */
     private static Mapped compareWithAbsorption(String body, String kind, String... valueKeys) {
-        String value = firstArgument(body, valueKeys);
-        Mapped mapped = compare(value == null ? body : value, kind);
-        if (!mapped.translated() || !includeAbsorption(body)) return mapped;
+        boolean seenValue = false;
+        boolean seenAbsorption = false;
+        boolean absorption = false;
+        String value = null;
+        for (String part : body.split(";", -1)) {
+            String token = part.trim();
+            int equals = token.indexOf('=');
+            if (token.isEmpty()) return new Mapped(body, false);
+            if (equals > 0 && Character.isLetter(token.charAt(0))) {
+                String key = token.substring(0, equals).trim();
+                boolean valueKey = java.util.Arrays.stream(valueKeys).anyMatch(key::equalsIgnoreCase);
+                if (!valueKey && !key.equalsIgnoreCase("includeabsorption")
+                        && !key.equalsIgnoreCase("include-absorption") && !key.equalsIgnoreCase("ia")) {
+                    return new Mapped(body, false);
+                }
+                if (!valueKey && !token.substring(equals + 1).trim().matches("(?i:true|false)")) {
+                    return new Mapped(body, false);
+                }
+                if (valueKey) {
+                    if (seenValue) return new Mapped(body, false);
+                    seenValue = true;
+                    value = token.substring(equals + 1).trim();
+                } else {
+                    if (seenAbsorption) return new Mapped(body, false);
+                    seenAbsorption = true;
+                    absorption = Boolean.parseBoolean(token.substring(equals + 1).trim());
+                }
+            } else {
+                if (seenValue) return new Mapped(body, false);
+                seenValue = true;
+                value = token;
+            }
+        }
+        if (value == null || value.isBlank()) return new Mapped(body, false);
+        String numeric = "[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?%?";
+        var range = java.util.regex.Pattern.compile("^(" + numeric + ")\\s*(to|-)\\s*(" + numeric + ")$",
+                java.util.regex.Pattern.CASE_INSENSITIVE).matcher(value);
+        if (range.matches()) {
+            String lowerText = range.group(1);
+            String upperText = range.group(3);
+            if (range.group(2).equals("-") && (lowerText.startsWith("-") || upperText.startsWith("-"))) {
+                return new Mapped(body, false);
+            }
+            boolean lowerPercent = lowerText.endsWith("%");
+            boolean upperPercent = upperText.endsWith("%");
+            if (lowerPercent != upperPercent || (kind.equals("health") && lowerPercent)) {
+                return new Mapped(body, false);
+            }
+            try {
+                double lower = Double.parseDouble(lowerPercent ? lowerText.substring(0, lowerText.length() - 1) : lowerText);
+                double upper = Double.parseDouble(upperPercent ? upperText.substring(0, upperText.length() - 1) : upperText);
+                if (kind.equals("health-percent") && !lowerPercent) {
+                    lower *= 100.0;
+                    upper *= 100.0;
+                }
+                if (!Double.isFinite(lower) || !Double.isFinite(upper) || lower > upper) {
+                    return new Mapped(body, false);
+                }
+                String flag = absorption ? " include-absorption=true" : "";
+                return new Mapped("all{" + kind + " >=" + fmt(lower) + flag + ";"
+                        + kind + " <=" + fmt(upper) + flag + "}", true);
+            } catch (NumberFormatException ignored) {
+                return new Mapped(body, false);
+            }
+        }
+        Mapped mapped = compare(value, kind);
+        if (!mapped.translated() || !absorption) return mapped;
         return new Mapped(mapped.condition() + " include-absorption=true", true);
     }
 
-    private static boolean includeAbsorption(String body) {
-        String raw = firstArgument(body, "includeabsorption", "include-absorption", "ia");
-        return raw != null && Boolean.parseBoolean(raw.trim());
-    }
-
     private static String fmt(double d) {
-        if (d == Math.rint(d)) return String.valueOf((long) d);
+        if (d == Math.rint(d) && d >= Long.MIN_VALUE && d < 0x1.0p63) return String.valueOf((long) d);
         return String.valueOf(d);
     }
 
@@ -1350,6 +1549,23 @@ public final class MmConditions {
         };
     }
 
+    private static String singleEnvironmentArgument(String body, String kind) {
+        if (body == null || body.isBlank()) return null;
+        String token = body.trim();
+        if (token.indexOf(';') >= 0 || token.indexOf(',') >= 0) return null;
+        int equals = token.indexOf('=');
+        if (equals >= 0) {
+            String key = token.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            boolean valid = key.equals(kind) || key.equals("name") || key.equals("value")
+                    || (kind.equals("world") && key.equals("w"))
+                    || (kind.equals("time") && key.equals("t"))
+                    || (kind.equals("weather") && key.equals("type"));
+            if (!valid) return null;
+            token = token.substring(equals + 1).trim();
+        }
+        return token.isBlank() || token.chars().anyMatch(Character::isWhitespace) ? null : token;
+    }
+
     private static String normalizeScalar(String body) {
         if (body == null || body.isBlank()) return null;
         String value = body.trim();
@@ -1362,8 +1578,9 @@ public final class MmConditions {
         String radius = firstArgument(body, "radius", "r", "range", "distance");
         String minimum = firstArgument(body, "count", "amount", "min", "minimum", "n");
         if (radius == null) radius = normalizeScalar(body);
-        return radius == null ? new Mapped(body, false)
-                : new Mapped(runtimeName + " " + (minimum == null ? "1" : minimum)
+        if (!validRadius(radius)) return new Mapped(body, false);
+        if (minimum != null && !validNumberRange(minimum)) return new Mapped(body, false);
+        return new Mapped(runtimeName + " " + (minimum == null ? "1" : minimum)
                 + " " + radius, true);
     }
 
@@ -1371,8 +1588,9 @@ public final class MmConditions {
         String radius = firstArgument(body, "radius", "r", "range", "distance");
         String amount = firstArgument(body, "amount", "a", "count", "min", "minimum", "n");
         if (radius == null) radius = normalizeScalar(body);
-        if (radius == null || radius.isBlank()) return new Mapped(original, false);
+        if (!validRadius(radius)) return new Mapped(original, false);
         if (amount == null || amount.isBlank()) amount = ">=1";
+        if (!validNumberRange(amount)) return new Mapped(original, false);
         return new Mapped(runtimeName + " " + amount + " " + radius, true);
     }
 
@@ -1400,23 +1618,73 @@ public final class MmConditions {
         try {
             if (value.startsWith(">=") || value.startsWith("<=")
                     || value.startsWith(">") || value.startsWith("<")) {
-                Double.parseDouble(value.replaceFirst("^(>=|<=|>|<)", "").trim());
-                return true;
+                return validFiniteNumber(value.replaceFirst("^(>=|<=|>|<)", "").trim());
             }
             int to = value.toLowerCase(Locale.ROOT).indexOf("to");
             if (to > 0) {
-                Double.parseDouble(value.substring(0, to).trim());
-                Double.parseDouble(value.substring(to + 2).trim());
-                return true;
+                return validFiniteNumber(value.substring(0, to).trim())
+                        && validFiniteNumber(value.substring(to + 2).trim());
             }
             int separator = value.indexOf('-', 1);
             if (separator > 0) {
-                Double.parseDouble(value.substring(0, separator).trim());
-                Double.parseDouble(value.substring(separator + 1).trim());
-                return true;
+                return validFiniteNumber(value.substring(0, separator).trim())
+                        && validFiniteNumber(value.substring(separator + 1).trim());
             }
-            Double.parseDouble(value);
-            return true;
+            return validFiniteNumber(value);
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean validComparison(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String value = raw.trim();
+        for (String operator : List.of(">=", "<=", "!=", "==", ">", "<", "=")) {
+            if (value.startsWith(operator)) {
+                value = value.substring(operator.length()).trim();
+                break;
+            }
+        }
+        try {
+            return Double.isFinite(Double.parseDouble(value));
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean validPinDistanceRange(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String value = raw.trim();
+        for (String operator : List.of(">=", "<=", "!=", "==", ">", "<", "=")) {
+            if (value.startsWith(operator)) {
+                return validFiniteNumber(value.substring(operator.length()).trim());
+            }
+        }
+        int to = value.toLowerCase(Locale.ROOT).indexOf("to");
+        if (to > 0) {
+            Double first = finiteNumber(value.substring(0, to));
+            Double second = finiteNumber(value.substring(to + 2));
+            return first != null && second != null && first <= second;
+        }
+        int separator = value.indexOf('-', 1);
+        if (separator > 0) {
+            Double first = finiteNumber(value.substring(0, separator));
+            Double second = finiteNumber(value.substring(separator + 1));
+            return first != null && second != null && first <= second;
+        }
+        return validFiniteNumber(value);
+    }
+
+    private static Double finiteNumber(String raw) {
+        if (!validFiniteNumber(raw)) return null;
+        return Double.parseDouble(raw.trim());
+    }
+
+    private static boolean validChance(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        try {
+            double chance = Double.parseDouble(raw.trim());
+            return Double.isFinite(chance) && chance >= 0 && chance <= 100;
         } catch (NumberFormatException ignored) {
             return false;
         }
@@ -1517,12 +1785,19 @@ public final class MmConditions {
     private static Mapped radiusOnlyCondition(String body, String runtimeName, String original) {
         String value = firstArgument(body, "distance", "d", "radius", "r");
         if (value == null) value = normalizeScalar(body);
-        if (value == null || value.isBlank()) return new Mapped(original, false);
+        return validRadius(value)
+                ? new Mapped(runtimeName + " " + value, true)
+                : new Mapped(original, false);
+    }
+
+    /** Radius arguments are concrete distances, never silent default values. */
+    private static boolean validRadius(String raw) {
+        if (raw == null || raw.isBlank()) return false;
         try {
-            Double.parseDouble(value);
-            return new Mapped(runtimeName + " " + value, true);
+            double radius = Double.parseDouble(raw.trim());
+            return Double.isFinite(radius) && radius >= 0;
         } catch (NumberFormatException ignored) {
-            return new Mapped(original, false);
+            return false;
         }
     }
 
@@ -1668,7 +1943,11 @@ public final class MmConditions {
                                     List<String> unmappedOut) {
         for (String raw : in == null ? List.<String>of() : in) {
             Mapped m = translate(raw);
-            if (m.condition() == null) continue;
+            if (m.condition() == null) {
+                translatedOut.add("");
+                unmappedOut.add(raw == null ? "<null>" : raw);
+                continue;
+            }
             if (m.translated()) {
                 translatedOut.add(m.condition());
             } else {

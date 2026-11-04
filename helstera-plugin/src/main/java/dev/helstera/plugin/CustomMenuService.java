@@ -35,12 +35,40 @@ public final class CustomMenuService implements Listener {
     private final Map<String, String> permissionCommands = new HashMap<>();
     private final Map<String, Region> regions = new HashMap<>();
     private volatile ItemResolver itemResolver;
+    private volatile java.util.function.Predicate<String> claimedItem = id -> false;
     private volatile java.util.function.BiFunction<String, org.bukkit.Location, Boolean> regionResolver;
 
     public CustomMenuService() { }
 
     public void setItemResolver(ItemResolver resolver) {
         itemResolver = resolver;
+    }
+
+    public void setClaimedItemPredicate(java.util.function.Predicate<String> predicate) {
+        claimedItem = predicate == null ? id -> false : predicate;
+    }
+
+    private boolean validItem(String id) {
+        ItemStack custom = itemResolver == null ? null : itemResolver.resolve(id);
+        if (custom != null && custom.getType() != Material.AIR) return true;
+        if (claimedItem.test(id)) return false;
+        return vanillaMaterial(id) != null;
+    }
+
+    private static Material vanillaMaterial(String id) {
+        if (id == null) return null;
+        int separator = id.indexOf(':');
+        if (separator >= 0 && !id.substring(0, separator).equalsIgnoreCase("minecraft")) return null;
+        return Material.matchMaterial(id);
+    }
+
+    private static ItemStack resolveMenuItem(String id, ItemResolver resolver,
+                                            java.util.function.Predicate<String> claimed) {
+        ItemStack custom = resolver == null ? null : resolver.resolve(id);
+        if (custom != null && custom.getType() != Material.AIR) return custom.clone();
+        if (claimed.test(id)) return null;
+        Material type = vanillaMaterial(id);
+        return type == null ? null : new ItemStack(type);
     }
 
     public void setRegionResolver(java.util.function.BiFunction<String, org.bukkit.Location, Boolean> resolver) {
@@ -85,8 +113,7 @@ public final class CustomMenuService implements Listener {
                     ConfigurationSection b = bs.getConfigurationSection(slot);
                     if (b == null) throw new IllegalArgumentException("menu " + id + " button " + slot + " must be a section");
                     String material = b.getString("item", b.getString("material", "STONE"));
-                    if (Material.matchMaterial(material) == null
-                            && (itemResolver == null || itemResolver.resolve(material) == null)) {
+                    if (!validItem(material)) {
                         throw new IllegalArgumentException("menu " + id + " button " + slot + " has invalid material: " + material);
                     }
                     String command = b.getString("command", "");
@@ -187,8 +214,7 @@ public final class CustomMenuService implements Listener {
             throw new IllegalArgumentException("menu " + menuId + " pagination " + id
                     + " amount must be 1..64");
         }
-        if (Material.matchMaterial(material) == null
-                && (itemResolver == null || itemResolver.resolve(material) == null)) {
+        if (!validItem(material)) {
             throw new IllegalArgumentException("menu " + menuId + " pagination " + id
                     + " has invalid material: " + material);
         }
@@ -252,7 +278,7 @@ public final class CustomMenuService implements Listener {
         for (var entry : menu.buttons.entrySet()) {
             Button button = entry.getValue();
             if (!button.visible(player, regions, regionResolver)) continue;
-            inventory.setItem(entry.getKey(), button.item(itemResolver, player, menu.id));
+            inventory.setItem(entry.getKey(), button.item(itemResolver, claimedItem, player, menu.id));
         }
         renderPagination(inventory, player, menu);
         open.put(inventory, menu);
@@ -356,9 +382,8 @@ public final class CustomMenuService implements Listener {
     private ItemStack paginationItem(String material, String name, java.util.List<String> lore,
                                      int amount, String enchantment, Player player, Menu menu,
                                      int page, int pages) {
-        Material type = Material.matchMaterial(material);
-        ItemStack item = type == null && itemResolver != null ? itemResolver.resolve(material) : null;
-        if (item == null) item = new ItemStack(type == null ? Material.PAPER : type);
+        ItemStack item = resolveMenuItem(material, itemResolver, claimedItem);
+        if (item == null) return null;
         item.setAmount(Math.max(1, Math.min(64, amount)));
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
@@ -510,12 +535,21 @@ public final class CustomMenuService implements Listener {
         if (shouldCancelClick(event.getRawSlot(), event.getView().getTopInventory().getSize(), event.getAction())) {
             event.setCancelled(true);
         }
+        if (event.getRawSlot() < 0 || event.getRawSlot() >= event.getView().getTopInventory().getSize()
+                || event.getView().getTopInventory().getItem(event.getRawSlot()) == null
+                || event.getView().getTopInventory().getItem(event.getRawSlot()).getType() == Material.AIR) return;
         Button button = menu.buttons.get(event.getRawSlot());
         boolean isCurrentMenu = menus.get(menu.id) == menu;
         if (event.getWhoClicked() instanceof Player pagePlayer && isCurrentMenu) {
             String pageTarget = paginationTarget(menu, event.getRawSlot(), pagePlayer);
             if (pageTarget != null) {
                 Menu page = pageMenu(menu, pageTarget);
+                Bukkit.getLogger().info("menu-click id=" + menu.id
+                        + " player=" + pagePlayer.getName()
+                        + " slot=" + event.getRawSlot()
+                        + " permitted=true"
+                        + " ran=" + (page != null)
+                        + " pagination=" + pageTarget);
                 if (page != null) openInternal(pagePlayer, page.id);
                 return;
             }
@@ -654,11 +688,10 @@ public final class CustomMenuService implements Listener {
             return menuRegionMatches(player, showIfRegion, regions, regionResolver);
         }
 
-        ItemStack item(ItemResolver resolver, Player player, String menuId) {
-            Material type = Material.matchMaterial(material);
-            ItemStack stack = type == null && resolver != null ? resolver.resolve(material) : null;
-            if (stack == null) stack = new ItemStack(type == null ? Material.STONE : type, amount);
-            else stack.setAmount(Math.max(1, Math.min(64, amount)));
+        ItemStack item(ItemResolver resolver, java.util.function.Predicate<String> claimed, Player player, String menuId) {
+            ItemStack stack = resolveMenuItem(material, resolver, claimed);
+            if (stack == null) return null;
+            stack.setAmount(Math.max(1, Math.min(64, amount)));
             ItemMeta meta = stack.getItemMeta();
             if (meta != null) {
                 if (!name.isBlank()) meta.setDisplayName(color(replace(name, player, menuId)));

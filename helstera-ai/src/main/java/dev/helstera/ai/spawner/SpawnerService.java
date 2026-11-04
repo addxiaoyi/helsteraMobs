@@ -42,6 +42,8 @@ import java.nio.file.StandardCopyOption;
 public final class SpawnerService {
 
     private static final int MAX_GROUND_SEARCH_BLOCKS = 512;
+    private static final List<String> LUNAR_PHASES = List.of("FULL", "WANING_GIBBOUS", "THIRD_QUARTER",
+            "WANING_CRESCENT", "NEW", "WAXING_CRESCENT", "FIRST_QUARTER", "WAXING_GIBBOUS");
 
     private record RegionBounds(String world, double x1, double y1, double z1,
                                 double x2, double y2, double z2) {
@@ -262,6 +264,9 @@ public final class SpawnerService {
     private BukkitTask task;
     private int tickCounter;
     private int minInterval = 100;
+    private boolean fileLoadFailed;
+    private boolean preserveStateBackup;
+    private boolean stateLoadFailed;
 
     public SpawnerService(Plugin plugin, Logger log, MobSpawner spawner) {
         this(plugin, log, spawner, name -> plugin == null
@@ -293,7 +298,40 @@ public final class SpawnerService {
         this.regionTester = tester;
     }
 
+    public void loadFile(java.nio.file.Path path) throws java.io.IOException {
+        try {
+            String text = java.nio.file.Files.readString(path);
+            var config = new org.bukkit.configuration.file.YamlConfiguration();
+            config.loadFromString(text);
+            var yaml = new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.SafeConstructor(
+                    new org.yaml.snakeyaml.LoaderOptions()));
+            Object parsed = yaml.load(text);
+            if (parsed instanceof java.util.Map<?, ?> root) {
+                Object nested = root.get("spawners");
+                boolean useNested = config.getConfigurationSection("spawners") != null && !config.contains("mob");
+                Object definitions = useNested ? nested : root;
+                ConfigurationSection sections = useNested ? config.getConfigurationSection("spawners") : config;
+                if (definitions instanceof java.util.Map<?, ?> map) {
+                    for (var entry : map.entrySet()) {
+                        if (!(entry.getKey() instanceof String name) || !(entry.getValue() instanceof java.util.Map<?, ?> fields)) continue;
+                        ConfigurationSection section = sections.getConfigurationSection(name);
+                        if (section != null && fields.containsKey("conditions") && fields.get("conditions") == null) {
+                            section.set("conditions", ConditionListParser.INVALID_CONDITION);
+                        }
+                    }
+                }
+            }
+            load(config);
+            fileLoadFailed = false;
+        } catch (java.io.IOException | org.bukkit.configuration.InvalidConfigurationException | RuntimeException ex) {
+            load(null);
+            fileLoadFailed = true;
+            throw new java.io.IOException("Unable to load spawner configuration " + path, ex);
+        }
+    }
+
     public void load(ConfigurationSection root) {
+        fileLoadFailed = false;
         spawners.clear();
         regions.clear();
         problems.clear();
@@ -530,20 +568,38 @@ public final class SpawnerService {
 
     /** Restores lifetime spawn counters after config reload or plugin restart. */
     public void loadState(File file) {
-        loadState(file, true);
+        if (file == null) return;
+        if (!file.exists()) {
+            File backup = new File(file.getPath() + ".bak");
+            if (!backup.isFile()) return;
+            if (log != null) log.warning("[Spawner] state file missing; trying backup.");
+            preserveStateBackup = true;
+            stateLoadFailed = !loadState(backup, false);
+        } else {
+            stateLoadFailed = !loadState(file, true);
+        }
+        if (stateLoadFailed && log != null) {
+            log.warning("[Spawner] spawning paused until a valid state is loaded.");
+        }
     }
 
-    private void loadState(File file, boolean allowBackup) {
-        if (file == null || !file.isFile()) return;
+    private boolean loadState(File file, boolean allowBackup) {
         try {
-            YamlConfiguration state = YamlConfiguration.loadConfiguration(file);
+            YamlConfiguration state = new YamlConfiguration();
+            state.load(file);
+            if (state.contains("schema-version") && !state.isInt("schema-version")) {
+                throw new IllegalArgumentException("invalid state schema version");
+            }
             int version = state.getInt("schema-version", 1);
             if (version != 1) {
-                if (log != null) log.warning("[Spawner] unsupported state schema version " + version + "; ignoring state.");
-                return;
+                if (log != null) log.warning("[Spawner] unsupported state schema version " + version + "; state saving disabled.");
+                return false;
             }
             ConfigurationSection root = state.getConfigurationSection("spawners");
-            if (root == null) return;
+            if (root == null && state.contains("spawners")) {
+                throw new IllegalArgumentException("spawners state must be a mapping");
+            }
+            validateState(state, root);
             // A state file is a snapshot. Reloading it must replace prior
             // scoped counters instead of retaining entries removed from the
             // newer snapshot.
@@ -554,7 +610,7 @@ public final class SpawnerService {
             if (worldCounts != null) for (String world : worldCounts.getKeys(false)) {
                 worldSpawnCounts.put(world.toLowerCase(Locale.ROOT), Math.max(0, worldCounts.getInt(world, 0)));
             }
-            for (String id : root.getKeys(false)) {
+            for (String id : root == null ? java.util.Set.<String>of() : root.getKeys(false)) {
                 Spawner sp = get(id);
                 ConfigurationSection section = root.getConfigurationSection(id);
                 if (sp == null || section == null) continue;
@@ -580,20 +636,61 @@ public final class SpawnerService {
                     }
                 }
             }
-        } catch (RuntimeException ex) {
+            if (allowBackup) preserveStateBackup = false;
+            return true;
+        } catch (IOException | org.bukkit.configuration.InvalidConfigurationException | RuntimeException ex) {
+            if (allowBackup) preserveStateBackup = true;
             File backup = new File(file.getPath() + ".bak");
             if (allowBackup && backup.isFile()) {
                 if (log != null) log.warning("[Spawner] state load failed; trying backup: " + ex.getMessage());
-                loadState(backup, false);
+                return loadState(backup, false);
             } else if (log != null) {
-                log.warning("[Spawner] state load failed; ignoring corrupt state: " + ex.getMessage());
+                log.warning("[Spawner] state load failed; state saving disabled: " + ex.getMessage());
             }
+            return false;
+        }
+    }
+
+    private static void validateState(ConfigurationSection state, ConfigurationSection root) {
+        validateStateCounts(state, "world-spawn-counts");
+        if (root == null) return;
+        for (String id : root.getKeys(false)) {
+            ConfigurationSection section = root.getConfigurationSection(id);
+            if (section == null) throw new IllegalArgumentException("invalid spawner state: " + id);
+            validateStateCount(section, "total-spawned");
+            validateStateCount(section, "next-spawn-in");
+            validateStateCounts(section, "mob-counts");
+            ConfigurationSection players = validateStateCounts(section, "player-spawn-counts");
+            if (players != null) for (String player : players.getKeys(false)) {
+                java.util.UUID.fromString(player);
+            }
+        }
+    }
+
+    private static ConfigurationSection validateStateCounts(ConfigurationSection parent, String key) {
+        ConfigurationSection counts = parent.getConfigurationSection(key);
+        if (counts == null && parent.contains(key)) throw new IllegalArgumentException("invalid state mapping: " + key);
+        if (counts != null) for (String name : counts.getKeys(false)) validateStateCount(counts, name);
+        return counts;
+    }
+
+    private static void validateStateCount(ConfigurationSection section, String key) {
+        if (section.contains(key) && (!section.isInt(key) || section.getInt(key) < 0)) {
+            throw new IllegalArgumentException("invalid state counter: " + section.getCurrentPath() + "." + key);
         }
     }
 
     /** Persists lifetime spawn counters without serializing live instance ids. */
     public void saveState(File file) {
         if (file == null) return;
+        if (fileLoadFailed) {
+            if (log != null) log.warning("[Spawner] state save skipped after configuration load failure.");
+            return;
+        }
+        if (stateLoadFailed) {
+            if (log != null) log.warning("[Spawner] state save skipped after state load failure.");
+            return;
+        }
         YamlConfiguration state = new YamlConfiguration();
         state.set("schema-version", 1);
         for (var entry : worldSpawnCounts.entrySet()) {
@@ -617,7 +714,7 @@ public final class SpawnerService {
             if (parent != null) parent.mkdirs();
             File temp = new File(file.getPath() + ".tmp");
             state.save(temp);
-            if (file.isFile()) {
+            if (file.isFile() && !preserveStateBackup) {
                 Files.copy(file.toPath(), new File(file.getPath() + ".bak").toPath(),
                         StandardCopyOption.REPLACE_EXISTING);
             }
@@ -627,6 +724,7 @@ public final class SpawnerService {
             } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
                 Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
             }
+            preserveStateBackup = false;
         } catch (IOException ex) {
             if (log != null) log.warning("[Spawner] state save failed: " + ex.getMessage());
         }
@@ -761,6 +859,7 @@ public final class SpawnerService {
         if (sp == null) return false;
         String key = sp.id();
         forceSpawnFailures.remove(key);
+        if (stateLoadFailed) return failForceSpawn(key, "spawner state unavailable");
         if (!withinSpawnLimits(sp)) return failForceSpawn(key, "spawn limits reached");
         Location loc = override != null ? override : randomLocation(sp);
         if (loc == null) return failForceSpawn(key, "no valid spawn location");
@@ -811,6 +910,7 @@ public final class SpawnerService {
 
     /** Advances the logical clock by real server ticks for the shared scheduler. */
     public void tickOnce(int elapsedTicks) {
+        if (stateLoadFailed) return;
         tickCounter += Math.max(1, elapsedTicks);
         for (Spawner sp : spawners.values()) {
             try {
@@ -1012,7 +1112,21 @@ public final class SpawnerService {
     }
 
     private List<String> readConditions(ConfigurationSection section) {
-        return ConditionListParser.parse(section.get("conditions"));
+        Object raw = section.get("conditions");
+        if (raw == null) return List.of();
+        List<?> values = raw instanceof List<?> list ? list : List.of(raw);
+        List<String> conditions = new ArrayList<>();
+        for (Object value : values) {
+            List<String> parsed = value instanceof String text ? ConditionListParser.parseFailClosed(text) : List.of();
+            if (parsed.isEmpty() || parsed.contains(ConditionListParser.INVALID_CONDITION)) {
+                conditions.add("");
+                problems.add("Spawner conditions contain an invalid entry; spawning will fail closed.");
+            }
+            for (String condition : parsed) {
+                if (!ConditionListParser.INVALID_CONDITION.equals(condition)) conditions.add(condition);
+            }
+        }
+        return conditions;
     }
 
     /**
@@ -1028,7 +1142,17 @@ public final class SpawnerService {
      * 而配置看上去完全正常。返回 null 表示「不是光照条件」，交回原有判定链。</p>
      */
     public static Boolean lightCondition(String condition, Location location) {
-        if (condition == null) return null;
+        return switch (evaluateLightCondition(condition, location)) {
+            case NOT_LIGHT -> null;
+            case INVALID, NO_MATCH -> false;
+            case MATCH -> true;
+        };
+    }
+
+    private enum LightResult { NOT_LIGHT, INVALID, MATCH, NO_MATCH }
+
+    private static LightResult evaluateLightCondition(String condition, Location location) {
+        if (condition == null) return LightResult.NOT_LIGHT;
         String text = condition.trim();
         String kind;
         String body;
@@ -1047,23 +1171,24 @@ public final class SpawnerService {
                 || normalizedKind.equals("blocklightlevel");
         // Mythic 的 LightLevel 是含天空光的合成光照；这里把裸写形式也归入它。
         boolean combined = normalizedKind.equals("light-level") || normalizedKind.equals("lightlevel");
-        if (!sky && !block && !combined) return null;
-        if (location == null || location.getWorld() == null) return false;
+        if (!sky && !block && !combined) return LightResult.NOT_LIGHT;
+        if (location == null || location.getWorld() == null) return LightResult.INVALID;
         String rangeText = normalizeComparator(body);
-        if (rangeText.isEmpty()) return false;
+        if (rangeText.isEmpty()) return LightResult.INVALID;
         try {
             World world = location.getWorld();
             int chunkX = location.getBlockX() >> 4;
             int chunkZ = location.getBlockZ() >> 4;
-            if (!world.isChunkLoaded(chunkX, chunkZ)) return false;
+            if (!world.isChunkLoaded(chunkX, chunkZ)) return LightResult.INVALID;
             int level = sky ? location.getBlock().getLightFromSky()
                     : block ? location.getBlock().getLightFromBlocks()
                     : location.getBlock().getLightLevel();
-            return appliesTo(level, rangeText, sky || block);
+            Boolean result = appliesTo(level, rangeText, sky || block);
+            return result == null ? LightResult.INVALID : result ? LightResult.MATCH : LightResult.NO_MATCH;
         } catch (Throwable t) {
             // 区块未加载时 Bukkit 取光照可能抛异常：拒绝生成而不是放行，
             // 避免刷怪点在未加载区域"盲刷"到玩家脚下。
-            return false;
+            return LightResult.INVALID;
         }
     }
 
@@ -1124,7 +1249,7 @@ public final class SpawnerService {
             }
         }
         int best = -1;
-        for (char symbol : new char[]{'=', '<', '>'}) {
+        for (char symbol : new char[]{'=', '<', '>', '!'}) {
             int at = text.indexOf(symbol);
             if (at <= 0) continue;
             if (nameEnd > 0 && at < nameEnd) continue;
@@ -1143,16 +1268,25 @@ public final class SpawnerService {
         return -1;
     }
 
-    private static boolean appliesTo(int level, String rangeText, boolean exact) {
+    private static Boolean appliesTo(int level, String rangeText, boolean exact) {
         String text = rangeText.trim();
-        if (text.startsWith("<=")) return level <= number(text.substring(2), Double.NaN);
-        if (text.startsWith(">=")) return level >= number(text.substring(2), Double.NaN);
-        if (text.startsWith("!=")) return level != number(text.substring(2), Double.NaN);
-        if (text.startsWith("<")) return level < number(text.substring(1), Double.NaN);
-        if (text.startsWith(">")) return level > number(text.substring(1), Double.NaN);
-        if (text.startsWith("=")) return level == number(text.substring(1), Double.NaN);
+        String op = text.startsWith("<=") || text.startsWith(">=") || text.startsWith("!=")
+                ? text.substring(0, 2) : text.startsWith("<") || text.startsWith(">") || text.startsWith("=")
+                ? text.substring(0, 1) : "";
+        if (!op.isEmpty()) {
+            double value = number(text.substring(op.length()), Double.NaN);
+            if (!Double.isFinite(value)) return null;
+            return switch (op) {
+                case "<=" -> level <= value;
+                case ">=" -> level >= value;
+                case "!=" -> level != value;
+                case "<" -> level < value;
+                case ">" -> level > value;
+                default -> level == value;
+            };
+        }
         int[] range = parseRange(text);
-        if (range == null) return false;
+        if (range == null) return null;
         // 单值形态（sky-light-level=15）语义是"等于"，区间形态（0-7）是闭区间。
         // 拉平会让「只在满光地表刷」变成「任何 >=15 的光」，语义漂移且不告警。
         if (range[0] == range[1] && exact) return level == range[0];
@@ -1164,15 +1298,15 @@ public final class SpawnerService {
         World world = location == null ? null : location.getWorld();
         if (world == null) return false;
         for (String raw : sp.conditions()) {
-            if (raw == null || raw.isBlank()) continue;
+            if (raw == null || raw.isBlank()) return false;
             String condition = raw.trim();
             boolean negate = condition.startsWith("!");
             if (negate) condition = condition.substring(1).trim();
             // 光照条件带参数（light-level-above=-1），规范化会把负号也吃掉，
             // 所以先按原样判定，命中就跳过下面的小写分支。
-            Boolean light = lightCondition(condition, location);
-            if (light != null) {
-                if (negate ? light : !light) return false;
+            LightResult light = evaluateLightCondition(condition, location);
+            if (light != LightResult.NOT_LIGHT) {
+                if (light == LightResult.INVALID || (negate ? light == LightResult.MATCH : light == LightResult.NO_MATCH)) return false;
                 continue;
             }
             String normalized = condition.toLowerCase(Locale.ROOT);
@@ -1182,53 +1316,80 @@ public final class SpawnerService {
             else if (normalized.equals("raining")) passed = world.hasStorm();
             else if (normalized.equals("thundering")) passed = world.isThundering();
             else if (normalized.startsWith("lunar-phase-is=")) {
-                passed = lunarPhase(world.getFullTime()).equalsIgnoreCase(condition.substring(15).trim());
+                String phase = condition.substring(15).trim().toUpperCase(Locale.ROOT);
+                if (!LUNAR_PHASES.contains(phase)) return false;
+                passed = lunarPhase(world.getFullTime()).equals(phase);
             } else if (normalized.startsWith("moon-phase-is=")) {
-                passed = lunarPhase(world.getFullTime()).equalsIgnoreCase(condition.substring(14).trim());
+                String phase = condition.substring(14).trim().toUpperCase(Locale.ROOT);
+                if (!LUNAR_PHASES.contains(phase)) return false;
+                passed = lunarPhase(world.getFullTime()).equals(phase);
             }
             else if (normalized.startsWith("player-faction-is=")) {
                 String faction = condition.substring(18).trim();
-                passed = !faction.isBlank() && playerFactionNear(location, sp.playersRadius(), faction);
+                if (faction.isBlank()) return false;
+                passed = playerFactionNear(location, sp.playersRadius(), faction);
             }
             else if (normalized.startsWith("player-faction-allied-to=")) {
-                String faction = condition.substring(26).trim();
-                passed = !faction.isBlank() && playerFactionRelationNear(location, sp.playersRadius(), faction, true);
+                String faction = condition.substring("player-faction-allied-to=".length()).trim();
+                if (faction.isBlank()) return false;
+                passed = playerFactionRelationNear(location, sp.playersRadius(), faction, true);
             } else if (normalized.startsWith("player-faction-hostile-to=")) {
-                String faction = condition.substring(27).trim();
-                passed = !faction.isBlank() && playerFactionRelationNear(location, sp.playersRadius(), faction, false);
+                String faction = condition.substring("player-faction-hostile-to=".length()).trim();
+                if (faction.isBlank()) return false;
+                passed = playerFactionRelationNear(location, sp.playersRadius(), faction, false);
             }
             else if (normalized.startsWith("region=")) {
                 String regionName = condition.substring(7).trim();
                 Boolean external = regionTester == null ? null : regionTester.contains(regionName, location);
                 RegionBounds named = regions.get(regionName.toLowerCase(Locale.ROOT));
-                passed = external != null ? external : named != null ? named.contains(location) : insideRegion(location, regionName);
+                Boolean match = external != null ? external
+                        : named != null ? Boolean.valueOf(named.contains(location)) : insideRegion(location, regionName);
+                if (match == null) return false;
+                passed = match;
             }
             else if (normalized.startsWith("biome-is=")) {
-                passed = location.getBlock().getBiome().name().equalsIgnoreCase(condition.substring(9).trim());
+                String biome = condition.substring(9).trim().toUpperCase(Locale.ROOT);
+                try {
+                    org.bukkit.block.Biome.valueOf(biome);
+                } catch (IllegalArgumentException ex) {
+                    return false;
+                }
+                passed = location.getBlock().getBiome().name().equals(biome);
             } else if (normalized.startsWith("time-between=")) {
-                passed = timeBetween(world.getTime(), condition.substring(13));
+                Boolean match = timeBetween(world.getTime(), condition.substring(13));
+                if (match == null) return false;
+                passed = match;
             } else if (normalized.startsWith("entities-at-least=")) {
-                int min = (int) number(condition.substring(18), -1);
-                passed = min >= 0 && livingCount(location, sp.playersRadius(), false) >= min;
+                Integer min = countThreshold(condition.substring(18));
+                if (min == null) return false;
+                passed = livingCount(location, sp.playersRadius(), false) >= min;
             } else if (normalized.startsWith("mobs-at-least=")) {
-                int min = (int) number(condition.substring(14), -1);
-                passed = min >= 0 && livingCount(location, sp.playersRadius(), true) >= min;
+                Integer min = countThreshold(condition.substring(14));
+                if (min == null) return false;
+                passed = livingCount(location, sp.playersRadius(), true) >= min;
             } else if (normalized.startsWith("players-at-most=")) {
-                int max = (int) number(condition.substring(16), -1);
-                passed = max >= 0 && countPlayersNear(location, max + 1, sp.playersRadius()) <= max;
+                Integer max = countThreshold(condition.substring(16));
+                if (max == null) return false;
+                passed = countPlayersNear(location, max == Integer.MAX_VALUE ? max : max + 1, sp.playersRadius()) <= max;
             }
-            else if (normalized.startsWith("world-is=")) passed = world.getName().equalsIgnoreCase(condition.substring(9).trim());
-            else if (normalized.startsWith("world-is ")) passed = world.getName().equalsIgnoreCase(condition.substring(9).trim());
+            else if (normalized.startsWith("world-is=") || normalized.startsWith("world-is ")) {
+                String worldName = condition.substring(9).trim();
+                if (worldName.isEmpty()) return false;
+                passed = world.getName().equalsIgnoreCase(worldName);
+            }
             else if (normalized.startsWith("y-below=")) {
                 double limit = number(condition.substring(8), Double.NaN);
-                passed = Double.isFinite(limit) && location.getY() < limit;
+                if (!Double.isFinite(limit)) return false;
+                passed = location.getY() < limit;
             } else if (normalized.startsWith("y-above=")) {
                 double limit = number(condition.substring(8), Double.NaN);
-                passed = Double.isFinite(limit) && location.getY() > limit;
+                if (!Double.isFinite(limit)) return false;
+                passed = location.getY() > limit;
             }
             else if (normalized.startsWith("players-at-least=")) {
-                int min = (int) number(condition.substring(17), -1);
-                passed = min >= 0 && countPlayersNear(location, min, sp.playersRadius()) >= min;
+                Integer min = countThreshold(condition.substring(17));
+                if (min == null) return false;
+                passed = countPlayersNear(location, min, sp.playersRadius()) >= min;
             } else {
                 ConditionTester tester = conditionTester;
                 if (tester != null) {
@@ -1253,6 +1414,12 @@ public final class SpawnerService {
     private static double number(String raw, double fallback) {
         try { return Double.parseDouble(raw.trim()); }
         catch (NumberFormatException ignored) { return fallback; }
+    }
+
+    private static Integer countThreshold(String raw) {
+        double value = number(raw, Double.NaN);
+        return Double.isFinite(value) && value >= 0 && value <= Integer.MAX_VALUE && value == Math.floor(value)
+                ? (int) value : null;
     }
 
     /** 宽松标量解析：接受数字与 "30%" 形态；不可解析返回 NaN，交给调用方告警。 */
@@ -1341,12 +1508,12 @@ public final class SpawnerService {
                 : String.format(Locale.ROOT, "%.3f", value);
     }
 
-    private static boolean timeBetween(long rawTime, String rawRange) {
+    private static Boolean timeBetween(long rawTime, String rawRange) {
         String[] parts = rawRange.split(",", 2);
-        if (parts.length != 2) return false;
+        if (parts.length != 2) return null;
         double start = number(parts[0], Double.NaN);
         double end = number(parts[1], Double.NaN);
-        if (!Double.isFinite(start) || !Double.isFinite(end)) return false;
+        if (!Double.isFinite(start) || !Double.isFinite(end)) return null;
         long time = Math.floorMod(rawTime, 24_000L);
         start = Math.max(0, Math.min(24_000, start));
         end = Math.max(0, Math.min(24_000, end));
@@ -1355,20 +1522,20 @@ public final class SpawnerService {
 
     /** Vanilla advances through eight moon phases, one phase per Minecraft day. */
     public static String lunarPhase(long fullTime) {
-        String[] phases = {"FULL", "WANING_GIBBOUS", "THIRD_QUARTER", "WANING_CRESCENT",
-                "NEW", "WAXING_CRESCENT", "FIRST_QUARTER", "WAXING_GIBBOUS"};
         long day = Math.floorDiv(fullTime, 24_000L);
-        return phases[(int) Math.floorMod(day, phases.length)];
+        return LUNAR_PHASES.get((int) Math.floorMod(day, LUNAR_PHASES.size()));
     }
 
-    private static boolean insideRegion(Location location, String rawBounds) {
-        if (location == null) return false;
+    private static Boolean insideRegion(Location location, String rawBounds) {
+        if (location == null) return null;
         String[] parts = rawBounds.split(",");
+        String worldName = null;
         if (parts.length == 7) {
-            if (location.getWorld() == null || !location.getWorld().getName().equalsIgnoreCase(parts[0].trim())) return false;
+            worldName = parts[0].trim();
+            if (worldName.isEmpty()) return null;
             parts = java.util.Arrays.copyOfRange(parts, 1, parts.length);
         }
-        if (parts.length != 6) return false;
+        if (parts.length != 6) return null;
         double x1 = number(parts[0], Double.NaN);
         double y1 = number(parts[1], Double.NaN);
         double z1 = number(parts[2], Double.NaN);
@@ -1376,7 +1543,9 @@ public final class SpawnerService {
         double y2 = number(parts[4], Double.NaN);
         double z2 = number(parts[5], Double.NaN);
         if (!(Double.isFinite(x1) && Double.isFinite(y1) && Double.isFinite(z1)
-                && Double.isFinite(x2) && Double.isFinite(y2) && Double.isFinite(z2))) return false;
+                && Double.isFinite(x2) && Double.isFinite(y2) && Double.isFinite(z2))) return null;
+        if (worldName != null && (location.getWorld() == null
+                || !location.getWorld().getName().equalsIgnoreCase(worldName))) return false;
         return location.getX() >= Math.min(x1, x2) && location.getX() <= Math.max(x1, x2)
                 && location.getY() >= Math.min(y1, y2) && location.getY() <= Math.max(y1, y2)
                 && location.getZ() >= Math.min(z1, z2) && location.getZ() <= Math.max(z1, z2);

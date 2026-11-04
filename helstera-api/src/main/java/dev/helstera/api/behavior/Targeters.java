@@ -28,8 +28,33 @@ public final class Targeters {
     private static final Map<String, Targeter> BUILTIN = new LinkedHashMap<>();
     private static final java.util.Set<String> WORLD_TARGETERS = java.util.Set.of(
             "playersinworld", "mobsinworld", "entitiesinworld", "livingentitiesinworld");
+    private static final java.util.Set<String> SERVER_PLAYER_TARGETERS = java.util.Set.of(
+            "playersonserver", "server", "everyone");
+    private static final java.util.Set<String> DIRECT_CONTEXT_TARGETERS = java.util.Set.of(
+            "self", "caster", "target", "targets", "trigger", "attacker", "owner", "parent",
+            "children", "child", "passengers", "passenger", "vehicle");
     private static final List<String> CONTEXT_TARGETERS = List.of(
             "nearestconditionaltarget", "nearestconditionalentity", "nearestconditionalplayer");
+    private static final java.util.Set<String> LOCATION_TARGETERS = java.util.Set.of(
+            "selflocation", "casterlocation", "bosslocation", "moblocation", "origin", "source",
+            "selfeyelocation", "eyedirection", "castereyelocation", "bosseyelocation", "mobeyelocation",
+            "targetlocation", "targetloc", "tl", "targetpredictedlocation", "targetpredictedloc",
+            "tpl", "predictedtargetlocation", "triggerlocation", "spawnlocation",
+            "casterspawnlocation", "casterspawn", "forward", "projectileforward");
+    private static final Map<String, String> TARGET_LOCATION_ARGUMENTS = Map.of(
+            "maxdistance", "maxdistance", "max", "maxdistance", "distance", "maxdistance",
+            "d", "maxdistance", "ignoretransparent", "ignoretransparent", "it", "ignoretransparent");
+    private static final Map<String, String> PREDICTED_LOCATION_ARGUMENTS = Map.of(
+            "maxdistance", "maxdistance", "max", "maxdistance", "distance", "maxdistance", "d", "maxdistance",
+            "tickspredicted", "ticks", "ticks", "ticks", "t", "ticks",
+            "ignoretransparent", "ignoretransparent", "it", "ignoretransparent");
+    private static final Map<String, String> FORWARD_ARGUMENTS = Map.of(
+            "forward", "forward", "f", "forward", "amount", "forward", "a", "forward",
+            "rotate", "rotate", "rot", "rotate", "useeyelocation", "useeyelocation", "uel", "useeyelocation",
+            "lockpitch", "lockpitch");
+    private static final Map<String, String> PROJECTILE_FORWARD_ARGUMENTS = Map.of(
+            "forward", "forward", "f", "forward", "amount", "forward", "a", "forward",
+            "rotate", "rotate", "rot", "rotate");
 
     static {
         BUILTIN.put("nearest", Targeters::nearest);
@@ -55,6 +80,9 @@ public final class Targeters {
         BUILTIN.put("entitiesinradius", Targeters::living);
         BUILTIN.put("livingentitiesinradius", Targeters::living);
         BUILTIN.put("playersinworld", Targeters::playersOnly);
+        BUILTIN.put("playersonserver", Targeters::playersOnly);
+        BUILTIN.put("server", Targeters::playersOnly);
+        BUILTIN.put("everyone", Targeters::playersOnly);
         BUILTIN.put("mobsinworld", Targeters::mobsOnly);
         BUILTIN.put("entitiesinworld", Targeters::living);
         BUILTIN.put("livingentitiesinworld", Targeters::living);
@@ -193,8 +221,12 @@ public final class Targeters {
      */
     private static volatile ThreatProvider threatProvider;
 
-    public static void threatProvider(ThreatProvider p) {
+    public static synchronized void threatProvider(ThreatProvider p) {
         threatProvider = p;
+    }
+
+    public static synchronized void clearThreatProvider(ThreatProvider expected) {
+        if (expected != null && threatProvider == expected) threatProvider = null;
     }
 
     /** Shared condition evaluator used by conditional Mythic targeters. */
@@ -205,8 +237,12 @@ public final class Targeters {
 
     private static volatile ConditionProvider conditionProvider;
 
-    public static void conditionProvider(ConditionProvider p) {
+    public static synchronized void conditionProvider(ConditionProvider p) {
         conditionProvider = p;
+    }
+
+    public static synchronized void clearConditionProvider(ConditionProvider expected) {
+        if (expected != null && conditionProvider == expected) conditionProvider = null;
     }
 
     /** 按当前仇恨降序排列；无数据源时返回空列表（见 {@link #threatProvider}）。 */
@@ -231,12 +267,42 @@ public final class Targeters {
         if (context == null) return List.of();
         List<String> chain = splitTargeterChain(spec);
         if (chain.size() > 1) {
-            List<LivingEntity> current = select(chain.get(0), context, candidates, fallbackArgs);
+            List<LivingEntity> current = selectContextScoped(chain.get(0), context, candidates, fallbackArgs, true);
             for (int i = 1; i < chain.size() && !current.isEmpty(); i++) {
-                current = selectScoped(chain.get(i), context.instance(), current, fallbackArgs, false);
+                current = selectContextScoped(chain.get(i), context, current, fallbackArgs, false);
             }
             return List.copyOf(current);
         }
+        return selectContextScoped(spec, context, candidates, fallbackArgs, true);
+    }
+
+    private static List<LivingEntity> selectContextScoped(String spec, BehaviorContext context,
+            Collection<? extends LivingEntity> candidates, List<String> fallbackArgs, boolean expandWorld) {
+        ParsedSpec parsed = ParsedSpec.parse(spec);
+        if (!parsed.valid()) return List.of();
+        if (CONTEXT_TARGETERS.contains(parsed.name())) return selectConditional(spec, context, candidates);
+        if (!DIRECT_CONTEXT_TARGETERS.contains(parsed.name())) {
+            if (isLocationName(parsed.name()) || isVariableLocationName(parsed.name())) {
+                List<LivingEntity> located = selectContextDirect(spec, context, candidates, fallbackArgs);
+                return expandWorld ? located : located.stream().filter(candidates::contains).toList();
+            }
+            return selectScoped(spec, context.instance(), candidates, fallbackArgs, expandWorld);
+        }
+        List<LivingEntity> direct = selectContextDirect(spec, context, candidates, fallbackArgs);
+        if (!expandWorld) direct = direct.stream().filter(candidates::contains).toList();
+        Collection<? extends LivingEntity> scoped = direct;
+        if (parsed.radius() != null) {
+            scoped = scoped.stream().filter(entity -> distance(context.instance(), entity) <= parsed.radius()).toList();
+        }
+        scoped = applyFilter(scoped, context.instance(), parsed.filter());
+        scoped = applyEntityFilters(scoped, context.instance(), parsed, parsed.args(), expandWorld);
+        List<LivingEntity> selected = applySort(new ArrayList<>(scoped), context.instance(), parsed.sort());
+        return applySkipAndLimit(selected, parsed);
+    }
+
+    private static List<LivingEntity> selectContextDirect(String spec, BehaviorContext context,
+                                                           Collection<? extends LivingEntity> candidates,
+                                                           List<String> fallbackArgs) {
         String name = spec == null ? "" : spec.trim().toLowerCase(Locale.ROOT);
         if (name.startsWith("@")) name = name.substring(1);
         int brace = name.indexOf('{');
@@ -255,12 +321,12 @@ public final class Targeters {
                     ? context.targetEntity().map(target -> List.<LivingEntity>of(target)).orElseGet(List::of)
                     : context.targets();
         }
-        if (name.equals("location")) {
-            Location location = parseLocation(spec, context);
+        if (isLocationName(name)) {
+            Location location = resolveLocation(spec, context).orElse(null);
             if (location == null) return List.of();
             return select("@nearest", context.instance(), candidatesAt(location, candidates), fallbackArgs);
         }
-        if (name.equals("variablelocation") || name.equals("variable-location")) {
+        if (isVariableLocationName(name)) {
             Location location = resolveLocation(spec, context).orElse(null);
             if (location == null) return List.of();
             return select("@nearest", context.instance(), candidatesAt(location, candidates), fallbackArgs);
@@ -351,6 +417,7 @@ public final class Targeters {
             scoped = scoped.stream().filter(entity -> distance(origin, entity) <= radius).toList();
         }
         scoped = applyFilter(scoped, context.instance(), parsed.filter());
+        scoped = applyEntityFilters(scoped, context.instance(), parsed, parsed.args(), true);
         List<LivingEntity> selected = new ArrayList<>();
         Location origin = context.origin().orElse(null);
         for (LivingEntity candidate : scoped) {
@@ -375,11 +442,7 @@ public final class Targeters {
         }
         selected.sort(Comparator.comparingDouble(entity -> distance(origin, entity)));
         selected = applySort(selected, context.instance(), parsed.sort());
-        if (parsed.limit() != null && parsed.limit() <= 0) return List.of();
-        if (parsed.limit() != null && selected.size() > parsed.limit()) {
-            selected = selected.subList(0, parsed.limit());
-        }
-        return List.copyOf(selected);
+        return applySkipAndLimit(selected, parsed);
     }
 
     private static List<String> conditionalConditions(List<String> args) {
@@ -420,97 +483,406 @@ public final class Targeters {
     /** Resolves a Mythic-style location targeter without coercing the location into an entity. */
     public static java.util.Optional<Location> resolveLocation(String spec, BehaviorContext context) {
         if (spec == null || context == null) return java.util.Optional.empty();
-        String value = spec.trim();
-        String name = value.startsWith("@") ? value.substring(1) : value;
-        int brace = name.indexOf('{');
-        String kind = (brace < 0 ? name : name.substring(0, brace)).trim();
-        if (kind.equalsIgnoreCase("origin") || kind.equalsIgnoreCase("selflocation")) {
+        if (!validLocationTargeterSpec(spec)) return java.util.Optional.empty();
+        ParsedSpec parsed = ParsedSpec.parse(spec);
+        String kind = canonicalLocationName(parsed.name());
+        if (kind.equals("origin") || kind.equals("source")) {
+            if (!noLocationOptions(spec)) return java.util.Optional.empty();
             return context.origin();
         }
-        if (kind.equalsIgnoreCase("triggerlocation")) {
+        if (kind.equals("selflocation")) {
+            if (!noLocationOptions(spec)) return java.util.Optional.empty();
+            return casterLocation(context);
+        }
+        if (kind.equals("selfeyelocation")) {
+            if (!noLocationOptions(spec) || !context.instanceValid()) return java.util.Optional.empty();
+            return context.instance().baseEntity()
+                    .filter(LivingEntity.class::isInstance)
+                    .map(LivingEntity.class::cast)
+                    .map(LivingEntity::getEyeLocation);
+        }
+        if (kind.equals("triggerlocation")) {
+            if (!noLocationOptions(spec)) return java.util.Optional.empty();
             return context.trigger().map(org.bukkit.entity.Entity::getLocation);
         }
-        if (kind.equalsIgnoreCase("targetlocation")) {
-            return context.targetEntity().map(org.bukkit.entity.Entity::getLocation);
+        if (kind.equals("targetlocation")) {
+            return resolveTargetLocation(spec, context);
         }
-        if (!kind.equalsIgnoreCase("variablelocation") && !kind.equalsIgnoreCase("variable-location")) {
-            if (!kind.equalsIgnoreCase("location")) return java.util.Optional.empty();
-            return java.util.Optional.ofNullable(parseLocation(value, context));
+        if (kind.equals("targetpredictedlocation")) {
+            return resolvePredictedTargetLocation(spec, context);
         }
-        String variable = namedArgument(value, "var");
-        String scope = namedArgument(value, "scope");
-        if (variable == null) variable = firstPositional(value);
-        if (variable == null || variable.isBlank()) return java.util.Optional.empty();
+        if (kind.equals("spawnlocation")) {
+            if (!noLocationOptions(spec)) return java.util.Optional.empty();
+            return casterLocation(context).map(Location::getWorld)
+                    .map(org.bukkit.World::getSpawnLocation);
+        }
+        if (kind.equals("casterspawnlocation")) {
+            if (!noLocationOptions(spec)) return java.util.Optional.empty();
+            return context.instanceValid()
+                    ? context.instance().spawnLocation() : java.util.Optional.empty();
+        }
+        if (kind.equals("forward")) {
+            return resolveForwardLocation(spec, context);
+        }
+        if (kind.equals("projectileforward")) {
+            return resolveProjectileForwardLocation(spec, context);
+        }
+        if (!isVariableLocationName(kind)) {
+            if (!isExplicitLocationName(kind)) return java.util.Optional.empty();
+            return java.util.Optional.ofNullable(parseLocation(spec, context));
+        }
+        VariableLocationSpec variableSpec = parseVariableLocation(spec);
+        if (variableSpec == null) return java.util.Optional.empty();
+        String variable = variableSpec.variable();
+        String normalizedScope = variableSpec.scope();
+        if (normalizedScope.equals("skill")) {
+            return context.skillTree().flatMap(tree -> tree.location(variable));
+        }
+        return VariableLocations.get(normalizedScope, variable, context);
+    }
+
+    private static java.util.Optional<Location> casterLocation(BehaviorContext context) {
+        if (!context.instanceValid()) return java.util.Optional.empty();
+        return context.instance().baseEntity().map(org.bukkit.entity.Entity::getLocation)
+                .or(() -> java.util.Optional.ofNullable(context.instance().location()));
+    }
+
+    private static java.util.Optional<Location> resolveTargetLocation(String spec, BehaviorContext context) {
+        Map<String, String> options = locationOptions(spec, TARGET_LOCATION_ARGUMENTS);
+        if (options == null) return java.util.Optional.empty();
+        double maxDistance = decimalOption(options, "maxdistance", 64);
+        Boolean ignoreTransparent = booleanOption(options, "ignoretransparent", true);
+        if (!Double.isFinite(maxDistance) || maxDistance < 0) return java.util.Optional.empty();
+        if (ignoreTransparent == null) return java.util.Optional.empty();
+
+        org.bukkit.entity.Entity caster = context.instanceValid()
+                ? context.instance().baseEntity().orElse(null) : null;
+        if (caster instanceof Player player) {
+            Location eye = player.getEyeLocation();
+            org.bukkit.util.RayTraceResult hit = eye.getWorld().rayTraceBlocks(
+                    eye, eye.getDirection(), maxDistance,
+                    org.bukkit.FluidCollisionMode.NEVER, ignoreTransparent);
+            if (hit != null && hit.getHitPosition() != null) {
+                return java.util.Optional.of(new Location(eye.getWorld(), hit.getHitPosition().getX(),
+                        hit.getHitPosition().getY(), hit.getHitPosition().getZ(), eye.getYaw(), eye.getPitch()));
+            }
+        }
+        return context.targetLocation()
+                .or(() -> context.targetEntity().map(org.bukkit.entity.Entity::getLocation))
+                .or(() -> context.targets().stream().findFirst().map(org.bukkit.entity.Entity::getLocation));
+    }
+
+    private static java.util.Optional<Location> resolvePredictedTargetLocation(
+            String spec, BehaviorContext context) {
+        Map<String, String> options = locationOptions(spec, PREDICTED_LOCATION_ARGUMENTS);
+        if (options == null) return java.util.Optional.empty();
+        double maxDistance = decimalOption(options, "maxdistance", 64);
+        double ticks = decimalOption(options, "ticks", 20);
+        Boolean ignoreTransparent = booleanOption(options, "ignoretransparent", true);
+        if (!Double.isFinite(maxDistance) || maxDistance < 0
+                || !Double.isFinite(ticks) || ticks < 0) return java.util.Optional.empty();
+        if (ignoreTransparent == null) return java.util.Optional.empty();
+
+        org.bukkit.entity.LivingEntity target = context.targetEntity().orElseGet(
+                () -> context.targets().stream().findFirst().orElse(null));
+        if (target == null) return java.util.Optional.empty();
+        Location start = target.getLocation();
+        org.bukkit.util.Vector movement = target.getVelocity().multiply(ticks);
+        double length = movement.length();
+        if (!Double.isFinite(length)) return java.util.Optional.empty();
+        if (length > maxDistance && length > 0) movement.multiply(maxDistance / length);
+        length = movement.length();
+        if (length > 0) {
+            org.bukkit.util.RayTraceResult hit = start.getWorld().rayTraceBlocks(start,
+                    movement.clone().normalize(), length, org.bukkit.FluidCollisionMode.NEVER, ignoreTransparent);
+            if (hit != null && hit.getHitPosition() != null) {
+                org.bukkit.util.Vector position = hit.getHitPosition();
+                return java.util.Optional.of(new Location(start.getWorld(), position.getX(), position.getY(),
+                        position.getZ(), start.getYaw(), start.getPitch()));
+            }
+        }
+        return java.util.Optional.of(start.add(movement));
+    }
+
+    private static java.util.Optional<Location> resolveForwardLocation(String spec, BehaviorContext context) {
+        Map<String, String> options = locationOptions(spec, FORWARD_ARGUMENTS);
+        if (options == null) return java.util.Optional.empty();
+        double forward = decimalOption(options, "forward", 5);
+        double rotate = decimalOption(options, "rotate", 0);
+        Boolean useEye = booleanOption(options, "useeyelocation", false);
+        Boolean lockPitch = booleanOption(options, "lockpitch", false);
+        if (!Double.isFinite(forward) || !Double.isFinite(rotate)) return java.util.Optional.empty();
+        if (useEye == null || lockPitch == null) return java.util.Optional.empty();
+        Location base = casterLocation(context).orElse(null);
+        if (base == null) return java.util.Optional.empty();
+        org.bukkit.entity.Entity caster = context.instance().baseEntity().orElse(null);
+        if (useEye && caster instanceof LivingEntity living) base = living.getEyeLocation();
+        if (lockPitch) base.setPitch(0);
+        org.bukkit.util.Vector direction = base.getDirection().rotateAroundY(Math.toRadians(-rotate));
+        if (direction.lengthSquared() == 0) return java.util.Optional.empty();
+        return java.util.Optional.of(base.add(direction.normalize().multiply(forward)));
+    }
+
+    private static java.util.Optional<Location> resolveProjectileForwardLocation(
+            String spec, BehaviorContext context) {
+        Map<String, String> options = locationOptions(spec, PROJECTILE_FORWARD_ARGUMENTS);
+        if (options == null) return java.util.Optional.empty();
+        double forward = decimalOption(options, "forward", 1);
+        double rotate = decimalOption(options, "rotate", 0);
+        if (!Double.isFinite(forward) || !Double.isFinite(rotate)) return java.util.Optional.empty();
+        var projectile = context.trigger().filter(org.bukkit.entity.Projectile.class::isInstance)
+                .map(org.bukkit.entity.Projectile.class::cast).orElse(null);
+        if (projectile == null) return java.util.Optional.empty();
+        Location base = projectile.getLocation();
+        org.bukkit.util.Vector direction = projectile.getVelocity();
+        if (direction.lengthSquared() == 0) {
+            return forward == 0 ? java.util.Optional.of(base) : java.util.Optional.empty();
+        }
+        direction.rotateAroundY(Math.toRadians(-rotate));
+        return java.util.Optional.of(base.add(direction.normalize().multiply(forward)));
+    }
+
+    private static Map<String, String> locationOptions(String spec, Map<String, String> aliases) {
+        ParsedSpec parsed = ParsedSpec.parse(spec);
+        if (!parsed.valid() || parsed.limit() != null || parsed.skip() != null || parsed.radius() != null
+                || parsed.filter() != null || parsed.sort() != null) return null;
+        Map<String, String> options = new LinkedHashMap<>();
+        for (String raw : parsed.args()) {
+            int equals = raw.indexOf('=');
+            if (equals <= 0) return null;
+            String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String canonical = aliases.get(key);
+            String value = raw.substring(equals + 1).trim();
+            if (canonical == null || value.isEmpty() || options.putIfAbsent(canonical, value) != null) return null;
+        }
+        return options;
+    }
+
+    private static boolean noLocationOptions(String spec) {
+        return locationOptions(spec, Map.of()) != null;
+    }
+
+    private static double decimalOption(Map<String, String> options, String key, double fallback) {
+        String raw = options.get(key);
+        if (raw == null) return fallback;
+        try {
+            double value = Double.parseDouble(raw);
+            return Double.isFinite(value) ? value : Double.NaN;
+        } catch (NumberFormatException ignored) {
+            return Double.NaN;
+        }
+    }
+
+    private static Boolean booleanOption(Map<String, String> options, String key, boolean fallback) {
+        String raw = options.get(key);
+        if (raw == null) return fallback;
+        if (raw.equalsIgnoreCase("true")) return true;
+        if (raw.equalsIgnoreCase("false")) return false;
+        return null;
+    }
+
+    /** Validates the supported VariableLocation syntax without requiring a stored value. */
+    public static boolean validVariableLocationSpec(String spec) {
+        return parseVariableLocation(spec) != null;
+    }
+
+    public static boolean isVariableLocationName(String name) {
+        return name != null && (name.equalsIgnoreCase("variablelocation")
+                || name.equalsIgnoreCase("variable-location") || name.equalsIgnoreCase("varlocation"));
+    }
+
+    public static boolean isLocationName(String name) {
+        if (name == null) return false;
+        String kind = name.trim();
+        if (kind.startsWith("@")) kind = kind.substring(1);
+        int arguments = kind.indexOf('{');
+        if (arguments >= 0) kind = kind.substring(0, arguments);
+        String normalized = canonicalLocationName(kind);
+        return isExplicitLocationName(normalized) || LOCATION_TARGETERS.contains(normalized);
+    }
+
+    private static String canonicalLocationName(String raw) {
+        String compact = raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT)
+                .replace("_", "").replace("-", "");
+        return switch (compact) {
+            case "casterlocation", "bosslocation", "moblocation" -> "selflocation";
+            case "eyedirection", "castereyelocation", "bosseyelocation", "mobeyelocation" -> "selfeyelocation";
+            case "targetloc", "tl" -> "targetlocation";
+            case "targetpredictedloc", "tpl", "predictedtargetlocation" -> "targetpredictedlocation";
+            case "casterspawn" -> "casterspawnlocation";
+            case "source" -> "origin";
+            default -> compact;
+        };
+    }
+
+    private static boolean isExplicitLocationName(String name) {
+        return name != null && (name.equalsIgnoreCase("location")
+                || name.equalsIgnoreCase("loc") || name.equalsIgnoreCase("l"));
+    }
+
+    /** Validates the supported location-targeter syntax without requiring runtime context. */
+    public static boolean validLocationTargeterSpec(String spec) {
+        if (spec == null) return false;
+        ParsedSpec parsed = ParsedSpec.parse(spec);
+        if (!parsed.valid()) return false;
+        String kind = canonicalLocationName(parsed.name());
+        if (isExplicitLocationName(kind)) return validLocationSpec(spec);
+        if (isVariableLocationName(kind)) return validVariableLocationSpec(spec);
+        if (kind.equals("origin") || kind.equals("selflocation") || kind.equals("selfeyelocation")
+                || kind.equals("triggerlocation")
+                || kind.equals("spawnlocation") || kind.equals("casterspawnlocation")) {
+            return noLocationOptions(spec);
+        }
+        if (kind.equals("targetlocation")) {
+            Map<String, String> options = locationOptions(spec, TARGET_LOCATION_ARGUMENTS);
+            double maxDistance = options == null ? Double.NaN : decimalOption(options, "maxdistance", 64);
+            return Double.isFinite(maxDistance) && maxDistance >= 0
+                    && options != null && booleanOption(options, "ignoretransparent", true) != null;
+        }
+        if (kind.equals("targetpredictedlocation")) {
+            Map<String, String> options = locationOptions(spec, PREDICTED_LOCATION_ARGUMENTS);
+            double maxDistance = options == null ? Double.NaN : decimalOption(options, "maxdistance", 64);
+            double ticks = options == null ? Double.NaN : decimalOption(options, "ticks", 20);
+            return Double.isFinite(maxDistance) && maxDistance >= 0
+                    && Double.isFinite(ticks) && ticks >= 0
+                    && options != null && booleanOption(options, "ignoretransparent", true) != null;
+        }
+        if (kind.equals("forward")) {
+            Map<String, String> options = locationOptions(spec, FORWARD_ARGUMENTS);
+            return options != null
+                    && Double.isFinite(decimalOption(options, "forward", 5))
+                    && Double.isFinite(decimalOption(options, "rotate", 0))
+                    && booleanOption(options, "useeyelocation", false) != null
+                    && booleanOption(options, "lockpitch", false) != null;
+        }
+        if (kind.equals("projectileforward")) {
+            Map<String, String> options = locationOptions(spec, PROJECTILE_FORWARD_ARGUMENTS);
+            return options != null && Double.isFinite(decimalOption(options, "forward", 1))
+                    && Double.isFinite(decimalOption(options, "rotate", 0));
+        }
+        return false;
+    }
+
+    private record VariableLocationSpec(String scope, String variable) { }
+
+    private static VariableLocationSpec parseVariableLocation(String spec) {
+        if (spec == null) return null;
+        String value = spec.trim();
+        int open = value.indexOf('{');
+        int close = value.lastIndexOf('}');
+        String kind = open < 0 ? value : value.substring(0, open).trim();
+        if (kind.startsWith("@")) kind = kind.substring(1);
+        if ((!isVariableLocationName(kind))
+                || open < 0 || close <= open || !value.substring(close + 1).isBlank()) return null;
+        String body = value.substring(open + 1, close);
+        if (body.indexOf('{') >= 0 || body.indexOf('}') >= 0) return null;
+        String variable = null;
+        String scope = null;
+        for (String part : body.split("[;,]")) {
+            String token = part.trim();
+            if (token.isEmpty()) continue;
+            int eq = token.indexOf('=');
+            if (eq < 0) {
+                if (variable != null) return null;
+                variable = token;
+                continue;
+            }
+            String key = token.substring(0, eq).trim().toLowerCase(Locale.ROOT);
+            String argument = token.substring(eq + 1).trim();
+            if (argument.isEmpty()) return null;
+            if (java.util.Set.of("variable", "name", "n", "var", "key", "k").contains(key)
+                    && variable == null) variable = argument;
+            else if ((key.equals("scope") || key.equals("s")) && scope == null) scope = argument;
+            else return null;
+        }
+        if (variable == null || variable.isBlank()) return null;
         if (scope == null && variable.indexOf('.') > 0) {
             int dot = variable.indexOf('.');
             scope = variable.substring(0, dot);
             variable = variable.substring(dot + 1);
         }
         String normalizedScope = VariableLocations.normalizeScope(scope);
-        if (normalizedScope == null) return java.util.Optional.empty();
-        if (normalizedScope.equals("skill")) {
-            String variableName = variable;
-            return context.skillTree().flatMap(tree -> tree.location(variableName));
-        }
-        return VariableLocations.get(normalizedScope, variable, context);
-    }
-
-    private static String namedArgument(String spec, String wanted) {
-        int open = spec.indexOf('{');
-        int close = spec.lastIndexOf('}');
-        if (open < 0 || close <= open) return null;
-        for (String part : spec.substring(open + 1, close).split("[;,]")) {
-            int eq = part.indexOf('=');
-            if (eq > 0 && part.substring(0, eq).trim().equalsIgnoreCase(wanted)) {
-                return part.substring(eq + 1).trim();
-            }
-        }
-        return null;
-    }
-
-    private static String firstPositional(String spec) {
-        int open = spec.indexOf('{');
-        int close = spec.lastIndexOf('}');
-        if (open < 0 || close <= open) return null;
-        for (String part : spec.substring(open + 1, close).split("[;,]")) {
-            String token = part.trim();
-            if (!token.isEmpty() && token.indexOf('=') < 0) return token;
-        }
-        return null;
+        if (normalizedScope == null || variable.isBlank()) return null;
+        return new VariableLocationSpec(normalizedScope, variable);
     }
 
     private static Location parseLocation(String spec, BehaviorContext context) {
+        ExplicitLocationSpec parsed = parseExplicitLocationSpec(spec);
+        if (parsed == null) return null;
+        Location base = context.instanceValid() ? context.instance().location() : null;
+        if (base == null || base.getWorld() == null) base = context.origin().orElse(null);
+        if (parsed.worldName() != null) {
+            org.bukkit.World world = org.bukkit.Bukkit.getWorld(parsed.worldName());
+            if (world == null) return null;
+            if (base == null || !world.equals(base.getWorld())) base = new Location(world, 0, 0, 0);
+        }
+        if (base == null || base.getWorld() == null) return null;
+        return new Location(base.getWorld(), parsed.x(), parsed.y(), parsed.z(), parsed.yaw(), parsed.pitch());
+    }
+
+    /** Validates explicit coordinates without requiring a loaded world. */
+    public static boolean validLocationSpec(String spec) {
+        return parseExplicitLocationSpec(spec) != null;
+    }
+
+    private record ExplicitLocationSpec(String worldName, double x, double y, double z, float yaw, float pitch) { }
+
+    private static ExplicitLocationSpec parseExplicitLocationSpec(String spec) {
         int open = spec == null ? -1 : spec.indexOf('{');
         int close = spec == null ? -1 : spec.lastIndexOf('}');
-        if (open < 0 || close <= open) return null;
+        if (spec == null || (open >= 0 && (close <= open || !spec.substring(close + 1).isBlank()))
+                || (open < 0 && close >= 0)) return null;
+        String kind = (open < 0 ? spec : spec.substring(0, open)).trim();
+        if (kind.startsWith("@")) kind = kind.substring(1);
+        if (!isExplicitLocationName(kind)) return null;
         String worldName = null;
-        Double x = null, y = null, z = null;
-        for (String part : spec.substring(open + 1, close).split("[;,]")) {
+        double x = 0, y = 0, z = 0, yaw = 0, pitch = 0;
+        double[] tuple = null;
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        String body = open < 0 ? "" : spec.substring(open + 1, close);
+        if (body.indexOf('{') >= 0 || body.indexOf('}') >= 0) return null;
+        for (String part : body.split(";|,(?=\\s*[A-Za-z]+\\s*=)")) {
             String token = part.trim();
+            if (token.isEmpty()) continue;
             int eq = token.indexOf('=');
-            if (eq <= 0) continue;
+            if (eq <= 0) return null;
             String key = token.substring(0, eq).trim().toLowerCase(Locale.ROOT);
             String value = token.substring(eq + 1).trim();
+            key = switch (key) {
+                case "loc", "l", "c" -> "location";
+                case "w" -> "world";
+                default -> key;
+            };
+            if (value.isEmpty() || !seen.add(key)) return null;
             try {
                 switch (key) {
-                    case "x" -> x = Double.valueOf(value);
-                    case "y" -> y = Double.valueOf(value);
-                    case "z" -> z = Double.valueOf(value);
+                    case "x" -> x = Double.parseDouble(value);
+                    case "y" -> y = Double.parseDouble(value);
+                    case "z" -> z = Double.parseDouble(value);
+                    case "yaw" -> yaw = Double.parseDouble(value);
+                    case "pitch" -> pitch = Double.parseDouble(value);
+                    case "location" -> {
+                        String[] values = value.split(",", -1);
+                        if (values.length != 5) return null;
+                        tuple = new double[5];
+                        for (int i = 0; i < values.length; i++) tuple[i] = Double.parseDouble(values[i].trim());
+                    }
                     case "world" -> worldName = value;
-                    default -> { }
+                    default -> { return null; }
                 }
             } catch (NumberFormatException e) {
                 return null;
             }
         }
-        Location base = context.origin().orElseGet(() -> context.instanceValid() ? context.instance().location() : null);
-        if (worldName != null) {
-            org.bukkit.World world = org.bukkit.Bukkit.getWorld(worldName);
-            if (world == null) return null;
-            if (base == null || !world.equals(base.getWorld())) base = new Location(world, 0, 0, 0);
+        if (tuple != null) {
+            if (seen.contains("x") || seen.contains("y") || seen.contains("z")
+                    || seen.contains("yaw") || seen.contains("pitch")) return null;
+            x = tuple[0]; y = tuple[1]; z = tuple[2]; yaw = tuple[3]; pitch = tuple[4];
         }
-        if (base == null || base.getWorld() == null || x == null || y == null || z == null) return null;
-        return new Location(base.getWorld(), x, y, z);
+        if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)
+                || !Double.isFinite(yaw) || !Double.isFinite(pitch)
+                || !Float.isFinite((float) yaw) || !Float.isFinite((float) pitch)) return null;
+        return new ExplicitLocationSpec(worldName, x, y, z, (float) yaw, (float) pitch);
     }
 
     private static Collection<? extends LivingEntity> candidatesAt(
@@ -551,65 +923,225 @@ public final class Targeters {
                                                     List<String> fallbackArgs, boolean expandWorld) {
         ParsedSpec parsed = ParsedSpec.parse(spec);
         if (!parsed.valid()) return List.of();
+        List<String> args = parsed.args().isEmpty()
+                ? (fallbackArgs == null ? List.of() : fallbackArgs) : parsed.args();
         Collection<? extends LivingEntity> scoped = candidates == null ? List.of() : candidates;
-        if (WORLD_TARGETERS.contains(parsed.name())) {
+        if (SERVER_PLAYER_TARGETERS.contains(parsed.name())) {
+            if (expandWorld) scoped = org.bukkit.Bukkit.getOnlinePlayers();
+            scoped = filterPlayers(scoped.stream()
+                            .filter(org.bukkit.entity.Player.class::isInstance)
+                            .map(org.bukkit.entity.Player.class::cast).toList(), null,
+                    source == null ? null : source.baseEntity().orElse(null), targetSelf(parsed, args));
+        } else if (WORLD_TARGETERS.contains(parsed.name())) {
             Location origin = source == null ? null : source.location();
             if (origin == null || origin.getWorld() == null) return List.of();
             org.bukkit.entity.Entity sourceEntity = source.baseEntity().orElse(null);
             // Only the first stage may expand the local candidate snapshot.
             if (expandWorld) scoped = origin.getWorld().getLivingEntities();
-            scoped = scoped.stream().filter(entity -> entity != null && entity.isValid() && !entity.isDead()
-                    && origin.getWorld().equals(entity.getWorld()) && entity != sourceEntity
-                    && !Factions.allied(sourceEntity, entity)).toList();
+            if (parsed.name().equals("playersinworld")) {
+                scoped = filterPlayers(scoped.stream()
+                                .filter(org.bukkit.entity.Player.class::isInstance)
+                                .map(org.bukkit.entity.Player.class::cast).toList(), origin.getWorld(),
+                        sourceEntity, targetSelf(parsed, args));
+            } else {
+                scoped = scoped.stream().filter(entity -> entity != null && entity.isValid() && !entity.isDead()
+                        && origin.getWorld().equals(entity.getWorld()) && entity != sourceEntity
+                        && !Factions.allied(sourceEntity, entity)).toList();
+            }
         }
         if (parsed.radius() != null && parsed.radius() >= 0) {
             double radius = parsed.radius();
             scoped = scoped.stream().filter(entity -> distance(source, entity) <= radius).toList();
         }
         scoped = applyFilter(scoped, source, parsed.filter());
+        scoped = applyEntityFilters(scoped, source, parsed, args, expandWorld);
 
         Targeter targeter = byName(parsed.name());
         if (targeter == null) return List.of();
-        List<String> args = parsed.args().isEmpty()
-                ? (fallbackArgs == null ? List.of() : fallbackArgs) : parsed.args();
         List<LivingEntity> selected = targeter.select(source, scoped, args);
         selected = applySort(selected, source, parsed.sort());
-        Integer limit = parsed.limit();
-        if (limit != null && limit <= 0) return List.of();
-        if (limit == null || selected.size() <= limit) return selected;
-        return List.copyOf(selected.subList(0, limit));
+        return applySkipAndLimit(selected, parsed);
     }
 
-    private record ParsedSpec(String name, List<String> args, Integer limit, Double radius,
-                              String filter, String sort, boolean valid) {
+    private static List<LivingEntity> applySkipAndLimit(List<LivingEntity> selected, ParsedSpec parsed) {
+        Integer skip = parsed.skip();
+        if (skip != null && (skip < 0 || skip >= selected.size())) return List.of();
+        if (skip != null && skip > 0) selected = selected.subList(skip, selected.size());
+
+        Integer limit = parsed.limit();
+        if (limit != null && limit <= 0) return List.of();
+        if (limit != null && selected.size() > limit) selected = selected.subList(0, limit);
+        return List.copyOf(selected);
+    }
+
+    private static boolean targetSelf(ParsedSpec parsed, List<String> args) {
+        return Boolean.TRUE.equals(targetSelfOption(parsed, args));
+    }
+
+    private static Boolean targetSelfOption(ParsedSpec parsed, List<String> args) {
+        if (parsed.targetSelf() != null) return parsed.targetSelf();
+        for (String argument : args) {
+            int equals = argument.indexOf('=');
+            if (equals <= 0 || !argument.substring(0, equals).trim().equalsIgnoreCase("targetself")) continue;
+            String value = argument.substring(equals + 1).trim();
+            if (value.equalsIgnoreCase("true")) return true;
+            if (value.equalsIgnoreCase("false")) return false;
+            return null;
+        }
+        return null;
+    }
+
+    private static Collection<? extends LivingEntity> applyEntityFilters(
+            Collection<? extends LivingEntity> candidates, ModelInstance source, ParsedSpec parsed,
+            List<String> args, boolean expandWorld) {
+        List<String> targets = parseEntityFilters(parsed.targetFilter());
+        List<String> ignored = parseEntityFilters(parsed.ignoreFilter());
+        if (targets == null || ignored == null) return List.of();
+
+        List<LivingEntity> scoped = new ArrayList<>(candidates == null ? List.of() : candidates);
+        org.bukkit.entity.Entity baseEntity = source == null || source.baseEntity() == null
+                ? null : source.baseEntity().orElse(null);
+        LivingEntity sourceEntity = baseEntity instanceof LivingEntity living ? living : null;
+        Boolean targetSelf = targetSelfOption(parsed, args);
+        if (Boolean.TRUE.equals(targetSelf) && expandWorld && sourceEntity != null
+                && sourceEntity.isValid() && !sourceEntity.isDead() && !scoped.contains(sourceEntity)) {
+            scoped.add(sourceEntity);
+        }
+        return scoped.stream().filter(entity -> {
+            if (entity == null) return false;
+            if (Boolean.FALSE.equals(targetSelf) && entity == sourceEntity) return false;
+            if (!targets.isEmpty() && targets.stream().noneMatch(filter -> matchesEntityFilter(filter, entity, source))) {
+                return false;
+            }
+            return ignored.stream().noneMatch(filter -> matchesEntityFilter(filter, entity, source));
+        }).toList();
+    }
+
+    private static List<String> parseEntityFilters(String raw) {
+        if (raw == null) return List.of();
+        String value = raw.trim();
+        if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+            value = value.substring(1, value.length() - 1).trim();
+        }
+        if (value.isEmpty()) return null;
+        List<String> filters = java.util.Arrays.stream(value.split(",", -1))
+                .map(filter -> filter.trim().toLowerCase(Locale.ROOT)).toList();
+        if (filters.stream().anyMatch(String::isBlank)
+                || filters.stream().anyMatch(filter -> !isSupportedEntityFilter(filter))) return null;
+        return filters;
+    }
+
+    private static boolean isSupportedEntityFilter(String filter) {
+        if (java.util.Set.of("player", "players", "mob", "mobs", "nonplayer", "nonplayers",
+                "living", "entity", "entities", "animal", "animals", "monster", "monsters",
+                "creature", "creatures", "villager", "villagers", "tamed", "self", "caster")
+                .contains(filter)) return true;
+        try {
+            org.bukkit.entity.EntityType.valueOf(filter.toUpperCase(Locale.ROOT));
+            return true;
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean matchesEntityFilter(String filter, LivingEntity entity, ModelInstance source) {
+        return switch (filter) {
+            case "player", "players" -> entity instanceof Player;
+            case "mob", "mobs", "nonplayer", "nonplayers" -> !(entity instanceof Player);
+            case "living", "entity", "entities" -> true;
+            case "animal", "animals" -> entity instanceof org.bukkit.entity.Animals;
+            case "monster", "monsters" -> entity instanceof org.bukkit.entity.Monster;
+            case "creature", "creatures" -> entity instanceof org.bukkit.entity.Animals
+                    || entity instanceof org.bukkit.entity.Monster || entity instanceof org.bukkit.entity.Villager;
+            case "villager", "villagers" -> entity instanceof org.bukkit.entity.Villager;
+            case "tamed" -> entity instanceof org.bukkit.entity.Tameable tameable && tameable.isTamed();
+            case "self", "caster" -> source != null && source.baseEntity() != null
+                    && source.baseEntity().map(base -> base == entity).orElse(false);
+            default -> entity.getType() != null && entity.getType().name().equalsIgnoreCase(filter);
+        };
+    }
+
+    static List<LivingEntity> filterPlayers(Collection<? extends org.bukkit.entity.Player> players,
+                                             org.bukkit.World world,
+                                             org.bukkit.entity.Entity sourceEntity,
+                                             boolean includeSource) {
+        if (players == null) return List.of();
+        return players.stream().filter(player -> player != null && player.isOnline()
+                && player.isValid() && !player.isDead()
+                && (world == null || world.equals(player.getWorld()))
+                && (includeSource || player != sourceEntity))
+                .map(player -> (LivingEntity) player).toList();
+    }
+
+    private record ParsedSpec(String name, List<String> args, Integer limit, Integer skip, Double radius,
+                              String filter, String targetFilter, String ignoreFilter, Boolean targetSelf,
+                              String sort, boolean valid) {
         static ParsedSpec parse(String raw) {
             String value = raw == null ? "" : raw.trim();
             if (value.startsWith("@")) value = value.substring(1);
             int open = value.indexOf('{');
-            if (open < 0) return new ParsedSpec(canonicalName(value), List.of(), null, null, null, null, true);
+            if (open < 0) return new ParsedSpec(canonicalName(value), List.of(), null, null, null,
+                    null, null, null, null, null, true);
             int close = value.lastIndexOf('}');
-            if (close < open) return new ParsedSpec(canonicalName(value.substring(0, open)), List.of(), null, null, null, null, false);
+            if (close < open || !value.substring(close + 1).isBlank()) {
+                return new ParsedSpec(canonicalName(value.substring(0, open)), List.of(), null, null, null,
+                        null, null, null, null, null, false);
+            }
+            String argumentBody = value.substring(open + 1, close);
+            if (!validArgumentSyntax(argumentBody)) {
+                return new ParsedSpec(canonicalName(value.substring(0, open)), List.of(), null,
+                        null, null, null, null, null, null, null, false);
+            }
             List<String> args = new ArrayList<>();
             Integer limit = null;
+            Integer skip = null;
             Double radius = null;
             String filter = null;
+            String targetFilter = null;
+            String ignoreFilter = null;
+            Boolean targetSelf = null;
             String sort = null;
             boolean valid = true;
-            for (String part : splitSpecArguments(value.substring(open + 1, close))) {
+            java.util.Set<String> seenGeneric = new java.util.HashSet<>();
+            for (String part : splitSpecArguments(argumentBody)) {
                 String token = part.trim();
                 if (token.isEmpty()) continue;
                 int eq = token.indexOf('=');
                 if (eq > 0) {
                     String key = token.substring(0, eq).trim();
                     String rawValue = token.substring(eq + 1).trim();
+                    String generic = switch (key.toLowerCase(Locale.ROOT)) {
+                        case "limit", "count" -> "limit";
+                        case "skiptargetsuptoindex", "stuti" -> "skip";
+                        case "r", "radius" -> "radius";
+                        case "filter", "type" -> "filter";
+                        case "target" -> "target";
+                        case "ignore" -> "ignore";
+                        case "targetself" -> "targetself";
+                        case "sort" -> "sort";
+                        default -> null;
+                    };
+                    if (generic != null && (!seenGeneric.add(generic) || rawValue.isBlank())) valid = false;
                     try {
                         if (key.equalsIgnoreCase("limit") || key.equalsIgnoreCase("count")) {
                             limit = Integer.valueOf(rawValue);
+                        } else if (key.equalsIgnoreCase("skipTargetsUpToIndex")
+                                || key.equalsIgnoreCase("stuti")) {
+                            skip = Integer.valueOf(rawValue);
+                            if (skip < 0) valid = false;
                         } else if (key.equalsIgnoreCase("r") || key.equalsIgnoreCase("radius")) {
                             radius = Double.valueOf(rawValue);
                             if (!Double.isFinite(radius) || radius < 0) valid = false;
                         } else if (key.equalsIgnoreCase("filter") || key.equalsIgnoreCase("type")) {
                             filter = rawValue;
+                        } else if (key.equalsIgnoreCase("target")) {
+                            targetFilter = rawValue;
+                        } else if (key.equalsIgnoreCase("ignore")) {
+                            ignoreFilter = rawValue;
+                        } else if (key.equalsIgnoreCase("targetself")) {
+                            if (rawValue.equalsIgnoreCase("true")) targetSelf = true;
+                            else if (rawValue.equalsIgnoreCase("false")) targetSelf = false;
+                            else valid = false;
                         } else if (key.equalsIgnoreCase("sort")) {
                             sort = rawValue;
                         } else {
@@ -618,16 +1150,19 @@ public final class Targeters {
                         }
                     } catch (NumberFormatException ignored) {
                         if (key.equalsIgnoreCase("limit") || key.equalsIgnoreCase("count")
+                                || key.equalsIgnoreCase("skipTargetsUpToIndex") || key.equalsIgnoreCase("stuti")
                                 || key.equalsIgnoreCase("r") || key.equalsIgnoreCase("radius")) valid = false;
                         if (!key.equalsIgnoreCase("limit") && !key.equalsIgnoreCase("count")
+                                && !key.equalsIgnoreCase("skipTargetsUpToIndex") && !key.equalsIgnoreCase("stuti")
                                 && !key.equalsIgnoreCase("r") && !key.equalsIgnoreCase("radius")
                                 && !key.equalsIgnoreCase("filter") && !key.equalsIgnoreCase("type")
-                                && !key.equalsIgnoreCase("sort")) args.add(token);
+                                && !key.equalsIgnoreCase("target") && !key.equalsIgnoreCase("ignore")
+                                && !key.equalsIgnoreCase("targetself") && !key.equalsIgnoreCase("sort")) args.add(token);
                     }
                 } else args.add(token);
             }
             return new ParsedSpec(canonicalName(value.substring(0, open)), args,
-                    limit, radius, filter, sort, valid);
+                    limit, skip, radius, filter, targetFilter, ignoreFilter, targetSelf, sort, valid);
         }
 
         private static String canonicalName(String raw) {
@@ -635,7 +1170,9 @@ public final class Targeters {
             String compact = normalized.replace("_", "").replace("-", "");
             return switch (compact) {
                 case "nearestentity", "nearestliving", "nearestlivingentity", "nearestmob",
-                        "playersinworld", "mobsinworld", "entitiesinworld", "livingentitiesinworld" -> compact;
+                        "playersinworld", "mobsinworld", "entitiesinworld", "livingentitiesinworld",
+                        "playersonserver" -> compact;
+                case "server", "everyone" -> "playersonserver";
                 default -> normalized;
             };
         }
@@ -664,6 +1201,45 @@ public final class Targeters {
         return parts;
     }
 
+    private static boolean validArgumentSyntax(String raw) {
+        if (raw == null || raw.isBlank()) return true;
+        List<Character> delimiters = new ArrayList<>();
+        boolean quoted = false;
+        boolean hasToken = false;
+        for (int i = 0; i < raw.length(); i++) {
+            char current = raw.charAt(i);
+            if (current == '\\' && quoted && i + 1 < raw.length() && raw.charAt(i + 1) == '"') {
+                i++;
+                hasToken = true;
+                continue;
+            }
+            if (current == '"') {
+                quoted = !quoted;
+                hasToken = true;
+                continue;
+            }
+            if (quoted) continue;
+            if (current == ';' && delimiters.isEmpty()) {
+                if (!hasToken) return false;
+                hasToken = false;
+                continue;
+            }
+            if (current == '{' || current == '[' || current == '(') {
+                delimiters.add(current);
+                hasToken = true;
+                continue;
+            }
+            if (current == '}' || current == ']' || current == ')') {
+                if (delimiters.isEmpty()) return false;
+                char opening = delimiters.remove(delimiters.size() - 1);
+                if ((current == '}' && opening != '{') || (current == ']' && opening != '[')
+                        || (current == ')' && opening != '(')) return false;
+            }
+            if (!Character.isWhitespace(current)) hasToken = true;
+        }
+        return !quoted && delimiters.isEmpty() && hasToken;
+    }
+
     private static List<String> splitTargeterChain(String raw) {
         if (raw == null || raw.isBlank()) return List.of();
         List<String> parts = new ArrayList<>();
@@ -683,6 +1259,7 @@ public final class Targeters {
             current.append(c);
         }
         if (quoted || braces != 0) return List.of(raw);
+        if (current.toString().trim().isEmpty() && !parts.isEmpty()) return List.of(raw);
         if (!current.toString().trim().isEmpty()) parts.add(current.toString().trim());
         return parts.isEmpty() ? List.of(raw) : parts;
     }
@@ -698,6 +1275,15 @@ public final class Targeters {
         boolean exactFaction = filter.startsWith("faction:");
         String factionName = alliedFaction || hostileFaction || exactFaction
                 ? filter.substring(filter.indexOf(':') + 1).trim() : null;
+        if (factionName != null && (factionName.isBlank() || Factions.table() == null)) return List.of();
+        if (factionName == null && !java.util.Set.of("player", "players", "mob", "mobs", "nonplayer",
+                "nonplayers", "living", "entity", "entities", "self", "caster").contains(filter)) {
+            try {
+                org.bukkit.entity.EntityType.valueOf(filter.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ignored) {
+                return List.of();
+            }
+        }
         final String wanted = filter;
         List<LivingEntity> filtered = new ArrayList<>();
         for (LivingEntity entity : candidates) {
@@ -728,14 +1314,43 @@ public final class Targeters {
     private static List<LivingEntity> applySort(List<LivingEntity> selected,
                                                  ModelInstance source, String rawSort) {
         if (rawSort == null || rawSort.isBlank()) return selected;
-        String sort = rawSort.trim().toLowerCase(Locale.ROOT);
+        String sort = rawSort.trim().toLowerCase(Locale.ROOT).replace('_', '-');
         List<LivingEntity> sorted = new ArrayList<>(selected);
-        if (sort.equals("random")) {
-            Collections.shuffle(sorted);
-        } else if (sort.equals("farthest")) {
-            sorted.sort(Comparator.comparingDouble((LivingEntity e) -> distance(source, e)).reversed());
-        } else if (sort.equals("nearest") || sort.equals("closest")) {
-            sorted.sort(Comparator.comparingDouble(e -> distance(source, e)));
+        switch (sort) {
+            case "none" -> { }
+            case "random" -> Collections.shuffle(sorted);
+            case "nearest", "closest" -> sorted.sort(Comparator.comparingDouble(e -> distance(source, e)));
+            case "farthest" -> sorted.sort(Comparator.comparingDouble(
+                    (LivingEntity e) -> distance(source, e)).reversed());
+            case "highest-health" -> {
+                if (sorted.stream().anyMatch(e -> !Double.isFinite(e.getHealth()))) return List.of();
+                sorted.sort(Comparator.comparingDouble(LivingEntity::getHealth).reversed());
+            }
+            case "lowest-health" -> {
+                if (sorted.stream().anyMatch(e -> !Double.isFinite(e.getHealth()))) return List.of();
+                sorted.sort(Comparator.comparingDouble(LivingEntity::getHealth));
+            }
+            case "oldest" -> sorted.sort(Comparator.comparingInt(LivingEntity::getTicksLived).reversed());
+            case "newest" -> sorted.sort(Comparator.comparingInt(LivingEntity::getTicksLived));
+            case "highest-threat", "lowest-threat" -> {
+                ThreatProvider provider = threatProvider;
+                if (provider == null) return List.of();
+                Map<LivingEntity, Double> threat = new java.util.IdentityHashMap<>();
+                for (LivingEntity entity : sorted) {
+                    double value;
+                    try {
+                        value = provider.threatOf(source, entity);
+                    } catch (RuntimeException ex) {
+                        return List.of();
+                    }
+                    if (!Double.isFinite(value)) return List.of();
+                    threat.put(entity, value);
+                }
+                Comparator<LivingEntity> byThreat = Comparator.comparingDouble(threat::get);
+                if (sort.equals("highest-threat")) byThreat = byThreat.reversed();
+                sorted.sort(byThreat.thenComparingDouble(e -> distance(source, e)));
+            }
+            default -> { return List.of(); }
         }
         return sorted;
     }

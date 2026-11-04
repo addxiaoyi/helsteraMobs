@@ -4,10 +4,14 @@ param(
     [ValidateSet('release', 'exploratory')]
     [string]$EvidenceMode = 'release',
     [double]$RandomSpawnTolerance = 0.15,
-    [DateTime]$StartedAtUtc = [DateTime]::MinValue
+    [DateTime]$StartedAtUtc = [DateTime]::MinValue,
+    [string]$PluginSha256 = ''
 )
 
 $ErrorActionPreference = 'Stop'
+if ($PluginSha256 -and $PluginSha256 -cnotmatch '^[0-9a-f]{64}$') {
+    throw 'PluginSha256 must be a lowercase SHA-256 digest.'
+}
 if ([double]::IsNaN($RandomSpawnTolerance) -or [double]::IsInfinity($RandomSpawnTolerance) -or
         $RandomSpawnTolerance -lt 0 -or $RandomSpawnTolerance -gt 1) {
     throw 'RandomSpawnTolerance must be finite and between 0 and 1.'
@@ -57,9 +61,33 @@ $probeSpecs = [ordered]@{
     armorOptions = 'armor-options result=true base=8(?:\.0+)?'
     entityConfigFlags = 'entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false'
     expOptions = 'exp-options result=true experience=13 event=true'
+    expNaturalDeath = 'exp-natural-death result=true dead=true experience=13 cause=BukkitDamage'
+    expTierDeath = 'exp-tier-death result=true low=2 qualified=7 low-dead=true qualified-dead=true low-bread=4 qualified-bread=4'
+    reviveNatural = 'revive-natural result=true alive=true attached=true health=8(?:\.0+)?(?:\s|$)'
+    reviveLate = 'revive-late result=true cancelled=true alive=true attached=true health=8(?:\.0+)? no-drops=true'
+    damageImported = 'damage-imported mapped=true entity-damage=true attacker-name=true attacker-equipment=true environmental-damage=true environmental-no-trigger=true passed=true'
+    immunityImported = 'immunity-imported result=true reduced=true condition-rejected=true invalid-rejected=true'
+    immunityNativeInvalid = 'immunity-native-invalid result=true false-rejected=true null-rejected=true unknown-rejected=true null-modifier-rejected=true'
+    immunityInvalidFields = 'immunity-invalid-fields null-immunity=true null-modifier-field=true unknown-modifier-field=true invalid-immune=true null-immune=true'
+    immunityPreservation = 'immunity-preservation nested-preserved=true nested-closed=true list-null-preserved=true list-null-closed=true'
+    conditionArguments = 'condition-arguments living-rejected=true baby-valid=true baby-rejected=true frozen-valid=true frozen-rejected=true warnings=true'
+    conditionStateArguments = 'condition-state-arguments valid=true movement-rejected=true category-rejected=true alive-rejected=true negated-rejected=true preserved=true warnings=true'
+    targetSneakingMob = 'target-sneaking-mob false-rejected=true true-passed=true'
+    timeWeatherArguments = 'time-weather-arguments time-valid=true time-opposite=true weather-valid=true weather-opposite=true time-rejected=true rain-rejected=true negated-rejected=true preserved=true warnings=true'
+    visibilityStateArguments = 'visibility-state-arguments valid=true rejected=true preserved=true warnings=true'
+    dropNullConditions = 'drop-null-conditions rejected=true warnings=true sibling=true'
+    dropNativeNullConditions = 'drop-native-null-conditions rejected=true sibling=true warnings=true'
+    dropNativeNullNumeric = 'drop-native-null-numeric rejected=true fallback=true overrides=true warnings=true'
+    dropNativeDynamic = 'drop-native-dynamic rejected=true warnings=true'
+    dropNativeTier = 'drop-native-tier rejected=true warnings=true'
+    dropNativeTierRange = 'drop-native-tier-range valid=true fallback=true warnings=true'
+    dropUnsafeReferences = 'drop-unsafe-references warnings=true stale-rejected=true'
+    dropMergedNull = 'drop-merged-null rejected=true warnings=true stale-rejected=true'
+    dropChanceImported = 'drop-chance-imported rejected=true warnings=true'
     despawnOptions = 'despawn-options result=true mode=PERSISTENT distance=0(?:\.0+)? persistent=true'
     spawningDistanceOptions = 'spawning-distance-options result=true mode=NORMAL distance=8(?:\.0+)?'
     spawningDistanceRuntime = 'spawning-distance-runtime result=true inside-retained=true outside-removed=true'
+    spawningDistanceClientWalk = 'spawning-distance-client-walk result=true player-displacement=(?:8|9|[1-9][0-9]+)(?:\.[0-9]+)? player-entity-distance=[0-9]+(?:\.[0-9]+)? instance-removed=true entity-removed=true'
     visibilityOptions = 'visibility-options result=true visible-by-default=true invisible=true show-name=true'
     sheep = 'sheep-options result=true'
     armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false .*items=true'
@@ -71,6 +99,7 @@ $probeSpecs = [ordered]@{
     ageOptions = 'age-options result=true'
     entityFlagOptions = 'entity-flag-options result=true .*patrol-spawn-point=true'
     endermanHeldBlock = 'enderman-held-block result=true material=OBSIDIAN'
+    mobPickupOption = 'mob-pickup-option result=true disabled=true explicit-overrides-default=true'
     spawnOptionRuntime = 'spawn-option-runtime result=true pickup-disabled=true explicit-pickup-overrides-fallback=true random-equipment-cleared=true explicit-equipment-preserved=true no-damage-ticks=true'
     attributes = 'attribute-options result=true modifiers=1'
     itemAttributes = 'item-attribute-options result=true modifiers=1'
@@ -85,9 +114,17 @@ $probeSpecs = [ordered]@{
     skillScheduling = 'skill-scheduler result=true delay=2 repeat=3 interval=2 executions=4 pre-delay-count=0'
     skillTreeBranches = 'skill-tree-branches result=true condition-denied=true condition-unlock=true prerequisite-blocked=true prerequisite-unlock=true'
     skillTreeCastPersistence = 'skill-tree-cast-persistence result=true blocked-before-unlock=true prerequisite-unlock-blocked=true snapshot-saved=true advanced-unlocked=true casts=1'
-    conditionCatalog = 'skill-actions (?=.*conditions=true)(?=.*owner-condition=true)(?=.*children-condition=true)(?=.*inside-outside-conditions=true)(?=.*distance-from-location-condition=true)(?=.*coordinate-difference-condition=true)(?=.*origin-location-condition=true)(?=.*line-of-sight-from-origin-condition=true)(?=.*bounds-condition=true)(?=.*enchanting-conditions=true)(?=.*plugin-condition=true)(?=.*field-of-view-condition=true)(?=.*spawn-reason-condition=true)(?=.*water-mob-condition=true)(?=.*zombie-condition=true)(?=.*aerial-condition=true)(?=.*enderman-condition=true)(?=.*enchantment-condition=true)(?=.*color-condition=true)(?=.*material-cooldown-condition=true)(?=.*trigger-item-type-condition=true)(?=.*entity-item-type-condition=true)(?=.*entity-item-similar-condition=true)(?=.*item-similar-condition=true)(?=.*targets-condition=true)(?=.*item-type-condition=true)(?=.*mythic-mob-type-condition=true)(?=.*trigger-block-type-condition=true)(?=.*frozen-condition=true)(?=.*dialogue-condition=true)(?=.*player-kills-condition=true)(?=.*absorption-condition=true)(?=.*health-absorption-condition=true)(?=.*potion-effect-condition=true)(?=.*aura-stacks-condition=true)(?=.*level-condition=true)(?=.*lunar-phase-condition=true)(?=.*string-equals-condition=true)(?=.*string-empty-condition=true)(?=.*compare-values-condition=true)(?=.*is-skill-condition=true)(?=.*global-score-condition=true)(?=.*score-condition=true)'
+    skillTreeQueueSnapshot = 'skill-tree-queue submitted=true restored=true'
+    skillLifecycleCleanup = 'skill-lifecycle reload=true scheduled=true cancelled=true'
+    conditionCatalog = 'skill-actions (?=.*conditions=true)(?=.*drowning-condition=true)(?=.*owner-condition=true)(?=.*children-condition=true)(?=.*inside-outside-conditions=true)(?=.*distance-from-location-condition=true)(?=.*coordinate-difference-condition=true)(?=.*origin-location-condition=true)(?=.*line-of-sight-from-origin-condition=true)(?=.*bounds-condition=true)(?=.*enchanting-conditions=true)(?=.*plugin-condition=true)(?=.*field-of-view-condition=true)(?=.*spawn-reason-condition=true)(?=.*water-mob-condition=true)(?=.*zombie-condition=true)(?=.*aerial-condition=true)(?=.*enderman-condition=true)(?=.*enchantment-condition=true)(?=.*color-condition=true)(?=.*material-cooldown-condition=true)(?=.*trigger-item-type-condition=true)(?=.*entity-item-type-condition=true)(?=.*entity-item-similar-condition=true)(?=.*item-similar-condition=true)(?=.*targets-condition=true)(?=.*item-type-condition=true)(?=.*mythic-mob-type-condition=true)(?=.*trigger-block-type-condition=true)(?=.*frozen-condition=true)(?=.*dialogue-condition=true)(?=.*player-kills-condition=true)(?=.*absorption-condition=true)(?=.*health-absorption-condition=true)(?=.*potion-effect-condition=true)(?=.*aura-stacks-condition=true)(?=.*level-condition=true)(?=.*lunar-phase-condition=true)(?=.*string-equals-condition=true)(?=.*string-empty-condition=true)(?=.*compare-values-condition=true)(?=.*is-skill-condition=true)(?=.*global-score-condition=true)(?=.*score-condition=true)'
+    enderDragonAliveCondition = 'ender-dragon-alive-condition positive=true negative=true removed=true'
     absorptionCondition = 'skill-actions .*absorption-condition=true'
     healthAbsorptionCondition = 'skill-actions .*health-absorption-condition=true'
+    healthImportedCondition = 'health-imported result=true comparisons=true invalid-preserved=true'
+    healthRangeImportedCondition = 'health-range-imported result=true ranges=true invalid-preserved=true'
+    comparisonBoundaryImportedCondition = 'comparison-boundary-imported result=true boundaries=true invalid-preserved=true'
+    targetHealthImportedCondition = 'target-health-imported result=true comparisons=true invalid-preserved=true'
+    environmentImportedCondition = 'environment-imported result=true valid=true invalid-rejected=true'
     potionEffectCondition = 'skill-actions .*potion-effect-condition=true'
     auraStacksCondition = 'skill-actions .*aura-stacks-condition=true'
     levelCondition = 'skill-actions .*level-condition=true'
@@ -120,6 +157,9 @@ $probeSpecs = [ordered]@{
     worldBiome = 'skill-actions .*world-biome=true'
     worldBiomeReject = 'skill-actions .*world-biome-reject=true'
     targetCategories = 'skill-actions .*target-categories=true'
+    raiderPatrolLeaderCondition = 'raider-patrol-leader-condition positive=true negative=true entity=PILLAGER restored=true'
+    creeperPrimedCondition = 'creeper-primed-condition positive=true negative=true restored=true'
+    enderDragonPhaseCondition = 'ender-dragon-phase-condition positive=true list=true negative=true invalid-rejected=true restored=true'
     targetHealthComparators = 'skill-actions .*target-health=true'
     factionConditions = 'skill-actions .*faction-conditions=true'
     factionMechanic = 'skill-actions .*faction-mechanic=true'
@@ -133,7 +173,13 @@ $probeSpecs = [ordered]@{
     targetKillMechanic = 'skill-actions .*target-kill=true'
     damageMeleeMechanic = 'skill-actions .*damage-melee=true'
     conditionUtilityAliases = 'skill-actions .*condition-utility=true .*block-type-radius-condition=true .*biome-condition=true'
+    survivalModeCondition = 'survival-mode-condition positive=true negative=true restored=true'
+    distanceFromSpawnCondition = 'condition-utility-details .*spawn-distance-exact=true .*spawn-distance-over-rejected=true'
+    mobsInChunkCondition = 'condition-utility-details .*mobs-chunk=true .*mobs-chunk-high-rejected=true .*mobs-chunk-zero=true .*mobs-chunk-occupied=true .*mobs-chunk-adjacent-excluded=true .*mobs-chunk-boundaries=true .*mobs-in-chunk-condition=true'
+    chanceCondition = 'condition-utility-details .*chance-100=true .*chance-0-rejected=true .*chance-invalid-rejected=true'
     biomeCondition = 'spatial-condition-details .*biome-exact=true .*biome-partial=true .*biome-reject=true .*biome-type-category=true'
+    biomeImported = 'biome-imported partial=true exact-rejected=true invalid-preserved=true'
+    invalidConditionsImported = 'invalid-imported-conditions valid-skill=true invalid-skill=true invalid-damage=true warnings=true'
     playerRadiusConditions = 'skill-actions .*player-radius-conditions=true'
     cooldownMechanics = 'skill-actions .*cooldown-mechanics=true'
     lastDamageCauseCondition = 'skill-actions .*last-damage-cause=true'
@@ -195,11 +241,37 @@ $probeSpecs = [ordered]@{
     spatialTargetersBoundaries = 'spatial-targeter-details .*sphere-boundary=true .*ring-boundary=true .*cone-boundary=true'
     lineTargeterParameters = 'spatial-targeter-details .*line-named=true .*line-width-boundary=true .*line-length-boundary=true'
     targeterControls = 'spatial-targeter-details .*targeter-controls=true'
-    targeterControlsNegative = 'spatial-targeter-details .*targeter-limit-zero=true .*targeter-negative-filter=true .*targeter-invalid-limits=true'
-    deathLootItems = 'death-loot items=[1-9][0-9]*'
-    deathLootExperience = 'death-loot .*experience=[1-9][0-9]*'
-    deathLootConditions = 'death-loot .*conditional-drop=true.*rejected-drop-absent=true'
-    deathLootDynamicChance = 'death-loot .*dynamic-chance-drop=true'
+    targeterSorts = 'spatial-targeter-details .*targeter-sorts=true'
+    targeterControlsNegative = 'spatial-targeter-details .*targeter-skip-index=true .*targeter-limit-zero=true .*targeter-negative-filter=true .*targeter-invalid-limits=true'
+    contextTargeterControls = 'context-targeter-controls order=true radius=true invalid-rejected=true'
+    contextTargeterChain = 'context-targeter-chain targets=true trigger=true excluded=true condition=true'
+    targeterArgumentValidation = 'targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true invalid-filter=true'
+    locationTargeterDispatch = 'location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true'
+    variableLocationDispatch = 'variable-location-dispatch valid=true invalid-rejected=true import-preserved=true'
+    explosionLocationDispatch = 'explosion-location-dispatch valid=true missing-rejected=true'
+    dropItemLocation = 'drop-item-location valid=true invalid-rejected=true missing-rejected=true'
+    dropItemImported = 'drop-item-import valid=true missing-rejected=true invalid-preserved=true'
+    dropItemNaturalImported = 'drop-item-natural-import exact=true invalid-preserved=true'
+    dropItemInlineImported = 'drop-item-inline-import valid=true invalid-preserved=true dynamic=true missing-rejected=true'
+    dropItemListImported = 'drop-item-list-import valid=true invalid-preserved=true'
+    importedSkillReference = 'imported-skill-reference valid=true rejected=true preserved=true warnings=true'
+    importedSkillTiming = 'imported-skill-timing submitted=true before-delay=true first=true repeated=true invalid-rejected=true preserved=true warnings=true duplicate-rejected=true mechanic-preserved=true positional-chance=true positional-condition=true suffix-rejected=true'
+    unroutedEventSuffix = 'unrouted-event-suffix rejected=true warnings=true'
+    eventSuffixVariants = 'event-suffix-variants rejected=true warnings=true literal=true'
+    orphanSuffix = 'orphan-suffix preserved=true warnings=true rejected=true unchanged=true'
+    conditionFailureClosed = '(?<![a-z-])condition-failure-closed bound=true blocked=true control=true'
+    namedConditionFailureClosed = 'named-condition-failure-closed bound=true blocked=true control=true'
+    namedSkillReload = 'named-skill-reload bound=true initial=true blocked=true restored=true'
+    namedSkillReference = 'named-skill-reference forward=true missing-rejected=true cycle-blocked=true'
+    deathLootItems = 'death-loot natural=true dead=true cause=BukkitDamage items=[1-9][0-9]*'
+    deathLootExperience = 'death-loot natural=true dead=true cause=BukkitDamage .*experience=1[4-6]'
+    deathLootConditions = 'death-loot natural=true dead=true cause=BukkitDamage .*conditional-drop=true.*rejected-drop-absent=true.*exclusive-range-drop=true range-amount=[12]'
+    deathLootDynamicChance = 'death-loot natural=true dead=true cause=BukkitDamage .*dynamic-chance-drop=true'
+    deathLootGeneratedLines = 'death-loot-count natural=true total-items=128 diamonds=(?:1[6-9]|[2-3][0-9]|4[0-8]) emeralds=(?:8[0-9]|9[0-9]|10[0-9]|11[0-2]) count-passed=true weights-passed=true'
+    deathLootBonuses = 'death-loot-bonus natural=true level-only=4 luck-only=3 combined=5 zero=2 weighted-max=4 potion-luck=3 potion-effective-luck=1(?:\.0+)? weighted-item-count=true fractional-samples=128 fractional-extra-lines=(?:3[5-9]|[4-8][0-9]|9[0-3]) fractional-range=true passed=true'
+    deathLootImportedDropTable = 'death-loot-imported natural=true killer-player=true imported=true conditions-mapped=true conflict-preserved=true nested-mapped=true diamond=1 gold-range-amount=[12] experience=5 restored=true passed=true'
+    deathLootTriggerConditions = 'death-loot-trigger natural=true killer-player=true permission-allowed=true permission-denied=true nested-allowed-drop=true effective-luck=1(?:\.0+)? luck-scaled-drop=true nested-rejected-drop-absent=true nested-rejected-experience=4 parent-rejected-drop-absent=true parent-rejected-experience=0'
+    deathLootDropperConditions = 'death-loot-dropper-conditions natural=true killer-player=true monster-allowed=true animal-rejected=true allowed-experience=3 rejected-experience=0'
     lootMaterialization = 'loot table=.+materialized=[1-9][0-9]*'
     lootDynamicChance = 'loot table=.+dynamic-chance=true'
     events = 'events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true .*prevent-transformation-reasons=true .*prevent-skeleton-conversion=true .*prevent-block-infection=true .*prevent-snow-formation=true .*prevent-leash=true .*prevent-rename=true .*prevent-target=true .*prevent-vanilla-damage=true .*prevent-projectiles=true .*prevent-entity-explosions=true .*prevent-block-explosion-damage=true .*prevent-drowning=true .*prevent-fall-damage=true .*prevent-fire=true .*prevent-fire-causes=true .*prevent-pickup=true .*prevent-item-use=true .*interactable=true .*interactable-armor-stand=true .*prevent-teleport=true .*prevent-sunburn=true .*prevent-other-drops=true .*prevent-mob-kill-drops=true .*prevent-mob-kill-custom-loot=true'
@@ -220,10 +292,13 @@ $probeSpecs = [ordered]@{
     pathfinderStopCalls = 'pathfinder-clear .*stop-calls=[1-9][0-9]*'
     aiPriority = 'ai-priority-probe attack-first=true flee-first=true attack-state=ATTACK flee-state=FLEE'
     aiPriorityTargets = 'ai-priority-detail probe=priority_attack_probe target-assigned=true target-valid=true health-ratio=0.5 attack-priority=0 flee-priority=1 selector=mode=PLAYERS can-attack=true can-chase=true can-flee=true target-matches=true'
-    aiSelectorCore = 'ai-selector-core .*player-target=true .*monster-target=true .*clear-no-fallback=true .*owner-target=true .*faction-target=true .*conditional-target=true .*players-in-world=true .*mobs-in-world=true .*world-caster-excluded=true .*world-chain-filtered=true .*nearest-living=true .*nearest-mob=true .*set-target-mechanic=true .*clear-target-mechanic=true .*context-chain-action=true .*native-target=true .*passed=true'
+    aiSelectorCore = 'ai-selector-core .*player-target=true .*monster-target=true .*clear-no-fallback=true .*owner-target=true .*faction-target=true .*conditional-target=true .*players-in-world=true .*players-on-server=true .*player-aliases=true .*mobs-in-world=true .*world-caster-excluded=true .*world-chain-filtered=true .*nearest-living=true .*nearest-mob=true .*targeter-syntax=true .*set-target-mechanic=true .*clear-target-mechanic=true .*context-chain-action=true .*native-target=true .*passed=true'
     aiRoute = 'ai-route-probe token=followpath .*active-before=true .*moving=true .*advanced=true .*passed=true'
+    pinTargeters = '\[自检\] pin-targeters result=true multi-dispatch=true random-single=true move-single=true reject-multi-move=true region-set-break=true region-cap-rejected=true'
+    pinConditions = '\[自检\] pin-conditions result=true distance=true origin-distance=true origin-inside=true origin-outside=true origin-missing-rejected=true region=true'
     skillTrigger = 'skill-trigger .*damage=true .*teleport=true .*bukkit-attacked=true'
     damageCauseCondition = 'skill-trigger .*damage-cause-condition=true .*damage-amount-condition=true .*bow-tension-condition=true'
+    damageTagCondition = 'skill-trigger .*damage-tag-condition=true'
     bowTensionCondition = 'skill-trigger .*bow-tension-condition=true'
     cancelledCondition = 'skill-trigger .*cancelled-condition=true .*cancelled-after=true'
     potionEffectEndTrigger = 'skill-trigger .*potion-effect-end=true'
@@ -241,7 +316,7 @@ $probeSpecs = [ordered]@{
     itemPickup = 'item-pickup trigger=true player=\S+'
     vehicleEvents = 'vehicle-events .*enter=true .*exit=true .*dismount=true .*destroy=true .*player=\S+'
     ejectPassenger = 'vehicle-events .*eject=true .*player=\S+'
-    environmentalDamage = 'environmental-damage trigger=true fire-ticks=-?[0-9]+'
+    environmentalDamage = 'environmental-damage natural=true source=LAVA action-observed=true elapsed-ticks=[1-9][0-9]* lava=true passed=true'
     spawnerMaxSpawns = 'spawner-max-spawns id=max_spawn_probe first=true second=false total=1'
     spawnerGroup = 'spawner-group id=group_probe requested=true alive=[12] total=[12] max-alive=2 group-min=3 group-max=5 limit=true'
     spawnerNaturalGroup = 'spawner-natural-group id=natural_group_probe mode=live-scheduler before=[0-9]+ after=[1-9][0-9]* alive=2 max-alive=2 group-min=3 group-max=5 limit=true'
@@ -261,7 +336,7 @@ $probeSpecs = [ordered]@{
     spawnerGroundRestored = 'spawner-ground id=ground_missing_fail requested=false failure=no valid spawn location restored=true saved-blocks=[1-9][0-9]*'
     spawnerUnloadedChunk = 'spawner-unloaded-chunk id=unloaded_chunk_fail requested=false chunk-loaded=false failure=no valid spawn location restored=true'
     spawnerLightFailClosed = 'spawner-light-fail-closed id=light_unloaded_fail requested=false chunk-loaded=false light-readable=false result=false restored=true'
-    spawnerBorderClipped = 'spawner-border id=border_clipped_inside_pass requested=true configured-radius=16(?:\.0+)? effective-radius=10(?:\.0+)? border-size=20(?:\.0+)? restored=true failure=null'
+    spawnerBorderClipped = 'spawner-border id=border_clipped_inside_pass requested=true configured-radius=16(?:\.0+)? effective-radius=10(?:\.0+)? border-size=20(?:\.0+)? attempts=[1-8] restored=true failure=null'
     spawnerBorderOutside = 'spawner-border id=border_outside_fail requested=false configured-radius=0\.1 effective-radius=0(?:\.0+)? border-size=20(?:\.0+)? restored=true failure=no valid spawn location'
     tempt = 'tempt-probe .* native-target=true .*passed=true'
     entityTargetSynthetic = 'tempt-probe .* synthetic-entity-target=true synthetic-before=false'
@@ -274,6 +349,9 @@ $probeSpecs = [ordered]@{
     entityTargetDelayed = 'tempt-probe-delayed entity-target-trigger=true target-events=[1-9][0-9]* target-find-misses=[0-9]+ target-reason=(?:CLOSEST_PLAYER|TEMPT) target-cancelled=false'
     audienceDispatch = 'audience player=\S+ message-dispatched=true title-dispatched=true actionbar-dispatched=true particle-dispatched=true radius-included-dispatched=true radius-excluded-dispatched=true permission-included-dispatched=true'
 }
+if ($env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW -ne 'true') {
+    $probeSpecs.Remove('spawningDistanceClientWalk')
+}
 $probes = @(
     foreach ($entry in $probeSpecs.GetEnumerator()) {
         $matches = [regex]::Matches($logText, $entry.Value)
@@ -285,7 +363,56 @@ $probes = @(
     }
 )
 
+if ($env:PAPER_WEB_RELOAD_PROBE -eq 'true') {
+    $webPath = Join-Path $server 'web-reload-probe.json'
+    $webStatus = 'not-observed'
+    $webObservation = 'web reload evidence missing or invalid'
+    if ((Test-Path -LiteralPath $webPath -PathType Leaf) -and $PluginSha256 -and
+            $StartedAtUtc -ne [DateTime]::MinValue -and
+            (Get-Item -LiteralPath $webPath).LastWriteTimeUtc -ge $StartedAtUtc.AddSeconds(-2)) {
+        try {
+            $web = Get-Content -LiteralPath $webPath -Raw -Encoding utf8 | ConvertFrom-Json
+            if ([string]$web.pluginSha256 -ceq $PluginSha256 -and $web.invalidOk -is [bool] -and
+                    $web.invalidOk -eq $false -and $web.restoredOk -is [bool] -and $web.restoredOk -eq $true -and
+                    $web.serverThread -is [bool] -and $web.serverThread -eq $true -and
+                    $web.restoredSpawnerCount -is [long] -and $web.restoredSpawnerCount -gt 0 -and
+                    $logText -match '(?s)\[Server thread/WARN\]: \[helsteraMobs\] 刷怪点重载失败[^\r\n]*.*?\[Server thread/INFO\]: \[helsteraMobs\] 已装载刷怪点') {
+                $webStatus = 'passed'
+                $webObservation = 'web-reload invalid=false restored=true server-thread=true'
+            }
+        } catch { $webObservation = 'web reload evidence invalid' }
+    }
+    $probes += [ordered]@{ id = 'webSpawnerReload'; status = $webStatus; observations = @($webObservation) }
+}
+
 $menuClientLog = Join-Path $server 'menu-client.stdout.log'
+$messageClientLog = Join-Path $server 'menu-client.process.stdout.log'
+$importedMessageStatus = 'not-observed'
+if ((Test-Path -LiteralPath $messageClientLog -PathType Leaf) -and
+        $logText -match 'imported-message-client dispatched=true' -and
+        (Get-Content -LiteralPath $messageClientLog -Raw -Encoding utf8) -match '(?m)^PAPER_IMPORTED_MESSAGE_RECEIVED exact=true\r?$') {
+    $importedMessageStatus = 'passed'
+}
+$probes += [ordered]@{
+    id = 'importedMessageClient'
+    status = $importedMessageStatus
+    observations = @($(if ($importedMessageStatus -eq 'passed') {
+        'imported-message-client dispatched=true client-exact=true'
+    } else { 'imported message dispatch or exact client receipt missing' }))
+}
+$escapedMessageStatus = 'not-observed'
+if ((Test-Path -LiteralPath $messageClientLog -PathType Leaf) -and
+        $logText -match 'imported-escaped-message-client dispatched=true' -and
+        (Get-Content -LiteralPath $messageClientLog -Raw -Encoding utf8) -match '(?m)^PAPER_IMPORTED_ESCAPED_MESSAGE_RECEIVED exact=true\r?$') {
+    $escapedMessageStatus = 'passed'
+}
+$probes += [ordered]@{
+    id = 'importedEscapedMessageClient'
+    status = $escapedMessageStatus
+    observations = @($(if ($escapedMessageStatus -eq 'passed') {
+        'imported-escaped-message-client dispatched=true client-exact=true'
+    } else { 'escaped message dispatch or exact client receipt missing' }))
+}
 $menuStatus = 'not-observed'
 $menuObservation = 'client report missing'
 if (Test-Path -LiteralPath $menuClientLog -PathType Leaf) {
@@ -295,16 +422,18 @@ if (Test-Path -LiteralPath $menuClientLog -PathType Leaf) {
         try {
             $menu = $Matches[1] | ConvertFrom-Json
             $menuObservation = $Matches[1]
-            $required = @('pageOne', 'deniedActionMessageAbsent')
+            $required = @('pageOne', 'deniedClickStayedOpen', 'paginationClick',
+                'pageTwo', 'allowedActionMessage', 'actionClosedInventory',
+                'deniedActionMessageAbsent')
             $allPassed = $menu.status -eq 'passed'
             foreach ($field in $required) { $allPassed = $allPassed -and $menu.observations.$field -eq $true }
-            # 客户端只证明「两页都打开了、被拒按钮没执行动作」。格子内容与
-            # 窗口开关状态它观测不到（1.21.1 物品组件解析失败、stateId 失步），
-            # 那部分改由服务端日志判定，强度不降反升。
             $allPassed = $allPassed -and
                 ($logText -match 'menu-render id=parity-page-1 .*10=REDSTONE') -and
+                ($logText -match 'menu-render id=parity-page-1 .*12=GOLD_INGOT') -and
                 ($logText -match 'menu-render id=parity-page-2 .*13=EMERALD') -and
-                ($logText -match 'menu-click id=parity-page-1 .*slot=10 permitted=false ran=false')
+                ($logText -match 'menu-click id=parity-page-1 .*slot=10 permitted=false ran=false') -and
+                ($logText -match 'menu-click id=parity-page-1 .*slot=26 permitted=true ran=true pagination=next') -and
+                ($logText -match 'menu-click id=parity-page-2 .*slot=13 permitted=true ran=true close=true')
             if ($allPassed) { $menuStatus = 'passed' }
         } catch {
             $menuObservation = "invalid client report: $($_.Exception.Message)"
@@ -416,10 +545,15 @@ foreach ($match in $spawnLines) {
     $spawnId = if ($line -match 'spawner(?:-condition|-probe)? id=([^ ]+)') { $Matches[1] } else { 'unknown' }
     if (-not $spawnObservations.ContainsKey($spawnId)) {
         $spawnObservations[$spawnId] = @()
-        $spawnStatuses[$spawnId] = 'observed-rejected'
+        $spawnStatuses[$spawnId] = 'not-observed'
     }
     $spawnObservations[$spawnId] = @($spawnObservations[$spawnId]) + $line
-    if ($line -match 'requested=true') { $spawnStatuses[$spawnId] = 'passed' }
+    if ($line -match '(?:^|\s)requested=true(?:\s|$)') {
+        $spawnStatuses[$spawnId] = 'passed'
+    } elseif ($spawnStatuses[$spawnId] -ne 'passed' -and
+            $line -match '(?:^|\s)requested=false\s+failure=(?!null(?:\s|$))\S') {
+        $spawnStatuses[$spawnId] = 'observed-rejected'
+    }
 }
 foreach ($spawnId in $spawnObservations.Keys) {
     $probes += [ordered]@{
@@ -498,9 +632,11 @@ $report = [ordered]@{
     pluginEnabled = $logText.Contains('Enabling helsteraMobs v1.0.0') -and $logText.Contains('Done (')
     log = 'logs/latest.log'
     expectedProbeIds = @($probeSpecs.Keys) + @(
-        'custom-menu-player-workflow', 'audience-player-delivery',
+        'custom-menu-player-workflow', 'audience-player-delivery', 'importedMessageClient', 'importedEscapedMessageClient',
         'audience-filter-delivery', 'random-spawn-distribution',
-        'skillTeleportCoordinates') + $(if ($playerPotionConsumeRequested) {
+        'skillTeleportCoordinates') + $(if ($env:PAPER_WEB_RELOAD_PROBE -eq 'true') {
+            @('webSpawnerReload')
+        } else { @() }) + $(if ($playerPotionConsumeRequested) {
             @('playerPotionConsume')
         } else { @() }) + $(if ($playerPotionNaturalExpiryRequested -or $playerPotionNaturalExpiryObserved) {
             @('playerPotionNaturalExpiry')
@@ -508,5 +644,6 @@ $report = [ordered]@{
         $spawnObservations.Keys | ForEach-Object { "spawner:$($_)" })
     probes = @($probes)
 }
+if ($PluginSha256) { $report.pluginSha256 = $PluginSha256 }
 $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $reportPath -Encoding utf8
 Write-Host "Paper integration report: $reportPath"

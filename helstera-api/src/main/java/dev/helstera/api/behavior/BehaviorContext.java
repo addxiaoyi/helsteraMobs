@@ -41,6 +41,7 @@ public final class BehaviorContext {
     private final Entity trigger;
     private final List<LivingEntity> targets;
     private final Location origin;
+    private final Location targetLocation;
     private final SkillTreeContext skillTree;
     private final Cancellable cancellableEvent;
     private final EntityDamageEvent.DamageCause damageCause;
@@ -92,6 +93,16 @@ public final class BehaviorContext {
                             List<? extends LivingEntity> targets, Location origin,
                             SkillTreeContext skillTree, Cancellable cancellableEvent,
                             EntityDamageEvent.DamageCause damageCause) {
+        this(instance, target, targetEntity, healthRatio, distanceToTarget, decisionCount, state,
+                payload, trigger, targets, origin, skillTree, cancellableEvent, damageCause, null);
+    }
+
+    private BehaviorContext(ModelInstance instance, Player target, LivingEntity targetEntity,
+                            double healthRatio, double distanceToTarget, long decisionCount,
+                            String state, String payload, Entity trigger,
+                            List<? extends LivingEntity> targets, Location origin,
+                            SkillTreeContext skillTree, Cancellable cancellableEvent,
+                            EntityDamageEvent.DamageCause damageCause, Location targetLocation) {
         this.instance = instance;
         this.target = target;
         this.targetEntity = targetEntity;
@@ -103,6 +114,7 @@ public final class BehaviorContext {
         this.trigger = trigger;
         this.targets = List.copyOf(targets == null ? List.of() : new ArrayList<>(targets));
         this.origin = origin == null ? null : origin.clone();
+        this.targetLocation = targetLocation == null ? null : targetLocation.clone();
         this.skillTree = skillTree;
         this.cancellableEvent = cancellableEvent;
         this.damageCause = damageCause;
@@ -277,6 +289,20 @@ public final class BehaviorContext {
     /** Origin used by location targeters and mechanics. */
     public Optional<Location> origin() {
         return Optional.ofNullable(origin == null ? null : origin.clone());
+    }
+
+    /** Current positional target, independent of entity targets such as {@code @Pin}. */
+    public Optional<Location> targetLocation() {
+        return Optional.ofNullable(targetLocation == null ? null : targetLocation.clone());
+    }
+
+    /** Returns a continuation scoped to a location target while retaining execution metadata. */
+    public BehaviorContext withLocationTarget(Location location) {
+        if (location == null || location.getWorld() == null) {
+            throw new IllegalArgumentException("location target must have a world");
+        }
+        return new BehaviorContext(instance, null, null, 0, -1, decisionCount, state, payload,
+                trigger, List.of(), origin, skillTree, cancellableEvent, damageCause, location);
     }
 
     /** State shared by nested skills triggered from this context. */

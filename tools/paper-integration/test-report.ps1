@@ -1,8 +1,10 @@
 $ErrorActionPreference = 'Stop'
 $previousRawPotionWorkflow = $env:PAPER_RAW_POTION_WORKFLOW
 $previousRawPotionShort = $env:PAPER_RAW_POTION_SHORT
+$previousSpawningDistanceWalkWorkflow = $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW
 $env:PAPER_RAW_POTION_WORKFLOW = 'false'
 $env:PAPER_RAW_POTION_SHORT = 'false'
+$env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $temp = Join-Path ([System.IO.Path]::GetTempPath()) ('helstera-paper-report-' + [guid]::NewGuid())
 $logDirectory = Join-Path $temp 'logs'
@@ -57,12 +59,24 @@ try {
         '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-scheduler result=true delay=2 repeat=3 interval=2 executions=4 pre-delay-count=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-tree-branches result=true condition-denied=true condition-unlock=true prerequisite-blocked=true prerequisite-unlock=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] pin-targeters result=true multi-dispatch=true random-single=true move-single=true reject-multi-move=true region-set-break=true region-cap-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] pin-conditions result=true distance=true origin-distance=true origin-inside=true origin-outside=true origin-missing-rejected=true region=true',
+        '[Server thread/INFO]: [helsteraMobs] survival-mode-condition positive=true negative=true restored=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-tree-cast-persistence result=true blocked-before-unlock=true prerequisite-unlock-blocked=true snapshot-saved=true advanced-unlocked=true casts=1',
+        '[Server thread/INFO]: skill-tree-queue submitted=true restored=true',
+        '[Server thread/INFO]: skill-lifecycle reload=true scheduled=true cancelled=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true bounds-condition=true bounding-box-overlap-condition=true',
-        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-mobility=true leashed-condition=true has-owner-condition=true has-tag-condition=true target-has-tag-condition=true scoreboard-tag-mechanics=true score-mechanics=true global-score-condition=true score-condition=true custom-owner-relation=true owner-condition=true children-condition=true inside-outside-conditions=true distance-from-location-condition=true coordinate-difference-condition=true origin-location-condition=true line-of-sight-from-origin-condition=true bounds-condition=true enchanting-conditions=true plugin-condition=true field-of-view-condition=true spawn-reason-condition=true water-mob-condition=true zombie-condition=true aerial-condition=true enderman-condition=true enchantment-condition=true color-condition=true material-cooldown-condition=true material-cooldown-mechanic=true set-game-mode-mechanic=true jump-mechanic=true force-pull-mechanic=true set-offhand-mechanic=true set-armor-mechanic=true clear-inventory-mechanic=true remove-held-item-mechanic=true raw-experience-mechanic=true set-absorption-mechanic=true trigger-item-type-condition=true entity-item-type-condition=true entity-item-similar-condition=true item-similar-condition=true targets-condition=true item-type-condition=true structure-condition=true mythic-mob-type-condition=true trigger-block-type-condition=true frozen-condition=true dialogue-condition=true player-kills-condition=true absorption-condition=true health-absorption-condition=true potion-effect-condition=true aura-stacks-condition=true level-condition=true lunar-phase-condition=true string-equals-condition=true string-empty-condition=true compare-values-condition=true is-skill-condition=true owner-online-condition=true parent-relation=true is-child-condition=true parent-derived-conditions=true player-experience-mechanics=true oxygen-mechanic=true consume-slot-mechanic=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-mobility=true drowning-condition=true leashed-condition=true has-owner-condition=true has-tag-condition=true target-has-tag-condition=true scoreboard-tag-mechanics=true score-mechanics=true global-score-condition=true score-condition=true custom-owner-relation=true owner-condition=true children-condition=true inside-outside-conditions=true distance-from-location-condition=true coordinate-difference-condition=true origin-location-condition=true line-of-sight-from-origin-condition=true bounds-condition=true enchanting-conditions=true plugin-condition=true field-of-view-condition=true spawn-reason-condition=true water-mob-condition=true zombie-condition=true aerial-condition=true enderman-condition=true enchantment-condition=true color-condition=true material-cooldown-condition=true material-cooldown-mechanic=true set-game-mode-mechanic=true jump-mechanic=true force-pull-mechanic=true set-offhand-mechanic=true set-armor-mechanic=true clear-inventory-mechanic=true remove-held-item-mechanic=true raw-experience-mechanic=true set-absorption-mechanic=true trigger-item-type-condition=true entity-item-type-condition=true entity-item-similar-condition=true item-similar-condition=true targets-condition=true item-type-condition=true structure-condition=true mythic-mob-type-condition=true trigger-block-type-condition=true frozen-condition=true dialogue-condition=true player-kills-condition=true absorption-condition=true health-absorption-condition=true potion-effect-condition=true aura-stacks-condition=true level-condition=true lunar-phase-condition=true string-equals-condition=true string-empty-condition=true compare-values-condition=true is-skill-condition=true owner-online-condition=true parent-relation=true is-child-condition=true parent-derived-conditions=true player-experience-mechanics=true oxygen-mechanic=true consume-slot-mechanic=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true',
-        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
+        '[Server thread/INFO]: raider-patrol-leader-condition positive=true negative=true entity=PILLAGER restored=true',
+        '[Server thread/INFO]: creeper-primed-condition positive=true negative=true restored=true',
+        '[Server thread/INFO]: ender-dragon-alive-condition positive=true negative=true removed=true',
+        '[Server thread/INFO]: ender-dragon-phase-condition positive=true list=true negative=true invalid-rejected=true restored=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
+        '[Server thread/INFO]: condition-utility-details .*spawn-distance-exact=true .*spawn-distance-over-rejected=true .*mobs-chunk=true .*mobs-chunk-high-rejected=true .*mobs-chunk-zero=true .*mobs-chunk-occupied=true .*mobs-chunk-adjacent-excluded=true .*mobs-chunk-boundaries=true .*mobs-in-chunk-condition=true .*chance-100=true .*chance-0-rejected=true .*chance-invalid-rejected=true',
         '[Server thread/INFO]: spatial-condition-details biome-exact=true biome-partial=true biome-reject=true biome-type-category=true',
+        '[Server thread/INFO]: biome-imported partial=true exact-rejected=true invalid-preserved=true',
+        '[Server thread/INFO]: invalid-imported-conditions valid-skill=true invalid-skill=true invalid-damage=true warnings=true',
         '[Server thread/INFO]: skill-dot damage-observed=true bounded=true expired=true initial=100 after-intervals=94 at-duration=92 after-expiry=92',
         '[Server thread/INFO]: skill-targeter threat-targeter=true source=damage-events faction-filters=true threat-actions=true first=high expected=high',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true',
@@ -80,7 +94,7 @@ try {
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true caster-permission=true food-level=true food-saturation=true free-inventory-slot=true has-item=true air-level=true custom-item=true target-state-conditions=true state-blocking=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true spyglass-condition=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true name-condition=true',
-        '[Server thread/INFO]: [自检] skill-trigger damage=true attacked=false teleport=true teleport-before=false bukkit-damage=true damage-cause-condition=true damage-amount-condition=true bow-tension-condition=true bukkit-attacked=true cancelled-condition=true cancelled-before=false cancelled-after=true entity-valid=true',
+        '[Server thread/INFO]: [自检] skill-trigger damage=true attacked=false teleport=true teleport-before=false bukkit-damage=true damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true bow-tension-condition=true bukkit-attacked=true cancelled-condition=true cancelled-before=false cancelled-after=true entity-valid=true',
         '[Server thread/INFO]: block-events break=true place=true player=HelsteraTester',
         '[Server thread/INFO]: skill-trigger damage=true attacked=false teleport=true potion-effect-end=true teleport-before=false bukkit-damage=true bukkit-attacked=true cancelled-before=false cancelled-after=false entity-valid=true',
         '[Server thread/INFO]: potion-natural-expiry=true expired=true event-observed=false action-observed=true item-marker-observed=false',
@@ -89,7 +103,7 @@ try {
         '[Server thread/INFO]: tempt-probe-delayed entity-target-trigger=true target-events=1 target-find-misses=0',
         '[Server thread/INFO]: item-pickup trigger=true player=HelsteraTester',
         '[Server thread/INFO]: vehicle-events enter=true exit=true dismount=true eject=true destroy=true player=HelsteraTester',
-        '[Server thread/INFO]: environmental-damage trigger=true fire-ticks=0',
+        '[Server thread/INFO]: environmental-damage natural=true source=LAVA action-observed=true elapsed-ticks=7 lava=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] [trigger-debug] player-potion-consume event=true player=HelsteraTester item=POTION',
         '[Server thread/INFO]: player-potion-natural-expiry=true expired=true action-observed=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true looking-at-condition=true item-recharging-condition=true variable-contains-condition=true before=1.00,2.00,3.00 after=1.00,2.00,3.00 offset-distance=1.000 moved-distance=0.000',
@@ -105,15 +119,36 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-options result=true base=8',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false',
         '[Server thread/INFO]: [helsteraMobs] [自检] exp-options result=true experience=13 event=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] exp-natural-death result=true dead=true experience=13 cause=BukkitDamage',
+        '[Server thread/INFO]: [helsteraMobs] [自检] exp-tier-death result=true low=2 qualified=7 low-dead=true qualified-dead=true low-bread=4 qualified-bread=4',
+        '[Server thread/INFO]: [helsteraMobs] [自检] revive-natural result=true alive=true attached=true health=8.0',
+        '[Server thread/INFO]: [helsteraMobs] [自检] revive-late result=true cancelled=true alive=true attached=true health=8.0 no-drops=true',
+        '[Server thread/INFO]: [helsteraMobs] damage-imported mapped=true entity-damage=true attacker-name=true attacker-equipment=true environmental-damage=true environmental-no-trigger=true passed=true',
+        '[Server thread/INFO]: [helsteraMobs] immunity-imported result=true reduced=true condition-rejected=true invalid-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] immunity-native-invalid result=true false-rejected=true null-rejected=true unknown-rejected=true null-modifier-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] immunity-invalid-fields null-immunity=true null-modifier-field=true unknown-modifier-field=true invalid-immune=true null-immune=true',
+        '[Server thread/INFO]: [helsteraMobs] immunity-preservation nested-preserved=true nested-closed=true list-null-preserved=true list-null-closed=true',
+        '[Server thread/INFO]: [helsteraMobs] condition-arguments living-rejected=true baby-valid=true baby-rejected=true frozen-valid=true frozen-rejected=true warnings=true',
+        '[Server thread/INFO]: [helsteraMobs] condition-state-arguments valid=true movement-rejected=true category-rejected=true alive-rejected=true negated-rejected=true preserved=true warnings=true',
+        '[Server thread/INFO]: [helsteraMobs] target-sneaking-mob false-rejected=true true-passed=true',
+        '[Server thread/INFO]: [helsteraMobs] time-weather-arguments time-valid=true time-opposite=true weather-valid=true weather-opposite=true time-rejected=true rain-rejected=true negated-rejected=true preserved=true warnings=true',
+        '[Server thread/INFO]: [helsteraMobs] visibility-state-arguments valid=true rejected=true preserved=true warnings=true',
+        '[Server thread/INFO]: [helsteraMobs] drop-null-conditions rejected=true warnings=true sibling=true',
+        '[Server thread/INFO]: [helsteraMobs] drop-native-null-conditions rejected=true sibling=true warnings=true',
+        '[Server thread/INFO]: [helsteraMobs] drop-native-null-numeric rejected=true fallback=true overrides=true warnings=true',
+        '[Server thread/INFO]: [helsteraMobs] drop-unsafe-references warnings=true stale-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] drop-merged-null rejected=true warnings=true stale-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] despawn-options result=true mode=PERSISTENT distance=0 persistent=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-options result=true mode=NORMAL distance=8',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-runtime result=true inside-retained=true outside-removed=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
         '[Server thread/INFO]: attribute-options result=true modifiers=1',
+        '[Server thread/INFO]: [helsteraMobs] [自检] mob-pickup-option result=true disabled=true explicit-overrides-default=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawn-option-runtime result=true pickup-disabled=true explicit-pickup-overrides-fallback=true random-equipment-cleared=true explicit-equipment-preserved=true no-damage-ticks=true',
         '[Server thread/INFO]: item-attribute-options result=true modifiers=1',
         '[Server thread/INFO]: [helsteraMobs] [自检] events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true prevent-transformation-reasons=true prevent-skeleton-conversion=true prevent-block-infection=true prevent-snow-formation=true tame-breed-tame=true tame-breed-breed=true leash-unleash-leash=true leash-unleash-unleash=true prevent-leash=true prevent-rename=true prevent-target=true prevent-vanilla-damage=true prevent-projectiles=true prevent-entity-explosions=true prevent-block-explosion-damage=true prevent-drowning=true prevent-fall-damage=true prevent-fire=true prevent-fire-causes=true prevent-pickup=true prevent-item-use=true interactable=true interactable-armor-stand=true prevent-teleport=true prevent-sunburn=true prevent-other-drops=true prevent-mob-kill-drops=true prevent-mob-kill-custom-loot=true shear-trigger=true bed-enter-leave-enter=true bed-enter-leave-leave=true trade-trigger=true quit-trigger=true item-drop-break-damage=true player-actions-interact=true world-change=true jump=true swing=true fish-trigger=true',
@@ -124,10 +159,16 @@ try {
         '[Server thread/INFO]: pathfinder-clear probe=path_clear_probe found=true reachable=true started=true active-before=true accepted=true cleared=true stop-calls=1 passed=true',
         '[Server thread/INFO]: ai-priority-probe attack-first=true flee-first=true attack-state=ATTACK flee-state=FLEE',
         '[Server thread/INFO]: ai-priority-detail probe=priority_attack_probe target-assigned=true target-valid=true health-ratio=0.5 attack-priority=0 flee-priority=1 selector=mode=PLAYERS can-attack=true can-chase=true can-flee=true target-matches=true',
-        '[Server thread/INFO]: ai-selector-core goals=true player-target=true monster-target=true clear-no-fallback=true owner-target=true faction-target=true conditional-target=true players-in-world=true mobs-in-world=true world-caster-excluded=true world-chain-filtered=true nearest-living=true nearest-mob=true set-target-mechanic=true clear-target-mechanic=true context-chain-action=true native-target=true selector=mode=PLAYERS can-attack=true can-chase=false conditional=is-player=>is-player entity=PLAYER passed=true passed=true',
+        '[Server thread/INFO]: ai-selector-core goals=true player-target=true monster-target=true clear-no-fallback=true owner-target=true faction-target=true conditional-target=true players-in-world=true players-on-server=true player-aliases=true mobs-in-world=true world-caster-excluded=true world-chain-filtered=true nearest-living=true nearest-mob=true targeter-syntax=true set-target-mechanic=true clear-target-mechanic=true context-chain-action=true native-target=true selector=mode=PLAYERS can-attack=true can-chase=false conditional=is-player=>is-player entity=PLAYER passed=true passed=true',
         '[Server thread/INFO]: ai-route-probe token=followpath active-before=true moving=true advanced=true waypoint-before=route=followpath waypoint=103,64,0 finished=false waypoint-after=route=followpath waypoint=105,64,0 finished=false passed=true',
-        '[Server thread/INFO]: spatial-targeter-details targeter-limit-zero=true targeter-negative-filter=true targeter-invalid-limits=true',
-        '[Server thread/INFO]: [helsteraMobs] [自检] death-loot items=1 conditional-drop=true rejected-drop-absent=true dynamic-chance-drop=true experience=10',
+        '[Server thread/INFO]: spatial-targeter-details targeter-controls=true targeter-sorts=true targeter-skip-index=true targeter-limit-zero=true targeter-negative-filter=true targeter-invalid-limits=true',
+        '[Server thread/INFO]: context-targeter-controls order=true radius=true invalid-rejected=true',
+        '[Server thread/INFO]: context-targeter-chain targets=true trigger=true excluded=true condition=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] death-loot natural=true dead=true cause=BukkitDamage items=2 conditional-drop=true rejected-drop-absent=true dynamic-chance-drop=true exclusive-range-drop=true range-amount=1 experience=10',
+        '[Server thread/INFO]: [helsteraMobs] [自检] death-loot-count natural=true total-items=128 diamonds=31 emeralds=97 count-passed=true weights-passed=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] death-loot-bonus natural=true level-only=4 luck-only=3 combined=5 zero=2 weighted-max=4 potion-luck=3 potion-effective-luck=1.0 weighted-item-count=true fractional-samples=128 fractional-extra-lines=64 fractional-range=true passed=true',
+        '[Server thread/INFO]: [helsteraMobs] death-loot-imported natural=true killer-player=true imported=true conditions-mapped=true conflict-preserved=true nested-mapped=true diamond=1 gold-range-amount=2 experience=5 restored=true passed=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] death-loot-trigger natural=true killer-player=true permission-allowed=true permission-denied=true nested-allowed-drop=true effective-luck=1.0 luck-scaled-drop=true nested-rejected-drop-absent=true nested-rejected-experience=4 parent-rejected-drop-absent=true parent-rejected-experience=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawner-probe id=pass requested=true failure=null',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawner-probe id=reject requested=false failure=player gate closed',
         '[Server thread/INFO]: spawner-max-spawns id=max_spawn_probe first=true second=false total=1 failure=max spawns reached',
@@ -146,7 +187,7 @@ try {
         '[Server thread/INFO]: spawner-ground id=ground_missing_fail requested=false failure=no valid spawn location restored=true saved-blocks=384',
         '[Server thread/INFO]: spawner-unloaded-chunk id=unloaded_chunk_fail requested=false chunk-loaded=false failure=no valid spawn location restored=true',
         '[Server thread/INFO]: spawner-light-fail-closed id=light_unloaded_fail requested=false chunk-loaded=false light-readable=false result=false restored=true',
-        '[Server thread/INFO]: spawner-border id=border_clipped_inside_pass requested=true configured-radius=16.0 effective-radius=10.0 border-size=20.0 restored=true failure=null',
+        '[Server thread/INFO]: spawner-border id=border_clipped_inside_pass requested=true configured-radius=16.0 effective-radius=10.0 border-size=20.0 attempts=1 restored=true failure=null',
         '[Server thread/INFO]: spawner-border id=border_outside_fail requested=false configured-radius=0.1 effective-radius=0.0 border-size=20.0 restored=true failure=no valid spawn location',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=border_clipped_inside_pass mode=natural-location requested=true failure=null',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=border_outside_fail mode=natural-location requested=false failure=no valid spawn location',
@@ -161,6 +202,9 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=biome_desert_pass mode=safe-override requested=true failure=null',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=biome_plains_fail mode=safe-override requested=false failure=conditions rejected location',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=condition_combo_pass mode=safe-override requested=true failure=null',
+        '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=null_condition_base mode=safe-override requested=false failure=conditions rejected location',
+        '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=null_condition_merged mode=safe-override requested=false failure=conditions rejected location',
+        '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=null_condition_override mode=safe-override requested=true failure=null',
         '[Server thread/INFO]: [helsteraMobs] [SelfTest] spawner-probe id=condition_combo_fail mode=safe-override requested=false failure=conditions rejected location',
         '[Server thread/INFO]: tempt-probe holder=HelsteraTester target=00000000-0000-0000-0000-000000000000 native-target=true entity-target-trigger=false synthetic-entity-target=true synthetic-before=false passed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] random-spawn expected={a=0.5, b=0.5} observed={a=0.5, b=0.5} deviation={a=0.0, b=0.0} total=99',
@@ -173,19 +217,64 @@ try {
     })
     $lines += '[Server thread/INFO]: random-spawn id=random_distribution_probe expected={a=0.5, b=0.5} observed={a=0.65, b=0.35} deviation={a=0.15, b=-0.15} max-abs-deviation=0.15 total=100'
     $lines += '[Server thread/INFO]: random-spawn id=random_distribution_probe expected={a=0.5, b=0.5} observed={a=0.650001, b=0.349999} deviation={a=0.150001, b=-0.150001} max-abs-deviation=0.150001 total=100'
-    $lines += '[Server thread/INFO]: menu-render id=parity-page-1 slot=10=REDSTONE'
+    $lines += '[Server thread/INFO]: menu-render id=parity-page-1 slots=10=REDSTONE,12=GOLD_INGOT'
     $lines += '[Server thread/INFO]: menu-render id=parity-page-2 slot=13=EMERALD'
     $lines += '[Server thread/INFO]: menu-click id=parity-page-1 slot=10 permitted=false ran=false'
+    $lines += '[Server thread/INFO]: menu-click id=parity-page-1 slot=26 permitted=true ran=true pagination=next'
+    $lines += '[Server thread/INFO]: menu-click id=parity-page-2 slot=13 permitted=true ran=true close=true'
     Set-Content -LiteralPath (Join-Path $logDirectory 'latest.log') -Value $lines -Encoding utf8
     Set-Content -LiteralPath (Join-Path $temp 'menu-client.stdout.log') -Value @(
-        'PAPER_MENU_REPORT {"status":"passed","observations":{"permissionDeniedClickStayedOpen":true,"pageOne":true,"pageTwo":true,"actionClosedInventory":true,"allowedActionMessage":true,"deniedActionMessageAbsent":true}}'
+        'PAPER_MENU_REPORT {"status":"passed","observations":{"pageOne":true,"pageOneRedstone":true,"deniedClickStayedOpen":true,"paginationClick":true,"pageTwo":true,"pageTwoEmerald":true,"allowedActionMessage":true,"actionClosedInventory":true,"deniedActionMessageAbsent":true}}'
     ) -Encoding utf8
     Set-Content -LiteralPath (Join-Path $temp 'audience-client.stdout.log') -Value @(
         'PAPER_AUDIENCE_REPORT {"status":"passed","observations":{"message":true,"title":true,"actionbar":true,"particle":true}}',
         'PAPER_AUDIENCE_FILTER_REPORT {"status":"passed","observations":{"radiusIncludedTester":true,"radiusIncludedGuest":true,"radiusExcludedTester":true,"radiusExcludedGuest":true,"permissionIncludedTester":true,"permissionIncludedGuest":true,"factionIncludedTester":true,"factionIncludedGuest":true,"factionExcludedTester":true,"factionExcludedGuest":true}}'
     ) -Encoding utf8
     $env:PAPER_RAW_POTION_WORKFLOW = 'true'
-    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp | Out-Null
+    $testPluginHash = 'a' * 64
+    $oldWebProbe = $env:PAPER_WEB_RELOAD_PROBE
+    try {
+        $env:PAPER_WEB_RELOAD_PROBE = 'true'
+        $webPath = Join-Path $temp 'web-reload-probe.json'
+        $web = @{ pluginSha256 = $testPluginHash; invalidOk = $false; restoredOk = $true; serverThread = $true; restoredSpawnerCount = 43 }
+        $web | ConvertTo-Json | Set-Content -LiteralPath $webPath -Encoding utf8
+        $webLog = @($lines) + @(
+            '[Server thread/WARN]: [helsteraMobs] 刷怪点重载失败',
+            '[Server thread/INFO]: [helsteraMobs] 已装载刷怪点 43 个'
+        )
+        Set-Content -LiteralPath (Join-Path $logDirectory 'latest.log') -Value $webLog -Encoding utf8
+        $started = [DateTime]::UtcNow.AddSeconds(-1)
+        & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash -StartedAtUtc $started | Out-Null
+        $webReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+        Assert-True (($webReport.probes | Where-Object id -eq 'webSpawnerReload').status -eq 'passed') 'web reload evidence passes with current hash and main-thread logs'
+        $web.pluginSha256 = 'b' * 64
+        $web | ConvertTo-Json | Set-Content -LiteralPath $webPath -Encoding utf8
+        & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash -StartedAtUtc $started | Out-Null
+        $webReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+        Assert-True (($webReport.probes | Where-Object id -eq 'webSpawnerReload').status -eq 'not-observed') 'web reload rejects mismatched plugin hash'
+        $web.pluginSha256 = $testPluginHash
+        $web | ConvertTo-Json | Set-Content -LiteralPath $webPath -Encoding utf8
+        (Get-Item -LiteralPath $webPath).LastWriteTimeUtc = $started.AddMinutes(-1)
+        & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash -StartedAtUtc $started | Out-Null
+        $webReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+        Assert-True (($webReport.probes | Where-Object id -eq 'webSpawnerReload').status -eq 'not-observed') 'web reload rejects stale evidence'
+        $web | ConvertTo-Json | Set-Content -LiteralPath $webPath -Encoding utf8
+        Set-Content -LiteralPath (Join-Path $logDirectory 'latest.log') -Value $lines -Encoding utf8
+        & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash -StartedAtUtc $started | Out-Null
+        $webReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+        Assert-True (($webReport.probes | Where-Object id -eq 'webSpawnerReload').status -eq 'not-observed') 'web reload rejects missing main-thread logs'
+    } finally {
+        $env:PAPER_WEB_RELOAD_PROBE = $oldWebProbe
+        Set-Content -LiteralPath (Join-Path $logDirectory 'latest.log') -Value $lines -Encoding utf8
+    }
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
+    $logPath = Join-Path $logDirectory 'latest.log'
+    Set-Content -LiteralPath $logPath -Value ($lines -replace '12=GOLD_INGOT', '12=SPONGE') -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
+    $collisionFailure = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($collisionFailure.probes | Where-Object id -eq 'custom-menu-player-workflow').status -ne 'passed') 'menu workflow rejects vanilla material in custom item collision'
+    Set-Content -LiteralPath $logPath -Value $lines -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
     $env:PAPER_RAW_POTION_WORKFLOW = 'false'
 
     $schemaPath = Join-Path $PSScriptRoot 'integration-report.schema.json'
@@ -198,6 +287,43 @@ try {
     $schema = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'integration-report.schema.json') -Raw -Encoding utf8 |
         ConvertFrom-Json
     Assert-ReportShape $report $schema
+    $messageTemp = Join-Path $temp 'message-client-fixture'
+    New-Item -ItemType Directory -Path (Join-Path $messageTemp 'logs') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $messageTemp 'logs/latest.log') -Value 'imported-message-client dispatched=true' -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $messageTemp | Out-Null
+    $messageReport = Get-Content -LiteralPath (Join-Path $messageTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($messageReport.probes | Where-Object id -eq 'importedMessageClient').status -eq 'not-observed') 'message probe requires client receipt'
+    Set-Content -LiteralPath (Join-Path $messageTemp 'menu-client.process.stdout.log') -Value 'PAPER_IMPORTED_MESSAGE_RECEIVED exact=true' -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $messageTemp | Out-Null
+    $messageReport = Get-Content -LiteralPath (Join-Path $messageTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($messageReport.probes | Where-Object id -eq 'importedMessageClient').status -eq 'passed') 'message probe requires both server and client evidence'
+    Set-Content -LiteralPath (Join-Path $messageTemp 'logs/latest.log') -Value 'imported-message-client dispatched=false' -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $messageTemp | Out-Null
+    $messageReport = Get-Content -LiteralPath (Join-Path $messageTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($messageReport.probes | Where-Object id -eq 'importedMessageClient').status -eq 'not-observed') 'message probe requires server dispatch'
+    Set-Content -LiteralPath (Join-Path $messageTemp 'logs/latest.log') -Value 'imported-escaped-message-client dispatched=true' -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $messageTemp | Out-Null
+    $messageReport = Get-Content -LiteralPath (Join-Path $messageTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($messageReport.probes | Where-Object id -eq 'importedEscapedMessageClient').status -eq 'not-observed') 'escaped message probe requires its own client receipt'
+    Set-Content -LiteralPath (Join-Path $messageTemp 'menu-client.process.stdout.log') -Value 'PAPER_IMPORTED_ESCAPED_MESSAGE_RECEIVED exact=true' -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $messageTemp | Out-Null
+    $messageReport = Get-Content -LiteralPath (Join-Path $messageTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($messageReport.probes | Where-Object id -eq 'importedEscapedMessageClient').status -eq 'passed') 'escaped message probe accepts both observations'
+    Set-Content -LiteralPath (Join-Path $messageTemp 'logs/latest.log') -Value 'imported-escaped-message-client dispatched=false' -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $messageTemp | Out-Null
+    $messageReport = Get-Content -LiteralPath (Join-Path $messageTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($messageReport.probes | Where-Object id -eq 'importedEscapedMessageClient').status -eq 'not-observed') 'escaped message probe requires server dispatch'
+    Set-Content -LiteralPath (Join-Path $messageTemp 'logs/latest.log') -Value 'named-condition-failure-closed bound=true blocked=true control=true' -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $messageTemp | Out-Null
+    $messageReport = Get-Content -LiteralPath (Join-Path $messageTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($messageReport.probes | Where-Object id -eq 'namedConditionFailureClosed').status -eq 'passed') 'named condition probe accepts its observation'
+    Assert-True (($messageReport.probes | Where-Object id -eq 'conditionFailureClosed').status -eq 'not-observed') 'named condition probe cannot satisfy the independent condition probe'
+    Assert-True ($report.pluginSha256 -ceq $testPluginHash) 'report records plugin SHA-256'
+    $wrongPluginHashRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $reportPath -ExpectedPluginSha256 ('b' * 64)
+    } catch { $wrongPluginHashRejected = $_.Exception.Message -match 'plugin SHA-256' }
+    Assert-True $wrongPluginHashRejected 'strict gate rejects mismatched plugin SHA-256'
     foreach ($requiredProbeId in @('custom-menu-player-workflow', 'audience-player-delivery',
             'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
@@ -205,20 +331,56 @@ try {
     }
     Assert-True $report.pluginEnabled 'plugin enabled detection'
     Assert-True (($report.probes | Where-Object id -eq 'pathfinderClear').status -eq 'passed') 'native Pathfinder clear probe'
+    Assert-True (($report.probes | Where-Object id -eq 'spawningDistanceClientWalk').status -eq 'passed') 'real client movement despawn probe'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriority').status -eq 'passed') 'AI selector priority arbitration probe'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriorityTargets').status -eq 'passed') 'AI priority probe target setup'
     Assert-True (($report.probes | Where-Object id -eq 'aiSelectorCore').status -eq 'passed') 'AI selector core Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'aiRoute').status -eq 'passed') 'AI route waypoint Paper probe'
+    Assert-True (($report.probes | Where-Object id -eq 'contextTargeterControls').status -eq 'passed') 'context targeter controls probe'
+    Assert-True (($report.probes | Where-Object id -eq 'contextTargeterChain').status -eq 'passed') 'context targeter chain probe'
+
+    $releaseManifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'release-evidence.json') -Raw -Encoding utf8 |
+        ConvertFrom-Json
+    foreach ($releaseEntry in $releaseManifest) {
+        $archivedReport = Join-Path $root ([string]$releaseEntry.report)
+        if (-not (Test-Path -LiteralPath $archivedReport -PathType Leaf)) {
+            throw "Archived release report is missing: $($releaseEntry.report)"
+        }
+        & $pythonCommand @pythonPrefix (Join-Path $PSScriptRoot 'validate-report.py') $schemaPath $archivedReport
+        if ($LASTEXITCODE -ne 0) { throw "Archived report schema validation failed: $($releaseEntry.report)" }
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $archivedReport -RequireTargetPaperVersion
+    }
     Assert-True (($report.probes | Where-Object id -eq 'targeterControlsNegative').status -eq 'passed') 'invalid targeter limits fail closed'
+    Assert-True (($report.probes | Where-Object id -eq 'targeterSorts').status -eq 'passed') 'generic target sorting behavior'
     Assert-True ($report.paperVersion -eq '1.21.1-test') 'Paper version extraction'
     Assert-True (($report.probes | Where-Object id -eq 'horse').status -eq 'passed') 'positive probe'
     Assert-True (($report.probes | Where-Object id -eq 'ageOptions').status -eq 'passed') 'age options probe'
     Assert-True (($report.probes | Where-Object id -eq 'entityFlagOptions').status -eq 'passed') 'entity flag options probe'
     Assert-True (($report.probes | Where-Object id -eq 'expOptions').status -eq 'passed') 'experience option probe'
+    Assert-True (($report.probes | Where-Object id -eq 'expNaturalDeath').status -eq 'passed') 'natural experience death probe'
+    Assert-True (($report.probes | Where-Object id -eq 'expTierDeath').status -eq 'passed') 'natural tiered experience death probe'
+    Assert-True (($report.probes | Where-Object id -eq 'reviveNatural').status -eq 'passed') 'natural revive probe'
+    Assert-True (($report.probes | Where-Object id -eq 'reviveLate').status -eq 'passed') 'late cancelled revive probe'
+    Assert-True (($report.probes | Where-Object id -eq 'damageImported').status -eq 'passed') 'imported damage trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'immunityImported').status -eq 'passed') 'imported immunity probe'
+    Assert-True (($report.probes | Where-Object id -eq 'immunityNativeInvalid').status -eq 'passed') 'invalid native immunity probe'
+    Assert-True (($report.probes | Where-Object id -eq 'immunityInvalidFields').status -eq 'passed') 'invalid immunity fields probe'
+    Assert-True (($report.probes | Where-Object id -eq 'immunityPreservation').status -eq 'passed') 'immunity preservation probe'
+    Assert-True (($report.probes | Where-Object id -eq 'conditionArguments').status -eq 'passed') 'condition arguments probe'
+    Assert-True (($report.probes | Where-Object id -eq 'conditionStateArguments').status -eq 'passed') 'condition state arguments probe'
+    Assert-True (($report.probes | Where-Object id -eq 'targetSneakingMob').status -eq 'passed') 'target sneaking mob probe'
+    Assert-True (($report.probes | Where-Object id -eq 'timeWeatherArguments').status -eq 'passed') 'time and weather arguments probe'
+    Assert-True (($report.probes | Where-Object id -eq 'visibilityStateArguments').status -eq 'passed') 'visibility state arguments probe'
+    Assert-True (($report.probes | Where-Object id -eq 'dropNullConditions').status -eq 'passed') 'null drop conditions probe'
+    Assert-True (($report.probes | Where-Object id -eq 'dropNativeNullConditions').status -eq 'passed') 'native null drop conditions probe'
+    Assert-True (($report.probes | Where-Object id -eq 'dropNativeNullNumeric').status -eq 'passed') 'native null numeric probe'
+    Assert-True (($report.probes | Where-Object id -eq 'dropUnsafeReferences').status -eq 'passed') 'unsafe drop references probe'
+    Assert-True (($report.probes | Where-Object id -eq 'dropMergedNull').status -eq 'passed') 'merged null drop probe'
     Assert-True (($report.probes | Where-Object id -eq 'despawnOptions').status -eq 'passed') 'despawn option probe'
     Assert-True (($report.probes | Where-Object id -eq 'visibilityOptions').status -eq 'passed') 'visibility option probe'
     Assert-True (($report.probes | Where-Object id -eq 'endermanHeldBlock').status -eq 'passed') 'Enderman held block option probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnOptionRuntime').status -eq 'passed') 'spawn option runtime probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mobPickupOption').status -eq 'passed') 'mob pickup option probe'
     Assert-True (($report.probes | Where-Object id -eq 'sheep').status -eq 'not-observed') 'missing probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawner:reject').status -eq 'observed-rejected') 'rejected probe'
     Assert-True (($report.probes | Where-Object id -eq 'lootDynamicChance').status -eq 'passed') 'dynamic chance probe'
@@ -242,11 +404,24 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'audience-player-delivery').status -eq 'passed') 'audience client workflow probe'
     Assert-True (($report.probes | Where-Object id -eq 'audience-filter-delivery').status -eq 'passed') 'audience filter workflow probe'
     Assert-True (($report.probes | Where-Object id -eq 'deathLootConditions').status -eq 'passed') 'death loot conditions probe'
+    Assert-True (($report.probes | Where-Object id -eq 'deathLootConditions').observations[0] -match 'exclusive-range-drop=true range-amount=[12]') 'exclusive Mythic amount range reaches natural death drops'
     Assert-True (($report.probes | Where-Object id -eq 'deathLootDynamicChance').status -eq 'passed') 'death loot dynamic chance probe'
+    Assert-True (($report.probes | Where-Object id -eq 'deathLootGeneratedLines').status -eq 'passed') 'generated drop-line count and relative weights probe'
+    Assert-True (($report.probes | Where-Object id -eq 'deathLootBonuses').status -eq 'passed') 'natural death BonusLevelItems and BonusLuckItems probe'
+    Assert-True (($report.probes | Where-Object id -eq 'deathLootBonuses').observations[0] -match 'weighted-max=4 .*weighted-item-count=true') 'bonus probe requires weighted single-bound evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'deathLootBonuses').observations[0] -match 'potion-luck=3 potion-effective-luck=1(?:\.0+)?') 'Luck potion contributes to effective Luck and BonusLuckItems'
+    Assert-True (($report.probes | Where-Object id -eq 'deathLootBonuses').observations[0] -match 'fractional-samples=128 fractional-extra-lines=64 fractional-range=true') 'fractional bonus probe records bounded natural-death samples'
+    Assert-True (($report.probes | Where-Object id -eq 'deathLootImportedDropTable').status -eq 'passed') 'imported Mythic DropTable natural death probe'
+    Assert-True (($report.probes | Where-Object id -eq 'deathLootImportedDropTable').observations[0] -match 'nested-mapped=true') 'cross-file nested DropTable reference reaches the death probe'
+    Assert-True (($report.probes | Where-Object id -eq 'deathLootImportedDropTable').observations[0] -match 'gold-range-amount=[12]') 'imported exclusive amount range reaches natural death drops'
+    Assert-True (($report.probes | Where-Object id -eq 'deathLootTriggerConditions').status -eq 'passed') 'killer trigger conditions probe'
+    Assert-True (($report.probes | Where-Object id -eq 'deathLootTriggerConditions').observations[0] -match 'effective-luck=1(?:\.0+)? luck-scaled-drop=true') 'Luck attribute drives a chance-scaled natural drop'
     Assert-True (($report.probes | Where-Object id -eq 'skillTeleport').status -eq 'passed') 'teleport mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'skillScheduling').status -eq 'passed') 'Paper tick scheduler probe'
     Assert-True (($report.probes | Where-Object id -eq 'skillTreeBranches').status -eq 'passed') 'Paper SkillTree branch gates probe'
     Assert-True (($report.probes | Where-Object id -eq 'skillTreeCastPersistence').status -eq 'passed') 'Paper persisted SkillTree cast gate probe'
+    Assert-True (($report.probes | Where-Object id -eq 'skillTreeQueueSnapshot').status -eq 'passed') 'Paper queued SkillTree snapshot probe'
+    Assert-True (($report.probes | Where-Object id -eq 'skillLifecycleCleanup').status -eq 'passed') 'Paper skill lifecycle cleanup probe'
     Assert-True (($report.probes | Where-Object id -eq 'playerExperienceMechanics').status -eq 'passed') 'player experience mechanics probe'
     Assert-True (($report.probes | Where-Object id -eq 'materialCooldownMechanic').status -eq 'passed') 'material cooldown mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'setGameModeMechanic').status -eq 'passed') 'set game mode mechanic probe'
@@ -269,6 +444,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'mythicMobTypeCondition').status -eq 'passed') 'mythic mob type condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'variableContainsCondition').status -eq 'passed') 'variable contains condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionCatalog').status -eq 'passed') 'condition catalog probe'
+    Assert-True (($report.probes | Where-Object id -eq 'enderDragonAliveCondition').status -eq 'passed') 'EnderDragonAlive positive/negative probe'
     Assert-True (($report.probes | Where-Object id -eq 'projectileHasEndedCondition').status -eq 'passed') 'projectile ended condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'absorptionCondition').status -eq 'passed') 'absorption condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'healthAbsorptionCondition').status -eq 'passed') 'health absorption condition probe'
@@ -295,6 +471,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'worldBiome').status -eq 'passed') 'world and biome condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'worldBiomeReject').status -eq 'passed') 'world and biome rejection probe'
     Assert-True (($report.probes | Where-Object id -eq 'targetCategories').status -eq 'passed') 'target categories probe'
+    Assert-True (($report.probes | Where-Object id -eq 'raiderPatrolLeaderCondition').status -eq 'passed') 'raider patrol leader condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'creeperPrimedCondition').status -eq 'passed') 'creeper primed condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'enderDragonPhaseCondition').status -eq 'passed') 'ender dragon phase condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'targetHealthComparators').status -eq 'passed') 'target health comparators probe'
     Assert-True (($report.probes | Where-Object id -eq 'targetFluidConditions').status -eq 'passed') 'target fluid conditions probe'
     Assert-True (($report.probes | Where-Object id -eq 'factionConditions').status -eq 'passed') 'faction conditions probe'
@@ -309,12 +488,19 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'targetKillMechanic').status -eq 'passed') 'target kill mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'damageMeleeMechanic').status -eq 'passed') 'damage melee mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionUtilityAliases').status -eq 'passed') 'condition utility alias probe'
+    Assert-True (($report.probes | Where-Object id -eq 'survivalModeCondition').status -eq 'passed') 'survival mode condition Paper probe'
+    Assert-True (($report.probes | Where-Object id -eq 'distanceFromSpawnCondition').status -eq 'passed') 'distance from spawn boundary probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mobsInChunkCondition').status -eq 'passed') 'mobs in chunk condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'chanceCondition').status -eq 'passed') 'chance condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'biomeCondition').status -eq 'passed') 'biome condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'biomeImported').status -eq 'passed') 'imported biome condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'invalidConditionsImported').status -eq 'passed') 'invalid imported conditions probe'
     Assert-True (($report.probes | Where-Object id -eq 'spyglassCondition').status -eq 'passed') 'spyglass condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'foodSaturationCondition').status -eq 'passed') 'food saturation condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'freeInventorySlotCondition').status -eq 'passed') 'free inventory slot condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'cooldownMechanics').status -eq 'passed') 'cooldown mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'lastDamageCauseCondition').status -eq 'passed') 'last damage cause condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'damageTagCondition').status -eq 'passed') 'damage tag condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'motionConditions').status -eq 'passed') 'motion condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'nameCondition').status -eq 'passed') 'name condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'playerRadiusConditions').status -eq 'passed') 'player radius condition probe'
@@ -349,6 +535,8 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'playerPotionNaturalExpiry').status -eq 'passed') 'raw player potion natural expiry probe'
     Assert-True ($report.expectedProbeIds -contains 'playerPotionNaturalExpiry') 'raw player potion natural expiry catalog entry'
     Assert-True (($report.probes | Where-Object id -eq 'skillTrigger').status -eq 'passed') 'skill trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'pinTargeters').status -eq 'passed') 'pin targeters Paper probe'
+    Assert-True (($report.probes | Where-Object id -eq 'pinConditions').status -eq 'passed') 'pin conditions Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'blockEvents').status -eq 'passed') 'block event trigger probe'
     Assert-True (($report.probes | Where-Object id -eq 'itemPickup').status -eq 'passed') 'item pickup trigger probe'
     Assert-True (($report.probes | Where-Object id -eq 'vehicleEvents').status -eq 'passed') 'vehicle event trigger probe'
@@ -399,6 +587,40 @@ try {
     Assert-True ($random[2].status -eq 'passed' -and $random[2].maxDeviation -eq $random[2].tolerance) 'inclusive tolerance boundary'
     Assert-True ($random[3].status -eq 'failed' -and $random[3].maxDeviation -gt $random[3].tolerance) 'over-tolerance random record'
 
+    $syntheticDeathLootTemp = Join-Path $temp 'synthetic-death-loot-fixture'
+    New-Item -ItemType Directory -Path (Join-Path $syntheticDeathLootTemp 'logs') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $syntheticDeathLootTemp 'logs/latest.log') -Encoding utf8 -Value @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: [helsteraMobs] [自检] death-loot items=1 conditional-drop=true rejected-drop-absent=true dynamic-chance-drop=true experience=10',
+        '[Server thread/INFO]: Done (1.000s)! For help, type "help"'
+    )
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $syntheticDeathLootTemp | Out-Null
+    $syntheticDeathLootReportPath = Join-Path $syntheticDeathLootTemp 'integration-report.json'
+    $syntheticDeathLootReport = Get-Content -LiteralPath $syntheticDeathLootReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    foreach ($deathLootProbeId in @('deathLootItems', 'deathLootExperience', 'deathLootConditions',
+            'deathLootDynamicChance', 'deathLootTriggerConditions', 'deathLootGeneratedLines',
+            'deathLootBonuses', 'deathLootImportedDropTable')) {
+        $deathLootProbe = @($syntheticDeathLootReport.probes | Where-Object id -eq $deathLootProbeId)
+        Assert-True ($deathLootProbe.Count -eq 1 -and $deathLootProbe[0].status -eq 'not-observed') "synthetic death-loot does not satisfy $deathLootProbeId"
+        Assert-True ($syntheticDeathLootReport.expectedProbeIds -contains $deathLootProbeId) "synthetic death-loot keeps $deathLootProbeId in the required catalog"
+    }
+    $syntheticDeathLootRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $syntheticDeathLootReportPath `
+            -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+    } catch {
+        $syntheticDeathLootRejected = $_.Exception.Message -match 'deathLootItems=not-observed' -and
+            $_.Exception.Message -match 'deathLootExperience=not-observed' -and
+            $_.Exception.Message -match 'deathLootConditions=not-observed' -and
+            $_.Exception.Message -match 'deathLootDynamicChance=not-observed' -and
+            $_.Exception.Message -match 'deathLootTriggerConditions=not-observed' -and
+            $_.Exception.Message -match 'deathLootGeneratedLines=not-observed' -and
+            $_.Exception.Message -match 'deathLootBonuses=not-observed' -and
+            $_.Exception.Message -match 'deathLootImportedDropTable=not-observed'
+    }
+    Assert-True $syntheticDeathLootRejected 'strict gate rejects synthetic-only death-loot evidence'
+
     $strictReportPath = Join-Path $temp 'strict-report.json'
     @{ probes = @(
         @{ id = 'positive'; status = 'passed' },
@@ -436,6 +658,1236 @@ try {
     } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $targetGateReportPath -Encoding utf8
     & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $targetGateReportPath `
         -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+    foreach ($invalidStatus in @('unknown', '')) {
+        $invalidStatusReport = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+        $invalidStatusReport.probes[0].status = $invalidStatus
+        $invalidStatusPath = Join-Path $temp 'invalid-status-report.json'
+        $invalidStatusReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $invalidStatusPath -Encoding utf8
+        $invalidStatusRejected = $false
+        try {
+            & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $invalidStatusPath -RequireTargetPaperVersion
+        } catch { $invalidStatusRejected = $_.Exception.Message -match 'invalid probe status' }
+        Assert-True $invalidStatusRejected 'strict gate rejects unknown or missing probe status'
+    }
+    $missingPluginHashRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $targetGateReportPath `
+            -ExpectedPluginSha256 $testPluginHash
+    } catch { $missingPluginHashRejected = $_.Exception.Message -match 'plugin SHA-256' }
+    Assert-True $missingPluginHashRejected 'strict gate rejects missing plugin SHA-256'
+    $targetGateWithHash = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $targetGateWithHash | Add-Member -NotePropertyName pluginSha256 -NotePropertyValue $testPluginHash
+    $targetGateWithHash | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $targetGateReportPath -Encoding utf8
+    & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $targetGateReportPath `
+        -RequireTargetPaperVersion -ExpectedPluginSha256 $testPluginHash
+
+    $missingFullCatalogRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $targetGateReportPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch {
+        $missingFullCatalogRejected = $_.Exception.Message -match 'required release probe'
+    }
+    Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
+    $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogAiSelector = @($fullCatalogReport.probes | Where-Object id -eq 'aiSelectorCore')
+    if ($fullCatalogAiSelector.Count -ne 1) { throw 'Synthetic full catalog report must contain aiSelectorCore.' }
+    $fullCatalogAiSelector[0].observations = @($fullCatalogAiSelector[0].observations) +
+        @('ai-selector-core targeter-syntax=true')
+    $fullCatalogReport.expectedProbeIds += 'webSpawnerReload'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'webSpawnerReload'; status = 'passed'; observations = @('web-reload invalid=false restored=true server-thread=true')
+    }
+    foreach ($id in @('null_condition_base', 'null_condition_merged', 'null_condition_override')) {
+        $fullCatalogReport.expectedProbeIds += "spawner:$id"
+        $accepted = $id -eq 'null_condition_override'
+        $status = if ($accepted) { 'passed' } else { 'observed-rejected' }
+        $observation = if ($accepted) {
+            "spawner-probe id=$id mode=safe-override requested=true failure=null"
+        } else {
+            "spawner-probe id=$id mode=safe-override requested=false failure=conditions rejected location"
+        }
+        $fullCatalogReport.probes += [pscustomobject]@{
+            id = "spawner:$id"; status = $status; observations = @($observation)
+        }
+    }
+    $fullCatalogReport.expectedProbeIds += 'immunityImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'immunityImported'; status = 'passed'; observations = @('immunity-imported result=true reduced=true condition-rejected=true invalid-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'immunityNativeInvalid'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'immunityNativeInvalid'; status = 'passed'; observations = @('immunity-native-invalid result=true false-rejected=true null-rejected=true unknown-rejected=true null-modifier-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'immunityInvalidFields'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'immunityInvalidFields'; status = 'passed'; observations = @('immunity-invalid-fields null-immunity=true null-modifier-field=true unknown-modifier-field=true invalid-immune=true null-immune=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'immunityPreservation'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'immunityPreservation'; status = 'passed'; observations = @('immunity-preservation nested-preserved=true nested-closed=true list-null-preserved=true list-null-closed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'conditionArguments'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'conditionArguments'; status = 'passed'; observations = @('condition-arguments living-rejected=true baby-valid=true baby-rejected=true frozen-valid=true frozen-rejected=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'conditionStateArguments'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'conditionStateArguments'; status = 'passed'; observations = @('condition-state-arguments valid=true movement-rejected=true category-rejected=true alive-rejected=true negated-rejected=true preserved=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'targetSneakingMob'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'targetSneakingMob'; status = 'passed'; observations = @('target-sneaking-mob false-rejected=true true-passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'timeWeatherArguments'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'timeWeatherArguments'; status = 'passed'; observations = @('time-weather-arguments time-valid=true time-opposite=true weather-valid=true weather-opposite=true time-rejected=true rain-rejected=true negated-rejected=true preserved=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'visibilityStateArguments'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'visibilityStateArguments'; status = 'passed'; observations = @('visibility-state-arguments valid=true rejected=true preserved=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropNullConditions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropNullConditions'; status = 'passed'; observations = @('drop-null-conditions rejected=true warnings=true sibling=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropNativeNullConditions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropNativeNullConditions'; status = 'passed'; observations = @('drop-native-null-conditions rejected=true sibling=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropNativeNullNumeric'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropNativeNullNumeric'; status = 'passed'; observations = @('drop-native-null-numeric rejected=true fallback=true overrides=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropNativeDynamic'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropNativeDynamic'; status = 'passed'; observations = @('drop-native-dynamic rejected=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropNativeTier'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropNativeTier'; status = 'passed'; observations = @('drop-native-tier rejected=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'targeterArgumentValidation'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'targeterArgumentValidation'; status = 'passed'; observations = @('targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true invalid-filter=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'locationTargeterDispatch'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'locationTargeterDispatch'; status = 'passed'; observations = @('location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'variableLocationDispatch'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'variableLocationDispatch'; status = 'passed'; observations = @('variable-location-dispatch valid=true invalid-rejected=true import-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'explosionLocationDispatch'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'explosionLocationDispatch'; status = 'passed'; observations = @('explosion-location-dispatch valid=true missing-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropItemLocation'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropItemLocation'; status = 'passed'; observations = @('drop-item-location valid=true invalid-rejected=true missing-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropItemImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropItemImported'; status = 'passed'; observations = @('drop-item-import valid=true missing-rejected=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropItemNaturalImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropItemNaturalImported'; status = 'passed'; observations = @('drop-item-natural-import exact=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropItemInlineImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropItemInlineImported'; status = 'passed'; observations = @('drop-item-inline-import valid=true invalid-preserved=true dynamic=true missing-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropItemListImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropItemListImported'; status = 'passed'; observations = @('drop-item-list-import valid=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedMessageClient'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedMessageClient'; status = 'passed'; observations = @('imported-message-client dispatched=true client-exact=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedEscapedMessageClient'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedEscapedMessageClient'; status = 'passed'; observations = @('imported-escaped-message-client dispatched=true client-exact=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedSkillReference'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedSkillReference'; status = 'passed'; observations = @('imported-skill-reference valid=true rejected=true preserved=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedSkillTiming'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedSkillTiming'; status = 'passed'; observations = @('imported-skill-timing submitted=true before-delay=true first=true repeated=true invalid-rejected=true preserved=true warnings=true duplicate-rejected=true mechanic-preserved=true positional-chance=true positional-condition=true suffix-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'unroutedEventSuffix'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'unroutedEventSuffix'; status = 'passed'; observations = @('unrouted-event-suffix rejected=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'eventSuffixVariants'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'eventSuffixVariants'; status = 'passed'; observations = @('event-suffix-variants rejected=true warnings=true literal=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'orphanSuffix'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'orphanSuffix'; status = 'passed'; observations = @('orphan-suffix preserved=true warnings=true rejected=true unchanged=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'conditionFailureClosed'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'conditionFailureClosed'; status = 'passed'; observations = @('condition-failure-closed bound=true blocked=true control=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'namedConditionFailureClosed'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'namedConditionFailureClosed'; status = 'passed'; observations = @('named-condition-failure-closed bound=true blocked=true control=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'namedSkillReload'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'namedSkillReload'; status = 'passed'; observations = @('named-skill-reload bound=true initial=true blocked=true restored=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'namedSkillReference'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'namedSkillReference'; status = 'passed'; observations = @('named-skill-reference forward=true missing-rejected=true cycle-blocked=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropNativeTierRange'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropNativeTierRange'; status = 'passed'; observations = @('drop-native-tier-range valid=true fallback=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropUnsafeReferences'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropUnsafeReferences'; status = 'passed'; observations = @('drop-unsafe-references warnings=true stale-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropMergedNull'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropMergedNull'; status = 'passed'; observations = @('drop-merged-null rejected=true warnings=true stale-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'dropChanceImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'dropChanceImported'; status = 'passed'; observations = @('drop-chance-imported rejected=true warnings=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'skillLifecycleCleanup'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'skillLifecycleCleanup'; status = 'passed'; observations = @('synthetic lifecycle evidence')
+    }
+    $fullCatalogReport.expectedProbeIds += 'skillTreeQueueSnapshot'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'skillTreeQueueSnapshot'; status = 'passed'; observations = @('synthetic queue snapshot evidence')
+    }
+    $fullCatalogReport.expectedProbeIds += 'healthImportedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'healthImportedCondition'; status = 'passed'; observations = @('health-imported result=true comparisons=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'healthRangeImportedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'healthRangeImportedCondition'; status = 'passed'; observations = @('health-range-imported result=true ranges=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'comparisonBoundaryImportedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'comparisonBoundaryImportedCondition'; status = 'passed'; observations = @('comparison-boundary-imported result=true boundaries=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'targetHealthImportedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'targetHealthImportedCondition'; status = 'passed'; observations = @('target-health-imported result=true comparisons=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'environmentImportedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'environmentImportedCondition'; status = 'passed'; observations = @('environment-imported result=true valid=true invalid-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'invalidConditionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'invalidConditionsImported'; status = 'passed'; observations = @('synthetic invalid condition evidence')
+    }
+    $fullCatalogReport.expectedProbeIds += 'biomeImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'biomeImported'; status = 'passed'; observations = @('synthetic imported biome test evidence')
+    }
+    $fullCatalogReport.expectedProbeIds += 'expTierDeath'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'expTierDeath'; status = 'passed'; observations = @('exp-tier-death result=true low=2 qualified=7 low-dead=true qualified-dead=true low-bread=4 qualified-bread=4')
+    }
+    $fullCatalogPath = Join-Path $temp 'full-catalog-report.json'
+    $originalPluginEnabled = $fullCatalogReport.pluginEnabled
+    $fullCatalogReport.pluginEnabled = $false
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $disabledPluginRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireFullReleaseCatalog
+    } catch {
+        $disabledPluginRejected = $_.Exception.Message -match 'enabled successfully'
+    }
+    Assert-True $disabledPluginRejected 'full release catalog alone rejects a disabled plugin'
+    $fullCatalogReport.pluginEnabled = $originalPluginEnabled
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingReviveRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch {
+        $missingReviveRejected = $_.Exception.Message -match 'reviveNatural'
+    }
+    Assert-True $missingReviveRejected 'full release gate rejects missing natural revive evidence'
+    $fullCatalogReport.expectedProbeIds += 'reviveNatural'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'reviveNatural'; status = 'passed'; observations = @('synthetic revive test evidence')
+    }
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingLateReviveRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch {
+        $missingLateReviveRejected = $_.Exception.Message -match 'reviveLate'
+    }
+    Assert-True $missingLateReviveRejected 'full release gate rejects missing late cancellation evidence'
+    $fullCatalogReport.expectedProbeIds += 'reviveLate'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'reviveLate'; status = 'passed'; observations = @('synthetic late cancellation test evidence')
+    }
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingDamageRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch {
+        $missingDamageRejected = $_.Exception.Message -match 'damageImported'
+    }
+    Assert-True $missingDamageRejected 'full release gate rejects missing imported damage evidence'
+    $fullCatalogReport.expectedProbeIds += 'damageImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'damageImported'; status = 'passed'; observations = @('synthetic imported damage test evidence')
+    }
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'biomeImported' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'biomeImported' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingBiomeRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch {
+        $missingBiomeRejected = $_.Exception.Message -match 'biomeImported'
+    }
+    Assert-True $missingBiomeRejected 'full release gate rejects missing imported biome evidence'
+    $fullCatalogReport.expectedProbeIds += 'biomeImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'biomeImported'; status = 'passed'; observations = @('synthetic imported biome test evidence')
+    }
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'invalidConditionsImported' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'invalidConditionsImported' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingInvalidConditionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch {
+        $missingInvalidConditionsRejected = $_.Exception.Message -match 'invalidConditionsImported'
+    }
+    Assert-True $missingInvalidConditionsRejected 'full release gate rejects missing invalid condition evidence'
+    $fullCatalogReport.expectedProbeIds += 'invalidConditionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'invalidConditionsImported'; status = 'passed'; observations = @('synthetic invalid condition evidence')
+    }
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'skillTreeQueueSnapshot' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'skillTreeQueueSnapshot' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingQueueRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingQueueRejected = $_.Exception.Message -match 'skillTreeQueueSnapshot' }
+    Assert-True $missingQueueRejected 'full release gate rejects missing queue snapshot evidence'
+    $fullCatalogReport.expectedProbeIds += 'skillTreeQueueSnapshot'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'skillTreeQueueSnapshot'; status = 'passed'; observations = @('synthetic queue snapshot evidence')
+    }
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'healthImportedCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'healthImportedCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingHealthRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingHealthRejected = $_.Exception.Message -match 'healthImportedCondition' }
+    Assert-True $missingHealthRejected 'full release gate rejects missing imported health evidence'
+    $fullCatalogReport.expectedProbeIds += 'healthImportedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'healthImportedCondition'; status = 'passed'; observations = @('health-imported result=true comparisons=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'healthRangeImportedCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'healthRangeImportedCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingRangeRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingRangeRejected = $_.Exception.Message -match 'healthRangeImportedCondition' }
+    Assert-True $missingRangeRejected 'full release gate rejects missing imported health range evidence'
+    $fullCatalogReport.expectedProbeIds += 'healthRangeImportedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'healthRangeImportedCondition'; status = 'passed'; observations = @('health-range-imported result=true ranges=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'comparisonBoundaryImportedCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'comparisonBoundaryImportedCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingComparisonRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingComparisonRejected = $_.Exception.Message -match 'comparisonBoundaryImportedCondition' }
+    Assert-True $missingComparisonRejected 'full release gate rejects missing imported comparison boundary evidence'
+    $fullCatalogReport.expectedProbeIds += 'comparisonBoundaryImportedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'comparisonBoundaryImportedCondition'; status = 'passed'; observations = @('comparison-boundary-imported result=true boundaries=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'targetHealthImportedCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'targetHealthImportedCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingTargetHealthRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingTargetHealthRejected = $_.Exception.Message -match 'targetHealthImportedCondition' }
+    Assert-True $missingTargetHealthRejected 'full release gate rejects missing imported target health evidence'
+    $fullCatalogReport.expectedProbeIds += 'targetHealthImportedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'targetHealthImportedCondition'; status = 'passed'; observations = @('target-health-imported result=true comparisons=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'environmentImportedCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'environmentImportedCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingEnvironmentRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingEnvironmentRejected = $_.Exception.Message -match 'environmentImportedCondition' }
+    Assert-True $missingEnvironmentRejected 'full release gate rejects missing imported environment evidence'
+    $fullCatalogReport.expectedProbeIds += 'environmentImportedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'environmentImportedCondition'; status = 'passed'; observations = @('environment-imported result=true valid=true invalid-rejected=true')
+    }
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+        -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    $naturalDeathProbe = $fullCatalogReport.probes | Where-Object id -eq 'expNaturalDeath'
+    $originalNaturalDeathObservations = $naturalDeathProbe.observations
+    $naturalDeathProbe.observations = @('incomplete evidence')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badNaturalEvidenceRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireFullReleaseCatalog
+    } catch { $badNaturalEvidenceRejected = $_.Exception.Message -match 'required observation for expNaturalDeath' }
+    Assert-True $badNaturalEvidenceRejected 'full release gate rejects incomplete natural death experience evidence'
+    $naturalDeathProbe.observations = $originalNaturalDeathObservations
+    $immunityProbe = $fullCatalogReport.probes | Where-Object id -eq 'immunityImported'
+    $originalImmunityObservations = $immunityProbe.observations
+    $immunityProbe.observations = @('immunity-imported result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badImmunityEvidenceRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badImmunityEvidenceRejected = $_.Exception.Message -match 'required observation for immunityImported' }
+    Assert-True $badImmunityEvidenceRejected 'full release gate rejects incomplete imported immunity evidence'
+    $immunityProbe.observations = $originalImmunityObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'immunityImported' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'immunityImported' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingImmunityRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingImmunityRejected = $_.Exception.Message -match 'immunityImported' }
+    Assert-True $missingImmunityRejected 'full release gate rejects missing imported immunity evidence'
+    $fullCatalogReport.expectedProbeIds += 'immunityImported'
+    $fullCatalogReport.probes += $immunityProbe
+    $nativeImmunityProbe = $fullCatalogReport.probes | Where-Object id -eq 'immunityNativeInvalid'
+    $nativeImmunityObservations = $nativeImmunityProbe.observations
+    $nativeImmunityProbe.observations = @('immunity-native-invalid result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badNativeImmunityRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badNativeImmunityRejected = $_.Exception.Message -match 'required observation for immunityNativeInvalid' }
+    Assert-True $badNativeImmunityRejected 'full release gate rejects incomplete native immunity evidence'
+    $nativeImmunityProbe.observations = $nativeImmunityObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'immunityNativeInvalid' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'immunityNativeInvalid' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingNativeImmunityRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingNativeImmunityRejected = $_.Exception.Message -match 'immunityNativeInvalid' }
+    Assert-True $missingNativeImmunityRejected 'full release gate rejects missing native immunity evidence'
+    $fullCatalogReport.expectedProbeIds += 'immunityNativeInvalid'
+    $fullCatalogReport.probes += $nativeImmunityProbe
+    $invalidFieldsProbe = $fullCatalogReport.probes | Where-Object id -eq 'immunityInvalidFields'
+    $invalidFieldsObservations = $invalidFieldsProbe.observations
+    $invalidFieldsProbe.observations = @('immunity-invalid-fields null-immunity=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badInvalidFieldsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badInvalidFieldsRejected = $_.Exception.Message -match 'required observation for immunityInvalidFields' }
+    Assert-True $badInvalidFieldsRejected 'full release gate rejects incomplete invalid immunity field evidence'
+    $invalidFieldsProbe.observations = $invalidFieldsObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'immunityInvalidFields' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'immunityInvalidFields' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingInvalidFieldsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingInvalidFieldsRejected = $_.Exception.Message -match 'immunityInvalidFields' }
+    Assert-True $missingInvalidFieldsRejected 'full release gate rejects missing invalid immunity field evidence'
+    $fullCatalogReport.expectedProbeIds += 'immunityInvalidFields'
+    $fullCatalogReport.probes += $invalidFieldsProbe
+    $preservationProbe = $fullCatalogReport.probes | Where-Object id -eq 'immunityPreservation'
+    $preservationObservations = $preservationProbe.observations
+    $preservationProbe.observations = @('immunity-preservation nested-preserved=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badPreservationRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badPreservationRejected = $_.Exception.Message -match 'required observation for immunityPreservation' }
+    Assert-True $badPreservationRejected 'full release gate rejects incomplete immunity preservation evidence'
+    $preservationProbe.observations = $preservationObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'immunityPreservation' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'immunityPreservation' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingPreservationRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingPreservationRejected = $_.Exception.Message -match 'immunityPreservation' }
+    Assert-True $missingPreservationRejected 'full release gate rejects missing immunity preservation evidence'
+    $fullCatalogReport.expectedProbeIds += 'immunityPreservation'
+    $fullCatalogReport.probes += $preservationProbe
+    $conditionArgumentsProbe = $fullCatalogReport.probes | Where-Object id -eq 'conditionArguments'
+    $conditionArgumentsObservations = $conditionArgumentsProbe.observations
+    $conditionArgumentsProbe.observations = @('condition-arguments living-rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badConditionArgumentsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badConditionArgumentsRejected = $_.Exception.Message -match 'required observation for conditionArguments' }
+    Assert-True $badConditionArgumentsRejected 'full release gate rejects incomplete condition argument evidence'
+    $conditionArgumentsProbe.observations = $conditionArgumentsObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'conditionArguments' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'conditionArguments' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingConditionArgumentsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingConditionArgumentsRejected = $_.Exception.Message -match 'conditionArguments' }
+    Assert-True $missingConditionArgumentsRejected 'full release gate rejects missing condition argument evidence'
+    $fullCatalogReport.expectedProbeIds += 'conditionArguments'
+    $fullCatalogReport.probes += $conditionArgumentsProbe
+    $stateArgumentsProbe = $fullCatalogReport.probes | Where-Object id -eq 'conditionStateArguments'
+    $stateArgumentsObservations = $stateArgumentsProbe.observations
+    $stateArgumentsProbe.observations = @('condition-state-arguments valid=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badStateArgumentsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badStateArgumentsRejected = $_.Exception.Message -match 'required observation for conditionStateArguments' }
+    Assert-True $badStateArgumentsRejected 'full release gate rejects incomplete condition state evidence'
+    $stateArgumentsProbe.observations = $stateArgumentsObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'conditionStateArguments' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'conditionStateArguments' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingStateArgumentsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingStateArgumentsRejected = $_.Exception.Message -match 'conditionStateArguments' }
+    Assert-True $missingStateArgumentsRejected 'full release gate rejects missing condition state evidence'
+    $fullCatalogReport.expectedProbeIds += 'conditionStateArguments'
+    $fullCatalogReport.probes += $stateArgumentsProbe
+    $sneakingProbe = $fullCatalogReport.probes | Where-Object id -eq 'targetSneakingMob'
+    $sneakingObservations = $sneakingProbe.observations
+    $sneakingProbe.observations = @('target-sneaking-mob false-rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badSneakingRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badSneakingRejected = $_.Exception.Message -match 'required observation for targetSneakingMob' }
+    Assert-True $badSneakingRejected 'full release gate rejects incomplete target sneaking evidence'
+    $sneakingProbe.observations = $sneakingObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'targetSneakingMob' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'targetSneakingMob' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingSneakingRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingSneakingRejected = $_.Exception.Message -match 'targetSneakingMob' }
+    Assert-True $missingSneakingRejected 'full release gate rejects missing target sneaking evidence'
+    $fullCatalogReport.expectedProbeIds += 'targetSneakingMob'
+    $fullCatalogReport.probes += $sneakingProbe
+    $timeWeatherProbe = $fullCatalogReport.probes | Where-Object id -eq 'timeWeatherArguments'
+    $timeWeatherObservations = $timeWeatherProbe.observations
+    $timeWeatherProbe.observations = @('time-weather-arguments time-valid=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badTimeWeatherRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badTimeWeatherRejected = $_.Exception.Message -match 'required observation for timeWeatherArguments' }
+    Assert-True $badTimeWeatherRejected 'full release gate rejects incomplete time and weather evidence'
+    $timeWeatherProbe.observations = $timeWeatherObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'timeWeatherArguments' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'timeWeatherArguments' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingTimeWeatherRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingTimeWeatherRejected = $_.Exception.Message -match 'timeWeatherArguments' }
+    Assert-True $missingTimeWeatherRejected 'full release gate rejects missing time and weather evidence'
+    $fullCatalogReport.expectedProbeIds += 'timeWeatherArguments'
+    $fullCatalogReport.probes += $timeWeatherProbe
+    $visibilityProbe = $fullCatalogReport.probes | Where-Object id -eq 'visibilityStateArguments'
+    $visibilityObservations = $visibilityProbe.observations
+    $visibilityProbe.observations = @('visibility-state-arguments valid=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badVisibilityRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badVisibilityRejected = $_.Exception.Message -match 'required observation for visibilityStateArguments' }
+    Assert-True $badVisibilityRejected 'full release gate rejects incomplete visibility state evidence'
+    $visibilityProbe.observations = $visibilityObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'visibilityStateArguments' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'visibilityStateArguments' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingVisibilityRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingVisibilityRejected = $_.Exception.Message -match 'visibilityStateArguments' }
+    Assert-True $missingVisibilityRejected 'full release gate rejects missing visibility state evidence'
+    $fullCatalogReport.expectedProbeIds += 'visibilityStateArguments'
+    $fullCatalogReport.probes += $visibilityProbe
+    $nullDropProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropNullConditions'
+    $nullDropObservations = $nullDropProbe.observations
+    $nullDropProbe.observations = @('drop-null-conditions rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badNullDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badNullDropRejected = $_.Exception.Message -match 'required observation for dropNullConditions' }
+    Assert-True $badNullDropRejected 'full release gate rejects incomplete null drop conditions evidence'
+    $nullDropProbe.observations = $nullDropObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropNullConditions' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropNullConditions' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingNullDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingNullDropRejected = $_.Exception.Message -match 'dropNullConditions' }
+    Assert-True $missingNullDropRejected 'full release gate rejects missing null drop conditions evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropNullConditions'
+    $fullCatalogReport.probes += $nullDropProbe
+    $unsafeDropProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropUnsafeReferences'
+    $unsafeDropObservations = $unsafeDropProbe.observations
+    $unsafeDropProbe.observations = @('drop-unsafe-references warnings=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badUnsafeDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badUnsafeDropRejected = $_.Exception.Message -match 'required observation for dropUnsafeReferences' }
+    Assert-True $badUnsafeDropRejected 'full release gate rejects incomplete unsafe drop reference evidence'
+    $unsafeDropProbe.observations = $unsafeDropObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropUnsafeReferences' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropUnsafeReferences' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingUnsafeDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingUnsafeDropRejected = $_.Exception.Message -match 'dropUnsafeReferences' }
+    Assert-True $missingUnsafeDropRejected 'full release gate rejects missing unsafe drop reference evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropUnsafeReferences'
+    $fullCatalogReport.probes += $unsafeDropProbe
+    $nativeNullProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropNativeNullConditions'
+    $nativeNullObservations = $nativeNullProbe.observations
+    $nativeNullProbe.observations = @('drop-native-null-conditions rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badNativeNullRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badNativeNullRejected = $_.Exception.Message -match 'required observation for dropNativeNullConditions' }
+    Assert-True $badNativeNullRejected 'full release gate rejects incomplete native null drop evidence'
+    $nativeNullProbe.observations = $nativeNullObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropNativeNullConditions' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropNativeNullConditions' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingNativeNullRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingNativeNullRejected = $_.Exception.Message -match 'dropNativeNullConditions' }
+    Assert-True $missingNativeNullRejected 'full release gate rejects missing native null drop evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropNativeNullConditions'
+    $fullCatalogReport.probes += $nativeNullProbe
+    $numericProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropNativeNullNumeric'
+    $numericObservations = $numericProbe.observations
+    $numericProbe.observations = @('drop-native-null-numeric rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badNumericRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badNumericRejected = $_.Exception.Message -match 'required observation for dropNativeNullNumeric' }
+    Assert-True $badNumericRejected 'full release gate rejects incomplete native null numeric evidence'
+    $numericProbe.observations = $numericObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropNativeNullNumeric' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropNativeNullNumeric' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingNumericRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingNumericRejected = $_.Exception.Message -match 'dropNativeNullNumeric' }
+    Assert-True $missingNumericRejected 'full release gate rejects missing native null numeric evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropNativeNullNumeric'
+    $fullCatalogReport.probes += $numericProbe
+    $dynamicProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropNativeDynamic'
+    $dynamicObservations = $dynamicProbe.observations
+    $dynamicProbe.observations = @('drop-native-dynamic rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badDynamicRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badDynamicRejected = $_.Exception.Message -match 'required observation for dropNativeDynamic' }
+    Assert-True $badDynamicRejected 'full release gate rejects incomplete native dynamic evidence'
+    $dynamicProbe.observations = $dynamicObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropNativeDynamic' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropNativeDynamic' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingDynamicRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingDynamicRejected = $_.Exception.Message -match 'dropNativeDynamic' }
+    Assert-True $missingDynamicRejected 'full release gate rejects missing native dynamic evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropNativeDynamic'
+    $fullCatalogReport.probes += $dynamicProbe
+    $tierProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropNativeTier'
+    $tierObservations = $tierProbe.observations
+    $tierProbe.observations = @('drop-native-tier rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badTierRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badTierRejected = $_.Exception.Message -match 'required observation for dropNativeTier' }
+    Assert-True $badTierRejected 'full release gate rejects incomplete native tier evidence'
+    $tierProbe.observations = $tierObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropNativeTier' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropNativeTier' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingTierRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingTierRejected = $_.Exception.Message -match 'dropNativeTier' }
+    Assert-True $missingTierRejected 'full release gate rejects missing native tier evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropNativeTier'
+    $fullCatalogReport.probes += $tierProbe
+    $targeterArgumentsProbe = $fullCatalogReport.probes | Where-Object id -eq 'targeterArgumentValidation'
+    $targeterArgumentsObservations = $targeterArgumentsProbe.observations
+    $targeterArgumentsProbe.observations = @('targeter-argument-validation rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badTargeterArgumentsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badTargeterArgumentsRejected = $_.Exception.Message -match 'required observation for targeterArgumentValidation' }
+    Assert-True $badTargeterArgumentsRejected 'full release gate rejects incomplete targeter argument evidence'
+    $targeterArgumentsProbe.observations = $targeterArgumentsObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'targeterArgumentValidation' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'targeterArgumentValidation' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingTargeterArgumentsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingTargeterArgumentsRejected = $_.Exception.Message -match 'targeterArgumentValidation' }
+    Assert-True $missingTargeterArgumentsRejected 'full release gate rejects missing targeter argument evidence'
+    $fullCatalogReport.expectedProbeIds += 'targeterArgumentValidation'
+    $fullCatalogReport.probes += $targeterArgumentsProbe
+    $locationProbe = $fullCatalogReport.probes | Where-Object id -eq 'locationTargeterDispatch'
+    $locationObservations = $locationProbe.observations
+    $locationProbe.observations = @('location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=false caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badLocationRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badLocationRejected = $_.Exception.Message -match 'required observation for locationTargeterDispatch' }
+    Assert-True $badLocationRejected 'full release gate rejects incomplete location evidence'
+    $locationProbe.observations = $locationObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'locationTargeterDispatch' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'locationTargeterDispatch' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingLocationRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingLocationRejected = $_.Exception.Message -match 'locationTargeterDispatch' }
+    Assert-True $missingLocationRejected 'full release gate rejects missing location evidence'
+    $fullCatalogReport.expectedProbeIds += 'locationTargeterDispatch'
+    $fullCatalogReport.probes += $locationProbe
+    $variableLocationProbe = $fullCatalogReport.probes | Where-Object id -eq 'variableLocationDispatch'
+    $variableLocationObservations = $variableLocationProbe.observations
+    $variableLocationProbe.observations = @('variable-location-dispatch valid=true invalid-rejected=true import-preserved=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badVariableLocationRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badVariableLocationRejected = $_.Exception.Message -match 'required observation for variableLocationDispatch' }
+    Assert-True $badVariableLocationRejected 'full release gate rejects incomplete variable location evidence'
+    $variableLocationProbe.observations = $variableLocationObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'variableLocationDispatch' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'variableLocationDispatch' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingVariableLocationRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingVariableLocationRejected = $_.Exception.Message -match 'variableLocationDispatch' }
+    Assert-True $missingVariableLocationRejected 'full release gate rejects missing variable location evidence'
+    $fullCatalogReport.expectedProbeIds += 'variableLocationDispatch'
+    $fullCatalogReport.probes += $variableLocationProbe
+    $explosionProbe = $fullCatalogReport.probes | Where-Object id -eq 'explosionLocationDispatch'
+    $explosionProbe.observations = @('explosion-location-dispatch valid=true missing-rejected=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badExplosionRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badExplosionRejected = $_.Exception.Message -match 'required observation for explosionLocationDispatch' }
+    Assert-True $badExplosionRejected 'full release gate rejects incomplete explosion location evidence'
+    $explosionProbe.observations = @('explosion-location-dispatch valid=true missing-rejected=true')
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'explosionLocationDispatch' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'explosionLocationDispatch' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingExplosionRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingExplosionRejected = $_.Exception.Message -match 'explosionLocationDispatch' }
+    Assert-True $missingExplosionRejected 'full release gate rejects missing explosion location evidence'
+    $fullCatalogReport.expectedProbeIds += 'explosionLocationDispatch'
+    $fullCatalogReport.probes += $explosionProbe
+    $dropLocationProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropItemLocation'
+    $dropLocationProbe.observations = @('drop-item-location valid=true invalid-rejected=false missing-rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badDropLocationRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badDropLocationRejected = $_.Exception.Message -match 'required observation for dropItemLocation' }
+    Assert-True $badDropLocationRejected 'full release gate rejects incomplete drop item location evidence'
+    $dropLocationProbe.observations = @('drop-item-location valid=true invalid-rejected=true missing-rejected=true')
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropItemLocation' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropItemLocation' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingDropLocationRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingDropLocationRejected = $_.Exception.Message -match 'dropItemLocation' }
+    Assert-True $missingDropLocationRejected 'full release gate rejects missing drop item location evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropItemLocation'
+    $fullCatalogReport.probes += $dropLocationProbe
+    $importedDropProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropItemImported'
+    $importedDropProbe.observations = @('drop-item-import valid=true missing-rejected=true invalid-preserved=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badImportedDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badImportedDropRejected = $_.Exception.Message -match 'required observation for dropItemImported' }
+    Assert-True $badImportedDropRejected 'full release gate rejects incomplete imported drop evidence'
+    $importedDropProbe.observations = @('drop-item-import valid=true missing-rejected=true invalid-preserved=true')
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropItemImported' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropItemImported' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingImportedDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingImportedDropRejected = $_.Exception.Message -match 'dropItemImported' }
+    Assert-True $missingImportedDropRejected 'full release gate rejects missing imported drop evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropItemImported'
+    $fullCatalogReport.probes += $importedDropProbe
+    $naturalDropProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropItemNaturalImported'
+    $naturalDropProbe.observations = @('drop-item-natural-import exact=false invalid-preserved=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badNaturalDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badNaturalDropRejected = $_.Exception.Message -match 'required observation for dropItemNaturalImported' }
+    Assert-True $badNaturalDropRejected 'full release gate rejects incomplete natural drop evidence'
+    $naturalDropProbe.observations = @('drop-item-natural-import exact=true invalid-preserved=true')
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropItemNaturalImported' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropItemNaturalImported' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingNaturalDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingNaturalDropRejected = $_.Exception.Message -match 'dropItemNaturalImported' }
+    Assert-True $missingNaturalDropRejected 'full release gate rejects missing natural drop evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropItemNaturalImported'
+    $fullCatalogReport.probes += $naturalDropProbe
+    $inlineDropProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropItemInlineImported'
+    $inlineDropProbe.observations = @('drop-item-inline-import valid=true invalid-preserved=true dynamic=false missing-rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badInlineDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badInlineDropRejected = $_.Exception.Message -match 'required observation for dropItemInlineImported' }
+    Assert-True $badInlineDropRejected 'full release gate rejects incomplete inline drop evidence'
+    $inlineDropProbe.observations = @('drop-item-inline-import valid=true invalid-preserved=true dynamic=true missing-rejected=true')
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropItemInlineImported' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropItemInlineImported' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingInlineDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingInlineDropRejected = $_.Exception.Message -match 'dropItemInlineImported' }
+    Assert-True $missingInlineDropRejected 'full release gate rejects missing inline drop evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropItemInlineImported'
+    $fullCatalogReport.probes += $inlineDropProbe
+    $listDropProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropItemListImported'
+    $listDropProbe.observations = @('drop-item-list-import valid=true invalid-preserved=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badListDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badListDropRejected = $_.Exception.Message -match 'required observation for dropItemListImported' }
+    Assert-True $badListDropRejected 'full release gate rejects incomplete list drop evidence'
+    $listDropProbe.observations = @('drop-item-list-import valid=true invalid-preserved=true')
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropItemListImported' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropItemListImported' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingListDropRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingListDropRejected = $_.Exception.Message -match 'dropItemListImported' }
+    Assert-True $missingListDropRejected 'full release gate rejects missing list drop evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropItemListImported'
+    $fullCatalogReport.probes += $listDropProbe
+    $messageProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedMessageClient'
+    $messageProbe.observations = @('imported-message-client dispatched=true client-exact=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badMessageRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badMessageRejected = $_.Exception.Message -match 'required observation for importedMessageClient' }
+    Assert-True $badMessageRejected 'full release gate rejects missing exact message receipt'
+    $messageProbe.observations = @('imported-message-client dispatched=true client-exact=true')
+    $escapedMessageProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedEscapedMessageClient'
+    $escapedMessageProbe.observations = @('imported-escaped-message-client dispatched=true client-exact=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badEscapedMessageRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badEscapedMessageRejected = $_.Exception.Message -match 'required observation for importedEscapedMessageClient' }
+    Assert-True $badEscapedMessageRejected 'full release gate rejects missing exact escaped message receipt'
+    $escapedMessageProbe.observations = @('imported-escaped-message-client dispatched=true client-exact=true')
+    $skillReferenceProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedSkillReference'
+    $skillReferenceProbe.observations = @('imported-skill-reference valid=true rejected=false preserved=true warnings=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badSkillReferenceRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badSkillReferenceRejected = $_.Exception.Message -match 'required observation for importedSkillReference' }
+    Assert-True $badSkillReferenceRejected 'full release gate rejects incomplete skill reference evidence'
+    $skillReferenceProbe.observations = @('imported-skill-reference valid=true rejected=true preserved=true warnings=true')
+    $skillTimingProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedSkillTiming'
+    $skillTimingProbe.observations = @('imported-skill-timing submitted=true before-delay=true first=true repeated=false invalid-rejected=true preserved=true warnings=true duplicate-rejected=true mechanic-preserved=true positional-chance=true positional-condition=true suffix-rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badSkillTimingRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badSkillTimingRejected = $_.Exception.Message -match 'required observation for importedSkillTiming' }
+    Assert-True $badSkillTimingRejected 'full release gate rejects incomplete skill timing evidence'
+    $skillTimingProbe.observations = @('imported-skill-timing submitted=true before-delay=true first=true repeated=true invalid-rejected=true preserved=true warnings=true duplicate-rejected=false mechanic-preserved=true positional-chance=true positional-condition=true suffix-rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $duplicateTimingAccepted = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+        $duplicateTimingAccepted = $true
+    } catch { if ($_.Exception.Message -notmatch 'required observation for importedSkillTiming') { throw } }
+    Assert-True (-not $duplicateTimingAccepted) 'full release gate rejects ambiguous execution options'
+    $skillTimingProbe.observations = @('imported-skill-timing submitted=true before-delay=true first=true repeated=true invalid-rejected=true preserved=true warnings=true duplicate-rejected=true mechanic-preserved=false positional-chance=true positional-condition=true suffix-rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badMechanicTimingAccepted = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+        $badMechanicTimingAccepted = $true
+    } catch { if ($_.Exception.Message -notmatch 'required observation for importedSkillTiming') { throw } }
+    Assert-True (-not $badMechanicTimingAccepted) 'full release gate rejects missing mechanic preservation evidence'
+    $skillTimingProbe.observations = @('imported-skill-timing submitted=true before-delay=true first=true repeated=true invalid-rejected=true preserved=true warnings=true duplicate-rejected=true mechanic-preserved=true positional-chance=false positional-condition=true suffix-rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badPositionalChanceAccepted = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+        $badPositionalChanceAccepted = $true
+    } catch { if ($_.Exception.Message -notmatch 'required observation for importedSkillTiming') { throw } }
+    Assert-True (-not $badPositionalChanceAccepted) 'full release gate rejects missing positional chance evidence'
+    $skillTimingProbe.observations = @('imported-skill-timing submitted=true before-delay=true first=true repeated=true invalid-rejected=true preserved=true warnings=true duplicate-rejected=true mechanic-preserved=true positional-chance=true positional-condition=false suffix-rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badPositionalConditionAccepted = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+        $badPositionalConditionAccepted = $true
+    } catch { if ($_.Exception.Message -notmatch 'required observation for importedSkillTiming') { throw } }
+    Assert-True (-not $badPositionalConditionAccepted) 'full release gate rejects missing positional condition evidence'
+    $skillTimingProbe.observations = @('imported-skill-timing submitted=true before-delay=true first=true repeated=true invalid-rejected=true preserved=true warnings=true duplicate-rejected=true mechanic-preserved=true positional-chance=true positional-condition=true suffix-rejected=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badSuffixAccepted = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+        $badSuffixAccepted = $true
+    } catch { if ($_.Exception.Message -notmatch 'required observation for importedSkillTiming') { throw } }
+    Assert-True (-not $badSuffixAccepted) 'full release gate rejects missing ambiguous suffix evidence'
+    $skillTimingProbe.observations = @('imported-skill-timing submitted=true before-delay=true first=true repeated=true invalid-rejected=true preserved=true warnings=true duplicate-rejected=true mechanic-preserved=true positional-chance=true positional-condition=true suffix-rejected=true')
+    $eventSuffixProbe = $fullCatalogReport.probes | Where-Object id -eq 'unroutedEventSuffix'
+    $eventSuffixProbe.observations = @('unrouted-event-suffix rejected=true warnings=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badEventSuffixRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badEventSuffixRejected = $_.Exception.Message -match 'required observation for unroutedEventSuffix' }
+    Assert-True $badEventSuffixRejected 'full release gate rejects incomplete event suffix evidence'
+    $eventSuffixProbe.observations = @('unrouted-event-suffix rejected=true warnings=true')
+    $eventVariantsProbe = $fullCatalogReport.probes | Where-Object id -eq 'eventSuffixVariants'
+    $eventVariantsProbe.observations = @('event-suffix-variants rejected=true warnings=true literal=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badEventVariantsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badEventVariantsRejected = $_.Exception.Message -match 'required observation for eventSuffixVariants' }
+    Assert-True $badEventVariantsRejected 'full release gate rejects incomplete event suffix variant evidence'
+    $eventVariantsProbe.observations = @('event-suffix-variants rejected=true warnings=true literal=true')
+    $orphanProbe = $fullCatalogReport.probes | Where-Object id -eq 'orphanSuffix'
+    $orphanProbe.observations = @('orphan-suffix preserved=true warnings=true rejected=true unchanged=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badOrphanRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badOrphanRejected = $_.Exception.Message -match 'required observation for orphanSuffix' }
+    Assert-True $badOrphanRejected 'full release gate rejects incomplete orphan suffix evidence'
+    $orphanProbe.observations = @('orphan-suffix preserved=true warnings=true rejected=true unchanged=true')
+    $conditionFailureProbe = $fullCatalogReport.probes | Where-Object id -eq 'conditionFailureClosed'
+    $conditionFailureProbe.observations = @('condition-failure-closed bound=true blocked=false control=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badConditionFailureRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badConditionFailureRejected = $_.Exception.Message -match 'required observation for conditionFailureClosed' }
+    Assert-True $badConditionFailureRejected 'full release gate rejects condition failure bypass'
+    $conditionFailureProbe.observations = @('condition-failure-closed bound=true blocked=true control=true')
+    $namedFailureProbe = $fullCatalogReport.probes | Where-Object id -eq 'namedConditionFailureClosed'
+    $namedFailureProbe.observations = @('named-condition-failure-closed bound=true blocked=false control=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badNamedFailureRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badNamedFailureRejected = $_.Exception.Message -match 'required observation for namedConditionFailureClosed' }
+    Assert-True $badNamedFailureRejected 'full release gate rejects named condition failure bypass'
+    $namedFailureProbe.observations = @('named-condition-failure-closed bound=true blocked=true control=true')
+    $reloadProbe = $fullCatalogReport.probes | Where-Object id -eq 'namedSkillReload'
+    $reloadProbe.observations = @('named-skill-reload bound=true initial=true blocked=false restored=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badReloadRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badReloadRejected = $_.Exception.Message -match 'required observation for namedSkillReload' }
+    Assert-True $badReloadRejected 'full release gate rejects stale named skill execution'
+    $reloadProbe.observations = @('named-skill-reload bound=true initial=true blocked=true restored=true')
+    $referenceProbe = $fullCatalogReport.probes | Where-Object id -eq 'namedSkillReference'
+    $referenceProbe.observations = @('named-skill-reference forward=true missing-rejected=true cycle-blocked=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badReferenceRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badReferenceRejected = $_.Exception.Message -match 'required observation for namedSkillReference' }
+    Assert-True $badReferenceRejected 'full release gate rejects cyclic named skill execution'
+    $referenceProbe.observations = @('named-skill-reference forward=true missing-rejected=true cycle-blocked=true')
+    $rangeProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropNativeTierRange'
+    $rangeProbe.observations = @('drop-native-tier-range valid=false fallback=true warnings=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badRangeRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badRangeRejected = $_.Exception.Message -match 'required observation for dropNativeTierRange' }
+    Assert-True $badRangeRejected 'full release gate rejects invalid tier range behavior'
+    $rangeProbe.observations = @('drop-native-tier-range valid=true fallback=true warnings=true')
+    $mergedProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropMergedNull'
+    $mergedObservations = $mergedProbe.observations
+    $mergedProbe.observations = @('drop-merged-null rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badMergedRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badMergedRejected = $_.Exception.Message -match 'required observation for dropMergedNull' }
+    Assert-True $badMergedRejected 'full release gate rejects incomplete merged null drop evidence'
+    $mergedProbe.observations = $mergedObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropMergedNull' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropMergedNull' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingMergedRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingMergedRejected = $_.Exception.Message -match 'dropMergedNull' }
+    Assert-True $missingMergedRejected 'full release gate rejects missing merged null drop evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropMergedNull'
+    $fullCatalogReport.probes += $mergedProbe
+    $chanceProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropChanceImported'
+    $chanceObservations = $chanceProbe.observations
+    $chanceProbe.observations = @('drop-chance-imported rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badChanceRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badChanceRejected = $_.Exception.Message -match 'required observation for dropChanceImported' }
+    Assert-True $badChanceRejected 'full release gate rejects incomplete imported chance evidence'
+    $chanceProbe.observations = $chanceObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropChanceImported' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropChanceImported' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingChanceRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingChanceRejected = $_.Exception.Message -match 'dropChanceImported' }
+    Assert-True $missingChanceRejected 'full release gate rejects missing imported chance evidence'
+    $fullCatalogReport.expectedProbeIds += 'dropChanceImported'
+    $fullCatalogReport.probes += $chanceProbe
+    ($fullCatalogReport.probes | Where-Object id -eq 'expTierDeath').observations = @('incomplete evidence')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badTierEvidenceRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badTierEvidenceRejected = $_.Exception.Message -match 'required observation for expTierDeath' }
+    Assert-True $badTierEvidenceRejected 'full release gate rejects incomplete tiered experience evidence'
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'expTierDeath' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'expTierDeath' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingTierRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingTierRejected = $_.Exception.Message -match 'expTierDeath' }
+    Assert-True $missingTierRejected 'full release gate rejects missing tiered experience evidence'
+    $fullCatalogReport.expectedProbeIds += 'expTierDeath'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'expTierDeath'; status = 'passed'; observations = @('exp-tier-death result=true low=2 qualified=7 low-dead=true qualified-dead=true low-bread=4 qualified-bread=4')
+    }
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'skillLifecycleCleanup' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'skillLifecycleCleanup' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingLifecycleRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingLifecycleRejected = $_.Exception.Message -match 'skillLifecycleCleanup' }
+    Assert-True $missingLifecycleRejected 'full release gate rejects missing lifecycle evidence'
+    $fullCatalogReport.expectedProbeIds += 'skillLifecycleCleanup'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'skillLifecycleCleanup'; status = 'passed'; observations = @('synthetic lifecycle evidence')
+    }
+    ($fullCatalogReport.probes | Where-Object id -eq 'playerPotionNaturalExpiry').status = 'observed-rejected'
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $rejectedPotionRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch {
+        $rejectedPotionRejected = $_.Exception.Message -match 'playerPotionNaturalExpiry'
+    }
+    Assert-True $rejectedPotionRejected 'full release gate requires Potion probes to pass'
+    ($fullCatalogReport.probes | Where-Object id -eq 'playerPotionNaturalExpiry').status = 'passed'
+    ($fullCatalogReport.probes | Where-Object id -eq 'spawner:condition_fail').status = 'passed'
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $unexpectedSpawnerPassRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch {
+        $unexpectedSpawnerPassRejected = $_.Exception.Message -match 'spawner:condition_fail'
+    }
+    Assert-True $unexpectedSpawnerPassRejected 'full release gate requires negative controls to be rejected'
+    ($fullCatalogReport.probes | Where-Object id -eq 'spawner:condition_fail').status = 'observed-rejected'
+    $negativeProbe = $fullCatalogReport.probes | Where-Object id -eq 'spawner:condition_fail'
+    $originalNegativeObservations = $negativeProbe.observations
+    $negativeProbe.observations = @('spawner-probe id=condition_fail requested=false failure=player gate closed')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $wrongRejectionRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch {
+        $wrongRejectionRejected = $_.Exception.Message -match 'expected rejection reason.*spawner:condition_fail'
+    }
+    Assert-True $wrongRejectionRejected 'full release gate rejects the wrong negative-control failure reason'
+    $negativeProbe.observations = $originalNegativeObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'skillTeleportCoordinates' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'skillTeleportCoordinates' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $omittedProbeRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch {
+        $omittedProbeRejected = $_.Exception.Message -match 'skillTeleportCoordinates'
+    }
+    Assert-True $omittedProbeRejected 'full release gate rejects a probe omitted from both report and report catalog'
 
     $exploratoryReportPath = Join-Path $temp 'exploratory-report.json'
     $exploratoryReport = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
@@ -581,7 +2033,9 @@ try {
         Set-Content -LiteralPath (Join-Path $chainTemp 'logs/latest.log') -Encoding utf8 -Value @(
             'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
             '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
-            "[Server thread/INFO]: ai-selector-core player-target=true monster-target=true clear-no-fallback=true owner-target=true faction-target=true conditional-target=true players-in-world=true mobs-in-world=true world-chain-filtered=true nearest-living=true nearest-mob=true set-target-mechanic=true clear-target-mechanic=true ${chainField}native-target=true passed=true",
+            "[Server thread/INFO]: ai-selector-core player-target=true monster-target=true clear-no-fallback=true owner-target=true faction-target=true conditional-target=true players-in-world=true players-on-server=true player-aliases=true mobs-in-world=true world-chain-filtered=true nearest-living=true nearest-mob=true targeter-syntax=true set-target-mechanic=true clear-target-mechanic=true ${chainField}native-target=true passed=true",
+            '[Server thread/INFO]: context-targeter-controls order=true radius=false invalid-rejected=true',
+            '[Server thread/INFO]: context-targeter-chain targets=true trigger=true excluded=false condition=true',
             '[Server thread/INFO]: Done (1.000s)! For help, type "help"'
         )
         & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $chainTemp | Out-Null
@@ -589,6 +2043,8 @@ try {
         $chainReport = Get-Content -LiteralPath $chainReportPath -Raw -Encoding utf8 | ConvertFrom-Json
         $chainProbe = @($chainReport.probes | Where-Object id -eq 'aiSelectorCore')
         Assert-True ($chainProbe.Count -eq 1 -and $chainProbe[0].status -eq 'not-observed') "context chain $chainState is not passing evidence"
+        Assert-True (($chainReport.probes | Where-Object id -eq 'contextTargeterControls').status -eq 'not-observed') 'context targeter radius failure is not passing evidence'
+        Assert-True (($chainReport.probes | Where-Object id -eq 'contextTargeterChain').status -eq 'not-observed') 'context chain exclusion failure is not passing evidence'
         $chainRejected = $false
         try {
             & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $chainReportPath -RequireTargetPaperVersion
@@ -597,6 +2053,27 @@ try {
         }
         Assert-True $chainRejected "strict gate rejects context chain $chainState"
     }
+
+    $targeterSyntaxTemp = Join-Path $temp 'targeter-syntax-missing'
+    New-Item -ItemType Directory -Path (Join-Path $targeterSyntaxTemp 'logs') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $targeterSyntaxTemp 'logs/latest.log') -Encoding utf8 -Value @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: ai-selector-core player-target=true monster-target=true clear-no-fallback=true owner-target=true faction-target=true conditional-target=true players-in-world=true players-on-server=true player-aliases=true mobs-in-world=true world-caster-excluded=true world-chain-filtered=true nearest-living=true nearest-mob=true targeter-syntax=false set-target-mechanic=true clear-target-mechanic=true context-chain-action=true native-target=true passed=true',
+        '[Server thread/INFO]: Done (1.000s)! For help, type "help"'
+    )
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $targeterSyntaxTemp | Out-Null
+    $targeterSyntaxReportPath = Join-Path $targeterSyntaxTemp 'integration-report.json'
+    $targeterSyntaxReport = Get-Content -LiteralPath $targeterSyntaxReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $targeterSyntaxProbe = @($targeterSyntaxReport.probes | Where-Object id -eq 'aiSelectorCore')
+    Assert-True ($targeterSyntaxProbe.Count -eq 1 -and $targeterSyntaxProbe[0].status -eq 'not-observed') 'targeter syntax failure is not passing evidence'
+    $targeterSyntaxRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $targeterSyntaxReportPath -RequireTargetPaperVersion
+    } catch {
+        $targeterSyntaxRejected = $_.Exception.Message -match 'aiSelectorCore=not-observed'
+    }
+    Assert-True $targeterSyntaxRejected 'strict gate rejects missing targeter syntax evidence'
 
     $noClientTemp = Join-Path $temp 'no-client-fixture'
     New-Item -ItemType Directory -Path (Join-Path $noClientTemp 'logs') -Force | Out-Null
@@ -609,7 +2086,8 @@ try {
     $noClientReport = Get-Content -LiteralPath (Join-Path $noClientTemp 'integration-report.json') -Raw -Encoding utf8 |
         ConvertFrom-Json
     foreach ($dynamicProbeId in @('custom-menu-player-workflow', 'audience-player-delivery',
-            'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates')) {
+            'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates',
+            'spawningDistanceClientWalk')) {
         $dynamicProbe = @($noClientReport.probes | Where-Object id -eq $dynamicProbeId)
         Assert-True ($dynamicProbe.Count -eq 1) "no-client report includes $dynamicProbeId"
         Assert-True ($dynamicProbe[0].status -eq 'not-observed') "no-client $dynamicProbeId is explicit missing evidence"
@@ -623,6 +2101,9 @@ try {
         '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
         '[Server thread/INFO]: spawner-probe id=aggregate requested=false failure=first',
         '[Server thread/INFO]: spawner-probe id=aggregate requested=true failure=null',
+        '[Server thread/INFO]: spawner-probe id=missing-request failure=conditions rejected location',
+        '[Server thread/INFO]: spawner-probe id=missing-reason requested=false failure=null',
+        '[Server thread/INFO]: spawner-probe id=explicit-reject requested=false failure=conditions rejected location',
         '[Server thread/INFO]: Done (1.000s)! For help, type "help"'
     )
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $dynamicSpawnerTemp | Out-Null
@@ -632,6 +2113,12 @@ try {
     Assert-True ($aggregateProbes.Count -eq 1) 'dynamic spawner evidence is aggregated by ID'
     Assert-True ($aggregateProbes[0].status -eq 'passed') 'aggregated dynamic spawner keeps passing evidence'
     Assert-True ($dynamicSpawnerReport.expectedProbeIds -contains 'spawner:aggregate') 'dynamic spawner is registered in the strict catalog'
+    foreach ($id in @('missing-request', 'missing-reason')) {
+        $probe = $dynamicSpawnerReport.probes | Where-Object id -eq "spawner:$id"
+        Assert-True ($probe.status -eq 'not-observed') "spawner $id is not evidence of rejection"
+    }
+    $explicitReject = $dynamicSpawnerReport.probes | Where-Object id -eq 'spawner:explicit-reject'
+    Assert-True ($explicitReject.status -eq 'observed-rejected') 'explicit spawner rejection is recorded'
 
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp `
         -RandomSpawnTolerance 0.10 | Out-Null
@@ -651,6 +2138,7 @@ try {
 } finally {
     $env:PAPER_RAW_POTION_WORKFLOW = $previousRawPotionWorkflow
     $env:PAPER_RAW_POTION_SHORT = $previousRawPotionShort
+    $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = $previousSpawningDistanceWalkWorkflow
     $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
     $tempPath = [System.IO.Path]::GetFullPath($temp)
     $isOwnedTemp = $tempPath.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase) -and

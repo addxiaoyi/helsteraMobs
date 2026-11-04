@@ -1,4 +1,18 @@
 spawners:
+  null_condition_base: &null_condition_base
+    mob: emberling
+    x: 2.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 10
+    enabled: false
+    conditions: null
+  null_condition_merged:
+    <<: *null_condition_base
+  null_condition_override:
+    <<: *null_condition_base
+    conditions: []
   regions:
     integration_box:
       world: ""
@@ -38,6 +52,76 @@ spawners:
     max-spawns: 0
     min-players: 0
     players-radius: 0.0
+    enabled: false
+  negated_height_pass:
+    mob: emberling
+    world: ""
+    x: 2.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 10
+    conditions: ['!y-above=300']
+    enabled: false
+  negated_invalid_height_fail:
+    mob: emberling
+    world: ""
+    x: 2.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 10
+    conditions: ['!y-above=NaN']
+    enabled: false
+  negated_invalid_light_fail:
+    mob: emberling
+    world: ""
+    x: 2.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 10
+    conditions: ['!light-level!=NaN']
+    enabled: false
+  negated_named_world_pass:
+    mob: emberling
+    world: ""
+    x: 2.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 10
+    conditions: ['!world-is=other-world']
+    enabled: false
+  negated_invalid_world_fail:
+    mob: emberling
+    world: ""
+    x: 2.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 10
+    conditions: ['!world-is=']
+    enabled: false
+  negated_invalid_moon_fail:
+    mob: emberling
+    world: ""
+    x: 2.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 10
+    conditions: ['!moon-phase-is=invalid']
+    enabled: false
+  negated_invalid_biome_fail:
+    mob: emberling
+    world: ""
+    x: 2.5
+    y: 70
+    z: 0.5
+    interval: 12000
+    max-alive: 10
+    conditions: ['!biome-is=invalid']
     enabled: false
   condition_pass:
     mob: emberling

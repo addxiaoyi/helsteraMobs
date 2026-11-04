@@ -1,5 +1,500 @@
 # Paper Startup Evidence
 
+Fixture `srv-paper-target-filters-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 339 probes, 320 passed and 19 expected rejections.
+`targeterArgumentValidation` verifies a real online player is selected by
+`target=players`, excluded by `ignore=players`, and that invalid filters are
+rejected while valid chain/control cases pass. API tests also cover category
+filters, quoted lists, malformed and duplicate values, and `targetself`
+inclusion/exclusion. Mythic-specific ground/water/flight, game-mode, NPC and
+MythicMob filters remain outside this implementation. Report and compressed
+server/client logs are listed in `release-evidence.json`; plugin SHA-256:
+`1f9089352bc60431cf9627bce2c4fc188ad1f12f14ff04ba6ed4342a40c59ff7`.
+
+Fixture `srv-paper-self-eye-location-strict-20261104-r1` passed the complete
+strict gate on Paper 1.21.1-133: 339 probes, 320 passed and 19 expected
+rejections. `locationTargeterDispatch` verifies real block-action dispatch for
+SelfLocation and all five SelfEyeLocation aliases, caster and world spawn
+locations, explicit target and trigger locations, `@Forward`, `@ProjectileForward`
+on an Arrow, and `@TargetPredictedLocation` using target velocity. Invalid
+coordinates are rejected. Report and logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-tier-range-20261104-r1` passed the complete strict gate on
+Paper 1.21.1-133: 339 probes, 320 passed and 19 expected rejections.
+`dropNativeTierRange` checks invalid list and indexed tier bounds are reported,
+valid tier siblings remain usable, and null indexed bounds use the documented
+base-amount fallback. Report and logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-named-reference-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 338 probes, 319 passed and 19 expected rejections.
+`namedSkillReference` verifies a mixed-case forward reference heals a real
+entity, an unknown reference fails binding and a cyclic guard blocks healing.
+Report and logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-named-reload-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 337 probes, 318 passed and 19 expected rejections.
+`namedSkillReload` checks direct skill action and negated condition behavior
+against a real entity after deletion and reintroduction of the skill definition.
+Report and logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-named-condition-20261104-r1` passed the complete strict
+gate on Paper 1.21.1-133: 336 probes, 317 passed and 19 expected rejections.
+`namedConditionFailureClosed` checks throwing and unknown named skill
+requirements block healing under negation on a real entity, while a normal
+false requirement allows the negated control to heal. Report and logs are
+listed in `release-evidence.json`.
+
+Fixture `srv-paper-condition-failure-20261104-r1` passed the complete strict
+gate on Paper 1.21.1-133: 335 probes, 316 passed and 19 expected rejections.
+`conditionFailureClosed` checks throwing registered conditions under nested
+negation block healing of a real entity, while a normal false-condition control
+heals it. Report and logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-orphan-suffix-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 334 probes, 315 passed and 19 expected rejections. The
+`orphanSuffix` probe verifies standalone `?` and `@` are preserved with
+warnings, rejected at binding and do not heal a real test entity. Report and
+logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-event-variants-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 333 probes, 314 passed and 19 expected rejections. The
+`eventSuffixVariants` probe checks rejected uppercase, unknown and incomplete
+event suffixes with diagnostics, and successful binding of quoted message text.
+It does not test client delivery. Report and logs are in `release-evidence.json`.
+
+Fixture `srv-paper-event-suffix-20261104-r1` passed the complete strict gate on
+Paper 1.21.1-133: 332 probes, 313 passed and 19 expected rejections. The
+`unroutedEventSuffix` probe checks direct binding rejects single unrouted and
+duplicate event suffixes with diagnostics; it does not test natural events.
+Report and logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-invalid-chance-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 331 probes, 312 passed and 19 expected rejections. Invalid
+chance suffixes `101%`, `NaN%`, and `1e999%` were preserved, warned and
+rejected without affecting a real entity. Report and logs are listed in
+`release-evidence.json`.
+
+Fixture `srv-paper-suffix-grammar-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 331 probes, 312 passed and 19 expected rejections. Three
+ambiguous suffixes were preserved, warned and rejected without affecting a real
+entity; a positional placeholder and valid targeter chain remained mapped.
+Report and logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-positional-condition-20261104-r1` passed the complete strict
+gate on Paper 1.21.1-133: 331 probes, 312 passed and 19 expected rejections.
+Imported positional heal lines correctly evaluate true and false target
+conditions, including a braced condition, and a braced targeter retains the
+heal amount on a real entity. Report and logs are in `release-evidence.json`.
+
+Fixture `srv-paper-positional-chance-20261104-r1` passed the complete strict
+gate on Paper 1.21.1-133: 331 probes, 312 passed and 19 expected rejections.
+Imported positional heal mechanics without targeters retained their chances:
+0% did not heal a real entity and 100% healed it. Report and logs are listed
+in `release-evidence.json`.
+
+Fixture `srv-paper-mechanic-timing-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 331 probes, 312 passed and 19 expected rejections. Three
+imported heal lines with invalid or duplicate timing options were preserved,
+warned and did not affect a real entity. Report and logs are listed in
+`release-evidence.json`.
+
+Fixture `srv-paper-skill-duplicate-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 331 probes, 312 passed and 19 expected rejections. It
+checks runtime rejection and diagnostics for duplicate delay, repeat and
+interval options alongside the delayed nested-skill observations. Report and
+logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-skill-timing-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 331 probes, 312 passed and 19 expected rejections. An
+imported nested skill was observed before its delay, after its first execution
+and after its repeat. Two invalid timing options were preserved with warnings
+and did not execute. Report and logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-skill-reference-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 330 probes, 311 passed and 19 expected rejections. A
+valid imported nested skill changed a real entity; three invalid references
+were preserved with warnings and did not change the entity. Report and logs
+are listed in `release-evidence.json`.
+
+Fixture `srv-paper-message-escape-20261104-r2` passed the complete strict gate
+on Paper 1.21.1-133: 329 probes, 310 passed and 19 expected rejections. A real
+client received an imported message with escaped quotes, a backslash, embedded
+delimiters and a `@trigger` targeter exactly. Report and logs are listed in
+`release-evidence.json`.
+
+Fixture `srv-paper-message-comma-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 328 probes, 309 passed and 19 expected rejections. A real
+client received an imported message containing commas, a key-like expression,
+and a semicolon exactly. The report and logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-drop-list-comma-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 327 probes, 308 passed and 19 expected rejections. It
+imports a two-item list followed by `,n=false`, observes both exact-location
+drops, and preserves an invalid list flag. The report and logs are listed in
+`release-evidence.json`.
+
+Fixture `srv-paper-drop-list-20261104-r1` passed the complete strict gate on
+Paper 1.21.1-133: 327 probes, 308 passed and 19 expected rejections. It imports a
+two-item list, observes both item types and counts at the selected location, and
+checks invalid-list preservation. The report and logs are in `release-evidence.json`.
+
+Fixture `srv-paper-drop-inline-20261104-r2` passed the complete strict gate on
+Paper 1.21.1-133: 326 probes, 307 passed and 19 expected rejections. It imports
+inline fixed and skill-variable item counts, observes both drops, and verifies
+missing-variable rejection and invalid inline-count preservation. Its report
+and logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-drop-natural-20261104-r1` passed the complete strict gate on
+Paper 1.21.1-133: 325 probes, 306 passed and 19 expected rejections. It imports
+`i=DIAMOND;n=false`, observes an exact-location item spawn, and checks invalid
+natural flag preservation and warning. Its report and logs are in
+`release-evidence.json`.
+
+Fixture `srv-paper-drop-import-20261104-r1` passed the complete strict gate
+on Paper 1.21.1-133: 324 probes, 305 passed and 19 expected rejections. Its
+imported Mythic skill produced a real item at the requested location, rejected a
+missing variable and preserved invalid amount and unknown arguments with warnings.
+The report and compressed logs are listed in `release-evidence.json`.
+
+Fixture `srv-paper-drop-location-20261104-r2` passed the complete strict gate
+on Paper 1.21.1-133: 323 probes, 304 passed and 19 expected rejections.
+Its item spawn listener confirmed the selected location, material and count,
+and no spawn for a zero count or missing location variable. The report and
+compressed logs are listed in `release-evidence.json`. Import-to-runtime
+execution was not covered by this earlier Paper probe.
+
+Fixture `srv-paper-explosion-location-20261104-r3` completed the existing
+strict run on Paper 1.21.1-133. Its report was regenerated from the original
+logs after registering `explosionLocationDispatch`: 322 probes, 303 passed,
+19 expected rejections. The server event listener observed the requested
+coordinates and no explosion for a missing variable, and cancelled the event.
+The report and compressed server and client logs are listed in
+`release-evidence.json`; imported explosion execution is unit-tested only.
+
+Spawner-state counter type and nested structure validation was included in the
+state-validation fixture below. Unit tests cover backup fallback and unrecoverable invalid
+counters; those failure cases do not have Paper evidence yet.
+
+Strict attempt `srv-paper-state-guard-strict-20261103-r1` failed because
+`spawningDistanceRuntime` observed no online player when its probe started;
+all other report entries reached their expected status. The client connected
+later. The probe now waits up to 1,200 server ticks for a suitable player; a timeout
+still fails the report. This attempt is not release evidence.
+
+Source changes prevent state saves after an unrecoverable state load
+or unsupported schema version until a valid state is loaded. Unit tests cover
+these cases; the state-validation strict fixture below includes this change but does not exercise the
+failure cases. Natural and forced spawning pause until valid state is loaded;
+focused Paper probes below cover both paths.
+
+Focused two-boot fixture `srv-paper-state-natural-repair-20261103-r2` used an
+enabled independent spawner capped at one spawn. With both state files corrupt,
+the real scheduler left its count at zero; after repair and console reload it
+reached one and persisted one at shutdown. Logs, state files and configuration:
+`reports/paper-1.21.1-state-natural-repair-20261103-r2-logs.tar.gz` (SHA-256
+`62815f3307d3feb21bf9cbcb94c2f41ff60d42561a021dad4526b1ae9b74fdde`).
+Report: `reports/paper-1.21.1-state-natural-repair-20261103-r2.json` (SHA-256
+`862a927d15fd5d7b4539965295379c57f971a8909d85f199d9ccfa8501a30cf7`).
+The earlier `srv-paper-state-natural-repair-20261103-r1` observed paused count
+zero but failed because asynchronous chat markers appeared out of order; it did
+not run the repair phase. These focused runs are not full strict fixtures.
+
+Focused two-boot fixture `srv-paper-state-corrupt-both-20261103-r1` corrupted
+both files after the first shutdown. The second boot logged the pause, rejected
+the console force command with zero spawns, and skipped state saving; both file
+hashes were unchanged after shutdown. Logs and state files:
+`reports/paper-1.21.1-state-corrupt-both-20261103-r1-logs.tar.gz`
+(SHA-256 `f7e54048e02e5fd0511bd242402e80b5b449a759f7f79b02436f0af395f2031a`).
+Second-boot report: `reports/paper-1.21.1-state-corrupt-both-20261103-r1.json`
+(SHA-256 `fc7b96fb6a02bcbfd982aaa91b5b6ba5bb1ce473636a33268818a254cef784bb`).
+This focused run does not itself establish natural scheduling or repair behavior.
+
+Focused fixture `srv-paper-state-repair-20261103-r2` corrupted both state files,
+observed the forced spawn rejected, restored the first boot's valid state and
+reloaded it. After loading the target chunk, the server restored count 1, accepted
+one forced spawn, and saved count 2 at shutdown. Its two boot logs and state
+files are archived in `reports/paper-1.21.1-state-repair-20261103-r2-logs.tar.gz`
+(SHA-256 `4ac0e91b1c0b8b6f5cd452d38c402d184376935deef082dfae2538dbf6896d9b`);
+the second-boot report is `reports/paper-1.21.1-state-repair-20261103-r2.json`
+(SHA-256 `52e2f8cb1700c6815d00236c26c668495217063c5ad7fa4a9c001a4ccffff048`).
+The earlier `srv-paper-state-repair-20261103-r1` restored count 1 but its forced
+spawn failed before the target chunk was explicitly loaded. The precise failure
+reason was not recorded. Neither
+run proves natural scheduling during the pause or after recovery.
+
+Historical strict fixture `srv-paper-state-validation-strict-20261103-r2` passed all 310
+probes (291 passed, 19 expected rejections). Report:
+`reports/paper-1.21.1-state-validation-strict-20261103-r2.json` (SHA-256
+`7613be1618a5048cb52dc7f6b451201b09dd9edc23fe91c70e67c59c4a7cf485`). The
+report uses plugin SHA-256
+`cccd4197127a0759da3cf849e01dbc3de1a43724e5f2e7ec74d61fd1214c2836` and
+includes the persisted-state structure validation available at that time.
+
+Focused two-boot fixture `srv-paper-state-missing-primary-20261103-r1` removed
+the primary state after the first shutdown. The second boot restored counter 1
+from the backup; shutdown wrote it to the primary while preserving backup
+SHA-256 `3ce9dbd1259f2eda6aa95ac702e58d1def045cb617fa15d37b9c9f9b224abc02`.
+Both logs and state files are archived in
+`reports/paper-1.21.1-state-missing-primary-20261103-r1-logs.tar.gz` (SHA-256
+`3f94274cd01c10abf8e06fb3e376e2ffdd1410881a967e191ab3e14ec0dc9667`).
+The second-boot report is `reports/paper-1.21.1-state-missing-primary-20261103-r1.json`
+(SHA-256 `68a3f66aef3affe75c4d5178194a660efe0f75f04b982fcdf20632620aa70442`).
+This focused run does not exercise the unrecoverable-state pause.
+
+Previous strict fixture `srv-paper-state-guard-strict-20261103-r2` passed 310
+probes (291 passed, 19 expected rejections). The distance probe observed
+`inside-retained=true outside-removed=true`. Report:
+`reports/paper-1.21.1-state-guard-strict-20261103-r2.json` (SHA-256
+`71fa9426722b2950e41e0d211d9a5c4e30fdc978267cfb9d272dc87584968b72`).
+
+Previous strict fixture `srv-paper-backup-save-strict-20261103-r2` passed 310
+probes (291 passed, 19 expected rejections) on the build that preserves a valid
+spawner-state backup after corrupt-primary recovery. Unit tests cover recovery
+and subsequent backup rotation. Report: `reports/paper-1.21.1-backup-save-strict-20261103-r2.json`
+(SHA-256 `a29384dbc10535092114f0edfb7ee52ab757145731f957976bd9b5006e0afe46`).
+
+Focused fixture `srv-paper-spawner-backup-save-20261103-r1` performed two real
+Paper 1.21.1-133 boots using the same plugin SHA-256 as the preceding
+`srv-paper-backup-save-strict-20261103-r2` run.
+After corrupting the primary state, the second boot restored the counter to 1;
+shutdown wrote that counter back to the primary while preserving the backup
+SHA-256 `8e0989e8a96f5c65df11c518e00713af3683dece713a9af6aa386f78135a92ac`.
+Both boot logs and resulting state files are archived in
+`reports/paper-1.21.1-spawner-backup-save-20261103-r1-logs.tar.gz` (SHA-256
+`8c08f611a86ca665d244a0e85d86aae377dbf065689d2da13e0970ee75aae9d2`).
+The second-boot report is `reports/paper-1.21.1-spawner-backup-save-20261103-r1.json`
+(SHA-256 `e6c7d91474527c7bc34a5d45e1492da7ade136e4083781bd246ca5f8a07d9dd1`).
+This focused run is not a full strict release fixture; interruption during the
+write and subsequent backup rotation remain outside its scope.
+
+Previous strict fixture `srv-paper-web-strict-20261103-r1` passed 310 probes
+(291 passed, 19 expected rejections) on Paper 1.21.1-133. The HTTP spawner
+reload probe rejected invalid YAML and recovered after repair on the server
+thread. Browser rendering and the loot failure path were not tested. The
+report is `reports/paper-1.21.1-web-strict-20261103-r1.json` (SHA-256
+`2cbc29b66617b0eeb36d6be13a196661be6b1b144d1b72a1ef4d491c113413fe`);
+the server and client logs and their hashes are in `release-evidence.json`.
+
+Follow-up focused fixture `srv-paper-web-reload-20261103-r3` repeated the HTTP
+failure and repair checks and recorded `serverThread=true`; the archived log
+also passes the tightened same-line server-thread assertion. Its result is
+`reports/paper-1.21.1-web-reload-20261103-r3.json` (SHA-256
+`f7e4d74e9c9cf99f3683b17dc92ed103486772377b02666c911fd3d9a1a6f8d5`),
+and its log is `reports/paper-1.21.1-web-reload-20261103-r3.log.gz` (SHA-256
+`64634ac5c781a93cab05206a98646aa4f8939ac9163b45d8f302a4b86df2d319`).
+This focused fixture is not part of the strict release catalog.
+
+Independent HTTP fixture `srv-paper-web-reload-20261103-r2` on Paper 1.21.1-133
+observed `invalidOk=false`, then `restoredOk=true` and 43 loaded spawners after
+repairing the YAML. Both server log entries identify `Server thread`. It does
+not test browser rendering or the loot failure path and is not a strict run.
+The plugin SHA-256 was `82b509e07d06497e7169647b9b3185423b534c93fae976ea3eb58c408a27e735`.
+Archived observations: `reports/paper-1.21.1-web-reload-20261103-r2.json`
+(SHA-256 `3cb08b5d97349de6e869a58dd5734b099137b9f799c9bc6e23edfbb5c4921774`),
+server log: `reports/paper-1.21.1-web-reload-20261103-r2.log.gz`
+(SHA-256 `9b10978eabd1e805a2c755b0df75ce35d6e2920de53743415c091a4eda0af89a`).
+
+Independent two-boot fixture `srv-paper-spawner-corrupt-restart-20261103-r1`
+on Paper 1.21.1-133 generated one spawn, replaced the primary state with invalid
+YAML, logged `state load failed; trying backup`, and restored the count with
+`before=1 after=1 restored=true result=true`. This is not a full strict run.
+The plugin SHA-256 was `cef7cc0bfc7779baa2eab9e3789ab4ff5714dd4867adbe80c9352b16a97be066`;
+both boot logs are archived in
+`reports/paper-1.21.1-spawner-corrupt-restart-20261103-r1-logs.tar.gz`
+(SHA-256 `f409cfc44318b60faae6fc8cc9180fd2846cff856866ecd6a7b86f3746af37eb`).
+
+Historical strict release fixture `srv-paper-spawner-null-20261103-r2` uses Paper
+`1.21.1-133` and completes 309 probes (290 passed, 19 expected rejections).
+Forced spawns reject direct and inherited null spawner conditions and accept an
+empty-list override. Natural scheduling and imported spawners are not covered by
+these probes. Report: `reports/paper-1.21.1-spawner-null-20261103-r2.json`.
+
+Earlier strict release fixture `srv-paper-merged-null-20261103-r1` uses Paper
+`1.21.1-133` and completes 306 probes (289 passed, 17 expected rejections).
+Its `dropMergedNull` server-side importer and runtime probe verifies a cross-file
+inherited null condition is rejected, the parent warns, a stale same-name table
+is not rolled, and a valid sibling survives. It is not a natural-death test of
+invalid merged conditions. Report: `reports/paper-1.21.1-merged-null-20261103-r1.json`.
+
+Earlier strict release fixture `srv-paper-native-numeric-20261103-r1` uses Paper
+`1.21.1-133` and completes 305 probes (288 passed, 17 expected rejections).
+Its `dropNativeNullNumeric` service probe checks native YAML null chance for
+items and XP, null tier weight fallback, explicit overrides and warnings. It is
+not a natural-death test for invalid values. Report:
+`reports/paper-1.21.1-native-numeric-20261103-r1.json`.
+
+Earlier strict release fixture `srv-paper-native-null-20261103-r1` uses Paper
+`1.21.1-133` and completes 304 probes (287 passed, 17 expected rejections).
+Its `dropNativeNullConditions` server-side service probe loads a native YAML file,
+rejects inherited null conditions for items and experience, and rolls a valid
+override. It is not a natural-death test for invalid conditions. Report:
+`reports/paper-1.21.1-native-null-20261103-r1.json`.
+
+Earlier strict release fixture `srv-paper-unsafe-drop-references-20261103-r1` uses
+Paper `1.21.1-133` and completes 303 probes (286 passed, 17 expected rejections).
+Its server-side `dropUnsafeReferences` probe verifies warnings and rejects stale
+same-name tables for null, unknown and indirect empty source references while a
+valid sibling rolls. It is not a natural-death test for rejected references.
+Report: `reports/paper-1.21.1-unsafe-drop-references-20261103-r1.json`.
+
+Earlier strict release fixture `srv-paper-null-drop-conditions-20261103-r1` uses
+Paper `1.21.1-133` and completes 302 probes (285 passed, 17 expected rejections).
+Its `dropNullConditions` probe checks importer warnings, rejects two tables with
+explicit null conditions, and rolls a valid sibling through the runtime service.
+It does not perform a natural death with an invalid table. Report:
+`reports/paper-1.21.1-null-drop-conditions-20261103-r1.json`.
+
+Earlier strict release fixture `srv-paper-nested-import-strict-20261102-r1` uses
+Paper `1.21.1-133` and completes 291 probes (274 passed, 17 expected rejections).
+The imported parent table is in a subdirectory and references a separate child
+by bare name. Natural Zombie death produces one Diamond, one Gold Ingot from
+exclusive `1-3`, and 5 XP. Report: `reports/paper-1.21.1-nested-import-20261102.json`.
+
+Earlier strict release fixture `srv-paper-skill-lifecycle-20261102-r1` uses Paper
+`1.21.1-133` and completes 291 probes (274 passed, 17 expected rejections).
+Its `skillLifecycleCleanup` probe uses an isolated skill service and a managed
+Zombie to check reload and delayed cancellation by directly calling `forget`.
+Its report is `reports/paper-1.21.1-skill-lifecycle-20261102.json`.
+A HIGH-priority self-test listener cancels real lethal damage; 60 ticks later the
+mob remains attached and alive at 8 health with no diamond drop observed. Its
+report for the earlier run is `reports/paper-1.21.1-damaged-import-20261102.json`. The listener is part
+of the self-test, so actual third-party plugin interoperability remains unverified.
+The imported damage probe converts both aliases and checks their actions on a
+real entity attacker; a separate no-attacker damage call reduces victim health
+without selecting the victim as `@Trigger`. Both calls are initiated by the
+self-test and do not establish natural combat AI or projectile semantics.
+
+Earlier strict release fixture `srv-paper-imported-drop-contract-strict-20261102-r1`
+uses Paper `1.21.1-133` and completes 284 probes (267 passed, 17 expected
+negative controls, zero incomplete). The imported DropTable contract verifies
+condition mapping, conflicting table preservation, and natural managed-Zombie
+death output of one Diamond, one Gold Ingot from exclusive `1-3`, and 5 XP.
+The input JAR SHA-256 is recorded in
+`reports/paper-1.21.1-imported-drop-contract-20261102.json`.
+
+Earlier strict release fixture `srv-paper-named-conditions-strict-20261102-r1`
+uses Paper `1.21.1-133` and completes 284 probes (267 passed, 17 expected
+negative controls, zero incomplete). Safe-location spawner probes accept a
+valid negated world name and reject blank world, invalid moon-phase, and invalid
+biome arguments with `conditions rejected location`. The input JAR SHA-256 is
+recorded in `reports/paper-1.21.1-named-conditions-20261102.json`.
+
+Earlier strict release fixture `srv-paper-negated-conditions-strict-20261102-r1`
+uses Paper `1.21.1-133` and completes 280 probes (266 passed, 14 expected
+negative controls, zero incomplete). Safe-location spawner probes accept
+`!y-above=300` and reject `!y-above=NaN` and `!light-level!=NaN` as
+`conditions rejected location`. The report and tested plugin SHA-256 are in
+`tools/paper-integration/reports/paper-1.21.1-negated-conditions-20261102.json`.
+
+Earlier strict release fixture `srv-paper-plugin-hash-strict-20261102-r1`
+uses Paper `1.21.1-133` and completes 277 probes (265 passed, 12 expected
+negative controls, zero incomplete). The tested input JAR SHA-256 is recorded in
+`tools/paper-integration/reports/paper-1.21.1-plugin-hash-20261102.json` and
+the release manifest. It does not identify the source commit or remapped JAR.
+
+Earlier strict release fixture `srv-paper-threat-provider-strict-20261102-r1`
+uses Paper `1.21.1-133` and completes 277 probes (265 passed, 12 expected
+negative controls, zero incomplete). Its threat probes use synthetic damage
+events with real entities and controllers to verify sorting, faction filters,
+and threat actions after startup. Restart and overlapping managers are covered
+by unit tests, not this fixture. The report is
+`tools/paper-integration/reports/paper-1.21.1-threat-provider-20261102.json`.
+
+Earlier strict release fixture `srv-paper-context-chain-strict-20261102-r7`
+uses Paper `1.21.1-133` and completes 277 probes (265 passed, 12 expected
+negative controls, zero incomplete). Its `contextTargeterChain` probe checks
+target intersection, trigger inclusion/exclusion, and the production condition
+provider on real Zombie entities. The report is
+`tools/paper-integration/reports/paper-1.21.1-context-chain-20261102.json`.
+
+Earlier strict release fixture `srv-paper-context-targeters-strict-20261102-r1`
+uses Paper `1.21.1-133` and completes 276 probes (264 passed, 12 expected
+negative controls, zero incomplete). Its `contextTargeterControls` probe uses
+real Zombie entities to check ordering, radius, and invalid parameter rejection.
+The report is `tools/paper-integration/reports/paper-1.21.1-context-targeters-20261102.json`.
+
+Earlier strict release fixture `srv-paper-full-catalog-strict-20261102-r2`
+uses Paper `1.21.1-133` and completes 275 probes (263 passed, 12 expected
+negative controls, zero incomplete). Real player Potion consumption and
+natural expiry both passed, including the expiry event and skill action. The
+fractional Bonus sample recorded 69 extra lines in 128 natural deaths. The
+report is `tools/paper-integration/reports/paper-1.21.1-full-catalog-20261102.json`.
+
+Earlier archived strict follow-up: `srv-paper-fractional-bonus-strict-20261102-r4`
+uses Paper `1.21.1-133` and completes 273 registered probes (261 passed,
+12 expected negative controls). Its natural-death Bonus probe records 63
+extra lines in 128 level-one samples with a 0.5 multiplier. This run did not
+request the raw Potion client; the earlier full Potion evidence is separate.
+The report is `tools/paper-integration/reports/paper-1.21.1-fractional-bonus-20261102.json`.
+
+Previous archived strict release report: fixture
+`srv-paper-drops-imported-range-strict-20261102-r5` uses Paper
+`1.21.1-133` / API `1.21.1-R0.1-SNAPSHOT` and completes all 273 registered
+probes (262 passed, 11 expected negative controls, zero incomplete). The
+`deathLootImportedDropTable` probe verifies standalone `DropTables/` import,
+runtime loading, and a real player-caused managed-Zombie death producing one
+Diamond, two Gold Ingots from the imported exclusive `1-3` range, and 5 XP.
+The report is archived at
+`tools/paper-integration/reports/paper-1.21.1-drops-imported-range-20261102.json`.
+
+Latest strict targeter follow-up: `srv-paper-targeter-sorting-strict-20261102-r1`
+uses Paper `1.21.1-133` / API `1.21.1-R0.1-SNAPSHOT` and completes all 272
+registered probes (260 passed, 12 expected negative controls, zero
+incomplete). Its `targeterSorts` probe verifies highest-health and oldest-first
+ordering against live Bukkit Zombies, and rejects an unknown sort mode. API
+tests additionally cover lowest-health, newest, threat ordering, missing threat
+provider, non-finite threat data, and conditional-target skip/limit ordering.
+The archived report passes schema and
+strict completeness gates:
+`tools/paper-integration/reports/paper-1.21.1-targeter-sorting-20261102.json`.
+
+Latest strict follow-up: `srv-paper-targeter-skip-index-strict-20261102-r3`
+uses Paper `1.21.1-133` / API `1.21.1-R0.1-SNAPSHOT` and completes all 271
+registered probes (259 passed, 12 expected negative controls, zero
+incomplete). Its targeter observation verifies nearest-order skipping via
+`skipTargetsUpToIndex` and alias `stuti`, with skip applied after ordering and
+before limit. The archived report passes schema and strict completeness gates:
+`tools/paper-integration/reports/paper-1.21.1-targeter-skip-index-20261102.json`.
+
+Previous strict targeter follow-up: `srv-paper-targeter-players-strict-20261102-r1`
+uses the same Paper/API versions and completes all 272 registered probes (260
+passed, 12 expected negative controls, zero incomplete). Its `ai-selector-core`
+observation verifies production `@PlayersOnServer` selection and `@everyone`
+alias equivalence. Its archived report is
+`tools/paper-integration/reports/paper-1.21.1-targeter-world-players-20261102.json`.
+
+Previous full strict baseline run: `srv-paper-pin-conditions-strict-20261102-r1`
+uses Paper `1.21.1-133` / API `1.21.1-R0.1-SNAPSHOT` and completes all 270
+registered probes (258 passed, 12 expected negative controls, zero incomplete).
+Its required `pinConditions` probe verifies target and origin distance
+comparators inside and outside their thresholds, rejection of a missing pin,
+and inclusive region membership. `pinTargeters` verifies multi-point and
+random `@Pin` dispatch, single-point `MovePin` updates, multi-point movement
+rejection, and real inclusive-cuboid block set/break with state restoration.
+It rejects a 16,385-block region before downstream action dispatch. The report also
+includes `player_gate_fail` rejected with
+`failure=player gate closed`, real-player Potion consumption and natural
+expiry, and the menu/Audience workflow. The Mineflayer client directly observed
+the REDSTONE and EMERALD buttons, denied and allowed clicks, pagination,
+command feedback, and inventory close. The strict report and schema gates
+passed.
+
+Archived machine-readable report:
+`tools/paper-integration/reports/paper-1.21.1-pin-conditions-20261102.json`.
+
+Previous full strict run: `srv-paper-pin-targeters-strict-20261102-r1`
+completed 265 probes (253 passed, 12 expected negative controls, zero
+incomplete) before the oversized-region negative assertion was added.
+
+Earlier full strict run: `srv-paper-menu-client-strict-20261102-r2`
+completed 264 probes (252 passed, 12 expected negative controls, zero
+incomplete) before Pin evidence became a required report entry.
+
+The separate strict client-walk fixture
+`srv-paper-spawning-distance-client-walk-strict-20261102-r3` remains the
+evidence for real player movement beyond the configured SpawningDistance and
+managed/Bukkit entity removal.
+
 Observed during an isolated run on 2026-10-14:
 
 This file is a human-readable summary; the matching machine-readable run report
@@ -1246,6 +1741,13 @@ chunk mob count, and NORMAL environment conditions; existing Name, HasItem,
 fluid, and Mob Option probes remained passed. This is exploratory Paper 1.21.11
 evidence; the Paper 1.21.1 release target remains open.
 
+The strict Paper 1.21.1-133 fixture
+`srv-paper-drowning-strict-20261102-r2` also requires and passes
+`conditionUtilityAliases`. Its production self-test evaluates
+`mobs-in-chunk >=1` against the active chunk containing a valid Bukkit Mob.
+This establishes the positive current-chunk count path; zero-count and
+cross-chunk boundary outcomes are not part of this probe.
+
 Fixture `srv-paper-integration-exploratory-1.21.11-r64` extends the same
 `conditionUtilityAliases` probe with official `Height`, `HeightAbove`,
 `HeightBelow`, `Pitch`, `Yaw`, and `OnBlock` checks. The structured diagnostic
@@ -1312,9 +1814,10 @@ Fixture `srv-paper-integration-exploratory-1.21.11-r74` extends the passing
 ignited and the Bukkit `isIgnited()` condition passed. `IsFrozen` is now
 implemented through Paper's `Entity#isFrozen()` boolean and the rebuilt
 self-test reaches the frozen state through the `Freeze` mechanic before
-restoring the original freeze ticks. Exploratory Paper 1.21.4 r123 records the
-independent `frozenCondition=passed` probe; the Paper 1.21.1 release target
-remains open.
+restoring the original freeze ticks. Strict Paper 1.21.1-133 fixture
+`srv-paper-runtime-alias-20261031-r2` records `frozenCondition=passed` in its
+integration report. Exploratory Paper 1.21.4 r123 is additional historical
+evidence for the same condition.
 
 Fixture `srv-paper-integration-exploratory-1.21.11-r75` extends the target
 category probe with `IsRaiderPatrolLeader`. A real Pillager was marked as a
@@ -1365,6 +1868,13 @@ implemented with per-instance lifetime state. Exploratory Paper 1.21.4
 killprobe now records `playerKillTrigger=passed` and
 `playerKillsCondition=passed` after a deterministic real-player death; strict
 Paper 1.21.1 evidence remains pending.
+
+Strict Paper 1.21.1-133 fixture
+`srv-paper-ender-dragon-alive-strict-20261102-r1` records the dedicated
+`enderDragonAliveCondition` as passed: a real dragon is accepted in the target
+world, then removed and rejected, with cleanup confirmed. Its release report
+contains 263 probes (252 passed, 11 expected negative controls, zero
+incomplete).
 
 The rebuilt self-test now also evaluates official `Absorption` on the managed
 Zombie after setting it through `SetAbsorption 4`, checking `>=4`, `=4`, and
@@ -1488,6 +1998,25 @@ with `EnderDragonPhase`. The temporary real EnderDragon was set to Bukkit phase
 `CIRCLING`, and the exact phase condition passed before cleanup. This is
 exploratory Paper 1.21.11 evidence; the Paper 1.21.1 release target remains
 open.
+
+Strict fixture `srv-paper-ender-dragon-phase-strict-20261101-r1` verifies the
+production `EnderDragonPhase` condition on Paper 1.21.1-133. The dedicated
+report probe passed a real `CIRCLING` match, a phase list, a negative match,
+fail-closed rejection of `CIRCLING,INVALID`, and restoration of the dragon's
+original phase. The aggregate report has one unrelated incomplete probe:
+`spawnerBorderClipped=not-observed`; therefore this run is condition evidence,
+not a complete strict release-gate pass.
+
+Strict follow-up `srv-paper-ender-dragon-phase-strict-20261101-r3` passes the
+Paper 1.21.1-133 schema and completeness gates with all 260 probes observed:
+248 passed, 12 expected negative controls, and zero incomplete. The required
+`enderDragonPhaseCondition` probe records a real `CIRCLING` match, list match,
+negative match, rejection of `CIRCLING,INVALID`, and phase restoration. The
+world-border clipping positive and outside-negative probes both pass; the
+positive natural-location sample records its bounded attempt count. The
+`lookingAtCondition` probe also passes both real-player ray-trace branches.
+The final report is retained at
+`srv-paper-ender-dragon-phase-strict-20261101-r3/integration-report.json`.
 
 Fixture `srv-paper-integration-exploratory-1.21.11-r79` extends the passing
 `conditionUtilityAliases` probe with `Altitude`, evaluating the real target's
@@ -1620,11 +2149,12 @@ restores inventory state. The independent report probe records
 Paper inventory write-back. Strict Paper 1.21.1 release evidence remains
 pending.
 
-The frozen-state self-test now reaches the real Zombie's frozen state through
-the `Freeze` mechanic before evaluating `IsFrozen` and restoring the original
-freeze ticks. Exploratory fixture `srv-paper-integration-exploratory-1.21.4-r123`
-records the independent `frozenCondition=passed` probe; a release-target Paper
-1.21.1 observation remains pending.
+The frozen-state self-test reaches the real Zombie's frozen state through the
+`Freeze` mechanic before evaluating `IsFrozen` and restoring the original
+freeze ticks. Strict Paper 1.21.1-133 fixture
+`srv-paper-runtime-alias-20261031-r2` records the independent
+`frozenCondition=passed` probe; exploratory fixture
+`srv-paper-integration-exploratory-1.21.4-r123` provides additional evidence.
 
 The current online-player self-test also invokes `SetItemCooldown` for
 `ENDER_PEARL` and `SetGameMode` for `ADVENTURE`, then restores both values. The
@@ -1913,7 +2443,7 @@ records `prevent-projectiles=true prevent-entity-explosions=true` from real
 `ProjectileHitEvent` and `EntityExplodeEvent` dispatches against managed
 protected entities.
 
-The latest fixture `srv-paper-integration-final-r23` passed the 222-probe
+Historical fixture `srv-paper-integration-final-r23` passed the 222-probe
 Paper 1.21.1-133 gate with 213 `passed`, 9 expected `observed-rejected`, and
 zero incomplete probes. Its events line records the additional
 `prevent-block-explosion-damage=true` assertion, produced by a real
@@ -1921,20 +2451,20 @@ zero incomplete probes. Its events line records the additional
 protected entity. The expected-rejected count reflects the current spawner
 negative-control observations; no probe failed or remained incomplete.
 
-The latest fixture `srv-paper-integration-final-r25` passed the 222-probe
+Historical fixture `srv-paper-integration-final-r25` passed the 222-probe
 Paper 1.21.1-133 gate with 213 `passed`, 9 expected `observed-rejected`, and
 zero incomplete probes. The events line records
 `prevent-drowning=true prevent-fall-damage=true prevent-fire=true`, each from a
 separate `EntityDamageEvent` carrying its matching `DamageCause` and a managed
 entity configured with the corresponding production option.
 
-The latest fixture `srv-paper-integration-final-r26` passed the 222-probe
+Historical fixture `srv-paper-integration-final-r26` passed the 222-probe
 Paper 1.21.1-133 gate with 213 `passed`, 9 expected `observed-rejected`, and
 zero incomplete probes. Its `PreventFireCauses=FIRE_TICK` check records
 `FIRE_TICK` cancelled while ordinary `FIRE` remains uncancelled, proving the
 configured cause filter is narrower than the global `PreventFire` option.
 
-The latest fixture `srv-paper-integration-final-r28` passed the 222-probe
+Historical fixture `srv-paper-integration-final-r28` passed the 222-probe
 Paper 1.21.1-133 gate with 214 `passed`, 8 expected `observed-rejected`, and
 zero incomplete probes. Cause isolation is verified with one option enabled
 at a time: `PreventDrowning` cancels `DROWNING` but allows `FALL`, and
@@ -1943,7 +2473,7 @@ at a time: `PreventDrowning` cancels `DROWNING` but allows `FALL`, and
 also pass. The intervening r27 run missed an unrelated player-facing
 `LookingAt` positive observation; r28 passed it without changing the gate.
 
-The latest fixture `srv-paper-integration-final-r30` passed with 222 observed
+Historical fixture `srv-paper-integration-final-r30` passed with 222 observed
 probes: 213 `passed`, 9 expected `observed-rejected`, and zero incomplete. Its
 events evidence adds positive/negative controls for `PreventPickup` and
 `PreventItemUse`: managed protected mobs reject their corresponding pickup or
@@ -1951,20 +2481,20 @@ right-click interaction events, while otherwise equivalent managed controls
 allow them. The r29 run had transient missing `LookingAt` and vehicle event
 observations; r30 observed both, with no gate changes.
 
-The latest fixture `srv-paper-integration-final-r31` passed the 222-probe
+Historical fixture `srv-paper-integration-final-r31` passed the 222-probe
 Paper 1.21.1-133 gate with 213 `passed`, 9 expected `observed-rejected`, and
 zero incomplete probes. `mob-options-mount-event` records
 `prevented=true allowed=true generic-prevented=true generic-allowed=true`:
 the jockey-specific Zombie restriction and generic `PreventMount` on a Wolf
 are independently enforced, while both control mount events remain allowed.
 
-The latest fixture `srv-paper-integration-final-r32` passed the 222-probe
+Historical fixture `srv-paper-integration-final-r32` passed the 222-probe
 Paper 1.21.1-133 gate with 213 `passed`, 9 expected `observed-rejected`, and
 zero incomplete probes. The events line now also records
 `prevent-teleport=true` using paired managed entities: the protected
 `EntityTeleportEvent` is cancelled and the default control event is allowed.
 
-The latest fixture `srv-paper-integration-final-r34` passed with 222 observed
+Historical fixture `srv-paper-integration-final-r34` passed with 222 observed
 probes: 213 `passed`, 9 expected `observed-rejected`, and zero incomplete.
 Its events line confirms `prevent-transformation-reasons=true` and its
 cause-isolated environmental damage checks. The real-player `LookingAt` probe
@@ -1972,28 +2502,28 @@ passed positive and negative checks after the fixture began snapshotting,
 clearing, and restoring only blocks along the ray, removing dependence on
 ambient terrain without weakening the ray assertion.
 
-The latest fixture `srv-paper-integration-final-r35` passed with 222 observed
+Historical fixture `srv-paper-integration-final-r35` passed with 222 observed
 probes: 214 `passed`, 8 expected `observed-rejected`, and zero incomplete.
 Its managed entity `PreventSunburn` check confirms the base sunlight
 `EntityCombustEvent` is cancelled while `EntityCombustByBlockEvent` and
 `EntityCombustByEntityEvent` remain uncancelled, preserving non-sunlight fire
 semantics.
 
-The latest fixture `srv-paper-integration-final-r36` passed with 222 observed
+Historical fixture `srv-paper-integration-final-r36` passed with 222 observed
 probes: 214 `passed`, 8 expected `observed-rejected`, and zero incomplete.
 Its `PreventOtherDrops` event assertion uses fixed MUTTON x2 and 7 XP values:
 the protected managed entity's `EntityDeathEvent` is cleared, while the
 otherwise equivalent managed control retains both drops and experience. This
 exercises the production death listener before optional loot-table processing.
 
-The latest fixture `srv-paper-integration-final-r37` passed with 222 observed
+Historical fixture `srv-paper-integration-final-r37` passed with 222 observed
 probes: 213 `passed`, 9 expected `observed-rejected`, and zero incomplete. Its
 killer-drop probe derives a managed killer from a real damage source before
 dispatching a fixed-drop/XP `EntityDeathEvent`; only the victim of the killer
 with `PreventMobKillDrops` loses drops and XP, while the ordinary managed
 killer control retains both.
 
-The latest fixture `srv-paper-integration-final-r38` passed with 223 observed
+Historical fixture `srv-paper-integration-final-r38` passed with 223 observed
 probes: 215 `passed`, 8 expected `observed-rejected`, and zero incomplete.
 Its `spawn-option-runtime` probe uses real Skeleton/Zombie entities and the
 production spawn-option helpers: `CanPickupItems=false` is applied, explicit
@@ -2001,7 +2531,7 @@ production spawn-option helpers: `CanPickupItems=false` is applied, explicit
 clears pre-existing helmet/weapon gear before explicit DIAMOND_SWORD equipment
 is applied, and configured `NoDamageTicks=19` is read back.
 
-The latest fixture `srv-paper-integration-final-r41` passed with 223 observed
+Historical fixture `srv-paper-integration-final-r41` passed with 223 observed
 probes: 214 `passed`, 9 expected `observed-rejected`, and zero incomplete. Its
 killer-drop probe resolves managed killers from actual victim damage. The
 protected killer suppresses native victim drops and the victim's configured
@@ -2009,27 +2539,27 @@ protected killer suppresses native victim drops and the victim's configured
 Diamond x2 and 9 XP. This confirms `PreventMobKillDrops` covers the target's
 complete loot result, not just vanilla drops.
 
-The latest fixture `srv-paper-integration-final-r42` passed with 223 observed
+Historical fixture `srv-paper-integration-final-r42` passed with 223 observed
 probes: 214 `passed`, 9 expected `observed-rejected`, and zero incomplete. The
 events probe records `prevent-block-infection=true` on real
 `EntityChangeBlockEvent` dispatch: only the managed Silverfish changing a
 block to `INFESTED_STONE` is cancelled; the default Silverfish and protected
 Pig control remain allowed.
 
-The latest fixture `srv-paper-integration-final-r43` passed with 223 observed
+Historical fixture `srv-paper-integration-final-r43` passed with 223 observed
 probes: 214 `passed`, 9 expected `observed-rejected`, and zero incomplete. The
 events probe records `prevent-snow-formation=true` from three real
 `EntityBlockFormEvent` dispatches: the protected Snow Golem is cancelled, while
 the default Snow Golem and a protected Pig control are allowed.
 
-The latest fixture `srv-paper-integration-final-r44` passed with 223 observed
+Historical fixture `srv-paper-integration-final-r44` passed with 223 observed
 probes: 214 `passed`, 9 expected `observed-rejected`, and zero incomplete.
 The events probe records `prevent-skeleton-conversion=true`: a managed
 Skeleton with only `FROZEN` in its transformation-reason list rejects FROZEN
 while allowing CURED. Importer regression maps `PreventConversion` by family
 and retains the option as unsupported for non-Zombie/non-Skeleton types.
 
-The latest fixture `srv-paper-integration-final-r47` passed with 224 observed
+Historical fixture `srv-paper-integration-final-r47` passed with 224 observed
 probes: 216 `passed`, 8 expected `observed-rejected`, and zero incomplete. The
 Enderman `HeldBlock` probe configures OBSIDIAN through `entity.held-block` and
 reads it back from the real Paper Enderman as OBSIDIAN. The r46 attempt showed
@@ -2249,7 +2779,7 @@ base attribute matched the configured value. The strict report catalog now
 contains 237 registered probes because this configuration-to-entity assertion
 is part of the release gate.
 
-The latest strict fixture
+Historical strict fixture
 `srv-paper-integration-entity-flags-20261031-r12` passed with 238 observed
 probes: 227 `passed`, 11 expected `observed-rejected`, and zero incomplete.
 Its configured entity flag line is:
@@ -2292,12 +2822,13 @@ exp-options result=true experience=13 event=true
 ```
 
 The production `spawnMobCore` path applies `mob.exp` to the managed instance,
-and the real Bukkit `EntityDeathEvent` dispatch reads back the configured
-experience override. The fixture uses `mobs/exp_probe.yml`; fixed and ranged
-`drops.experience*` precedence and missing-table fallback are covered by unit
-tests, while broader natural death/drop semantics remain outside this probe.
+and Bukkit `EntityDeathEvent` reads back the configured experience override.
+The fixture uses `mobs/exp_probe.yml`; fixed and ranged `drops.experience*`
+precedence and missing-table fallback are covered by unit tests. This root
+`Exp` probe only establishes the mob-level override path; the separate natural
+DropTable path is recorded below.
 
-The latest strict fixture `srv-paper-integration-exp-20261031-r16` passed
+Historical strict fixture `srv-paper-integration-exp-20261031-r16` passed
 Paper 1.21.1-133 with 240 observed probes: 230 `passed`, 10 expected
 `observed-rejected`, and zero incomplete. Its current-code vehicle line is:
 
@@ -2309,7 +2840,75 @@ The vehicle workflow now uses an independent managed ArmorStand passenger, so
 the online player's unrelated death/respawn probes cannot remove the binding
 before the delayed Boat event sequence runs.
 
-The latest strict fixture `srv-paper-integration-exp-20261031-r17` passed
+Strict fixture `srv-paper-exp-natural-death-20261101-r3` passed on Paper
+1.21.1-133 with 255 observed probes: 243 passed, 12 expected negative
+controls, and zero incomplete. It retains the synthetic event check and adds
+a separate real-damage death check:
+
+```text
+exp-options result=true experience=13 event=true
+exp-natural-death result=true dead=true experience=13 cause=BukkitDamage
+```
+
+The natural-death probe spawns a second configured managed Zombie, records
+existing experience-orb UUIDs, calls Bukkit `LivingEntity#damage`, confirms
+the entity died, and totals only newly spawned orbs within four blocks. It
+removes those probe orbs afterward. This verifies root `Exp` through the
+production death listener and Paper's normal experience-orb spawn path.
+
+Strict fixture `srv-paper-drops-natural-death-20261101-r4` passed on Paper
+1.21.1-133 with 255 observed probes: 243 passed, 12 expected negative
+controls, and zero incomplete. Its `death-loot` probe now requires and records
+the natural death path explicitly:
+
+```text
+death-loot natural=true dead=true cause=BukkitDamage items=1 conditional-drop=true rejected-drop-absent=true dynamic-chance-drop=true experience=9
+```
+
+The self-test binds a production model instance to a Zombie, assigns the
+`integration_death` table, snapshots existing Item and ExperienceOrb UUIDs,
+and applies Bukkit damage. It counts only new entities within six blocks,
+observes the condition-matched Diamond stack, confirms the rejected Bread
+entry is absent, and reads 9 XP from the configured 9–11 range. Cleanup removes
+only entities created during this probe. This proves this case of natural
+DropTable death; looting interaction and broader Mythic drop placeholders
+remain unverified.
+
+Strict fixture `srv-paper-drops-trigger-conditions-20261101-r5` passed on
+Paper 1.21.1-133 with 258 observed probes: 247 passed, 11 expected negative
+controls, and zero incomplete. It adds natural player-caused deaths for
+DropTable trigger conditions, including nested-table and experience behavior:
+
+```text
+death-loot-trigger natural=true killer-player=true nested-allowed-drop=true nested-rejected-drop-absent=true nested-rejected-experience=4 parent-rejected-drop-absent=true parent-rejected-experience=0
+```
+
+The first table passes its player condition and a nested world condition, so
+its Diamond appears. The second table passes the parent player condition but
+fails the nested world condition; its Diamond is absent while its parent's 4
+XP remains. The third table fails its top-level world condition; both its
+Diamond and configured 5 XP are suppressed. These are real Bukkit damage and
+death-hook paths with player killer context, not synthetic event dispatch.
+The same report retains passing menu/Audience and player Potion consume/natural
+expiry probes. This r5 run predates the real permission-context assertion below.
+
+Strict follow-up fixture `srv-paper-drops-trigger-conditions-20261101-r7`
+passed Paper 1.21.1-133 with all 258 probes observed: 246 `passed`, 12
+expected `observed-rejected`, and zero incomplete. The permission probe runs
+after the menu client's temporary permission-denial check restores the test
+player's operator status. It records the real allow and deny cases:
+
+```text
+death-loot-trigger natural=true killer-player=true permission-allowed=true permission-denied=true nested-allowed-drop=true nested-rejected-drop-absent=true nested-rejected-experience=4 parent-rejected-drop-absent=true parent-rejected-experience=0
+```
+
+The accepted nested table uses `has-permission loot.vip`. The OP killer
+produces its Diamond; the non-OP killer produces none. The accepted parent
+still grants 4 XP when its child rejects the killer. A separate top-level
+world rejection suppresses both its Diamond and 5 configured XP. The schema
+validator and strict report-completeness gate passed.
+
+Historical strict fixture `srv-paper-integration-exp-20261031-r17` passed
 Paper 1.21.1-133 with 240 observed probes: 229 `passed`, 11 expected
 `observed-rejected`, and zero incomplete. It adds the configuration-to-instance
 Mob Option line:
@@ -2321,7 +2920,7 @@ despawn-options result=true mode=PERSISTENT distance=0.0 persistent=true
 This reads the normalized `SpawnOptions` mode/distance and the real Bukkit
 entity persistence flag from `mobs/despawn_probe.yml`.
 
-The latest strict fixture `srv-paper-integration-exp-20261031-r19` passed
+Historical strict fixture `srv-paper-integration-exp-20261031-r19` passed
 Paper 1.21.1-133 with 241 observed probes: 231 `passed`, 10 expected
 `observed-rejected`, and zero incomplete. It adds the visibility option line:
 
@@ -2332,7 +2931,7 @@ visibility-options result=true visible-by-default=true invisible=true show-name=
 This reads `VisibleByDefault`, `Invisible`, and `AlwaysShowName` from a real
 configured Zombie through the production spawn path.
 
-The latest strict fixture `srv-paper-integration-exp-20261031-r20` passed
+Historical strict fixture `srv-paper-integration-exp-20261031-r20` passed
 Paper 1.21.1-133 with 244 observed probes: 233 `passed`, 11 expected
 `observed-rejected`, and zero incomplete. It adds the Spawner group-limit line:
 
@@ -2343,7 +2942,7 @@ spawner-group id=group_probe requested=true alive=2 total=2 max-alive=2 group-mi
 This proves the production group spawn path stops at `max-alive` instead of
 materializing the full requested group.
 
-The latest strict fixture `srv-paper-integration-exp-20261031-r21` passed
+Historical strict fixture `srv-paper-integration-exp-20261031-r21` passed
 Paper 1.21.1-133 with 245 observed probes: 235 `passed`, 10 expected
 `observed-rejected`, and zero incomplete. Its live scheduler group line is:
 
@@ -2354,7 +2953,7 @@ spawner-natural-group id=natural_group_probe mode=live-scheduler before=2 after=
 This is separate from the manual `forceSpawn` group probe and proves the
 interval-driven scheduler path applies the same per-attempt alive cap.
 
-The latest strict fixture `srv-paper-integration-exp-20261031-r23` passed
+Historical strict fixture `srv-paper-integration-exp-20261031-r23` passed
 Paper 1.21.1-133 with 246 observed probes: 236 `passed`, 10 expected
 `observed-rejected`, and zero incomplete. Its named-region line is:
 
@@ -2378,7 +2977,7 @@ spawner-region-outside id=region_probe_outside requested=false region=integratio
 The production Spawner gate therefore accepts a location inside the configured
 coordinate region and rejects the same condition at a location outside it.
 
-The latest strict fixture `srv-paper-integration-exp-20261031-r27` passed
+Historical strict fixture `srv-paper-integration-exp-20261031-r27` passed
 Paper 1.21.1-133 with 248 observed probes: 237 `passed`, 11 expected
 `observed-rejected`, and zero incomplete. It closes the previous real-client
 Shield timing gap while retaining the strict report contract:
@@ -2392,9 +2991,9 @@ The menu client keeps `HelsteraTester` in a real Shield-use window; the
 production self-test then evaluates `Player#isBlocking` without rewriting the
 client's active-use inventory state. Historical exploratory fixtures r43 and
 r126 remain as evidence of the earlier timing failure; r27 is the strict
-condition evidence and r28 is the current overall release fixture.
+condition evidence and r28 was the overall release fixture at that time.
 
-The latest strict fixture `srv-paper-integration-exp-20261031-r28` passed
+Historical strict fixture `srv-paper-integration-exp-20261031-r28` passed
 Paper 1.21.1-133 with 250 observed probes: 239 `passed`, 11 expected
 `observed-rejected`, and zero incomplete. It adds the natural Spawner recycle
 probe:
@@ -2407,7 +3006,7 @@ The probe removes a real tracked instance, observes the runtime cleanup release
 the `max-alive=1` slot, and then observes the shared scheduler create the next
 instance before disabling and cleaning the fixture probe.
 
-The latest strict fixture `srv-paper-integration-targeters-20261031-r3`
+Historical strict fixture `srv-paper-integration-targeters-20261031-r3`
 supersedes r28 as the overall report evidence. It passed Paper 1.21.1-133 with
 251 observed probes: 240 `passed`, 11 expected `observed-rejected`, and zero
 incomplete. The managed AI selector probe now also verifies world-scoped
@@ -2459,7 +3058,7 @@ incomplete). Its real-entity probe records `targeter-invalid-limits=true`:
 invalid count and non-finite radius select nothing, while a valid count
 selects one entity.
 
-The latest strict fixture `srv-paper-runtime-alias-20261031-r2` passed Paper
+Historical strict fixture `srv-paper-runtime-alias-20261031-r2` passed Paper
 1.21.1-133 with 251 observed probes (240 passed, 11 expected rejected, zero
 incomplete). Its `ai-selector-core` line passes while using the runtime alias
 forms `@Players_In_World`, `@Mobs_In_World`, `@Nearest_Living_Entity`, and
@@ -2555,4 +3154,400 @@ original biome. The report requires
 `spatial-condition-details .*biome-type-category=true`; both `biomeCondition`
 and `conditionUtilityAliases` pass in
 `srv-paper-biome-type-category-strict-20261101-r1/integration-report.json`.
+
+Strict fixture `srv-paper-raider-patrol-condition-strict-20261101-r1` passed
+Paper 1.21.1-133 with all 259 probes observed: 247 `passed`, 12 expected
+`observed-rejected`, and zero incomplete. Its required
+`raiderPatrolLeaderCondition` probe runs the official `IsRaiderPatrolLeader`
+condition through the production `SkillService` against a real Pillager. It
+records both the leader-positive and non-leader-negative paths, restores the
+Pillager's leader flag, and logs:
+
+```text
+raider-patrol-leader-condition positive=true negative=true entity=PILLAGER restored=true
+```
+
+The report schema and strict completeness gate passed. The report is retained
+at `srv-paper-raider-patrol-condition-strict-20261101-r1/integration-report.json`.
+
+Strict fixture `srv-paper-creeper-primed-condition-strict-20261101-r1` passed
+Paper 1.21.1-133 with 259 observed probes: 247 `passed`, 12 expected
+`observed-rejected`, and zero incomplete. Its required
+`creeperPrimedCondition` probe evaluates official `IsCreeperPrimed` through the
+production `SkillService` against a real Creeper, checks ignited and
+non-ignited states, then restores the ignited state. The server records:
+
+```text
+creeper-primed-condition positive=true negative=true restored=true
+```
+
+The report schema and strict completeness gate passed. The report is retained
+at `srv-paper-creeper-primed-condition-strict-20261101-r1/integration-report.json`.
+
+Strict fixture `srv-paper-chance-condition-strict-20261101-r1` passed Paper
+1.21.1-133 with all 259 probes observed: 247 passed, 12 expected
+`observed-rejected` negative controls, and zero incomplete. Its required
+`chanceCondition` probe uses the production `SkillService` and verifies
+`Chance:100` passes, `Chance:0` rejects, and malformed `Chance:101` rejects
+fail-closed with a diagnostic. The structured log records:
+
+```text
+condition-utility-details ... chance-100=true chance-0-rejected=true chance-invalid-rejected=true
+```
+
+The same release report also passes the natural DropTable trigger-condition
+probe, including real OP/non-OP permission outcomes for a nested table. The
+report schema and strict completeness gate passed and the report is retained
+at `srv-paper-chance-condition-strict-20261101-r1/integration-report.json`.
+
+Strict fixture `srv-paper-damage-tag-strict-20261102-r3` passed Paper
+1.21.1-133 with 261 observed probes: 249 passed, 12 expected
+`observed-rejected` negative controls, and zero incomplete. Its
+`damageTagCondition` probe sends an untagged event first and confirms the
+configured `on-damage` action does not run. It then invokes the production
+`damage-target 3 tags=FIRE` action against the managed trigger probe. The real
+Bukkit event carries `FIRE`, passes the cause and final-damage conditions,
+executes the configured action, is cancelled, and leaves the victim health at
+20.0. The structured self-test line records:
+
+```text
+skill-trigger damage=true ... bukkit-damage=false damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true tagged-damage-action=true tagged-damage-events=1 tagged-damage-cancelled=true tagged-damage-health=20.0>20.0 ... cancelled-condition=true ... cancelled-after=true
+```
+
+The run also exposed and fixed event routing when multiple managed instances
+share a Bukkit entity: damage and attacked dispatch now independently prefer a
+binding whose profile declares that trigger. The report schema and strict
+completeness gate passed; the report is retained at
+`srv-paper-damage-tag-strict-20261102-r3/integration-report.json`.
+
+Strict Conditions follow-up `srv-paper-drowning-strict-20261102-r2` passed on
+Paper 1.21.1-133 with 262 observed probes: 250 passed, 12 expected
+`observed-rejected` negative controls, and zero incomplete. The required
+`conditionCatalog` observation includes `drowning-condition=true`; the
+production self-test sets caster remaining air to 80, accepts `drowning <=100`,
+rejects `drowning >100`, and restores the original value. Its report is retained
+at `srv-paper-drowning-strict-20261102-r2/integration-report.json`.
+The same report requires and passes `lastDamageCauseCondition`; its observation
+is `last-damage-cause=true`, backed by the registered Paper self-test that
+accepts the stored FIRE cause and rejects ENTITY_ATTACK.
+It also requires and passes `foodSaturationCondition`; the production player
+probe sets saturation to 1.0 and 2.0 to verify both comparator outcomes, then
+restores the original value.
+
+Strict follow-up `srv-paper-mobs-in-chunk-boundary-strict-20261102-r1` passed
+on Paper 1.21.1-133 with 263 observed probes: 252 passed, 11 expected
+`observed-rejected` negative controls, and zero incomplete. Its required
+`mobsInChunkCondition` probe uses two loaded adjacent chunks, confirms both
+start without valid Bukkit Mobs, spawns a controlled Mob only in one chunk, and
+checks zero count in the other, positive count in the occupied chunk, and
+exclusion of that adjacent Mob. It also rejects `mobs-in-chunk >=999999`.
+The observation records `mobs-chunk-zero=true`,
+`mobs-chunk-occupied=true`, and `mobs-chunk-adjacent-excluded=true`. The report
+schema and release completeness gate passed; the report is retained at
+`srv-paper-mobs-in-chunk-boundary-strict-20261102-r1/integration-report.json`.
+The same strict report also passes the required `damageTagCondition` and
+`conditionCatalog` entries, including the Drowning remaining-air comparator.
+
+Strict Paper 1.21.1-133 fixture
+`srv-paper-spawning-distance-client-walk-strict-20261102-r3` completes all 264
+registered probes: 253 passed, 11 expected negative controls, and zero
+incomplete. The client log records `PAPER_SPAWNING_DISTANCE_WALK
+displacement=14.01`; the server independently records
+`spawning-distance-client-walk result=true player-displacement=8.4687...`
+and confirms `instance-removed=true entity-removed=true` after the configured
+eight-block radius is crossed. The JSON schema validator and strict release
+completeness gate pass. This standalone movement fixture is retained at
+`srv-paper-spawning-distance-client-walk-strict-20261102-r3/integration-report.json`.
+That aggregate report also passes `killTrigger`, `playerKillTrigger`, and
+`playerKillsCondition`. `killTrigger` uses a managed mob's real Bukkit attack
+and victim death path. `playerKillTrigger` sets a controlled
+`EntityDamageByEntityEvent` as the online player's `lastDamageCause`, then
+sets health to zero so Bukkit emits the real player death events; the action
+and per-instance `PlayerKills` positive/negative comparisons pass. This proves
+death-event dispatch with controlled attribution, not a natural PvP damage
+packet.
+
+Strict Paper 1.21.1-133 fixture
+`srv-paper-environmental-natural-strict-20261102-r1` completed all 269
+registered probes: 257 passed, 12 expected negative controls, zero
+incomplete. Its `environmentalDamage` probe places a production managed Zombie
+in a temporary Lava block, clears prior fire and damage state, and waits for
+Paper's own damage tick. The observation is:
+
+```text
+environmental-damage natural=true source=LAVA action-observed=true elapsed-ticks=16 lava=true passed=true
+```
+
+The action check reads back the configured main-hand DIAMOND_SWORD after the
+managed `on-damage` skill runs. Cleanup restores the original block data and
+despawns the probe instance. The report passed JSON schema validation and the
+strict release completeness gate; the archived report is
+`tools/paper-integration/reports/paper-1.21.1-environmental-natural-20261102.json`.
+
+Strict Conditions follow-up `srv-paper-distance-from-spawn-strict-20261102-r1`
+passed on Paper 1.21.1-133 with all 265 registered probes complete. Its
+`distanceFromSpawnCondition` probe evaluates the production `SkillService`
+against a real entity location and the world's spawn location. The inclusive
+exact-distance comparison passes while the exclusive `> distance` comparison
+rejects. The structured observation records
+`spawn-distance-exact=true spawn-distance-over-rejected=true`; schema and strict
+completeness checks pass. The archived report is
+`tools/paper-integration/reports/paper-1.21.1-distance-from-spawn-20261102.json`.
+
+Strict DropTable follow-up `srv-paper-drops-range-strict-20261102-r4` passed
+on Paper 1.21.1-133 with all 265 registered probes complete and zero
+incomplete. Its natural Bukkit death observation records
+`exclusive-range-drop=true range-amount=2` for the fixture projection of the
+Mythic inline entry `GOLD_INGOT 1-3 1`, whose exclusive upper bound yields
+runtime amounts 1-2. The same run records the independent root experience
+probe at 13 XP. The report is archived at
+`tools/paper-integration/reports/paper-1.21.1-drops-exclusive-range-20261102.json`.
+This verifies the tested amount-range path only; weighted line counts, Luck
+and level bonuses, `BiasStat`, and the full official DropTable catalog remain
+open.
+
+Strict Paper 1.21.1-133 fixture
+`srv-paper-drops-luck-attribute-strict-20261102-r2` passed all 266 registered
+probes: 255 passed, 11 expected negative controls, zero incomplete. For the
+natural player-kill DropTable probe, the self-test sets the killer's base
+`GENERIC_LUCK` to 1.0, captures the effective value, applies Bukkit damage to
+the managed Zombie, then restores the original attribute. The observation
+records `effective-luck=1.0 luck-scaled-drop=true`; that IRON_INGOT entry has
+base chance 0 and only passes the current scaler after the effective Luck
+value is read. The JSON report is archived at
+`tools/paper-integration/reports/paper-1.21.1-drops-luck-attribute-20261102.json`.
+This verifies the current Luck input path. Separate strict fixture
+`srv-paper-drops-bonus-semantics-strict-20261102-r1` verifies `BonusLuckItems`
+with Bukkit Luck; neither fixture covers Mythic custom Luck enchantment/curses
+inputs or `BiasStat`.
+
+Strict Paper 1.21.1-133 fixture
+`srv-paper-drops-total-items-strict-20261102-r1` passed all 266 registered
+probes: 254 passed, 12 expected negative controls, zero incomplete. Its
+required `deathLootGeneratedLines` probe applies Bukkit damage to a managed
+Zombie with `integration_total_items`, then measures only newly spawned Item
+entities from that death. It observes exactly 128 items: 33 DIAMOND and 95
+EMERALD by stack amount, within the configured 1:3 relative-weight bounds.
+The schema validator and strict release completeness gate pass. The report is
+archived at
+`tools/paper-integration/reports/paper-1.21.1-drops-total-items-20261102.json`.
+This establishes the tested `TotalItems` weighted path only. Separate strict
+fixture `srv-paper-drops-bonus-semantics-strict-20261102-r1` verifies level/luck
+line bonuses and single-bound weighted selection. Standalone Mythic DropTable
+natural-death evidence is in fixture
+`srv-paper-drops-imported-range-strict-20261102-r5`, which observes one Diamond,
+two Gold Ingots from the imported exclusive range, and 5 XP. Its report is
+archived at
+`tools/paper-integration/reports/paper-1.21.1-drops-imported-range-20261102.json`.
+`BiasStat`, Mythic custom Luck
+enchantment/curses inputs, and broader drop catalog semantics remain open; the
+official DropTables catalog does not define a separate `Looting` table option.
+
+Strict Paper 1.21.1-133 fixture
+`srv-paper-drops-bonus-semantics-strict-20261102-r1` exercises natural
+managed-Zombie deaths and reports `level-only=4`, `luck-only=3`, `combined=5`,
+`zero=2`, and single-bound weighted selection via
+`weighted-max=4 weighted-item-count=true`. Its archived report has 273 probes
+(262 passed, 11 expected negative controls, zero incomplete). The earlier r4
+report only verifies bonus line counts and is not evidence of weighted
+selection. The report contract now requires the weighted fields. Fractional
+bonus probability has focused unit coverage. Follow-up
+`srv-paper-fractional-bonus-strict-20261102-r4` records 63 extra lines across
+128 natural managed-Zombie deaths using a level-one 0.5 bonus. Its archived
+273-probe report has 261 passed and 12 expected negative controls; raw Potion
+consumption and natural expiry were not requested in this run. Imported
+range/placeholder combinations, `BiasStat`,
+Mythic custom Luck enchantment/curses inputs, and the broader official drop
+catalog remain open. The
+importer-to-runtime parser contract is covered separately. The official
+DropTables catalog does not define a separate `Looting` table option.
+The bonus report is archived at
+`tools/paper-integration/reports/paper-1.21.1-drops-bonus-semantics-20261102.json`.
+
+Strict Paper 1.21.1-133 fixture
+`srv-paper-dropper-conditions-strict-20261102-r1` completes 268 release probes
+with zero incomplete. Its natural-death `deathLootDropperConditions` probe
+binds two real Bukkit Zombies to separate DropTables and damages both through
+Paper. The `is-monster` condition allows an Emerald and exactly 3 table XP;
+`is-animal` rejects both the configured BREAD and its 7 table XP. Both deaths
+retain the same real player killer, separating dropper context from killer
+`TriggerConditions`. The report is archived at
+`tools/paper-integration/reports/paper-1.21.1-dropper-conditions-20261102.json`.
+
+Strict Paper 1.21.1-133 fixture
+`srv-paper-exp-lines-strict-20261102-r2` completes 268 probes (256 passed,
+12 expected negative controls, zero incomplete). Its natural `deathLootExperience`
+probe configures an `exp` entry for 5 XP alongside table experience 9-11 and
+observes 16 total XP from a real managed-Zombie Bukkit death. This confirms the
+separate experience row is consumed by the production death hook. The archived
+report is
+`tools/paper-integration/reports/paper-1.21.1-exp-drop-lines-20261102.json`.
+
+Strict Paper 1.21.1-133 fixture
+`srv-paper-drops-imported-range-strict-20261102-r5` passes all 273 registered
+probes: 262 passed, 11 expected negative controls, zero incomplete. The
+`deathLootImportedDropTable` probe imports a standalone `DropTables/` file
+containing killer `TriggerConditions`, dropper `Conditions`, a fixed Diamond,
+an exclusive `GOLD_INGOT 1-3` range, and an `exp` line. Import projection and
+runtime parsing both pass; a real player-caused managed-Zombie death observes
+1 Diamond, 2 Gold Ingots (within the projected 1-2 range), and 5 XP, then
+restores the prior runtime table set. The two-client menu workflow also ran in
+this strict fixture. The report is archived at
+`tools/paper-integration/reports/paper-1.21.1-drops-imported-range-20261102.json`.
+
+Full strict Paper 1.21.1-133 fixture `srv-paper-integration` passed all 271
+required probes: 259 passed, 12 expected negative controls, zero incomplete.
+The required `survivalModeCondition` probe accepts Survival, rejects Adventure,
+and records restoration of the player's original mode. The required
+`enderDragonAliveCondition` probe accepts a real Ender Dragon, removes it, then
+rejects the absent entity. The two-player menu client completed permission
+denial, pagination, allowed action feedback, and close; Paper render/click logs
+asserted the button materials and server outcomes because Mineflayer did not
+decode the menu item contents reliably. The report passed schema and strict
+completeness validation and is archived at
+`tools/paper-integration/reports/paper-1.21.1-full-strict-20261102.json`.
+
+Latest full strict run `srv-paper-current-20261103-r3` passed on Paper 1.21.1-133
+with 275 passed probes and 17 expected rejections. The report and server/client
+logs are archived in `tools/paper-integration/reports/` and recorded in the
+release evidence manifest. Its plugin SHA-256 is
+`c332a7a782a7e366d40b9033f49edb06b2793b6a5a708e5e9c484279173289a4`.
+The catalog does not independently probe recent migration backup or failure handling.
+
+Strict follow-up `srv-paper-pin-casing-strict-20261103-r1` passed all 310
+required probes on Paper 1.21.1-133: 291 passed and 19 expected rejections.
+The runtime self-check confirmed Pin targeters and conditions through mixed-case
+`Pins`/`pins` sections and `World`/`X`/`Y`/`Z` fields, while invalid coordinates
+and missing worlds remained rejected. The report is archived at
+`tools/paper-integration/reports/paper-1.21.1-pin-casing-strict-20261103-r1.json`;
+the plugin SHA-256 is
+`d0650a0078e6e91be741a58b4af3cea8186e296ff64cfc931de825123b57aa65`.
+
+Strict follow-up `srv-paper-location-targeters-strict-20261104-r1` passed 339
+probes (320 passed, 19 expected rejections). `locationTargeterDispatch` verifies
+real Paper block-action dispatch for SelfLocation aliases, caster and world
+spawn locations, explicit target and trigger locations, `@Forward`,
+`@ProjectileForward` on an Arrow, and `@TargetPredictedLocation` using target
+velocity. Invalid coordinate input is rejected. Report:
+`tools/paper-integration/reports/paper-1.21.1-location-targeters-strict-20261104-r1.json`;
+server log SHA-256 `f17e7774605218e08521fec749e21a0da5953ab5d363c091645a310f2ab9f520`;
+client log archive SHA-256
+`efb184f20e405c6557cc650fd7535ef46bc4686bf37ee10b70cef9a086b7e9bf`. Plugin
+SHA-256: `b23a9e5acd11f33281a25570a7918d1129b19041118088f23f8a9b09150c2cd9`.
+
+Strict follow-up `srv-paper-variable-location-strict-20261104-r1` passed 321 probes
+(302 passed, 19 expected rejections). `variableLocationDispatch` checks block
+dispatch, duplicate-variable rejection and migration preservation with a warning.
+Report: `tools/paper-integration/reports/paper-1.21.1-variable-location-strict-20261104-r1.json`.
+
+Strict follow-up `srv-paper-location-dispatch-strict-20261104-r2` passed 320 probes
+(301 passed, 19 expected rejections). `locationTargeterDispatch` verifies that
+the real Paper block action receives an explicit location and that a duplicate
+non-finite coordinate does not change the block. Report:
+`tools/paper-integration/reports/paper-1.21.1-location-dispatch-strict-20261104-r2.json`.
+
+Strict follow-up `srv-paper-targeter-arguments-strict-20261104-r1` passed 319 probes
+(300 passed, 19 expected rejections). `targeterArgumentValidation` checks
+malformed and ambiguous targeter controls, chain rejection and a valid control
+using real Paper entities.
+Report: `tools/paper-integration/reports/paper-1.21.1-targeter-arguments-strict-20261104-r1.json`.
+Plugin SHA-256: `fa456690d3e3609721ff76c734402822ba52d1ea572fed629a167aa504f0d8ab`.
+
+Strict follow-up `srv-paper-drop-tier-strict-20261104-r1` passed 318 probes
+(299 passed, 19 expected rejections). `dropNativeTier` verifies invalid native
+tier restrictions, inherited nulls and valid known-tier controls through file
+loading and rolling; the probe does not exercise natural death.
+Report: `tools/paper-integration/reports/paper-1.21.1-drop-tier-strict-20261104-r1.json`.
+Plugin SHA-256: `18106d8b37195dd97091374b135d00fd76462740fc1203e1f5cfff73ac673969`.
+
+Strict follow-up `srv-paper-drop-dynamic-strict-20261104-r1` passed 317 probes
+(298 passed, 19 expected rejections). `dropNativeDynamic` verifies invalid native
+dynamic chance expressions fail closed through file loading and runtime rolling,
+including inherited nulls and explicit valid overrides; natural death is not tested.
+Report: `tools/paper-integration/reports/paper-1.21.1-drop-dynamic-strict-20261104-r1.json`.
+Plugin SHA-256: `880ec114287d3cc10ec1124770509002452c042e386bee74280c5fb0d59cd306`.
+
+Strict follow-up `srv-paper-drop-numeric-strict-20261104-r1` passed 316 probes
+(297 passed, 19 expected rejections). The imported drop chance probe also rejects
+`0x1p-1` and `0.5d`, preserves their source in warnings and rolls the valid sibling.
+Report: `tools/paper-integration/reports/paper-1.21.1-drop-numeric-strict-20261104-r1.json`.
+Plugin SHA-256: `10a17a26162674114a2f6f0de22e3f4540843debf0294cb73cce6665865f1eff`.
+
+Strict follow-up `srv-paper-dropper-orb-strict-20261104-r1` passed 316 probes
+(297 passed, 19 expected rejections). The natural dropper-condition probe
+observed event experience and immediate/delayed orb deltas of 3 for the
+allowed branch and 0 for the rejected branch. The probe requires correct event
+values and actual orbs observed at either sampling time; the earlier missed
+observation's cause is still unconfirmed.
+Report: `tools/paper-integration/reports/paper-1.21.1-dropper-orb-strict-20261104-r1.json`.
+Plugin SHA-256: `7261cdfdebc9009019eda7e076fbc7b9f8ead09e70994460772f85ee8ef91fc7`.
+
+Strict follow-up `srv-paper-drop-chance-strict-20261104-r1` passed 316 probes
+(297 passed, 19 expected rejections). `dropChanceImported` verifies malformed
+percentages are preserved in warnings and excluded from runtime rolling while
+a valid sibling remains. Natural death is not covered by this probe.
+Report: `tools/paper-integration/reports/paper-1.21.1-drop-chance-strict-20261104-r1.json`.
+Plugin SHA-256: `5d4f0548381420a855a40e47519adb152256f09b9bb63ff31d3eca03cab55086`.
+An earlier attempt observed zero instead of three experience points in the
+unrelated natural dropper-condition probe; the cause remains unconfirmed.
+
+Strict follow-up `srv-paper-environment-validation-strict-20261104-r1` passed 315 probes
+(296 passed, 19 expected rejections), including mapped world, time and weather
+conditions and rejection of invalid and negated invalid argument blocks.
+Report: `tools/paper-integration/reports/paper-1.21.1-environment-validation-strict-20261104-r1.json`.
+Plugin SHA-256: `a6b6e366cab29900970be7ad18bbb10a8bb4ba87a9de961b9d63696b67eaa6d8`.
+
+Strict follow-up `srv-paper-target-health-strict-20261104-r1` passed 314 probes
+(295 passed, 19 expected rejections), including target health percentage
+multipliers, strict boundaries, absent target and invalid input preservation.
+Report: `tools/paper-integration/reports/paper-1.21.1-target-health-strict-20261104-r1.json`.
+Plugin SHA-256: `bbea66135c9eef740e3aaa49df6d4d08450321b4d592e980a5ca788cf9092dba`.
+
+Strict follow-up `srv-paper-comparison-boundary-strict-20261104-r1` passed 313 probes
+(294 passed, 19 expected rejections), including imported distance and light
+strict/inclusive comparisons and invalid input preservation on real entities.
+Report: `tools/paper-integration/reports/paper-1.21.1-comparison-boundary-strict-20261104-r1.json`.
+Plugin SHA-256: `8a4804e2455c5b03b665014b3aed867d8868e2367c83578ff570cbb32f11af1f`.
+
+Strict follow-up `srv-paper-health-range-strict-20261104-r1` passed 312 probes
+(293 passed, 19 expected rejections), including imported health range endpoints,
+absorption, percentages and invalid range preservation on a real Zombie.
+Report: `tools/paper-integration/reports/paper-1.21.1-health-range-strict-20261104-r1.json`.
+Plugin SHA-256: `6f5b825e45332f851ea008e701da0bed21b7a195e7f6d3006aa6545772bfce60`.
+
+Strict follow-up `srv-paper-health-validation-strict-20261104-r1` passed 311 probes
+(292 passed, 19 expected rejections) on the build with health argument validation.
+Report: `tools/paper-integration/reports/paper-1.21.1-health-validation-strict-20261104-r1.json`.
+The plugin SHA-256 is `a4b1b01227b8c4e193f4d13998f025a81d0ecb583581e0fb56cff8cb7b3dcbd2`.
+Duplicate-argument and overflow rejection have unit tests but no dedicated Paper probe.
+
+Strict follow-up `srv-paper-health-import-strict-20261104-r1` passed 311 probes
+(292 passed, 19 expected rejections), including `healthImportedCondition` on a
+real Zombie. Report: `tools/paper-integration/reports/paper-1.21.1-health-import-strict-20261104-r1.json`.
+The plugin SHA-256 is `db9e56a4e5df62fe2a259d0630163f20734a59aee7825823f6176d1b7fbd4dc5`.
+
+Strict follow-up `srv-paper-external-boundary-strict-20261103-r2` passed all
+310 required probes on Paper 1.21.1-133: 291 passed and 19 expected
+rejections. The current build registers explicit blocked adapters for MMOItems,
+MythicCrucible, and ModelEngine; the strict catalog remained complete and no
+core behavior was claimed for those uninstalled external plugins. The report
+is archived at
+`tools/paper-integration/reports/paper-1.21.1-external-boundary-strict-20261103-r2.json`;
+the plugin SHA-256 is
+`8b9e5a3d25e07e373b1fa96a872323ab5fa5ec02ae6b4926facee6f8e6cd9287`.
+
+Previous full strict run `srv-paper-current-strict-20261103-r2` passed on Paper
+1.21.1-133 with 275 passed probes and 17 expected rejections. The archived
+report is `tools/paper-integration/reports/paper-1.21.1-current-strict-20261103-r2.json`;
+its plugin SHA-256 is
+`f9ed76327e1f36688b34c2fd7eaba0ce5ef0bcea0046920a9996ea3c3616f6e2`.
+This reruns the existing release catalog and does not establish parity for
+unregistered features or the recent migration failure-handling boundaries.
+The original server log is archived as
+`tools/paper-integration/reports/paper-1.21.1-current-strict-20261103-r2.log.gz`;
+the release evidence manifest records its compressed-file SHA-256.
+The corresponding client outputs are archived in
+`tools/paper-integration/reports/paper-1.21.1-current-strict-20261103-r2-client-logs.tar.gz`
+and checked by the same manifest audit. They do not constitute a complete
+startup configuration snapshot; the server generated a token during startup.
 

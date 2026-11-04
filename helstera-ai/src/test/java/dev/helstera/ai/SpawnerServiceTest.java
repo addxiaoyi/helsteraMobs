@@ -714,6 +714,167 @@ class SpawnerServiceTest {
     }
 
     @Test
+    void failedFileReloadDoesNotOverwriteSavedSpawnerState(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        var config = dir.resolve("spawners.yml");
+        var state = dir.resolve("spawner-state.yml");
+        String valid = "spawners:\n  arena: {mob: boss, x: 0, z: 0}\n";
+        Files.writeString(config, valid);
+        var service = new SpawnerService(null, (mob, location, profile) -> 1);
+        service.loadFile(config);
+        assertTrue(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+        service.saveState(state.toFile());
+        String saved = Files.readString(state);
+        Files.writeString(config, "spawners: [broken");
+        org.junit.jupiter.api.Assertions.assertThrows(java.io.IOException.class, () -> service.loadFile(config));
+        service.saveState(state.toFile());
+        assertEquals(saved, Files.readString(state));
+        Files.writeString(config, valid);
+        service.loadFile(config);
+        service.loadState(state.toFile());
+        assertEquals(1, service.get("arena").totalSpawned());
+        assertTrue(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+        service.saveState(state.toFile());
+        assertEquals(2, YamlConfiguration.loadConfiguration(state.toFile()).getInt("spawners.arena.total-spawned"));
+    }
+
+    @Test
+    void fileConditionsPreserveNullAndMergeOverrides(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        var file = dir.resolve("spawners.yml");
+        var service = new SpawnerService(null, (mob, location, profile) -> 1);
+        service.setConditionTester((condition, location) -> true);
+        var location = new Location(mock(World.class), 0, 64, 0);
+        for (String prefix : List.of("spawners:\n", "")) {
+            String indent = prefix.isEmpty() ? "" : "  ";
+            Files.writeString(file, prefix + ("""
+                    base: &base {mob: boss, x: 0, z: 0, conditions: null}
+                    merged: {<<: *base}
+                    override: {<<: *base, conditions: []}
+                    absent: {mob: boss, x: 0, z: 0}
+                    """).lines().map(line -> indent + line + "\n").collect(java.util.stream.Collectors.joining()));
+            service.loadFile(file);
+            assertFalse(service.forceSpawn("base", location));
+            assertFalse(service.forceSpawn("merged", location));
+            assertTrue(service.forceSpawn("override", location));
+            assertTrue(service.forceSpawn("absent", location));
+        }
+        Files.writeString(file, "spawners: [invalid");
+        org.junit.jupiter.api.Assertions.assertThrows(java.io.IOException.class, () -> service.loadFile(file));
+        assertFalse(service.forceSpawn("absent", location));
+    }
+
+    @Test
+    void malformedConditionsFailClosedAndEmptyListRemainsUnconditional() {
+        SpawnerService service = new SpawnerService(null, (mob, location, profile) -> 1);
+        service.setConditionTester((condition, location) -> true);
+        service.load(YamlConfiguration.loadConfiguration(new StringReader("""
+                spawners:
+                  blank: {mob: boss, x: 0, z: 0, conditions: ['']}
+                  invalid: {mob: boss, x: 0, z: 0, conditions: [null]}
+                  numeric: {mob: boss, x: 0, z: 0, conditions: [42]}
+                  separator: {mob: boss, x: 0, z: 0, conditions: ';'}
+                  trailing: {mob: boss, x: 0, z: 0, conditions: 'night;'}
+                  unbalanced: {mob: boss, x: 0, z: 0, conditions: 'night{'}
+                  empty: {mob: boss, x: 0, z: 0, conditions: []}
+                """)));
+        World world = mock(World.class);
+        Location location = new Location(world, 0, 64, 0);
+        for (String id : List.of("blank", "invalid", "numeric", "separator", "trailing", "unbalanced")) {
+            assertFalse(service.forceSpawn(id, location), id);
+        }
+        assertTrue(service.forceSpawn("empty", location));
+    }
+
+    @Test
+    void invalidNativeConditionArgumentsStayClosedWhenNegated() {
+        List<String> invalid = List.of("!y-above=NaN", "!y-below=Infinity", "!time-between=bad,20",
+                "!region=unknown", "!region=other,invalid,0,0,1,1,1", "!entities-at-least=NaN",
+                "!mobs-at-least=-1", "!players-at-most=1.5", "!players-at-least=Infinity",
+                "!lunar-phase-is=invalid", "!moon-phase-is=", "!biome-is=invalid", "!biome-is=",
+                "!world-is=");
+        var config = new YamlConfiguration();
+        for (int i = 0; i < invalid.size(); i++) {
+            config.set("spawners.s" + i + ".mob", "boss");
+            config.set("spawners.s" + i + ".x", 0);
+            config.set("spawners.s" + i + ".z", 0);
+            config.set("spawners.s" + i + ".conditions", List.of(invalid.get(i)));
+        }
+        config.set("spawners.valid.mob", "boss");
+        config.set("spawners.valid.x", 0);
+        config.set("spawners.valid.z", 0);
+        config.set("spawners.valid.conditions", List.of("!y-above=80"));
+        var service = new SpawnerService(null, (mob, location, profile) -> 1);
+        service.load(config);
+        var world = mock(World.class);
+        when(world.getName()).thenReturn("world");
+        var location = new Location(world, 0, 64, 0);
+        for (int i = 0; i < invalid.size(); i++) {
+            assertFalse(service.forceSpawn("s" + i, location), invalid.get(i));
+        }
+        assertTrue(service.forceSpawn("valid", location));
+    }
+
+    @Test
+    void validNegatedNamedConditionsStillMatch() {
+        var config = new YamlConfiguration();
+        var conditions = List.of("!moon-phase-is=NEW", "!lunar-phase-is=NEW",
+                "!biome-is=DESERT", "!world-is=other");
+        for (int i = 0; i < conditions.size(); i++) {
+            config.set("spawners.s" + i + ".mob", "boss");
+            config.set("spawners.s" + i + ".x", 0);
+            config.set("spawners.s" + i + ".z", 0);
+            config.set("spawners.s" + i + ".conditions", List.of(conditions.get(i)));
+        }
+        var service = new SpawnerService(null, (mob, loc, profile) -> 1);
+        service.load(config);
+        var world = mock(World.class);
+        var block = mock(Block.class);
+        when(world.getName()).thenReturn("world");
+        when(world.getBlockAt(any(Location.class))).thenReturn(block);
+        when(block.getBiome()).thenReturn(org.bukkit.block.Biome.PLAINS);
+        var location = new Location(world, 0, 64, 0);
+        for (int i = 0; i < conditions.size(); i++) {
+            assertTrue(service.forceSpawn("s" + i, location), conditions.get(i));
+        }
+    }
+
+    @Test
+    void factionConditionsPreserveNamesAndRejectBlankArguments() {
+        var table = mock(dev.helstera.api.behavior.FactionTable.class);
+        var previous = dev.helstera.api.behavior.Factions.table();
+        var world = mock(World.class);
+        var location = new Location(world, 0, 64, 0);
+        var player = mock(Player.class);
+        when(world.getPlayers()).thenReturn(List.of(player));
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        when(player.getLocation()).thenReturn(location);
+        when(table.factionOf(player)).thenReturn("guards");
+        when(table.alliedFactions("guards", "allies")).thenReturn(true);
+        var conditions = List.of("player-faction-allied-to=allies", "player-faction-hostile-to=enemies",
+                "!player-faction-allied-to=enemies", "!player-faction-hostile-to=allies",
+                "player-faction-is=", "!player-faction-is=", "player-faction-allied-to=",
+                "!player-faction-allied-to=", "player-faction-hostile-to=", "!player-faction-hostile-to=");
+        var config = new YamlConfiguration();
+        for (int i = 0; i < conditions.size(); i++) {
+            config.set("spawners.s" + i + ".mob", "boss");
+            config.set("spawners.s" + i + ".x", 0);
+            config.set("spawners.s" + i + ".z", 0);
+            config.set("spawners.s" + i + ".conditions", List.of(conditions.get(i)));
+        }
+        var service = new SpawnerService(null, (mob, loc, profile) -> 1);
+        service.load(config);
+        dev.helstera.api.behavior.Factions.install(table);
+        try {
+            for (int i = 0; i < conditions.size(); i++) {
+                assertEquals(i < 4, service.forceSpawn("s" + i, location), conditions.get(i));
+            }
+            verify(table, times(2)).alliedFactions("guards", "allies");
+            verify(table, times(2)).alliedFactions("guards", "enemies");
+        } finally {
+            dev.helstera.api.behavior.Factions.install(previous);
+        }
+    }
+
+    @Test
     @DisplayName("null 节与空节安全返回，不抛异常")
     void toleratesNullAndEmpty() {
         SpawnerService s = new SpawnerService(null, (m, l, a) -> -1);
@@ -1200,10 +1361,170 @@ class SpawnerServiceTest {
                     x: 0
                     z: 0
                 """);
-        restored.loadState(state);
+        var server = mock(org.bukkit.Server.class);
+        when(server.getLogger()).thenReturn(java.util.logging.Logger.getAnonymousLogger());
+        try (var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getServer).thenReturn(server);
+            restored.loadState(state);
+        }
         assertEquals(1, restored.get("arena").totalSpawned());
         Files.deleteIfExists(state.toPath());
         Files.deleteIfExists(new java.io.File(state.getPath() + ".bak").toPath());
+    }
+
+    @Test
+    void savingAfterBackupRecoveryPreservesTheValidBackup(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        var config = dir.resolve("spawners.yml");
+        var state = dir.resolve("spawner-state.yml");
+        var backup = dir.resolve("spawner-state.yml.bak");
+        Files.writeString(config, "spawners:\n  arena: {mob: boss, x: 0, z: 0}\n");
+        var service = new SpawnerService(null, (mob, location, profile) -> 1);
+        service.loadFile(config);
+        assertTrue(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+        service.saveState(state.toFile());
+        Files.copy(state, backup);
+        String validBackup = Files.readString(backup);
+        Files.writeString(state, "spawners: [broken");
+
+        service.loadState(state.toFile());
+        assertEquals(1, service.get("arena").totalSpawned());
+        service.saveState(state.toFile());
+        assertEquals(validBackup, Files.readString(backup));
+        assertEquals(1, YamlConfiguration.loadConfiguration(state.toFile()).getInt("spawners.arena.total-spawned"));
+
+        assertTrue(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+        service.saveState(state.toFile());
+        assertEquals(1, YamlConfiguration.loadConfiguration(backup.toFile()).getInt("spawners.arena.total-spawned"));
+        assertEquals(2, YamlConfiguration.loadConfiguration(state.toFile()).getInt("spawners.arena.total-spawned"));
+    }
+
+    @Test
+    void unrecoverableStateDoesNotOverwriteEitherFile(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        var config = dir.resolve("spawners.yml");
+        var state = dir.resolve("spawner-state.yml");
+        var backup = dir.resolve("spawner-state.yml.bak");
+        Files.writeString(config, "spawners:\n  arena: {mob: boss, x: 0, z: 0}\n");
+        var service = new SpawnerService(null, (mob, location, profile) -> 1);
+        service.loadFile(config);
+
+        for (String invalid : List.of("spawners: [broken", "schema-version: 2\nspawners: {}\n",
+                "schema-version: nope\n", "spawners: invalid\n")) {
+            Files.writeString(state, invalid);
+            Files.writeString(backup, "spawners: [also-broken");
+            service.loadState(state.toFile());
+            service.saveState(state.toFile());
+            assertEquals(invalid, Files.readString(state));
+            assertEquals("spawners: [also-broken", Files.readString(backup));
+        }
+
+        String future = "schema-version: 2\nspawners: {}\n";
+        String oldBackup = "schema-version: 1\nspawners:\n  arena:\n    total-spawned: 9\n";
+        Files.writeString(state, future);
+        Files.writeString(backup, oldBackup);
+        service.loadState(state.toFile());
+        service.saveState(state.toFile());
+        assertEquals(future, Files.readString(state));
+        assertEquals(oldBackup, Files.readString(backup));
+        assertEquals(0, service.get("arena").totalSpawned());
+
+        Files.writeString(state, "schema-version: 1\nspawners:\n  arena:\n    total-spawned: 3\n");
+        service.loadState(state.toFile());
+        assertEquals(3, service.get("arena").totalSpawned());
+        service.saveState(state.toFile());
+        assertEquals(3, YamlConfiguration.loadConfiguration(state.toFile()).getInt("spawners.arena.total-spawned"));
+    }
+
+    @Test
+    void malformedStateCountersFallBackWithoutApplyingPartialSnapshot(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        var state = dir.resolve("spawner-state.yml");
+        var backup = dir.resolve("spawner-state.yml.bak");
+        var service = service("spawners:\n  arena: {mob: boss, x: 0, z: 0}\n");
+        String valid = "schema-version: 1\nspawners:\n  arena:\n    total-spawned: 7\n";
+        Files.writeString(backup, valid);
+        for (String invalid : List.of(
+                "world-spawn-counts: {world: nope}\n",
+                "world-spawn-counts: invalid\n",
+                "spawners: {arena: invalid}\n",
+                "spawners: {arena: {total-spawned: -1}}\n",
+                "spawners: {arena: {next-spawn-in: 1.5}}\n",
+                "spawners: {arena: {mob-counts: {boss: nope}}}\n",
+                "spawners: {arena: {player-spawn-counts: {bad-uuid: 1}}}\n")) {
+            Files.writeString(state, invalid);
+            service.loadState(state.toFile());
+            assertEquals(7, service.get("arena").totalSpawned(), invalid);
+            service.saveState(state.toFile());
+            assertEquals(valid, Files.readString(backup));
+        }
+        Files.writeString(backup, "spawners: {arena: {total-spawned: invalid}}\n");
+        Files.writeString(state, "spawners: {arena: {total-spawned: invalid}}\n");
+        service.loadState(state.toFile());
+        assertEquals(7, service.get("arena").totalSpawned());
+        assertFalse(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+    }
+
+    @Test
+    void emptyStateSnapshotClearsPreviouslyLoadedCounters(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        var state = dir.resolve("spawner-state.yml");
+        var service = service("spawners:\n  arena: {mob: boss, x: 0, z: 0}\n");
+        assertTrue(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+        Files.writeString(state, "schema-version: 1\n");
+        service.loadState(state.toFile());
+        assertEquals(0, service.get("arena").totalSpawned());
+    }
+
+    @Test
+    void unrecoverableStatePausesAutomaticAndForcedSpawnsUntilValidReload(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        var state = dir.resolve("spawner-state.yml");
+        var service = automaticService("""
+                spawners:
+                  arena:
+                    mob: boss
+                    world: arena
+                    x: 0
+                    z: 0
+                    max-spawns: 2
+                """);
+        service.tickOnce();
+        assertEquals(1, service.get("arena").totalSpawned());
+        assertEquals(200, service.nextSpawnInTicks("arena"));
+        Files.writeString(state, "schema-version: 2\n");
+        service.loadState(state.toFile());
+        service.tickOnce(200);
+        assertFalse(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+        assertEquals("spawner state unavailable", service.forceSpawnFailure("arena"));
+        assertEquals(1, service.get("arena").totalSpawned());
+        assertEquals(200, service.nextSpawnInTicks("arena"));
+
+        Files.writeString(state, "schema-version: 1\nspawners:\n  arena:\n    total-spawned: 1\n");
+        service.loadState(state.toFile());
+        service.tickOnce();
+        assertEquals(2, service.get("arena").totalSpawned());
+        assertFalse(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+        assertEquals("spawn limits reached", service.forceSpawnFailure("arena"));
+    }
+
+    @Test
+    void missingPrimaryRestoresBackupAndRejectsInvalidBackup(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        var state = dir.resolve("spawner-state.yml");
+        var backup = dir.resolve("spawner-state.yml.bak");
+        var service = service("spawners:\n  arena: {mob: boss, x: 0, z: 0}\n");
+        service.loadState(state.toFile());
+        assertTrue(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+        String valid = "schema-version: 1\nspawners:\n  arena:\n    total-spawned: 4\n";
+        Files.writeString(backup, valid);
+        service.loadState(state.toFile());
+        assertEquals(4, service.get("arena").totalSpawned());
+        service.saveState(state.toFile());
+        assertEquals(valid, Files.readString(backup));
+        assertEquals(4, YamlConfiguration.loadConfiguration(state.toFile()).getInt("spawners.arena.total-spawned"));
+
+        Files.delete(state);
+        Files.writeString(backup, "spawners: [broken");
+        service.loadState(state.toFile());
+        assertFalse(service.forceSpawn("arena", new Location(null, 0, 64, 0)));
+        service.saveState(state.toFile());
+        assertFalse(Files.exists(state));
+        assertEquals("spawners: [broken", Files.readString(backup));
     }
 
     @Test
@@ -1706,6 +2027,8 @@ class SpawnerServiceTest {
         assertEquals(Boolean.TRUE, SpawnerService.lightCondition("light-level<8", location));
         assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level<3", location));
         assertEquals(Boolean.TRUE, SpawnerService.lightCondition("light-level<=3", location));
+        assertEquals(Boolean.TRUE, SpawnerService.lightCondition("light-level!=4", location));
+        assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level!=NaN", location));
         assertEquals(Boolean.TRUE, SpawnerService.lightCondition("light-level-above=2", location));
         assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level-above=5", location));
         assertEquals(Boolean.TRUE, SpawnerService.lightCondition("light-level 0-5", location));
@@ -1748,6 +2071,33 @@ class SpawnerServiceTest {
         assertEquals(Boolean.FALSE, SpawnerService.lightCondition("light-level<8", location));
         verify(world).isChunkLoaded(0, 0);
         verify(location, never()).getBlock();
+    }
+
+    @Test
+    void negatedLightConditionsRejectInvalidValuesAndUnavailableChunks() {
+        var config = new YamlConfiguration();
+        List<String> conditions = List.of("!light-level<NaN", "!light-level!=NaN", "!light-level",
+                "!light-level 9-3", "!light-level<8", "!light-level<2");
+        for (int i = 0; i < conditions.size(); i++) {
+            config.set("spawners.s" + i + ".mob", "boss");
+            config.set("spawners.s" + i + ".x", 0);
+            config.set("spawners.s" + i + ".z", 0);
+            config.set("spawners.s" + i + ".conditions", List.of(conditions.get(i)));
+        }
+        var service = new SpawnerService(null, (mob, location, profile) -> 1);
+        service.load(config);
+        Location loaded = litLocation("test", 3, 15, 12);
+        for (int i = 0; i < 4; i++) assertFalse(service.forceSpawn("s" + i, loaded), conditions.get(i));
+        assertFalse(service.forceSpawn("s4", loaded));
+        assertTrue(service.forceSpawn("s5", loaded));
+
+        var world = mock(World.class);
+        when(world.isChunkLoaded(0, 0)).thenReturn(false);
+        Location unloaded = new Location(world, 0, 64, 0);
+        assertFalse(service.forceSpawn("s4", unloaded));
+        when(world.isChunkLoaded(0, 0)).thenReturn(true);
+        when(world.getBlockAt(0, 64, 0)).thenThrow(new IllegalStateException("unavailable"));
+        assertFalse(service.forceSpawn("s4", unloaded));
     }
 
     @Test

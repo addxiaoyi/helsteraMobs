@@ -28,6 +28,11 @@ public interface ModelInstance {
     /** 当前位置。 */
     Location location();
 
+    /** 初始生成位置；实现未保存该位置时返回 empty。 */
+    default Optional<Location> spawnLocation() {
+        return Optional.empty();
+    }
+
     void teleport(Location location);
 
     /** 全局缩放（会与模型定义 scale 相乘）。 */

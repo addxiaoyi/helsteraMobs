@@ -18,12 +18,14 @@ public final class SkillTreeContext {
                            Map<String, LocationSnapshot> locations,
                            Map<String, Set<String>> branchRequirements,
                            Set<String> unlockedBranches,
+                           Set<String> damageTags,
                            Optional<Snapshot> parent) {
         public Snapshot {
             variables = Map.copyOf(variables == null ? Map.of() : variables);
             locations = Map.copyOf(locations == null ? Map.of() : locations);
             branchRequirements = copyRequirements(branchRequirements);
             unlockedBranches = Set.copyOf(unlockedBranches == null ? Set.of() : unlockedBranches);
+            damageTags = Set.copyOf(damageTags == null ? Set.of() : damageTags);
             parent = parent == null ? Optional.empty() : parent;
         }
 
@@ -46,6 +48,7 @@ public final class SkillTreeContext {
     private final ConcurrentHashMap<String, Location> locations = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Set<String>> branchRequirements = new ConcurrentHashMap<>();
     private final java.util.Set<String> unlockedBranches = ConcurrentHashMap.newKeySet();
+    private volatile Set<String> damageTags = Set.of();
 
     public SkillTreeContext(Entity trigger, List<? extends LivingEntity> targets) {
         this(trigger, targets, null, null);
@@ -66,6 +69,14 @@ public final class SkillTreeContext {
 
     public Optional<SkillTreeContext> parent() {
         return Optional.ofNullable(parent);
+    }
+
+    public Set<String> damageTags() {
+        return damageTags.isEmpty() && parent != null ? parent.damageTags() : damageTags;
+    }
+
+    public void damageTags(Set<String> tags) {
+        damageTags = Set.copyOf(tags == null ? Set.of() : tags);
     }
 
     public Optional<Entity> trigger() {
@@ -179,7 +190,7 @@ public final class SkillTreeContext {
         });
         Map<String, LocationSnapshot> savedLocations = new java.util.LinkedHashMap<>();
         locations.forEach((name, location) -> savedLocations.put(name, toSnapshot(location)));
-        return new Snapshot(savedVariables, savedLocations, branchRequirements, unlockedBranches,
+        return new Snapshot(savedVariables, savedLocations, branchRequirements, unlockedBranches, damageTags,
                 parent == null ? Optional.empty() : Optional.of(parent.snapshot()));
     }
 
@@ -194,6 +205,7 @@ public final class SkillTreeContext {
         restored.variables.putAll(snapshot.variables());
         snapshot.branchRequirements().forEach(restored.branchRequirements::put);
         restored.unlockedBranches.addAll(snapshot.unlockedBranches());
+        restored.damageTags = snapshot.damageTags();
         snapshot.locations().forEach((name, location) ->
                 restored.locations.put(name, fromSnapshot(location, worldResolver)));
         return restored;

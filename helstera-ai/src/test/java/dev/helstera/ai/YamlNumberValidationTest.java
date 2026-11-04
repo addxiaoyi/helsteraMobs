@@ -44,12 +44,14 @@ class YamlNumberValidationTest {
     @Test
     @DisplayName("chance 非数字：不再静默变成 100% 必掉")
     void chanceGarbageReported() {
-        List<String> p = parseLoot("""
+        List<String> p = new ArrayList<>();
+        DropTable table = DropTable.parse("t", yaml("""
                 table:
                   entries:
                     - item: DIAMOND
                       chance: "很多"
-                """);
+                """).getConfigurationSection("table"), p);
+        assertTrue(table.isEmpty(), "无效概率的掉落条目应被跳过");
         assertTrue(p.stream().anyMatch(w -> w.contains("chance") && w.contains("很多")),
                 "应报出 chance 的原始字面量，实际 = " + p);
     }

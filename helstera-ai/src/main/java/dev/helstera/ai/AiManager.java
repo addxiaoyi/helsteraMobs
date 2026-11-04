@@ -43,6 +43,20 @@ public final class AiManager implements Listener {
     private dev.helstera.ai.skill.SkillService skills;
     /** Resolves selector condition text through the shared SkillService catalog. */
     private volatile java.util.function.Function<String, String> conditionBinder;
+    private final dev.helstera.api.behavior.Targeters.ConditionProvider conditionalTargeterProvider = this::testCondition;
+
+    /** Binds condition specifications before evaluating them against the shared registry. */
+    public boolean testCondition(String condition, dev.helstera.api.behavior.BehaviorContext context) {
+        if (condition == null || context == null || behaviors == null) return false;
+        try {
+            String key = conditionBinder == null
+                    ? (skills == null ? condition : skills.bindCondition(condition))
+                    : conditionBinder.apply(condition);
+            return key != null && !key.isBlank() && behaviors.testCondition(key, context);
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
     /**
      * 技能触发器分发器，用于派发 on-attack-hit；可为 null。
      *
@@ -79,10 +93,18 @@ public final class AiManager implements Listener {
 
     /** 实例 -> 实际绑定的档案（含 mobs/*.yml 局部覆盖）；事件触发器据此取档案。 */
     private final Map<Integer, AiProfile> boundProfiles = new ConcurrentHashMap<>();
+    private record ProfileOverlay(String baseName, java.util.function.UnaryOperator<AiProfile> apply) { }
+    private final Map<Integer, ProfileOverlay> profileOverlays = new ConcurrentHashMap<>();
     /** 受控实例，避免事件触发器反查时反复遍历全量实例。 */
     private final Map<Integer, ModelInstanceImpl> controlled = new ConcurrentHashMap<>();
     private final Map<String, AiProfile> profiles = new ConcurrentHashMap<>();
     private final Map<Integer, AiController> controllers = new ConcurrentHashMap<>();
+    private final dev.helstera.api.behavior.Targeters.ThreatProvider threatTargeterProvider = (src, cand) -> {
+        var c = src == null ? null : controllers.get(src.instanceId());
+        if (c == null) return 0;
+        var table = c.threatTable();
+        return table == null ? 0 : table.threatOf(cand.getUniqueId());
+    };
     private BukkitTask task;
     private java.util.function.Consumer<AnimationMarkerEvent> animationMarkerListener;
     private java.util.function.Consumer<ModelRemoveEvent> modelRemoveListener;
@@ -94,12 +116,7 @@ public final class AiManager implements Listener {
         // 仇恨选择器需要按实例反查仇恨表。构造时就注入而不是等到有实例，
         // 否则「threat」在首个控制器建好前一直返回空候选——而空候选会被
         // 动作侧当成「没有目标」，技能静默不执行
-        dev.helstera.api.behavior.Targeters.threatProvider((src, cand) -> {
-            var c = src == null ? null : controllers.get(src.instanceId());
-            if (c == null) return 0;
-            var table = c.threatTable();
-            return table == null ? 0 : table.threatOf(cand.getUniqueId());
-        });
+        dev.helstera.api.behavior.Targeters.threatProvider(threatTargeterProvider);
     }
 
     /** 注入自定义条件/动作注册表，使 profile 的 require / on-decision 生效。 */
@@ -121,17 +138,7 @@ public final class AiManager implements Listener {
     }
 
     private void installConditionalTargeterProvider() {
-        dev.helstera.api.behavior.Targeters.conditionProvider((condition, context) -> {
-            if (condition == null || context == null || behaviors == null) return false;
-            try {
-                String key = conditionBinder == null
-                        ? (skills == null ? null : skills.bindCondition(condition))
-                        : conditionBinder.apply(condition);
-                return key != null && !key.isBlank() && behaviors.testCondition(key, context);
-            } catch (RuntimeException ignored) {
-                return false;
-            }
-        });
+        dev.helstera.api.behavior.Targeters.conditionProvider(conditionalTargeterProvider);
     }
 
     /**
@@ -200,10 +207,9 @@ public final class AiManager implements Listener {
      * {@code /helstera reload config} 之后，存量 Boss 仍按旧免疫表挨打——
      * 新生成的实例却已经用上新配置，两者行为不一致且控制台毫无提示。</p>
      *
-     * <p><b>只换绑引用同一旧对象的实例</b>（{@code oldProfileObjects} 用
-     * {@link java.util.IdentityHashMap} 集合判等，不走 {@code equals}）。
-     * mobs/*.yml 的 {@code ai} 覆盖产生的是独立副本，不在该集合内，
-     * 无差别换绑会静默抹掉生物级覆盖。</p>
+     * <p>共享档案按对象身份换绑；带生物覆盖的档案则使用生成时保存的
+     * 覆盖函数重新构建，以保留生物级配置。该覆盖使用生成时的配置快照，
+     * 不会读取后来修改的 mobs/*.yml。</p>
      *
      * @return 实际换绑的实例数（供测试与诊断）
      */
@@ -212,15 +218,27 @@ public final class AiManager implements Listener {
         int rebound = 0;
         for (var e : new java.util.ArrayList<>(boundProfiles.entrySet())) {
             AiProfile cur = e.getValue();
-            if (cur == null || !oldProfileObjects.contains(cur)) continue;
-            AiProfile fresh = profiles.get(cur.name);
+            if (cur == null) continue;
+            ProfileOverlay overlay = profileOverlays.get(e.getKey());
+            if (overlay == null && !oldProfileObjects.contains(cur)) continue;
+            AiProfile fresh = profiles.get(overlay == null ? cur.name : overlay.baseName());
             // 新档案里已无此名：保留旧对象而不是置 null，否则实例会退化成
             // 「无档案」，其免疫/技能全部失效——比用旧配置更难察觉
             if (fresh == null || fresh == cur) continue;
+            if (overlay != null) {
+                try {
+                    fresh = overlay.apply().apply(fresh);
+                } catch (RuntimeException ex) {
+                    if (plugin != null) plugin.getLogger().warning("Cannot reapply mob profile override: " + ex.getMessage());
+                    continue;
+                }
+                if (fresh == null) continue;
+            }
             boundProfiles.put(e.getKey(), fresh);
             var inst = controlled.get(e.getKey());
             if (inst != null) {
-                inst.boundEntityId().ifPresent(id -> factions.bindInstance(id, fresh.faction));
+                String faction = fresh.faction;
+                inst.boundEntityId().ifPresent(id -> factions.bindInstance(id, faction));
                 var ctrl = controllers.get(e.getKey());
                 if (ctrl != null) ctrl.rebindProfile(fresh);
             }
@@ -240,6 +258,11 @@ public final class AiManager implements Listener {
 
     /** 用指定档案（可来自 mobs/*.yml 的 ai 节覆盖）启用 AI。 */
     public void attach(ModelInstanceImpl inst, AiProfile profile) {
+        attach(inst, profile, null, null);
+    }
+
+    public void attach(ModelInstanceImpl inst, AiProfile profile, String baseName,
+                       java.util.function.UnaryOperator<AiProfile> overlay) {
         var anim = inst.stateMachine;
         if (anim == null) return;
         AiProfile p = profile == null ? profile("default") : profile;
@@ -249,6 +272,8 @@ public final class AiManager implements Listener {
         inst.aiController = c;
         controllers.put(inst.instanceId(), c);
         boundProfiles.put(inst.instanceId(), p);
+        if (baseName != null && overlay != null) profileOverlays.put(inst.instanceId(), new ProfileOverlay(baseName, overlay));
+        else profileOverlays.remove(inst.instanceId());
         controlled.put(inst.instanceId(), inst);
         // 登记阵营：档案可在运行期被 mobs/*.yml 热改覆盖，只在 attach 时绑定一次
         // 会让「改了配置的旧实例」与「新生成的实例」行为不一致
@@ -432,10 +457,13 @@ public final class AiManager implements Listener {
         if (skills != null) skills.forget(instanceId);
         dev.helstera.ai.skill.SkillExtras.forget(instanceId);
         boundProfiles.remove(instanceId);
+        profileOverlays.remove(instanceId);
     }
 
     public void start(int decisionTicks) {
         stop();
+        dev.helstera.api.behavior.Targeters.threatProvider(threatTargeterProvider);
+        installConditionalTargeterProvider();
         task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (skills != null) skills.tickCasts();
             for (var entry : controllers.entrySet()) {
@@ -564,8 +592,10 @@ public final class AiManager implements Listener {
         }
         controllers.clear();
         boundProfiles.clear();
+        profileOverlays.clear();
         controlled.clear();
-        dev.helstera.api.behavior.Targeters.conditionProvider(null);
+        dev.helstera.api.behavior.Targeters.clearThreatProvider(threatTargeterProvider);
+        dev.helstera.api.behavior.Targeters.clearConditionProvider(conditionalTargeterProvider);
     }
 
     public int activeCount() {
@@ -746,7 +776,7 @@ public final class AiManager implements Listener {
      */
     private java.util.function.Consumer<ModelSpawnEvent> bossBarSpawnListener;
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDeath(EntityDeathEvent e) {
         ModelInstanceImpl inst = findByEntity(e.getEntity());
         if (inst == null) return;

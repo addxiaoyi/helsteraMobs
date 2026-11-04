@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.Set;
 
 /** Parsed, lossless boundary model for one MythicMobs drop entry. */
 public record MythicDropSpec(
@@ -20,6 +21,9 @@ public record MythicDropSpec(
         Object source,
         boolean external) {
 
+    private static final java.util.regex.Pattern DECIMAL_CHANCE = java.util.regex.Pattern.compile(
+            "[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?");
+
     public MythicDropSpec {
         conditions = List.copyOf(conditions == null ? List.of() : conditions);
     }
@@ -28,28 +32,82 @@ public record MythicDropSpec(
         return table != null && !table.isBlank();
     }
 
-    /** Returns the safe runtime projection, or an empty map for external entries. */
+    /** Returns the safe runtime projection, or an empty map for unsupported entries. */
     public Map<String, Object> runtimeEntry() {
         if (external || (item == null && !isTable())) return Map.of();
+        if (isTable() && (amountMin != 1 || amountMax != 1)) return Map.of();
+        if (isTable()) {
+            int dot = table.indexOf('.');
+            String identifier = dot > 0 ? table.substring(dot + 1) : table;
+            if (!identifier.matches("(?s).*[A-Za-z0-9].*")) return Map.of();
+        }
+        if (item != null && Set.of("exp", "xp", "experience").contains(item.toLowerCase(Locale.ROOT))) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("item", "exp");
+            out.put("amount-min", amountMin);
+            out.put("amount-max", amountMax);
+            out.put("chance", chance);
+            if (chanceExpression != null && !chanceExpression.isBlank()) {
+                out.put("chance-expression", chanceExpression);
+            }
+            if (!conditions.isEmpty()) {
+                List<String> translated = new ArrayList<>();
+                List<String> unmapped = new ArrayList<>();
+                MmConditions.translateAll(conditions, translated, unmapped);
+                if (!unmapped.isEmpty()) return Map.of();
+                out.put("conditions", translated);
+            }
+            return Map.copyOf(out);
+        }
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put(isTable() ? "table" : "item", isTable() ? table : item);
+        out.put(isTable() ? "table" : "item", isTable() ? MythicMobsImporter.normalizeId(table) : item);
         out.put("amount-min", amountMin);
         out.put("amount-max", amountMax);
         out.put("chance", chance);
         if (chanceExpression != null && !chanceExpression.isBlank()) {
             out.put("chance-expression", chanceExpression);
         }
-        if (!conditions.isEmpty()) out.put("conditions", MmConditions.translateOnly(conditions));
+        if (!conditions.isEmpty()) {
+            List<String> translated = new ArrayList<>();
+            List<String> unmapped = new ArrayList<>();
+            MmConditions.translateAll(conditions, translated, unmapped);
+            if (!unmapped.isEmpty()) return Map.of();
+            out.put("conditions", translated);
+        }
         return Map.copyOf(out);
     }
 
     public static MythicDropSpec parse(Object raw) {
+        if (raw instanceof MythicDropSpec spec) return spec;
         if (raw instanceof Map<?, ?> map) return parseMap(map, raw);
         if (raw == null) return null;
         return parseText(String.valueOf(raw), raw);
     }
 
     private static MythicDropSpec parseMap(Map<?, ?> map, Object source) {
+        Set<String> recognized = Set.of("item", "Item", "type", "Type", "table", "Table",
+                "drop-table", "DropTable", "amount-min", "amountMin", "amount", "amount-max", "amountMax",
+                "chance", "Chance", "chance-expression", "chanceExpression", "dynamic-chance", "dynamicChance",
+                "conditions", "Conditions", "drop-if", "dropIf", "DropIf", "no-drop-if", "noDropIf", "NoDropIf");
+        if (!recognized.containsAll(map.keySet())) return null;
+        for (List<String> aliases : List.of(
+                List.of("item", "Item", "type", "Type", "table", "Table", "drop-table", "DropTable"),
+                List.of("amount-min", "amountMin", "amount"), List.of("amount-max", "amountMax"),
+                List.of("chance", "Chance"),
+                List.of("chance-expression", "chanceExpression", "dynamic-chance", "dynamicChance"))) {
+            int present = 0;
+            for (String key : aliases) {
+                if (!map.containsKey(key)) continue;
+                Object value = map.get(key);
+                if (!(value instanceof String || value instanceof Number) || String.valueOf(value).isBlank()) return null;
+                present++;
+            }
+            if (present > 1) return null;
+        }
+        for (String key : List.of("conditions", "Conditions", "drop-if", "dropIf", "DropIf",
+                "no-drop-if", "noDropIf", "NoDropIf")) {
+            if (map.containsKey(key) && !validConditionInput(map.get(key))) return null;
+        }
         String item = text(map, "item", "Item", "type", "Type");
         String table = text(map, "table", "Table", "drop-table", "DropTable");
         int min = integer(map, 1, "amount-min", "amountMin", "amount");
@@ -60,16 +118,15 @@ public record MythicDropSpec(
         // 以前只读 conditions，这两种写法会被静默忽略——条目变成无条件必掉，
         // 而配置看上去完全正常。前者与 conditions 同义合并，后者取反后并入，
         // 保证「命中即不掉」的语义在运行时仍然是同一个条件求值器判定的。
-        List<String> conditions = new ArrayList<>(list(map.get("conditions")));
-        for (String dropIf : list(firstOf(map, "drop-if", "dropIf", "DropIf"))) {
-            if (dropIf == null || dropIf.isBlank()) continue;
-            conditions.add(stripPrefix(dropIf.trim()));
+        List<String> conditions = new ArrayList<>();
+        for (String key : List.of("conditions", "Conditions", "drop-if", "dropIf", "DropIf")) {
+            for (String dropIf : list(map.get(key))) conditions.add(stripPrefix(dropIf.trim()));
         }
-        for (String veto : list(firstOf(map, "no-drop-if", "noDropIf", "NoDropIf"))) {
-            if (veto == null || veto.isBlank()) continue;
-            String trimmed = stripPrefix(veto.trim());
-            // 双重否定就地抵消：no-drop-if: "!raining" 等价于 drop-if: "raining"
-            conditions.add(trimmed.startsWith("!") ? trimmed.substring(1).trim() : "!" + trimmed);
+        for (String key : List.of("no-drop-if", "noDropIf", "NoDropIf")) {
+            for (String veto : list(map.get(key))) {
+                String trimmed = stripPrefix(veto.trim());
+                conditions.add(trimmed.startsWith("!") ? trimmed.substring(1).trim() : "!" + trimmed);
+            }
         }
         return finish(item, table, min, max, chance, expression, conditions, source);
     }
@@ -94,18 +151,27 @@ public record MythicDropSpec(
         int max = 1;
         double chance = 1.0;
         if (parts.length > 1) {
-            int dash = parts[1].indexOf('-');
             try {
-                min = Integer.parseInt(dash > 0 ? parts[1].substring(0, dash) : parts[1]);
-                max = Integer.parseInt(dash > 0 ? parts[1].substring(dash + 1) : parts[1]);
+                String amount = parts[1].trim();
+                java.util.regex.Matcher range = java.util.regex.Pattern
+                        .compile("^(\\d+)(?:-(\\d+)|to(\\d+))$", java.util.regex.Pattern.CASE_INSENSITIVE)
+                        .matcher(amount);
+                if (range.matches()) {
+                    min = Integer.parseInt(range.group(1));
+                    int upperExclusive = Integer.parseInt(range.group(2) == null
+                            ? range.group(3) : range.group(2));
+                    max = upperExclusive - 1;
+                } else {
+                    min = Integer.parseInt(amount);
+                    max = min;
+                }
             } catch (NumberFormatException ignored) {
                 return null;
             }
         }
         if (parts.length > 2) {
             try {
-                chance = Double.parseDouble(parts[2].replace("%", ""));
-                if (parts[2].contains("%") || chance > 1) chance /= 100.0;
+                chance = parseChance(parts[2]);
             } catch (NumberFormatException ignored) {
                 return null;
             }
@@ -117,10 +183,11 @@ public record MythicDropSpec(
             if (token.startsWith("?")) {
                 if (pending != null) conditions.add(pending.toString().trim());
                 String condition = token.substring(1).trim();
-                pending = condition.isBlank() ? null : new StringBuilder(condition);
+                if (condition.isBlank()) return null;
+                pending = new StringBuilder(condition);
             } else if (pending != null) {
                 pending.append(' ').append(token);
-            }
+            } else return null;
         }
         if (pending != null) conditions.add(pending.toString().trim());
         return finish(parts[0], null, min, max, chance, null, conditions, source);
@@ -135,15 +202,6 @@ public record MythicDropSpec(
                 && !token.toLowerCase(Locale.ROOT).startsWith("minecraft:");
         return new MythicDropSpec(item, table, min, max, chance, chanceExpression,
                 conditions, source, external);
-    }
-
-    /** 按别名顺序取第一个非空值：Mythic 的键名大小写混杂，逐个 text() 会漏掉组合。 */
-    private static Object firstOf(Map<?, ?> map, String... keys) {
-        for (String key : keys) {
-            Object value = map.get(key);
-            if (value != null && !String.valueOf(value).isBlank()) return value;
-        }
-        return null;
     }
 
     private static String text(Map<?, ?> map, String... keys) {        for (String key : keys) {
@@ -164,12 +222,34 @@ public record MythicDropSpec(
         String value = text(map, keys);
         if (value == null) return fallback;
         try {
-            double parsed = Double.parseDouble(value.replace("%", ""));
-            return value.contains("%") || parsed > 1 ? parsed / 100.0 : parsed;
+            return parseChance(value);
         } catch (NumberFormatException ignored) { return Double.NaN; }
+    }
+
+    private static double parseChance(String raw) {
+        String value = raw.trim();
+        boolean percent = value.endsWith("%");
+        if (percent) value = value.substring(0, value.length() - 1);
+        if (!DECIMAL_CHANCE.matcher(value).matches()) throw new NumberFormatException("invalid chance");
+        double parsed = Double.parseDouble(value);
+        return percent || parsed > 1 ? parsed / 100.0 : parsed;
     }
 
     private static List<String> list(Object value) {
         return ConditionListParser.parse(value);
+    }
+
+    private static boolean validConditionInput(Object raw) {
+        if (raw == null) return false;
+        List<?> values = raw instanceof List<?> list ? list : List.of(raw);
+        for (Object value : values) {
+            if (!(value instanceof String text)) return false;
+            List<String> parsed = ConditionListParser.parseFailClosed(text);
+            if (parsed.isEmpty() || parsed.contains(ConditionListParser.INVALID_CONDITION)) return false;
+            for (String condition : parsed) {
+                if (stripPrefix(condition.trim()).isBlank()) return false;
+            }
+        }
+        return true;
     }
 }

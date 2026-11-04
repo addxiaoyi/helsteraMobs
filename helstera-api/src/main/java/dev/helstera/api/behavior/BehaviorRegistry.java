@@ -38,6 +38,14 @@ public interface BehaviorRegistry {
     boolean testCondition(String name, BehaviorContext ctx);
 
     /**
+     * Evaluate a condition for composition, propagating failures. Registries
+     * must override this method to support composite conditions safely.
+     */
+    default boolean testConditionForComposition(String name, BehaviorContext ctx) {
+        throw new UnsupportedOperationException("Condition composition is not supported by this registry");
+    }
+
+    /**
      * 执行命名动作。动作不存在或抛异常时静默忽略。
      *
      * @return 是否实际执行了动作

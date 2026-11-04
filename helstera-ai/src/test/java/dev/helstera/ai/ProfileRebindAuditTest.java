@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.*;
 
 /**
  * 档案热重载换绑的回归测试。
@@ -29,6 +30,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 最想消灭的缺陷类型，而它无法靠行为测试发现。</p>
  */
 class ProfileRebindAuditTest {
+
+    @Test
+    void reloadReappliesMobOverlayToFreshProfile() {
+        var manager = new AiManager(null, null, mock(dev.helstera.api.event.HelsteraEventBus.class));
+        var first = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                "boss:\n  damage-modifiers:\n    FIRE: 0.5\n  sight-radius: 10\n"));
+        var second = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                "boss:\n  damage-modifiers:\n    FIRE: 0.25\n  sight-radius: 20\n"));
+        var inst = mock(dev.helstera.runtime.instance.ModelInstanceImpl.class);
+        inst.stateMachine = mock(dev.helstera.runtime.animation.EntityAnimationStateMachine.class);
+        when(inst.instanceId()).thenReturn(7);
+        when(inst.boundEntityId()).thenReturn(java.util.Optional.empty());
+        java.util.function.UnaryOperator<AiProfile> overlay = base -> {
+            var result = new AiProfile(base);
+            result.sightRadius = 42;
+            return result;
+        };
+        try {
+            manager.loadProfiles(first);
+            manager.attach(inst, overlay.apply(manager.profile("boss")), "boss", overlay);
+            assertEquals(5, manager.profileOf(7).immunityTable().evaluate("FIRE", 10).damage(), 1e-9);
+            var controller = inst.aiController;
+            manager.loadProfiles(second);
+            assertEquals(2.5, manager.profileOf(7).immunityTable().evaluate("FIRE", 10).damage(), 1e-9);
+            assertEquals(42, manager.profileOf(7).sightRadius, 1e-9);
+            assertTrue(controller == inst.aiController);
+        } finally {
+            manager.stop();
+        }
+    }
 
     private static final Path SRC = Path.of("src", "main", "java", "dev", "helstera", "ai");
 

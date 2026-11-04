@@ -4242,7 +4242,7 @@ $('bSaveLoot').onclick = async () => {
       setOut($('lootOut'), '✓ ' + d.message + (d.version ? '\n备份版本: ' + d.version : ''));
       toast(d.message || '已成功保存', 'ok');
       await loadLoot();
-    } else { setOut($('lootOut'), '✗ ' + d.error); toast(d.error, 'err'); }
+    } else { const message = d.error || d.message || '保存失败'; setOut($('lootOut'), '✗ ' + message); toast(message, 'err'); }
   } catch (e) { toast('保存失败: ' + e.message, 'err'); }
 };
 
@@ -4365,7 +4365,7 @@ async function loadSpawners() {
 $('bSpReload').onclick = async () => {
   try {
     const d = await api('/api/spawners/reload', { method: 'POST', body: '{}' });
-    toast(d.message || '刷怪点已重载', 'ok');
+    toast(d.message || (d.ok ? '刷怪点已重载' : '刷怪点重载失败'), d.ok ? 'ok' : 'err');
     await loadSpawners();
   } catch (e) { toast('重载失败: ' + e.message, 'err'); }
 };
@@ -4390,7 +4390,7 @@ $('bSaveSp').onclick = async () => {
       setOut($('spOut2'), '✓ ' + d.message + (d.version ? '\n备份版本: ' + d.version : ''));
       toast(d.message || '已保存', 'ok');
       await loadSpawners();
-    } else { setOut($('spOut2'), '✗ ' + d.error); toast(d.error, 'err'); }
+    } else { const message = d.error || d.message || '保存失败'; setOut($('spOut2'), '✗ ' + message); toast(message, 'err'); }
   } catch (e) { toast('保存失败: ' + e.message, 'err'); }
 };
 

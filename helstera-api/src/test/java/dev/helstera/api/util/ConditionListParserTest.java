@@ -8,6 +8,33 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ConditionListParserTest {
+    @Test
+    void preservesBooleanOrWhileSplittingSinglePipeLists() {
+        assertEquals(List.of("day || night", "raining", "(day || night) && raining"),
+                ConditionListParser.parse("day || night | raining; (day || night) && raining"));
+        assertEquals(List.of("day ||"), ConditionListParser.parseFailClosed("day ||"));
+    }
+
+    @Test
+    void failClosedParsingPreservesEmptyListElements() {
+        for (String input : List.of("day;", ";day", "day;;night", "day | | night")) {
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    ConditionListParser.parseFailClosed(input).contains(ConditionListParser.INVALID_CONDITION), input);
+        }
+        assertEquals(List.of("day", "night"), ConditionListParser.parse("day;;night"));
+    }
+
+    @Test
+    void failClosedParsingRejectsUnbalancedStructure() {
+        for (String input : List.of("night{", "night}", "night(", "night]", "name \"unfinished",
+                "check{[}]", "check{(])}")) {
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    ConditionListParser.parseFailClosed(input).contains(ConditionListParser.INVALID_CONDITION), input);
+        }
+        assertEquals(List.of("name \"valid\""), ConditionListParser.parseFailClosed("name \"valid\""));
+        assertEquals(List.of("check{value=[(ok)]}", "night"),
+                ConditionListParser.parseFailClosed("check{value=[(ok)]};night"));
+    }
 
     @Test
     @DisplayName("scalar conditions accept separators without losing range commas")

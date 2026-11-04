@@ -68,6 +68,9 @@ class ConfigConsumptionAuditTest {
         EXEMPT.put("SpawnerService.task", "BukkitTask 句柄，非配置");
         EXEMPT.put("SpawnerService.tickCounter", "共享节拍计数器，非配置");
         EXEMPT.put("SpawnerService.minInterval", "装载期派生值，非配置键");
+        EXEMPT.put("SpawnerService.fileLoadFailed", "Internal state guarding persistence after a failed file load");
+        EXEMPT.put("SpawnerService.preserveStateBackup", "Internal state protecting the backup after a failed state load");
+        EXEMPT.put("SpawnerService.stateLoadFailed", "Internal state preventing persistence after an unrecoverable state load");
         EXEMPT.put("SpawnerService.aliveCheck", "插件层注入的回调，非配置键");
         EXEMPT.put("SpawnerService.problems", "装载期告警列表，供命令与网页开发器");
         EXEMPT.put("SpawnerService.spawnWarningKeys", "Runtime warning deduplication avoids repeated tick log spam");

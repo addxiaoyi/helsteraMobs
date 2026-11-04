@@ -49,6 +49,7 @@ public final class SkillService {
     private final List<String> warnings = new ArrayList<>();
     /** 命名技能 -> 解析结果。reloadSkills 会重建，故每次 loadSkills 先清空。 */
     private final Map<String, SkillDef> defs = new LinkedHashMap<>();
+    private final ThreadLocal<Set<String>> evaluatingSkillConditions = ThreadLocal.withInitial(LinkedHashSet::new);
     /** 冷却记录："实例id|技能名" -> 上次放行时间（epoch 毫秒）。 */
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
     /** Runtime SetSkillCooldown overrides: "实例id|技能名" -> duration in milliseconds. */
@@ -59,6 +60,8 @@ public final class SkillService {
     private final Map<Integer, Long> executionGenerations = new ConcurrentHashMap<>();
     /** Number of delayed/repeated continuations still waiting for each instance. */
     private final Map<Integer, Integer> pendingScheduledActions = new ConcurrentHashMap<>();
+    /** In-flight action chains, invalidated if their instance is detached. */
+    private final Map<Integer, List<boolean[]>> inFlightActions = new HashMap<>();
     /** Per-instance SkillTree state retained across separate casts. */
     private final Map<Integer, dev.helstera.api.behavior.SkillTreeContext.Snapshot> persistedTrees =
             new ConcurrentHashMap<>();
@@ -90,6 +93,7 @@ public final class SkillService {
         public final List<String> require = new ArrayList<>();
         public final List<String> targetRequire = new ArrayList<>();
         public final List<String> triggerRequire = new ArrayList<>();
+        public boolean invalidCondition;
         /** 按序执行的已绑定动作键。 */
         public final List<String> actions = new ArrayList<>();
         /** 本技能直接调用的其它技能名。 */
@@ -140,10 +144,12 @@ public final class SkillService {
     private static final class QueuedSkill {
         final SkillDef def;
         final dev.helstera.api.behavior.BehaviorContext ctx;
+        final boolean restoreTree;
 
-        QueuedSkill(SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx) {
+        QueuedSkill(SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx, boolean restoreTree) {
             this.def = def;
             this.ctx = ctx;
+            this.restoreTree = restoreTree;
         }
     }
 
@@ -258,11 +264,30 @@ public final class SkillService {
         if (def == null) return null;
 
         List<CondTrace> trace = new ArrayList<>();
-        boolean allPass = true;
+        boolean allPass = !def.invalidCondition;
+        if (def.invalidCondition) trace.add(new CondTrace("invalid-condition", false));
         for (String condKey : def.require) {
             boolean ok = registry.testCondition(condKey, ctx);
             trace.add(new CondTrace(condKey, ok));
             if (!ok) allPass = false;
+        }
+        if (ctx == null) {
+            trace.add(new CondTrace("context", false));
+            allPass = false;
+        } else {
+            var filtered = filterTargetConditions(def.targetRequire, ctx, false);
+            if (!def.targetRequire.isEmpty()) {
+                boolean ok = filtered != null;
+                trace.add(new CondTrace("target-conditions", ok));
+                if (!ok) allPass = false;
+            }
+            if (!def.triggerRequire.isEmpty()) {
+                boolean ok = filtered != null
+                        && filtered.trigger().orElse(null) instanceof org.bukkit.entity.LivingEntity
+                        && conditionsPass(def.triggerRequire, triggerConditionContext(filtered));
+                trace.add(new CondTrace("trigger-conditions", ok));
+                if (!ok) allPass = false;
+            }
         }
         String previewCooldownKey = cooldownKey(def, ctx);
         boolean cooling = cooldownOverrides.getOrDefault(previewCooldownKey, def.cooldownMillis) > 0
@@ -280,6 +305,64 @@ public final class SkillService {
         List<String> parts = split(normalized);
         String name = canonicalConditionName(parts.get(0).toLowerCase(Locale.ROOT));
         List<String> args = new ArrayList<>(parts.subList(1, parts.size()));
+        if (name.startsWith("skill:")) {
+            String referenced = name.substring("skill:".length());
+            if (args.isEmpty() && !referenced.isBlank() && defs.containsKey(referenced)) return name;
+            warn("未知技能条件 \"" + spec + "\"");
+            return null;
+        }
+        if (Set.of("world-is", "weather-is", "time-is").contains(name)) {
+            if (args.size() != 1 || args.get(0).isBlank()) return null;
+            int open = spec.indexOf('{');
+            if (open >= 0) {
+                int close = spec.lastIndexOf('}');
+                if (close != spec.length() - 1 || close <= open
+                        || spec.indexOf('{', open + 1) >= 0 || spec.indexOf('}', open + 1) != close) return null;
+                String body = spec.substring(open + 1, close).trim();
+                if (body.indexOf(';') >= 0 || body.indexOf(',') >= 0) return null;
+                int equals = body.indexOf('=');
+                if (equals >= 0) {
+                    String key = body.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                    boolean validKey = key.equals("name") || key.equals("value")
+                            || (name.equals("world-is") && Set.of("world", "w").contains(key))
+                            || (name.equals("weather-is") && Set.of("weather", "type").contains(key))
+                            || (name.equals("time-is") && Set.of("time", "t").contains(key));
+                    if (!validKey || body.substring(equals + 1).isBlank()) return null;
+                }
+            }
+        }
+        if (!args.isEmpty() && Set.of("night", "raining", "thundering", "day", "daytime", "dawn",
+                "dusk", "sunset", "morning", "noon", "midnight", "clear", "sun", "sunny", "storm",
+                "thunderstorm", "is-living",
+                "is-player", "is-mob", "is-monster", "is-animal", "is-villager", "is-tameable", "is-raider",
+                "is-baby", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered",
+                "target-is-baby", "target-is-adult", "target-is-tamed", "target-is-sheared",
+                "target-is-saddled", "target-is-powered", "is-sneaking", "is-sprinting", "is-flying",
+                "is-climbing", "is-invisible", "is-glowing", "falling", "target-is-climbing",
+                "target-is-invisible", "target-is-glowing", "target-is-frozen",
+                "is-blocking", "is-gliding", "is-swimming", "in-water", "in-lava", "on-fire", "in-air",
+                "target-is-sneaking", "target-is-sprinting", "target-is-flying", "target-is-blocking",
+                "target-is-gliding", "target-is-swimming", "target-in-water", "target-in-lava",
+                "target-on-fire", "target-in-air", "target-is-player", "target-is-living", "target-is-mob",
+                "target-is-monster", "target-is-animal", "target-is-villager", "target-is-tameable",
+                "target-is-raider", "has-ai", "has-gravity", "is-silent", "is-dead", "is-alive", "is-valid",
+                "target-has-ai", "target-has-gravity", "target-is-silent", "target-dead", "target-is-alive",
+                "target-is-valid")
+                .contains(name)) return null;
+        if ("last-signal".equals(name) && spec.indexOf('{') >= 0) {
+            try {
+                int open = spec.indexOf('{');
+                int close = spec.lastIndexOf('}');
+                if (close < open || spec.substring(open + 1, close).indexOf(';') >= 0
+                        || spec.substring(open + 1, close).indexOf(',') >= 0) return null;
+                MythicSkillSpec parsed = MythicSkillSpec.parse(spec);
+                if (parsed.arguments().size() + parsed.positional().size() > 1
+                        || parsed.arguments().keySet().stream().anyMatch(key -> !key.equals("signal") && !key.equals("s"))
+                        || parsed.arguments().values().stream().anyMatch(String::isBlank)) return null;
+            } catch (IllegalArgumentException ex) {
+                return null;
+            }
+        }
         if (isVariableCondition(name) && spec.indexOf('{') >= 0) {
             try {
                 MythicSkillSpec parsed = MythicSkillSpec.parse(spec);
@@ -304,6 +387,7 @@ public final class SkillService {
             try {
                 registry.registerCondition(key, f.create(args));
             } catch (RuntimeException e) {
+                bound.remove("c:" + key);
                 warn("条件 \"" + key + "\" 参数非法: " + e.getMessage());
                 return null;
             }
@@ -318,6 +402,10 @@ public final class SkillService {
         List<String> children = new ArrayList<>();
         if (isWrappedCondition(spec)) {
             return bindCondition(spec.substring(1, spec.length() - 1).trim());
+        } else if (topLevelCompositeOperator(spec) != null) {
+            String delimiter = topLevelCompositeOperator(spec);
+            operator = delimiter.equals("&&") ? "all" : "any";
+            children = splitCompositeChildren(spec, delimiter);
         } else if (spec.startsWith("!")) {
             negate = true;
             operator = "not";
@@ -337,14 +425,8 @@ public final class SkillService {
             operator = "not";
             negate = true;
             children = compositeChildren(spec);
-        } else if (spec.contains("&&") || spec.contains("||")) {
-            String delimiter = topLevelCompositeOperator(spec);
-            if (delimiter != null) {
-                operator = delimiter.equals("&&") ? "all" : "any";
-                children = splitCompositeChildren(spec, delimiter);
-            }
         }
-        if (operator == null || children.isEmpty()) return null;
+        if (operator == null || children.isEmpty() || (negate && children.size() != 1)) return null;
         List<String> keys = new ArrayList<>();
         for (String child : children) {
             String key = bindCondition(child.trim());
@@ -358,11 +440,11 @@ public final class SkillService {
             boolean capturedNegate = negate;
             registry.registerCondition(key, ctx -> {
                 if (capturedNegate || capturedOperator.equals("not")) {
-                    return !registry.testCondition(captured.get(0), ctx);
+                    return !registry.testConditionForComposition(captured.get(0), ctx);
                 }
                 boolean all = capturedOperator.equals("all");
                 for (String child : captured) {
-                    boolean passed = registry.testCondition(child, ctx);
+                    boolean passed = registry.testConditionForComposition(child, ctx);
                     if (all && !passed) return false;
                     if (!all && passed) return true;
                 }
@@ -375,7 +457,14 @@ public final class SkillService {
     private static List<String> compositeChildren(String spec) {
         int open = spec.indexOf('{');
         int close = spec.lastIndexOf('}');
-        if (open < 0 || close <= open) return List.of();
+        if (open < 0 || close != spec.length() - 1 || close <= open) return List.of();
+        int depth = 0;
+        for (int i = open; i <= close; i++) {
+            char ch = spec.charAt(i);
+            if (ch == '{') depth++;
+            else if (ch == '}' && (--depth < 0 || (depth == 0 && i != close))) return List.of();
+        }
+        if (depth != 0) return List.of();
         String body = spec.substring(open + 1, close).trim();
         if (body.startsWith("conditions=")) body = body.substring("conditions=".length()).trim();
         String delimiter = topLevelCompositeOperator(body);
@@ -385,6 +474,7 @@ public final class SkillService {
 
     private static String topLevelCompositeOperator(String text) {
         int depth = 0;
+        int parentheses = 0;
         boolean hasAnd = false;
         for (int i = 0; i < text.length(); i++) {
             char current = text.charAt(i);
@@ -396,7 +486,9 @@ public final class SkillService {
                 depth = Math.max(0, depth - 1);
                 continue;
             }
-            if (depth != 0 || i + 1 >= text.length()) continue;
+            if (depth == 0 && current == '(') { parentheses++; continue; }
+            if (depth == 0 && current == ')') { parentheses--; continue; }
+            if (depth != 0 || parentheses != 0 || i + 1 >= text.length()) continue;
             String pair = text.substring(i, i + 2);
             if (pair.equals("||")) return "||";
             if (pair.equals("&&")) hasAnd = true;
@@ -421,6 +513,7 @@ public final class SkillService {
     private static List<String> splitCompositeChildren(String text, String delimiter) {
         List<String> children = new ArrayList<>();
         int depth = 0;
+        int parentheses = 0;
         int start = 0;
         for (int i = 0; i < text.length(); i++) {
             char current = text.charAt(i);
@@ -432,17 +525,21 @@ public final class SkillService {
                 depth = Math.max(0, depth - 1);
                 continue;
             }
-            boolean matches = depth == 0 && text.startsWith(delimiter, i);
-            if (!matches && delimiter.equals(";") && depth == 0 && current == '|') matches = true;
+            if (depth == 0 && current == '(') { parentheses++; continue; }
+            if (depth == 0 && current == ')') { parentheses--; continue; }
+            boolean matches = depth == 0 && parentheses == 0 && text.startsWith(delimiter, i);
+            if (!matches && delimiter.equals(";") && depth == 0 && parentheses == 0 && current == '|') matches = true;
             if (!matches) continue;
             String child = text.substring(start, i).trim();
-            if (!child.isEmpty()) children.add(child);
+            if (child.isEmpty()) return List.of();
+            children.add(child);
             start = i + delimiter.length();
             if (delimiter.equals(";") && current == '|') start = i + 1;
             i = start - 1;
         }
         String tail = text.substring(start).trim();
-        if (!tail.isEmpty()) children.add(tail);
+        if (tail.isEmpty()) return List.of();
+        children.add(tail);
         return List.copyOf(children);
     }
 
@@ -463,11 +560,15 @@ public final class SkillService {
         }
         MythicSkillSpec parsed = null;
         if (spec.indexOf('{') >= 0 || spec.contains("@") || spec.contains("?")
-                || spec.contains("~on") || spec.matches(".*\\d+(?:\\.\\d+)?%.*")) {
+                || spec.contains("~") || spec.contains("%")) {
             try {
                 parsed = MythicSkillSpec.parse(spec);
             } catch (IllegalArgumentException e) {
                 warn("invalid Mythic skill line \"" + spec + "\": " + e.getMessage());
+                return null;
+            }
+            if (parsed.trigger() != null) {
+                warn("event trigger requires event routing in skill line \"" + spec + "\"");
                 return null;
             }
             List<String> mechanicArgs = new ArrayList<>(parsed.positional());
@@ -493,20 +594,32 @@ public final class SkillService {
             }
         }
 
-        String ref = parseSkillRef(spec);
-        if (ref != null) return bindCast(ref);
-        if ("random-skill".equals(name)) return bindRandomSkill(args);
-
         Double chance = parsed == null ? null : parsed.chance();
         String targeterSpec = parsed == null ? null : parsed.targeter();
-        long delayTicks = parsed == null ? 0 : parseExecutionTicks(parsed.arguments().get("delay"));
-        int repeat = parsed == null ? 0 : parseExecutionCount(parsed.arguments().get("repeat"));
-        long repeatInterval = parsed == null ? 0 : parseExecutionTicks(parsed.arguments().getOrDefault(
-                "repeatinterval", parsed.arguments().get("repeat-interval")));
-        String actionName = targeterSpec == null ? name : targetableMechanicName(name);
+        long delayTicks;
+        int repeat;
+        long repeatInterval;
+        try {
+            delayTicks = parsed == null ? 0 : parseExecutionTicks(parsed.arguments().get("delay"));
+            repeat = parsed == null ? 0 : parseExecutionCount(parsed.arguments().get("repeat"));
+            repeatInterval = parsed == null ? 0 : parseExecutionTicks(parsed.arguments().getOrDefault(
+                    "repeatinterval", parsed.arguments().get("repeat-interval")));
+            if (repeat == Integer.MAX_VALUE && repeatInterval > 0) {
+                throw new IllegalArgumentException("repeat count overflows execution count");
+            }
+        } catch (IllegalArgumentException e) {
+            warn("invalid execution options in \"" + spec + "\": " + e.getMessage());
+            return null;
+        }
+        String ref = parseSkillRef(spec);
+        String nestedAction = ref != null ? bindCast(ref)
+                : "random-skill".equals(name) ? bindRandomSkill(args) : null;
+        if ("random-skill".equals(name) && nestedAction == null) return null;
+        String actionName = nestedAction != null ? nestedAction
+                : targeterSpec == null ? name : targetableMechanicName(name);
         SkillCatalog.ActionFactory factory = actionFactories.get(actionName);
-        boolean customRegisteredAction = false;
-        if (factory == null && targeterSpec != null && registry.hasAction(name)) {
+        boolean customRegisteredAction = nestedAction != null;
+        if (nestedAction == null && factory == null && targeterSpec != null && registry.hasAction(name)) {
             actionName = name;
             customRegisteredAction = true;
         }
@@ -542,9 +655,20 @@ public final class SkillService {
         if (bound.add("a:" + key)) {
             try {
                 final String registeredActionName = actionName;
-                Consumer<dev.helstera.api.behavior.BehaviorContext> action = factory != null
-                        ? factory.create(factoryArgs)
-                        : ctx -> registry.runAction(registeredActionName, ctx);
+                Consumer<dev.helstera.api.behavior.BehaviorContext> action;
+                if ("start-cast".equals(actionName) && factory != null) {
+                    String skill = factoryArgs.isEmpty() ? "" : factoryArgs.get(0);
+                    action = ctx -> {
+                        if (ctx != null && ctx.instanceValid() && !skill.isBlank()) startCast(skill, ctx);
+                    };
+                } else if ("cancel-cast".equals(actionName) && factory != null) {
+                    action = ctx -> {
+                        if (ctx != null && ctx.instanceValid()) cancelCast(ctx.instance().instanceId());
+                    };
+                } else {
+                    action = factory != null ? factory.create(factoryArgs)
+                            : ctx -> registry.runAction(registeredActionName, ctx);
+                }
                 Double requiredChance = chance;
                 long requiredDelay = delayTicks;
                 int requiredRepeat = repeat;
@@ -565,6 +689,7 @@ public final class SkillService {
                     invokeTimed(guarded, ctx, requiredDelay, requiredRepeat, requiredRepeatInterval);
                 });
             } catch (RuntimeException e) {
+                bound.remove("a:" + key);
                 warn("���� \"" + key + "\" �����Ƿ�: " + e.getMessage());
                 return null;
             }
@@ -591,6 +716,26 @@ public final class SkillService {
                                 String targeterSpec,
                                 dev.helstera.api.behavior.BehaviorContext ctx) {
         if (ctx == null) return;
+        String targeterName = targeterSpec.trim();
+        if (targeterName.startsWith("@")) targeterName = targeterName.substring(1);
+        int argumentStart = targeterName.indexOf('{');
+        if (argumentStart >= 0) targeterName = targeterName.substring(0, argumentStart);
+        if (dev.helstera.api.behavior.Targeters.isLocationName(targeterName.trim())
+                || dev.helstera.api.behavior.Targeters.isVariableLocationName(targeterName.trim())) {
+            dev.helstera.api.behavior.Targeters.resolveLocation(targeterSpec, ctx)
+                    .filter(location -> location.getWorld() != null)
+                    .ifPresent(location -> action.accept(ctx.withLocationTarget(location)));
+            return;
+        }
+        if (PinTargeter.recognizes(targeterSpec)) {
+            List<org.bukkit.Location> locations = PinTargeter.select(
+                    targeterSpec, SkillExtras.pinRegistry());
+            if (locations == null) return;
+            for (org.bukkit.Location location : locations) {
+                action.accept(ctx.withLocationTarget(location));
+            }
+            return;
+        }
         List<org.bukkit.entity.LivingEntity> candidates = ctx.skillTree()
                 .map(dev.helstera.api.behavior.SkillTreeContext::targets)
                 .orElse(ctx.targets());
@@ -640,23 +785,30 @@ public final class SkillService {
     }
 
     private static long parseExecutionTicks(String raw) {
-        if (raw == null || raw.isBlank()) return 0;
+        if (raw == null) return 0;
         String value = raw.trim().toLowerCase(Locale.ROOT);
         try {
-            if (value.endsWith("ms")) return Math.max(0, (long) Math.ceil(Double.parseDouble(value.substring(0, value.length() - 2)) / 50.0));
-            if (value.endsWith("s")) return Math.max(0, (long) Math.ceil(Double.parseDouble(value.substring(0, value.length() - 1)) * 20.0));
-            return Math.max(0, (long) Math.ceil(Double.parseDouble(value)));
-        } catch (NumberFormatException ignored) {
-            return 0;
+            double ticks;
+            if (value.endsWith("ms")) ticks = Double.parseDouble(value.substring(0, value.length() - 2)) / 50.0;
+            else if (value.endsWith("s")) ticks = Double.parseDouble(value.substring(0, value.length() - 1)) * 20.0;
+            else ticks = Double.parseDouble(value);
+            if (!Double.isFinite(ticks) || ticks < 0 || ticks >= Long.MAX_VALUE) {
+                throw new NumberFormatException();
+            }
+            return (long) Math.ceil(ticks);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("invalid execution duration: " + raw, e);
         }
     }
 
     private static int parseExecutionCount(String raw) {
-        if (raw == null || raw.isBlank()) return 0;
+        if (raw == null) return 0;
         try {
-            return Math.max(0, Integer.parseInt(raw.trim()));
-        } catch (NumberFormatException ignored) {
-            return 0;
+            int count = Integer.parseInt(raw.trim());
+            if (count < 0) throw new NumberFormatException();
+            return count;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("invalid repeat count: " + raw, e);
         }
     }
 
@@ -674,24 +826,22 @@ public final class SkillService {
                                      dev.helstera.api.behavior.BehaviorContext ctx,
                                      long delayTicks, int remaining, long intervalTicks,
                                      int instanceId, long generation) {
+        boolean scheduled = delayTicks != 0 || remaining != 1;
         Runnable run = () -> {
-            pendingScheduledActions.computeIfPresent(instanceId, (key, count) ->
-                    count <= 1 ? null : count - 1);
-            if (executionGenerations.getOrDefault(instanceId, 0L) != generation) {
-                cleanupExecutionGeneration(instanceId);
-                return;
-            }
             try {
+                if (executionGenerations.getOrDefault(instanceId, 0L) != generation) return;
                 action.accept(ctx);
                 if (remaining > 1) {
                     scheduleInvocation(action, ctx, intervalTicks, remaining - 1, intervalTicks,
                             instanceId, generation);
                 }
             } finally {
+                if (scheduled) pendingScheduledActions.computeIfPresent(instanceId, (key, count) ->
+                        count <= 1 ? null : count - 1);
                 cleanupExecutionGeneration(instanceId);
             }
         };
-        if (delayTicks == 0 && remaining == 1) {
+        if (!scheduled) {
             run.run();
             return;
         }
@@ -746,6 +896,7 @@ public final class SkillService {
             case "remove-tag" -> "remove-tag-targets";
             case "equip", "set-item" -> mechanic + "-targets";
             case "drop-item" -> "drop-item-targets";
+            case "drop-items" -> "drop-items-targets";
             case "set-ai" -> "set-ai-targets";
             case "set-gravity" -> "set-gravity-targets";
             case "set-silent" -> "set-silent-targets";
@@ -766,6 +917,8 @@ public final class SkillService {
     }
 
     public void loadSkills(ConfigurationSection root) {
+        inFlightActions.values().forEach(chains -> chains.forEach(chain -> chain[0] = false));
+        inFlightActions.clear();
         // Invalidate old delayed continuations before replacing definitions.
         // Clearing the generation map would make an old task with generation 0
         // look current again after reload, so keep its tombstone until every
@@ -796,10 +949,12 @@ public final class SkillService {
         if (root == null) return;
 
         // 1) 解析原始定义
+        Map<String, ConfigurationSection> skillSections = new LinkedHashMap<>();
         for (String skillName : root.getKeys(false)) {
             ConfigurationSection s = root.getConfigurationSection(skillName);
             if (s == null) continue;
             String key = skillName.toLowerCase(Locale.ROOT);
+            skillSections.put(key, s);
             SkillDef def = new SkillDef(key);
             def.cooldownMillis = parseCooldownMillis(s.get("cooldown"));
             def.castMillis = parseCooldownMillis(s.get("cast-duration"));
@@ -829,27 +984,27 @@ public final class SkillService {
 
         // 3) 绑定内部条件/动作
         for (SkillDef def : defs.values()) {
-            ConfigurationSection s = root.getConfigurationSection(def.name);
+            ConfigurationSection s = skillSections.get(def.name);
             if (s == null) continue;
-            for (String spec : stringOrList(s, "require")) {
+            for (String spec : conditionSpecs(s, "require")) {
                 String k = bindCondition(spec);
-                if (k != null) def.require.add(k);
+                if (k != null) def.require.add(k); else def.invalidCondition = true;
             }
-            for (String spec : stringOrList(s, "target-conditions")) {
+            for (String spec : conditionSpecs(s, "target-conditions")) {
                 String k = bindCondition(spec);
-                if (k != null) def.targetRequire.add(k);
+                if (k != null) def.targetRequire.add(k); else def.invalidCondition = true;
             }
-            for (String spec : stringOrList(s, "trigger-conditions")) {
+            for (String spec : conditionSpecs(s, "trigger-conditions")) {
                 String k = bindCondition(spec);
-                if (k != null) def.triggerRequire.add(k);
+                if (k != null) def.triggerRequire.add(k); else def.invalidCondition = true;
             }
-            for (String spec : stringOrList(s, "TargetConditions")) {
+            for (String spec : conditionSpecs(s, "TargetConditions")) {
                 String k = bindCondition(spec);
-                if (k != null) def.targetRequire.add(k);
+                if (k != null) def.targetRequire.add(k); else def.invalidCondition = true;
             }
-            for (String spec : stringOrList(s, "TriggerConditions")) {
+            for (String spec : conditionSpecs(s, "TriggerConditions")) {
                 String k = bindCondition(spec);
-                if (k != null) def.triggerRequire.add(k);
+                if (k != null) def.triggerRequire.add(k); else def.invalidCondition = true;
             }
             for (String spec : stringOrList(s, "on-decision")) {
                 String k = bindAction(spec);
@@ -872,16 +1027,31 @@ public final class SkillService {
             if (bound.add("c:" + key)) {
                 List<String> captured = List.copyOf(def.require);
                 registry.registerCondition(key, ctx -> {
-                    for (String k : captured) {
-                        if (!registry.testCondition(k, ctx)) return false;
+                    if (defs.get(def.name) != def) throw new IllegalStateException("Stale skill: " + def.name);
+                    if (def.invalidCondition) throw new IllegalStateException("Invalid conditions in skill: " + def.name);
+                    Set<String> evaluating = evaluatingSkillConditions.get();
+                    if (!evaluating.add(def.name)) throw new IllegalStateException("Cyclic skill condition: " + def.name);
+                    try {
+                        for (String k : captured) {
+                            boolean passed = registry.testConditionForComposition(k, ctx);
+                            if (defs.get(def.name) != def) throw new IllegalStateException("Stale skill: " + def.name);
+                            if (!passed) return false;
+                        }
+                        return true;
+                    } finally {
+                        evaluating.remove(def.name);
+                        if (evaluating.isEmpty()) evaluatingSkillConditions.remove();
                     }
-                    return true;
                 });
             }
             if (bound.add("a:" + key)) {
                 List<String> captured = List.copyOf(def.actions);
                 registry.registerAction(key, ctx -> {
-                    for (String k : captured) registry.runAction(k, ctx);
+                    if (def.invalidCondition) return;
+                    for (String k : captured) {
+                        if (defs.get(def.name) != def) return;
+                        registry.runAction(k, ctx);
+                    }
                 });
             }
         }
@@ -938,6 +1108,19 @@ public final class SkillService {
 
     private static List<String> randomSkillRefs(String spec) {
         if (spec == null || spec.isBlank()) return List.of();
+        if (spec.indexOf('{') >= 0) {
+            try {
+                MythicSkillSpec parsed = MythicSkillSpec.parse(spec);
+                if (!"random-skill".equals(canonicalActionName(parsed.mechanic()))) return List.of();
+                List<String> candidates = new ArrayList<>(parsed.positional());
+                parsed.arguments().forEach((key, value) -> {
+                    if (key.equals("skill") || key.equals("skills")) candidates.add(value);
+                });
+                return normalizeRandomSkillArgs(candidates);
+            } catch (IllegalArgumentException e) {
+                return List.of();
+            }
+        }
         String normalized = spec.indexOf('{') >= 0 ? SpecSyntax.normalize(spec) : spec.trim();
         List<String> parts = split(normalized);
         if (parts.isEmpty() || !"random-skill".equals(canonicalActionName(
@@ -977,9 +1160,12 @@ public final class SkillService {
         if (skillName == null || skillName.isBlank()) return false;
         SkillDef def = defs.get(skillName.toLowerCase(Locale.ROOT));
         if (def == null) return false;
+        if (def.invalidCondition) return false;
         if (!conditionsPass(def.require, ctx)) return false;
         ctx = filterTargetConditions(def.targetRequire, ctx);
-        if (ctx == null || !conditionsPass(def.triggerRequire, triggerConditionContext(ctx))) return false;
+        if (ctx == null || (!def.triggerRequire.isEmpty()
+                && (!(ctx.trigger().orElse(null) instanceof org.bukkit.entity.LivingEntity)
+                || !conditionsPass(def.triggerRequire, triggerConditionContext(ctx))))) return false;
 
         int[] d = depth.get();
         if (d[0] >= MAX_DEPTH) {
@@ -990,17 +1176,8 @@ public final class SkillService {
         long now = System.currentTimeMillis();
         String cdKey = cooldownKey(def, ctx);
         if (!cooldownReady(def, cdKey, now)) return false;
-        if (cooldownOverrides.getOrDefault(cdKey, def.cooldownMillis) > 0) cooldowns.put(cdKey, now);
-
-        // 队列门控：同一实例有技能正在执行时入队
-        int instId = ctx != null && ctx.instance() != null ? ctx.instance().instanceId() : -1;
-        if (instId >= 0 && isInstanceBusy(instId)) {
-            enqueueSkill(instId, def, ctx);
-            return true;
-        }
-
-        d[0]++;
         var tree = ctx == null ? null : ctx.skillTree().orElse(null);
+        boolean restoreQueuedTree = tree == null;
         if (tree == null && ctx != null) {
             int treeInstanceId = ctx.instance() == null ? -1 : ctx.instance().instanceId();
             var saved = persistedTrees.get(treeInstanceId);
@@ -1023,10 +1200,19 @@ public final class SkillService {
         }
         if (!def.branch.isBlank()) {
             if (!tree.branchUnlocked(def.branch)) {
-                d[0]--;
                 return false;
             }
         }
+        if (cooldownOverrides.getOrDefault(cdKey, def.cooldownMillis) > 0) cooldowns.put(cdKey, now);
+
+        // 队列门控：同一实例有技能正在执行时入队
+        int instId = ctx.instance() != null ? ctx.instance().instanceId() : -1;
+        if (instId >= 0 && isInstanceBusy(instId)) {
+            enqueueSkill(instId, def, ctx, restoreQueuedTree);
+            return true;
+        }
+
+        d[0]++;
         if (def.castMillis > 0) {
             try {
                 beginCast(def, ctx);
@@ -1065,9 +1251,8 @@ public final class SkillService {
                 && origin.getWorld().equals(target.getWorld())) {
             distance = origin.distance(target.getLocation());
         }
-        org.bukkit.entity.Player player = target instanceof org.bukkit.entity.Player p ? p : null;
         return dev.helstera.api.behavior.BehaviorContext.continueExecution(
-                ctx.instance(), player, ratio, distance, ctx.decisionCount(), ctx.state(),
+                ctx.instance(), target, ratio, distance, ctx.decisionCount(), ctx.state(),
                 ctx.payload().orElse(null), ctx.trigger().orElse(null), targets,
                 ctx.origin().orElse(null), ctx.skillTree().orElse(null),
                 ctx.cancellableEvent().orElse(null), ctx.damageCause().orElse(null));
@@ -1075,13 +1260,18 @@ public final class SkillService {
 
     private dev.helstera.api.behavior.BehaviorContext filterTargetConditions(
             List<String> conditions, dev.helstera.api.behavior.BehaviorContext ctx) {
+        return filterTargetConditions(conditions, ctx, true);
+    }
+
+    private dev.helstera.api.behavior.BehaviorContext filterTargetConditions(
+            List<String> conditions, dev.helstera.api.behavior.BehaviorContext ctx, boolean updateTree) {
         if (ctx == null || conditions.isEmpty()) return ctx;
         List<org.bukkit.entity.LivingEntity> targets = ctx.targets();
         if (targets.isEmpty()) {
             var target = ctx.targetEntity().orElse(null);
             if (target == null) return conditionsPass(conditions, ctx) ? ctx : null;
             if (!conditionsPass(conditions, targetConditionContext(ctx, target, List.of(target)))) return null;
-            ctx.skillTree().ifPresent(tree -> tree.targets(List.of(target)));
+            if (updateTree) ctx.skillTree().ifPresent(tree -> tree.targets(List.of(target)));
             return targetConditionContext(ctx, target, List.of(target));
         }
 
@@ -1094,7 +1284,7 @@ public final class SkillService {
         if (passing.isEmpty()) return null;
         var active = passing.get(0);
         var filtered = targetConditionContext(ctx, active, passing);
-        ctx.skillTree().ifPresent(tree -> tree.targets(passing));
+        if (updateTree) ctx.skillTree().ifPresent(tree -> tree.targets(passing));
         return filtered;
     }
 
@@ -1104,10 +1294,9 @@ public final class SkillService {
         var trigger = ctx.trigger().orElse(null);
         if (!(trigger instanceof org.bukkit.entity.LivingEntity living)) return ctx;
         double ratio = living.getMaxHealth() > 0 ? living.getHealth() / living.getMaxHealth() : 0;
-        org.bukkit.entity.Player player = trigger instanceof org.bukkit.entity.Player p ? p : null;
         List<org.bukkit.entity.LivingEntity> inherited = ctx.targets();
         return dev.helstera.api.behavior.BehaviorContext.continueExecution(
-                ctx.instance(), player, ratio, ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),
+                ctx.instance(), living, ratio, ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),
                 ctx.payload().orElse(null), trigger, inherited, ctx.origin().orElse(null),
                 ctx.skillTree().orElse(null), ctx.cancellableEvent().orElse(null),
                 ctx.damageCause().orElse(null));
@@ -1122,10 +1311,11 @@ public final class SkillService {
     }
 
     /** 把技能请求按优先级插入排序到实例队列中。 */
-    private void enqueueSkill(int instId, SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx) {
+    private void enqueueSkill(int instId, SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx,
+                              boolean restoreTree) {
         skillQueue.compute(instId, (k, q) -> {
             if (q == null) q = new SkillQueueEntry();
-            q.items.add(new QueuedSkill(def, ctx));
+            q.items.add(new QueuedSkill(def, ctx, restoreTree));
             // 按优先级降序插入
             q.items.sort((a, b) -> Integer.compare(b.def.priority, a.def.priority));
             return q;
@@ -1140,11 +1330,23 @@ public final class SkillService {
             SkillQueueEntry q = skillQueue.get(instId);
             while (q != null && !q.items.isEmpty()) {
                 QueuedSkill qs = q.items.remove(0);
+                var context = qs.ctx;
+                var saved = qs.restoreTree ? persistedTrees.get(instId) : null;
+                if (saved != null) {
+                    var tree = dev.helstera.api.behavior.SkillTreeContext.restore(saved,
+                            context.trigger().orElse(null), context.targets(), org.bukkit.Bukkit::getWorld);
+                    context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                            context.instance(), context.targetEntity().orElse(null), context.healthRatio(),
+                            context.distanceToTarget(), context.decisionCount(), context.state(),
+                            context.payload().orElse(null), context.trigger().orElse(null), context.targets(),
+                            context.origin().orElse(null), tree, context.cancellableEvent().orElse(null),
+                            context.damageCause().orElse(null));
+                }
                 int[] d = depth.get();
                 d[0]++;
                 try {
-                    if (qs.def.castMillis > 0) beginCast(qs.def, qs.ctx);
-                    else executeSkillActions(qs.def, qs.ctx);
+                    if (qs.def.castMillis > 0) beginCast(qs.def, context);
+                    else executeSkillActions(qs.def, context);
                 } finally {
                     d[0]--;
                 }
@@ -1161,14 +1363,25 @@ public final class SkillService {
 
     /** 执行技能动作集合并启动读条（复用 castSkill 的逻辑分支）。 */
     private void executeSkillActions(SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx) {
-        for (String k : def.actions) {
-            try {
-                registry.runAction(k, ctx);
-            } catch (Throwable t) {
-                warn("技能 \"" + def.name + "\" 动作 \"" + k + "\" 失败: " + t);
+        Integer instanceId = ctx == null || ctx.instance() == null ? null : ctx.instance().instanceId();
+        boolean[] valid = {true};
+        inFlightActions.computeIfAbsent(instanceId, ignored -> new ArrayList<>()).add(valid);
+        try {
+            for (String k : def.actions) {
+                if (!valid[0]) return;
+                try {
+                    registry.runAction(k, ctx);
+                } catch (Throwable t) {
+                    warn("技能 \"" + def.name + "\" 动作 \"" + k + "\" 失败: " + t);
+                }
             }
+            if (valid[0]) rememberSkillTree(ctx);
+        } finally {
+            inFlightActions.computeIfPresent(instanceId, (ignored, chains) -> {
+                chains.remove(valid);
+                return chains.isEmpty() ? null : chains;
+            });
         }
-        rememberSkillTree(ctx);
     }
 
     private void rememberSkillTree(dev.helstera.api.behavior.BehaviorContext ctx) {
@@ -1246,8 +1459,7 @@ public final class SkillService {
         if (skillName == null || skillName.isBlank()) return false;
         SkillDef def = defs.get(skillName.toLowerCase(Locale.ROOT));
         if (def == null || def.castMillis <= 0) return false;
-        beginCast(def, ctx);
-        return true;
+        return castSkill(skillName, ctx);
     }
 
     /**
@@ -1355,6 +1567,9 @@ public final class SkillService {
 
     /** Releases per-instance dynamic cooldown state during entity teardown. */
     public void forget(int instanceId) {
+        invalidateScheduledActions(instanceId);
+        var chains = inFlightActions.remove(instanceId);
+        if (chains != null) chains.forEach(chain -> chain[0] = false);
         String prefix = instanceId + "|";
         cooldowns.keySet().removeIf(key -> key.startsWith(prefix));
         cooldownOverrides.keySet().removeIf(key -> key.startsWith(prefix));
@@ -1473,8 +1688,14 @@ public final class SkillService {
             return bound.isEmpty() ? null : bound;
         }
         if (s.regionMatches(true, 0, "cast-skill", 0, "cast-skill".length())) {
-            String rest = s.substring("cast-skill".length()).trim();
-            return rest.isEmpty() ? null : rest;
+            try {
+                MythicSkillSpec parsed = MythicSkillSpec.parse(s);
+                if (!parsed.mechanic().equals("cast-skill") || parsed.positional().size() != 1) return null;
+                String ref = parsed.positional().get(0).trim();
+                return ref.isEmpty() ? null : ref;
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
         }
         int brace = s.indexOf('{');
         if (brace >= 0 && (s.regionMatches(true, 0, "skill{", 0, 6)
@@ -1641,6 +1862,7 @@ public final class SkillService {
             case "targetisglowing", "target-is-glowing" -> "target-is-glowing";
             case "targetisinvisible", "target-is-invisible" -> "target-is-invisible";
             case "targetisclimbing", "target-is-climbing" -> "target-is-climbing";
+            case "targetisfrozen", "targetfrozen", "target-is-frozen" -> "target-is-frozen";
             case "targetisblocked", "target-is-blocked" -> "target-is-blocked";
             case "inside", "in" -> "inside";
             case "outside", "out" -> "outside";
@@ -1686,6 +1908,7 @@ public final class SkillService {
             case "sneaking", "issneaking", "sneakingis" -> "is-sneaking";
             case "sprinting", "issprinting", "sprintingis" -> "is-sprinting";
             case "glowing", "isglowing", "glowingis" -> "is-glowing";
+            case "invisible", "isinvisible", "invisibleis" -> "is-invisible";
             case "invulnerable", "isinvulnerable", "invulnerableis" -> "is-invulnerable";
             case "swimming", "isswimming", "swimmingis" -> "is-swimming";
             case "climbing", "isclimbing", "climbingis" -> "is-climbing";
@@ -1781,6 +2004,7 @@ public final class SkillService {
             case "airlevel", "air-level", "remainingair", "remaining-air", "air" -> "air-level";
             case "damagecause", "damage-cause", "cause" -> "damage-cause";
             case "damageamount", "damage-amount", "amount", "a" -> "damage-amount";
+            case "damagetag", "damage-tag", "damagehastag", "damage-has-tag" -> "damage-tag";
             case "lastdamagecause", "last-damage-cause" -> "last-damage-cause";
             case "hasitem", "has-item", "item-count", "itemcount" -> "has-item";
             case "hasenchantment", "has-enchantment", "hasenchant", "has-enchant" ->
@@ -1942,7 +2166,7 @@ public final class SkillService {
             case "setlevel", "set-level" -> "set-level";
             case "setweather", "set-weather" -> "set-weather";
             case "settime", "set-time" -> "set-time";
-            case "lightning", "strike-lightning", "strike-lightning-effect" -> "lightning";
+            case "lightning", "strike-lightning" -> "lightning";
             case "feed", "food" -> "feed";
             case "setblock", "set-block" -> "set-block";
             case "breakblock", "break-block" -> "break-block";
@@ -2011,6 +2235,11 @@ public final class SkillService {
         boolean quoted = false;
         for (int i = 0; i < spec.length(); i++) {
             char c = spec.charAt(i);
+            if (quoted && c == '\\' && i + 1 < spec.length()
+                    && (spec.charAt(i + 1) == '"' || spec.charAt(i + 1) == '\\')) {
+                cur.append(spec.charAt(++i));
+                continue;
+            }
             if (c == '"') {
                 quoted = !quoted;
                 continue;
@@ -2034,6 +2263,21 @@ public final class SkillService {
         if (raw instanceof String one) return List.of(one);
         List<String> l = s.getStringList(key);
         return l == null ? List.of() : l;
+    }
+
+    private List<String> conditionSpecs(ConfigurationSection section, String key) {
+        Object raw = section.get(key);
+        if (raw == null) return List.of();
+        List<?> values = raw instanceof List<?> list ? list : List.of(raw);
+        List<String> result = new ArrayList<>();
+        for (Object value : values) {
+            if (value instanceof String text && !text.isBlank()) result.add(text);
+            else {
+                warn("技能条件字段 \"" + key + "\" 包含空值或非字符串，已阻止执行");
+                result.add("");
+            }
+        }
+        return result;
     }
 
     private void warn(String msg) {

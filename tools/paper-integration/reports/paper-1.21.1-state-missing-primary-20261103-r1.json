@@ -1,0 +1,2103 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-03T22:33:36.8085834Z",
+  "fixtureDirectory": "srv-paper-state-missing-primary-20261103-r1",
+  "evidenceMode": "release",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "modelDisplay",
+    "horse",
+    "maxCombatDistance",
+    "scaleOptions",
+    "healthOptions",
+    "movementSpeedOptions",
+    "knockbackResistanceOptions",
+    "followRangeOptions",
+    "damageOptions",
+    "armorOptions",
+    "entityConfigFlags",
+    "expOptions",
+    "expNaturalDeath",
+    "expTierDeath",
+    "reviveNatural",
+    "reviveLate",
+    "damageImported",
+    "immunityImported",
+    "immunityNativeInvalid",
+    "immunityInvalidFields",
+    "immunityPreservation",
+    "conditionArguments",
+    "conditionStateArguments",
+    "targetSneakingMob",
+    "timeWeatherArguments",
+    "visibilityStateArguments",
+    "dropNullConditions",
+    "dropNativeNullConditions",
+    "dropNativeNullNumeric",
+    "dropUnsafeReferences",
+    "dropMergedNull",
+    "despawnOptions",
+    "spawningDistanceOptions",
+    "spawningDistanceRuntime",
+    "visibilityOptions",
+    "sheep",
+    "armorStand",
+    "cat",
+    "fallingBlock",
+    "creeper",
+    "bee",
+    "entitySizeRange",
+    "ageOptions",
+    "entityFlagOptions",
+    "endermanHeldBlock",
+    "mobPickupOption",
+    "spawnOptionRuntime",
+    "attributes",
+    "itemAttributes",
+    "skillEquipment",
+    "playerExperienceMechanics",
+    "oxygenMechanic",
+    "consumeSlotMechanic",
+    "rawExperienceMechanic",
+    "skillPotion",
+    "skillDropItem",
+    "skillTeleport",
+    "skillScheduling",
+    "skillTreeBranches",
+    "skillTreeCastPersistence",
+    "skillTreeQueueSnapshot",
+    "skillLifecycleCleanup",
+    "conditionCatalog",
+    "enderDragonAliveCondition",
+    "absorptionCondition",
+    "healthAbsorptionCondition",
+    "potionEffectCondition",
+    "auraStacksCondition",
+    "levelCondition",
+    "lunarPhaseCondition",
+    "stringEqualsCondition",
+    "stringEmptyCondition",
+    "compareValuesCondition",
+    "isSkillCondition",
+    "materialCooldownMechanic",
+    "setGameModeMechanic",
+    "jumpMechanic",
+    "forcePullMechanic",
+    "setOffhandMechanic",
+    "setArmorMechanic",
+    "clearInventoryMechanic",
+    "removeHeldItemMechanic",
+    "setAbsorptionMechanic",
+    "frozenCondition",
+    "boundsCondition",
+    "boundingBoxOverlapCondition",
+    "entityItemTypeCondition",
+    "entityItemSimilarCondition",
+    "itemSimilarCondition",
+    "itemTypeCondition",
+    "structureCondition",
+    "targetsCondition",
+    "lineOfSightFromOriginCondition",
+    "originLocationCondition",
+    "triggerBlockTypeCondition",
+    "worldBiome",
+    "worldBiomeReject",
+    "targetCategories",
+    "raiderPatrolLeaderCondition",
+    "creeperPrimedCondition",
+    "enderDragonPhaseCondition",
+    "targetHealthComparators",
+    "factionConditions",
+    "factionMechanic",
+    "levelMechanic",
+    "weatherMechanic",
+    "timeMechanic",
+    "lightningMechanic",
+    "signalMechanics",
+    "globalScoreCondition",
+    "scoreCondition",
+    "targetKillMechanic",
+    "damageMeleeMechanic",
+    "conditionUtilityAliases",
+    "survivalModeCondition",
+    "distanceFromSpawnCondition",
+    "mobsInChunkCondition",
+    "chanceCondition",
+    "biomeCondition",
+    "biomeImported",
+    "invalidConditionsImported",
+    "playerRadiusConditions",
+    "cooldownMechanics",
+    "lastDamageCauseCondition",
+    "motionConditions",
+    "nameCondition",
+    "dotMechanic",
+    "projectileHasEndedCondition",
+    "targetEnvironmentalConditions",
+    "targetFluidConditions",
+    "targetBlockedCondition",
+    "targetStateConditions",
+    "conditionComposition",
+    "conditionMobility",
+    "conditionLeashed",
+    "conditionHasOwner",
+    "conditionHasTag",
+    "targetHasTagCondition",
+    "scoreboardTagMechanics",
+    "scoreMechanics",
+    "customOwnerRelation",
+    "ownerOnlineCondition",
+    "parentRelation",
+    "conditionIsChild",
+    "parentDerivedConditions",
+    "timeWeather",
+    "customItemResolver",
+    "giveItemAction",
+    "takeItemAction",
+    "dynamicPlaceholderAction",
+    "gameplayPlaceholders",
+    "blockSetAction",
+    "blockBreakAction",
+    "setAiAction",
+    "setGravityAction",
+    "setSilentAction",
+    "setCollidableAction",
+    "setFireAction",
+    "clearFireAction",
+    "rotationAction",
+    "lookAtAction",
+    "casterPermission",
+    "foodLevelCondition",
+    "foodSaturationCondition",
+    "freeInventorySlotCondition",
+    "hasItemCondition",
+    "airLevelCondition",
+    "lookingAtCondition",
+    "itemRechargingCondition",
+    "playerPotionEvents",
+    "stateConditions",
+    "entityStateConditions",
+    "stateBlocking",
+    "spyglassCondition",
+    "invulnerableCondition",
+    "targetInvulnerable",
+    "ownerTargeter",
+    "spatialTargeters",
+    "spatialTargetersNegative",
+    "spatialTargetersBoundaries",
+    "lineTargeterParameters",
+    "targeterControls",
+    "targeterSorts",
+    "targeterControlsNegative",
+    "contextTargeterControls",
+    "contextTargeterChain",
+    "deathLootItems",
+    "deathLootExperience",
+    "deathLootConditions",
+    "deathLootDynamicChance",
+    "deathLootGeneratedLines",
+    "deathLootBonuses",
+    "deathLootImportedDropTable",
+    "deathLootTriggerConditions",
+    "deathLootDropperConditions",
+    "lootMaterialization",
+    "lootDynamicChance",
+    "events",
+    "tameBreed",
+    "leashLifecycle",
+    "shearTrigger",
+    "bedLifecycle",
+    "tradeTrigger",
+    "quitTrigger",
+    "itemLifecycle",
+    "playerActions",
+    "fishTrigger",
+    "creeperNaturalFuse",
+    "mobOptionsNatural",
+    "mobOptionsMountEvent",
+    "mobOptionsSlimeSplit",
+    "pathfinderClear",
+    "pathfinderStopCalls",
+    "aiPriority",
+    "aiPriorityTargets",
+    "aiSelectorCore",
+    "aiRoute",
+    "pinTargeters",
+    "pinConditions",
+    "skillTrigger",
+    "damageCauseCondition",
+    "damageTagCondition",
+    "bowTensionCondition",
+    "cancelledCondition",
+    "potionEffectEndTrigger",
+    "potionNaturalExpiry",
+    "killTrigger",
+    "playerKillTrigger",
+    "playerKillsCondition",
+    "mythicMobTypeCondition",
+    "variableContainsCondition",
+    "attackerTargeter",
+    "threatTargeter",
+    "threatFactionFilters",
+    "threatActions",
+    "blockEvents",
+    "itemPickup",
+    "vehicleEvents",
+    "ejectPassenger",
+    "environmentalDamage",
+    "spawnerMaxSpawns",
+    "spawnerGroup",
+    "spawnerNaturalGroup",
+    "spawnerRecycle",
+    "spawnerRegion",
+    "spawnerRegionOutside",
+    "spawnerScopedLimits",
+    "spawnerPlayerLimits",
+    "spawnerCooldown",
+    "spawnerFailureCooldown",
+    "spawnerNaturalTiming",
+    "spawnerLunar",
+    "spawnerHeightmap",
+    "spawnerGroundRestored",
+    "spawnerUnloadedChunk",
+    "spawnerLightFailClosed",
+    "spawnerBorderClipped",
+    "spawnerBorderOutside",
+    "tempt",
+    "entityTargetSynthetic",
+    "entityTargetBukkit",
+    "entityTargetDelayed",
+    "audienceDispatch",
+    "custom-menu-player-workflow",
+    "audience-player-delivery",
+    "audience-filter-delivery",
+    "random-spawn-distribution",
+    "skillTeleportCoordinates",
+    "spawner:negated_invalid_moon_fail",
+    "spawner:recycle_probe",
+    "spawner:region_probe_outside",
+    "spawner:region_probe",
+    "spawner:condition_combo_fail",
+    "spawner:player_gate_fail",
+    "spawner:border_fail",
+    "spawner:negated_invalid_world_fail",
+    "spawner:weather_rain_pass",
+    "spawner:negated_invalid_height_fail",
+    "spawner:max_spawn_probe",
+    "spawner:light_unloaded_fail",
+    "spawner:biome_desert_pass",
+    "spawner:null_condition_merged",
+    "spawner:unloaded_chunk_fail",
+    "spawner:time_window_pass",
+    "spawner:natural_ground_pass",
+    "spawner:condition_fail",
+    "spawner:condition_combo_pass",
+    "spawner:weather_rain_fail",
+    "spawner:biome_plains_fail",
+    "spawner:random_distribution_probe",
+    "spawner:negated_height_pass",
+    "spawner:border_outside_fail",
+    "spawner:ground_missing_fail",
+    "spawner:negated_named_world_pass",
+    "spawner:scoped_limit_probe",
+    "spawner:condition_pass",
+    "spawner:heightmap_ground_pass",
+    "spawner:negated_invalid_light_fail",
+    "spawner:integration_test",
+    "spawner:null_condition_base",
+    "spawner:group_probe",
+    "spawner:border_clipped_inside_pass",
+    "spawner:null_condition_override",
+    "spawner:negated_invalid_biome_fail",
+    "spawner:lunar_probe",
+    "spawner:time_window_fail"
+  ],
+  "probes": [
+    {
+      "id": "modelDisplay",
+      "status": "passed",
+      "observations": [
+        "结果=通过 实例#2 模型=example/emberling 骨骼数=9 Display实体数=12 实例有效=true"
+      ]
+    },
+    {
+      "id": "horse",
+      "status": "passed",
+      "observations": [
+        "horse-options result=true saddled=true armor=true chest=true"
+      ]
+    },
+    {
+      "id": "maxCombatDistance",
+      "status": "passed",
+      "observations": [
+        "max-combat-distance result=true inside-allowed=true outside-blocked=true"
+      ]
+    },
+    {
+      "id": "scaleOptions",
+      "status": "passed",
+      "observations": [
+        "scale-options result=true scale=1.25"
+      ]
+    },
+    {
+      "id": "healthOptions",
+      "status": "passed",
+      "observations": [
+        "health-options result=true health=42.0 max-health=42.0"
+      ]
+    },
+    {
+      "id": "movementSpeedOptions",
+      "status": "passed",
+      "observations": [
+        "movement-speed-options result=true base=0.4"
+      ]
+    },
+    {
+      "id": "knockbackResistanceOptions",
+      "status": "passed",
+      "observations": [
+        "knockback-resistance-options result=true base=0.75"
+      ]
+    },
+    {
+      "id": "followRangeOptions",
+      "status": "passed",
+      "observations": [
+        "follow-range-options result=true base=40.0"
+      ]
+    },
+    {
+      "id": "damageOptions",
+      "status": "passed",
+      "observations": [
+        "damage-options result=true base=12.0"
+      ]
+    },
+    {
+      "id": "armorOptions",
+      "status": "passed",
+      "observations": [
+        "armor-options result=true base=8.0"
+      ]
+    },
+    {
+      "id": "entityConfigFlags",
+      "status": "passed",
+      "observations": [
+        "entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false"
+      ]
+    },
+    {
+      "id": "expOptions",
+      "status": "passed",
+      "observations": [
+        "exp-options result=true experience=13 event=true"
+      ]
+    },
+    {
+      "id": "expNaturalDeath",
+      "status": "passed",
+      "observations": [
+        "exp-natural-death result=true dead=true experience=13 cause=BukkitDamage"
+      ]
+    },
+    {
+      "id": "expTierDeath",
+      "status": "passed",
+      "observations": [
+        "exp-tier-death result=true low=2 qualified=7 low-dead=true qualified-dead=true low-bread=4 qualified-bread=4"
+      ]
+    },
+    {
+      "id": "reviveNatural",
+      "status": "passed",
+      "observations": [
+        "revive-natural result=true alive=true attached=true health=8.0\n"
+      ]
+    },
+    {
+      "id": "reviveLate",
+      "status": "passed",
+      "observations": [
+        "revive-late result=true cancelled=true alive=true attached=true health=8.0 no-drops=true"
+      ]
+    },
+    {
+      "id": "damageImported",
+      "status": "passed",
+      "observations": [
+        "damage-imported mapped=true entity-damage=true attacker-name=true attacker-equipment=true environmental-damage=true environmental-no-trigger=true passed=true"
+      ]
+    },
+    {
+      "id": "immunityImported",
+      "status": "passed",
+      "observations": [
+        "immunity-imported result=true reduced=true condition-rejected=true invalid-rejected=true"
+      ]
+    },
+    {
+      "id": "immunityNativeInvalid",
+      "status": "passed",
+      "observations": [
+        "immunity-native-invalid result=true false-rejected=true null-rejected=true unknown-rejected=true null-modifier-rejected=true"
+      ]
+    },
+    {
+      "id": "immunityInvalidFields",
+      "status": "passed",
+      "observations": [
+        "immunity-invalid-fields null-immunity=true null-modifier-field=true unknown-modifier-field=true invalid-immune=true null-immune=true"
+      ]
+    },
+    {
+      "id": "immunityPreservation",
+      "status": "passed",
+      "observations": [
+        "immunity-preservation nested-preserved=true nested-closed=true list-null-preserved=true list-null-closed=true"
+      ]
+    },
+    {
+      "id": "conditionArguments",
+      "status": "passed",
+      "observations": [
+        "condition-arguments living-rejected=true baby-valid=true baby-rejected=true frozen-valid=true frozen-rejected=true warnings=true"
+      ]
+    },
+    {
+      "id": "conditionStateArguments",
+      "status": "passed",
+      "observations": [
+        "condition-state-arguments valid=true movement-rejected=true category-rejected=true alive-rejected=true negated-rejected=true preserved=true warnings=true"
+      ]
+    },
+    {
+      "id": "targetSneakingMob",
+      "status": "passed",
+      "observations": [
+        "target-sneaking-mob false-rejected=true true-passed=true"
+      ]
+    },
+    {
+      "id": "timeWeatherArguments",
+      "status": "passed",
+      "observations": [
+        "time-weather-arguments time-valid=true time-opposite=true weather-valid=true weather-opposite=true time-rejected=true rain-rejected=true negated-rejected=true preserved=true warnings=true"
+      ]
+    },
+    {
+      "id": "visibilityStateArguments",
+      "status": "passed",
+      "observations": [
+        "visibility-state-arguments valid=true rejected=true preserved=true warnings=true"
+      ]
+    },
+    {
+      "id": "dropNullConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "dropNativeNullConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "dropNativeNullNumeric",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "dropUnsafeReferences",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "dropMergedNull",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "despawnOptions",
+      "status": "passed",
+      "observations": [
+        "despawn-options result=true mode=PERSISTENT distance=0.0 persistent=true"
+      ]
+    },
+    {
+      "id": "spawningDistanceOptions",
+      "status": "passed",
+      "observations": [
+        "spawning-distance-options result=true mode=NORMAL distance=8.0"
+      ]
+    },
+    {
+      "id": "spawningDistanceRuntime",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "visibilityOptions",
+      "status": "passed",
+      "observations": [
+        "visibility-options result=true visible-by-default=true invisible=true show-name=true"
+      ]
+    },
+    {
+      "id": "sheep",
+      "status": "passed",
+      "observations": [
+        "sheep-options result=true"
+      ]
+    },
+    {
+      "id": "armorStand",
+      "status": "passed",
+      "observations": [
+        "armor-stand-options result=true can-move=false can-tick=false items=true"
+      ]
+    },
+    {
+      "id": "cat",
+      "status": "passed",
+      "observations": [
+        "cat-options result=true"
+      ]
+    },
+    {
+      "id": "fallingBlock",
+      "status": "passed",
+      "observations": [
+        "falling-block-options result=true"
+      ]
+    },
+    {
+      "id": "creeper",
+      "status": "passed",
+      "observations": [
+        "creeper-options result=true"
+      ]
+    },
+    {
+      "id": "bee",
+      "status": "passed",
+      "observations": [
+        "bee-options result=true"
+      ]
+    },
+    {
+      "id": "entitySizeRange",
+      "status": "passed",
+      "observations": [
+        "entity-size-range result=true samples=64 configured=2..5 observed=2..5"
+      ]
+    },
+    {
+      "id": "ageOptions",
+      "status": "passed",
+      "observations": [
+        "age-options result=true",
+        "age-options result=true"
+      ]
+    },
+    {
+      "id": "entityFlagOptions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "endermanHeldBlock",
+      "status": "passed",
+      "observations": [
+        "enderman-held-block result=true material=OBSIDIAN"
+      ]
+    },
+    {
+      "id": "mobPickupOption",
+      "status": "passed",
+      "observations": [
+        "mob-pickup-option result=true disabled=true explicit-overrides-default=true"
+      ]
+    },
+    {
+      "id": "spawnOptionRuntime",
+      "status": "passed",
+      "observations": [
+        "spawn-option-runtime result=true pickup-disabled=true explicit-pickup-overrides-fallback=true random-equipment-cleared=true explicit-equipment-preserved=true no-damage-ticks=true"
+      ]
+    },
+    {
+      "id": "attributes",
+      "status": "passed",
+      "observations": [
+        "attribute-options result=true modifiers=1",
+        "attribute-options result=true modifiers=1"
+      ]
+    },
+    {
+      "id": "itemAttributes",
+      "status": "passed",
+      "observations": [
+        "item-attribute-options result=true modifiers=1"
+      ]
+    },
+    {
+      "id": "skillEquipment",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "playerExperienceMechanics",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "oxygenMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "consumeSlotMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "rawExperienceMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "skillPotion",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "skillDropItem",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "skillTeleport",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "skillScheduling",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "skillTreeBranches",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "skillTreeCastPersistence",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "skillTreeQueueSnapshot",
+      "status": "passed",
+      "observations": [
+        "skill-tree-queue submitted=true restored=true"
+      ]
+    },
+    {
+      "id": "skillLifecycleCleanup",
+      "status": "passed",
+      "observations": [
+        "skill-lifecycle reload=true scheduled=true cancelled=true"
+      ]
+    },
+    {
+      "id": "conditionCatalog",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "enderDragonAliveCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "absorptionCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "healthAbsorptionCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "potionEffectCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "auraStacksCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "levelCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "lunarPhaseCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "stringEqualsCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "stringEmptyCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "compareValuesCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "isSkillCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "materialCooldownMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "setGameModeMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "jumpMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "forcePullMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "setOffhandMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "setArmorMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "clearInventoryMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "removeHeldItemMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "setAbsorptionMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "frozenCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "boundsCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "boundingBoxOverlapCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "entityItemTypeCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "entityItemSimilarCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "itemSimilarCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "itemTypeCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "structureCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targetsCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "lineOfSightFromOriginCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "originLocationCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "triggerBlockTypeCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "worldBiome",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "worldBiomeReject",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targetCategories",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "raiderPatrolLeaderCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "creeperPrimedCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "enderDragonPhaseCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targetHealthComparators",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "factionConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "factionMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "levelMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "weatherMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "timeMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "lightningMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "signalMechanics",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "globalScoreCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "scoreCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targetKillMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "damageMeleeMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "conditionUtilityAliases",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "survivalModeCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "distanceFromSpawnCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "mobsInChunkCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "chanceCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "biomeCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "biomeImported",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "invalidConditionsImported",
+      "status": "passed",
+      "observations": [
+        "invalid-imported-conditions valid-skill=true invalid-skill=true invalid-damage=true warnings=true"
+      ]
+    },
+    {
+      "id": "playerRadiusConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "cooldownMechanics",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "lastDamageCauseCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "motionConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "nameCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "dotMechanic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "projectileHasEndedCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targetEnvironmentalConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targetFluidConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targetBlockedCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targetStateConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "conditionComposition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "conditionMobility",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "conditionLeashed",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "conditionHasOwner",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "conditionHasTag",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targetHasTagCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "scoreboardTagMechanics",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "scoreMechanics",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "customOwnerRelation",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "ownerOnlineCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "parentRelation",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "conditionIsChild",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "parentDerivedConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "timeWeather",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "customItemResolver",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "giveItemAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "takeItemAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "dynamicPlaceholderAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "gameplayPlaceholders",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "blockSetAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "blockBreakAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "setAiAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "setGravityAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "setSilentAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "setCollidableAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "setFireAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "clearFireAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "rotationAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "lookAtAction",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "casterPermission",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "foodLevelCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "foodSaturationCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "freeInventorySlotCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "hasItemCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "airLevelCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "lookingAtCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "itemRechargingCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "playerPotionEvents",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "stateConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "entityStateConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "stateBlocking",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "spyglassCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "invulnerableCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targetInvulnerable",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "ownerTargeter",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "spatialTargeters",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "spatialTargetersNegative",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "spatialTargetersBoundaries",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "lineTargeterParameters",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targeterControls",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targeterSorts",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "targeterControlsNegative",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "contextTargeterControls",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "contextTargeterChain",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "deathLootItems",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "deathLootExperience",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "deathLootConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "deathLootDynamicChance",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "deathLootGeneratedLines",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "deathLootBonuses",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "deathLootImportedDropTable",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "deathLootTriggerConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "deathLootDropperConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "lootMaterialization",
+      "status": "passed",
+      "observations": [
+        "loot table=common hits=1 materialized=1"
+      ]
+    },
+    {
+      "id": "lootDynamicChance",
+      "status": "passed",
+      "observations": [
+        "loot table=common hits=1 materialized=1 entities=1 amounts=true experience=0 dynamic-chance=true"
+      ]
+    },
+    {
+      "id": "events",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "tameBreed",
+      "status": "passed",
+      "observations": [
+        "events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true prevent-transformation-reasons=true prevent-skeleton-conversion=true prevent-block-infection=true prevent-snow-formation=true tame-breed-tame=true tame-breed-breed=true"
+      ]
+    },
+    {
+      "id": "leashLifecycle",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "shearTrigger",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "bedLifecycle",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "tradeTrigger",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "quitTrigger",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "itemLifecycle",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "playerActions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "fishTrigger",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "creeperNaturalFuse",
+      "status": "passed",
+      "observations": [
+        "mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true"
+      ]
+    },
+    {
+      "id": "mobOptionsNatural",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "mobOptionsMountEvent",
+      "status": "passed",
+      "observations": [
+        "mob-options-mount-event prevented=true allowed=true generic-prevented=true generic-allowed=true jockey-instance=true jockey-type=ZOMBIE jockey-valid=true jockey-dead=false jockey-health=20.0 jockey-vehicle=none jockey-block=AIR jockey-passengers=0 jockey-attempts=240 jockey-inst-registered=true generic-inst-registered=true inst-active=16 jockey-inst-base-match=true jockey-found=true jockey-found-prevent=true jockey-ticks=240 jockey-passenger-types= passed=true"
+      ]
+    },
+    {
+      "id": "mobOptionsSlimeSplit",
+      "status": "passed",
+      "observations": [
+        "mob-options-slime-split prevented=true allowed=true passed=true"
+      ]
+    },
+    {
+      "id": "pathfinderClear",
+      "status": "passed",
+      "observations": [
+        "pathfinder-clear probe=path_clear_probe found=true reachable=true started=true active-before=true accepted=true on-ground=true valid=true has-ai=true aware=true location=-35.5,71.0,32.5 below=STONE destination=-28,71,32 cleared=true stop-calls=4 passed=true"
+      ]
+    },
+    {
+      "id": "pathfinderStopCalls",
+      "status": "passed",
+      "observations": [
+        "pathfinder-clear probe=path_clear_probe found=true reachable=true started=true active-before=true accepted=true on-ground=true valid=true has-ai=true aware=true location=-35.5,71.0,32.5 below=STONE destination=-28,71,32 cleared=true stop-calls=4"
+      ]
+    },
+    {
+      "id": "aiPriority",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "aiPriorityTargets",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "aiSelectorCore",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "aiRoute",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "pinTargeters",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "pinConditions",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "skillTrigger",
+      "status": "passed",
+      "observations": [
+        "skill-trigger damage=true attacked=false teleport=true potion-effect-end=true potion-effect-action=true potion-added-by-mechanic=true potion-active-before-remove=true potion-active-after-remove=false potion-removed-by-mechanic=true potion-events=3 attacker-targeter=true teleport-before=false bukkit-damage=false damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true tagged-damage-action=true tagged-damage-events=1 tagged-damage-cancelled=true tagged-damage-health=20.0>20.0 bow-tension-condition=true bukkit-attacked=true"
+      ]
+    },
+    {
+      "id": "damageCauseCondition",
+      "status": "passed",
+      "observations": [
+        "skill-trigger damage=true attacked=false teleport=true potion-effect-end=true potion-effect-action=true potion-added-by-mechanic=true potion-active-before-remove=true potion-active-after-remove=false potion-removed-by-mechanic=true potion-events=3 attacker-targeter=true teleport-before=false bukkit-damage=false damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true tagged-damage-action=true tagged-damage-events=1 tagged-damage-cancelled=true tagged-damage-health=20.0>20.0 bow-tension-condition=true"
+      ]
+    },
+    {
+      "id": "damageTagCondition",
+      "status": "passed",
+      "observations": [
+        "skill-trigger damage=true attacked=false teleport=true potion-effect-end=true potion-effect-action=true potion-added-by-mechanic=true potion-active-before-remove=true potion-active-after-remove=false potion-removed-by-mechanic=true potion-events=3 attacker-targeter=true teleport-before=false bukkit-damage=false damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true"
+      ]
+    },
+    {
+      "id": "bowTensionCondition",
+      "status": "passed",
+      "observations": [
+        "skill-trigger damage=true attacked=false teleport=true potion-effect-end=true potion-effect-action=true potion-added-by-mechanic=true potion-active-before-remove=true potion-active-after-remove=false potion-removed-by-mechanic=true potion-events=3 attacker-targeter=true teleport-before=false bukkit-damage=false damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true tagged-damage-action=true tagged-damage-events=1 tagged-damage-cancelled=true tagged-damage-health=20.0>20.0 bow-tension-condition=true"
+      ]
+    },
+    {
+      "id": "cancelledCondition",
+      "status": "passed",
+      "observations": [
+        "skill-trigger damage=true attacked=false teleport=true potion-effect-end=true potion-effect-action=true potion-added-by-mechanic=true potion-active-before-remove=true potion-active-after-remove=false potion-removed-by-mechanic=true potion-events=3 attacker-targeter=true teleport-before=false bukkit-damage=false damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true tagged-damage-action=true tagged-damage-events=1 tagged-damage-cancelled=true tagged-damage-health=20.0>20.0 bow-tension-condition=true bukkit-attacked=true cancelled-condition=true cancelled-before=false cancelled-after=true"
+      ]
+    },
+    {
+      "id": "potionEffectEndTrigger",
+      "status": "passed",
+      "observations": [
+        "skill-trigger damage=true attacked=false teleport=true potion-effect-end=true"
+      ]
+    },
+    {
+      "id": "potionNaturalExpiry",
+      "status": "passed",
+      "observations": [
+        "potion-natural-expiry=true expired=true event-observed=true action-observed=true item-marker-observed=true"
+      ]
+    },
+    {
+      "id": "killTrigger",
+      "status": "passed",
+      "observations": [
+        "kill-trigger natural=true victim-dead=true action-observed=true passed=true"
+      ]
+    },
+    {
+      "id": "playerKillTrigger",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "playerKillsCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "mythicMobTypeCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "variableContainsCondition",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "attackerTargeter",
+      "status": "passed",
+      "observations": [
+        "skill-trigger damage=true attacked=false teleport=true potion-effect-end=true potion-effect-action=true potion-added-by-mechanic=true potion-active-before-remove=true potion-active-after-remove=false potion-removed-by-mechanic=true potion-events=3 attacker-targeter=true"
+      ]
+    },
+    {
+      "id": "threatTargeter",
+      "status": "passed",
+      "observations": [
+        "skill-targeter threat-targeter=true"
+      ]
+    },
+    {
+      "id": "threatFactionFilters",
+      "status": "passed",
+      "observations": [
+        "skill-targeter threat-targeter=true source=damage-events faction-filters=true"
+      ]
+    },
+    {
+      "id": "threatActions",
+      "status": "passed",
+      "observations": [
+        "skill-targeter threat-targeter=true source=damage-events faction-filters=true threat-actions=true"
+      ]
+    },
+    {
+      "id": "blockEvents",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "itemPickup",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "vehicleEvents",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "ejectPassenger",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "environmentalDamage",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "spawnerMaxSpawns",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "spawnerGroup",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "spawnerNaturalGroup",
+      "status": "passed",
+      "observations": [
+        "spawner-natural-group id=natural_group_probe mode=live-scheduler before=6 after=8 alive=2 max-alive=2 group-min=3 group-max=5 limit=true"
+      ]
+    },
+    {
+      "id": "spawnerRecycle",
+      "status": "passed",
+      "observations": [
+        "spawner-recycle id=recycle_probe before=3 after=4 released=true respawned=true alive=1 interval=40"
+      ]
+    },
+    {
+      "id": "spawnerRegion",
+      "status": "passed",
+      "observations": [
+        "spawner-region id=region_probe requested=true region=integration_box failure=null"
+      ]
+    },
+    {
+      "id": "spawnerRegionOutside",
+      "status": "passed",
+      "observations": [
+        "spawner-region-outside id=region_probe_outside requested=false region=integration_box failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawnerScopedLimits",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "spawnerPlayerLimits",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "spawnerCooldown",
+      "status": "passed",
+      "observations": [
+        "spawner-cooldown id=cooldown_probe before=6 after-first=7 after-second=7 remaining-first=40 remaining-second=39"
+      ]
+    },
+    {
+      "id": "spawnerFailureCooldown",
+      "status": "passed",
+      "observations": [
+        "spawner-failure-cooldown id=failed_cooldown_probe before=0 after=0 total-before=0 total-after=0 rejected=true failure=no-valid-location"
+      ]
+    },
+    {
+      "id": "spawnerNaturalTiming",
+      "status": "passed",
+      "observations": [
+        "spawner-natural-timing id=cooldown_probe mode=live-scheduler before=7 samples=20 spawned=8 remaining-at-start=39 before-due=true after-due=true"
+      ]
+    },
+    {
+      "id": "spawnerLunar",
+      "status": "passed",
+      "observations": [
+        "spawner-lunar id=lunar_probe requested=true phase=FULL failure=null"
+      ]
+    },
+    {
+      "id": "spawnerHeightmap",
+      "status": "passed",
+      "observations": [
+        "spawner-heightmap id=heightmap_ground_pass requested=true surface=SAND surface-y=64 failure=null"
+      ]
+    },
+    {
+      "id": "spawnerGroundRestored",
+      "status": "passed",
+      "observations": [
+        "spawner-ground id=ground_missing_fail requested=false failure=no valid spawn location restored=true saved-blocks=384"
+      ]
+    },
+    {
+      "id": "spawnerUnloadedChunk",
+      "status": "passed",
+      "observations": [
+        "spawner-unloaded-chunk id=unloaded_chunk_fail requested=false chunk-loaded=false failure=no valid spawn location restored=true"
+      ]
+    },
+    {
+      "id": "spawnerLightFailClosed",
+      "status": "passed",
+      "observations": [
+        "spawner-light-fail-closed id=light_unloaded_fail requested=false chunk-loaded=false light-readable=false result=false restored=true"
+      ]
+    },
+    {
+      "id": "spawnerBorderClipped",
+      "status": "passed",
+      "observations": [
+        "spawner-border id=border_clipped_inside_pass requested=true configured-radius=16.0 effective-radius=10.0 border-size=20.0 attempts=1 restored=true failure=null"
+      ]
+    },
+    {
+      "id": "spawnerBorderOutside",
+      "status": "passed",
+      "observations": [
+        "spawner-border id=border_outside_fail requested=false configured-radius=0.1 effective-radius=0.0 border-size=20.0 restored=true failure=no valid spawn location"
+      ]
+    },
+    {
+      "id": "tempt",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "entityTargetSynthetic",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "entityTargetBukkit",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "entityTargetDelayed",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "audienceDispatch",
+      "status": "not-observed",
+      "observations": []
+    },
+    {
+      "id": "custom-menu-player-workflow",
+      "status": "not-observed",
+      "observations": [
+        "client report missing"
+      ]
+    },
+    {
+      "id": "audience-player-delivery",
+      "status": "not-observed",
+      "observations": [
+        "client report missing"
+      ]
+    },
+    {
+      "id": "audience-filter-delivery",
+      "status": "not-observed",
+      "observations": [
+        "audience filter report missing"
+      ]
+    },
+    {
+      "id": "spawner:negated_invalid_moon_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=negated_invalid_moon_fail mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:recycle_probe",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=recycle_probe mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:region_probe_outside",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=region_probe_outside mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:region_probe",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=region_probe mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:condition_combo_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=condition_combo_fail mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:player_gate_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=player_gate_fail mode=safe-override requested=false failure=player gate closed"
+      ]
+    },
+    {
+      "id": "spawner:border_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=border_fail mode=natural-location requested=false failure=no valid spawn location"
+      ]
+    },
+    {
+      "id": "spawner:negated_invalid_world_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=negated_invalid_world_fail mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:weather_rain_pass",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=weather_rain_pass mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:negated_invalid_height_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=negated_invalid_height_fail mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:max_spawn_probe",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=max_spawn_probe mode=safe-override requested=false failure=spawn limits reached"
+      ]
+    },
+    {
+      "id": "spawner:light_unloaded_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=light_unloaded_fail mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:biome_desert_pass",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=biome_desert_pass mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:null_condition_merged",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=null_condition_merged mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:unloaded_chunk_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=unloaded_chunk_fail mode=natural-location requested=false failure=no valid spawn location"
+      ]
+    },
+    {
+      "id": "spawner:time_window_pass",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=time_window_pass mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:natural_ground_pass",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=natural_ground_pass mode=natural-location requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:condition_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=condition_fail mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:condition_combo_pass",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=condition_combo_pass mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:weather_rain_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=weather_rain_fail mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:biome_plains_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=biome_plains_fail mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:random_distribution_probe",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=random_distribution_probe mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:negated_height_pass",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=negated_height_pass mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:border_outside_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=border_outside_fail mode=natural-location requested=false failure=no valid spawn location"
+      ]
+    },
+    {
+      "id": "spawner:ground_missing_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=ground_missing_fail mode=natural-location requested=false failure=no valid spawn location"
+      ]
+    },
+    {
+      "id": "spawner:negated_named_world_pass",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=negated_named_world_pass mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:scoped_limit_probe",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=scoped_limit_probe mode=safe-override requested=false failure=scoped spawn limits reached"
+      ]
+    },
+    {
+      "id": "spawner:condition_pass",
+      "status": "passed",
+      "observations": [
+        "spawner id=condition_pass requested=true alive=0 next=38 direct-spawn=22 failure=null"
+      ]
+    },
+    {
+      "id": "spawner:heightmap_ground_pass",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=heightmap_ground_pass mode=natural-location requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:negated_invalid_light_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=negated_invalid_light_fail mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:integration_test",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=integration_test mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:null_condition_base",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=null_condition_base mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:group_probe",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=group_probe mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:border_clipped_inside_pass",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=border_clipped_inside_pass mode=natural-location requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:null_condition_override",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=null_condition_override mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:negated_invalid_biome_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=negated_invalid_biome_fail mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "spawner:lunar_probe",
+      "status": "passed",
+      "observations": [
+        "spawner-probe id=lunar_probe mode=safe-override requested=true failure=null"
+      ]
+    },
+    {
+      "id": "spawner:time_window_fail",
+      "status": "observed-rejected",
+      "observations": [
+        "spawner-probe id=time_window_fail mode=safe-override requested=false failure=conditions rejected location"
+      ]
+    },
+    {
+      "id": "random-spawn-distribution",
+      "status": "passed",
+      "sampleCount": 100,
+      "expected": "{emberling=0.5, emberling_boss=0.5}",
+      "observed": "{emberling=0.4577114427860697, emberling_boss=0.5422885572139303}",
+      "deviation": "{emberling=-0.04228855721393032, emberling_boss=0.04228855721393032}",
+      "maxDeviation": 0.042289,
+      "tolerance": 0.15,
+      "observations": [
+        "random-spawn id=random_distribution_probe expected={emberling=0.5, emberling_boss=0.5} observed={emberling=0.4577114427860697, emberling_boss=0.5422885572139303} deviation={emberling=-0.04228855721393032, emberling_boss=0.04228855721393032} max-abs-deviation=0.042289 total=100"
+      ]
+    },
+    {
+      "id": "skillTeleportCoordinates",
+      "status": "not-observed",
+      "observations": [
+        "teleport coordinate evidence missing"
+      ]
+    }
+  ],
+  "pluginSha256": "460ba3bc62216246f9a48da5e0e4d28c7b7f0428d3e8877b7c40e9e9a47f595e"
+}

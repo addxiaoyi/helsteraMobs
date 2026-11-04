@@ -17,12 +17,11 @@ import java.io.StringReader;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.ServiceLoader;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 迁移服务实现：
@@ -37,8 +36,6 @@ public final class MigrationServiceImpl implements MigrationService {
     private final Map<String, MigrationImporter> importers = new LinkedHashMap<>();
     private final Path backupRoot;
     private volatile String lastReportJson = "{}";
-    /** 回滚记录：backupId -> {source -> files}。 */
-    private final Map<String, Map<String, List<Path>>> backups = new ConcurrentHashMap<>();
 
     public MigrationServiceImpl(Plugin plugin) {
         this.plugin = plugin;
@@ -113,18 +110,29 @@ public final class MigrationServiceImpl implements MigrationService {
         report.put("importer", imp.displayName());
         report.put("dry-run", true);
         try {
-            List<Path> files = imp.scan(pluginDataOf(source));
+            Path sourceRoot = pluginDataOf(source);
+            List<Path> files = imp.scan(sourceRoot);
             for (Path f : files) {
                 try {
-                    report.entries().addAll(imp.convert(f));
+                    for (Map<String, Object> entry : imp.convert(f, sourceRoot)) {
+                        Map<String, Object> withSource = new LinkedHashMap<>(entry);
+                        withSource.putIfAbsent("file", f.toString());
+                        report.addEntry(withSource);
+                    }
                 } catch (Exception e) {
-                    report.addEntry(Map.of("file", f.toString(), "status", "conflict",
+                    report.addEntry(Map.of("file", f.toString(), "status", "conflict", "conflict-type", "conversion-failed",
                             "note", "转换失败: " + e.getMessage()));
                 }
             }
         } catch (Exception e) {
             report.put("error", e.getMessage());
         }
+        report.entries().addAll(resolveSpawnerMobReferences(report.entries()));
+        resolveSpawnerRegionReferences(report.entries());
+        report.entries().addAll(lootTableConflicts(report.entries()));
+        report.entries().addAll(mobTargetConflicts(report.entries()));
+        report.entries().addAll(skillConflicts(report.entries()));
+        report.entries().addAll(contentDefinitionConflicts(report.entries()));
         report.put("summary", report.summary());
         lastReportJson = GSON.toJson(report.data());
         audit("preview", source, report.summary());
@@ -139,9 +147,21 @@ public final class MigrationServiceImpl implements MigrationService {
             lastReportJson = GSON.toJson(preview.data());
             return preview;
         }
+        if (preview.entries().stream().anyMatch(e -> "conversion-failed".equals(e.get("conflict-type"))
+                || "duplicate-loot-table".equals(e.get("conflict-type"))
+                || "duplicate-mob-target".equals(e.get("conflict-type"))
+                || "duplicate-skill-id".equals(e.get("conflict-type"))
+                || "duplicate-spawner-pool-id".equals(e.get("conflict-type"))
+                || "duplicate-definition-id".equals(e.get("conflict-type")))) {
+            preview.put("apply-result", Map.of("success", false, "written", 0,
+                    "error", "Conversion failure or duplicate imported IDs; resolve conflicts before applying"));
+            lastReportJson = GSON.toJson(preview.data());
+            return preview;
+        }
 
         Path targetRoot = plugin.getDataFolder().toPath();
-        String backupId = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String backupId = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+                + "_" + java.util.UUID.randomUUID();
 
         // 1. 备份将要写入的目标文件
         List<Path> written = new ArrayList<>();
@@ -151,18 +171,41 @@ public final class MigrationServiceImpl implements MigrationService {
             Map<String, Path> targetPaths = new LinkedHashMap<>();
             for (Map<String, Object> e : preview.entries()) {
                 if (!"mapped".equals(e.get("status"))) continue;
-                String targetRel = String.valueOf(e.get("target-file"));
-                if (targetRel == null || "null".equals(targetRel)) continue;
+                if (!(e.get("target-file") instanceof String targetRel)
+                        || !(e.get("content") instanceof String content)) continue;
                 Path target = targetRoot.resolve(targetRel).normalize();
                 if (!target.startsWith(targetRoot)) {
                     throw new IllegalStateException("Migration target escapes root: " + targetRel);
                 }
-                YamlConfiguration destination = merged.computeIfAbsent(targetRel, ignored ->
-                        Files.isRegularFile(target) ? YamlConfiguration.loadConfiguration(target.toFile())
-                                : new YamlConfiguration());
-                YamlConfiguration incoming = YamlConfiguration.loadConfiguration(
-                        new StringReader(String.valueOf(e.get("content"))));
-                mergeYaml(incoming, destination, "");
+                boolean replaceMob = e.containsKey("source-mob-id") && targetRel.startsWith("mobs/")
+                        && targetRel.endsWith(".yml");
+                YamlConfiguration destination = merged.get(targetRel);
+                if (destination == null) {
+                    destination = new YamlConfiguration();
+                    if (!replaceMob && Files.exists(target)) {
+                        try {
+                            destination.load(target.toFile());
+                        } catch (Exception ex) {
+                            throw new IllegalStateException("Cannot load migration target " + target + ": " + ex.getMessage(), ex);
+                        }
+                    }
+                    merged.put(targetRel, destination);
+                }
+                YamlConfiguration incoming = new YamlConfiguration();
+                try {
+                    incoming.loadFromString(content);
+                } catch (org.bukkit.configuration.InvalidConfigurationException ex) {
+                    throw new IllegalStateException("Invalid migration plan for " + targetRel + ": " + ex.getMessage(), ex);
+                }
+                if ("loot.yml".equals(targetRel)) mergeLootYaml(incoming, destination);
+                else if ("skills.yml".equals(targetRel)) mergeDefinitions(incoming, destination, "skills");
+                else if ("items.yml".equals(targetRel)) mergeDefinitions(incoming, destination, "items");
+                else if ("spawners.yml".equals(targetRel)) {
+                    clearDefinitions(incoming, destination, "spawners.regions", null);
+                    clearDefinitions(incoming, destination, "spawners", "regions");
+                    mergeYaml(incoming, destination, "");
+                }
+                else mergeYaml(incoming, destination, "");
                 targetPaths.put(targetRel, target);
                 if (!target.startsWith(targetRoot)) {
                     throw new IllegalStateException("迁移目标路径越界: " + targetRel);
@@ -175,9 +218,7 @@ public final class MigrationServiceImpl implements MigrationService {
                 if (Files.exists(target)) {
                     Path backup = backupRoot.resolve(source + "/" + backupId + "/" + item.getKey());
                     Files.createDirectories(backup.getParent());
-                    Files.copy(target, backup, StandardCopyOption.REPLACE_EXISTING);
-                    backups.computeIfAbsent(backupId, k -> new HashMap<>())
-                            .computeIfAbsent(source, k -> new ArrayList<>()).add(backup);
+                    Files.copy(target, backup);
                 }
                 Files.createDirectories(target.getParent());
                 Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
@@ -227,6 +268,210 @@ public final class MigrationServiceImpl implements MigrationService {
         }
     }
 
+    static void mergeLootYaml(YamlConfiguration source, YamlConfiguration target) {
+        mergeDefinitions(source, target, "tables");
+    }
+
+    static void mergeDefinitions(YamlConfiguration source, YamlConfiguration target, String section) {
+        clearDefinitions(source, target, section, null);
+        mergeYaml(source, target, "");
+    }
+
+    static void clearDefinitions(YamlConfiguration source, YamlConfiguration target, String section, String excluded) {
+        ConfigurationSection tables = source.getConfigurationSection(section);
+        if (tables != null) {
+            ConfigurationSection existing = target.getConfigurationSection(section);
+            if (existing != null) {
+                for (String name : tables.getKeys(false)) {
+                    if (excluded != null && excluded.equalsIgnoreCase(name)) continue;
+                    String id = name.toLowerCase(Locale.ROOT);
+                    for (String oldName : new ArrayList<>(existing.getKeys(false))) {
+                        if (oldName.toLowerCase(Locale.ROOT).equals(id)) existing.set(oldName, null);
+                    }
+                }
+            }
+        }
+    }
+
+    static List<Map<String, Object>> contentDefinitionConflicts(List<Map<String, Object>> entries) {
+        Map<String, String> sources = new LinkedHashMap<>();
+        List<Map<String, Object>> conflicts = new ArrayList<>();
+        for (Map<String, Object> entry : entries) {
+            if (!"mapped".equals(entry.get("status")) || !(entry.get("content") instanceof String content)) continue;
+            String target = String.valueOf(entry.get("target-file"));
+            List<String> sections = switch (target) {
+                case "items.yml" -> List.of("items");
+                case "spawners.yml" -> List.of("spawners", "spawners.regions");
+                default -> List.of();
+            };
+            if (sections.isEmpty()) continue;
+            YamlConfiguration yaml = YamlConfiguration.loadConfiguration(new StringReader(content));
+            String source = String.valueOf(entry.getOrDefault("file", "unknown"));
+            for (String section : sections) {
+                ConfigurationSection definitions = yaml.getConfigurationSection(section);
+                if (definitions == null) continue;
+                for (String name : definitions.getKeys(false)) {
+                    if ("spawners".equals(section) && "regions".equalsIgnoreCase(name)) continue;
+                    String id = section + ":" + name.toLowerCase(Locale.ROOT);
+                    String previous = sources.putIfAbsent(id, source);
+                    if (previous != null) conflicts.add(Map.of("status", "conflict", "conflict-type", "duplicate-definition-id",
+                            "id", id, "file", source, "previous-file", previous,
+                            "note", "Multiple imported definitions resolve to the same ID."));
+                }
+            }
+        }
+        return conflicts;
+    }
+
+    static List<Map<String, Object>> resolveSpawnerMobReferences(List<Map<String, Object>> entries) {
+        Map<String, String> mobIds = new LinkedHashMap<>();
+        for (Map<String, Object> entry : entries) {
+            if ("mapped".equals(entry.get("status")) && entry.get("source-mob-id") instanceof String source
+                    && entry.get("target-mob-id") instanceof String target) {
+                mobIds.put(source.trim().toLowerCase(Locale.ROOT), target);
+            }
+        }
+        List<Map<String, Object>> diagnostics = new ArrayList<>();
+        for (Map<String, Object> entry : entries) {
+            if (!"mapped".equals(entry.get("status")) || !"spawners.yml".equals(entry.get("target-file"))
+                    || !(entry.get("content") instanceof String content)) continue;
+            YamlConfiguration yaml = YamlConfiguration.loadConfiguration(new StringReader(content));
+            ConfigurationSection spawners = yaml.getConfigurationSection("spawners");
+            if (spawners == null) continue;
+            for (String name : spawners.getKeys(false)) {
+                if ("regions".equalsIgnoreCase(name)) continue;
+                ConfigurationSection spawner = spawners.getConfigurationSection(name);
+                if (spawner == null) continue;
+                String mob = spawner.getString("mob");
+                if (mob != null) {
+                    String resolved = mobIds.get(mob.trim().toLowerCase(Locale.ROOT));
+                    if (resolved != null) spawner.set("mob", resolved);
+                    else diagnostics.add(unresolvedMob(entry, name, mob));
+                }
+                ConfigurationSection pool = spawner.getConfigurationSection("random-mobs");
+                if (pool == null) continue;
+                Map<String, Object> resolvedPool = new LinkedHashMap<>();
+                for (String key : pool.getKeys(false)) {
+                    String resolved = mobIds.get(key.trim().toLowerCase(Locale.ROOT));
+                    if (resolved == null) {
+                        resolved = key;
+                        diagnostics.add(unresolvedMob(entry, name, key));
+                    }
+                    if (resolvedPool.putIfAbsent(resolved, pool.get(key)) != null) {
+                        diagnostics.add(Map.of("status", "conflict", "conflict-type", "duplicate-spawner-pool-id",
+                                "file", String.valueOf(entry.getOrDefault("file", "unknown")),
+                                "note", "Spawner " + name + " has multiple pool entries resolving to " + resolved));
+                    }
+                }
+                spawner.set("random-mobs", resolvedPool);
+            }
+            entry.put("content", yaml.saveToString());
+        }
+        return diagnostics;
+    }
+
+    static void resolveSpawnerRegionReferences(List<Map<String, Object>> entries) {
+        Map<String, String> regionIds = new LinkedHashMap<>();
+        for (Map<String, Object> entry : entries) {
+            if (!"mapped".equals(entry.get("status")) || !(entry.get("source-regions") instanceof Map<?, ?> regions)) continue;
+            for (Map.Entry<?, ?> region : regions.entrySet()) {
+                if (region.getKey() instanceof String id && region.getValue() instanceof String original) {
+                    regionIds.put(original.trim().toLowerCase(Locale.ROOT), id);
+                }
+            }
+        }
+        for (Map<String, Object> entry : entries) {
+            if (!"mapped".equals(entry.get("status")) || !"spawners.yml".equals(entry.get("target-file"))
+                    || !(entry.get("content") instanceof String content)) continue;
+            YamlConfiguration yaml = YamlConfiguration.loadConfiguration(new StringReader(content));
+            ConfigurationSection spawners = yaml.getConfigurationSection("spawners");
+            if (spawners == null) continue;
+            for (String name : spawners.getKeys(false)) {
+                if ("regions".equalsIgnoreCase(name)) continue;
+                ConfigurationSection spawner = spawners.getConfigurationSection(name);
+                if (spawner == null || !spawner.isList("conditions")) continue;
+                List<String> conditions = spawner.getStringList("conditions");
+                for (int i = 0; i < conditions.size(); i++) {
+                    String condition = conditions.get(i).trim();
+                    boolean negated = condition.startsWith("!");
+                    String leaf = negated ? condition.substring(1).trim() : condition;
+                    if (!leaf.toLowerCase(Locale.ROOT).startsWith("region=")) continue;
+                    String id = regionIds.get(leaf.substring(7).trim().toLowerCase(Locale.ROOT));
+                    if (id != null) conditions.set(i, (negated ? "!" : "") + "region=" + id);
+                }
+                spawner.set("conditions", conditions);
+            }
+            entry.put("content", yaml.saveToString());
+        }
+    }
+
+    private static Map<String, Object> unresolvedMob(Map<String, Object> entry, String spawner, String mob) {
+        return Map.of("status", "unsupported", "file", String.valueOf(entry.getOrDefault("file", "unknown")),
+                "note", "Spawner " + spawner + " references " + mob
+                        + "; no matching mob was imported, so the reference was preserved.");
+    }
+
+    static List<Map<String, Object>> skillConflicts(List<Map<String, Object>> entries) {
+        Map<String, String> sources = new LinkedHashMap<>();
+        List<Map<String, Object>> conflicts = new ArrayList<>();
+        for (Map<String, Object> entry : entries) {
+            if (!"mapped".equals(entry.get("status")) || !"skills.yml".equals(entry.get("target-file"))
+                    || !(entry.get("content") instanceof String content)) continue;
+            ConfigurationSection skills = YamlConfiguration.loadConfiguration(new StringReader(content))
+                    .getConfigurationSection("skills");
+            if (skills == null) continue;
+            String source = String.valueOf(entry.getOrDefault("file", "unknown"));
+            for (String name : skills.getKeys(false)) {
+                String previous = sources.putIfAbsent(name.toLowerCase(Locale.ROOT), source);
+                if (previous != null) conflicts.add(Map.of("status", "conflict", "conflict-type", "duplicate-skill-id",
+                        "skill", name, "file", source, "previous-file", previous,
+                        "note", "Multiple imported skills resolve to the same ID."));
+            }
+        }
+        return conflicts;
+    }
+
+    static List<Map<String, Object>> lootTableConflicts(List<Map<String, Object>> entries) {
+        Map<String, String> sources = new LinkedHashMap<>();
+        List<Map<String, Object>> conflicts = new ArrayList<>();
+        for (Map<String, Object> entry : entries) {
+            if (!"mapped".equals(entry.get("status")) || !"loot.yml".equals(entry.get("target-file"))
+                    || !(entry.get("content") instanceof String content)) continue;
+            ConfigurationSection tables = YamlConfiguration.loadConfiguration(new StringReader(content))
+                    .getConfigurationSection("tables");
+            if (tables == null) continue;
+            String source = String.valueOf(entry.getOrDefault("file", "unknown"));
+            for (String name : tables.getKeys(false)) {
+                String previous = sources.putIfAbsent(name.toLowerCase(Locale.ROOT), source);
+                if (previous != null) {
+                    conflicts.add(Map.of("status", "conflict", "conflict-type", "duplicate-loot-table",
+                            "table", name, "file", source, "previous-file", previous,
+                            "note", "Multiple imported tables resolve to the same loot table ID."));
+                }
+            }
+        }
+        return conflicts;
+    }
+
+    static List<Map<String, Object>> mobTargetConflicts(List<Map<String, Object>> entries) {
+        Map<String, Map<String, Object>> sources = new LinkedHashMap<>();
+        List<Map<String, Object>> conflicts = new ArrayList<>();
+        for (Map<String, Object> entry : entries) {
+            if (!"mapped".equals(entry.get("status")) || !(entry.get("content") instanceof String)
+                    || !(entry.get("target-file") instanceof String target)
+                    || !target.startsWith("mobs/") || !target.endsWith(".yml")) continue;
+            Map<String, Object> previous = sources.putIfAbsent(target.toLowerCase(Locale.ROOT), entry);
+            if (previous != null) {
+                conflicts.add(Map.of("status", "conflict", "conflict-type", "duplicate-mob-target",
+                        "target-file", target, "file", String.valueOf(entry.getOrDefault("file", "unknown")),
+                        "previous-file", String.valueOf(previous.getOrDefault("file", "unknown")),
+                        "note", "Multiple imported mobs resolve to the same target file: "
+                                + previous.getOrDefault("note", "") + "; " + entry.getOrDefault("note", "")));
+            }
+        }
+        return conflicts;
+    }
+
     static boolean restoreWrittenFile(Path target, Path dataRoot, Path backupRoot,
                                       String source, String backupId) throws java.io.IOException {
         Path relative = dataRoot.relativize(target);
@@ -240,38 +485,17 @@ public final class MigrationServiceImpl implements MigrationService {
 
     @Override
     public boolean rollback(String source, String backupId) {
-        Map<String, List<Path>> record = backups.get(backupId);
-        if (record == null) {
-            // 扫描备份目录
-            Path dir = backupRoot.resolve(source + "/" + backupId);
-            if (!Files.isDirectory(dir)) return false;
-            try (var s = Files.walk(dir)) {
-                s.filter(Files::isRegularFile).forEach(b -> {
-                    try {
-                        String rel = dir.relativize(b).toString();
-                        Path target = plugin.getDataFolder().toPath().resolve(rel);
-                        Files.createDirectories(target.getParent());
-                        Files.copy(b, target, StandardCopyOption.REPLACE_EXISTING);
-                    } catch (Exception ignored) {
-                    }
-                });
-            } catch (Exception e) {
-                return false;
+        Path dir = backupRoot.resolve(source).resolve(backupId);
+        if (!Files.isDirectory(dir)) return false;
+        try (var paths = Files.walk(dir)) {
+            for (Path backup : paths.filter(Files::isRegularFile).toList()) {
+                Path target = plugin.getDataFolder().toPath().resolve(dir.relativize(backup));
+                Files.createDirectories(target.getParent());
+                Files.copy(backup, target, StandardCopyOption.REPLACE_EXISTING);
             }
-            audit("rollback", source, backupId);
-            return true;
-        }
-        for (List<Path> paths : record.values()) {
-            for (Path b : paths) {
-                try {
-                    // 备份根 = backupRoot/source/backupId/targetRoot...
-                    Path rel = backupRoot.resolve(source + "/" + backupId).relativize(b);
-                    Path target = plugin.getDataFolder().toPath().resolve(rel);
-                    Files.createDirectories(target.getParent());
-                    Files.copy(b, target, StandardCopyOption.REPLACE_EXISTING);
-                } catch (Exception ignored) {
-                }
-            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("[迁移] 回滚失败: " + e.getMessage());
+            return false;
         }
         audit("rollback", source, backupId);
         return true;

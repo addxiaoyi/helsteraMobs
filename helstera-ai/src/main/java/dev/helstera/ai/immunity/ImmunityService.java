@@ -292,6 +292,7 @@ public final class ImmunityService {
             if (r.unconditional()) return true;
             if (cond == null) return false;
             for (String c : r.conditions()) {
+                if (ConditionListParser.INVALID_CONDITION.equals(c)) return false;
                 boolean ok;
                 try {
                     ok = cond.test(c);
@@ -378,9 +379,11 @@ public final class ImmunityService {
             // 一行一个条件名已经够用，不值得引入这个失败模式。
             List<String> conditions = row.conditions() == null
                     ? List.of() : row.conditions().stream()
-                    .filter(c -> c != null && !c.isBlank())
-                    .map(String::trim)
+                    .map(c -> c == null || c.isBlank() ? ConditionListParser.INVALID_CONDITION : c.trim())
                     .toList();
+            if (conditions.contains(ConditionListParser.INVALID_CONDITION)) {
+                warnings.add("伤害类型 \"" + key + "\" 包含无效条件，该规则不会生效");
+            }
             Rule rule = new Rule(key, displayKind, multiplier, negate, conditions);
             boolean duplicate = false;
             for (Kind k : kinds) {
@@ -425,7 +428,19 @@ public final class ImmunityService {
                 immRaw instanceof org.bukkit.configuration.ConfigurationSection s ? s : null;
         if (immSec != null) {
             for (String key : immSec.getKeys(false)) {
-                rows.add(Row.immune(key, conditionsOf(immSec, key)));
+                Object value = immSec.get(key);
+                if (Boolean.TRUE.equals(value)) {
+                    rows.add(Row.immune(key));
+                } else if (value instanceof org.bukkit.configuration.ConfigurationSection sub) {
+                    List<String> conditions = new ArrayList<>(conditionsOf(sub, null));
+                    if (sub.getKeys(false).stream().anyMatch(name ->
+                            !name.equals("when") && !name.equals("conditions"))) {
+                        conditions.add(ConditionListParser.INVALID_CONDITION);
+                    }
+                    rows.add(Row.immune(key, conditions));
+                } else {
+                    rows.add(Row.immune(key, List.of(ConditionListParser.INVALID_CONDITION)));
+                }
             }
         } else {
             // 裸列表；也兼容「只写一条时退化成字符串」——此时 getStringList 返回空，
@@ -449,9 +464,18 @@ public final class ImmunityService {
                     continue;
                 }
                 if (raw instanceof org.bukkit.configuration.ConfigurationSection sub) {
-                    List<String> conds = conditionsOf(sub, null);
-                    Double mul = sub.contains("multiplier") ? sub.getDouble("multiplier") : null;
+                    List<String> conds = new ArrayList<>(conditionsOf(sub, null));
+                    if (sub.getKeys(false).stream().anyMatch(name -> !name.equals("multiplier")
+                            && !name.equals("immune") && !name.equals("when") && !name.equals("conditions"))
+                            || (sub.contains("immune") && !(sub.get("immune") instanceof Boolean))) {
+                        conds.add(ConditionListParser.INVALID_CONDITION);
+                    }
+                    Double mul = sub.contains("multiplier") ? asNumber(sub.get("multiplier")) : null;
                     boolean immune = sub.getBoolean("immune", false);
+                    if (sub.contains("multiplier") && mul == null) {
+                        rows.add(new Row(key, Double.NaN, null, conds));
+                        continue;
+                    }
                     if (mul == null && !immune) {
                         rows.add(new Row(key, null, Boolean.FALSE, conds));
                     } else {
@@ -493,9 +517,8 @@ public final class ImmunityService {
                 ? sec : sec.getConfigurationSection(key);
         if (c == null) return List.of();
         List<String> out = new ArrayList<>();
-        String when = c.getString("when");
-        if (when != null && !when.isBlank()) out.addAll(ConditionListParser.parse(when));
-        out.addAll(ConditionListParser.parse(c.get("conditions")));
+        if (c.contains("when")) out.addAll(ConditionListParser.parseFailClosed(c.get("when")));
+        out.addAll(ConditionListParser.parseFailClosed(c.get("conditions")));
         return out;
     }
 
