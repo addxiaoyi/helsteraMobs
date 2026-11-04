@@ -58,6 +58,7 @@ class SkillNestingTest {
         assertEquals("ember", SkillService.parseSkillRef("skill{s=ember;cooldown=1s}"));
         assertEquals("ember", SkillService.parseSkillRef("~onSpawn:ember"));
         assertEquals("ember", SkillService.parseSkillRef("  cast-skill   ember  "));
+        assertEquals("ember", SkillService.parseSkillRef("cast-skill{delay=2} ember @Target 50%"));
     }
 
     @Test
@@ -75,6 +76,71 @@ class SkillNestingTest {
     // ------------------------------------------------------------------
     // 嵌套执行
     // ------------------------------------------------------------------
+
+    @Test
+    void targetedNestedSkillsHonorConditionsAndSelectedTarget() {
+        var target = livingPlayerProxy();
+        var observed = new java.util.ArrayList<BehaviorContext>();
+        var allowed = new java.util.concurrent.atomic.AtomicBoolean(false);
+        registry.registerAction("capture", observed::add);
+        registry.registerAction("skill", context -> { throw new AssertionError("wrong dispatcher"); });
+        registry.registerCondition("gate", context -> allowed.get());
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  inner:
+                    on-decision: [capture]
+                """).getConfigurationSection("skills"));
+        var context = BehaviorContext.execution(null, (org.bukkit.entity.Player) target,
+                0.5, 4, 0, "skill", null, null, List.of(target), null);
+        for (String spec : List.of("skill{s=inner} @Target ?gate",
+                "cast-skill inner @Target ?gate", "randomskill{skills=inner} @Target ?gate")) {
+            String action = svc.bindAction(spec);
+            assertNotNull(action, svc.warnings().toString());
+            assertTrue(registry.runAction(action, context));
+            assertTrue(observed.isEmpty(), spec);
+            allowed.set(true);
+            assertTrue(registry.runAction(action, context));
+            assertEquals(1, observed.size(), spec);
+            assertSame(target, observed.remove(0).targetEntity().orElseThrow());
+            allowed.set(false);
+        }
+    }
+
+    @Test
+    void nestedAndRandomSkillsRespectExecutionMetadata() {
+        var fired = new AtomicInteger();
+        var delays = new java.util.ArrayList<Long>();
+        registry.registerAction("probe", context -> fired.incrementAndGet());
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  inner:
+                    on-decision: [probe]
+                """).getConfigurationSection("skills"));
+        SkillCatalog.taskScheduler((task, delay) -> {
+            delays.add(delay);
+            task.run();
+            return true;
+        });
+        try {
+            String nested = svc.bindAction("skill{s=inner;delay=2;repeat=1;repeatinterval=3}");
+            assertNotNull(nested, svc.warnings().toString());
+            assertTrue(registry.runAction(nested, ctx()));
+            assertEquals(2, fired.get());
+            assertEquals(List.of(2L, 3L), delays);
+            String skipped = svc.bindAction("skill{s=inner} 0%");
+            assertTrue(registry.runAction(skipped, ctx()));
+            assertEquals(2, fired.get());
+            String random = svc.bindAction("randomskill{skills=inner;delay=1}");
+            assertNotNull(random, svc.warnings().toString());
+            assertTrue(registry.runAction(random, ctx()));
+            assertEquals(3, fired.get());
+            assertEquals(List.of(2L, 3L, 1L), delays);
+        } finally {
+            SkillCatalog.taskScheduler(null);
+        }
+    }
 
     @Test
     @DisplayName("技能 A 调用技能 B，两级动作按序执行")
@@ -529,6 +595,48 @@ class SkillNestingTest {
     }
 
     @Test
+    void unknownConditionsNeverBecomeUnconditionalSkills() {
+        var fired = new AtomicInteger();
+        registry.registerAction("probe", context -> fired.incrementAndGet());
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  bad_require:
+                    require: [missing-condition]
+                    on-decision: [probe]
+                  bad_target:
+                    target-conditions: [missing-condition]
+                    on-decision: [probe]
+                  bad_trigger:
+                    trigger-conditions: [missing-condition]
+                    on-decision: [probe]
+                  bad_alias:
+                    TargetConditions: [missing-condition]
+                    on-decision: [probe]
+                  bad_null:
+                    target-conditions: [null]
+                    on-decision: [probe]
+                  bad_number:
+                    trigger-conditions: [123]
+                    on-decision: [probe]
+                  bad_blank:
+                    require: ['']
+                    on-decision: [probe]
+                  good:
+                    on-decision: [probe]
+                """).getConfigurationSection("skills"));
+        for (String name : List.of("bad_require", "bad_target", "bad_trigger", "bad_alias",
+                "bad_null", "bad_number", "bad_blank")) {
+            assertFalse(svc.castSkill(name, ctx()), name);
+            assertFalse(svc.preview(name, ctx()).wouldRun(), name);
+            assertFalse(registry.testCondition("skill:" + name, ctx()), name);
+            registry.runAction("skill:" + name, ctx());
+        }
+        assertTrue(svc.castSkill("good", ctx()));
+        assertEquals(1, fired.get());
+    }
+
+    @Test
     @DisplayName("nested skills share and unset one tree variable")
     void nestedSkillsShareAndUnsetTreeVariable() {
         var svc = service();
@@ -566,10 +674,63 @@ class SkillNestingTest {
         registry.registerAction("probe", context -> { });
         var original = BehaviorContext.execution(null, null, 1.0, -1, 0, "skill",
                 null, null, List.of(), null);
-        assertTrue(svc.castSkill("gated", original));
-        assertEquals(2, seen.size());
+        assertFalse(svc.castSkill("gated", original));
+        assertEquals(1, seen.size());
         assertSame(original, seen.get(0), "without a target, keep the neutral context");
-        assertSame(original, seen.get(1), "without a trigger entity, keep the neutral context");
+    }
+
+    @Test
+    void triggerConditionsRejectMissingOrNonLivingTriggerEvenWhenTargetPasses() {
+        var target = mock(org.bukkit.entity.Zombie.class);
+        var nonLiving = mock(org.bukkit.entity.Item.class);
+        var fired = new AtomicInteger();
+        registry.registerCondition("accept-target", context -> context.targetEntity().orElse(null) == target);
+        registry.registerAction("probe", context -> fired.incrementAndGet());
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  gated:
+                    trigger-conditions: [accept-target]
+                    on-decision: [probe]
+                  unrestricted:
+                    on-decision: [probe]
+                """).getConfigurationSection("skills"));
+        for (var trigger : java.util.Arrays.asList(null, nonLiving)) {
+            var context = BehaviorContext.continueExecution(null, target, 1, -1, 0, "skill",
+                    null, trigger, List.of(target), null, null);
+            assertFalse(svc.castSkill("gated", context));
+            assertFalse(svc.preview("gated", context).wouldRun());
+            assertTrue(svc.castSkill("unrestricted", context));
+        }
+        assertEquals(2, fired.get());
+    }
+
+    @Test
+    void previewChecksTargetConditionsWithoutChangingTreeTargets() {
+        var target = mock(org.bukkit.entity.Zombie.class);
+        var other = mock(org.bukkit.entity.Zombie.class);
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of(target, other));
+        registry.registerCondition("reject-target", context -> false);
+        registry.registerCondition("accept-first", context -> context.targetEntity().orElse(null) == target);
+        registry.registerAction("probe", context -> { });
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  gated:
+                    target-conditions: [reject-target]
+                    on-decision: [probe]
+                  filtered:
+                    target-conditions: [accept-first]
+                    on-decision: [probe]
+                """).getConfigurationSection("skills"));
+        var context = BehaviorContext.continueExecution(null, target, 1, -1, 0, "skill",
+                null, null, List.of(target, other), null, tree);
+        assertFalse(svc.preview("gated", context).wouldRun());
+        assertTrue(svc.preview("filtered", context).wouldRun());
+        assertEquals(List.of(target, other), tree.targets());
+        assertFalse(svc.castSkill("gated", context));
+        assertTrue(svc.castSkill("filtered", context));
+        assertEquals(List.of(target), tree.targets());
     }
 
     @Test
@@ -599,6 +760,34 @@ class SkillNestingTest {
         assertEquals(2, observed.size());
         assertSame(target, observed.get(0));
         assertSame(trigger, observed.get(1));
+    }
+
+    @Test
+    void targetAndTriggerConditionsPreserveNonPlayerEntities() {
+        var target = mock(org.bukkit.entity.Zombie.class);
+        var trigger = mock(org.bukkit.entity.Zombie.class);
+        when(target.getHealth()).thenReturn(10.0);
+        when(target.getMaxHealth()).thenReturn(20.0);
+        when(trigger.getHealth()).thenReturn(8.0);
+        when(trigger.getMaxHealth()).thenReturn(20.0);
+        var observed = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
+        registry.registerCondition("capture-mob", context -> {
+            observed.add(context.targetEntity().orElse(null));
+            return true;
+        });
+        registry.registerAction("probe", context -> { });
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  gated:
+                    target-conditions: [capture-mob]
+                    trigger-conditions: [capture-mob]
+                    on-decision: [probe]
+                """).getConfigurationSection("skills"));
+        var context = BehaviorContext.continueExecution(null, target, 0.5, 4, 0, "skill",
+                null, trigger, List.of(target), null, null);
+        assertTrue(svc.castSkill("gated", context));
+        assertEquals(List.of(target, trigger), observed);
     }
 
     @Test

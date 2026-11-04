@@ -27,6 +27,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MythicAgeOptionsTest {
@@ -289,6 +290,17 @@ class MythicAgeOptionsTest {
                 new HelsteraPlugin.ParsedEnchantment("SHARPNESS", 5),
                 new HelsteraPlugin.ParsedEnchantment("LOOTING", 2)),
                 parsed.enchantments());
+    }
+
+    @Test
+    void itemSpecRejectsExternalIdentifiersWithoutTreatingThemAsEnchantments() {
+        assertNull(HelsteraPlugin.parseItemSpec("stone:custom"));
+        assertNull(HelsteraPlugin.parseItemSpec("minecraft:stone:custom"));
+        assertNull(HelsteraPlugin.parseItemSpec("stone:"));
+        assertEquals("STONE", HelsteraPlugin.parseItemSpec("minecraft:stone").material());
+        assertEquals(2, HelsteraPlugin.parseItemSpec("stone:2").amount());
+        assertEquals(List.of(new HelsteraPlugin.ParsedEnchantment("SHARPNESS", 3)),
+                HelsteraPlugin.parseItemSpec("stone:1:sharpness:3").enchantments());
     }
 
     @Test

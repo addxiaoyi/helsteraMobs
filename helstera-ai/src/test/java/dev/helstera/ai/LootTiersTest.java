@@ -26,6 +26,93 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class LootTiersTest {
 
+    @Test
+    void nativeFileSingleTierNullWeightDoesNotBecomeDefault(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir)
+            throws Exception {
+        var file = dir.resolve("loot.yml");
+        java.nio.file.Files.writeString(file, """
+                null-weight: &null-weight {weight: null, amount-min: 9, amount-max: 9}
+                tables:
+                  indexed:
+                    entries:
+                      0: {item: DIAMOND, tiers: {weight: null, amount-min: 9}}
+                      1: {item: EMERALD, tiers: {<<: *null-weight}}
+                      2: {item: GOLD_INGOT, tiers: {<<: *null-weight, weight: 1}}
+                      3: {item: BREAD, tiers: {amount-min: 2}}
+                  list:
+                    entries:
+                      - {item: IRON_INGOT, tiers: {weight: null, amount-min: 9}}
+                """);
+        LootService service = service();
+        service.loadFile(file);
+        var entries = service.table("indexed").entries();
+        assertFalse(entries.get(0).hasTiers());
+        assertFalse(entries.get(1).hasTiers());
+        assertTrue(entries.get(2).hasTiers());
+        assertTrue(entries.get(3).hasTiers());
+        assertFalse(service.table("list").entries().get(0).hasTiers());
+        assertEquals(3, service.warnings().stream().filter(w -> w.contains("weight = null")).count());
+        assertEquals(List.of(1, 1, 9, 2), service.rollPlan(service.table("indexed"), 0, new Random(1))
+                .stream().map(LootService.Hit::amount).toList());
+    }
+
+    @Test
+    void invalidTierWeightsAreSkippedInsteadOfDefaultingToOne() {
+        List<String> problems = new ArrayList<>();
+        DropTable table = parse("""
+                entries:
+                  - item: DIAMOND
+                    tiers:
+                      - {weight: invalid, amount-min: 9, amount-max: 9}
+                      - {weight: '', amount-min: 8, amount-max: 8}
+                      - {weight: .inf, amount-min: 7, amount-max: 7}
+                      - {weight: null, amount-min: 6, amount-max: 6}
+                      - {amount-min: 2, amount-max: 2}
+                """, problems);
+        assertEquals(1, table.entries().get(0).tiers().size());
+        assertEquals(2, service().rollPlan(table, 0, new Random(1)).get(0).amount());
+        assertTrue(problems.stream().anyMatch(p -> p.contains("invalid") && p.contains("weight")));
+        assertTrue(problems.stream().anyMatch(p -> p.contains("weight = null")));
+    }
+
+    @Test
+    void invalidTierRangesAreSkippedWhileValidSiblingsRemain() {
+        List<String> problems = new ArrayList<>();
+        DropTable table = parse("""
+                entries:
+                  - item: DIAMOND
+                    tiers:
+                      - {amount-min: invalid}
+                      - {amount-min: null}
+                      - {amount-min: 2.5}
+                      - {amount-min: 0}
+                      - {amount-min: 5, amount-max: 2}
+                      - {amount-min: 1, amount-max: .inf}
+                      - {amount-min: 3, amount-max: 3}
+                """, problems);
+        assertEquals(1, table.entries().get(0).tiers().size());
+        assertEquals(3, service().rollPlan(table, 0, new Random(1)).get(0).amount());
+        assertEquals(6, problems.stream().filter(p -> p.contains("tiers amount range is invalid")).count());
+    }
+
+    @Test
+    void nativeFileRetainsNullSingleTierRange(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir)
+            throws Exception {
+        var file = dir.resolve("loot.yml");
+        java.nio.file.Files.writeString(file, """
+                tables:
+                  indexed:
+                    entries:
+                      0: {item: DIAMOND, tiers: {amount-min: null}}
+                      1: {item: EMERALD, tiers: {amount-min: 2, amount-max: 2}}
+                """);
+        LootService service = service();
+        service.loadFile(file);
+        assertFalse(service.table("indexed").entries().get(0).hasTiers());
+        assertTrue(service.table("indexed").entries().get(1).hasTiers());
+        assertTrue(service.warnings().stream().anyMatch(p -> p.contains("tiers amount range is invalid")));
+    }
+
     private static DropTable parse(String yml, List<String> problems) {
         return DropTable.parse("t", YamlConfiguration.loadConfiguration(new StringReader(yml)), problems);
     }
@@ -60,6 +147,25 @@ class LootTiersTest {
     }
 
     @Test
+    void largeWeightsRemainProportionalAndNonFiniteWeightsAreInvalid() {
+        assertFalse(DropTable.Tier.of(1, 1, Double.POSITIVE_INFINITY).valid());
+        assertFalse(DropTable.Tier.of(1, 1, Double.NaN).valid());
+        DropTable table = parse("""
+                entries:
+                  - item: DIAMOND
+                    tiers:
+                      - {weight: 1.0e308, amount-min: 1, amount-max: 1}
+                      - {weight: 1.0e308, amount-min: 2, amount-max: 2}
+                """, new ArrayList<>());
+        Random random = new Random(13);
+        int first = 0;
+        for (int i = 0; i < 1000; i++) {
+            if (service().rollPlan(table, 0, random).get(0).amount() == 1) first++;
+        }
+        assertTrue(first > 400 && first < 600, "equal large weights should select both tiers");
+    }
+
+    @Test
     @DisplayName("只写一个档位时（写成映射而非列表）也能解析")
     void singleTierAsMap() {
         DropTable t = parse("""
@@ -72,15 +178,15 @@ class LootTiersTest {
     }
 
     @Test
-    @DisplayName("min-tier-level 非正数时忽略门槛并留痕")
-    void negativeTierIgnored() {
+    @DisplayName("min-tier-level 非正数时拒绝条目并留痕")
+    void negativeTierRejected() {
         List<String> problems = new ArrayList<>();
         DropTable t = parse("""
                 entries:
                   - item: DIAMOND
                     min-tier-level: -3
                 """, problems);
-        assertNull(t.entries().get(0).minTierLevel(), "非法门槛应视为未设置");
+        assertTrue(t.entries().isEmpty(), "非法门槛不得变成无条件掉落");
         assertTrue(problems.stream().anyMatch(p -> p.contains("min-tier-level")));
     }
 

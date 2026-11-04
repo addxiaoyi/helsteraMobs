@@ -25,4 +25,9 @@ public interface MigrationImporter {
      * 无法无损转换的字段必须放入 "unsupported" 节点，不能静默丢弃。
      */
     List<Map<String, Object>> convert(Path sourceFile);
+
+    /** Converts a scanned file with its source plugin directory as context. */
+    default List<Map<String, Object>> convert(Path sourceFile, Path pluginDataFolder) {
+        return convert(sourceFile);
+    }
 }

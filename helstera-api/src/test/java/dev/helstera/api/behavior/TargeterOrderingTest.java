@@ -3,6 +3,8 @@ package dev.helstera.api.behavior;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.World;
+import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -103,6 +105,62 @@ class TargeterOrderingTest {
     }
 
     @Test
+    @DisplayName("PlayersInWorld 保留同阵营玩家，并排除跨世界、离线、失效及默认自身")
+    void playersInWorldBoundaries() {
+        World world = proxy(World.class, (method, args) -> null);
+        World otherWorld = proxy(World.class, (method, args) -> null);
+        Player caster = player(world, true, true, false);
+        Player ally = player(world, true, true, false);
+        Player elsewhere = player(otherWorld, true, true, false);
+        Player offline = player(world, false, true, false);
+        Player invalid = player(world, true, false, false);
+        Player dead = player(world, true, true, true);
+
+        assertEquals(List.of(ally), Targeters.filterPlayers(
+                List.of(caster, ally, elsewhere, offline, invalid, dead), world, caster, false));
+        assertEquals(List.of(caster, ally), Targeters.filterPlayers(
+                List.of(caster, ally), world, caster, true));
+    }
+
+    @Test
+    @DisplayName("PlayersOnServer aliases are registered and server selection accepts every world")
+    void playersOnServerAliasesAndWorldBoundary() {
+        assertTrue(Targeters.names().containsAll(List.of("playersonserver", "server", "everyone")));
+        World first = proxy(World.class, (method, args) -> null);
+        World second = proxy(World.class, (method, args) -> null);
+        Player inFirst = player(first, true, true, false);
+        Player inSecond = player(second, true, true, false);
+
+        assertEquals(List.of(inFirst, inSecond), Targeters.filterPlayers(
+                List.of(inFirst, inSecond), null, null, false));
+    }
+
+    private static Player player(World world, boolean online, boolean valid, boolean dead) {
+        return proxy(Player.class, (method, args) -> switch (method) {
+            case "getWorld" -> world;
+            case "isOnline" -> online;
+            case "isValid" -> valid;
+            case "isDead" -> dead;
+            case "toString" -> "player";
+            default -> null;
+        });
+    }
+
+    private static <T> T proxy(Class<T> type, Invocation invocation) {
+        return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
+                (instance, method, args) -> switch (method.getName()) {
+                    case "equals" -> instance == args[0];
+                    case "hashCode" -> System.identityHashCode(instance);
+                    default -> invocation.invoke(method.getName(), args);
+                }));
+    }
+
+    @FunctionalInterface
+    private interface Invocation {
+        Object invoke(String method, Object[] args);
+    }
+
+    @Test
     @DisplayName("全 NaN 分数不会让排序退化或抛异常")
     void nanScoresDoNotBreak() {
         var in = List.of(
@@ -181,6 +239,12 @@ class TargeterOrderingTest {
         var resolved = Targeters.resolveLocation("@VariableLocation{var=mark}", ctx);
         assertTrue(resolved.isPresent());
         assertEquals(12, resolved.orElseThrow().getX());
+        for (String alias : List.of("variable", "name", "n", "var", "key", "k")) {
+            assertEquals(12, Targeters.resolveLocation("@varLocation{" + alias + "=mark;s=skill}", ctx)
+                    .orElseThrow().getX(), alias);
+            assertTrue(Targeters.resolveLocation("@varLocation{" + alias + "=mark;var=other}", ctx).isEmpty(), alias);
+        }
+        assertTrue(Targeters.resolveLocation("@varLocation{var=mark;scope=skill;s=skill}", ctx).isEmpty());
         assertTrue(Targeters.resolveLocation("@VariableLocation{var=missing}", ctx).isEmpty());
         assertEquals(List.of(), Targeters.select("@VariableLocation{var=mark}", ctx,
                 List.of(), List.of()), "Location targeter must not pretend a nearby entity is the saved location");
@@ -203,13 +267,134 @@ class TargeterOrderingTest {
     }
 
     @Test
+    @DisplayName("Mythic target and ignore lists filter living entity categories and fail closed")
+    void mythicTargetAndIgnoreFilters() {
+        var player = livingProxy(org.bukkit.entity.Player.class);
+        var animal = livingProxy(org.bukkit.entity.Animals.class);
+        var monster = livingProxy(org.bukkit.entity.Monster.class);
+        List<LivingEntity> candidates = List.of(player, animal, monster);
+        var source = (dev.helstera.api.instance.ModelInstance) null;
+
+        assertEquals(List.of(player, animal), Targeters.select(
+                "@living{target=players,animals}", source, candidates, List.of()));
+        assertEquals(List.of(player, animal), Targeters.select(
+                "@living{target=\"players,animals\"}", source, candidates, List.of()));
+        assertEquals(List.of(monster), Targeters.select(
+                "@living{ignore=players,animals}", source, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{target=players;ignore=players}", source, candidates, List.of()));
+        for (String spec : List.of("@living{target=players,unknown-filter}",
+                "@living{ignore=players,,animals}", "@living{target=players;target=animals}",
+                "@living{targetself=maybe}")) {
+            assertEquals(List.of(), Targeters.select(spec, source, candidates, List.of()), spec);
+        }
+
+        var caster = conditionalLivingProxy(10.0);
+        var other = conditionalLivingProxy(12.0);
+        var instance = (dev.helstera.api.instance.ModelInstance) Proxy.newProxyInstance(
+                dev.helstera.api.instance.ModelInstance.class.getClassLoader(),
+                new Class<?>[]{dev.helstera.api.instance.ModelInstance.class},
+                (proxy, method, args) -> method.getName().equals("baseEntity")
+                        ? java.util.Optional.of(caster) : defaultValue(method.getReturnType()));
+        assertEquals(List.of(other), Targeters.select("@living{targetself=false;sort=none}",
+                instance, List.of(caster, other), List.of()));
+        var includesCaster = Targeters.select("@living{targetself=true;sort=none}",
+                instance, List.of(other), List.of());
+        assertEquals(2, includesCaster.size());
+        assertTrue(includesCaster.containsAll(List.of(caster, other)));
+    }
+
+    @Test
+    @DisplayName("target limits sort first, skip an index, then apply the result limit")
+    void targeterSkipIndexAndAlias() {
+        var first = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var second = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var candidates = List.<LivingEntity>of(first, second);
+        var source = (dev.helstera.api.instance.ModelInstance) null;
+
+        assertEquals(List.of(second), Targeters.select(
+                "@living{sort=none;skipTargetsUpToIndex=1;limit=1}", source, candidates, List.of()));
+        assertEquals(List.of(second), Targeters.select(
+                "@living{sort=none;stuti=1;limit=1}", source, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{sort=none;stuti=2;limit=1}", source, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{stuti=-1}", source, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{skipTargetsUpToIndex=invalid}", source, candidates, List.of()));
+    }
+
+    @Test
+    @DisplayName("generic target sorting supports health, age, threat and rejects unknown or unavailable data")
+    void genericTargetSorts() {
+        var lowHealth = sortableLiving(5, 900, 4);
+        var highHealth = sortableLiving(18, 100, 20);
+        var mediumHealth = sortableLiving(10, 500, 12);
+        var candidates = List.of(lowHealth, highHealth, mediumHealth);
+        var source = (dev.helstera.api.instance.ModelInstance) null;
+
+        assertEquals(List.of(highHealth, mediumHealth, lowHealth), Targeters.select(
+                "@living{sort=HIGHEST_HEALTH}", source, candidates, List.of()));
+        assertEquals(List.of(lowHealth, mediumHealth, highHealth), Targeters.select(
+                "@living{sort=lowest_health}", source, candidates, List.of()));
+        assertEquals(List.of(lowHealth, mediumHealth, highHealth), Targeters.select(
+                "@living{sort=OLDEST}", source, candidates, List.of()));
+        assertEquals(List.of(highHealth, mediumHealth, lowHealth), Targeters.select(
+                "@living{sort=NEWEST}", source, candidates, List.of()));
+        assertEquals(candidates, Targeters.select(
+                "@living{sort=NONE}", source, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{sort=not-a-sort}", source, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{sort=highest-health}", source,
+                List.of(highHealth, sortableLiving(Double.NaN, 50, 2)), List.of()));
+
+        try {
+            Targeters.threatProvider(null);
+            assertEquals(List.of(), Targeters.select(
+                    "@living{sort=highest-threat}", source, candidates, List.of()));
+            Targeters.threatProvider((ignored, entity) -> entity == lowHealth ? 3
+                    : entity == highHealth ? 30 : 12);
+            assertEquals(List.of(highHealth, mediumHealth, lowHealth), Targeters.select(
+                    "@living{sort=highest-threat}", source, candidates, List.of()));
+            assertEquals(List.of(lowHealth, mediumHealth, highHealth), Targeters.select(
+                    "@living{sort=lowest-threat}", source, candidates, List.of()));
+            Targeters.threatProvider((ignored, entity) -> Double.NaN);
+            assertEquals(List.of(), Targeters.select(
+                    "@living{sort=highest-threat}", source, candidates, List.of()));
+        } finally {
+            Targeters.threatProvider(null);
+        }
+    }
+
+    private static LivingEntity sortableLiving(double health, int ticksLived, double x) {
+        return (LivingEntity) Proxy.newProxyInstance(LivingEntity.class.getClassLoader(),
+                new Class<?>[]{LivingEntity.class}, (proxy, method, args) -> switch (method.getName()) {
+                    case "getHealth" -> health;
+                    case "getTicksLived" -> ticksLived;
+                    case "getLocation" -> new org.bukkit.Location(null, x, 0, 0);
+                    case "getType" -> org.bukkit.entity.EntityType.ZOMBIE;
+                    default -> defaultValue(method.getReturnType());
+                });
+    }
+
+    @Test
     @DisplayName("invalid explicit targeter limits fail closed")
     void invalidTargeterLimitsFailClosed() {
         var player = livingProxy(org.bukkit.entity.Player.class);
         var source = (dev.helstera.api.instance.ModelInstance) null;
         for (String spec : List.of("@living{limit=typo}", "@living{count=1.5}",
                 "@living{radius=typo}", "@living{r=-1}", "@living{r=NaN}",
-                "@living{r=Infinity}", "@living{limit=1")) {
+                "@living{r=Infinity}", "@living{limit=1", "@living{limit=1}junk",
+                "@living{r=1;radius=10}", "@living{limit=1;count=2}",
+                "@living{filter=player;type=mob}", "@living{sort=none;sort=random}",
+                "@living{stuti=0;skipTargetsUpToIndex=1}", "@living{filter=}",
+                "@living{filter=!not-an-entity}", "@living{filter=!faction:}", "@living >")) {
+            assertEquals(List.of(), Targeters.select(spec, source, List.of(player), List.of()), spec);
+        }
+        for (String spec : List.of("@living{limit=1;}", "@living{;limit=1}",
+                "@living{limit=1;;sort=nearest}", "@living{filter=\"player}",
+                "@living{filter=(player]}", "@living{limit=1;sort=(nearest)}junk")) {
             assertEquals(List.of(), Targeters.select(spec, source, List.of(player), List.of()), spec);
         }
         assertEquals(List.of(player), Targeters.select("@living{count=1}", source, List.of(player), List.of()));
@@ -223,6 +408,7 @@ class TargeterOrderingTest {
                 (org.bukkit.entity.LivingEntity) Proxy.newProxyInstance(type.getClassLoader(),
                         new Class<?>[]{type}, (proxy, method, args) -> switch (method.getName()) {
                             case "getWorld" -> worldRef[0];
+                            case "isOnline" -> true;
                             case "isValid" -> valid;
                             case "isDead" -> false;
                             case "equals" -> proxy == args[0];
@@ -362,6 +548,44 @@ class TargeterOrderingTest {
     }
 
     @Test
+    void contextTargetsApplySortingFilteringAndBounds() {
+        var low = conditionalLivingProxy(3.0);
+        var high = conditionalLivingProxy(12.0);
+        var player = conditionalPlayerProxy(7.0);
+        var context = BehaviorContext.continueExecution(null, (LivingEntity) null, 1, 2, 0,
+                "skill", null, null, List.of(low, player, high), null, null);
+        assertEquals(List.of(low), Targeters.select(
+                "@targets{filter=mob;sort=highest-health;stuti=1;limit=1}", context, List.of(), List.of()));
+        assertEquals(List.of(player), Targeters.select(
+                "@targets{filter=player;count=1}", context, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@targets{limit=bad}", context, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@targets{sort=unknown}", context, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@targets{radius=NaN}", context, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@targets{limit=0}", context, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@targets{filter=!unknown-entity}", context, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@targets{count=1;limit=2}", context, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@targets > @targets{filter=!unknown-entity}", context, List.of(), List.of()));
+    }
+
+    @Test
+    void contextTargetsRadiusUsesCasterWorldAndDistance() {
+        World world = proxy(World.class, (method, args) -> null);
+        World other = proxy(World.class, (method, args) -> null);
+        var origin = new org.bukkit.Location(world, 0, 0, 0);
+        var source = proxy(dev.helstera.api.instance.ModelInstance.class,
+                (method, args) -> method.equals("location") ? origin : null);
+        LivingEntity near = proxy(LivingEntity.class, (method, args) ->
+                method.equals("getLocation") ? new org.bukkit.Location(world, 3, 0, 0) : null);
+        LivingEntity far = proxy(LivingEntity.class, (method, args) ->
+                method.equals("getLocation") ? new org.bukkit.Location(world, 6, 0, 0) : null);
+        LivingEntity elsewhere = proxy(LivingEntity.class, (method, args) ->
+                method.equals("getLocation") ? new org.bukkit.Location(other, 1, 0, 0) : null);
+        var context = BehaviorContext.continueExecution(source, (LivingEntity) null, 1, 0, 0,
+                "skill", null, null, List.of(near, far, elsewhere), origin, null);
+        assertEquals(List.of(near), Targeters.select("@targets{r=3}", context, List.of(), List.of()));
+    }
+
+    @Test
     @DisplayName("context targeter chains apply subsequent filters")
     void contextTargeterChainAppliesFilters() {
         var player = livingProxy(org.bukkit.entity.Player.class);
@@ -373,6 +597,35 @@ class TargeterOrderingTest {
                 context, List.of(player), List.of()));
         assertEquals(List.of(), Targeters.select("@Target{} > @unknown",
                 context, List.of(player), List.of()));
+    }
+
+    @Test
+    void chainedContextTargetersPreserveScopeAndConditions() {
+        var low = conditionalLivingProxy(4.0);
+        var high = conditionalLivingProxy(12.0);
+        var context = BehaviorContext.continueExecution(null, low, 1, 0, 0, "skill",
+                null, low, List.of(low, high), new org.bukkit.Location(null, 0, 0, 0), null);
+        List<LivingEntity> candidates = List.of(low, high);
+        assertEquals(List.of(high), Targeters.select(
+                "@living{sort=highest-health;limit=1} > @targets{sort=none;limit=1}",
+                context, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{sort=highest-health;limit=1} > @trigger",
+                context, candidates, List.of()));
+        assertEquals(List.of(low), Targeters.select(
+                "@living{sort=lowest-health;limit=1} > @trigger",
+                context, candidates, List.of()));
+        Targeters.conditionProvider((condition, candidate) -> candidate.healthRatio() > 0.5);
+        try {
+            assertEquals(List.of(high), Targeters.select(
+                    "@living > @nearestConditionalTarget{conditions=[health-above 0.5]}",
+                    context, candidates, List.of()));
+            assertEquals(List.of(), Targeters.select(
+                    "@living{sort=lowest-health;limit=1} > @nearestConditionalTarget{conditions=[health-above 0.5]}",
+                    context, candidates, List.of()));
+        } finally {
+            Targeters.conditionProvider(null);
+        }
     }
 
     @Test
@@ -483,6 +736,38 @@ class TargeterOrderingTest {
     }
 
     @Test
+    @DisplayName("conditional targeters apply skip after sorting and before limit")
+    void conditionalTargetersApplySkipAndLimit() {
+        var first = conditionalLivingProxy(8.0);
+        var second = conditionalLivingProxy(12.0);
+        List<LivingEntity> candidates = List.of(first, second);
+        Targeters.conditionProvider((condition, context) -> "eligible".equals(condition));
+        try {
+            var context = BehaviorContext.continueExecution(null, (LivingEntity) null, 1, -1, 0,
+                    "skill", null, null, candidates,
+                    new org.bukkit.Location(null, 0, 0, 0), null);
+
+            assertEquals(List.of(second), Targeters.select(
+                    "@nearestConditionalTarget{conditions=[eligible];sort=none;skipTargetsUpToIndex=1;limit=1}",
+                    context, candidates, List.of()));
+            assertEquals(List.of(second), Targeters.select(
+                    "@nearestConditionalTarget{conditions=[eligible];sort=none;stuti=1;limit=1}",
+                    context, candidates, List.of()));
+            assertEquals(List.of(), Targeters.select(
+                    "@nearestConditionalTarget{conditions=[eligible];stuti=2;limit=1}",
+                    context, candidates, List.of()));
+            assertEquals(List.of(), Targeters.select(
+                    "@nearestConditionalTarget{conditions=[eligible];stuti=-1}",
+                    context, candidates, List.of()));
+            assertEquals(List.of(), Targeters.select(
+                    "@nearestConditionalTarget{conditions=[eligible];stuti=invalid}",
+                    context, candidates, List.of()));
+        } finally {
+            Targeters.conditionProvider(null);
+        }
+    }
+
+    @Test
     @DisplayName("nearestConditionalPlayer excludes non-player candidates")
     void conditionalPlayerTargeterFiltersEntityType() {
         var player = conditionalPlayerProxy(12.0);
@@ -525,6 +810,8 @@ class TargeterOrderingTest {
                 new Class<?>[]{org.bukkit.entity.LivingEntity.class},
                 (proxy, method, args) -> {
                     return switch (method.getName()) {
+                        case "equals" -> proxy == args[0];
+                        case "hashCode" -> System.identityHashCode(proxy);
                         case "isValid" -> true;
                         case "isDead" -> false;
                         case "getHealth" -> health;
@@ -542,6 +829,8 @@ class TargeterOrderingTest {
                 new Class<?>[]{org.bukkit.entity.Player.class},
                 (proxy, method, args) -> {
                     return switch (method.getName()) {
+                        case "equals" -> proxy == args[0];
+                        case "hashCode" -> System.identityHashCode(proxy);
                         case "isValid" -> true;
                         case "isDead" -> false;
                         case "getHealth" -> health;

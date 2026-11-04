@@ -26,6 +26,7 @@ public final class AiProfile {
     public double attackCooldown = 1.2;
     /** Maximum distance from which an entity may damage this mob. */
     public double maxCombatDistance = 256.0;
+    public double reviveHealth = Double.NaN;
     public double fleeHealthRatio = 0.3;
     public double patrolRadius = 8;
     public double patrolInterval = 4.0;
@@ -195,6 +196,7 @@ public final class AiProfile {
         this.attackDamage = base.attackDamage;
         this.attackCooldown = base.attackCooldown;
         this.maxCombatDistance = base.maxCombatDistance;
+        this.reviveHealth = base.reviveHealth;
         this.fleeHealthRatio = base.fleeHealthRatio;
         this.patrolRadius = base.patrolRadius;
         this.patrolInterval = base.patrolInterval;
@@ -594,6 +596,7 @@ public final class AiProfile {
         p.attackDamage = s.getDouble("attack-damage", p.attackDamage);
         p.attackCooldown = s.getDouble("attack-cooldown", p.attackCooldown);
         p.maxCombatDistance = s.getDouble("max-combat-distance", p.maxCombatDistance);
+        p.reviveHealth = readReviveHealth(s, p.reviveHealth);
         p.fleeHealthRatio = s.getDouble("flee-health-ratio", p.fleeHealthRatio);
         p.patrolRadius = s.getDouble("patrol-radius", p.patrolRadius);
         p.patrolInterval = s.getDouble("patrol-interval", p.patrolInterval);
@@ -771,6 +774,13 @@ public final class AiProfile {
      * 生物级配置的意图是「这个生物的行为是另一种」，叠加会让「清空某项」
      * 无法表达。</p>
      */
+    private static double readReviveHealth(ConfigurationSection s, double fallback) {
+        Object raw = s.get("revive-health");
+        if (!(raw instanceof Number number)) return fallback;
+        double value = number.doubleValue();
+        return Double.isFinite(value) && (value == -1 || value > 0) ? value : fallback;
+    }
+
     public void applyOverridesFrom(ConfigurationSection s) {
         if (s == null) return;
         sightRadius = s.getDouble("sight-radius", sightRadius);
@@ -778,6 +788,7 @@ public final class AiProfile {
         attackDamage = s.getDouble("attack-damage", attackDamage);
         attackCooldown = s.getDouble("attack-cooldown", attackCooldown);
         maxCombatDistance = s.getDouble("max-combat-distance", maxCombatDistance);
+        reviveHealth = readReviveHealth(s, reviveHealth);
         fleeHealthRatio = s.getDouble("flee-health-ratio", fleeHealthRatio);
         patrolRadius = s.getDouble("patrol-radius", patrolRadius);
         patrolInterval = s.getDouble("patrol-interval", patrolInterval);

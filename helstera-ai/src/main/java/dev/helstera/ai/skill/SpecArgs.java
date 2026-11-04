@@ -48,7 +48,11 @@ public final class SpecArgs {
         String raw = args.get(i) == null ? "" : args.get(i).trim();
         if (raw.isEmpty()) return def;
         try {
-            return Double.parseDouble(raw);
+            double value = Double.parseDouble(raw);
+            if (!Double.isFinite(value)) {
+                throw new NumberFormatException("non-finite");
+            }
+            return value;
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(
                     what + "参数 \"" + raw + "\" 不是合法数值（应为 1 / 0.5 / -2 之类）");

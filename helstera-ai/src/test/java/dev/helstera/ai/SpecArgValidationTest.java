@@ -37,6 +37,12 @@ class SpecArgValidationTest {
         return c;
     }
 
+    private static dev.helstera.ai.skill.SkillCatalog.ConditionFactory extraCond(String name) {
+        var c = dev.helstera.ai.skill.SkillExtras.conditions().get(name);
+        assertTrue(c != null, "扩展条件 " + name + " 应存在");
+        return c;
+    }
+
     // ---- 数值参数 ----
 
     @Test
@@ -49,6 +55,11 @@ class SpecArgValidationTest {
 
         assertThrows(IllegalArgumentException.class,
                 () -> cond("health-below").create(List.of("百分比")));
+
+        for (String value : List.of("NaN", "Infinity", "-Infinity")) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> action("set-scale").create(List.of(value)), value);
+        }
     }
 
     @Test
@@ -64,6 +75,23 @@ class SpecArgValidationTest {
         action("set-scale").create(List.of("  0.8  "));
         cond("health-below").create(List.of("0.3"));
         cond("targets-exist").create(List.of("nearest", "8", "2"));
+    }
+
+    @Test
+    @DisplayName("范围条件拒绝负半径、负数数量和分数数量")
+    void radiusConditionsRejectInvalidBounds() {
+        for (String name : List.of("players-in-radius", "entities-in-radius", "mobs-in-radius")) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraCond(name).create(List.of("-1", "8")), name + " 数量不能为负数");
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraCond(name).create(List.of("1.5", "8")), name + " 数量必须为整数");
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraCond(name).create(List.of("1", "-1")), name + " 半径不能为负数");
+        }
+        for (String name : List.of("mobs-near-origin", "living-in-radius")) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraCond(name).create(List.of(">=", "-1")), name + " 半径不能为负数");
+        }
     }
 
     // ---- 布尔参数：原实现最隐蔽的一类 ----
@@ -118,6 +146,18 @@ class SpecArgValidationTest {
                 "warnings 必须含原始字面量：实际 = " + svc.warnings());
         assertFalse(registry.hasAction("set-scale:abc"),
                 "非法动作不应进入注册表，否则会真的被执行");
+    }
+
+    @Test
+    @DisplayName("绑定动作时非法百分比不会绕过 MythicSkillSpec")
+    void invalidChanceCannotBypassStructuredParser() {
+        var registry = new BehaviorRegistryImpl();
+        var svc = new dev.helstera.ai.skill.SkillService(registry, null);
+
+        assertTrue(svc.bindAction("damage NaN%") == null);
+        assertTrue(svc.bindAction("damage 101%") == null);
+        assertTrue(svc.warnings().stream().anyMatch(w -> w.contains("NaN%")));
+        assertTrue(svc.warnings().stream().anyMatch(w -> w.contains("101%")));
     }
 
     @Test

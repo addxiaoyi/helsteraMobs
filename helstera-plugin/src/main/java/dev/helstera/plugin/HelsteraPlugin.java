@@ -101,6 +101,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private Object resourcePack;                 // ResourcePackServiceImpl
     private Object behaviorRegistry;             // BehaviorRegistryImpl
     private Object skillService;                 // dev.helstera.ai.skill.SkillService
+    private dev.helstera.ai.skill.PinRegistry pinRegistry;
     private Object skillTriggers;                // dev.helstera.ai.skill.SkillTriggers
     /** 拉杆服务；未装载时为 null。 */
     private dev.helstera.ai.lever.LeverService leverService;
@@ -125,6 +126,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        if (!restoreConfigImmunityConditions()) {
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         // saveDefaultConfig() 只在配置文件不存在时写盘。插件更新后新增的键不会到达
         // 已有安装——用户看不到新配置项，只能吃默认值（表现为"配置写了没反应"）。
         // 这里把缺失的默认键补写进现有配置，已有值一律不动。
@@ -252,6 +257,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 // SkillExtras 里的 dot / despawn 等动作需要调度器与实例管理器，
                 // 同样走注入钩子而非直接依赖，保证目录类可被单元测试加载。
                 dev.helstera.ai.skill.SkillExtras.host(this);
+                this.pinRegistry = new dev.helstera.ai.skill.PinRegistry();
+                dev.helstera.ai.skill.SkillExtras.pinRegistry(pinRegistry);
+                reloadPins("启动");
                 dev.helstera.ai.skill.SkillExtras.managedEntityLookup(this::findInstanceSafe);
                 dev.helstera.ai.skill.SkillExtras.despawner(
                         instanceId -> ((InstanceManagerImpl) instances).despawn(instanceId));
@@ -313,15 +321,6 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 a.loadProfiles(getConfig().getConfigurationSection("ai.profiles"));
                 dev.helstera.ai.skill.SkillExtras.damageCause((ctx, target) ->
                         ctx != null && "on-projectile-hit".equalsIgnoreCase(ctx.state()) ? "PROJECTILE" : "MAGIC");
-                dev.helstera.ai.skill.SkillExtras.damagePolicy((ctx, target, amount, cause) -> {
-                    if (ctx == null || !ctx.instanceValid()) return amount;
-                    var profile = a.profileOf(ctx.instance().instanceId());
-                    if (profile == null || profile.immunityTable() == null) return amount;
-                    var conditionContext = ctx;
-                    var rule = profile.immunityTable().evaluate(cause, amount,
-                            condition -> br.testCondition(condition, conditionContext));
-                    return rule.damage();
-                });
                 SkillTriggers trig = new SkillTriggers(this, a, br, bus, getLogger(), skills);
                 // 必须在 a.start() 之前注入：attack_hit 桥接在 start 时就捕获了
                 // SkillTriggers 的引用，晚注入会让攻击命中静默不派发
@@ -378,8 +377,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (!new java.io.File(getDataFolder(), "loot.yml").exists()) {
                 saveResource("loot.yml", false);
             }
-            loot.load(YamlConfiguration.loadConfiguration(
-                    new java.io.File(getDataFolder(), "loot.yml")).getConfigurationSection("tables"));
+            loot.loadFile(new java.io.File(getDataFolder(), "loot.yml").toPath());
             // 档位按权限节点 helstera.tier.<n> 判定：档位语义属玩法配置，
             // 而权限是服务端唯一现成的、不引入依赖的等级载体。
             // 未持有任何节点时返回 -1（未知），门槛型掉落照常参与掷骰。
@@ -395,6 +393,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     var context = dev.helstera.api.behavior.BehaviorContext.execution(
                             null, killer, 1.0, distance, 0, "loot", null, killer,
                             killer == null ? java.util.List.of() : java.util.List.of(killer), location);
+                    return behaviors.testCondition(key, context);
+                });
+                loot.setDropperConditionEvaluator((condition, location, dropper) -> {
+                    String key = skills.bindCondition(condition);
+                    if (key == null || !(dropper instanceof org.bukkit.entity.LivingEntity living)) return false;
+                    var targets = java.util.List.of(living);
+                    var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                            null, living, 1.0, -1, 0, "loot-dropper", null, dropper, targets,
+                            location, new dev.helstera.api.behavior.SkillTreeContext(dropper, targets, location));
                     return behaviors.testCondition(key, context);
                 });
             }
@@ -434,8 +441,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (!new java.io.File(getDataFolder(), "spawners.yml").exists()) {
                 saveResource("spawners.yml", false);
             }
-            sp.load(YamlConfiguration.loadConfiguration(
-                    new java.io.File(getDataFolder(), "spawners.yml")));
+            sp.loadFile(new java.io.File(getDataFolder(), "spawners.yml").toPath());
             sp.loadState(new java.io.File(getDataFolder(), "spawner-state.yml"));
             this.spawnerService = sp;
         } catch (Throwable t) {
@@ -492,17 +498,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (getConfig().getBoolean("compatibility.craftengine", true)) {
                 ir.register(new CraftEngineAdapter());
             }
+            ir.register(new dev.helstera.integrations.BlockedExternalAdapter(
+                    "MMOItems", "none verified; item API bridge not implemented"));
+            ir.register(new dev.helstera.integrations.BlockedExternalAdapter(
+                    "MythicCrucible", "none verified; item/mechanic API bridge not implemented"));
+            ir.register(new dev.helstera.integrations.BlockedExternalAdapter(
+                    "ModelEngine", "none verified; model state API bridge not implemented"));
             ir.register(new WorldGuardAdapter());
             int connected = ir.enableAll(this);
             dev.helstera.ai.skill.SkillExtras.currencyBalance(vaultEconomy::balance);
             getLogger().info("外部插件适配器: " + connected + "/" + ir.all().size() + " 已连接");
             this.integrations = ir;
-            // 掉落表的自定义物品解析：借适配器的 CUSTOM_ITEM_RESOLVE 能力。
-            // 用反射而非直接引用 ItemAdderAdapter，是因为 integrations 模块在
-            // phase3 及以下并不打进 jar，直接引用会在 NoClassDefFoundError 上炸掉整个启动。
-            if (loot() != null) {
-                loot().setCustomItemResolver(id -> resolveCustomItem(ir, id));
-            }
         } catch (Throwable t) {
             getLogger().warning("外部插件集成层不可用: " + t);
         }
@@ -543,12 +549,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
         // 命令与监听
         reloadCustomItems();
+        if (loot() != null) {
+            loot().setCustomItemResolver(id -> resolveCustomItem(
+                    (dev.helstera.api.integration.IntegrationRegistry) integrations, id));
+            loot().setClaimedItemPredicate(this::hasConfiguredItem);
+        }
         dev.helstera.ai.skill.SkillExtras.itemResolver(id -> resolveCustomItem(
                 (dev.helstera.api.integration.IntegrationRegistry) integrations, id));
+        dev.helstera.ai.skill.SkillExtras.claimedItemPredicate(this::hasConfiguredItem);
 
         customMenuService = new CustomMenuService();
         customMenuService.setItemResolver(id -> resolveCustomItem(
                 (dev.helstera.api.integration.IntegrationRegistry) integrations, id));
+        customMenuService.setClaimedItemPredicate(this::hasConfiguredItem);
         customMenuService.setRegionResolver((region, location) -> integrations == null ? null
                 : ((dev.helstera.api.integration.IntegrationRegistry) integrations).containsRegion(region, location));
         java.io.File menuFile = new java.io.File(getDataFolder(), "menu.yml");
@@ -619,6 +632,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         if (getConfig().getBoolean("debug.self-test-death-loot", false)) {
             runDeathLootSelfTest();
+            runDropTableCountSelfTest();
+            runDropTableBonusSelfTest();
+            runImportedDropTableSelfTest();
         }
         if (getConfig().getBoolean("debug.self-test-spawner", false)) {
             runSpawnerSelfTest();
@@ -628,6 +644,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         if (getConfig().getBoolean("debug.self-test-events", false)) {
             runEventSelfTest();
+            runImportedDamageTriggerSelfTest();
+            runImportedImmunitySelfTest();
+            runImportedInvalidConditionsSelfTest();
+            runImportedSkillReferenceSelfTest();
+            runImportedSkillTimingSelfTest();
+            runQueuedSkillTreeSelfTest();
+            runSkillLifecycleSelfTest();
             runSelectorSelfTest();
         }
         if (getConfig().getBoolean("debug.self-test-audience", false)) {
@@ -675,6 +698,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        dev.helstera.ai.skill.SkillExtras.claimedItemPredicate(null);
         if (skillService instanceof dev.helstera.ai.skill.SkillService skills) {
             int saved = skills.savePersistedSkillTrees(new java.io.File(getDataFolder(), "skill-trees"));
             if (saved > 0) getLogger().info("Saved " + saved + " SkillTree snapshots.");
@@ -874,6 +898,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } catch (Exception e) {
             getLogger().warning("补写默认配置项失败: " + e.getMessage());
         }
+    }
+
+    private boolean restoreConfigImmunityConditions() {
+        try {
+            int count = dev.helstera.api.util.NullImmunityConditions.restore(
+                    getConfig(), getDataFolder().toPath().resolve("config.yml"));
+            if (count > 0) getLogger().warning(count + " null immunity fields were disabled; "
+                    + "saving config.yml will write invalid-condition markers in their place.");
+            return true;
+        } catch (java.io.IOException | org.yaml.snakeyaml.error.YAMLException ex) {
+            getLogger().severe("Cannot inspect config.yml immunity conditions: " + ex.getMessage());
+            return false;
+        }
+    }
+
+    public boolean reloadRuntimeConfig() {
+        reloadConfig();
+        if (!restoreConfigImmunityConditions()) return false;
+        if (ai instanceof AiManager manager) {
+            manager.loadProfiles(getConfig().getConfigurationSection("ai.profiles"));
+        }
+        return true;
     }
 
     /** 构建资源包（异步）；applyAll=true 时向在线玩家下发。 */
@@ -1134,6 +1180,84 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (entityFlagsProbeId > 0) instances().despawn(entityFlagsProbeId);
                 }
 
+                if (mobConfig("revive_probe") != null) {
+                    Bukkit.getScheduler().runTaskLater(this, () -> {
+                        var reviveLocation = origin.clone().add(62, 0, 62);
+                        reviveLocation.getChunk().load();
+                        int reviveId = spawnMobAt("revive_probe", reviveLocation, null);
+                        var reviveInstance = reviveId > 0 ? instances().impl(reviveId) : null;
+                        var reviveEntity = reviveInstance == null ? null : reviveInstance.baseEntity().orElse(null);
+                        if (reviveEntity instanceof org.bukkit.entity.LivingEntity living) {
+                            living.damage(living.getHealth() + 10.0);
+                            Bukkit.getScheduler().runTaskLater(this, () -> {
+                                boolean alive = living.isValid() && !living.isDead();
+                                boolean attached = instances().impl(reviveId) != null;
+                                boolean health = Math.abs(living.getHealth() - 8.0) < 0.01;
+                                getLogger().info("[自检] revive-natural result=" + (alive && attached && health)
+                                        + " alive=" + alive + " attached=" + attached + " health=" + living.getHealth());
+                                if (instances().impl(reviveId) != null) instances().despawn(reviveId);
+                            }, 60L);
+                        } else {
+                            getLogger().info("[自检] revive-natural result=false reason=spawn-failed");
+                        }
+                    }, 100L);
+                }
+
+                if (mobConfig("revive_late_probe") != null) {
+                    Bukkit.getScheduler().runTaskLater(this, () -> {
+                        var location = origin.clone().add(78, 0, 78);
+                        var probeChunk = location.getChunk();
+                        boolean wasForceLoaded = probeChunk.isForceLoaded();
+                        probeChunk.setForceLoaded(true);
+                        probeChunk.load();
+                        int id = spawnMobAt("revive_late_probe", location, null);
+                        var instance = id > 0 ? instances().impl(id) : null;
+                        var entity = instance == null ? null : instance.baseEntity().orElse(null);
+                        if (!(entity instanceof org.bukkit.entity.LivingEntity living)) {
+                            getLogger().info("[自检] revive-late result=false reason=spawn-failed");
+                            if (!wasForceLoaded) probeChunk.setForceLoaded(false);
+                            return;
+                        }
+                        instance.lootTable = "integration_death";
+                        var existingItems = location.getWorld().getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .map(org.bukkit.entity.Entity::getUniqueId).collect(java.util.stream.Collectors.toSet());
+                        var cancelled = new java.util.concurrent.atomic.AtomicBoolean();
+                        var listener = new org.bukkit.event.Listener() {};
+                        getServer().getPluginManager().registerEvent(org.bukkit.event.entity.EntityDeathEvent.class,
+                                listener, org.bukkit.event.EventPriority.HIGH, (ignored, event) -> {
+                                    var death = (org.bukkit.event.entity.EntityDeathEvent) event;
+                                    if (death.getEntity().getUniqueId().equals(living.getUniqueId())) {
+                                        cancelled.set(true);
+                                        death.setCancelled(true);
+                                    }
+                                }, this, false);
+                        try {
+                            living.damage(living.getHealth() + 10.0);
+                        } finally {
+                            org.bukkit.event.HandlerList.unregisterAll(listener);
+                        }
+                        Bukkit.getScheduler().runTaskLater(this, () -> {
+                            boolean alive = living.isValid() && !living.isDead();
+                            boolean attached = instances().impl(id) != null;
+                            boolean health = Math.abs(living.getHealth() - 8.0) < 0.01;
+                            boolean noDrops = location.getWorld().getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                    .filter(item -> !existingItems.contains(item.getUniqueId()))
+                                    .noneMatch(item -> item.getLocation().distanceSquared(location) < 9
+                                            && item.getItemStack().getType() == org.bukkit.Material.DIAMOND);
+                            getLogger().info("[自检] revive-late result="
+                                    + (cancelled.get() && alive && attached && health && noDrops)
+                                    + " cancelled=" + cancelled.get() + " alive=" + alive
+                                    + " attached=" + attached + " health=" + living.getHealth()
+                                    + " no-drops=" + noDrops);
+                            try {
+                                if (instances().impl(id) != null) instances().despawn(id);
+                            } finally {
+                                if (!wasForceLoaded) probeChunk.setForceLoaded(false);
+                            }
+                        }, 60L);
+                    }, 100L);
+                }
+
                 if (mobConfig("exp_probe") != null) {
                     int expProbeId = spawnMobAt("exp_probe", origin.clone().add(14, 0, 0), null);
                     var expProbe = expProbeId > 0 ? instances().impl(expProbeId) : null;
@@ -1154,6 +1278,138 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     getLogger().info("[自检] exp-options result=" + expOptions
                             + " experience=" + observedExperience + " event=" + expEventObserved);
                     if (expProbeId > 0) instances().despawn(expProbeId);
+
+                    var naturalDeathLocation = origin.clone().add(64, 0, 64);
+                    naturalDeathLocation.getChunk().load();
+                    int naturalDeathProbeId = spawnMobAt("exp_probe", naturalDeathLocation, null);
+                    var naturalDeathProbe = naturalDeathProbeId > 0
+                            ? instances().impl(naturalDeathProbeId) : null;
+                    var naturalDeathEntity = naturalDeathProbe == null ? null
+                            : naturalDeathProbe.baseEntity().orElse(null);
+                    int naturalExperience = -1;
+                    boolean naturalDeathObserved = false;
+                    if (naturalDeathEntity instanceof org.bukkit.entity.LivingEntity living) {
+                        var deathWorld = living.getWorld();
+                        var deathLocation = living.getLocation().clone();
+                        var allExistingOrbs = deathWorld.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class)
+                                .stream()
+                                .collect(java.util.stream.Collectors.toMap(org.bukkit.entity.Entity::getUniqueId,
+                                        orb -> new int[]{orb.getExperience(), orb.getCount()}));
+                        var existingOrbs = deathWorld.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class)
+                                .stream().filter(orb -> orb.getLocation().distanceSquared(deathLocation) <= 16.0)
+                                .collect(java.util.stream.Collectors.toMap(org.bukkit.entity.Entity::getUniqueId,
+                                        orb -> new int[]{orb.getExperience(), orb.getCount()}));
+                        var observedDeathExperience = new java.util.concurrent.atomic.AtomicInteger(-1);
+                        var orbSpawns = new java.util.ArrayList<String>();
+                        var observer = new org.bukkit.event.Listener() {};
+                        getServer().getPluginManager().registerEvent(org.bukkit.event.entity.EntityDeathEvent.class,
+                                observer, org.bukkit.event.EventPriority.MONITOR, (ignored, event) -> {
+                                    var death = (org.bukkit.event.entity.EntityDeathEvent) event;
+                                    if (death.getEntity().getUniqueId().equals(living.getUniqueId())) {
+                                        observedDeathExperience.set(death.getDroppedExp());
+                                    }
+                                }, this, false);
+                        getServer().getPluginManager().registerEvent(org.bukkit.event.entity.EntitySpawnEvent.class,
+                                observer, org.bukkit.event.EventPriority.MONITOR, (ignored, event) -> {
+                                    var spawn = (org.bukkit.event.entity.EntitySpawnEvent) event;
+                                    if (spawn.getEntity() instanceof org.bukkit.entity.ExperienceOrb orb
+                                            && orb.getWorld().equals(deathWorld)) {
+                                        orbSpawns.add(orb.getUniqueId() + ":" + orb.getExperience()
+                                                + "@distance2=" + orb.getLocation().distanceSquared(deathLocation)
+                                                + "@cancelled=" + spawn.isCancelled());
+                                    }
+                                }, this, false);
+                        try {
+                            living.damage(Math.max(1.0, living.getHealth() + 1.0));
+                        } finally {
+                            org.bukkit.event.HandlerList.unregisterAll(observer);
+                        }
+                        naturalDeathObserved = living.isDead();
+                        var nearbyOrbs = deathWorld.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                                .filter(orb -> orb.getLocation().distanceSquared(deathLocation) <= 16.0)
+                                .toList();
+                        naturalExperience = nearbyOrbs.stream().mapToInt(orb -> {
+                            int[] original = existingOrbs.get(orb.getUniqueId());
+                            return orb.getExperience() * orb.getCount()
+                                    - (original == null ? 0 : original[0] * original[1]);
+                        }).sum();
+                        String orbValues = nearbyOrbs.stream().map(orb -> orb.getUniqueId() + ":"
+                                + orb.getExperience() + "x" + orb.getCount())
+                                .collect(java.util.stream.Collectors.joining(","));
+                        String outsideOrbs = deathWorld.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class)
+                                .stream().filter(orb -> !allExistingOrbs.containsKey(orb.getUniqueId())
+                                        && orb.getLocation().distanceSquared(deathLocation) > 16.0)
+                                .map(orb -> orb.getUniqueId() + ":" + orb.getExperience() + "@distance2="
+                                        + orb.getLocation().distanceSquared(deathLocation))
+                                .collect(java.util.stream.Collectors.joining(","));
+                        getLogger().info("[自检] exp-natural-death-detail event-experience="
+                                + observedDeathExperience.get() + " orbs=" + orbValues
+                                + " spawns=" + orbSpawns + " outside=" + outsideOrbs);
+                        nearbyOrbs.forEach(orb -> {
+                            int[] original = existingOrbs.get(orb.getUniqueId());
+                            if (original == null) orb.remove();
+                            else {
+                                orb.setExperience(original[0]);
+                                orb.setCount(original[1]);
+                            }
+                        });
+                    }
+                    boolean naturalExperienceOptions = naturalDeathObserved && naturalExperience == 13;
+                    getLogger().info("[自检] exp-natural-death result=" + naturalExperienceOptions
+                            + " dead=" + naturalDeathObserved + " experience=" + naturalExperience
+                            + " cause=BukkitDamage");
+                    if (naturalDeathProbeId > 0 && instances().impl(naturalDeathProbeId) != null) {
+                        instances().despawn(naturalDeathProbeId);
+                    }
+                    if (Boolean.getBoolean("helstera.debug.xp-repeat")) {
+                        runExperienceRepeatDiagnostic(naturalDeathLocation,
+                                Math.max(1, Math.min(1000, Integer.getInteger("helstera.debug.xp-attempts", 40))));
+                    }
+
+                    int[] tierExperience = {-1, -1};
+                    int[] tierBread = {-1, -1};
+                    boolean[] tierDeaths = {false, false};
+                    for (int index = 0; index < 2; index++) {
+                        var tierLocation = origin.clone().add(70 + index * 6, 0, 64);
+                        tierLocation.getChunk().load();
+                        int tierId = spawnMobAt("exp_probe", tierLocation, null);
+                        var tierInstance = tierId > 0 ? instances().impl(tierId) : null;
+                        var tierEntity = tierInstance == null ? null : tierInstance.baseEntity().orElse(null);
+                        if (tierEntity instanceof org.bukkit.entity.LivingEntity living) {
+                            tierInstance.lootTable = "integration_experience_tier";
+                            tierInstance.lootExperienceMin = -1;
+                            tierInstance.lootExperienceMax = -1;
+                            tierInstance.level = index + 2;
+                            var observed = new java.util.concurrent.atomic.AtomicInteger(-1);
+                            var observedBread = new java.util.concurrent.atomic.AtomicInteger(-1);
+                            var observer = new org.bukkit.event.Listener() {};
+                            getServer().getPluginManager().registerEvent(org.bukkit.event.entity.EntityDeathEvent.class,
+                                    observer, org.bukkit.event.EventPriority.MONITOR, (ignored, event) -> {
+                                        var death = (org.bukkit.event.entity.EntityDeathEvent) event;
+                                        if (death.getEntity().getUniqueId().equals(living.getUniqueId())) {
+                                            observed.set(death.getDroppedExp());
+                                            observedBread.set(death.getDrops().stream()
+                                                    .filter(item -> item.getType() == org.bukkit.Material.BREAD)
+                                                    .mapToInt(org.bukkit.inventory.ItemStack::getAmount).sum());
+                                        }
+                                    }, this, false);
+                            try {
+                                living.damage(living.getHealth() + 1.0);
+                            } finally {
+                                org.bukkit.event.HandlerList.unregisterAll(observer);
+                            }
+                            tierDeaths[index] = living.isDead();
+                            tierExperience[index] = observed.get();
+                            tierBread[index] = observedBread.get();
+                        }
+                        if (tierId > 0 && instances().impl(tierId) != null) instances().despawn(tierId);
+                    }
+                    getLogger().info("[自检] exp-tier-death result="
+                            + (tierDeaths[0] && tierDeaths[1] && tierExperience[0] == 2 && tierExperience[1] == 7
+                                    && tierBread[0] == 4 && tierBread[1] == 4)
+                            + " low=" + tierExperience[0] + " qualified=" + tierExperience[1]
+                            + " low-dead=" + tierDeaths[0] + " qualified-dead=" + tierDeaths[1]
+                            + " low-bread=" + tierBread[0] + " qualified-bread=" + tierBread[1]);
                 }
 
                 if (mobConfig("despawn_probe") != null) {
@@ -1325,6 +1581,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 applyMobPickupOption(pickupProbe, pickupOptions,
                         dev.helstera.api.instance.SpawnOptions.defaults().preventItemPickup(true));
                 boolean explicitPickupOverridesFallback = pickupProbe.getCanPickupItems();
+                getLogger().info("[自检] mob-pickup-option result="
+                        + (pickupDisabled && explicitPickupOverridesFallback)
+                        + " disabled=" + pickupDisabled
+                        + " explicit-overrides-default=" + explicitPickupOverridesFallback);
 
                 var equipmentProbe = world.spawn(origin.clone().add(15, 0, 0),
                         org.bukkit.entity.Zombie.class);
@@ -1436,6 +1696,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     private void scheduleSpawningDistanceRuntimeProbe() {
+        scheduleSpawningDistanceRuntimeProbe(60);
+    }
+
+    private void scheduleSpawningDistanceRuntimeProbe(int attemptsRemaining) {
         var player = getServer().getOnlinePlayers().stream()
                 .filter(candidate -> candidate.isOnline() && !candidate.isDead()
                         && candidate.getGameMode() != org.bukkit.GameMode.SPECTATOR)
@@ -1443,6 +1707,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         !candidate.getName().equalsIgnoreCase("HelsteraTester")))
                 .orElse(null);
         if (player == null) {
+            if (attemptsRemaining > 0) {
+                getServer().getScheduler().runTaskLater(this,
+                        () -> scheduleSpawningDistanceRuntimeProbe(attemptsRemaining - 1), 20L);
+                return;
+            }
             getLogger().info("[自检] spawning-distance-runtime result=false reason=no-player");
             return;
         }
@@ -1457,6 +1726,66 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
 
         java.util.UUID playerId = player.getUniqueId();
+        if ("true".equalsIgnoreCase(System.getenv("PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW"))) {
+            Location playerStart = player.getLocation().clone();
+            double initialDistance = playerStart.distance(entity.getLocation());
+            boolean retainedInside = initialDistance <= 8.0
+                    && instances().impl(instanceId) != null && entity.isValid();
+            if (!retainedInside) {
+                getLogger().info("[自检] spawning-distance-client-walk result=false"
+                        + " reason=not-retained-inside initial-distance=" + initialDistance);
+                instances().despawn(instanceId);
+                return;
+            }
+            player.sendMessage("PAPER_SPAWNING_DISTANCE_WALK_READY");
+            new org.bukkit.scheduler.BukkitRunnable() {
+                private int elapsedTicks;
+
+                @Override
+                public void run() {
+                    var onlinePlayer = getServer().getPlayer(playerId);
+                    if (onlinePlayer == null || !onlinePlayer.isOnline()
+                            || !onlinePlayer.getWorld().equals(entity.getWorld())) {
+                        finish(false, "player-disconnected", Double.NaN);
+                        return;
+                    }
+                    double distance = onlinePlayer.getLocation().distance(entity.getLocation());
+                    if (distance > 8.0) {
+                        cancel();
+                        getServer().getScheduler().runTaskLater(HelsteraPlugin.this, () -> {
+                            var currentPlayer = getServer().getPlayer(playerId);
+                            double displacement = currentPlayer == null ? 0.0
+                                    : currentPlayer.getLocation().distance(playerStart);
+                            boolean removed = instances().impl(instanceId) == null && !entity.isValid();
+                            boolean passed = currentPlayer != null && displacement > 8.0 && removed;
+                            double finalDistance = currentPlayer == null ? Double.NaN
+                                    : currentPlayer.getLocation().distance(entity.getLocation());
+                            getLogger().info("[自检] spawning-distance-client-walk result=" + passed
+                                    + " player-displacement=" + displacement
+                                    + " player-entity-distance=" + finalDistance
+                                    + " instance-removed=" + (instances().impl(instanceId) == null)
+                                    + " entity-removed=" + !entity.isValid());
+                            getLogger().info("[自检] spawning-distance-runtime result=" + passed
+                                    + " inside-retained=true outside-removed=" + removed);
+                            if (instances().impl(instanceId) != null) instances().despawn(instanceId);
+                        }, 40L);
+                        return;
+                    }
+                    elapsedTicks += 5;
+                    if (elapsedTicks >= 900) finish(false, "client-did-not-leave-radius", distance);
+                }
+
+                private void finish(boolean passed, String reason, double distance) {
+                    cancel();
+                    getLogger().info("[自检] spawning-distance-client-walk result=" + passed
+                            + " reason=" + reason + " player-entity-distance=" + distance);
+                    getLogger().info("[自检] spawning-distance-runtime result=" + passed
+                            + " inside-retained=true outside-removed=" + (instances().impl(instanceId) == null));
+                    if (instances().impl(instanceId) != null) instances().despawn(instanceId);
+                }
+            }.runTaskTimer(this, 1L, 5L);
+            return;
+        }
         getServer().getScheduler().runTaskLater(this, () -> {
             try {
                 var onlinePlayer = getServer().getPlayer(playerId);
@@ -1505,12 +1834,29 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             Location location = world.getSpawnLocation().clone().add(0, 3, 0);
             org.bukkit.entity.Zombie zombie = null;
             org.bukkit.entity.Zombie conditionTarget = null;
+            org.bukkit.entity.Zombie locationProbeTarget = null;
             org.bukkit.entity.LivingEntity meleeProbeTarget = null;
             org.bukkit.entity.LivingEntity dotProbeTarget = null;
             org.bukkit.block.BlockState conditionTargetBlockState = null;
             org.bukkit.block.BlockState conditionTargetHeadBlockState = null;
             org.bukkit.block.BlockState blockMechanicState = null;
             Location blockMechanicLocation = null;
+            boolean pinTargeters = false;
+            boolean pinConditions = false;
+            boolean pinDistanceCondition = false;
+            boolean pinOriginDistanceCondition = false;
+            boolean pinOriginDistanceInside = false;
+            boolean pinOriginDistanceOutside = false;
+            boolean pinOriginMissingRejected = false;
+            boolean pinRegionCondition = false;
+            boolean pinMultiDispatch = false;
+            boolean pinRandomSingle = false;
+            boolean pinMoveSingle = false;
+            boolean pinRejectMultiMove = false;
+            boolean pinRegionSetBreak = false;
+            boolean pinRegionCapRejected = false;
+            var pinBlockStates = new java.util.ArrayList<org.bukkit.block.BlockState>();
+            org.bukkit.entity.LivingEntity pinConditionEntity = null;
             String conditionTargetCustomName = null;
             var conditionCategoryEntities = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
             dev.helstera.api.instance.ModelInstance modelInstance = null;
@@ -1519,6 +1865,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             dev.helstera.api.instance.ModelInstance ownerInstance = null;
             dev.helstera.api.instance.ModelInstance stateInstance = null;
             org.bukkit.entity.Projectile projectileProbe = null;
+            org.bukkit.entity.Arrow locationProbeProjectile = null;
             var droppedItems = new java.util.ArrayList<org.bukkit.entity.Item>();
             long originalWorldTime = world.getTime();
             boolean originalStorm = world.hasStorm();
@@ -1540,6 +1887,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean targetKillMechanic = false;
             boolean damageMeleeMechanic = false;
             boolean conditionUtilityAliases = false;
+            boolean survivalModeCondition = false;
+            boolean mobsInChunkCondition = false;
+            boolean chanceCondition = false;
             boolean blockTypeRadiusWildcardCondition = false;
             boolean biomeCondition = false;
             boolean playerRadiusConditions = false;
@@ -1605,6 +1955,150 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         || !(behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors)) {
                     throw new IllegalStateException("SkillService/BehaviorRegistry unavailable");
                 }
+                try {
+                    var pinConfig = new org.bukkit.configuration.file.YamlConfiguration();
+                    String pinWorld = world.getName();
+                    double pinX = Math.floor(location.getX()) + 8;
+                    double pinY = Math.floor(location.getY());
+                    double pinZ = Math.floor(location.getZ());
+                    pinConfig.set("Pins.probe-multi.Points", java.util.List.of(
+                            java.util.Map.of("World", pinWorld, "X", pinX, "Y", pinY, "Z", pinZ),
+                            java.util.Map.of("world", pinWorld, "x", pinX + 1, "y", pinY, "z", pinZ)));
+                    pinConfig.set("Pins.probe-single", java.util.Map.of(
+                            "World", pinWorld, "X", pinX + 3, "Y", pinY, "Z", pinZ));
+                    pinConfig.set("Pins.probe-min", java.util.Map.of(
+                            "world", pinWorld, "x", pinX + 5, "y", pinY, "z", pinZ));
+                    pinConfig.set("Pins.probe-max", java.util.Map.of(
+                            "world", pinWorld, "x", pinX + 6, "y", pinY + 1, "z", pinZ));
+                    pinConfig.set("Pins.probe-cap-min", java.util.Map.of(
+                            "world", pinWorld, "x", pinX + 8, "y", pinY, "z", pinZ));
+                    pinConfig.set("Pins.probe-cap-max", java.util.Map.of(
+                            "world", pinWorld, "x", pinX + 8 + 16_384, "y", pinY, "z", pinZ));
+                    pinRegistry.load(pinConfig);
+
+                    pinConditionEntity = (org.bukkit.entity.LivingEntity) world.spawnEntity(
+                            new Location(world, pinX + 8, pinY, pinZ),
+                            org.bukkit.entity.EntityType.ZOMBIE);
+                    var pinConditionContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            modelInstance, pinConditionEntity, 1.0, -1, 0, "integration");
+                    double targetPinDistance = pinRegistry.locations("probe-multi").stream()
+                            .mapToDouble(pinConditionEntity.getLocation()::distance).min().orElseThrow();
+                    Location probeOrigin = modelInstance.location().clone();
+                    var pinOriginContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                            null, null, 1.0, -1, 0, "integration", null, null,
+                            java.util.List.of(), probeOrigin);
+                    double originPinDistance = pinRegistry.locations("probe-multi").stream()
+                            .mapToDouble(probeOrigin::distance).min().orElseThrow();
+                    pinDistanceCondition = behaviors.testCondition(skills.bindCondition(
+                                    "distance-from-pin pin=probe-multi distance=<="
+                                            + (targetPinDistance + 0.05)), pinConditionContext)
+                            && !behaviors.testCondition(skills.bindCondition(
+                                    "distance-from-pin pin=probe-multi distance=<="
+                                            + (targetPinDistance - 0.05)), pinConditionContext)
+                            && !behaviors.testCondition(skills.bindCondition(
+                                    "distance-from-pin pin=missing distance=<=1"), pinConditionContext);
+                    pinOriginDistanceInside = behaviors.testCondition(skills.bindCondition(
+                                    "origin-distance-from-pin pin=probe-multi distance=<="
+                                            + (originPinDistance + 0.05)), pinOriginContext);
+                    pinOriginDistanceOutside = !behaviors.testCondition(skills.bindCondition(
+                                    "origin-distance-from-pin pin=probe-multi distance=<="
+                                            + (originPinDistance - 0.05)), pinOriginContext);
+                    pinOriginMissingRejected = !behaviors.testCondition(skills.bindCondition(
+                            "origin-distance-from-pin pin=missing distance=<=1"), pinOriginContext);
+                    pinOriginDistanceCondition = pinOriginDistanceInside
+                            && pinOriginDistanceOutside && pinOriginMissingRejected;
+                    pinConditionEntity.teleport(new Location(world, pinX + 5.5, pinY + 0.5, pinZ));
+                    pinRegionCondition = behaviors.testCondition(skills.bindCondition(
+                                    "in-pin-region pin1=probe-min pin2=probe-max"), pinConditionContext)
+                            && !behaviors.testCondition(skills.bindCondition(
+                                    "in-pin-region pin1=probe-min pin2=missing"), pinConditionContext);
+                    pinConditionEntity.teleport(new Location(world, pinX + 5.5, pinY + 0.5, pinZ + 1));
+                    pinRegionCondition = pinRegionCondition && !behaviors.testCondition(skills.bindCondition(
+                            "in-pin-region pin1=probe-min pin2=probe-max"), pinConditionContext);
+                    pinConditions = pinDistanceCondition && pinOriginDistanceCondition && pinRegionCondition;
+
+                    var capturedLocations = new java.util.ArrayList<Location>();
+                    var pinContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            modelInstance, null, 1.0, -1, 0, "integration");
+                    behaviors.registerAction("integration-pin-location-probe",
+                            actionContext -> actionContext.targetLocation().ifPresent(capturedLocations::add));
+                    String allPinsAction = skills.bindAction(
+                            "integration-pin-location-probe @Pin{name=probe-multi}");
+                    pinMultiDispatch = allPinsAction != null
+                            && skills.runAction(allPinsAction, pinContext)
+                            && capturedLocations.size() == 2
+                            && capturedLocations.stream().allMatch(point -> point.getWorld() == world);
+                    capturedLocations.clear();
+                    String randomPinAction = skills.bindAction(
+                            "integration-pin-location-probe @Pin{name=probe-multi;random=true}");
+                    pinRandomSingle = randomPinAction != null
+                            && skills.runAction(randomPinAction, pinContext)
+                            && capturedLocations.size() == 1
+                            && Math.floor(capturedLocations.get(0).getX()) >= pinX
+                            && Math.floor(capturedLocations.get(0).getX()) <= pinX + 1;
+
+                    var moveContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            modelInstance, getServer().getOnlinePlayers().iterator().next(),
+                            1.0, -1, 0, "integration");
+                    String moveSingleAction = skills.bindAction("move-pin{pin=probe-single}");
+                    pinMoveSingle = moveSingleAction != null
+                            && skills.runAction(moveSingleAction, moveContext)
+                            && pinRegistry.locations("probe-single").get(0)
+                            .distance(moveContext.targetEntity().orElseThrow().getLocation()) < 0.01;
+                    var multiBeforeMove = pinRegistry.locations("probe-multi");
+                    String moveMultiAction = skills.bindAction("move-pin{pin=probe-multi}");
+                    pinRejectMultiMove = moveMultiAction != null
+                            && skills.runAction(moveMultiAction, moveContext)
+                            && pinRegistry.locations("probe-multi").equals(multiBeforeMove);
+
+                    String regionTarget = "@BlocksInPinRegion{pin1=probe-min;pin2=probe-max}";
+                    var region = dev.helstera.ai.skill.PinTargeter.select(regionTarget, pinRegistry);
+                    for (Location point : region) pinBlockStates.add(point.getBlock().getState());
+                    String setRegionAction = skills.bindAction("set-block STONE " + regionTarget);
+                    boolean regionSet = region.size() == 4 && setRegionAction != null
+                            && skills.runAction(setRegionAction, pinContext)
+                            && region.stream().allMatch(point -> point.getBlock().getType()
+                            == org.bukkit.Material.STONE);
+                    String breakRegionAction = skills.bindAction("break-block " + regionTarget);
+                    boolean regionBroken = regionSet && breakRegionAction != null
+                            && skills.runAction(breakRegionAction, pinContext)
+                            && region.stream().allMatch(point -> point.getBlock().getType()
+                            == org.bukkit.Material.AIR);
+                    pinRegionSetBreak = regionSet && regionBroken;
+                    var capDispatches = new java.util.concurrent.atomic.AtomicInteger();
+                    behaviors.registerAction("integration-pin-region-cap-probe",
+                            ignored -> capDispatches.incrementAndGet());
+                    String oversizedTarget = "@BlocksInPinRegion{pin1=probe-cap-min;pin2=probe-cap-max}";
+                    String oversizedAction = skills.bindAction(
+                            "integration-pin-region-cap-probe " + oversizedTarget);
+                    pinRegionCapRejected = dev.helstera.ai.skill.PinTargeter
+                            .select(oversizedTarget, pinRegistry).isEmpty()
+                            && oversizedAction != null
+                            && skills.runAction(oversizedAction, pinContext)
+                            && capDispatches.get() == 0;
+                    pinTargeters = pinMultiDispatch && pinRandomSingle && pinMoveSingle
+                            && pinRejectMultiMove && pinRegionSetBreak && pinRegionCapRejected;
+                } catch (Throwable pinFailure) {
+                    getLogger().warning("[自检] pin-targeters probe exception: " + pinFailure);
+                } finally {
+                    for (var state : pinBlockStates) state.update(true, false);
+                    if (pinConditionEntity != null && pinConditionEntity.isValid()) pinConditionEntity.remove();
+                    reloadPins("Pin 自检恢复");
+                }
+                getLogger().info("[自检] pin-targeters result=" + pinTargeters
+                        + " multi-dispatch=" + pinMultiDispatch
+                        + " random-single=" + pinRandomSingle
+                        + " move-single=" + pinMoveSingle
+                        + " reject-multi-move=" + pinRejectMultiMove
+                        + " region-set-break=" + pinRegionSetBreak
+                        + " region-cap-rejected=" + pinRegionCapRejected);
+                getLogger().info("[自检] pin-conditions result=" + pinConditions
+                        + " distance=" + pinDistanceCondition
+                        + " origin-distance=" + pinOriginDistanceCondition
+                        + " origin-inside=" + pinOriginDistanceInside
+                        + " origin-outside=" + pinOriginDistanceOutside
+                        + " origin-missing-rejected=" + pinOriginMissingRejected
+                        + " region=" + pinRegionCondition);
                 var scheduledActionCount = new java.util.concurrent.atomic.AtomicInteger();
                 behaviors.registerAction("integration-scheduler-probe",
                         ignored -> scheduledActionCount.incrementAndGet());
@@ -1736,6 +2230,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " casts=" + branchSkillCastCount);
                 var context = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, zombie, 1.0, -1, 0, "integration");
+                String observedWeather = world.isThundering() ? "thunder" : world.hasStorm() ? "rain" : "clear";
+                boolean importedEnvironment = true;
+                for (String source : new String[]{"world{world=" + world.getName() + "}",
+                        "time{value=" + Math.floorMod(world.getTime(), 24_000L) + "}",
+                        "weather{type=" + observedWeather + "}"}) {
+                    var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                    importedEnvironment &= mapped.translated()
+                            && behaviors.testCondition(skills.bindCondition(mapped.condition()), context);
+                }
+                boolean invalidEnvironmentRejected = true;
+                for (String source : new String[]{"world{world=" + world.getName() + ";unknown=true}",
+                        "time{value=day;value=night}", "weather{type=clear;unknown=true}",
+                        "!world{world=other;unknown=true}", "world{world=other}{world=other}"}) {
+                    var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                    invalidEnvironmentRejected &= !mapped.translated() && source.equals(mapped.condition())
+                            && skills.bindCondition(mapped.condition()) == null;
+                }
+                getLogger().info("environment-imported result=" + (importedEnvironment && invalidEnvironmentRejected)
+                        + " valid=" + importedEnvironment + " invalid-rejected=" + invalidEnvironmentRejected);
                 var variableContext = dev.helstera.api.behavior.BehaviorContext.execution(
                         modelInstance, null, 1.0, -1, 0, "integration", null,
                         zombie, java.util.List.of(zombie), zombie.getLocation());
@@ -1855,8 +2368,112 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                     + ((currentHealth + 4.0) / maxHealth * 100.0)
                                     + " include-absorption=true"), context);
                     healthAbsorptionCondition = healthIncluded && healthExcluded && percentIncluded;
+                    String[] healthSources = {
+                            "?health{h=" + currentHealth + "}",
+                            "?health{h=<" + currentHealth + "}",
+                            "?health{h=>" + currentHealth + ";ia=true}",
+                            "?healthpercent{p=" + (currentHealth / maxHealth) + "}",
+                            "?healthpercent{p=" + (currentHealth / maxHealth * 100.0) + "%}"
+                    };
+                    boolean[] healthExpected = {true, false, true, true, true};
+                    boolean importedHealth = true;
+                    for (int i = 0; i < healthSources.length; i++) {
+                        var mapped = dev.helstera.migration.importer.MmConditions.translate(healthSources[i]);
+                        importedHealth &= mapped.translated() && behaviors.testCondition(
+                                skills.bindCondition(mapped.condition()), context) == healthExpected[i];
+                    }
+                    String invalidHealth = "?health{h=10;ia=invalid}";
+                    var invalidMapped = dev.helstera.migration.importer.MmConditions.translate(invalidHealth);
+                    boolean invalidPreserved = !invalidMapped.translated()
+                            && invalidHealth.equals(invalidMapped.condition());
+                    getLogger().info("health-imported result=" + (importedHealth && invalidPreserved)
+                            + " comparisons=" + importedHealth + " invalid-preserved=" + invalidPreserved);
+                    String[] rangeSources = {
+                            "?health{h=" + currentHealth + "to" + (currentHealth + 1) + "}",
+                            "?health{h=" + (currentHealth - 1) + "to" + currentHealth + "}",
+                            "?health{h=" + (currentHealth + 1) + "to" + (currentHealth + 2) + "}",
+                            "?health{h=" + (currentHealth + 4) + "to" + (currentHealth + 5) + ";ia=true}",
+                            "?health{h=" + (currentHealth + 4) + "to" + (currentHealth + 5) + "}",
+                            "?healthpercent{p=" + (currentHealth / maxHealth) + "to2}",
+                            "?healthpercent{p=" + (currentHealth / maxHealth * 100) + "%to200%}"
+                    };
+                    boolean[] rangeExpected = {true, true, false, true, false, true, true};
+                    boolean importedRanges = true;
+                    for (int i = 0; i < rangeSources.length; i++) {
+                        var mapped = dev.helstera.migration.importer.MmConditions.translate(rangeSources[i]);
+                        importedRanges &= mapped.translated() && mapped.condition().startsWith("all{")
+                                && behaviors.testCondition(skills.bindCondition(mapped.condition()), context)
+                                == rangeExpected[i];
+                    }
+                    boolean invalidRangesPreserved = true;
+                    for (String source : new String[]{"?health{20to10}",
+                            "?healthpercent{p=25%to0.5}", "?health{h=1to2;h=1to2}"}) {
+                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                        invalidRangesPreserved &= !mapped.translated() && source.equals(mapped.condition());
+                    }
+                    getLogger().info("health-range-imported result=" + (importedRanges && invalidRangesPreserved)
+                            + " ranges=" + importedRanges + " invalid-preserved=" + invalidRangesPreserved);
                 } finally {
                     zombie.setAbsorptionAmount(originalAbsorption);
+                }
+                var comparisonTarget = world.spawn(zombie.getLocation().clone().add(5, 0, 0),
+                        org.bukkit.entity.Zombie.class);
+                try {
+                    double distance = zombie.getLocation().distance(comparisonTarget.getLocation());
+                    int light = zombie.getLocation().getBlock().getLightLevel();
+                    var comparisonContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            modelInstance, comparisonTarget, 1.0, distance, 0, "integration");
+                    comparisonTarget.setHealth(comparisonTarget.getMaxHealth() / 2.0);
+                    var missingTargetContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            modelInstance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+                    boolean targetHealthComparisons = true;
+                    for (String source : new String[]{"?targetHealthPercent{>=0.5}",
+                            "?targetHealthPercent{<=50%}", "?targetHealth{=" + comparisonTarget.getHealth() + "}"}) {
+                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                        targetHealthComparisons &= mapped.translated()
+                                && behaviors.testCondition(skills.bindCondition(mapped.condition()), comparisonContext)
+                                && !behaviors.testCondition(skills.bindCondition(mapped.condition()), missingTargetContext);
+                    }
+                    for (String source : new String[]{"?targetHealthPercent{<0.5}",
+                            "?targetHealthPercent{>50%}"}) {
+                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                        targetHealthComparisons &= mapped.translated()
+                                && !behaviors.testCondition(skills.bindCondition(mapped.condition()), comparisonContext);
+                    }
+                    boolean invalidTargetHealthPreserved = true;
+                    for (String source : new String[]{"?targetHealth{50%}", "?targetHealthPercent{1e308}"}) {
+                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                        invalidTargetHealthPreserved &= !mapped.translated() && source.equals(mapped.condition());
+                    }
+                    getLogger().info("target-health-imported result="
+                            + (targetHealthComparisons && invalidTargetHealthPreserved)
+                            + " comparisons=" + targetHealthComparisons
+                            + " invalid-preserved=" + invalidTargetHealthPreserved);
+                    boolean boundaries = true;
+                    for (String source : new String[]{"?targetDistance{<= " + distance + "}",
+                            "?targetDistance{>= " + distance + "}", "?lightLevel{<= " + light + "}",
+                            "?lightLevel{>= " + light + "}"}) {
+                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                        boundaries &= mapped.translated() && behaviors.testCondition(
+                                skills.bindCondition(mapped.condition()), comparisonContext);
+                    }
+                    for (String source : new String[]{"?targetDistance{< " + distance + "}",
+                            "?targetDistance{> " + distance + "}", "?lightLevel{< " + light + "}",
+                            "?lightLevel{> " + light + "}"}) {
+                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                        boundaries &= mapped.translated() && !behaviors.testCondition(
+                                skills.bindCondition(mapped.condition()), comparisonContext);
+                    }
+                    boolean invalidPreserved = true;
+                    for (String source : new String[]{"?targetDistance{NaN}", "?targetDistance{5%}",
+                            "?lightLevel{invalid}"}) {
+                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                        invalidPreserved &= !mapped.translated() && source.equals(mapped.condition());
+                    }
+                    getLogger().info("comparison-boundary-imported result=" + (boundaries && invalidPreserved)
+                            + " boundaries=" + boundaries + " invalid-preserved=" + invalidPreserved);
+                } finally {
+                    comparisonTarget.remove();
                 }
                 var actualSpawnReason = zombie.getEntitySpawnReason();
                 var alternateSpawnReason = java.util.Arrays.stream(
@@ -2238,6 +2855,271 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var blockContext = dev.helstera.api.behavior.BehaviorContext.execution(
                         modelInstance, null, 1.0, -1, 0, "integration", null, null,
                         java.util.List.of(), blockMechanicLocation);
+                String locationArgs = "x=" + blockMechanicLocation.getBlockX()
+                        + ";y=" + blockMechanicLocation.getBlockY()
+                        + ";z=" + blockMechanicLocation.getBlockZ();
+                boolean locationDispatch = runIntegrationAction(skills, behaviors,
+                        "set-block STONE @location{" + locationArgs + "}", blockContext)
+                        && blockMechanicLocation.getBlock().getType() == org.bukkit.Material.STONE;
+                boolean locationRejected = runIntegrationAction(skills, behaviors,
+                        "set-block DIRT @location{" + locationArgs + ";x=NaN}", blockContext)
+                        && blockMechanicLocation.getBlock().getType() == org.bukkit.Material.STONE;
+                boolean selfLocationAliases = true;
+                for (String targeter : java.util.List.of(
+                        "@SelfLocation", "@casterLocation", "@bossLocation", "@mobLocation")) {
+                    selfLocationAliases &= dispatchLocationTargeter(skills, behaviors, targeter, blockContext);
+                }
+                boolean selfEyeLocationAliases = true;
+                for (String targeter : java.util.List.of("@SelfEyeLocation", "@eyeDirection",
+                        "@casterEyeLocation", "@bossEyeLocation", "@mobEyeLocation")) {
+                    selfEyeLocationAliases &= dispatchLocationTargeter(skills, behaviors, targeter, blockContext);
+                }
+                boolean casterSpawnLocation = dispatchLocationTargeter(
+                        skills, behaviors, "@CasterSpawnLocation", blockContext)
+                        && dispatchLocationTargeter(skills, behaviors, "@casterSpawn", blockContext);
+                boolean spawnLocation = dispatchLocationTargeter(
+                        skills, behaviors, "@SpawnLocation", blockContext);
+                locationProbeTarget = world.spawn(location.clone().add(12, 0, 0),
+                        org.bukkit.entity.Zombie.class);
+                var targetLocationContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        modelInstance, locationProbeTarget, 1.0, 12.0, 0, "integration", null, null,
+                        java.util.List.of(locationProbeTarget), blockMechanicLocation,
+                        blockContext.skillTree().orElse(null));
+                boolean targetLocationAliases = true;
+                for (String targeter : java.util.List.of("@TargetLocation", "@targetloc", "@TL")) {
+                    targetLocationAliases &= dispatchLocationTargeter(
+                            skills, behaviors, targeter, targetLocationContext);
+                }
+                var triggerLocationContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                        modelInstance, null, 1.0, -1, 0, "integration", null, locationProbeTarget,
+                        java.util.List.of(), blockMechanicLocation);
+                boolean triggerLocation = dispatchLocationTargeter(
+                        skills, behaviors, "@TriggerLocation", triggerLocationContext);
+                boolean forwardLocation = dispatchLocationTargeter(
+                        skills, behaviors, "@Forward{f=2}", blockContext);
+                locationProbeProjectile = world.spawn(location.clone().add(0, 5, 0),
+                        org.bukkit.entity.Arrow.class);
+                locationProbeProjectile.setVelocity(new org.bukkit.util.Vector(1, 0, 0));
+                var projectileLocationContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                        modelInstance, null, 1.0, -1, 0, "integration", null, locationProbeProjectile,
+                        java.util.List.of(), blockMechanicLocation);
+                boolean projectileForwardLocation = dispatchLocationTargeter(
+                        skills, behaviors, "@ProjectileForward{f=2}", projectileLocationContext);
+                var originalLocationTargetVelocity = locationProbeTarget.getVelocity().clone();
+                boolean predictedTargetLocation;
+                try {
+                    locationProbeTarget.setVelocity(new org.bukkit.util.Vector(0.25, 0, 0));
+                    predictedTargetLocation = dispatchLocationTargeter(skills, behaviors,
+                            "@TargetPredictedLocation{ticks=4;max=2}", targetLocationContext);
+                } finally {
+                    locationProbeTarget.setVelocity(originalLocationTargetVelocity);
+                }
+                getLogger().info("location-targeter-dispatch valid=" + locationDispatch
+                        + " invalid-rejected=" + locationRejected
+                        + " self-aliases=" + selfLocationAliases
+                        + " self-eye=" + selfEyeLocationAliases
+                        + " caster-spawn=" + casterSpawnLocation
+                        + " spawn=" + spawnLocation
+                        + " target-aliases=" + targetLocationAliases
+                        + " trigger=" + triggerLocation
+                        + " forward=" + forwardLocation
+                        + " projectile-forward=" + projectileForwardLocation
+                        + " predicted=" + predictedTargetLocation);
+                blockContext.skillTree().orElseThrow().setLocation("integration-mark", blockMechanicLocation);
+                boolean variableDispatch = runIntegrationAction(skills, behaviors,
+                        "set-block DIRT @VariableLocation{var=skill.integration-mark}", blockContext)
+                        && blockMechanicLocation.getBlock().getType() == org.bukkit.Material.DIRT;
+                boolean variableRejected = runIntegrationAction(skills, behaviors,
+                        "set-block STONE @VariableLocation{var=skill.integration-mark;var=skill.other}", blockContext)
+                        && blockMechanicLocation.getBlock().getType() == org.bukkit.Material.DIRT;
+                boolean variableImport = false;
+                Path variableRoot = null;
+                try {
+                    variableRoot = Files.createTempDirectory("helstera-variable-location-");
+                    Path variableSkills = Files.createDirectory(variableRoot.resolve("Skills"));
+                    Path variableSource = variableSkills.resolve("probe.yml");
+                    Files.writeString(variableSource, """
+                            skills:
+                              probe:
+                                Skills:
+                                  - setblock{material=STONE} @VariableLocation{var=skill.integration-mark;var=skill.other}
+                            """);
+                    var variableEntries = new MythicMobsImporter().convert(variableSource);
+                    var variablePlan = variableEntries.stream().filter(entry -> "skills.yml".equals(entry.get("target-file")))
+                            .findFirst().orElseThrow();
+                    var variableYaml = YamlConfiguration.loadConfiguration(
+                            new java.io.StringReader(String.valueOf(variablePlan.get("content"))));
+                    variableImport = variableYaml.getStringList("skills.probe.unsupported").size() == 1
+                            && variableYaml.getStringList("skills.probe.on-decision").isEmpty()
+                            && variableEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                            && String.valueOf(entry.get("note")).contains("Invalid VariableLocation"));
+                } finally {
+                    if (variableRoot != null) {
+                        Files.deleteIfExists(variableRoot.resolve("Skills/probe.yml"));
+                        Files.deleteIfExists(variableRoot.resolve("Skills"));
+                        Files.deleteIfExists(variableRoot);
+                    }
+                }
+                getLogger().info("variable-location-dispatch valid=" + variableDispatch
+                        + " invalid-rejected=" + variableRejected + " import-preserved=" + variableImport);
+                var explosionListener = new org.bukkit.event.Listener() { };
+                var explosionLocations = new java.util.ArrayList<Location>();
+                getServer().getPluginManager().registerEvent(org.bukkit.event.block.BlockExplodeEvent.class,
+                        explosionListener, org.bukkit.event.EventPriority.HIGHEST, (listener, event) -> {
+                            var explosion = (org.bukkit.event.block.BlockExplodeEvent) event;
+                            explosionLocations.add(explosion.getBlock().getLocation());
+                            explosion.setCancelled(true);
+                        }, this);
+                boolean explosionAtLocation;
+                boolean explosionMissingVariable;
+                try {
+                    Location blast = blockMechanicLocation.clone().add(5, 0, 0).getBlock().getLocation();
+                    String blastArgs = "x=" + blast.getBlockX() + ";y=" + blast.getBlockY()
+                            + ";z=" + blast.getBlockZ();
+                    explosionAtLocation = runIntegrationAction(skills, behaviors,
+                            "explode 2 false true @location{" + blastArgs + "}", blockContext)
+                            && explosionLocations.size() == 1 && blast.equals(explosionLocations.get(0));
+                    explosionMissingVariable = runIntegrationAction(skills, behaviors,
+                            "explode 2 false true @VariableLocation{var=skill.missing-blast}", blockContext)
+                            && explosionLocations.size() == 1;
+                } finally {
+                    org.bukkit.event.HandlerList.unregisterAll(explosionListener);
+                }
+                getLogger().info("explosion-location-dispatch valid=" + explosionAtLocation
+                        + " missing-rejected=" + explosionMissingVariable);
+                var dropListener = new org.bukkit.event.Listener() { };
+                var locationDrops = new java.util.ArrayList<org.bukkit.entity.Item>();
+                getServer().getPluginManager().registerEvent(org.bukkit.event.entity.ItemSpawnEvent.class,
+                        dropListener, org.bukkit.event.EventPriority.MONITOR, (listener, event) -> {
+                            var spawn = (org.bukkit.event.entity.ItemSpawnEvent) event;
+                            if (!spawn.isCancelled()) locationDrops.add(spawn.getEntity());
+                        }, this);
+                boolean dropAtLocation;
+                boolean invalidDropRejected;
+                boolean missingDropRejected;
+                boolean importedDrop = false;
+                boolean importedMissingRejected = false;
+                boolean importedDropInvalidPreserved = false;
+                boolean importedExactDrop = false;
+                boolean importedNaturalInvalid = false;
+                boolean importedInlineInvalid = false;
+                boolean importedInlineDynamic = false;
+                boolean importedInlineMissing = false;
+                boolean importedListDrop = false;
+                boolean importedListInvalid = false;
+                Path dropImportRoot = null;
+                try {
+                    Location dropLocation = blockMechanicLocation.clone().add(8, 2, 0).getBlock().getLocation();
+                    String dropArgs = "x=" + dropLocation.getBlockX() + ";y=" + dropLocation.getBlockY()
+                            + ";z=" + dropLocation.getBlockZ();
+                    dropAtLocation = runIntegrationAction(skills, behaviors,
+                            "drop-item DIAMOND 3 @location{" + dropArgs + "}", blockContext)
+                            && locationDrops.size() == 1
+                            && locationDrops.get(0).getItemStack().getType() == org.bukkit.Material.DIAMOND
+                            && locationDrops.get(0).getItemStack().getAmount() == 3
+                            && locationDrops.get(0).getLocation().distance(dropLocation) < 2.0;
+                    invalidDropRejected = runIntegrationAction(skills, behaviors,
+                            "drop-item DIAMOND 0 @location{" + dropArgs + "}", blockContext)
+                            && locationDrops.size() == 1;
+                    missingDropRejected = runIntegrationAction(skills, behaviors,
+                            "drop-item DIAMOND 3 @VariableLocation{var=skill.missing-drop}", blockContext)
+                            && locationDrops.size() == 1;
+                    dropImportRoot = Files.createTempDirectory("helstera-drop-import-");
+                    Path dropSkills = Files.createDirectory(dropImportRoot.resolve("Skills"));
+                    Path dropSource = dropSkills.resolve("probe.yml");
+                    String invalidAmount = "dropitem{item=DIAMOND;amount=0}";
+                    String unknownArgument = "dropitem{item=DIAMOND;unknown=true}";
+                    String invalidNatural = "dropitem{item=DIAMOND;n=maybe}";
+                    String invalidInline = "dropitem{items=DIAMOND 0}";
+                    String invalidList = "dropitem{items=DIAMOND 1,STONE 0}";
+                    String invalidListNatural = "dropitem{items=DIAMOND,STONE,n=maybe}";
+                    Files.writeString(dropSource, """
+                            skills:
+                              probe:
+                                Skills:
+                                  - dropitem{item=DIAMOND;amount=2} @location{%s}
+                                  - dropitem{item=DIAMOND;amount=2} @VariableLocation{var=skill.missing-drop}
+                                  - dropitem{i=DIAMOND 4;n=false} @location{%s}
+                                  - dropitem{i=DIAMOND <skill.var.drop-count>;n=false} @location{%s}
+                                  - dropitem{items=DIAMOND 2,STONE 3,n=false} @location{%s}
+                                  - %s
+                                  - %s
+                                  - %s
+                                  - %s
+                                  - %s
+                                  - %s
+                            """.formatted(dropArgs, dropArgs, dropArgs, dropArgs, invalidAmount, unknownArgument, invalidNatural, invalidInline, invalidList, invalidListNatural));
+                    var dropEntries = new MythicMobsImporter().convert(dropSource);
+                    var dropPlan = dropEntries.stream().filter(entry -> "skills.yml".equals(entry.get("target-file")))
+                            .findFirst().orElseThrow();
+                    var dropYaml = YamlConfiguration.loadConfiguration(
+                            new java.io.StringReader(String.valueOf(dropPlan.get("content"))));
+                    var importedActions = dropYaml.getStringList("skills.probe.on-decision");
+                    var unsupportedDrops = dropYaml.getStringList("skills.probe.unsupported");
+                    importedDropInvalidPreserved = unsupportedDrops.containsAll(java.util.List.of(invalidAmount, unknownArgument))
+                            && dropEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                            && String.valueOf(entry.get("note")).contains("Invalid dropitem amount"))
+                            && dropEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                            && String.valueOf(entry.get("note")).contains("Unsupported dropitem argument"));
+                    importedNaturalInvalid = unsupportedDrops.contains(invalidNatural)
+                            && dropEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                            && String.valueOf(entry.get("note")).contains("Invalid dropitem naturally flag"));
+                    importedInlineInvalid = unsupportedDrops.contains(invalidInline)
+                            && dropEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                            && String.valueOf(entry.get("note")).contains("Invalid dropitem item"));
+                    importedListInvalid = unsupportedDrops.size() == 6 && unsupportedDrops.contains(invalidList)
+                            && unsupportedDrops.contains(invalidListNatural)
+                            && dropEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                            && String.valueOf(entry.get("note")).contains("Invalid dropitem item"));
+                    if (importedActions.size() == 5) {
+                        importedDrop = runIntegrationAction(skills, behaviors, importedActions.get(0), blockContext)
+                                && locationDrops.size() == 2
+                                && locationDrops.get(1).getItemStack().getType() == org.bukkit.Material.DIAMOND
+                                && locationDrops.get(1).getItemStack().getAmount() == 2
+                                && locationDrops.get(1).getLocation().distance(dropLocation) < 2.0;
+                        importedMissingRejected = runIntegrationAction(skills, behaviors, importedActions.get(1), blockContext)
+                                && locationDrops.size() == 2;
+                        importedExactDrop = runIntegrationAction(skills, behaviors, importedActions.get(2), blockContext)
+                                && locationDrops.size() == 3
+                                && locationDrops.get(2).getItemStack().getType() == org.bukkit.Material.DIAMOND
+                                && locationDrops.get(2).getItemStack().getAmount() == 4
+                                && locationDrops.get(2).getLocation().distanceSquared(dropLocation) < 1.0e-8;
+                        importedInlineMissing = runIntegrationAction(skills, behaviors, importedActions.get(3), blockContext)
+                                && locationDrops.size() == 3;
+                        blockContext.skillTree().orElseThrow().setVariable("drop-count", 5);
+                        importedInlineDynamic = runIntegrationAction(skills, behaviors, importedActions.get(3), blockContext)
+                                && locationDrops.size() == 4
+                                && locationDrops.get(3).getItemStack().getAmount() == 5
+                                && locationDrops.get(3).getLocation().distanceSquared(dropLocation) < 1.0e-8;
+                        importedListDrop = runIntegrationAction(skills, behaviors, importedActions.get(4), blockContext)
+                                && locationDrops.size() == 6
+                                && locationDrops.get(4).getItemStack().getType() == org.bukkit.Material.DIAMOND
+                                && locationDrops.get(4).getItemStack().getAmount() == 2
+                                && locationDrops.get(5).getItemStack().getType() == org.bukkit.Material.STONE
+                                && locationDrops.get(5).getItemStack().getAmount() == 3
+                                && locationDrops.get(4).getLocation().distanceSquared(dropLocation) < 1.0e-8
+                                && locationDrops.get(5).getLocation().distanceSquared(dropLocation) < 1.0e-8;
+                    }
+                } finally {
+                    org.bukkit.event.HandlerList.unregisterAll(dropListener);
+                    for (var item : locationDrops) item.remove();
+                    if (dropImportRoot != null) {
+                        Files.deleteIfExists(dropImportRoot.resolve("Skills/probe.yml"));
+                        Files.deleteIfExists(dropImportRoot.resolve("Skills"));
+                        Files.deleteIfExists(dropImportRoot);
+                    }
+                }
+                getLogger().info("drop-item-location valid=" + dropAtLocation
+                        + " invalid-rejected=" + invalidDropRejected + " missing-rejected=" + missingDropRejected);
+                getLogger().info("drop-item-import valid=" + importedDrop + " missing-rejected="
+                        + importedMissingRejected + " invalid-preserved=" + importedDropInvalidPreserved);
+                getLogger().info("drop-item-natural-import exact=" + importedExactDrop
+                        + " invalid-preserved=" + importedNaturalInvalid);
+                getLogger().info("drop-item-inline-import valid=" + importedExactDrop
+                        + " invalid-preserved=" + importedInlineInvalid + " dynamic=" + importedInlineDynamic
+                        + " missing-rejected=" + importedInlineMissing);
+                getLogger().info("drop-item-list-import valid=" + importedListDrop
+                        + " invalid-preserved=" + importedListInvalid);
                 boolean blockSetAction = runIntegrationAction(skills, behaviors,
                         "set-block STONE", blockContext)
                         && blockMechanicLocation.getBlock().getType() == org.bukkit.Material.STONE;
@@ -2462,6 +3344,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("block-type-is #minecraft:base_stone_overworld"), conditionContext);
                     String biomePartialKey = actualBiome.length() > 1 ? actualBiome.substring(1) : actualBiome;
                     String biomeMismatchId = actualBiomeKey.getNamespace() + ":" + actualBiome + "_missing";
+                    var importedBiomePartial = dev.helstera.migration.importer.MmConditions.translate(
+                            "?biome{e=false;b=" + biomeMismatchId + ", " + biomePartialKey + "}");
+                    var importedBiomeExact = dev.helstera.migration.importer.MmConditions.translate(
+                            "?biome{e=true;b=" + biomeMismatchId + ", " + biomePartialKey + "}");
+                    String invalidBiomeSource = "?biome{b=" + actualBiomeId + ",}";
+                    var invalidBiome = dev.helstera.migration.importer.MmConditions.translate(invalidBiomeSource);
+                    boolean importedPartial = importedBiomePartial.translated() && behaviors.testCondition(
+                            skills.bindCondition(importedBiomePartial.condition()), conditionContext);
+                    boolean importedExactReject = importedBiomeExact.translated() && !behaviors.testCondition(
+                            skills.bindCondition(importedBiomeExact.condition()), conditionContext);
+                    boolean importedInvalidPreserved = !invalidBiome.translated()
+                            && invalidBiomeSource.equals(invalidBiome.condition());
+                    getLogger().info("biome-imported partial=" + importedPartial + " exact-rejected="
+                            + importedExactReject + " invalid-preserved=" + importedInvalidPreserved);
                     boolean biomeExact = behaviors.testCondition(
                             skills.bindCondition("biome-is " + actualBiomeId + " true"), conditionContext)
                             && behaviors.testCondition(skills.bindCondition(
@@ -2581,8 +3477,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 primedConditionProbe.setIgnited(true);
                 var primedConditionContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, primedConditionProbe, 1.0, 5.0, 0, "integration");
-                boolean creeperPrimedCondition = behaviors.testCondition(
+                boolean creeperPrimedPositive = behaviors.testCondition(
                         skills.bindCondition("is-creeper-primed"), primedConditionContext);
+                primedConditionProbe.setIgnited(false);
+                boolean creeperPrimedNegative = !behaviors.testCondition(
+                        skills.bindCondition("is-creeper-primed"), primedConditionContext);
+                primedConditionProbe.setIgnited(true);
+                boolean creeperPrimedCondition = creeperPrimedPositive && creeperPrimedNegative;
+                getLogger().info("creeper-primed-condition positive=" + creeperPrimedPositive
+                        + " negative=" + creeperPrimedNegative
+                        + " restored=" + primedConditionProbe.isIgnited());
                 var dragonAliveProbe = world.spawn(
                         conditionTarget.getLocation().clone().add(20, 0, 0),
                         org.bukkit.entity.EnderDragon.class);
@@ -2591,11 +3495,34 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 dragonAliveProbe.setInvulnerable(true);
                 var dragonAliveContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, dragonAliveProbe, 1.0, 20.0, 0, "integration");
-                boolean enderDragonAliveCondition = behaviors.testCondition(
+                boolean enderDragonAlivePositive = behaviors.testCondition(
                         skills.bindCondition("ender-dragon-alive"), dragonAliveContext);
+                var originalDragonPhase = dragonAliveProbe.getPhase();
                 dragonAliveProbe.setPhase(org.bukkit.entity.EnderDragon.Phase.CIRCLING);
-                boolean enderDragonPhaseCondition = behaviors.testCondition(
+                boolean dragonPhasePositive = behaviors.testCondition(
                         skills.bindCondition("ender-dragon-phase CIRCLING"), dragonAliveContext);
+                boolean dragonPhaseList = behaviors.testCondition(
+                        skills.bindCondition("ender-dragon-phase FLY_TO_PORTAL,CIRCLING"), dragonAliveContext);
+                dragonAliveProbe.setPhase(org.bukkit.entity.EnderDragon.Phase.HOVER);
+                boolean dragonPhaseNegative = !behaviors.testCondition(
+                        skills.bindCondition("ender-dragon-phase CIRCLING"), dragonAliveContext);
+                boolean dragonPhaseInvalidRejected = skills.bindCondition(
+                        "ender-dragon-phase CIRCLING,INVALID") == null;
+                dragonAliveProbe.setPhase(originalDragonPhase);
+                boolean enderDragonPhaseCondition = dragonPhasePositive && dragonPhaseList
+                        && dragonPhaseNegative && dragonPhaseInvalidRejected;
+                getLogger().info("ender-dragon-phase-condition positive=" + dragonPhasePositive
+                        + " list=" + dragonPhaseList + " negative=" + dragonPhaseNegative
+                        + " invalid-rejected=" + dragonPhaseInvalidRejected
+                        + " restored=" + (dragonAliveProbe.getPhase() == originalDragonPhase));
+                dragonAliveProbe.remove();
+                boolean enderDragonAliveNegative = !behaviors.testCondition(
+                        skills.bindCondition("ender-dragon-alive"), dragonAliveContext);
+                boolean enderDragonAliveCondition = enderDragonAlivePositive
+                        && enderDragonAliveNegative && !dragonAliveProbe.isValid();
+                getLogger().info("ender-dragon-alive-condition positive="
+                        + enderDragonAlivePositive + " negative=" + enderDragonAliveNegative
+                        + " removed=" + !dragonAliveProbe.isValid());
                 var mobSizeProbe = world.spawn(
                         conditionTarget.getLocation().clone().add(4, 0, 0),
                         org.bukkit.entity.Slime.class);
@@ -2627,8 +3554,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills.bindCondition("mobsinradius 1 4"), context);
                 boolean utilityMobsOrigin = behaviors.testCondition(
                         skills.bindCondition("mobs-near-origin >=1 4 ZOMBIE"), context);
+                double spawnDistance = conditionTarget.getLocation()
+                        .distance(world.getSpawnLocation());
                 boolean utilitySpawnDistance = behaviors.testCondition(
                         skills.bindCondition("distance-from-spawn <1000"), conditionContext);
+                boolean utilitySpawnDistanceExact = behaviors.testCondition(
+                        skills.bindCondition("distance-from-spawn <= " + spawnDistance), conditionContext);
+                boolean utilitySpawnDistanceOverRejected = !behaviors.testCondition(
+                        skills.bindCondition("distance-from-spawn > " + spawnDistance), conditionContext);
                 boolean utilityAltitude = behaviors.testCondition(
                         skills.bindCondition("altitude >=0 30"), conditionContext);
                 boolean utilityPlayersOnline = behaviors.testCondition(
@@ -2641,11 +3574,84 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills.bindCondition("living-in-radius >= 1 4"), conditionContext);
                 boolean utilityMobsChunk = behaviors.testCondition(
                         skills.bindCondition("mobs-in-chunk >= 1"), conditionContext);
+                boolean utilityMobsChunkReject = !behaviors.testCondition(
+                        skills.bindCondition("mobs-in-chunk >= 999999"), conditionContext);
+                int emptyChunkX = (location.getBlockX() >> 4) + 128;
+                int boundaryChunkZ = location.getBlockZ() >> 4;
+                int emptyChunkBlockX = (emptyChunkX << 4) + 8;
+                int boundaryChunkBlockX = ((emptyChunkX + 1) << 4) + 8;
+                world.getChunkAt(emptyChunkX, boundaryChunkZ);
+                world.getChunkAt(emptyChunkX + 1, boundaryChunkZ);
+                Location emptyChunkLocation = new Location(world, emptyChunkBlockX,
+                        world.getHighestBlockYAt(emptyChunkBlockX, (boundaryChunkZ << 4) + 8) + 1,
+                        (boundaryChunkZ << 4) + 8);
+                Location boundaryChunkLocation = new Location(world, boundaryChunkBlockX,
+                        world.getHighestBlockYAt(boundaryChunkBlockX, (boundaryChunkZ << 4) + 8) + 1,
+                        (boundaryChunkZ << 4) + 8);
+                var emptyChunk = world.getChunkAt(emptyChunkX, boundaryChunkZ);
+                var occupiedChunk = world.getChunkAt(emptyChunkX + 1, boundaryChunkZ);
+                boolean cleanChunkPair = java.util.Arrays.stream(emptyChunk.getEntities())
+                        .noneMatch(entity -> entity instanceof org.bukkit.entity.Mob mob && mob.isValid())
+                        && java.util.Arrays.stream(occupiedChunk.getEntities())
+                        .noneMatch(entity -> entity instanceof org.bukkit.entity.Mob mob && mob.isValid());
+                var boundaryChunkMob = world.spawn(boundaryChunkLocation,
+                        org.bukkit.entity.Zombie.class);
+                conditionCategoryEntities.add(boundaryChunkMob);
+                boundaryChunkMob.setAI(false);
+                boundaryChunkMob.setInvulnerable(true);
+                var emptyChunkContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                        modelInstance, null, 1.0, -1, 0, "integration", null, null,
+                        java.util.List.of(), emptyChunkLocation);
+                var occupiedChunkContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                        modelInstance, null, 1.0, -1, 0, "integration", null, null,
+                        java.util.List.of(), boundaryChunkLocation);
+                boolean zeroChunkCount = behaviors.testCondition(
+                        skills.bindCondition("mobs-in-chunk =0"), emptyChunkContext);
+                boolean occupiedChunkCount = behaviors.testCondition(
+                        skills.bindCondition("mobs-in-chunk >=1"), occupiedChunkContext);
+                boolean adjacentChunkExcluded = behaviors.testCondition(
+                        skills.bindCondition("mobs-in-chunk =0"), emptyChunkContext);
+                boolean mobsInChunkBoundaries = cleanChunkPair && zeroChunkCount
+                        && occupiedChunkCount && adjacentChunkExcluded;
+                mobsInChunkCondition = utilityMobsChunk && utilityMobsChunkReject
+                        && mobsInChunkBoundaries;
                 boolean utilityDimension = behaviors.testCondition(
                         skills.bindCondition("dimension-is NORMAL"), conditionContext);
+                boolean chanceAlways = behaviors.testCondition(
+                        skills.bindCondition("randomchance 100"), context);
+                boolean chanceNever = !behaviors.testCondition(
+                        skills.bindCondition("randomchance 0"), context);
+                boolean chanceInvalidRejected = skills.bindCondition("randomchance 101") == null;
+                chanceCondition = chanceAlways && chanceNever && chanceInvalidRejected;
                 String liveMinecraftVersion = org.bukkit.Bukkit.getMinecraftVersion();
+                var survivalProbePlayer = org.bukkit.Bukkit.getOnlinePlayers().stream()
+                        .findFirst().orElse(null);
+                boolean survivalRejected = false;
+                boolean survivalAccepted = false;
+                boolean survivalModeRestored = false;
+                if (survivalProbePlayer != null) {
+                    var originalGameMode = survivalProbePlayer.getGameMode();
+                    try {
+                        var survivalContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                modelInstance, survivalProbePlayer, 1.0, -1, 0, "integration");
+                        survivalProbePlayer.setGameMode(org.bukkit.GameMode.ADVENTURE);
+                        survivalRejected = !behaviors.testCondition(
+                                skills.bindCondition("isInSurvivalMode"), survivalContext);
+                        survivalProbePlayer.setGameMode(org.bukkit.GameMode.SURVIVAL);
+                        survivalAccepted = behaviors.testCondition(
+                                skills.bindCondition("is-in-survival-mode"), survivalContext);
+                    } finally {
+                        survivalProbePlayer.setGameMode(originalGameMode);
+                        survivalModeRestored = survivalProbePlayer.getGameMode() == originalGameMode;
+                    }
+                }
+                survivalModeCondition = survivalRejected && survivalAccepted && survivalModeRestored;
+                getLogger().info("survival-mode-condition positive=" + survivalAccepted
+                        + " negative=" + survivalRejected
+                        + " restored=" + survivalModeRestored);
                 conditionUtilityAliases = utilityInCombat && utilityTargetCount
                         && utilityMobsRadius && utilityMobsOrigin && utilitySpawnDistance
+                        && utilitySpawnDistanceExact && utilitySpawnDistanceOverRejected
                         && utilityAltitude && vehicleDeadCondition && utilityPlayersOnline
                         && utilityPlayersWorld && utilityMobsWorld && utilityLivingRadius
                         && utilityMobsChunk && utilityDimension
@@ -2683,6 +3689,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && creeperPrimedCondition
                         && enderDragonAliveCondition
                         && enderDragonPhaseCondition
+                        && survivalModeCondition
                         && behaviors.testCondition(
                         skills.bindCondition("is-mythic-mob"), context)
                         && behaviors.testCondition(
@@ -2691,13 +3698,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills.bindCondition("sky-light-level >=0"), conditionContext)
                         && behaviors.testCondition(
                         skills.bindCondition("light-level-from-blocks >=0"), conditionContext)
-                        && behaviors.testCondition(
-                        skills.bindCondition("randomchance 100"), context);
+                        && chanceCondition;
                 getLogger().info("condition-utility-details incombat=" + utilityInCombat
                         + " targetcount=" + utilityTargetCount
                         + " mobs-radius=" + utilityMobsRadius
                         + " mobs-origin=" + utilityMobsOrigin
                         + " spawn-distance=" + utilitySpawnDistance
+                        + " spawn-distance-exact=" + utilitySpawnDistanceExact
+                        + " spawn-distance-over-rejected=" + utilitySpawnDistanceOverRejected
                         + " altitude=" + utilityAltitude
                         + " vehicle-dead=" + vehicleDeadCondition
                         + " players-online=" + utilityPlayersOnline
@@ -2705,7 +3713,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " mobs-world=" + utilityMobsWorld
                         + " living-radius=" + utilityLivingRadius
                         + " mobs-chunk=" + utilityMobsChunk
+                        + " mobs-chunk-high-rejected=" + utilityMobsChunkReject
+                        + " mobs-chunk-zero=" + zeroChunkCount
+                        + " mobs-chunk-occupied=" + occupiedChunkCount
+                        + " mobs-chunk-adjacent-excluded=" + adjacentChunkExcluded
+                        + " mobs-chunk-boundaries=" + mobsInChunkBoundaries
+                        + " mobs-in-chunk-condition=" + mobsInChunkCondition
                         + " dimension=" + utilityDimension
+                        + " chance-100=" + chanceAlways
+                        + " chance-0-rejected=" + chanceNever
+                        + " chance-invalid-rejected=" + chanceInvalidRejected
+                        + " survival-mode-condition=" + survivalModeCondition
                         + " server-version=" + liveMinecraftVersion
                         + " aggregate=" + conditionUtilityAliases);
                 var killProbe = world.spawn(location.clone().add(4, 0, 0), org.bukkit.entity.Zombie.class);
@@ -3032,6 +4050,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         org.bukkit.entity.Zombie.class);
                 var farTarget = world.spawn(zombie.getLocation().clone().add(3, 0, 0),
                         org.bukkit.entity.Zombie.class);
+                nearTarget.setHealth(6.0);
+                farTarget.setHealth(16.0);
+                nearTarget.setTicksLived(900);
+                farTarget.setTicksLived(100);
                 conditionCategoryEntities.add(nearTarget);
                 conditionCategoryEntities.add(farTarget);
                 var chainTargets = dev.helstera.api.behavior.Targeters.select(
@@ -3040,10 +4062,106 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var sortedTargets = dev.helstera.api.behavior.Targeters.select(
                         "@living{filter=mob;limit=1;sort=farthest}", modelInstance,
                         java.util.List.of(nearTarget, farTarget), java.util.List.of());
+                var skippedTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{filter=mob;sort=nearest;skipTargetsUpToIndex=1;limit=1}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of());
+                var skippedAliasTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{filter=mob;sort=nearest;stuti=1;limit=1}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of());
+                var highestHealthTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{filter=mob;sort=HIGHEST_HEALTH}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of());
+                var oldestTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{filter=mob;sort=OLDEST}", modelInstance,
+                        java.util.List.of(farTarget, nearTarget), java.util.List.of());
+                var invalidSortTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{filter=mob;sort=unsupported-sort}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of());
+                var directTargetContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        modelInstance, (org.bukkit.entity.LivingEntity) null, 1, 0, 0, "integration",
+                        null, null, java.util.List.of(nearTarget, farTarget), zombie.getLocation(), null);
+                boolean directContextOrder = dev.helstera.api.behavior.Targeters.select(
+                        "@targets{filter=mob;sort=highest-health;stuti=1;limit=1}", directTargetContext,
+                        java.util.List.of(), java.util.List.of()).equals(java.util.List.of(nearTarget));
+                boolean directContextRadius = dev.helstera.api.behavior.Targeters.select(
+                        "@targets{radius=2}", directTargetContext,
+                        java.util.List.of(), java.util.List.of()).equals(java.util.List.of(nearTarget));
+                boolean directContextInvalid = dev.helstera.api.behavior.Targeters.select(
+                        "@targets{limit=invalid}", directTargetContext, java.util.List.of(), java.util.List.of()).isEmpty()
+                        && dev.helstera.api.behavior.Targeters.select(
+                        "@targets{sort=invalid}", directTargetContext, java.util.List.of(), java.util.List.of()).isEmpty();
+                getLogger().info("context-targeter-controls order=" + directContextOrder
+                        + " radius=" + directContextRadius + " invalid-rejected=" + directContextInvalid);
+                var chainContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        modelInstance, nearTarget, 1, 0, 0, "integration", null, nearTarget,
+                        java.util.List.of(nearTarget, farTarget), zombie.getLocation(), null);
+                var chainCandidates = java.util.List.of(nearTarget, farTarget);
+                boolean contextChainTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{sort=highest-health;limit=1} > @targets", chainContext,
+                        chainCandidates, java.util.List.of()).equals(java.util.List.of(farTarget));
+                boolean contextChainTrigger = dev.helstera.api.behavior.Targeters.select(
+                        "@living{sort=lowest-health;limit=1} > @trigger", chainContext,
+                        chainCandidates, java.util.List.of()).equals(java.util.List.of(nearTarget));
+                boolean contextChainExcluded = dev.helstera.api.behavior.Targeters.select(
+                        "@living{sort=highest-health;limit=1} > @trigger", chainContext,
+                        chainCandidates, java.util.List.of()).isEmpty();
+                var conditionalChainResult = dev.helstera.api.behavior.Targeters.select(
+                        "@living > @nearestConditionalTarget{conditions=[target-health-above 50]}",
+                        chainContext, chainCandidates, java.util.List.of());
+                var conditionalChainExcluded = dev.helstera.api.behavior.Targeters.select(
+                        "@living{sort=lowest-health;limit=1} > @nearestConditionalTarget{conditions=[target-health-above 50]}",
+                        chainContext, chainCandidates, java.util.List.of());
+                boolean contextChainCondition = conditionalChainResult.equals(java.util.List.of(farTarget))
+                        && conditionalChainExcluded.isEmpty();
+                getLogger().info("context-targeter-chain targets=" + contextChainTargets
+                        + " trigger=" + contextChainTrigger + " excluded=" + contextChainExcluded
+                        + " condition=" + contextChainCondition);
+                boolean argumentsRejected = true;
+                for (String spec : java.util.List.of("@living{r=1;radius=10}",
+                        "@living{count=1;limit=2}", "@living{filter=!unknown-entity}",
+                        "@living{limit=1}junk", "@living >")) {
+                    argumentsRejected &= dev.helstera.api.behavior.Targeters.select(spec, modelInstance,
+                            chainCandidates, java.util.List.of()).isEmpty();
+                }
+                boolean chainArgumentsRejected = dev.helstera.api.behavior.Targeters.select(
+                        "@targets > @targets{filter=!unknown-entity}", chainContext,
+                        chainCandidates, java.util.List.of()).isEmpty();
+                boolean argumentsControl = dev.helstera.api.behavior.Targeters.select(
+                        "@living{filter=mob;sort=nearest;limit=1}", modelInstance,
+                        chainCandidates, java.util.List.of()).equals(java.util.List.of(nearTarget));
+                var liveFilterPlayers = getServer().getOnlinePlayers().stream()
+                        .map(player -> (org.bukkit.entity.LivingEntity) player).toList();
+                var filterCandidates = new java.util.ArrayList<org.bukkit.entity.LivingEntity>(chainCandidates);
+                filterCandidates.addAll(liveFilterPlayers);
+                var targetedPlayers = dev.helstera.api.behavior.Targeters.select(
+                        "@living{target=players}", modelInstance, filterCandidates, java.util.List.of());
+                var playersIgnored = dev.helstera.api.behavior.Targeters.select(
+                        "@living{ignore=players}", modelInstance, filterCandidates, java.util.List.of());
+                boolean targetPlayersFilter = !liveFilterPlayers.isEmpty()
+                        && targetedPlayers.size() == liveFilterPlayers.size()
+                        && targetedPlayers.containsAll(liveFilterPlayers);
+                boolean ignorePlayersFilter = !liveFilterPlayers.isEmpty()
+                        && playersIgnored.size() == chainCandidates.size()
+                        && playersIgnored.containsAll(chainCandidates);
+                boolean invalidEntityFilterRejected = dev.helstera.api.behavior.Targeters.select(
+                        "@living{target=players,unknown-filter}", modelInstance,
+                        filterCandidates, java.util.List.of()).isEmpty();
+                getLogger().info("targeter-argument-validation rejected=" + argumentsRejected
+                        + " chain=" + chainArgumentsRejected + " control=" + argumentsControl
+                        + " target-players=" + targetPlayersFilter + " ignore-players=" + ignorePlayersFilter
+                        + " invalid-filter=" + invalidEntityFilterRejected);
+                boolean targeterSorts = highestHealthTargets.equals(java.util.List.of(farTarget, nearTarget))
+                        && oldestTargets.equals(java.util.List.of(nearTarget, farTarget))
+                        && invalidSortTargets.isEmpty();
                 boolean targeterControls = chainTargets.size() == 1
                         && chainTargets.get(0).equals(nearTarget)
                         && sortedTargets.size() == 1
-                        && sortedTargets.get(0).equals(farTarget);
+                        && sortedTargets.get(0).equals(farTarget)
+                        && skippedTargets.size() == 1 && skippedTargets.get(0).equals(farTarget)
+                        && skippedAliasTargets.equals(skippedTargets);
+                boolean targeterSkipIndex = skippedTargets.size() == 1
+                        && skippedTargets.get(0).equals(farTarget)
+                        && skippedAliasTargets.equals(skippedTargets);
                 boolean targeterLimitZero = dev.helstera.api.behavior.Targeters.select(
                         "@living{limit=0}", modelInstance,
                         java.util.List.of(nearTarget, farTarget), java.util.List.of()).isEmpty();
@@ -3055,6 +4173,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         java.util.List.of(nearTarget, farTarget), java.util.List.of()).isEmpty()
                         && dev.helstera.api.behavior.Targeters.select(
                         "@living{radius=NaN}", modelInstance,
+                        java.util.List.of(nearTarget, farTarget), java.util.List.of()).isEmpty()
+                        && dev.helstera.api.behavior.Targeters.select(
+                        "@living{stuti=-1}", modelInstance,
                         java.util.List.of(nearTarget, farTarget), java.util.List.of()).isEmpty()
                         && dev.helstera.api.behavior.Targeters.select(
                         "@living{limit=1}", modelInstance,
@@ -3096,6 +4217,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " nearest-tamed=" + nearestTamedTargeter
                         + " nearest-player=" + nearestPlayerTargeter
                         + " targeter-controls=" + targeterControls
+                        + " targeter-sorts=" + targeterSorts
+                        + " targeter-skip-index=" + targeterSkipIndex
                         + " targeter-limit-zero=" + targeterLimitZero
                         + " targeter-negative-filter=" + targeterNegativeFilter
                         + " targeter-invalid-limits=" + targeterInvalidLimits
@@ -3246,11 +4369,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             && parentAliveBeforeRemoval && !parentAliveAfterRemoval;
                     dev.helstera.api.behavior.MobRelations.clearParent(orphanProbe);
                 }
+                boolean patrolLeaderCondition = behaviors.testCondition(
+                        skills.bindCondition("is-raider-patrol-leader"), pillagerContext);
+                raiderView.setPatrolLeader(false);
+                boolean nonPatrolLeaderRejected = !behaviors.testCondition(
+                        skills.bindCondition("is-raider-patrol-leader"), pillagerContext);
+                raiderView.setPatrolLeader(true);
+                boolean raiderPatrolLeaderCondition = patrolLeaderCondition && nonPatrolLeaderRejected;
+                getLogger().info("raider-patrol-leader-condition positive=" + patrolLeaderCondition
+                        + " negative=" + nonPatrolLeaderRejected
+                        + " entity=" + pillager.getType()
+                        + " restored=" + raiderView.isPatrolLeader());
                 targetCategories = targetCategories
                         && testTargetCategory(skills, behaviors, modelInstance, wolf, "tameable")
                         && testTargetCategory(skills, behaviors, modelInstance, pillager, "raider")
-                        && behaviors.testCondition(
-                        skills.bindCondition("is-raider-patrol-leader"), pillagerContext)
+                        && raiderPatrolLeaderCondition
                         && testTargetCategory(skills, behaviors, modelInstance, sheep, "animal")
                         && testTargetCategory(skills, behaviors, modelInstance, villager, "villager");
                 var passengerProbe = world.spawn(conditionTarget.getLocation(), org.bukkit.entity.Pig.class);
@@ -3272,6 +4405,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 conditionTarget.setVelocity(originalConditionVelocity);
                 boolean conditionMobility = unmountedBefore && noPassengerBefore
                         && mountedNow && hasPassengerNow && movingNow;
+                int previousCasterAir = zombie.getRemainingAir();
+                boolean drowningCondition;
+                try {
+                    zombie.setRemainingAir(80);
+                    boolean belowThreshold = behaviors.testCondition(
+                            skills.bindCondition("drowning <=100"), conditionContext);
+                    boolean aboveThresholdRejected = !behaviors.testCondition(
+                            skills.bindCondition("drowning >100"), conditionContext);
+                    drowningCondition = belowThreshold && aboveThresholdRejected;
+                } finally {
+                    zombie.setRemainingAir(previousCasterAir);
+                }
                 boolean conditionComposition = behaviors.testCondition(nestedCondition, conditionContext)
                         && behaviors.testCondition(negatedCondition, conditionContext);
                 world.setTime(6_000L);
@@ -3287,14 +4432,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean stormWeather = behaviors.testCondition(
                         skills.bindCondition("weather-is thunderstorm"), conditionContext);
                 boolean timeWeather = dayTimeWeather && stormWeather;
-                org.bukkit.entity.Player permissionProbe = null;
-                for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
-                    if (candidate.isOnline() && !candidate.isDead()
-                            && candidate.getName().equalsIgnoreCase("HelsteraTester")) {
-                        permissionProbe = candidate;
-                        break;
-                    }
-                }
+                org.bukkit.entity.Player guestProbe = getServer().getPlayerExact("AudienceGuest");
+                org.bukkit.entity.Player permissionProbe = guestProbe != null
+                        && guestProbe.isOnline() && !guestProbe.isDead() ? guestProbe : null;
                 if (permissionProbe == null) {
                     for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
                         if (candidate.isOnline() && !candidate.isDead()) {
@@ -3429,6 +4569,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     var lookingAtBlockStates = new java.util.LinkedHashMap<org.bukkit.block.Block,
                             org.bukkit.block.BlockState>();
                     try {
+                        permissionProbe.teleport(permissionProbe.getWorld().getSpawnLocation().clone().add(0, 2, 0));
                         permissionProbe.setRotation(0f, 0f);
                         Location eye = permissionProbe.getEyeLocation();
                         var direction = eye.getDirection().normalize();
@@ -3865,6 +5006,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " teleport=" + teleport
                         + " conditions=" + conditions
                         + " condition-mobility=" + conditionMobility
+                        + " drowning-condition=" + drowningCondition
                         + " leashed-condition=" + leashedCondition
                         + " has-owner-condition=" + hasOwnerCondition
                         + " has-tag-condition=" + hasTagCondition
@@ -3891,6 +5033,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " target-kill=" + targetKillMechanic
                         + " damage-melee=" + damageMeleeMechanic
                         + " condition-utility=" + conditionUtilityAliases
+                        + " mobs-in-chunk-condition=" + mobsInChunkCondition
                         + " player-radius-conditions=" + playerRadiusConditions
                         + " cooldown-mechanics=" + cooldownMechanics
                         + " last-damage-cause=" + lastDamageCauseCondition
@@ -4022,7 +5165,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 world.setThunderDuration(originalThunderDuration);
                 if (zombie != null) zombie.remove();
                 if (conditionTarget != null) conditionTarget.remove();
+                if (locationProbeTarget != null) locationProbeTarget.remove();
                 if (meleeProbeTarget != null) meleeProbeTarget.remove();
+                if (locationProbeProjectile != null && locationProbeProjectile.isValid()) {
+                    locationProbeProjectile.remove();
+                }
                 if (dotProbeTarget != null && !dotProbeScheduled) dotProbeTarget.remove();
                 if (projectileProbe != null && !projectileProbeScheduled) projectileProbe.remove();
                 if (conditionTargetBlockState != null) conditionTargetBlockState.update(true, false);
@@ -4072,6 +5219,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                                  dev.helstera.api.behavior.BehaviorContext context) {
         String key = skills.bindAction(spec);
         return key != null && behaviors.runAction(key, context);
+    }
+
+    private static boolean dispatchLocationTargeter(
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors,
+            String targeter,
+            dev.helstera.api.behavior.BehaviorContext context) {
+        var selected = dev.helstera.api.behavior.Targeters.resolveLocation(targeter, context)
+                .filter(location -> location.getWorld() != null).orElse(null);
+        if (selected == null) return false;
+        var block = selected.getBlock();
+        var original = block.getState();
+        block.setType(org.bukkit.Material.DIRT, false);
+        try {
+            return runIntegrationAction(skills, behaviors, "set-block STONE " + targeter, context)
+                    && block.getType() == org.bukkit.Material.STONE;
+        } finally {
+            original.update(true, false);
+        }
     }
 
     /**
@@ -4289,48 +5455,285 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             Location location = world.getSpawnLocation().clone().add(0, 3, 0);
             org.bukkit.entity.Zombie zombie = null;
+            org.bukkit.entity.Zombie rejectedZombie = null;
+            org.bukkit.entity.Zombie rejectedParentZombie = null;
+            org.bukkit.entity.Zombie dropperAllowedZombie = null;
+            org.bukkit.entity.Zombie dropperRejectedZombie = null;
             dev.helstera.api.instance.ModelInstance modelInstance = null;
+            dev.helstera.api.instance.ModelInstance rejectedInstance = null;
+            dev.helstera.api.instance.ModelInstance rejectedParentInstance = null;
+            dev.helstera.api.instance.ModelInstance dropperAllowedInstance = null;
+            dev.helstera.api.instance.ModelInstance dropperRejectedInstance = null;
             try {
+                var killer = getServer().getPlayerExact("HelsteraTester");
+                var unprivilegedKiller = getServer().getPlayerExact("AudienceGuest");
+                if (killer == null || unprivilegedKiller == null) {
+                    throw new IllegalStateException("strict permission probe requires both Paper test players");
+                }
                 zombie = world.spawn(location, org.bukkit.entity.Zombie.class);
                 modelInstance = instances().bind("example/emberling", zombie,
                         dev.helstera.api.instance.SpawnOptions.defaults());
                 if (!(modelInstance instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl)) {
                     throw new IllegalStateException("model instance implementation unavailable");
                 }
-                impl.lootTable = "integration_death";
-                impl.lootUsesLuck = false;
+                impl.lootTable = "integration_death_player";
+                impl.lootUsesLuck = true;
                 zombie.setMaxHealth(1.0);
                 zombie.setHealth(1.0);
-                zombie.damage(1000.0);
+                Location rejectedLocation = location.clone().add(12, 0, 0);
+                rejectedZombie = world.spawn(rejectedLocation, org.bukkit.entity.Zombie.class);
+                rejectedInstance = instances().bind("example/emberling", rejectedZombie,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                if (!(rejectedInstance instanceof dev.helstera.runtime.instance.ModelInstanceImpl rejectedImpl)) {
+                    throw new IllegalStateException("rejected model instance implementation unavailable");
+                }
+                rejectedImpl.lootTable = "integration_death_rejected";
+                rejectedImpl.lootUsesLuck = false;
+                rejectedZombie.setMaxHealth(1.0);
+                rejectedZombie.setHealth(1.0);
+                Location rejectedParentLocation = location.clone().add(24, 0, 0);
+                rejectedParentZombie = world.spawn(rejectedParentLocation, org.bukkit.entity.Zombie.class);
+                rejectedParentInstance = instances().bind("example/emberling", rejectedParentZombie,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                if (!(rejectedParentInstance instanceof dev.helstera.runtime.instance.ModelInstanceImpl rejectedParentImpl)) {
+                    throw new IllegalStateException("rejected parent model instance implementation unavailable");
+                }
+                rejectedParentImpl.lootTable = "integration_death_parent_rejected";
+                rejectedParentImpl.lootUsesLuck = false;
+                rejectedParentZombie.setMaxHealth(1.0);
+                rejectedParentZombie.setHealth(1.0);
+                Location dropperAllowedLocation = location.clone().add(36, 0, 0);
+                dropperAllowedZombie = world.spawn(dropperAllowedLocation, org.bukkit.entity.Zombie.class);
+                dropperAllowedInstance = instances().bind("example/emberling", dropperAllowedZombie,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                if (!(dropperAllowedInstance instanceof dev.helstera.runtime.instance.ModelInstanceImpl dropperAllowedImpl)) {
+                    throw new IllegalStateException("dropper-allowed model instance implementation unavailable");
+                }
+                dropperAllowedImpl.lootTable = "integration_death_dropper_allowed";
+                dropperAllowedImpl.lootUsesLuck = false;
+                dropperAllowedZombie.setMaxHealth(1.0);
+                dropperAllowedZombie.setHealth(1.0);
+                Location dropperRejectedLocation = location.clone().add(48, 0, 0);
+                dropperRejectedZombie = world.spawn(dropperRejectedLocation, org.bukkit.entity.Zombie.class);
+                dropperRejectedInstance = instances().bind("example/emberling", dropperRejectedZombie,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                if (!(dropperRejectedInstance instanceof dev.helstera.runtime.instance.ModelInstanceImpl dropperRejectedImpl)) {
+                    throw new IllegalStateException("dropper-rejected model instance implementation unavailable");
+                }
+                dropperRejectedImpl.lootTable = "integration_death_dropper_rejected";
+                dropperRejectedImpl.lootUsesLuck = false;
+                dropperRejectedZombie.setMaxHealth(1.0);
+                dropperRejectedZombie.setHealth(1.0);
+                var existingItems = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                        .map(org.bukkit.entity.Entity::getUniqueId)
+                        .collect(java.util.stream.Collectors.toSet());
+                var existingOrbs = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                        .collect(java.util.stream.Collectors.toMap(org.bukkit.entity.Entity::getUniqueId,
+                                OrbSnapshot::of));
+                var killerLuckAttribute = killer.getAttribute(org.bukkit.attribute.Attribute.GENERIC_LUCK);
+                if (killerLuckAttribute == null) {
+                    throw new IllegalStateException("test player has no GENERIC_LUCK attribute");
+                }
+                double previousKillerLuck = killerLuckAttribute.getBaseValue();
+                killerLuckAttribute.setBaseValue(1.0);
+                double observedKillerLuck = resolveDropLuck(killer);
+                var observedDeathExperience = new java.util.concurrent.atomic.AtomicInteger(-1);
+                var observedDropperAllowedExperience = new java.util.concurrent.atomic.AtomicInteger(-1);
+                var observedDropperRejectedExperience = new java.util.concurrent.atomic.AtomicInteger(-1);
+                var deathObserver = new org.bukkit.event.Listener() {};
+                var observedVictimId = zombie.getUniqueId();
+                var allowedVictimId = dropperAllowedZombie.getUniqueId();
+                var rejectedVictimId = dropperRejectedZombie.getUniqueId();
+                getServer().getPluginManager().registerEvent(org.bukkit.event.entity.EntityDeathEvent.class,
+                        deathObserver, org.bukkit.event.EventPriority.MONITOR, (ignored, event) -> {
+                            var death = (org.bukkit.event.entity.EntityDeathEvent) event;
+                            if (death.getEntity().getUniqueId().equals(observedVictimId)) {
+                                observedDeathExperience.set(death.getDroppedExp());
+                            }
+                        }, this, false);
+                try {
+                    zombie.damage(1000.0, killer);
+                } finally {
+                    org.bukkit.event.HandlerList.unregisterAll(deathObserver);
+                    killerLuckAttribute.setBaseValue(previousKillerLuck);
+                }
+                var initialOrbs = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                        .filter(orb -> !existingOrbs.containsKey(orb.getUniqueId()))
+                        .filter(orb -> orb.getLocation().distanceSquared(location) < 36)
+                        .collect(java.util.stream.Collectors.toMap(org.bukkit.entity.Entity::getUniqueId,
+                                OrbSnapshot::of));
+                boolean naturalDeath = zombie.isDead();
+                rejectedZombie.damage(1000.0, unprivilegedKiller);
+                boolean rejectedNaturalDeath = rejectedZombie.isDead();
+                rejectedParentZombie.damage(1000.0, killer);
+                boolean rejectedParentNaturalDeath = rejectedParentZombie.isDead();
+                boolean dropperAllowedNaturalDeath;
+                boolean dropperRejectedNaturalDeath;
+                int initialDropperAllowedExperience;
+                int initialDropperRejectedExperience;
+                getServer().getPluginManager().registerEvent(org.bukkit.event.entity.EntityDeathEvent.class,
+                        deathObserver, org.bukkit.event.EventPriority.MONITOR, (ignored, event) -> {
+                            var death = (org.bukkit.event.entity.EntityDeathEvent) event;
+                            if (death.getEntity().getUniqueId().equals(allowedVictimId)) {
+                                observedDropperAllowedExperience.set(death.getDroppedExp());
+                            } else if (death.getEntity().getUniqueId().equals(rejectedVictimId)) {
+                                observedDropperRejectedExperience.set(death.getDroppedExp());
+                            }
+                        }, this, false);
+                try {
+                    dropperAllowedZombie.damage(1000.0, killer);
+                    dropperAllowedNaturalDeath = dropperAllowedZombie.isDead();
+                    initialDropperAllowedExperience = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                            .filter(orb -> orb.getLocation().distanceSquared(dropperAllowedLocation) < 9)
+                            .mapToInt(orb -> orbDelta(orb, existingOrbs)).sum();
+                    dropperRejectedZombie.damage(1000.0, killer);
+                    dropperRejectedNaturalDeath = dropperRejectedZombie.isDead();
+                    initialDropperRejectedExperience = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                            .filter(orb -> orb.getLocation().distanceSquared(dropperRejectedLocation) < 9)
+                            .mapToInt(orb -> orbDelta(orb, existingOrbs)).sum();
+                } finally {
+                    org.bukkit.event.HandlerList.unregisterAll(deathObserver);
+                }
+                var positiveDead = zombie;
+                var negativeDead = rejectedZombie;
+                var rejectedParentDead = rejectedParentZombie;
+                var dropperAllowedDead = dropperAllowedZombie;
+                var dropperRejectedDead = dropperRejectedZombie;
                 var tracked = modelInstance;
+                var rejectedTracked = rejectedInstance;
+                var rejectedParentTracked = rejectedParentInstance;
+                var dropperAllowedTracked = dropperAllowedInstance;
+                var dropperRejectedTracked = dropperRejectedInstance;
                 getServer().getScheduler().runTaskLater(this, () -> {
                     try {
-                        int itemEntities = (int) world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
-                                .filter(item -> item.getLocation().distanceSquared(location) < 36)
-                                .count();
                         var drops = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .filter(item -> !existingItems.contains(item.getUniqueId()))
                                 .filter(item -> item.getLocation().distanceSquared(location) < 36)
                                 .toList();
+                        int itemEntities = drops.size();
                         boolean conditionalDrop = drops.stream().anyMatch(item ->
                                 item.getItemStack().getType() == org.bukkit.Material.DIAMOND
                                         && item.getItemStack().getAmount() == 2);
+                        var amountRangeDrops = drops.stream().filter(item ->
+                                item.getItemStack().getType() == org.bukkit.Material.GOLD_INGOT).toList();
+                        int amountRange = amountRangeDrops.size() == 1
+                                ? amountRangeDrops.get(0).getItemStack().getAmount() : 0;
+                        boolean amountRangeDrop = amountRange >= 1 && amountRange <= 2;
                         boolean rejectedDropAbsent = drops.stream().noneMatch(item ->
                                 item.getItemStack().getType() == org.bukkit.Material.BREAD);
+                        var rejectedDrops = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .filter(item -> !existingItems.contains(item.getUniqueId()))
+                                .filter(item -> item.getLocation().distanceSquared(rejectedLocation) < 9)
+                                .toList();
+                        var rejectedParentDrops = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .filter(item -> !existingItems.contains(item.getUniqueId()))
+                                .filter(item -> item.getLocation().distanceSquared(rejectedParentLocation) < 9)
+                                .toList();
+                        var dropperAllowedDrops = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .filter(item -> !existingItems.contains(item.getUniqueId()))
+                                .filter(item -> item.getLocation().distanceSquared(dropperAllowedLocation) < 9)
+                                .toList();
+                        var dropperRejectedDrops = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .filter(item -> !existingItems.contains(item.getUniqueId()))
+                                .filter(item -> item.getLocation().distanceSquared(dropperRejectedLocation) < 9)
+                                .toList();
+                        boolean triggerAllowedDrop = drops.stream().anyMatch(item ->
+                                item.getItemStack().getType() == org.bukkit.Material.DIAMOND
+                                        && item.getItemStack().getAmount() == 2);
+                        boolean luckScaledDrop = drops.stream().anyMatch(item ->
+                                item.getItemStack().getType() == org.bukkit.Material.IRON_INGOT);
+                        boolean triggerRejectedDropAbsent = rejectedDrops.stream().noneMatch(item ->
+                                item.getItemStack().getType() == org.bukkit.Material.DIAMOND);
                         int experience = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
                                 .filter(orb -> orb.getLocation().distanceSquared(location) < 36)
-                                .mapToInt(org.bukkit.entity.ExperienceOrb::getExperience).sum();
-                        getLogger().info("[自检] death-loot items=" + itemEntities
+                                .mapToInt(orb -> orbDelta(orb, existingOrbs)).sum();
+                        String delayedOrbs = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                                .filter(orb -> initialOrbs.containsKey(orb.getUniqueId())
+                                        || (!existingOrbs.containsKey(orb.getUniqueId())
+                                        && orb.getLocation().distanceSquared(location) < 36))
+                                .map(orb -> orb.getUniqueId() + ":" + orb.getExperience() + "x" + orb.getCount()
+                                        + "@distance2=" + orb.getLocation().distanceSquared(location))
+                                .collect(java.util.stream.Collectors.joining(","));
+                        var killerLocation = killer.getLocation();
+                        double killerDistance = world.equals(killerLocation.getWorld())
+                                ? killerLocation.distanceSquared(location) : -1;
+                        getLogger().info("[自检] death-loot-experience-detail event="
+                                + observedDeathExperience.get() + " initial=" + initialOrbs
+                                + " delayed=" + delayedOrbs + " killer-distance2="
+                                + killerDistance);
+                        int dropperAllowedExperience = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                                .filter(orb -> orb.getLocation().distanceSquared(dropperAllowedLocation) < 9)
+                                .mapToInt(orb -> orbDelta(orb, existingOrbs)).sum();
+                        int dropperRejectedExperience = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                                .filter(orb -> orb.getLocation().distanceSquared(dropperRejectedLocation) < 9)
+                                .mapToInt(orb -> orbDelta(orb, existingOrbs)).sum();
+                        getLogger().info("[自检] death-loot-dropper-experience-detail allowed-event="
+                                + observedDropperAllowedExperience.get() + " allowed-initial=" + initialDropperAllowedExperience
+                                + " allowed-delayed=" + dropperAllowedExperience + " rejected-event="
+                                + observedDropperRejectedExperience.get() + " rejected-initial=" + initialDropperRejectedExperience
+                                + " rejected-delayed=" + dropperRejectedExperience);
+                        getLogger().info("[自检] death-loot natural=" + naturalDeath + " dead=" + naturalDeath
+                                + " cause=BukkitDamage items=" + itemEntities
                                 + " conditional-drop=" + conditionalDrop
                                 + " rejected-drop-absent=" + rejectedDropAbsent
                                 + " dynamic-chance-drop=" + conditionalDrop
+                                + " exclusive-range-drop=" + amountRangeDrop
+                                + " range-amount=" + amountRange
                                 + " experience=" + experience);
+                        getLogger().info("[自检] death-loot-trigger natural="
+                                + (naturalDeath && rejectedNaturalDeath && rejectedParentNaturalDeath)
+                                + " killer-player=" + (positiveDead.getKiller() == killer
+                                && negativeDead.getKiller() == unprivilegedKiller
+                                && rejectedParentDead.getKiller() == killer)
+                                + " permission-allowed=" + killer.hasPermission("loot.vip")
+                                + " permission-denied=" + !unprivilegedKiller.hasPermission("loot.vip")
+                                + " nested-allowed-drop=" + triggerAllowedDrop
+                                + " effective-luck=" + observedKillerLuck
+                                + " luck-scaled-drop=" + luckScaledDrop
+                                + " nested-rejected-drop-absent=" + triggerRejectedDropAbsent
+                                + " nested-rejected-experience=" + world.getEntitiesByClass(
+                                        org.bukkit.entity.ExperienceOrb.class).stream()
+                                        .filter(orb -> orb.getLocation().distanceSquared(rejectedLocation) < 9)
+                                        .mapToInt(orb -> orbDelta(orb, existingOrbs)).sum()
+                                + " parent-rejected-drop-absent=" + rejectedParentDrops.stream().noneMatch(item ->
+                                        item.getItemStack().getType() == org.bukkit.Material.DIAMOND)
+                                + " parent-rejected-experience=" + world.getEntitiesByClass(
+                                        org.bukkit.entity.ExperienceOrb.class).stream()
+                                        .filter(orb -> orb.getLocation().distanceSquared(rejectedParentLocation) < 9)
+                                        .mapToInt(orb -> orbDelta(orb, existingOrbs)).sum());
+                        getLogger().info("[自检] death-loot-dropper-conditions natural="
+                                + (dropperAllowedNaturalDeath && dropperRejectedNaturalDeath)
+                                + " killer-player=" + (dropperAllowedDead.getKiller() == killer
+                                && dropperRejectedDead.getKiller() == killer)
+                                + " monster-allowed=" + dropperAllowedDrops.stream().anyMatch(item ->
+                                        item.getItemStack().getType() == org.bukkit.Material.EMERALD)
+                                + " animal-rejected=" + dropperRejectedDrops.isEmpty()
+                                + " allowed-experience=" + (observedDropperAllowedExperience.get() == 3
+                                        ? Math.max(initialDropperAllowedExperience, dropperAllowedExperience) : -1)
+                                + " rejected-experience=" + (observedDropperRejectedExperience.get() == 0
+                                        ? Math.max(initialDropperRejectedExperience, dropperRejectedExperience) : -1));
                     } finally {
                         if (tracked != null && instances() != null) instances().despawn(tracked.instanceId());
+                        if (rejectedTracked != null && instances() != null) {
+                            instances().despawn(rejectedTracked.instanceId());
+                        }
+                        if (rejectedParentTracked != null && instances() != null) {
+                            instances().despawn(rejectedParentTracked.instanceId());
+                        }
+                        if (dropperAllowedTracked != null && instances() != null) {
+                            instances().despawn(dropperAllowedTracked.instanceId());
+                        }
+                        if (dropperRejectedTracked != null && instances() != null) {
+                            instances().despawn(dropperRejectedTracked.instanceId());
+                        }
                         for (var item : world.getEntitiesByClass(org.bukkit.entity.Item.class)) {
-                            if (item.getLocation().distanceSquared(location) < 36) item.remove();
+                            if (!existingItems.contains(item.getUniqueId())
+                                    && item.getLocation().distanceSquared(location) < 400) item.remove();
                         }
                         for (var orb : world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class)) {
-                            if (orb.getLocation().distanceSquared(location) < 36) orb.remove();
+                            if (orb.getLocation().distanceSquared(location) < 400) {
+                                restoreOrb(orb, existingOrbs.get(orb.getUniqueId()));
+                            }
                         }
                     }
                 }, 10L);
@@ -4338,8 +5741,1630 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().warning("[自检] death-loot 异常: " + t);
                 if (modelInstance != null) instances().despawn(modelInstance.instanceId());
                 else if (zombie != null) zombie.remove();
+                if (rejectedInstance != null) instances().despawn(rejectedInstance.instanceId());
+                else if (rejectedZombie != null) rejectedZombie.remove();
+                if (rejectedParentInstance != null) instances().despawn(rejectedParentInstance.instanceId());
+                else if (rejectedParentZombie != null) rejectedParentZombie.remove();
+                if (dropperAllowedInstance != null) instances().despawn(dropperAllowedInstance.instanceId());
+                else if (dropperAllowedZombie != null) dropperAllowedZombie.remove();
+                if (dropperRejectedInstance != null) instances().despawn(dropperRejectedInstance.instanceId());
+                else if (dropperRejectedZombie != null) dropperRejectedZombie.remove();
             }
-        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 50L);
+        // Leave time for the strict two-player menu workflow to complete its
+        // temporary permission-denial check and restore the operator context.
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 250L);
+    }
+
+    private void runDropTableCountSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            var killer = getServer().getPlayerExact("HelsteraTester");
+            if (world == null || killer == null || instances == null || loot() == null) {
+                getLogger().warning("[自检] death-loot-count 失败: 世界、击杀者或掉落系统不可用");
+                return;
+            }
+            Location location = world.getSpawnLocation().clone().add(48, 3, 0);
+            org.bukkit.entity.Zombie zombie = null;
+            dev.helstera.api.instance.ModelInstance model = null;
+            var existingItems = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                    .map(org.bukkit.entity.Entity::getUniqueId)
+                    .collect(java.util.stream.Collectors.toSet());
+            try {
+                zombie = world.spawn(location, org.bukkit.entity.Zombie.class);
+                model = instances().bind("example/emberling", zombie,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                if (!(model instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl)) {
+                    throw new IllegalStateException("model instance implementation unavailable");
+                }
+                impl.lootTable = "integration_total_items";
+                impl.lootUsesLuck = false;
+                zombie.setMaxHealth(1.0);
+                zombie.setHealth(1.0);
+                var tracked = model;
+                zombie.damage(1000.0, killer);
+                boolean naturalDeath = zombie.isDead();
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    try {
+                        var drops = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .filter(item -> !existingItems.contains(item.getUniqueId()))
+                                .filter(item -> item.getLocation().distanceSquared(location) < 36)
+                                .toList();
+                        int diamonds = drops.stream()
+                                .filter(item -> item.getItemStack().getType() == org.bukkit.Material.DIAMOND)
+                                .mapToInt(item -> item.getItemStack().getAmount()).sum();
+                        int emeralds = drops.stream()
+                                .filter(item -> item.getItemStack().getType() == org.bukkit.Material.EMERALD)
+                                .mapToInt(item -> item.getItemStack().getAmount()).sum();
+                        int total = diamonds + emeralds;
+                        boolean countPassed = total == 128;
+                        boolean weightsPassed = diamonds >= 16 && diamonds <= 48
+                                && emeralds >= 80 && emeralds <= 112;
+                        getLogger().info("[自检] death-loot-count natural=" + naturalDeath
+                                + " total-items=" + total + " diamonds=" + diamonds
+                                + " emeralds=" + emeralds + " count-passed=" + countPassed
+                                + " weights-passed=" + weightsPassed);
+                    } finally {
+                        if (tracked != null && instances() != null) instances().despawn(tracked.instanceId());
+                        for (var item : world.getEntitiesByClass(org.bukkit.entity.Item.class)) {
+                            if (!existingItems.contains(item.getUniqueId())
+                                    && item.getLocation().distanceSquared(location) < 36) item.remove();
+                        }
+                    }
+                }, 10L);
+            } catch (Throwable t) {
+                getLogger().warning("[自检] death-loot-count 异常: " + t);
+                if (model != null) instances().despawn(model.instanceId());
+                else if (zombie != null) zombie.remove();
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 65L);
+    }
+
+    private void runDropTableBonusSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            var killer = getServer().getPlayerExact("HelsteraTester");
+            if (world == null || killer == null || instances == null || loot() == null) {
+                getLogger().warning("[自检] death-loot-bonus 失败: 世界、击杀者或掉落系统不可用");
+                return;
+            }
+            var luckAttribute = killer.getAttribute(org.bukkit.attribute.Attribute.GENERIC_LUCK);
+            if (luckAttribute == null) {
+                getLogger().warning("[自检] death-loot-bonus 失败: 击杀者没有 GENERIC_LUCK 属性");
+                return;
+            }
+            Location origin = world.getSpawnLocation().clone().add(80, 3, 0);
+            double previousLuck = luckAttribute.getBaseValue();
+            var luckEffectType = org.bukkit.potion.PotionEffectType.LUCK;
+            var previousLuckEffect = killer.getPotionEffect(luckEffectType);
+            killer.removePotionEffect(luckEffectType);
+            var existingItems = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                    .map(org.bukkit.entity.Entity::getUniqueId)
+                    .collect(java.util.stream.Collectors.toSet());
+            var tracked = new java.util.ArrayList<dev.helstera.api.instance.ModelInstance>();
+            var locations = new java.util.ArrayList<Location>();
+            int[] counts = new int[6];
+            int fractionalExtraLines = 0;
+            int fractionalSamples = 128;
+            double potionLuck = Double.NaN;
+            java.util.Map<String, Integer> orderedMaterials = new java.util.HashMap<>();
+            try {
+                int[] levels = {2, 0, 2, 0, 4, 0};
+                double[] luckValues = {0, 1, 1, 0, 0, 0};
+                String[] tables = {"integration_bonus_items", "integration_bonus_items",
+                        "integration_bonus_items", "integration_bonus_items",
+                        "integration_bonus_max_weighted", "integration_bonus_items"};
+                for (int i = 0; i < levels.length; i++) {
+                    Location location = origin.clone();
+                    var zombie = world.spawn(location, org.bukkit.entity.Zombie.class);
+                    var instance = instances().bind("example/emberling", zombie,
+                            dev.helstera.api.instance.SpawnOptions.defaults());
+                    if (!(instance instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl)) {
+                        throw new IllegalStateException("model instance implementation unavailable");
+                    }
+                    impl.lootTable = tables[i];
+                    impl.lootUsesLuck = true;
+                    impl.level = levels[i];
+                    zombie.setMaxHealth(1.0);
+                    zombie.setHealth(1.0);
+                    tracked.add(instance);
+                    locations.add(location);
+                    luckAttribute.setBaseValue(luckValues[i]);
+                    if (i == 5) {
+                        killer.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                                luckEffectType, 200, 0, false, false, false));
+                        potionLuck = resolveDropLuck(killer);
+                    }
+                    zombie.damage(1000.0, killer);
+                    if (!zombie.isDead()) throw new IllegalStateException("managed Zombie survived bonus probe damage");
+                    var spawnedItems = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                            .filter(item -> !existingItems.contains(item.getUniqueId()))
+                            .filter(item -> item.getLocation().distanceSquared(location) < 36).toList();
+                    counts[i] = spawnedItems.stream()
+                            .mapToInt(item -> item.getItemStack().getAmount()).sum();
+                    if (i == 4) {
+                        for (var item : spawnedItems) {
+                            orderedMaterials.merge(item.getItemStack().getType().name(),
+                                    item.getItemStack().getAmount(), Integer::sum);
+                        }
+                    }
+                    spawnedItems.forEach(org.bukkit.entity.Item::remove);
+                }
+                for (int i = 0; i < fractionalSamples; i++) {
+                    Location location = origin.clone().add((i % 8) * 2.0, 0, (i / 8) * 2.0);
+                    var zombie = world.spawn(location, org.bukkit.entity.Zombie.class);
+                    var instance = instances().bind("example/emberling", zombie,
+                            dev.helstera.api.instance.SpawnOptions.defaults());
+                    if (!(instance instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl)) {
+                        throw new IllegalStateException("model instance implementation unavailable");
+                    }
+                    impl.lootTable = "integration_bonus_fractional_strict";
+                    impl.lootUsesLuck = false;
+                    impl.level = 1;
+                    zombie.setMaxHealth(1.0);
+                    zombie.setHealth(1.0);
+                    tracked.add(instance);
+                    locations.add(location);
+                    zombie.damage(1000.0, killer);
+                    if (!zombie.isDead()) {
+                        throw new IllegalStateException("managed Zombie survived fractional bonus probe");
+                    }
+                    var spawnedItems = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                            .filter(item -> !existingItems.contains(item.getUniqueId()))
+                            .filter(item -> item.getLocation().distanceSquared(location) < 36).toList();
+                    int itemCount = spawnedItems.stream()
+                            .mapToInt(item -> item.getItemStack().getAmount()).sum();
+                    if (itemCount == 2) fractionalExtraLines++;
+                    else if (itemCount != 1) {
+                        throw new IllegalStateException("fractional bonus produced unexpected item count: "
+                                + itemCount);
+                    }
+                    spawnedItems.forEach(org.bukkit.entity.Item::remove);
+                }
+            } catch (Throwable t) {
+                getLogger().warning("[自检] death-loot-bonus setup 异常: " + t);
+                for (var instance : tracked) instances().despawn(instance.instanceId());
+                luckAttribute.setBaseValue(previousLuck);
+                killer.removePotionEffect(luckEffectType);
+                if (previousLuckEffect != null) killer.addPotionEffect(previousLuckEffect);
+                return;
+            }
+            luckAttribute.setBaseValue(previousLuck);
+            killer.removePotionEffect(luckEffectType);
+            if (previousLuckEffect != null) killer.addPotionEffect(previousLuckEffect);
+            boolean weightedMax = counts.length == 6 && counts[4] == 4
+                    && orderedMaterials.size() == 1
+                    && orderedMaterials.getOrDefault("EMERALD", 0) == 4;
+            boolean fractionalRange = fractionalSamples == 128
+                    && fractionalExtraLines >= 35 && fractionalExtraLines <= 93;
+            boolean passed = counts.length == 6 && counts[0] == 4 && counts[1] == 3
+                    && counts[2] == 5 && counts[3] == 2 && weightedMax
+                    && counts[5] == 3 && Math.abs(potionLuck - 1.0) < 1.0e-9
+                    && fractionalRange;
+            getLogger().info("[自检] death-loot-bonus natural=true level-only=" + counts[0]
+                    + " luck-only=" + counts[1] + " combined=" + counts[2]
+                    + " zero=" + counts[3] + " weighted-max=" + counts[4]
+                    + " potion-luck=" + counts[5] + " potion-effective-luck=" + potionLuck
+                    + " weighted-item-count=" + weightedMax
+                    + " fractional-samples=" + fractionalSamples
+                    + " fractional-extra-lines=" + fractionalExtraLines
+                    + " fractional-range=" + fractionalRange + " passed=" + passed);
+            for (var instance : tracked) instances().despawn(instance.instanceId());
+            for (var item : world.getEntitiesByClass(org.bukkit.entity.Item.class)) {
+                if (!existingItems.contains(item.getUniqueId()) && locations.stream()
+                        .anyMatch(location -> item.getLocation().distanceSquared(location) < 36)) {
+                    item.remove();
+                }
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 80L);
+    }
+
+    private void runSkillLifecycleSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null || instances() == null) {
+                getLogger().warning("skill-lifecycle passed=false reason=runtime-unavailable");
+                return;
+            }
+            var location = world.getSpawnLocation().clone().add(78, 4, 78);
+            location.getChunk().load();
+            var zombie = world.spawn(location, org.bukkit.entity.Zombie.class);
+            zombie.setAI(false);
+            var instance = instances().bind("example/emberling", zombie,
+                    dev.helstera.api.instance.SpawnOptions.defaults());
+            if (instance == null) {
+                zombie.remove();
+                getLogger().warning("skill-lifecycle passed=false reason=bind-failed");
+                return;
+            }
+            var registry = new BehaviorRegistryImpl();
+            var skills = new dev.helstera.ai.skill.SkillService(registry, getLogger());
+            var oldRuns = new java.util.concurrent.atomic.AtomicInteger();
+            var delayedRuns = new java.util.concurrent.atomic.AtomicInteger();
+            registry.registerAction("lifecycle-old", ignored -> oldRuns.incrementAndGet());
+            registry.registerAction("lifecycle-reload", ignored -> skills.loadSkills(null));
+            registry.registerAction("lifecycle-delayed", ignored -> delayedRuns.incrementAndGet());
+            var config = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                    skills:
+                      old:
+                        on-decision: [lifecycle-reload, lifecycle-old]
+                    """));
+            skills.loadSkills(config.getConfigurationSection("skills"));
+            var context = dev.helstera.api.behavior.BehaviorContext.of(instance, zombie,
+                    1.0, -1, 0, "integration");
+            boolean reload = skills.castSkill("old", context) && oldRuns.get() == 0;
+            String delayed = skills.bindAction("lifecycle-delayed{delay=4}");
+            boolean scheduled = delayed != null && registry.runAction(delayed, context);
+            skills.forget(instance.instanceId());
+            getServer().getScheduler().runTaskLater(this, () -> {
+                try {
+                    boolean cancelled = scheduled && delayedRuns.get() == 0;
+                    getLogger().info("skill-lifecycle reload=" + reload + " scheduled=" + scheduled
+                            + " cancelled=" + cancelled);
+                } finally {
+                    instances().despawn(instance.instanceId());
+                }
+            }, 10L);
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
+    }
+
+    private void runQueuedSkillTreeSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null || instances() == null) {
+                getLogger().warning("skill-tree-queue passed=false reason=runtime-unavailable");
+                return;
+            }
+            var location = world.getSpawnLocation().clone().add(76, 4, 76);
+            location.getChunk().load();
+            var zombie = world.spawn(location, org.bukkit.entity.Zombie.class);
+            zombie.setAI(false);
+            var instance = instances().bind("example/emberling", zombie,
+                    dev.helstera.api.instance.SpawnOptions.defaults());
+            if (instance == null) {
+                zombie.remove();
+                getLogger().warning("skill-tree-queue passed=false reason=bind-failed");
+                return;
+            }
+            var skills = new dev.helstera.ai.skill.SkillService(new BehaviorRegistryImpl(), getLogger());
+            var config = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                    skills:
+                      charged:
+                        cast-duration: 50ms
+                        on-decision: ['var-set marker 4']
+                      queued:
+                        on-decision: ['var-add marker 3']
+                    """));
+            skills.loadSkills(config.getConfigurationSection("skills"));
+            var context = dev.helstera.api.behavior.BehaviorContext.of(instance, zombie,
+                    1.0, -1, 0, "integration");
+            boolean submitted = skills.castSkill("charged", context) && skills.castSkill("queued", context)
+                    && skills.queuedSkillCount() == 1;
+            getServer().getScheduler().runTaskLater(this, () -> {
+                try {
+                    skills.tickCasts();
+                    Object value = skills.snapshotOf(instance.instanceId())
+                            .map(snapshot -> snapshot.variables().get("marker")).orElse(null);
+                    boolean restored = value instanceof Number number && number.doubleValue() == 7.0;
+                    getLogger().info("skill-tree-queue submitted=" + submitted + " restored=" + restored);
+                } finally {
+                    instances().despawn(instance.instanceId());
+                }
+            }, 10L);
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
+    }
+
+    private void runImportedSkillTimingSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null) return;
+            Path root = null;
+            org.bukkit.entity.Zombie target = null;
+            try {
+                root = Files.createTempDirectory("helstera-skill-timing-");
+                Path source = Files.createDirectories(root.resolve("Skills")).resolve("probe.yml");
+                Files.writeString(source, """
+                        skills:
+                          timed:
+                            Skills: ['skill{s="child";delay=5;repeat=1;repeatinterval=5} @Target']
+                          bad:
+                            Skills:
+                              - 'skill{s=child;delay=NaN}'
+                              - 'skill{s=child;repeat=-1}'
+                          badmechanics:
+                            Skills:
+                              - 'heal{amount=4;delay=NaN} @Target'
+                              - 'heal{amount=4;repeat=-1} @Target'
+                              - 'heal{amount=4;repeatinterval=1;repeat-interval=2} @Target'
+                          positionalzero:
+                            Skills: ['heal 4 0%']
+                          positionalfull:
+                            Skills: ['heal 2 100%']
+                          conditionalpass:
+                            Skills: ['heal 2 ?targetIsAlive']
+                          conditionalfail:
+                            Skills: ['heal 4 ?hasTarget{value=false}']
+                          positionaltarget:
+                            Skills: ['heal 2 @Target{limit=1}']
+                          ambiguous:
+                            Skills:
+                              - 'heal 4 0% 100%'
+                              - 'heal 4 @self @target'
+                              - 'heal 4 @self > > @target'
+                              - 'heal 4 101%'
+                              - 'heal 4 NaN%'
+                              - 'heal 4 1e999%'
+                          suffixvalid:
+                            Skills:
+                              - 'message <target.name>'
+                              - 'heal 2 @self > @target'
+                          orphan:
+                            Skills:
+                              - 'heal 4 ?'
+                              - 'heal 4 @'
+                          child:
+                            Skills: ['heal{amount=2} @Target']
+                        """);
+                var entries = new MythicMobsImporter().convert(source);
+                var entry = entries.stream().filter(e -> "skills.yml".equals(e.get("target-file")))
+                        .findFirst().orElseThrow();
+                var yaml = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(entry.get("content"))));
+                boolean preserved = yaml.getStringList("skills.bad.unsupported").size() == 2
+                        && yaml.getStringList("skills.bad.on-decision").isEmpty();
+                boolean warnings = entries.stream().filter(e -> "WARN".equals(e.get("severity"))
+                        && String.valueOf(e.get("note")).contains("Invalid skill execution options")).count() == 2;
+                boolean mechanicPreserved = yaml.getStringList("skills.badmechanics.unsupported").equals(List.of(
+                        "heal{amount=4;delay=NaN} @Target", "heal{amount=4;repeat=-1} @Target",
+                        "heal{amount=4;repeatinterval=1;repeat-interval=2} @Target"))
+                        && yaml.getStringList("skills.badmechanics.on-decision").isEmpty()
+                        && entries.stream().filter(e -> "WARN".equals(e.get("severity"))
+                        && String.valueOf(e.get("note")).contains("Invalid mechanic execution options")).count() == 3;
+                boolean suffixPreserved = yaml.getStringList("skills.ambiguous.unsupported").equals(List.of(
+                        "heal 4 0% 100%", "heal 4 @self @target", "heal 4 @self > > @target",
+                        "heal 4 101%", "heal 4 NaN%", "heal 4 1e999%"))
+                        && yaml.getStringList("skills.ambiguous.on-decision").isEmpty()
+                        && entries.stream().filter(e -> "WARN".equals(e.get("severity"))
+                        && String.valueOf(e.get("note")).contains("Invalid or ambiguous targeter, condition or chance suffix")).count() == 8
+                        && yaml.getStringList("skills.suffixvalid.on-decision").equals(List.of(
+                        "message-target \"<target.name>\"", "heal-targets 2 @self > @target"));
+                var skills = new dev.helstera.ai.skill.SkillService(new BehaviorRegistryImpl(), null);
+                skills.loadSkills(yaml.getConfigurationSection("skills"));
+                String unroutedEvent = "heal 4 ~onAttack";
+                String duplicateEvent = "heal 4 ~onAttack ~onDeath";
+                boolean eventRejected = skills.bindAction(unroutedEvent) == null
+                        && skills.bindAction(duplicateEvent) == null;
+                boolean eventWarnings = skills.warnings().stream().anyMatch(w -> w.contains(unroutedEvent)
+                        && w.contains("event trigger requires event routing"))
+                        && skills.warnings().stream().anyMatch(w -> w.contains(duplicateEvent)
+                        && w.contains("multiple event triggers"));
+                getLogger().info("unrouted-event-suffix rejected=" + eventRejected + " warnings=" + eventWarnings);
+                String upperEvent = "heal 4 ~ONAttack";
+                String unknownEvent = "heal 4 ~unknown";
+                String incompleteEvent = "heal 4 ~on";
+                boolean variantRejected = List.of(upperEvent, unknownEvent, incompleteEvent).stream()
+                        .allMatch(spec -> skills.bindAction(spec) == null);
+                boolean variantWarnings = skills.warnings().stream().anyMatch(w -> w.contains(upperEvent)
+                        && w.contains("event trigger requires event routing"))
+                        && List.of(unknownEvent, incompleteEvent).stream().allMatch(spec -> skills.warnings().stream()
+                        .anyMatch(w -> w.contains(spec) && w.contains("invalid event trigger")));
+                boolean literalBound = skills.bindAction("message-target \"~onAttack\"") != null;
+                getLogger().info("event-suffix-variants rejected=" + variantRejected
+                        + " warnings=" + variantWarnings + " literal=" + literalBound);
+                var ambiguous = List.of("heal{amount=2;delay=0;DELAY=1} @Target",
+                        "heal{amount=2;repeat=1;repeat=2} @Target",
+                        "heal{amount=2;repeatinterval=1;repeat-interval=2} @Target");
+                boolean duplicateRejected = ambiguous.stream().allMatch(spec -> skills.bindAction(spec) == null)
+                        && ambiguous.stream().allMatch(spec -> skills.warnings().stream()
+                        .anyMatch(warning -> warning.contains(spec) && warning.contains("duplicate execution option")));
+                var location = world.getSpawnLocation().clone().add(78, 4, 78);
+                location.getChunk().load();
+                target = world.spawn(location, org.bukkit.entity.Zombie.class);
+                target.setAI(false);
+                target.setInvulnerable(true);
+                target.setHealth(10);
+                var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        null, target, 1, 1, 0, "probe", null, target, List.of(target), location, null);
+                skills.castSkill("bad", context);
+                skills.castSkill("badmechanics", context);
+                skills.castSkill("ambiguous", context);
+                skills.castSkill("orphan", context);
+                var orphanSpecs = List.of("heal 4 ?", "heal 4 @");
+                boolean orphanPreserved = yaml.getStringList("skills.orphan.unsupported").equals(orphanSpecs)
+                        && yaml.getStringList("skills.orphan.on-decision").isEmpty();
+                boolean orphanWarnings = entries.stream().filter(e -> "WARN".equals(e.get("severity"))
+                        && String.valueOf(e.get("note")).contains("Invalid or ambiguous targeter, condition or chance suffix")
+                        && orphanSpecs.contains(String.valueOf(e.get("value")))).count() == 2;
+                boolean orphanRejected = orphanSpecs.stream().allMatch(spec -> skills.bindAction(spec) == null);
+                getLogger().info("orphan-suffix preserved=" + orphanPreserved + " warnings=" + orphanWarnings
+                        + " rejected=" + orphanRejected + " unchanged=" + (target.getHealth() == 10));
+                boolean invalidRejected = target.getHealth() == 10;
+                boolean suffixRejected = suffixPreserved && List.of("heal 4 0% 100%", "heal 4 @self @target",
+                        "heal 4 @self > > @target", "heal 4 101%", "heal 4 NaN%", "heal 4 1e999%")
+                        .stream().allMatch(spec -> skills.bindAction(spec) == null);
+                var conditionRegistry = new BehaviorRegistryImpl();
+                conditionRegistry.registerCondition("probe-broken", ignored -> {
+                    throw new IllegalStateException("intentional condition failure");
+                });
+                conditionRegistry.registerCondition("probe-false", ignored -> false);
+                var conditionSkills = new dev.helstera.ai.skill.SkillService(conditionRegistry, null);
+                var failedGuards = List.of("heal-targets 4 ?!probe-broken",
+                        "heal-targets 4 ?not{not{probe-broken}}",
+                        "heal-targets 4 ?!any{probe-false;probe-broken}");
+                var guardedActions = failedGuards.stream().map(conditionSkills::bindAction).toList();
+                String controlAction = conditionSkills.bindAction("heal-targets 2 ?!probe-false");
+                boolean guardsBound = guardedActions.stream().allMatch(java.util.Objects::nonNull)
+                        && controlAction != null;
+                if (guardsBound) guardedActions.forEach(key -> conditionSkills.runAction(key, context));
+                boolean failureBlocked = target.getHealth() == 10;
+                if (controlAction != null) conditionSkills.runAction(controlAction, context);
+                boolean controlPassed = Math.abs(target.getHealth() - 12) < 0.001;
+                getLogger().info("condition-failure-closed bound=" + guardsBound + " blocked=" + failureBlocked
+                        + " control=" + controlPassed);
+                target.setHealth(10);
+                var namedConditions = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                        throwing:
+                          require: [probe-broken]
+                        invalid:
+                          require: [probe-unknown]
+                        ordinary:
+                          require: [probe-false]
+                        """));
+                conditionSkills.loadSkills(namedConditions);
+                var namedGuards = List.of("heal-targets 4 ?!skill:throwing",
+                        "heal-targets 4 ?!skill:invalid", "heal-targets 4 ?not{not{skill:throwing}}");
+                var namedActions = namedGuards.stream().map(conditionSkills::bindAction).toList();
+                String namedControl = conditionSkills.bindAction("heal-targets 2 ?!skill:ordinary");
+                boolean namedBound = namedActions.stream().allMatch(java.util.Objects::nonNull) && namedControl != null;
+                if (namedBound) namedActions.forEach(key -> conditionSkills.runAction(key, context));
+                boolean namedBlocked = target.getHealth() == 10;
+                if (namedControl != null) conditionSkills.runAction(namedControl, context);
+                boolean namedControlPassed = Math.abs(target.getHealth() - 12) < 0.001;
+                getLogger().info("named-condition-failure-closed bound=" + namedBound + " blocked=" + namedBlocked
+                        + " control=" + namedControlPassed);
+                target.setHealth(10);
+                var reloadDefinition = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                        reloadprobe:
+                          on-decision: ['heal-targets 2']
+                        """));
+                conditionSkills.loadSkills(reloadDefinition);
+                String staleGuard = conditionSkills.bindAction("heal-targets 4 ?!skill:reloadprobe");
+                conditionSkills.runAction("skill:reloadprobe", context);
+                boolean reloadInitial = Math.abs(target.getHealth() - 12) < 0.001;
+                target.setHealth(10);
+                conditionSkills.loadSkills(null);
+                conditionSkills.runAction("skill:reloadprobe", context);
+                if (staleGuard != null) conditionSkills.runAction(staleGuard, context);
+                boolean reloadBlocked = target.getHealth() == 10;
+                conditionSkills.loadSkills(reloadDefinition);
+                conditionSkills.runAction("skill:reloadprobe", context);
+                boolean reloadRestored = Math.abs(target.getHealth() - 12) < 0.001;
+                getLogger().info("named-skill-reload bound=" + (staleGuard != null) + " initial=" + reloadInitial
+                        + " blocked=" + reloadBlocked + " restored=" + reloadRestored);
+                target.setHealth(10);
+                var referenceDefinitions = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                        Parent:
+                          require: ['!skill:Child']
+                          on-decision: ['heal-targets 2']
+                        Child:
+                          require: [probe-false]
+                        first:
+                          require: ['!skill:second']
+                        second:
+                          require: ['!skill:first']
+                        """));
+                conditionSkills.loadSkills(referenceDefinitions);
+                boolean forwardCast = conditionSkills.castSkill("parent", context);
+                boolean forwardHealed = Math.abs(target.getHealth() - 12) < 0.001;
+                target.setHealth(10);
+                boolean missingRejected = conditionSkills.bindCondition("!skill:missing") == null;
+                String cyclicGuard = conditionSkills.bindAction("heal-targets 4 ?!skill:first");
+                if (cyclicGuard != null) conditionSkills.runAction(cyclicGuard, context);
+                boolean cycleBlocked = cyclicGuard != null && target.getHealth() == 10;
+                getLogger().info("named-skill-reference forward=" + (forwardCast && forwardHealed)
+                        + " missing-rejected=" + missingRejected + " cycle-blocked=" + cycleBlocked);
+                target.setHealth(10);
+                boolean positionalMapped = yaml.getStringList("skills.positionalzero.on-decision")
+                        .equals(List.of("heal-targets 4 0%"))
+                        && yaml.getStringList("skills.positionalfull.on-decision")
+                        .equals(List.of("heal-targets 2 100%"));
+                boolean zeroSubmitted = skills.castSkill("positionalzero", context);
+                boolean zeroHeld = target.getHealth() == 10;
+                boolean fullSubmitted = skills.castSkill("positionalfull", context);
+                boolean positionalChance = positionalMapped && zeroSubmitted && zeroHeld && fullSubmitted
+                        && Math.abs(target.getHealth() - 12) < 0.001;
+                target.setHealth(10);
+                boolean conditionMapped = yaml.getStringList("skills.conditionalpass.on-decision")
+                        .equals(List.of("heal-targets 2 ?targetIsAlive"))
+                        && yaml.getStringList("skills.conditionalfail.on-decision")
+                        .equals(List.of("heal-targets 4 ?hasTarget{value=false}"))
+                        && yaml.getStringList("skills.positionaltarget.on-decision")
+                        .equals(List.of("heal-targets 2 @target{limit=1}"));
+                boolean passSubmitted = skills.castSkill("conditionalpass", context);
+                boolean passHealed = Math.abs(target.getHealth() - 12) < 0.001;
+                boolean failSubmitted = skills.castSkill("conditionalfail", context);
+                boolean failHeld = Math.abs(target.getHealth() - 12) < 0.001;
+                target.setHealth(10);
+                boolean targetSubmitted = skills.castSkill("positionaltarget", context);
+                boolean positionalCondition = conditionMapped && passSubmitted && passHealed && failSubmitted
+                        && failHeld && targetSubmitted && Math.abs(target.getHealth() - 12) < 0.001;
+                target.setHealth(10);
+                boolean submitted = skills.castSkill("timed", context);
+                var observed = target;
+                boolean[] timing = new boolean[2];
+                getServer().getScheduler().runTaskLater(this,
+                        () -> timing[0] = observed.isValid() && Math.abs(observed.getHealth() - 10) < 0.001, 2L);
+                getServer().getScheduler().runTaskLater(this,
+                        () -> timing[1] = observed.isValid() && Math.abs(observed.getHealth() - 12) < 0.001, 7L);
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    try {
+                        boolean repeated = observed.isValid() && Math.abs(observed.getHealth() - 14) < 0.001;
+                        getLogger().info("imported-skill-timing submitted=" + submitted + " before-delay=" + timing[0]
+                                + " first=" + timing[1] + " repeated=" + repeated + " invalid-rejected=" + invalidRejected
+                                + " preserved=" + preserved + " warnings=" + warnings
+                                + " duplicate-rejected=" + duplicateRejected + " mechanic-preserved=" + mechanicPreserved
+                                + " positional-chance=" + positionalChance + " positional-condition=" + positionalCondition
+                                + " suffix-rejected=" + suffixRejected);
+                    } finally {
+                        observed.remove();
+                    }
+                }, 20L);
+                target = null;
+            } catch (Exception e) {
+                getLogger().warning("imported-skill-timing failed=" + e);
+            } finally {
+                if (target != null) target.remove();
+                if (root != null) {
+                    try {
+                        Files.deleteIfExists(root.resolve("Skills/probe.yml"));
+                        Files.deleteIfExists(root.resolve("Skills"));
+                        Files.deleteIfExists(root);
+                    } catch (java.io.IOException e) {
+                        getLogger().warning("skill timing probe cleanup failed=" + e);
+                    }
+                }
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
+    }
+
+    private void runImportedSkillReferenceSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null) return;
+            Path root = null;
+            org.bukkit.entity.Zombie target = null;
+            try {
+                root = Files.createTempDirectory("helstera-skill-reference-");
+                Path source = Files.createDirectories(root.resolve("Skills")).resolve("probe.yml");
+                Files.writeString(source, """
+                        skills:
+                          good:
+                            Skills: ['skill{s="child",delay=0} @Target']
+                          bad:
+                            Skills:
+                              - 'skill{note="text;s=child"}'
+                              - 'skill{s=child;skill=child}'
+                              - 'skill{s=child;unknown=true}'
+                          child:
+                            Skills: ['setname{name=SKILL_REFERENCE_OK} @Target']
+                        """);
+                var entries = new MythicMobsImporter().convert(source);
+                var entry = entries.stream().filter(e -> "skills.yml".equals(e.get("target-file")))
+                        .findFirst().orElseThrow();
+                var yaml = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(entry.get("content"))));
+                var unsupported = yaml.getStringList("skills.bad.unsupported");
+                boolean preserved = unsupported.size() == 3
+                        && yaml.getStringList("skills.bad.on-decision").isEmpty();
+                boolean warnings = entries.stream().filter(e -> "WARN".equals(e.get("severity"))
+                        && String.valueOf(e.get("note")).contains("Invalid skill reference or unsupported skill arguments")).count() == 3;
+                var skills = new dev.helstera.ai.skill.SkillService(new BehaviorRegistryImpl(), null);
+                skills.loadSkills(yaml.getConfigurationSection("skills"));
+                var location = world.getSpawnLocation().clone().add(76, 4, 76);
+                location.getChunk().load();
+                target = world.spawn(location, org.bukkit.entity.Zombie.class);
+                target.setAI(false);
+                var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        null, target, 1, 1, 0, "probe", null, target, List.of(target), location, null);
+                skills.castSkill("bad", context);
+                boolean rejected = target.getCustomName() == null;
+                boolean valid = skills.castSkill("good", context)
+                        && "SKILL_REFERENCE_OK".equals(target.getCustomName());
+                getLogger().info("imported-skill-reference valid=" + valid + " rejected=" + rejected
+                        + " preserved=" + preserved + " warnings=" + warnings);
+            } catch (Exception e) {
+                getLogger().warning("imported-skill-reference failed=" + e);
+            } finally {
+                if (target != null) target.remove();
+                if (root != null) {
+                    try {
+                        Files.deleteIfExists(root.resolve("Skills/probe.yml"));
+                        Files.deleteIfExists(root.resolve("Skills"));
+                        Files.deleteIfExists(root);
+                    } catch (java.io.IOException e) {
+                        getLogger().warning("skill reference probe cleanup failed=" + e);
+                    }
+                }
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
+    }
+
+    private void runImportedInvalidConditionsSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null) {
+                getLogger().warning("invalid-imported-conditions passed=false reason=world-unavailable");
+                return;
+            }
+            Path root = null;
+            org.bukkit.entity.Zombie target = null;
+            try {
+                root = Files.createTempDirectory("helstera-invalid-conditions-");
+                Path skillSource = Files.createDirectories(root.resolve("Skills")).resolve("probe.yml");
+                Files.writeString(skillSource, """
+                        skills:
+                          good:
+                            TargetConditions: [isLiving]
+                            Skills: ['setname{name=VALID_CONDITION} @Target']
+                          bad:
+                            TargetConditions: [null]
+                            Skills: ['setname{name=INVALID_CONDITION} @Target']
+                          baby_good:
+                            TargetConditions: [isBaby]
+                            Skills: ['setname{name=BABY_VALID} @Target']
+                          baby_bad:
+                            TargetConditions: ['isBaby{unknown=true}']
+                            Skills: ['setname{name=BABY_INVALID} @Target']
+                          living_bad:
+                            TargetConditions: ['isLiving{unknown=true}']
+                            Skills: ['setname{name=LIVING_INVALID} @Target']
+                          frozen_good:
+                            TargetConditions: [isFrozen]
+                            Skills: ['setname{name=FROZEN_VALID} @Target']
+                          frozen_bad:
+                            TargetConditions: ['isFrozen{unknown=true}']
+                            Skills: ['setname{name=FROZEN_INVALID} @Target']
+                          state_good:
+                            TargetConditions: [targetIsMob, targetIsAlive, targetHasGravity]
+                            Skills: ['setname{name=STATE_VALID} @Target']
+                          sneaking_good:
+                            TargetConditions: [targetIsSneaking]
+                            Skills: ['setname{name=SNEAKING_VALID} @Target']
+                          movement_bad:
+                            TargetConditions: ['targetIsSneaking{unknown=true}']
+                            Skills: ['setname{name=MOVEMENT_INVALID} @Target']
+                          category_bad:
+                            TargetConditions: ['targetIsMob{unknown=true}']
+                            Skills: ['setname{name=CATEGORY_INVALID} @Target']
+                          alive_bad:
+                            TargetConditions: ['targetIsAlive{unknown=true}']
+                            Skills: ['setname{name=ALIVE_INVALID} @Target']
+                          negated_bad:
+                            TargetConditions: ['!targetIsMob{unknown=true}']
+                            Skills: ['setname{name=NEGATED_INVALID} @Target']
+                          morning_yes:
+                            TargetConditions: [morning]
+                            Skills: ['setname{name=TIME_VALID} @Target']
+                          morning_no:
+                            TargetConditions: ['!morning']
+                            Skills: ['setname{name=TIME_VALID} @Target']
+                          clear_yes:
+                            TargetConditions: [clear]
+                            Skills: ['setname{name=WEATHER_VALID} @Target']
+                          clear_no:
+                            TargetConditions: ['!clear']
+                            Skills: ['setname{name=WEATHER_VALID} @Target']
+                          morning_bad:
+                            TargetConditions: ['morning{unknown=true}']
+                            Skills: ['setname{name=TIME_INVALID} @Target']
+                          rain_bad:
+                            TargetConditions: ['rain{unknown=true}']
+                            Skills: ['setname{name=RAIN_INVALID} @Target']
+                          thunder_bad:
+                            TargetConditions: ['!thunder{unknown=true}']
+                            Skills: ['setname{name=THUNDER_INVALID} @Target']
+                          visibility_good:
+                            TargetConditions: [targetIsGlowing, targetIsInvisible, targetFrozen]
+                            Skills: ['setname{name=VISIBILITY_VALID} @Target']
+                          glow_bad:
+                            TargetConditions: ['targetIsGlowing{unknown=true}']
+                            Skills: ['setname{name=GLOW_INVALID} @Target']
+                          invisible_bad:
+                            TargetConditions: ['!targetIsInvisible{unknown=true}']
+                            Skills: ['setname{name=INVISIBLE_INVALID} @Target']
+                          target_frozen_bad:
+                            TargetConditions: ['targetFrozen{unknown=true}']
+                            Skills: ['setname{name=TARGET_FROZEN_INVALID} @Target']
+                          climb_bad:
+                            TargetConditions: ['climbing{unknown=true}']
+                            Skills: ['setname{name=CLIMB_INVALID} @Target']
+                          fall_bad:
+                            TargetConditions: ['falling{unknown=true}']
+                            Skills: ['setname{name=FALL_INVALID} @Target']
+                          charged_bad:
+                            TargetConditions: ['charged{unknown=true}']
+                            Skills: ['setname{name=CHARGED_INVALID} @Target']
+                        """);
+                Path mobSource = Files.createDirectories(root.resolve("Mobs")).resolve("probe.yml");
+                Files.writeString(mobSource, """
+                        mobs:
+                          Probe:
+                            DamageModifiers:
+                              FIRE:
+                                multiplier: 0.5
+                                conditions: [null]
+                              PROJECTILE:
+                                - multiplier: 0.5
+                                  conditions: [42]
+                        """);
+                var importer = new MythicMobsImporter();
+                var skillEntries = importer.convert(skillSource);
+                var mobEntries = importer.convert(mobSource);
+                String skillYaml = String.valueOf(skillEntries.stream().filter(e -> e.containsKey("target-file"))
+                        .findFirst().orElseThrow().get("content"));
+                String mobYaml = String.valueOf(mobEntries.stream().filter(e -> e.containsKey("target-file"))
+                        .findFirst().orElseThrow().get("content"));
+                var registry = new BehaviorRegistryImpl();
+                var skills = new dev.helstera.ai.skill.SkillService(registry, null);
+                var skillConfig = YamlConfiguration.loadConfiguration(new java.io.StringReader(skillYaml));
+                skills.loadSkills(skillConfig.getConfigurationSection("skills"));
+                var profile = dev.helstera.ai.AiProfile.fromSection("invalid-condition-probe",
+                        YamlConfiguration.loadConfiguration(new java.io.StringReader(mobYaml))
+                                .getConfigurationSection("mob"));
+                Location location = world.getSpawnLocation().clone().add(74, 4, 74);
+                location.getChunk().load();
+                target = world.spawn(location, org.bukkit.entity.Zombie.class);
+                target.setAI(false);
+                var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        null, target, 1, 1, 0, "probe", null, target, List.of(target), location, null);
+                boolean good = skills.castSkill("good", context) && "VALID_CONDITION".equals(target.getCustomName());
+                boolean bad = !skills.castSkill("bad", context) && "VALID_CONDITION".equals(target.getCustomName());
+                boolean livingRejected = !skills.castSkill("living_bad", context)
+                        && "VALID_CONDITION".equals(target.getCustomName());
+                target.setBaby();
+                boolean babyValid = skills.castSkill("baby_good", context) && "BABY_VALID".equals(target.getCustomName());
+                boolean babyRejected = !skills.castSkill("baby_bad", context) && "BABY_VALID".equals(target.getCustomName());
+                target.setFreezeTicks(target.getMaxFreezeTicks() + 1);
+                boolean frozenValid = skills.castSkill("frozen_good", context) && "FROZEN_VALID".equals(target.getCustomName());
+                boolean frozenRejected = !skills.castSkill("frozen_bad", context) && "FROZEN_VALID".equals(target.getCustomName());
+                boolean argumentWarnings = skillEntries.stream().filter(e -> "WARN".equals(e.get("severity"))
+                        && String.valueOf(e.get("source-key")).contains("Conditions.unmapped")).count() >= 4;
+                getLogger().info("condition-arguments living-rejected=" + livingRejected + " baby-valid=" + babyValid
+                        + " baby-rejected=" + babyRejected + " frozen-valid=" + frozenValid
+                        + " frozen-rejected=" + frozenRejected + " warnings=" + argumentWarnings);
+                boolean stateValid = skills.castSkill("state_good", context) && "STATE_VALID".equals(target.getCustomName());
+                boolean movementRejected = !skills.castSkill("movement_bad", context) && "STATE_VALID".equals(target.getCustomName());
+                boolean categoryRejected = !skills.castSkill("category_bad", context) && "STATE_VALID".equals(target.getCustomName());
+                boolean aliveRejected = !skills.castSkill("alive_bad", context) && "STATE_VALID".equals(target.getCustomName());
+                boolean negatedRejected = !skills.castSkill("negated_bad", context) && "STATE_VALID".equals(target.getCustomName());
+                boolean stateWarnings = skillEntries.stream().filter(e -> "WARN".equals(e.get("severity"))
+                        && String.valueOf(e.get("source-key")).contains("Conditions.unmapped")).count() >= 8;
+                boolean preserved = skillYaml.contains("unknown=true");
+                getLogger().info("condition-state-arguments valid=" + stateValid + " movement-rejected=" + movementRejected
+                        + " category-rejected=" + categoryRejected + " alive-rejected=" + aliveRejected
+                        + " negated-rejected=" + negatedRejected + " preserved=" + preserved + " warnings=" + stateWarnings);
+                target.setSneaking(false);
+                boolean sneakingFalse = !skills.castSkill("sneaking_good", context)
+                        && "STATE_VALID".equals(target.getCustomName());
+                target.setSneaking(true);
+                boolean sneakingTrue = skills.castSkill("sneaking_good", context)
+                        && "SNEAKING_VALID".equals(target.getCustomName());
+                getLogger().info("target-sneaking-mob false-rejected=" + sneakingFalse + " true-passed=" + sneakingTrue);
+                long time = world.getTime();
+                boolean morning = time >= 1000 && time < 6000;
+                boolean clear = !world.hasStorm() && !world.isThundering();
+                boolean timeValid = skills.castSkill(morning ? "morning_yes" : "morning_no", context)
+                        && "TIME_VALID".equals(target.getCustomName());
+                boolean timeOpposite = !skills.castSkill(morning ? "morning_no" : "morning_yes", context)
+                        && "TIME_VALID".equals(target.getCustomName());
+                boolean weatherValid = skills.castSkill(clear ? "clear_yes" : "clear_no", context)
+                        && "WEATHER_VALID".equals(target.getCustomName());
+                boolean weatherOpposite = !skills.castSkill(clear ? "clear_no" : "clear_yes", context)
+                        && "WEATHER_VALID".equals(target.getCustomName());
+                boolean invalidTime = !skills.castSkill("morning_bad", context)
+                        && "WEATHER_VALID".equals(target.getCustomName());
+                boolean invalidRain = !skills.castSkill("rain_bad", context)
+                        && "WEATHER_VALID".equals(target.getCustomName());
+                boolean invalidThunder = !skills.castSkill("thunder_bad", context)
+                        && "WEATHER_VALID".equals(target.getCustomName());
+                boolean timeWeatherPreserved = skillConfig.getStringList("skills.morning_bad.target-conditions")
+                        .equals(List.of("morning{unknown=true}"))
+                        && skillConfig.getStringList("skills.rain_bad.target-conditions").equals(List.of("rain{unknown=true}"))
+                        && skillConfig.getStringList("skills.thunder_bad.target-conditions").equals(List.of("!thunder{unknown=true}"));
+                boolean timeWeatherWarnings = skillEntries.stream().filter(e -> "WARN".equals(e.get("severity"))
+                        && String.valueOf(e.get("source-key")).contains("Conditions.unmapped")).count() >= 11;
+                getLogger().info("time-weather-arguments time-valid=" + timeValid + " time-opposite=" + timeOpposite
+                        + " weather-valid=" + weatherValid + " weather-opposite=" + weatherOpposite
+                        + " time-rejected=" + invalidTime + " rain-rejected=" + invalidRain
+                        + " negated-rejected=" + invalidThunder + " preserved=" + timeWeatherPreserved
+                        + " warnings=" + timeWeatherWarnings);
+                target.setGlowing(true);
+                target.setInvisible(true);
+                boolean visibilityValid = skills.castSkill("visibility_good", context)
+                        && "VISIBILITY_VALID".equals(target.getCustomName());
+                var invalidVisibility = java.util.Map.of(
+                        "glow_bad", "targetIsGlowing{unknown=true}",
+                        "invisible_bad", "!targetIsInvisible{unknown=true}",
+                        "target_frozen_bad", "targetFrozen{unknown=true}",
+                        "climb_bad", "climbing{unknown=true}",
+                        "fall_bad", "falling{unknown=true}",
+                        "charged_bad", "charged{unknown=true}");
+                boolean visibilityRejected = true;
+                for (String name : invalidVisibility.keySet()) {
+                    if (skills.castSkill(name, context) || !"VISIBILITY_VALID".equals(target.getCustomName())) {
+                        visibilityRejected = false;
+                    }
+                }
+                boolean visibilityPreserved = invalidVisibility.entrySet().stream().allMatch(entry ->
+                        skillConfig.getStringList("skills." + entry.getKey() + ".target-conditions")
+                                .equals(List.of(entry.getValue())));
+                boolean visibilityWarnings = invalidVisibility.keySet().stream().allMatch(name ->
+                        skillEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                                && (name + ".TargetConditions.unmapped").equals(entry.get("source-key"))));
+                getLogger().info("visibility-state-arguments valid=" + visibilityValid + " rejected=" + visibilityRejected
+                        + " preserved=" + visibilityPreserved + " warnings=" + visibilityWarnings);
+                boolean damage = !profile.immunityTable().evaluate("FIRE", 10, ignored -> true).matched()
+                        && !profile.immunityTable().evaluate("PROJECTILE", 10, ignored -> true).matched();
+                boolean warnings = skillEntries.stream().anyMatch(e -> "WARN".equals(e.get("severity")))
+                        && mobEntries.stream().filter(e -> "WARN".equals(e.get("severity"))
+                        && String.valueOf(e.get("source-key")).endsWith(".conditions")).count() == 2;
+                getLogger().info("invalid-imported-conditions valid-skill=" + good + " invalid-skill=" + bad
+                        + " invalid-damage=" + damage + " warnings=" + warnings);
+            } catch (Exception failure) {
+                getLogger().warning("invalid-imported-conditions passed=false error=" + failure.getClass().getSimpleName());
+            } finally {
+                if (target != null) target.remove();
+                if (root != null) {
+                    try {
+                        Files.deleteIfExists(root.resolve("Skills/probe.yml"));
+                        Files.deleteIfExists(root.resolve("Mobs/probe.yml"));
+                        Files.deleteIfExists(root.resolve("Skills"));
+                        Files.deleteIfExists(root.resolve("Mobs"));
+                        Files.deleteIfExists(root);
+                    } catch (java.io.IOException failure) {
+                        getLogger().warning("invalid-imported-conditions cleanup=" + failure.getClass().getSimpleName());
+                    }
+                }
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
+    }
+
+    record OrbSnapshot(int experience, int count) {
+        static OrbSnapshot of(org.bukkit.entity.ExperienceOrb orb) {
+            return new OrbSnapshot(orb.getExperience(), orb.getCount());
+        }
+
+        int total() {
+            return experience * count;
+        }
+    }
+
+    static int orbDelta(org.bukkit.entity.ExperienceOrb orb, java.util.Map<java.util.UUID, OrbSnapshot> before) {
+        var previous = before.get(orb.getUniqueId());
+        return OrbSnapshot.of(orb).total() - (previous == null ? 0 : previous.total());
+    }
+
+    private static void restoreOrb(org.bukkit.entity.ExperienceOrb orb, OrbSnapshot previous) {
+        if (previous == null) orb.remove();
+        else {
+            orb.setExperience(previous.experience());
+            orb.setCount(previous.count());
+        }
+    }
+
+    private void runExperienceRepeatDiagnostic(Location location, int attempts) {
+        var world = location.getWorld();
+        if (world == null) return;
+        int mismatches = 0;
+        for (int i = 0; i < attempts; i++) {
+            int id = spawnMobAt("exp_probe", location.clone(), null);
+            var instance = id > 0 ? instances().impl(id) : null;
+            if (instance == null || !(instance.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity living)) {
+                mismatches++;
+                getLogger().warning("xp-repeat index=" + i + " spawn-failed=true");
+                if (id > 0 && instances().impl(id) != null) instances().despawn(id);
+                continue;
+            }
+            var deathLocation = living.getLocation().clone();
+            var before = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                    .collect(java.util.stream.Collectors.toMap(org.bukkit.entity.Entity::getUniqueId,
+                            orb -> new int[]{orb.getExperience(), orb.getCount()}));
+            var events = new java.util.ArrayList<String>();
+            var observedXp = new java.util.concurrent.atomic.AtomicInteger(-1);
+            var observer = new org.bukkit.event.Listener() {};
+            getServer().getPluginManager().registerEvent(org.bukkit.event.entity.EntityDeathEvent.class,
+                    observer, org.bukkit.event.EventPriority.MONITOR, (ignored, event) -> {
+                        var death = (org.bukkit.event.entity.EntityDeathEvent) event;
+                        if (death.getEntity().getUniqueId().equals(living.getUniqueId())) observedXp.set(death.getDroppedExp());
+                    }, this, false);
+            getServer().getPluginManager().registerEvent(org.bukkit.event.entity.EntitySpawnEvent.class,
+                    observer, org.bukkit.event.EventPriority.MONITOR, (ignored, event) -> {
+                        var spawn = (org.bukkit.event.entity.EntitySpawnEvent) event;
+                        if (spawn.getEntity() instanceof org.bukkit.entity.ExperienceOrb orb && orb.getWorld().equals(world)) {
+                            events.add(orb.getUniqueId() + ":" + orb.getExperience() + ":" + spawn.isCancelled()
+                                    + ":" + orb.getLocation().distanceSquared(deathLocation));
+                        }
+                    }, this, false);
+            try {
+                living.damage(Math.max(1.0, living.getHealth() + 1.0));
+            } finally {
+                org.bukkit.event.HandlerList.unregisterAll(observer);
+            }
+            var after = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                    .filter(orb -> orb.getLocation().distanceSquared(deathLocation) <= 16.0).toList();
+            int total = after.stream().mapToInt(orb -> {
+                int[] original = before.get(orb.getUniqueId());
+                return orb.getExperience() * orb.getCount() - (original == null ? 0 : original[0] * original[1]);
+            }).sum();
+            int faceValue = after.stream().mapToInt(org.bukkit.entity.ExperienceOrb::getExperience).sum();
+            if (faceValue != total) {
+                getLogger().info("xp-repeat-stacked index=" + i + " face-value=" + faceValue + " total=" + total
+                        + " orbs=" + after.stream().map(orb -> orb.getExperience() + "x" + orb.getCount())
+                        .collect(java.util.stream.Collectors.joining(",")));
+            }
+            if (!living.isDead() || observedXp.get() != 13 || total != 13) {
+                mismatches++;
+                getLogger().warning("xp-repeat index=" + i + " dead=" + living.isDead() + " event=" + observedXp.get()
+                        + " observed=" + total + " events=" + events + " visible=" + after.stream()
+                        .map(orb -> orb.getUniqueId() + ":" + orb.getExperience() + ":" + orb.isValid())
+                        .collect(java.util.stream.Collectors.joining(",")));
+            }
+            after.forEach(orb -> {
+                int[] original = before.get(orb.getUniqueId());
+                if (original == null) orb.remove();
+                else {
+                    orb.setExperience(original[0]);
+                    orb.setCount(original[1]);
+                }
+            });
+            if (instances().impl(id) != null) instances().despawn(id);
+        }
+        getLogger().info("xp-repeat attempts=" + attempts + " mismatches=" + mismatches);
+    }
+
+    private void runImportedImmunitySelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null || instances == null || !(ai instanceof AiManager manager)) return;
+            Path root = null;
+            int id = -1;
+            org.bukkit.entity.Zombie attacker = null;
+            class DamageObserver implements org.bukkit.event.Listener {
+                org.bukkit.entity.Entity victim;
+                double damage = Double.NaN;
+                @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
+                public void onDamage(org.bukkit.event.entity.EntityDamageEvent event) {
+                    if (event.getEntity().equals(victim)) damage = event.getDamage();
+                }
+            }
+            var observer = new DamageObserver();
+            try {
+                root = Files.createTempDirectory("helstera-immunity-import-");
+                Path mobDir = Files.createDirectory(root.resolve("Mobs"));
+                Path source = mobDir.resolve("probe.yml");
+                Files.writeString(source, """
+                        mobs:
+                          Probe:
+                            DamageModifiers:
+                              ENTITY_ATTACK:
+                                multiplier: 0.5
+                                conditions: ['health-above 0.7']
+                        """);
+                var plan = new MythicMobsImporter().convert(source).stream()
+                        .filter(entry -> entry.containsKey("target-file")).findFirst().orElseThrow();
+                var yaml = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(plan.get("content"))));
+                var profile = AiProfile.fromSection("immunity-probe", yaml.getConfigurationSection("mob"));
+                Location location = world.getSpawnLocation().clone().add(72, 4, 72);
+                location.getChunk().load();
+                id = spawnMobAt("trigger_probe", location, null);
+                var instance = id > 0 ? instances().impl(id) : null;
+                if (instance == null || !(instance.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity victim))
+                    throw new IllegalStateException("victim spawn failed");
+                manager.attach(instance, profile);
+                attacker = world.spawn(location.clone().add(2, 0, 0), org.bukkit.entity.Zombie.class);
+                attacker.setAI(false);
+                observer.victim = victim;
+                getServer().getPluginManager().registerEvents(observer, this);
+                victim.setInvulnerable(false);
+                victim.setHealth(victim.getMaxHealth());
+                victim.setNoDamageTicks(0);
+                victim.damage(4, attacker);
+                boolean reduced = Math.abs(observer.damage - 2) < 0.001;
+                victim.setHealth(victim.getMaxHealth() * 0.3);
+                victim.setNoDamageTicks(0);
+                observer.damage = Double.NaN;
+                victim.damage(4, attacker);
+                boolean rejected = Math.abs(observer.damage - 4) < 0.001;
+                var invalid = YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                        "damage-modifiers:\n  ENTITY_ATTACK:\n    multiplier: invalid\n    immune: true\n"));
+                manager.attach(instance, AiProfile.fromSection("invalid-immunity-probe", invalid));
+                victim.setHealth(victim.getMaxHealth());
+                victim.setNoDamageTicks(0);
+                observer.damage = Double.NaN;
+                victim.damage(4, attacker);
+                boolean invalidRejected = Math.abs(observer.damage - 4) < 0.001;
+                getLogger().info("immunity-imported result=" + (reduced && rejected && invalidRejected)
+                        + " reduced=" + reduced + " condition-rejected=" + rejected
+                        + " invalid-rejected=" + invalidRejected);
+                Path nativeFile = root.resolve("native.yml");
+                String[] configs = {
+                        "immunities:\n  ENTITY_ATTACK: false\n",
+                        "immunities:\n  ENTITY_ATTACK: null\n",
+                        "immunities:\n  ENTITY_ATTACK:\n    unknown-gate: true\n",
+                        "damage-modifiers:\n  ENTITY_ATTACK: null\n",
+                        "immunities:\n  ENTITY_ATTACK:\n    unknown-gate: null\n",
+                        "damage-modifiers:\n  ENTITY_ATTACK:\n    multiplier: 0.5\n    unknown-gate: null\n",
+                        "damage-modifiers:\n  ENTITY_ATTACK:\n    multiplier: 0.5\n    unknown-gate: true\n",
+                        "damage-modifiers:\n  ENTITY_ATTACK:\n    multiplier: 0.5\n    immune: invalid\n",
+                        "damage-modifiers:\n  ENTITY_ATTACK:\n    multiplier: 0.5\n    immune: null\n"
+                };
+                boolean[] rejectedNative = new boolean[configs.length];
+                for (int i = 0; i < configs.length; i++) {
+                    Files.writeString(nativeFile, configs[i]);
+                    var nativeConfig = YamlConfiguration.loadConfiguration(nativeFile.toFile());
+                    dev.helstera.api.util.NullImmunityConditions.restore(nativeConfig, nativeFile);
+                    var nativeProfile = AiProfile.fromSection("invalid-native-immunity-probe", nativeConfig);
+                    manager.attach(instance, nativeProfile);
+                    victim.setHealth(victim.getMaxHealth());
+                    victim.setNoDamageTicks(0);
+                    observer.damage = Double.NaN;
+                    victim.damage(4, attacker);
+                    rejectedNative[i] = Math.abs(observer.damage - 4) < 0.001
+                            && !nativeProfile.immunityWarnings().isEmpty();
+                }
+                getLogger().info("immunity-native-invalid result="
+                        + (rejectedNative[0] && rejectedNative[1] && rejectedNative[2] && rejectedNative[3])
+                        + " false-rejected=" + rejectedNative[0] + " null-rejected=" + rejectedNative[1]
+                        + " unknown-rejected=" + rejectedNative[2] + " null-modifier-rejected=" + rejectedNative[3]);
+                getLogger().info("immunity-invalid-fields null-immunity=" + rejectedNative[4]
+                        + " null-modifier-field=" + rejectedNative[5] + " unknown-modifier-field=" + rejectedNative[6]
+                        + " invalid-immune=" + rejectedNative[7] + " null-immune=" + rejectedNative[8]);
+                String[] importedConfigs = {
+                        "mobs:\n  Probe:\n    DamageModifiers:\n      ENTITY_ATTACK:\n        multiplier: 0.5\n        custom:\n          nested:\n            missing: null\n",
+                        "mobs:\n  Probe:\n    DamageModifiers:\n      ENTITY_ATTACK:\n        - multiplier: 0.5\n          conditions: null\n"
+                };
+                boolean[] preserved = new boolean[2];
+                boolean[] closed = new boolean[2];
+                for (int i = 0; i < importedConfigs.length; i++) {
+                    Files.writeString(source, importedConfigs[i]);
+                    var entries = new MythicMobsImporter().convert(source);
+                    var imported = entries.stream().filter(entry -> entry.containsKey("target-file"))
+                            .findFirst().orElseThrow();
+                    var importedYaml = YamlConfiguration.loadConfiguration(
+                            new java.io.StringReader(String.valueOf(imported.get("content"))));
+                    if (i == 0) {
+                        preserved[i] = dev.helstera.api.util.ConditionListParser.INVALID_CONDITION.equals(
+                                importedYaml.getString("mob.unsupported.DamageModifiers.ENTITY_ATTACK.custom.nested.missing"));
+                    } else {
+                        var list = importedYaml.getMapList("mob.unsupported.DamageModifiers.ENTITY_ATTACK");
+                        preserved[i] = list.size() == 1 && list.get(0).containsKey("conditions")
+                                && list.get(0).get("conditions") == null;
+                    }
+                    var importedProfile = AiProfile.fromSection("preserved-immunity-probe", importedYaml.getConfigurationSection("mob"));
+                    manager.attach(instance, importedProfile);
+                    victim.setHealth(victim.getMaxHealth());
+                    victim.setNoDamageTicks(0);
+                    observer.damage = Double.NaN;
+                    victim.damage(4, attacker);
+                    closed[i] = Math.abs(observer.damage - 4) < 0.001
+                            && entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity")));
+                }
+                getLogger().info("immunity-preservation nested-preserved=" + preserved[0]
+                        + " nested-closed=" + closed[0] + " list-null-preserved=" + preserved[1]
+                        + " list-null-closed=" + closed[1]);
+            } catch (Exception failure) {
+                getLogger().warning("immunity-imported result=false error=" + failure.getClass().getSimpleName());
+                getLogger().warning("immunity-native-invalid result=false error=" + failure.getClass().getSimpleName());
+                getLogger().warning("immunity-invalid-fields result=false error=" + failure.getClass().getSimpleName());
+                getLogger().warning("immunity-preservation result=false error=" + failure.getClass().getSimpleName());
+            } finally {
+                org.bukkit.event.HandlerList.unregisterAll(observer);
+                if (attacker != null) attacker.remove();
+                if (id > 0 && instances() != null) instances().despawn(id);
+                if (root != null) {
+                    try {
+                        Files.deleteIfExists(root.resolve("Mobs/probe.yml"));
+                        Files.deleteIfExists(root.resolve("native.yml"));
+                        Files.deleteIfExists(root.resolve("Mobs"));
+                        Files.deleteIfExists(root);
+                    } catch (java.io.IOException ignored) { }
+                }
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
+    }
+
+    private void runImportedDamageTriggerSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null || instances == null || !(ai instanceof dev.helstera.ai.AiManager manager)
+                    || !(skillService instanceof dev.helstera.ai.skill.SkillService skills)) {
+                getLogger().warning("damage-imported passed=false reason=runtime-unavailable");
+                return;
+            }
+            Path root = null;
+            int id = -1;
+            org.bukkit.entity.Zombie attacker = null;
+            try {
+                root = Files.createTempDirectory("helstera-damaged-import-");
+                Path mobDir = Files.createDirectory(root.resolve("Mobs"));
+                Path source = mobDir.resolve("probe.yml");
+                Files.writeString(source, """
+                        mobs:
+                          Probe:
+                            Skills:
+                              - setname{name=IMPORTED_DAMAGE} @Trigger ~onDamaged
+                              - equip{item=GOLDEN_SWORD;slot=HAND} @Trigger ~onHurt
+                        """);
+                var conversion = new MythicMobsImporter().convert(source);
+                var plan = conversion.stream().filter(entry -> entry.containsKey("target-file"))
+                        .findFirst().orElseThrow();
+                var config = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(plan.get("content"))));
+                var section = config.getConfigurationSection("mob");
+                if (section == null) throw new IllegalStateException("missing imported mob");
+                var profile = dev.helstera.ai.AiProfile.fromSection("imported-damage-probe", section);
+                skills.expandTriggers(profile);
+                boolean mapped = profile.triggers.containsKey("on-damage")
+                        && profile.triggers.get("on-damage").actions.size() == 2;
+                Location location = world.getSpawnLocation().clone().add(70, 4, 70);
+                location.getChunk().load();
+                id = spawnMobAt("trigger_probe", location, null);
+                var instance = id > 0 ? instances().impl(id) : null;
+                var entity = instance == null ? null : instance.baseEntity().orElse(null);
+                if (!(entity instanceof org.bukkit.entity.LivingEntity victim)) {
+                    throw new IllegalStateException("victim spawn failed");
+                }
+                manager.attach(instance, profile);
+                attacker = world.spawn(location.clone().add(2, 0, 0), org.bukkit.entity.Zombie.class);
+                attacker.setAI(false);
+                victim.setInvulnerable(false);
+                victim.setNoDamageTicks(0);
+                victim.damage(2, attacker);
+                boolean named = "IMPORTED_DAMAGE".equals(attacker.getCustomName());
+                boolean equipped = attacker.getEquipment() != null
+                        && attacker.getEquipment().getItemInMainHand().getType() == org.bukkit.Material.GOLDEN_SWORD;
+                String before = victim.getCustomName();
+                victim.setNoDamageTicks(0);
+                double beforeHealth = victim.getHealth();
+                victim.damage(1);
+                boolean environmentalDamage = victim.getHealth() < beforeHealth;
+                boolean noEnvironmentalTrigger = java.util.Objects.equals(before, victim.getCustomName());
+                getLogger().info("damage-imported mapped=" + mapped + " entity-damage=true attacker-name=" + named
+                        + " attacker-equipment=" + equipped + " environmental-damage=" + environmentalDamage
+                        + " environmental-no-trigger=" + noEnvironmentalTrigger
+                        + " passed=" + (mapped && named && equipped && environmentalDamage && noEnvironmentalTrigger));
+            } catch (Exception failure) {
+                getLogger().warning("damage-imported passed=false error=" + failure.getClass().getSimpleName());
+            } finally {
+                if (attacker != null) attacker.remove();
+                if (id > 0 && instances() != null) instances().despawn(id);
+                if (root != null) {
+                    try {
+                        Files.deleteIfExists(root.resolve("Mobs/probe.yml"));
+                        Files.deleteIfExists(root.resolve("Mobs"));
+                        Files.deleteIfExists(root);
+                    } catch (java.io.IOException failure) {
+                        getLogger().warning("damage-imported cleanup=" + failure.getClass().getSimpleName());
+                    }
+                }
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
+    }
+
+    private void runImportedDropTableSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            var killer = getServer().getPlayerExact("HelsteraTester");
+            if (world == null || killer == null || instances == null || loot() == null) {
+                getLogger().warning("death-loot-imported natural=false reason=runtime-unavailable");
+                return;
+            }
+
+            Path probeRoot = getDataFolder().toPath().resolve("integration-drop-table-import-probe");
+            Path sourceFile = probeRoot.resolve("DropTables/nested/imported_reward.yml");
+            Path childFile = probeRoot.resolve("DropTables/imported_child.yml");
+            var lootFile = new java.io.File(getDataFolder(), "loot.yml");
+            Location location = world.getSpawnLocation().clone().add(64, 3, 0);
+            org.bukkit.entity.Zombie zombie = null;
+            dev.helstera.api.instance.ModelInstance instance = null;
+            java.util.Set<java.util.UUID> existingItems = world.getEntitiesByClass(org.bukkit.entity.Item.class)
+                    .stream().map(org.bukkit.entity.Entity::getUniqueId)
+                    .collect(java.util.stream.Collectors.toSet());
+            java.util.Map<java.util.UUID, OrbSnapshot> existingOrbExperience = world.getEntitiesByClass(
+                    org.bukkit.entity.ExperienceOrb.class).stream()
+                    .filter(orb -> orb.getLocation().distanceSquared(location) < 36)
+                    .collect(java.util.stream.Collectors.toMap(org.bukkit.entity.Entity::getUniqueId,
+                            OrbSnapshot::of));
+            boolean importerMapped = false;
+            boolean conditionsMapped = false;
+            String tableName = "";
+            try {
+                Files.createDirectories(sourceFile.getParent());
+                Path nativeProbe = probeRoot.resolve("native-loot.yml");
+                try {
+                    Files.writeString(nativeProbe, """
+                            defaults: &defaults
+                              conditions: null
+                              trigger-conditions: null
+                            entry: &entry
+                              item: DIAMOND
+                              conditions: null
+                            null-chance: &null-chance {chance: null}
+                            null-weight: &null-weight {weight: null, amount-min: 9, amount-max: 9}
+                            null-dynamic: &null-dynamic {dynamic-chance: null}
+                            null-tier: &null-tier {min-tier-level: null}
+                            tables:
+                              inherited:
+                                <<: *defaults
+                                experience: 4
+                                entries: [{item: DIAMOND}]
+                              indexed:
+                                entries:
+                                  0: {<<: *entry}
+                                  1: {<<: *entry, item: exp, amount: 4}
+                              valid:
+                                <<: *defaults
+                                conditions: [allowed]
+                                trigger-conditions: [allowed]
+                                entries: [{item: BREAD}]
+                              numeric:
+                                entries:
+                                  0: {<<: *null-chance, item: DIAMOND}
+                                  1: {item: exp, amount: 4, chance: null}
+                                  2: {item: EMERALD, tiers: {<<: *null-weight}}
+                                  3: {item: GOLD_INGOT, tiers: {<<: *null-weight, weight: 1}}
+                                  4: {<<: *null-chance, item: BREAD, chance: 1}
+                              dynamic-list:
+                                entries:
+                                  - {item: DIAMOND, dynamic-chance: null}
+                                  - {item: EMERALD, chance-expression: ''}
+                                  - {item: GOLD_INGOT, dynamic-chance: 7}
+                                  - {item: IRON_INGOT, dynamic-chance: valid, chance-expression: valid}
+                                  - {item: BREAD, dynamic-chance: valid}
+                              dynamic-indexed:
+                                entries:
+                                  0: {<<: *null-dynamic, item: DIAMOND}
+                                  1: {<<: *null-dynamic, item: BREAD, dynamic-chance: valid}
+                              tier-list:
+                                entries:
+                                  - {item: DIAMOND, min-tier-level: null}
+                                  - {item: EMERALD, min-tier-level: 0}
+                                  - {item: GOLD_INGOT, min-tier-level: nope}
+                                  - {item: exp, amount: 4, min-tier-level: -1}
+                                  - {item: BREAD, min-tier-level: 2}
+                              tier-indexed:
+                                entries:
+                                  0: {<<: *null-tier, item: DIAMOND}
+                                  1: {<<: *null-tier, item: BREAD, min-tier-level: 2}
+                              tier-range-list:
+                                entries:
+                                  - item: DIAMOND
+                                    tiers:
+                                      - {amount-min: null}
+                                      - {amount-min: invalid}
+                                      - {amount-min: 2.5}
+                                      - {amount-min: 5, amount-max: 2}
+                                      - {amount-min: 3, amount-max: 3}
+                              tier-range-indexed:
+                                entries:
+                                  0: {item: EMERALD, amount: 2, tiers: {amount-min: null}}
+                                  1: {item: BREAD, tiers: {amount-min: 4, amount-max: 4}}
+                            """);
+                    var nativeLoot = new dev.helstera.ai.loot.LootService(null);
+                    nativeLoot.loadFile(nativeProbe);
+                    nativeLoot.setConditionEvaluator((condition, at, player) -> true);
+                    nativeLoot.setDropperConditionEvaluator((condition, at, entity) -> true);
+                    boolean rejected = java.util.List.of("inherited", "indexed").stream().allMatch(name ->
+                            nativeLoot.rollPlan(nativeLoot.table(name), 0, new java.util.Random(1), location,
+                                    killer, 0, killer).isEmpty()
+                            && nativeLoot.experience(name, new java.util.Random(1), location, killer, killer) == 0);
+                    var valid = nativeLoot.rollPlan(nativeLoot.table("valid"), 0, new java.util.Random(1),
+                            location, killer, 0, killer);
+                    boolean sibling = valid.size() == 1 && "BREAD".equals(valid.get(0).entry().itemId());
+                    boolean warnings = nativeLoot.warnings().stream().anyMatch(w -> w.contains("invalid condition"));
+                    getLogger().info("drop-native-null-conditions rejected=" + rejected
+                            + " sibling=" + sibling + " warnings=" + warnings);
+                    var numeric = nativeLoot.rollPlan(nativeLoot.table("numeric"), 10, new java.util.Random(1));
+                    boolean numericRejected = numeric.stream().noneMatch(hit -> "DIAMOND".equals(hit.entry().itemId()))
+                            && nativeLoot.experience("numeric", new java.util.Random(1)) == 0;
+                    boolean tierFallback = numeric.stream().anyMatch(hit -> "EMERALD".equals(hit.entry().itemId())
+                            && hit.amount() == 1);
+                    boolean numericOverrides = numeric.stream().anyMatch(hit -> "GOLD_INGOT".equals(hit.entry().itemId())
+                            && hit.amount() == 9)
+                            && numeric.stream().anyMatch(hit -> "BREAD".equals(hit.entry().itemId()));
+                    boolean numericWarnings = nativeLoot.warnings().stream().filter(w -> w.contains("chance = null")).count() == 2
+                            && nativeLoot.warnings().stream().anyMatch(w -> w.contains("weight = null"));
+                    getLogger().info("drop-native-null-numeric rejected=" + numericRejected
+                            + " fallback=" + tierFallback + " overrides=" + numericOverrides
+                            + " warnings=" + numericWarnings);
+                    nativeLoot.setDynamicChanceEvaluator((expression, at, player, luck) -> 1);
+                    boolean dynamicSafe = java.util.List.of("dynamic-list", "dynamic-indexed").stream().allMatch(name -> {
+                        var hits = nativeLoot.rollPlan(nativeLoot.table(name), 0, new java.util.Random(1));
+                        return hits.size() == 1 && "BREAD".equals(hits.get(0).entry().itemId());
+                    });
+                    boolean dynamicWarnings = nativeLoot.warnings().stream()
+                            .filter(w -> w.contains("invalid or ambiguous dynamic chance expression")).count() == 5;
+                    getLogger().info("drop-native-dynamic rejected=" + dynamicSafe + " warnings=" + dynamicWarnings);
+                    boolean tierSafe = java.util.List.of("tier-list", "tier-indexed").stream().allMatch(name -> {
+                        var table = nativeLoot.table(name);
+                        var low = nativeLoot.rollPlan(table, 0, new java.util.Random(1), 1, location, killer);
+                        var high = nativeLoot.rollPlan(table, 0, new java.util.Random(1), 2, location, killer);
+                        return low.isEmpty() && high.size() == 1 && "BREAD".equals(high.get(0).entry().itemId());
+                    }) && nativeLoot.experience("tier-list", new java.util.Random(1)) == 0;
+                    boolean tierWarnings = nativeLoot.warnings().stream()
+                            .filter(w -> w.contains("min-tier-level is invalid")).count() == 5;
+                    getLogger().info("drop-native-tier rejected=" + tierSafe + " warnings=" + tierWarnings);
+                    var rangeList = nativeLoot.rollPlan(nativeLoot.table("tier-range-list"), 0, new java.util.Random(1));
+                    var rangeIndexed = nativeLoot.rollPlan(nativeLoot.table("tier-range-indexed"), 0, new java.util.Random(1));
+                    boolean rangeValid = rangeList.size() == 1 && rangeList.get(0).amount() == 3
+                            && rangeIndexed.size() == 2 && rangeIndexed.get(1).amount() == 4;
+                    boolean rangeFallback = rangeIndexed.size() == 2 && rangeIndexed.get(0).amount() == 2;
+                    boolean rangeWarnings = nativeLoot.warnings().stream()
+                            .filter(w -> w.contains("tiers amount range is invalid")).count() == 5;
+                    getLogger().info("drop-native-tier-range valid=" + rangeValid + " fallback=" + rangeFallback
+                            + " warnings=" + rangeWarnings);
+                } finally {
+                    Files.deleteIfExists(nativeProbe);
+                }
+                Files.writeString(childFile, """
+                        imported-child:
+                          Drops: [GOLD_INGOT 1-3 1]
+                        merged_defaults: &merged_defaults
+                          Conditions: null
+                        merged_rejected:
+                          <<: *merged_defaults
+                          Drops: [DIAMOND 1 1]
+                        """);
+                Files.writeString(sourceFile, """
+                        imported_reward:
+                          TriggerConditions:
+                            - isPlayer
+                          Conditions:
+                            - isMonster
+                          Drops:
+                            - item: DIAMOND
+                              Conditions: isPlayer
+                              DropIf: isPlayer
+                            - imported-child 1 1
+                            - exp 5 1
+                        conflicting_reward:
+                          Conditions: [isPlayer]
+                          conditions: [isMonster]
+                          Drops: [EMERALD 1 1]
+                        null_dropper:
+                          Conditions: null
+                          Drops: [DIAMOND 1 1]
+                        null_trigger:
+                          TriggerConditions: ~
+                          Drops: [EMERALD 1 1]
+                        null_safe:
+                          Drops: [BREAD 1 1]
+                        chance_validation:
+                          Drops:
+                            - DIAMOND 1 1%0
+                            - {item: EMERALD, chance: '25%%'}
+                            - COAL 1 0x1p-1
+                            - {item: IRON_INGOT, chance: '0.5d'}
+                            - BREAD 1 100%
+                        unsafe_empty:
+                          Drops: [MMOItems:SWORD 1 1]
+                        unsafe_indirect:
+                          Drops: [unsafe_empty 1 1]
+                        unsafe_unknown:
+                          Conditions: [future-condition]
+                          Drops: [DIAMOND 1 1]
+                        safe_parent:
+                          Drops:
+                            - null_dropper 1 1
+                            - {table: null_trigger}
+                            - unsafe_unknown 1 1
+                            - {table: unsafe_indirect}
+                            - merged_rejected 1 1
+                            - {table: merged_rejected}
+                            - BREAD 1 1
+                        """);
+                var conversion = new MythicMobsImporter().convert(sourceFile);
+                var nullRuntime = new dev.helstera.ai.loot.LootService(null);
+                var nullTables = new YamlConfiguration();
+                for (var entry : conversion) {
+                    if (!"mapped".equals(entry.get("status")) || !entry.containsKey("content")) continue;
+                    var yaml = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(entry.get("content"))));
+                    var tables = yaml.getConfigurationSection("tables");
+                    if (tables == null) continue;
+                    for (String name : tables.getKeys(false)) nullTables.set("tables." + name, tables.get(name));
+                }
+                nullRuntime.load(nullTables.getConfigurationSection("tables"));
+                var chanceRoll = nullRuntime.rollPlan("chance_validation", 0);
+                boolean chanceRejected = chanceRoll.size() == 1 && "BREAD".equals(chanceRoll.get(0).entry().itemId());
+                boolean chanceWarnings = conversion.stream().anyMatch(entry ->
+                        "chance_validation.Drops".equals(entry.get("source-key"))
+                                && "unsupported".equals(entry.get("status"))
+                                && "WARN".equals(entry.get("severity"))
+                                && String.valueOf(entry.get("value")).contains("1%0")
+                                && String.valueOf(entry.get("value")).contains("25%%")
+                                && String.valueOf(entry.get("value")).contains("0x1p-1")
+                                && String.valueOf(entry.get("value")).contains("0.5d"));
+                getLogger().info("drop-chance-imported rejected=" + chanceRejected + " warnings=" + chanceWarnings);
+                boolean nullRejected = nullRuntime.table("null_dropper") == null
+                        && nullRuntime.table("null_trigger") == null
+                        && nullRuntime.rollPlan("null_dropper", 0).isEmpty()
+                        && nullRuntime.rollPlan("null_trigger", 0).isEmpty();
+                boolean nullWarnings = java.util.List.of("null_dropper", "null_trigger").stream().allMatch(name ->
+                        conversion.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                                && "WARN".equals(entry.get("severity"))
+                                && String.valueOf(entry.get("source-key")).startsWith(name)));
+                var safeRoll = nullRuntime.rollPlan("null_safe", 0);
+                boolean nullSibling = safeRoll.size() == 1 && "BREAD".equals(safeRoll.get(0).entry().itemId());
+                getLogger().info("drop-null-conditions rejected=" + nullRejected
+                        + " warnings=" + nullWarnings + " sibling=" + nullSibling);
+                boolean referenceWarnings = conversion.stream().anyMatch(entry ->
+                        "safe_parent.Drops".equals(entry.get("source-key"))
+                                && "unsupported".equals(entry.get("status"))
+                                && "WARN".equals(entry.get("severity"))
+                                && java.util.List.of("null_dropper", "null_trigger", "unsafe_unknown", "unsafe_indirect")
+                                .stream().allMatch(name -> String.valueOf(entry.get("value")).contains(name)));
+                for (String name : java.util.List.of("null_dropper", "null_trigger", "unsafe_unknown", "unsafe_indirect")) {
+                    nullTables.set("tables." + name + ".entries.0.item", "DIAMOND");
+                    nullTables.set("tables." + name + ".entries.0.chance", 1);
+                }
+                nullRuntime.load(nullTables.getConfigurationSection("tables"));
+                var parentRoll = nullRuntime.rollPlan("safe_parent", 0);
+                boolean staleRejected = parentRoll.size() == 1 && "BREAD".equals(parentRoll.get(0).entry().itemId());
+                getLogger().info("drop-unsafe-references warnings=" + referenceWarnings
+                        + " stale-rejected=" + staleRejected);
+                var mergedChildEntries = new MythicMobsImporter().convert(childFile);
+                boolean mergedRejected = mergedChildEntries.stream().anyMatch(entry ->
+                        "merged_rejected".equals(entry.get("source-key"))
+                                && "unsupported".equals(entry.get("status"))
+                                && "WARN".equals(entry.get("severity")));
+                boolean mergedWarning = conversion.stream().anyMatch(entry ->
+                        "safe_parent.Drops".equals(entry.get("source-key"))
+                                && "unsupported".equals(entry.get("status"))
+                                && String.valueOf(entry.get("value")).contains("merged_rejected"));
+                nullTables.set("tables.merged_rejected.entries.0.item", "DIAMOND");
+                nullRuntime.load(nullTables.getConfigurationSection("tables"));
+                var mergedRoll = nullRuntime.rollPlan("safe_parent", 0);
+                boolean mergedStaleRejected = mergedRoll.size() == 1
+                        && "BREAD".equals(mergedRoll.get(0).entry().itemId());
+                getLogger().info("drop-merged-null rejected=" + mergedRejected
+                        + " warnings=" + mergedWarning + " stale-rejected=" + mergedStaleRejected);
+                boolean conflictPreserved = conversion.stream().anyMatch(entry ->
+                        "unsupported".equals(entry.get("status"))
+                                && "conflicting_reward".equals(entry.get("source-key"))
+                                && String.valueOf(entry.get("value")).contains("isPlayer")
+                                && String.valueOf(entry.get("value")).contains("isMonster")
+                                && String.valueOf(entry.get("value")).contains("EMERALD"));
+                var plan = conversion.stream()
+                        .filter(entry -> "mapped".equals(entry.get("status"))
+                                && "loot.yml".equals(entry.get("target-file")))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("importer produced no loot plan"));
+                var projected = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(plan.get("content"))));
+                var projectedTables = projected.getConfigurationSection("tables");
+                if (projectedTables == null || projectedTables.getKeys(false).size() != 1) {
+                    throw new IllegalStateException("importer output has no unique table");
+                }
+                tableName = projectedTables.getKeys(false).iterator().next();
+                var projectedTable = projectedTables.getConfigurationSection(tableName);
+                conditionsMapped = projectedTable != null
+                        && projectedTable.getStringList("conditions").equals(java.util.List.of("is-monster"))
+                        && projectedTable.getStringList("trigger-conditions").equals(java.util.List.of("is-player"))
+                        && "DIAMOND".equals(projectedTable.getString("entries.0.item"))
+                        && projectedTable.getStringList("entries.0.conditions")
+                                .equals(java.util.List.of("is-player", "is-player"))
+                        && "imported_child".equals(projectedTable.getString("entries.1.table"))
+                        && "exp".equals(projectedTable.getString("entries.2.item"));
+                var childConversion = new MythicMobsImporter().convert(childFile);
+                var childPlan = childConversion.stream().filter(entry -> "mapped".equals(entry.get("status"))
+                        && "loot.yml".equals(entry.get("target-file"))).findFirst().orElseThrow();
+                var childYaml = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(childPlan.get("content"))));
+                var childTable = childYaml.getConfigurationSection("tables.imported_child");
+                boolean nestedMapped = childTable != null
+                        && "GOLD_INGOT".equals(childTable.getString("entries.0.item"))
+                        && childTable.getInt("entries.0.amount-min", -1) == 1
+                        && childTable.getInt("entries.0.amount-max", -1) == 2;
+                if (!conditionsMapped || !conflictPreserved || !nestedMapped) throw new IllegalStateException("imported table projection mismatch");
+                importerMapped = true;
+
+                YamlConfiguration mergedLoot = YamlConfiguration.loadConfiguration(lootFile);
+                for (String key : projectedTable.getKeys(true)) {
+                    String path = "tables." + tableName + "." + key;
+                    if (projectedTable.isConfigurationSection(key)) mergedLoot.createSection(path);
+                    else mergedLoot.set(path, projectedTable.get(key));
+                }
+                for (String key : childTable.getKeys(true)) {
+                    String path = "tables.imported_child." + key;
+                    if (childTable.isConfigurationSection(key)) mergedLoot.createSection(path);
+                    else mergedLoot.set(path, childTable.get(key));
+                }
+                loot().load(mergedLoot.getConfigurationSection("tables"));
+                if (loot().table(tableName) == null) throw new IllegalStateException("runtime did not load imported table");
+
+                zombie = world.spawn(location, org.bukkit.entity.Zombie.class);
+                instance = instances().bind("example/emberling", zombie,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                if (!(instance instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl)) {
+                    throw new IllegalStateException("managed Zombie binding unavailable");
+                }
+                impl.lootTable = tableName;
+                impl.lootUsesLuck = false;
+                impl.lootExperienceMin = -1;
+                impl.lootExperienceMax = -1;
+                zombie.setAI(false);
+                zombie.setRemoveWhenFarAway(false);
+                zombie.setMaxHealth(1.0);
+                zombie.setHealth(1.0);
+                zombie.damage(1000.0, killer);
+                boolean naturalDeath = zombie.isDead();
+                var tracked = instance;
+                var dead = zombie;
+                String importedTable = tableName;
+                boolean mapped = importerMapped;
+                boolean mappedConditions = conditionsMapped;
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    int diamonds = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                            .filter(item -> !existingItems.contains(item.getUniqueId()))
+                            .filter(item -> item.getLocation().distanceSquared(location) < 36)
+                            .filter(item -> item.getItemStack().getType() == org.bukkit.Material.DIAMOND)
+                            .mapToInt(item -> item.getItemStack().getAmount()).sum();
+                    int goldRangeAmount = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                            .filter(item -> !existingItems.contains(item.getUniqueId()))
+                            .filter(item -> item.getLocation().distanceSquared(location) < 36)
+                            .filter(item -> item.getItemStack().getType() == org.bukkit.Material.GOLD_INGOT)
+                            .mapToInt(item -> item.getItemStack().getAmount()).sum();
+                    int experience = world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class).stream()
+                            .filter(orb -> orb.getLocation().distanceSquared(location) < 36)
+                            .mapToInt(orb -> orbDelta(orb, existingOrbExperience)).sum();
+                    boolean killerAttributed = dead.getKiller() == killer;
+                    try {
+                        loot().loadFile(lootFile.toPath());
+                        if (tracked != null && instances() != null) instances().despawn(tracked.instanceId());
+                        for (var item : world.getEntitiesByClass(org.bukkit.entity.Item.class)) {
+                            if (!existingItems.contains(item.getUniqueId())
+                                    && item.getLocation().distanceSquared(location) < 36) item.remove();
+                        }
+                        for (var orb : world.getEntitiesByClass(org.bukkit.entity.ExperienceOrb.class)) {
+                            if (orb.getLocation().distanceSquared(location) >= 36) continue;
+                            restoreOrb(orb, existingOrbExperience.get(orb.getUniqueId()));
+                        }
+                        Files.deleteIfExists(sourceFile);
+                        Files.deleteIfExists(sourceFile.getParent());
+                        Files.deleteIfExists(childFile);
+                        Files.deleteIfExists(childFile.getParent());
+                        Files.deleteIfExists(probeRoot);
+                    } catch (Exception cleanupFailure) {
+                        getLogger().warning("death-loot-imported cleanup="
+                                + cleanupFailure.getClass().getSimpleName());
+                    }
+                    boolean restored = loot().table(importedTable) == null;
+                    boolean passed = naturalDeath && killerAttributed && mapped && mappedConditions
+                            && diamonds == 1 && goldRangeAmount >= 1 && goldRangeAmount <= 2
+                            && experience == 5 && restored;
+                    getLogger().info("death-loot-imported natural=" + naturalDeath
+                            + " killer-player=" + killerAttributed
+                            + " imported=" + mapped + " conditions-mapped=" + mappedConditions
+                            + " conflict-preserved=" + conflictPreserved
+                            + " nested-mapped=" + nestedMapped
+                            + " diamond=" + diamonds + " gold-range-amount=" + goldRangeAmount
+                            + " experience=" + experience
+                            + " restored=" + restored + " passed=" + passed);
+                }, 10L);
+            } catch (Throwable failure) {
+                try {
+                    loot().loadFile(lootFile.toPath());
+                    if (instance != null && instances() != null) instances().despawn(instance.instanceId());
+                    else if (zombie != null) zombie.remove();
+                    Files.deleteIfExists(sourceFile);
+                    Files.deleteIfExists(sourceFile.getParent());
+                    Files.deleteIfExists(childFile);
+                    Files.deleteIfExists(childFile.getParent());
+                    Files.deleteIfExists(probeRoot);
+                } catch (Exception cleanupFailure) {
+                    getLogger().warning("death-loot-imported cleanup="
+                            + cleanupFailure.getClass().getSimpleName());
+                }
+                getLogger().warning("death-loot-imported natural=false error="
+                        + failure.getClass().getSimpleName());
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 350L);
     }
 
     private boolean probeEntityControlled(dev.helstera.api.instance.ModelInstance instance) {
@@ -4578,6 +7603,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean borderInsideProbe = candidate.equals("border_clipped_inside_pass");
                     boolean borderOutsideProbe = candidate.equals("border_outside_fail");
                     boolean regionOutsideProbe = candidate.equals("region_probe_outside");
+                    boolean playerGateFailProbe = candidate.equals("player_gate_fail");
+                    Location playerGateLocation = null;
+                    if (playerGateFailProbe) {
+                        playerGateLocation = safeLocation.clone().add(4096, 0, 4096);
+                        playerGateLocation.getChunk().load();
+                    }
                     boolean borderProbe = borderInsideProbe || borderOutsideProbe;
                     org.bukkit.World probeWorld = safeLocation.getWorld();
                     long originalFullTime = probeWorld == null ? 0L : probeWorld.getFullTime();
@@ -4673,13 +7704,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 + " failure=no-valid-location");
                         continue;
                     }
-                    boolean accepted = naturalLocationProbe
-                            ? sp.forceSpawn(candidate)
-                            : sp.forceSpawn(candidate,
-                            candidate.equals("scoped_limit_probe") ? scopedLocation
-                                    : regionOutsideProbe ? safeLocation.clone().add(2000, 0, 2000)
-                                    : lightFailClosedProbe && configuredProbeLocation != null
-                                    ? configuredProbeLocation : safeLocation);
+                    int borderInsideAttempts = 0;
+                    boolean accepted;
+                    do {
+                        accepted = naturalLocationProbe
+                                ? sp.forceSpawn(candidate)
+                                : sp.forceSpawn(candidate,
+                                candidate.equals("scoped_limit_probe") ? scopedLocation
+                                        : playerGateFailProbe ? playerGateLocation
+                                        : regionOutsideProbe ? safeLocation.clone().add(2000, 0, 2000)
+                                        : lightFailClosedProbe && configuredProbeLocation != null
+                                        ? configuredProbeLocation : safeLocation);
+                        borderInsideAttempts++;
+                    } while (borderInsideProbe && !accepted && borderInsideAttempts < 8
+                            && "no valid spawn location".equals(sp.forceSpawnFailure(candidate)));
                     if (candidate.equals("group_probe")) {
                         var groupSpawner = sp.get(candidate);
                         int groupAlive = sp.aliveCount(candidate);
@@ -4761,6 +7799,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         getLogger().info("spawner-border id=" + candidate
                                 + " requested=" + accepted + " configured-radius=" + currentBorderSpawner.radius()
                                 + " effective-radius=" + effectiveRadius + " border-size=" + testBorderSize
+                                + (borderInsideProbe ? " attempts=" + borderInsideAttempts : "")
                                 + " restored=" + (worldBorder != null && originalBorderCenter != null
                                 && worldBorder.getCenter().equals(originalBorderCenter)
                                 && worldBorder.getSize() == originalBorderSize)
@@ -4789,6 +7828,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 + " player-limit=" + sp.get(candidate).maxPerPlayer()
                                 + " failure=" + sp.forceSpawnFailure(candidate));
                     }
+                    if (playerGateFailProbe) {
+                        double nearest = Double.POSITIVE_INFINITY;
+                        for (var player : playerGateLocation.getWorld().getPlayers()) {
+                            nearest = Math.min(nearest, player.getLocation().distance(playerGateLocation));
+                        }
+                        getLogger().info("spawner-player-gate id=" + candidate + " nearest=" + nearest
+                                + " radius=" + sp.get(candidate).playersRadius());
+                    }
                     if (lunarProbe) {
                         getLogger().info("spawner-lunar id=" + candidate
                                 + " requested=" + accepted
@@ -4814,6 +7861,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             runNaturalMobOptionTimingProbe(world, location);
             runNaturalKillTriggerProbe(world, location);
             runNaturalPlayerKillTriggerProbe(world, location);
+            if ("true".equalsIgnoreCase(System.getenv("PAPER_RAW_POTION_WORKFLOW"))) {
+                registerRawPotionExpiryProbe();
+            }
             var tracked = new java.util.ArrayList<dev.helstera.api.instance.ModelInstance>();
             dev.helstera.api.instance.ModelInstance triggerProbe = null;
             dev.helstera.api.instance.ModelInstance blockProbe = null;
@@ -5114,11 +8164,6 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                     + " player=" + holder.getName());
                         }, 240L);
                         getServer().getScheduler().runTaskLater(this, () -> {
-                            boolean expired = !holder.hasPotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
-                            boolean actionObserved = "\u00a7ePLAYER_POTION_END_OK".equals(holder.getCustomName());
-                            getLogger().info("player-potion-natural-expiry="
-                                    + (expired && actionObserved) + " expired=" + expired
-                                    + " action-observed=" + actionObserved);
                             if (holder.isValid() && !holder.isDead()) {
                                 holder.teleport(holderOriginalLocation);
                                 holder.setInvulnerable(holderWasInvulnerable);
@@ -5170,28 +8215,46 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             aiManager.attach(environmentalInstance, environmentalProfile);
                         }
                         var hazardLocation = world.getHighestBlockAt(
-                                living.getLocation().getBlockX() + 2,
-                                living.getLocation().getBlockZ()).getLocation()
+                                holder.getLocation().getBlockX() + 32,
+                                holder.getLocation().getBlockZ() + 32).getLocation()
                                 .add(0.5, 1.01, 0.5);
                         var hazardBlock = hazardLocation.getBlock();
                         var originalHazardData = hazardBlock.getBlockData().clone();
                         hazardBlock.setType(org.bukkit.Material.LAVA, false);
                         living.teleport(hazardLocation);
+                        living.setInvulnerable(false);
                         living.setNoDamageTicks(0);
-                        living.setFireTicks(80);
-                        // Paper's no-AI test entity does not reliably receive lava ticks;
-                        // this still exercises the real Bukkit damage event without an attacker.
-                        living.damage(1.0);
-                        getServer().getScheduler().runTaskLater(this, () -> {
-                            boolean environmentalDamage = living.getEquipment() != null
-                                    && living.getEquipment().getItemInMainHand().getType()
-                                    == org.bukkit.Material.DIAMOND_SWORD;
-                            getLogger().info("environmental-damage trigger=" + environmentalDamage
-                                    + " fire-ticks=" + living.getFireTicks()
-                                    + " lava=" + (hazardBlock.getType() == org.bukkit.Material.LAVA));
-                            hazardBlock.setBlockData(originalHazardData, false);
-                            if (instances() != null) instances().despawn(environmentalId);
-                        }, 80L);
+                        living.setFireTicks(0);
+                        if (living instanceof org.bukkit.entity.Mob hazardMob) {
+                            hazardMob.setAI(false);
+                        }
+                        new org.bukkit.scheduler.BukkitRunnable() {
+                            private int elapsedTicks;
+
+                            @Override
+                            public void run() {
+                                elapsedTicks++;
+                                var lastDamage = living.getLastDamageCause();
+                                boolean lavaDamage = lastDamage != null
+                                        && lastDamage.getCause()
+                                        == org.bukkit.event.entity.EntityDamageEvent.DamageCause.LAVA;
+                                boolean actionObserved = living.getEquipment() != null
+                                        && living.getEquipment().getItemInMainHand().getType()
+                                        == org.bukkit.Material.DIAMOND_SWORD;
+                                boolean passed = lavaDamage && actionObserved;
+                                if (passed || elapsedTicks >= 40) {
+                                    getLogger().info("environmental-damage natural=true source="
+                                            + (lastDamage == null ? "NONE" : lastDamage.getCause())
+                                            + " action-observed=" + actionObserved
+                                            + " elapsed-ticks=" + elapsedTicks
+                                            + " lava=" + (hazardBlock.getType() == org.bukkit.Material.LAVA)
+                                            + " passed=" + passed);
+                                    hazardBlock.setBlockData(originalHazardData, false);
+                                    if (instances() != null) instances().despawn(environmentalId);
+                                    cancel();
+                                }
+                            }
+                        }.runTaskTimer(this, 1L, 1L);
                     }
                     // The tempt selector intentionally ignores Creative and
                     // Spectator players. Restore its real eligible target
@@ -5487,16 +8550,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             && living.getEquipment() != null
                             && living.getEquipment().getItemInMainHand().getType()
                             == org.bukkit.Material.DIAMOND_SWORD;
-                    boolean damageCauseCondition = bukkitDamage;
+                    boolean damageCauseCondition = false;
                     boolean damageAmountCondition = false;
+                    boolean damageTagCondition = false;
                     if (behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry damageBehaviors
                             && skillService instanceof dev.helstera.ai.skill.SkillService damageSkills) {
                         var damageContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
                                 triggerProbe, probeLiving, 1.0, -1, 0, "on-damage", null,
                                 probeEntity, java.util.List.of(probeLiving), probeEntity.getLocation(), null,
-                                probeDamage);
+                                probeDamage, probeDamage.getCause());
                         damageAmountCondition = damageBehaviors.testCondition(
                                 damageSkills.bindCondition("damage-amount >=2"), damageContext);
+                        damageCauseCondition = damageBehaviors.testCondition(
+                                damageSkills.bindCondition("damage-cause ENTITY_ATTACK"), damageContext);
                         var bowContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
                                 triggerProbe, probeLiving, 1.0, -1, 0, "on-entity-shoot", null,
                                 probeEntity, java.util.List.of(probeLiving), probeEntity.getLocation(), null,
@@ -5510,6 +8576,36 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             && skillTriggers instanceof dev.helstera.ai.skill.SkillTriggers skillTriggerListener) {
                         skillTriggerListener.onDamage(probeDamage);
                     }
+                    long taggedDamageTriggerBefore = triggerFiredCount();
+                    boolean taggedDamageAction = false;
+                    var taggedDamageEvents = new java.util.concurrent.atomic.AtomicInteger();
+                    var taggedDamageEventCancelled = new java.util.concurrent.atomic.AtomicBoolean();
+                    org.bukkit.event.Listener taggedDamageListener = new org.bukkit.event.Listener() { };
+                    getServer().getPluginManager().registerEvent(
+                            org.bukkit.event.entity.EntityDamageByEntityEvent.class, taggedDamageListener,
+                            org.bukkit.event.EventPriority.MONITOR, (listener, event) -> {
+                                var damageEvent = (org.bukkit.event.entity.EntityDamageByEntityEvent) event;
+                                if (damageEvent.getEntity().getUniqueId().equals(probeLiving.getUniqueId())) {
+                                    taggedDamageEvents.incrementAndGet();
+                                    taggedDamageEventCancelled.set(damageEvent.isCancelled());
+                                }
+                            }, this, false);
+                    double taggedDamageHealthBefore = probeLiving.getHealth();
+                    if (skillService instanceof dev.helstera.ai.skill.SkillService damageSkills
+                            && behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry damageBehaviors) {
+                        probeLiving.setNoDamageTicks(0);
+                        var taggedDamageContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                                null, probeLiving, 1.0, -1, 0, "integration", null,
+                                probeAttacker, java.util.List.of(probeLiving), probeLiving.getLocation(), null);
+                        taggedDamageAction = runIntegrationAction(damageSkills, damageBehaviors,
+                                "damage-target 3 tags=FIRE", taggedDamageContext);
+                    }
+                    org.bukkit.event.HandlerList.unregisterAll(taggedDamageListener);
+                    boolean taggedDamageObserved = taggedDamageAction
+                            && triggerFiredCount() > taggedDamageTriggerBefore
+                            && probeLiving.getEquipment().getItemInMainHand().getType()
+                            == org.bukkit.Material.DIAMOND_SWORD;
+                    damageTagCondition = !bukkitDamage && taggedDamageObserved;
                     boolean damageTrigger = probeEntity instanceof org.bukkit.entity.LivingEntity living
                             && living.getEquipment() != null
                             && living.getEquipment().getItemInMainHand().getType()
@@ -5574,11 +8670,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " bukkit-damage=" + bukkitDamage
                             + " damage-cause-condition=" + damageCauseCondition
                             + " damage-amount-condition=" + damageAmountCondition
+                            + " damage-tag-condition=" + damageTagCondition
+                            + " tagged-damage-action=" + taggedDamageAction
+                            + " tagged-damage-events=" + taggedDamageEvents.get()
+                            + " tagged-damage-cancelled=" + taggedDamageEventCancelled.get()
+                            + " tagged-damage-health=" + taggedDamageHealthBefore + ">" + probeLiving.getHealth()
                             + " bow-tension-condition=" + bowTensionCondition
                             + " bukkit-attacked=" + bukkitAttacked
                             + " cancelled-condition=" + cancelledCondition
                             + " cancelled-before=" + cancelledBefore
-                            + " cancelled-after=" + probeDamage.isCancelled()
+                            + " cancelled-after=" + (probeDamage.isCancelled() || taggedDamageEventCancelled.get())
                             + " entity-valid=" + probeEntity.isValid()
                             + " fired-after=" + triggerFiredCount());
                     probeAttacker.remove();
@@ -6227,17 +9328,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                         new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON))), 5);
                         getServer().getPluginManager().callEvent(protectedCustomLootDeath);
                         getServer().getPluginManager().callEvent(controlCustomLootDeath);
-                        var protectedCustomItems = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
-                                .filter(item -> item.getLocation().distanceSquared(protectedDropVictim.getLocation()) < 9)
-                                .toList();
-                        var controlCustomItems = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
-                                .filter(item -> item.getLocation().distanceSquared(controlDropVictim.getLocation()) < 9)
-                                .toList();
+                        var protectedCustomItems = protectedCustomLootDeath.getDrops();
+                        var controlCustomItems = controlCustomLootDeath.getDrops();
                         boolean protectedCustomDropAbsent = protectedCustomItems.stream().noneMatch(item ->
-                                item.getItemStack().getType() == org.bukkit.Material.DIAMOND);
+                                item.getType() == org.bukkit.Material.DIAMOND);
                         boolean controlCustomDropMaterialized = controlCustomItems.stream().anyMatch(item ->
-                                item.getItemStack().getType() == org.bukkit.Material.DIAMOND
-                                        && item.getItemStack().getAmount() == 2);
+                                item.getType() == org.bukkit.Material.DIAMOND && item.getAmount() == 2);
                         preventMobKillCustomLootOption = protectedCustomDropAbsent
                                 && protectedCustomLootDeath.getDroppedExp() == 0
                                 && controlCustomDropMaterialized
@@ -6251,9 +9347,6 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 + " control-custom-present=" + controlCustomDropMaterialized
                                 + " protected-custom-exp=" + protectedCustomLootDeath.getDroppedExp()
                                 + " control-custom-exp=" + controlCustomLootDeath.getDroppedExp());
-                        java.util.stream.Stream.concat(protectedCustomItems.stream(), controlCustomItems.stream())
-                                .forEach(org.bukkit.entity.Entity::remove);
-
                         var protectedProjectileTarget = world.spawn(location.clone().add(13, 1, 0),
                                 org.bukkit.entity.Zombie.class);
                         var protectedProjectileInstance = instances().bind("example/emberling",
@@ -6405,6 +9498,69 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 70L);
     }
 
+    private void registerRawPotionExpiryProbe() {
+        if (!(skillService instanceof dev.helstera.ai.skill.SkillService skills)
+                || !(ai instanceof dev.helstera.ai.AiManager manager)) return;
+        class PotionProbe implements org.bukkit.event.Listener {
+            private org.bukkit.entity.Player player;
+            private dev.helstera.api.instance.ModelInstance instance;
+            private String originalName;
+            private boolean consumed;
+            private boolean active;
+            private boolean naturalExpiry;
+
+            @org.bukkit.event.EventHandler
+            public void join(org.bukkit.event.player.PlayerJoinEvent event) {
+                if (player != null || !event.getPlayer().getName().equalsIgnoreCase("HelsteraTester")) return;
+                player = event.getPlayer();
+                originalName = player.getCustomName();
+                instance = instances().bind("example/emberling", player,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                var profile = new dev.helstera.ai.AiProfile("paper-raw-potion-player");
+                var spec = new dev.helstera.ai.AiProfile.TriggerSpec();
+                spec.actions.add(skills.bindAction("set-name-targets &ePLAYER_POTION_END_OK"));
+                profile.triggers.put("on-potion-effect-end", spec);
+                manager.attach((dev.helstera.runtime.instance.ModelInstanceImpl) instance, profile);
+            }
+
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
+            public void consume(org.bukkit.event.player.PlayerItemConsumeEvent event) {
+                if (event.getPlayer() != player || consumed || event.getItem().getType() != org.bukkit.Material.POTION) return;
+                consumed = true;
+                getServer().getScheduler().runTaskLater(HelsteraPlugin.this, () ->
+                        active = player.hasPotionEffect(org.bukkit.potion.PotionEffectType.SPEED), 1L);
+                getServer().getScheduler().runTaskLater(HelsteraPlugin.this, () -> {
+                    boolean expired = !player.hasPotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
+                    boolean action = "\u00a7ePLAYER_POTION_END_OK".equals(player.getCustomName());
+                    getLogger().info("player-potion-natural-expiry=" + (active && naturalExpiry && expired && action)
+                            + " active=" + active + " natural-event=" + naturalExpiry
+                            + " expired=" + expired + " action-observed=" + action);
+                    cleanup();
+                }, 80L);
+            }
+
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
+            public void effect(org.bukkit.event.entity.EntityPotionEffectEvent event) {
+                if (event.getEntity() == player && consumed
+                        && event.getModifiedType().equals(org.bukkit.potion.PotionEffectType.SPEED)
+                        && event.getCause() == org.bukkit.event.entity.EntityPotionEffectEvent.Cause.EXPIRATION
+                        && event.getAction() == org.bukkit.event.entity.EntityPotionEffectEvent.Action.REMOVED) {
+                    naturalExpiry = true;
+                }
+            }
+
+            void cleanup() {
+                org.bukkit.event.HandlerList.unregisterAll(this);
+                if (instance != null && instances() != null) instances().despawn(instance.instanceId());
+                if (player != null && player.isOnline()) player.setCustomName(originalName);
+                instance = null;
+            }
+        }
+        var probe = new PotionProbe();
+        getServer().getPluginManager().registerEvents(probe, this);
+        getServer().getScheduler().runTaskLater(this, probe::cleanup, 3000L);
+    }
+
     /** Verifies killer-side on-kill dispatch against a real Bukkit death chain. */
     private void runNaturalKillTriggerProbe(org.bukkit.World world, Location origin) {
         if (world == null || origin == null || instances() == null
@@ -6474,9 +9630,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             getLogger().warning("player-kill-trigger unavailable=true passed=false");
             return;
         }
-        org.bukkit.entity.Player victim = getServer().getOnlinePlayers().stream()
-                .filter(player -> player.isOnline() && !player.isDead())
-                .findFirst().orElse(null);
+        org.bukkit.entity.Player guest = getServer().getPlayerExact("AudienceGuest");
+        org.bukkit.entity.Player victim = guest != null && guest.isOnline() && !guest.isDead()
+                ? guest : getServer().getOnlinePlayers().stream()
+                        .filter(player -> player.isOnline() && !player.isDead())
+                        .findFirst().orElse(null);
         if (victim == null) {
             getLogger().warning("player-kill-trigger unavailable=true passed=false");
             return;
@@ -7119,11 +10277,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         instance, holder, 1.0, 2.0, 0, "integration");
                 var playersInWorld = dev.helstera.api.behavior.Targeters.select(
                         "@Players_In_World", worldTargetContext, List.of(monster), List.of());
+                var playersOnServer = dev.helstera.api.behavior.Targeters.select(
+                        "@PlayersOnServer", worldTargetContext, List.of(monster), List.of());
+                var everyoneAlias = dev.helstera.api.behavior.Targeters.select(
+                        "@everyone", worldTargetContext, List.of(monster), List.of());
                 var mobsInWorld = dev.helstera.api.behavior.Targeters.select(
                         "@Mobs_In_World", worldTargetContext, List.of(holder), List.of());
+                boolean everyoneMatchesServer = new java.util.HashSet<>(everyoneAlias)
+                        .equals(new java.util.HashSet<>(playersOnServer));
                 boolean worldPlayerTarget = playersInWorld.contains(holder)
                         && playersInWorld.stream().allMatch(candidate -> candidate instanceof org.bukkit.entity.Player
                         && candidate.isValid() && !candidate.isDead());
+                boolean serverPlayerTargets = playersOnServer.containsAll(
+                        org.bukkit.Bukkit.getOnlinePlayers())
+                        && playersOnServer.stream().allMatch(candidate -> candidate instanceof org.bukkit.entity.Player
+                        && candidate.isValid() && !candidate.isDead())
+                        && everyoneMatchesServer;
                 boolean worldMobTarget = mobsInWorld.contains(monster)
                         && mobsInWorld.stream().allMatch(candidate -> !(candidate instanceof org.bukkit.entity.Player)
                         && candidate.isValid() && !candidate.isDead());
@@ -7137,6 +10306,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         "@Nearest_Living_Entity", worldTargetContext, nearestCandidates, List.of());
                 var nearestMob = dev.helstera.api.behavior.Targeters.select(
                         "@Nearest_Mob", worldTargetContext, nearestCandidates, List.of());
+                var malformedTargetSyntax = dev.helstera.api.behavior.Targeters.select(
+                        "@targets{limit=1;;}", worldTargetContext, List.of(monster), List.of());
+                var validTargetSyntax = dev.helstera.api.behavior.Targeters.select(
+                        "@targets{limit=1}", worldTargetContext, List.of(monster), List.of());
+                boolean targeterSyntaxFailClosed = malformedTargetSyntax.isEmpty()
+                        && validTargetSyntax.equals(List.of(holder));
                 double holderDistance = instance.location().distanceSquared(holder.getLocation());
                 double monsterDistance = instance.location().distanceSquared(monster.getLocation());
                 boolean nearestLivingTarget = nearestLiving.size() == 1
@@ -7148,7 +10323,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean passed = playerTarget && monsterTarget && clearNoFallback
                         && ownerTarget && factionTarget && conditionalTarget
                         && worldPlayerTarget && worldMobTarget && worldCasterExcluded && worldChainFiltered
+                        && serverPlayerTargets
                         && nearestLivingTarget && nearestMobTarget
+                        && targeterSyntaxFailClosed
                         && setTargetMechanic && clearTargetMechanic && contextChainAction
                         && mob.getTarget() == holder;
                 getLogger().info("ai-selector-core goals=" + goals
@@ -7159,11 +10336,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " faction-target=" + factionTarget
                         + " conditional-target=" + conditionalTarget
                         + " players-in-world=" + worldPlayerTarget
+                        + " players-on-server=" + serverPlayerTargets
+                        + " player-aliases=" + everyoneMatchesServer
                         + " mobs-in-world=" + worldMobTarget
                         + " world-caster-excluded=" + worldCasterExcluded
                         + " world-chain-filtered=" + worldChainFiltered
                         + " nearest-living=" + nearestLivingTarget
                         + " nearest-mob=" + nearestMobTarget
+                        + " targeter-syntax=" + targeterSyntaxFailClosed
                         + " set-target-mechanic=" + setTargetMechanic
                         + " clear-target-mechanic=" + clearTargetMechanic
                         + " context-chain-action=" + contextChainAction
@@ -7298,6 +10478,40 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var context = dev.helstera.api.behavior.BehaviorContext.execution(
                         instance, player, 1.0, 0.0, 0, "IDLE", null, player,
                         java.util.List.of(player), audienceOrigin);
+                Path messageRoot = Files.createTempDirectory("helstera-message-import-");
+                try {
+                    Path messageSkills = Files.createDirectory(messageRoot.resolve("Skills"));
+                    Path messageSource = messageSkills.resolve("probe.yml");
+                    Files.writeString(messageSource, """
+                            skills:
+                              probe:
+                                Skills:
+                                  - 'message{m="PAPER_IMPORT_MESSAGE, radius=10; complete"}'
+                                  - 'message{m="PAPER_ESCAPE \\"quoted; radius=10\\" C:\\\\home } done"} @trigger'
+                            """);
+                    var messageEntry = new MythicMobsImporter().convert(messageSource).stream()
+                            .filter(entry -> "skills.yml".equals(entry.get("target-file")))
+                            .findFirst().orElseThrow();
+                    var messageYaml = YamlConfiguration.loadConfiguration(
+                            new java.io.StringReader(String.valueOf(messageEntry.get("content"))));
+                    var messageActions = messageYaml.getStringList("skills.probe.on-decision");
+                    String importedMessageAction = messageActions.size() == 2
+                            ? skills.bindAction(messageActions.get(0)) : null;
+                    boolean messageImported = messageActions.size() == 2
+                            && messageYaml.getStringList("skills.probe.unsupported").isEmpty()
+                            && importedMessageAction != null && skills.runAction(importedMessageAction, context);
+                    getLogger().info("imported-message-client dispatched=" + messageImported);
+                    String escapedMessageAction = messageActions.size() == 2
+                            ? skills.bindAction(messageActions.get(1)) : null;
+                    boolean escapedMessageImported = escapedMessageAction != null
+                            && messageYaml.getStringList("skills.probe.unsupported").isEmpty()
+                            && skills.runAction(escapedMessageAction, context);
+                    getLogger().info("imported-escaped-message-client dispatched=" + escapedMessageImported);
+                } finally {
+                    Files.deleteIfExists(messageRoot.resolve("Skills/probe.yml"));
+                    Files.deleteIfExists(messageRoot.resolve("Skills"));
+                    Files.deleteIfExists(messageRoot);
+                }
                 var message = skills.bindAction("audience-message target &aAUDIENCE_MESSAGE_OK");
                 var title = skills.bindAction("audience-title target &bAUDIENCE_TITLE_OK 0 20 0");
                 var actionbar = skills.bindAction("audience-actionbar target &eAUDIENCE_ACTIONBAR_OK");
@@ -7644,16 +10858,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             String profileName = (aiProfileOverride != null && !aiProfileOverride.isBlank())
                     ? aiProfileOverride.trim()
                     : aiSec == null ? "default" : aiSec.getString("profile", "default");
-            AiProfile profile = ai().profile(profileName);
-            profile = overrideProfile(profile, behaviorSec);
-            applyMobOptions(profile, mobOptions);
-            // 生物级技能引用：与档案级 skills 同样经 SkillService 展开为已绑定键
-            if (skillService instanceof SkillService sk) {
-                sk.expand(profile, behaviorSec.getStringList("skills"));
-            }
-            profile.goals.addAll(behaviorSec.getStringList("goals"));
-            profile.targets.addAll(behaviorSec.getStringList("targets"));
-            ai().attach((dev.helstera.runtime.instance.ModelInstanceImpl) inst, profile);
+            java.util.function.UnaryOperator<AiProfile> overlay = baseProfile -> {
+                AiProfile profile = overrideProfile(baseProfile, behaviorSec);
+                applyMobOptions(profile, mobOptions);
+                if (skillService instanceof SkillService sk) {
+                    sk.expand(profile, behaviorSec.getStringList("skills"));
+                }
+                profile.goals.addAll(behaviorSec.getStringList("goals"));
+                profile.targets.addAll(behaviorSec.getStringList("targets"));
+                return profile;
+            };
+            ai().attach((dev.helstera.runtime.instance.ModelInstanceImpl) inst,
+                    overlay.apply(ai().profile(profileName)), profileName, overlay);
         }
         // 实例就绪后派发生成事件：SkillTriggers 的 on-spawn 依赖它。
         // 此前全工程没有任何地方 post 该事件，触发器链路完全未接通。
@@ -7952,9 +11168,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 && cause == org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) event.setCancelled(true);
     }
 
-    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
+    public void onConfirmedEntityDeath(org.bukkit.event.entity.EntityDeathEvent e) {
+        if (!e.isCancelled()) releasePersistentMobChunk(e.getEntity());
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityDeathForLoot(org.bukkit.event.entity.EntityDeathEvent e) {
-        releasePersistentMobChunk(e.getEntity());
+        if (e.isCancelled()) return;
         if (instances == null) return;
         org.bukkit.entity.Entity ent = e.getEntity();
         org.bukkit.entity.Player killer = e.getEntity().getKiller();
@@ -7999,29 +11220,43 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         e.setDroppedExp(0);
         double luck = 0;
         if (inst.lootUsesLuck && e.getEntity().getKiller() != null) {
-            try {
-                var inv = e.getEntity().getKiller().getInventory();
-                var held = inv.getItemInMainHand();
-                if (held != null && held.getType() != org.bukkit.Material.AIR) {
-                    var ench = held.getEnchantmentLevel(
-                            org.bukkit.enchantments.Enchantment.LOOTING);
-                    luck = ench;
-                }
-            } catch (Throwable ignored) {
-            }
+            luck = resolveDropLuck(e.getEntity().getKiller());
         }
         try {
             // 传入击杀者与 mob 等级：min-tier-level 门槛同时参考玩家档位和 mob 等级，
             // 取 max(玩家档位, mob等级) 作为有效档位
             int mobLevel = (inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl)
                     && impl.level > 0 ? impl.level : 0;
-            loot.rollAndDrop(ent.getLocation(), inst.lootTable, luck, e.getEntity().getKiller(), mobLevel);
+            boolean traceLoot = getConfig().getBoolean("debug.trace-triggers", false)
+                    && inst.lootTable.toLowerCase(java.util.Locale.ROOT).contains("bonus");
+            var generatedItems = loot.rollItems(ent.getLocation(), inst.lootTable, luck,
+                    e.getEntity().getKiller(), mobLevel, ent);
+            e.getDrops().addAll(generatedItems);
+            if (traceLoot) {
+                String drops = generatedItems.stream()
+                        .map(item -> item.getType().name() + ":" + item.getAmount())
+                        .collect(java.util.stream.Collectors.joining(";"));
+                getLogger().info("[loot-debug] table=" + inst.lootTable + " level=" + mobLevel
+                        + " luck=" + luck + " generated-items=" + generatedItems.size()
+                        + " dropper=" + ent.getType() + " items=" + drops);
+            }
             int experience = experienceOverride >= 0
                     ? experienceOverride
-                    : loot.experience(inst.lootTable);
+                    : loot.experience(inst.lootTable, new java.util.Random(), luck, ent.getLocation(),
+                            e.getEntity().getKiller(), mobLevel, ent);
             e.setDroppedExp(experience);
         } catch (Throwable t) {
             getLogger().warning("掉落投掷失败: " + t);
+        }
+    }
+
+    static double resolveDropLuck(org.bukkit.entity.Player killer) {
+        if (killer == null) return 0;
+        try {
+            var attribute = killer.getAttribute(org.bukkit.attribute.Attribute.GENERIC_LUCK);
+            return attribute == null ? 0 : attribute.getValue();
+        } catch (RuntimeException ignored) {
+            return 0;
         }
     }
 
@@ -8135,6 +11370,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return resolveConfiguredItem(id, new java.util.HashSet<>());
     }
 
+    private ConfigurationSection configuredItemSection(String id) {
+        ConfigurationSection items = customItems;
+        if (items == null || id == null || id.isBlank()) return null;
+        String trimmed = id.trim();
+        ConfigurationSection section = items.getConfigurationSection(trimmed);
+        if (section == null) section = items.getConfigurationSection(trimmed.replace(':', '_').replace('.', '_'));
+        if (section == null) for (String key : items.getKeys(false)) {
+            ConfigurationSection candidate = items.getConfigurationSection(key);
+            if (candidate != null && trimmed.equalsIgnoreCase(candidate.getString("id", key))) return candidate;
+        }
+        return section;
+    }
+
+    private boolean hasConfiguredItem(String id) {
+        return configuredItemSection(id) != null;
+    }
+
     private org.bukkit.inventory.ItemStack resolveConfiguredItem(String id, java.util.Set<String> resolving) {
         ConfigurationSection items = customItems;
         if (items == null || id == null || id.isBlank()) return null;
@@ -8143,25 +11395,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             getLogger().warning("[Items] template cycle detected at " + id);
             return null;
         }
-        ConfigurationSection section = items.getConfigurationSection(id.trim());
+        ConfigurationSection section = configuredItemSection(id);
         if (resolving.size() > 32) {
             resolving.remove(identity);
             getLogger().warning("[Items] template chain exceeds 32 levels at " + id);
             return null;
         }
-        if (section == null) section = items.getConfigurationSection(id.trim().replace(':', '_').replace('.', '_'));
-        if (section == null) {
-            for (String key : items.getKeys(false)) {
-                ConfigurationSection candidate = items.getConfigurationSection(key);
-                if (candidate != null && id.equalsIgnoreCase(candidate.getString("id", key))) {
-                    section = candidate;
-                    break;
-                }
-            }
-        }
         if (section == null) { resolving.remove(identity); return null; }
+        if (section.contains("unsupported.template")) {
+            resolving.remove(identity);
+            getLogger().warning("[Items] unsupported template for " + id);
+            return null;
+        }
         String template = section.getString("template");
-        if (template != null && !template.isBlank()) {
+        if (section.contains("template")) {
+            if (!section.isString("template") || template == null || template.isBlank()) {
+                resolving.remove(identity);
+                getLogger().warning("[Items] invalid template for " + id);
+                return null;
+            }
             org.bukkit.inventory.ItemStack inherited = resolveConfiguredItem(template, resolving);
             if (inherited != null) {
                 inherited = inherited.clone();
@@ -8175,6 +11427,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 resolving.remove(identity);
                 return inherited;
             }
+            resolving.remove(identity);
+            getLogger().warning("[Items] unresolved template " + template + " for " + id);
+            return null;
         }
         org.bukkit.inventory.ItemStack stack = parseItemStack(section.getString("id", section.getString("material")));
         if (stack == null) { resolving.remove(identity); return null; }
@@ -8193,6 +11448,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (reg == null || id == null) return resolveConfiguredItem(id);
         org.bukkit.inventory.ItemStack configured = resolveConfiguredItem(id);
         if (configured != null) return configured;
+        if (hasConfiguredItem(id)) return null;
         for (var a : reg.all()) {
             try {
                 if (!a.hasCapability(dev.helstera.api.integration.Capability.CUSTOM_ITEM_RESOLVE)) continue;
@@ -8226,9 +11482,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 String raw = itemNode == null ? itemsSec.getString(slotKey, "")
                         : itemNode.getString("item", itemNode.getString("material", itemNode.getString("spec", "")));
                 if (raw == null || raw.isBlank()) continue;
-                org.bukkit.inventory.ItemStack stack = parseItemStack(raw);
-                if (stack == null) {
-                    stack = resolveCustomItem((dev.helstera.api.integration.IntegrationRegistry) integrations, raw.trim());
+                org.bukkit.inventory.ItemStack stack = resolveCustomItem((dev.helstera.api.integration.IntegrationRegistry) integrations, raw.trim());
+                if (stack == null && !hasConfiguredItem(raw.trim())) {
+                    stack = parseItemStack(raw);
                 }
                 if (stack == null || stack.getType() == org.bukkit.Material.AIR) continue;
                 applyConfiguredEnchantments(stack, sec.getConfigurationSection("item-enchantments." + slotKey));
@@ -8325,9 +11581,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             return;
         }
         String requested = raw.trim();
-        org.bukkit.inventory.ItemStack stack = parseItemStack(requested);
-        if (stack == null) {
-            stack = resolveCustomItem((dev.helstera.api.integration.IntegrationRegistry) integrations, requested);
+        org.bukkit.inventory.ItemStack stack = resolveCustomItem((dev.helstera.api.integration.IntegrationRegistry) integrations, requested);
+        if (stack == null && !hasConfiguredItem(requested)) {
+            stack = parseItemStack(requested);
         }
         if (stack == null || stack.getType() == org.bukkit.Material.AIR) {
             getLogger().warning("[HorseArmor] 无法解析物品，保持原装甲: " + requested);
@@ -8349,9 +11605,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             stand.getEquipment().setItem(slot, null);
             return;
         }
-        org.bukkit.inventory.ItemStack stack = parseItemStack(raw);
-        if (stack == null) {
-            stack = resolveCustomItem((dev.helstera.api.integration.IntegrationRegistry) integrations, raw);
+        org.bukkit.inventory.ItemStack stack = resolveCustomItem((dev.helstera.api.integration.IntegrationRegistry) integrations, raw);
+        if (stack == null && !hasConfiguredItem(raw)) {
+            stack = parseItemStack(raw);
         }
         if (stack != null && stack.getType() != org.bukkit.Material.AIR) {
             stand.getEquipment().setItem(slot, stack);
@@ -9323,7 +12579,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     /** Parses material:amount:enchantment:level without losing colon-separated levels. */
     static ParsedItemSpec parseItemSpec(String raw) {
         if (raw == null || raw.isBlank()) return null;
-        String[] parts = raw.trim().split(":");
+        String[] parts = raw.trim().split(":", -1);
         int cursor = 0;
         String material = parts[cursor++].trim();
         if (material.equalsIgnoreCase("minecraft") && cursor < parts.length) {
@@ -9334,6 +12590,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (cursor < parts.length && isIntegerToken(parts[cursor])) {
             amount = Math.max(1, Integer.parseInt(parts[cursor].trim()));
             cursor++;
+        } else if (cursor < parts.length) {
+            return null;
         }
         List<ParsedEnchantment> enchantments = new ArrayList<>();
         if (cursor < parts.length) {
@@ -9420,6 +12678,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (sk == null) return false;
         var cfg = YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "skills.yml"));
         try {
+            reloadPins(source);
             sk.loadSkills(cfg.getConfigurationSection("skills"));
             var sec = cfg.getConfigurationSection("skills");
             int count = sec == null ? 0 : sec.getKeys(false).size();
@@ -9434,6 +12693,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             getLogger().warning(source + "重载 skills.yml 失败: " + t);
             return false;
         }
+    }
+
+    private void reloadPins(String source) {
+        if (pinRegistry == null) return;
+        java.io.File file = new java.io.File(getDataFolder(), "pins.yml");
+        if (!file.exists()) {
+            try {
+                saveResource("pins.yml", false);
+            } catch (IllegalArgumentException e) {
+                getLogger().warning("无法创建 pins.yml: " + e.getMessage());
+                pinRegistry.load(null);
+                return;
+            }
+        }
+        var config = YamlConfiguration.loadConfiguration(file);
+        for (String warning : pinRegistry.load(config)) {
+            getLogger().warning("[Pin] " + warning);
+        }
+        getLogger().info(source + "加载了 " + pinRegistry.size() + " 个 Pin（pins.yml）");
     }
 
     public boolean reloadCustomMenus() {
@@ -9453,17 +12731,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    public void reloadLootAndSpawners() {
+    public boolean reloadLootAndSpawners() {
+        boolean success = true;
         if (loot() != null) {
-            loot().load(YamlConfiguration.loadConfiguration(
-                    new java.io.File(getDataFolder(), "loot.yml")).getConfigurationSection("tables"));
+            try {
+                loot().loadFile(new java.io.File(getDataFolder(), "loot.yml").toPath());
+            } catch (java.io.IOException ex) {
+                success = false;
+                getLogger().warning("掉落表重载失败，已禁用掉落表: " + ex.getMessage());
+            }
         }
         if (spawners() != null) {
             spawners().saveState(new java.io.File(getDataFolder(), "spawner-state.yml"));
-            spawners().load(YamlConfiguration.loadConfiguration(
-                    new java.io.File(getDataFolder(), "spawners.yml")));
-            spawners().loadState(new java.io.File(getDataFolder(), "spawner-state.yml"));
-            spawners().start();
+            try {
+                spawners().loadFile(new java.io.File(getDataFolder(), "spawners.yml").toPath());
+                spawners().loadState(new java.io.File(getDataFolder(), "spawner-state.yml"));
+                spawners().start();
+            } catch (java.io.IOException ex) {
+                success = false;
+                spawners().stop();
+                getLogger().warning("刷怪点重载失败，已禁用刷怪点: " + ex.getMessage());
+            }
         }
         // 对话系统就地重载：不打断正在运行的 cinematic
         if (dialogueService != null) {
@@ -9479,6 +12767,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         for (String w : mobCfgWarn) {
             getLogger().warning("[生物配置] " + w);
         }
+        return success;
     }
 
     /** 刷怪点服务（spawners.yml），未启用时为 null。 */
@@ -9862,7 +13151,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         Path mobsDir = getDataFolder().toPath().resolve("mobs").normalize();
         Path file = mobsDir.resolve(id + ".yml").normalize();
         if (!file.startsWith(mobsDir) || !Files.isRegularFile(file)) return null;
-        return YamlConfiguration.loadConfiguration(file.toFile());
+        var config = YamlConfiguration.loadConfiguration(file.toFile());
+        try {
+            dev.helstera.api.util.NullImmunityConditions.restore(config, file);
+        } catch (java.io.IOException | org.yaml.snakeyaml.error.YAMLException ex) {
+            getLogger().warning("Cannot inspect mob conditions in " + file + ": " + ex.getMessage());
+            return null;
+        }
+        return config;
     }
 
     private static boolean isMobId(String id) {
@@ -10358,8 +13654,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
 
         @Override public boolean reloadLoot() {
-            reloadLootAndSpawners();
-            return true;
+            return PrimaryThreadCall.run(HelsteraPlugin.this, HelsteraPlugin.this::reloadLootAndSpawners);
         }
 
         @Override public java.util.List<String> lootTables() {

@@ -77,7 +77,7 @@ public final class Placeholders {
         return switch (scope) {
             case "caster" -> caster(ctx, field);
             case "target" -> target(ctx, field);
-            case "skill" -> skill(ctx, field);
+            case "skill" -> skill(ctx, dot < 0 ? "" : key.substring(dot + 1));
             case "mob" -> caster(ctx, field);       // 兼容旧写法
             case "player" -> target(ctx, field);    // 公告里的 %player%
             default -> null;
@@ -192,8 +192,14 @@ public final class Placeholders {
         return null;
     }
 
-    /** skill.* 记录的是「当前技能上下文」，目前只有触发器名可用。 */
+    /** Resolves current skill context and skill-tree variables. */
     private static String skill(BehaviorContext ctx, String field) {
+        if (field.regionMatches(true, 0, "var.", 0, 4) && field.length() > 4) {
+            String name = field.substring(4);
+            return ctx.skillTree().flatMap(tree -> tree.variable(name))
+                    .filter(value -> value instanceof Number || value instanceof CharSequence || value instanceof Boolean)
+                    .map(Object::toString).orElse(null);
+        }
         field = normalizeField(field);
         if (field.equals("trigger") || field.equals("name")) return ctx.state();
         if (field.equals("health")) return fmt(ctx.healthRatio() * 100.0);

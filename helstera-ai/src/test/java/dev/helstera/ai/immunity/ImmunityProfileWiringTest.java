@@ -11,6 +11,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.*;
 
 /**
  * 档案级 {@code immunities} / {@code damage-modifiers} 的接线测试。
@@ -21,6 +22,262 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 服务端不会有任何异常。</p>
  */
 class ImmunityProfileWiringTest {
+
+    @Test
+    void invalidSectionMultiplierNeverBecomesImmunity() {
+        var p = profile("""
+                damage-modifiers:
+                  FIRE: {multiplier: invalid}
+                  PROJECTILE: {multiplier: false, immune: true}
+                  MAGIC: {multiplier: '0.5'}
+                """);
+        var table = p.immunityTable();
+        assertFalse(table.evaluate("FIRE", 10).matched());
+        assertFalse(table.evaluate("PROJECTILE", 10).matched());
+        assertEquals(5, table.evaluate("MAGIC", 10).damage(), 1e-9);
+        assertEquals(2, p.immunityWarnings().stream().filter(w -> w.contains("倍率非法")).count());
+    }
+
+    @Test
+    void nativeMobNullConditionsRemainClosed(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        var file = root.resolve("mob.yml");
+        java.nio.file.Files.writeString(file, """
+                ai:
+                  immunities:
+                    FIRE:
+                      when: null
+                  damage-modifiers:
+                    PROJECTILE:
+                      multiplier: 0.5
+                      conditions: ~
+                    MAGIC: 0.5
+                    LAVA:
+                      multiplier: null
+                      immune: true
+                    POISON: null
+                """);
+        var config = YamlConfiguration.loadConfiguration(file.toFile());
+        dev.helstera.api.util.NullImmunityConditions.restore(config, file);
+        var profile = AiProfile.fromSection("p", config.getConfigurationSection("ai"));
+        var table = profile.immunityTable();
+        assertFalse(table.evaluate("FIRE", 10, ignored -> true).matched());
+        assertFalse(table.evaluate("PROJECTILE", 10, ignored -> true).matched());
+        assertFalse(table.evaluate("LAVA", 10, ignored -> true).matched());
+        assertFalse(table.evaluate("POISON", 10, ignored -> true).matched());
+        assertTrue(profile.immunityWarnings().stream().anyMatch(w -> w.contains("POISON")));
+        assertEquals(5, table.evaluate("MAGIC", 10, ignored -> true).damage(), 1e-9);
+    }
+
+    @Test
+    void nativeImmunityEntriesRejectInvalidValues(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        var file = root.resolve("immunities.yml");
+        java.nio.file.Files.writeString(file, """
+                ai:
+                  immunities:
+                    FIRE: false
+                    PROJECTILE: invalid
+                    MAGIC: null
+                    FALL:
+                      unknown-gate: true
+                    DROWNING: true
+                    POISON:
+                      when: 'health-above 0.7'
+                """);
+        var config = YamlConfiguration.loadConfiguration(file.toFile());
+        dev.helstera.api.util.NullImmunityConditions.restore(config, file);
+        var profile = AiProfile.fromSection("p", config.getConfigurationSection("ai"));
+        var table = profile.immunityTable();
+        for (String cause : java.util.List.of("FIRE", "PROJECTILE", "MAGIC", "FALL")) {
+            assertFalse(table.evaluate(cause, 10, ignored -> true).matched(), cause);
+            assertTrue(profile.immunityWarnings().stream().anyMatch(w -> w.contains(cause)), cause);
+        }
+        assertEquals(0, table.evaluate("DROWNING", 10, ignored -> false).damage(), 1e-9);
+        assertFalse(table.evaluate("POISON", 10, ignored -> false).matched());
+        assertEquals(0, table.evaluate("POISON", 10, ignored -> true).damage(), 1e-9);
+    }
+
+    @Test
+    void nativeNullUnknownFieldsAndInvalidImmuneFailClosed(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        var file = root.resolve("invalid-fields.yml");
+        java.nio.file.Files.writeString(file, """
+                ai:
+                  immunities:
+                    FIRE:
+                      unknown-gate: null
+                  damage-modifiers:
+                    PROJECTILE:
+                      multiplier: 0.5
+                      unknown-gate: null
+                    MAGIC:
+                      multiplier: 0.5
+                      unknown-gate: true
+                    FALL:
+                      multiplier: 0.5
+                      immune: invalid
+                    DROWNING:
+                      multiplier: 0.5
+                      immune: null
+                    POISON: 0.5
+                """);
+        var config = YamlConfiguration.loadConfiguration(file.toFile());
+        dev.helstera.api.util.NullImmunityConditions.restore(config, file);
+        var profile = AiProfile.fromSection("p", config.getConfigurationSection("ai"));
+        for (String cause : java.util.List.of("FIRE", "PROJECTILE", "MAGIC", "FALL", "DROWNING")) {
+            assertFalse(profile.immunityTable().evaluate(cause, 10, ignored -> true).matched(), cause);
+            assertTrue(profile.immunityWarnings().stream().anyMatch(w -> w.contains(cause)), cause);
+        }
+        assertEquals(5, profile.immunityTable().evaluate("POISON", 10, ignored -> true).damage(), 1e-9);
+    }
+
+    @Test
+    void nestedNullUnknownFieldsRemainClosed(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        var file = root.resolve("nested-null.yml");
+        java.nio.file.Files.writeString(file, """
+                ai:
+                  immunities:
+                    FIRE:
+                      custom:
+                        nested: {missing: null}
+                  damage-modifiers:
+                    PROJECTILE:
+                      multiplier: 0.5
+                      custom:
+                        nested: {missing: null}
+                    MAGIC: 0.5
+                unrelated:
+                  missing: null
+                """);
+        var config = YamlConfiguration.loadConfiguration(file.toFile());
+        assertEquals(2, dev.helstera.api.util.NullImmunityConditions.restore(config, file));
+        assertEquals(dev.helstera.api.util.ConditionListParser.INVALID_CONDITION,
+                config.getString("ai.immunities.FIRE.custom.nested.missing"));
+        assertFalse(config.contains("unrelated.missing"));
+        var profile = AiProfile.fromSection("p", config.getConfigurationSection("ai"));
+        for (String cause : List.of("FIRE", "PROJECTILE")) {
+            assertFalse(profile.immunityTable().evaluate(cause, 10, ignored -> true).matched(), cause);
+            assertTrue(profile.immunityWarnings().stream().anyMatch(w -> w.contains(cause)), cause);
+        }
+        assertEquals(5, profile.immunityTable().evaluate("MAGIC", 10, ignored -> true).damage(), 1e-9);
+    }
+
+    @Test
+    void profileReloadRetainsNullConditionsBeforeConfigSave(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        var file = root.resolve("config.yml");
+        java.nio.file.Files.writeString(file, """
+                ai:
+                  profiles:
+                    boss:
+                      damage-modifiers:
+                        FIRE:
+                          multiplier: 0.5
+                          when: null
+                """);
+        var config = YamlConfiguration.loadConfiguration(file.toFile());
+        assertEquals(1, dev.helstera.api.util.NullImmunityConditions.restore(config, file));
+        config.set("other-default", true);
+        config.save(file.toFile());
+        var reloaded = YamlConfiguration.loadConfiguration(file.toFile());
+        var manager = new dev.helstera.ai.AiManager(null, null,
+                mock(dev.helstera.api.event.HelsteraEventBus.class));
+        try {
+            manager.loadProfiles(reloaded.getConfigurationSection("ai.profiles"));
+            assertFalse(manager.profiles().get("boss").immunityTable()
+                    .evaluate("FIRE", 10, ignored -> true).matched());
+        } finally {
+            manager.stop();
+        }
+    }
+
+    @Test
+    void skillDamageUsesVictimModifierOnce() {
+        var registry = new dev.helstera.ai.BehaviorRegistryImpl();
+        var skills = new dev.helstera.ai.skill.SkillService(registry, null);
+        var manager = spy(new dev.helstera.ai.AiManager(null, null,
+                mock(dev.helstera.api.event.HelsteraEventBus.class)));
+        manager.setBehaviors(registry);
+        manager.setSkills(skills);
+        var attacker = mock(dev.helstera.runtime.instance.ModelInstanceImpl.class);
+        var victim = mock(dev.helstera.runtime.instance.ModelInstanceImpl.class);
+        var attackerEntity = mock(org.bukkit.entity.LivingEntity.class);
+        var victimEntity = mock(org.bukkit.entity.LivingEntity.class);
+        var victimId = java.util.UUID.randomUUID();
+        when(attacker.isValid()).thenReturn(true);
+        when(attacker.instanceId()).thenReturn(1);
+        when(attacker.baseEntity()).thenReturn(java.util.Optional.of(attackerEntity));
+        when(victim.instanceId()).thenReturn(2);
+        when(victim.boundEntityId()).thenReturn(java.util.Optional.of(victimId));
+        when(victimEntity.getUniqueId()).thenReturn(victimId);
+        when(victimEntity.getMaxHealth()).thenReturn(20.0);
+        when(victimEntity.getHealth()).thenReturn(16.0);
+        when(victimEntity.getLocation()).thenReturn(new org.bukkit.Location(null, 0, 0, 0));
+        doReturn(List.of(victim)).when(manager).allInstances();
+        doReturn(profile("immunities: [MAGIC]\n")).when(manager).profileOf(1);
+        doReturn(profile("damage-modifiers:\n  ENTITY_ATTACK:\n    multiplier: 0.5\n    when: 'health-above 0.7'\n"))
+                .when(manager).profileOf(2);
+        var event = mock(org.bukkit.event.entity.EntityDamageEvent.class);
+        when(event.getEntity()).thenReturn(victimEntity);
+        when(event.getCause()).thenReturn(org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK);
+        when(event.getDamage()).thenReturn(10.0);
+        var listener = new ImmunityListener(manager);
+        doAnswer(invocation -> { listener.onDamage(event); return null; })
+                .when(victimEntity).damage(10.0, attackerEntity);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                attacker, victimEntity, 1, 0, 0, "skill", null, victimEntity,
+                List.of(victimEntity), null, null);
+        try {
+            String action = skills.bindAction("damage-percent{amount=50}");
+            assertTrue(registry.runAction(action, context));
+            verify(victimEntity).damage(10.0, attackerEntity);
+            verify(event).setDamage(5.0);
+            verify(manager, never()).profileOf(1);
+        } finally {
+            manager.stop();
+        }
+    }
+
+    @Test
+    void listenerBindsParameterizedAndCompositeConditions() {
+        var registry = new dev.helstera.ai.BehaviorRegistryImpl();
+        var skills = new dev.helstera.ai.skill.SkillService(registry, null);
+        var manager = spy(new dev.helstera.ai.AiManager(null, null,
+                mock(dev.helstera.api.event.HelsteraEventBus.class)));
+        manager.setBehaviors(registry);
+        manager.setSkills(skills);
+        var instance = mock(dev.helstera.runtime.instance.ModelInstanceImpl.class);
+        var entity = mock(org.bukkit.entity.LivingEntity.class);
+        var id = java.util.UUID.randomUUID();
+        when(instance.boundEntityId()).thenReturn(java.util.Optional.of(id));
+        when(instance.instanceId()).thenReturn(1);
+        when(entity.getUniqueId()).thenReturn(id);
+        when(entity.getHealth()).thenReturn(16.0);
+        when(entity.getMaxHealth()).thenReturn(20.0);
+        when(entity.getLocation()).thenReturn(new org.bukkit.Location(null, 0, 0, 0));
+        doReturn(List.of(instance)).when(manager).allInstances();
+        var event = mock(org.bukkit.event.entity.EntityDamageEvent.class);
+        when(event.getEntity()).thenReturn(entity);
+        when(event.getCause()).thenReturn(org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE);
+        when(event.getDamage()).thenReturn(10.0);
+        var listener = new ImmunityListener(manager);
+        try {
+            doReturn(profile("damage-modifiers:\n  FIRE:\n    multiplier: 0.5\n    when: 'health-above 0.7 || health-below 0.2'\n"))
+                    .when(manager).profileOf(1);
+            listener.onDamage(event);
+            verify(event).setDamage(5.0);
+
+            clearInvocations(event);
+            doReturn(profile("damage-modifiers:\n  FIRE:\n    multiplier: 0.5\n    when: 'health-above 0.9 || health-below 0.2'\n"))
+                    .when(manager).profileOf(1);
+            listener.onDamage(event);
+            verify(event, never()).setDamage(anyDouble());
+
+            doReturn(profile("damage-modifiers:\n  FIRE:\n    multiplier: 0.5\n    when: 'health-above 0.7 ||'\n"))
+                    .when(manager).profileOf(1);
+            listener.onDamage(event);
+            verify(event, never()).setDamage(anyDouble());
+        } finally {
+            manager.stop();
+        }
+    }
 
     private static AiProfile profile(String yml) {
         return AiProfile.fromSection("p",
@@ -104,6 +361,28 @@ class ImmunityProfileWiringTest {
                 t.rules().get(0).conditions());
         assertTrue(t.evaluate("FIRE", 10.0, ignored -> true).matched());
         assertFalse(t.evaluate("FIRE", 10.0, ignored -> false).matched());
+    }
+
+    @Test
+    void malformedConditionsNeverEnableDamageModifiers() {
+        AiProfile p = profile("""
+                damage-modifiers:
+                  FIRE:
+                    multiplier: 0.5
+                    conditions: [null, health-above 0.3]
+                  PROJECTILE:
+                    multiplier: 0.5
+                    conditions: [42]
+                  MAGIC:
+                    multiplier: 0.5
+                    when: ''
+                """);
+        var table = p.immunityTable();
+        for (String cause : List.of("FIRE", "PROJECTILE", "MAGIC")) {
+            assertFalse(table.evaluate(cause, 10, ignored -> true).matched(), cause);
+            assertEquals(10, table.evaluate(cause, 10, ignored -> true).damage(), 1e-9);
+        }
+        assertEquals(3, p.immunityWarnings().stream().filter(w -> w.contains("无效条件")).count());
     }
 
     @Test

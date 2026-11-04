@@ -1,0 +1,14 @@
+# Project-native pin registry. Coordinates use Bukkit world names.
+# The loader accepts either `pins` or `Pins`, case-insensitive point fields,
+# and the single-point/list forms below. MythicMobs pack semantics beyond these
+# coordinate forms remain explicitly unverified.
+pins:
+  # center:
+  #   world: world
+  #   x: 0.5
+  #   y: 64
+  #   z: 0.5
+  # route:
+  #   locations:
+  #     - {world: world, x: 0, y: 64, z: 0}
+  #     - "world,10,64,0,90,0"

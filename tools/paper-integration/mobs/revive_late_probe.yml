@@ -1,0 +1,11 @@
+name: Late Revive Probe
+model: example/emberling
+mob:
+  health: 20
+  despawn: NEVER
+  revive-health: 8
+entity:
+  type: ZOMBIE
+  silent: true
+  no-ai: true
+  prevent-sunburn: true

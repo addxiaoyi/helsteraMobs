@@ -3,3 +3,6 @@ items:
     id: GOLD_INGOT
     amount: 1
     display-name: '&6Resolver Probe'
+  SPONGE:
+    id: GOLD_INGOT
+    display-name: '&6Menu Collision Probe'

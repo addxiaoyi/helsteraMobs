@@ -25,6 +25,56 @@ import java.util.function.Predicate;
  */
 public final class SkillCatalog {
 
+    private record DamageTagScope(java.util.UUID victim, java.util.Set<String> tags) { }
+
+    private static final ThreadLocal<DamageTagScope> DAMAGE_TAG_SCOPE = new ThreadLocal<>();
+
+    static java.util.Set<String> currentDamageTags() {
+        DamageTagScope scope = DAMAGE_TAG_SCOPE.get();
+        return scope == null ? java.util.Set.of() : scope.tags();
+    }
+
+    static java.util.Set<String> currentDamageTags(Entity victim) {
+        DamageTagScope scope = DAMAGE_TAG_SCOPE.get();
+        return scope != null && victim != null && victim.getUniqueId().equals(scope.victim())
+                ? scope.tags() : java.util.Set.of();
+    }
+
+    private static void withDamageTags(Entity victim, java.util.Set<String> tags, Runnable operation) {
+        DamageTagScope previous = DAMAGE_TAG_SCOPE.get();
+        if (victim == null) DAMAGE_TAG_SCOPE.remove();
+        else DAMAGE_TAG_SCOPE.set(new DamageTagScope(victim.getUniqueId(), java.util.Set.copyOf(tags)));
+        try {
+            operation.run();
+        } finally {
+            if (previous == null) DAMAGE_TAG_SCOPE.remove();
+            else DAMAGE_TAG_SCOPE.set(previous);
+        }
+    }
+
+    private static java.util.Set<String> damageTags(List<String> args) {
+        java.util.Set<String> tags = new java.util.LinkedHashSet<>();
+        if (args == null) return java.util.Set.of();
+        for (String arg : args) {
+            if (arg == null) continue;
+            int equals = arg.indexOf('=');
+            if (equals <= 0) continue;
+            String key = arg.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            if (!key.equals("tags") && !key.equals("tag") && !key.equals("rawtags")
+                    && !key.equals("rawtag") && !key.equals("damagetype") && !key.equals("element")) continue;
+            boolean raw = key.startsWith("raw");
+            String value = arg.substring(equals + 1).trim();
+            for (String token : value.split(",", -1)) {
+                String tag = token.trim();
+                if (!tag.isEmpty()) tags.add(raw ? tag : tag.toUpperCase(Locale.ROOT));
+            }
+            if (!raw && (key.equals("damagetype") || key.equals("element")) && !value.isBlank()) {
+                tags.add(value.toUpperCase(Locale.ROOT));
+            }
+        }
+        return java.util.Set.copyOf(tags);
+    }
+
     /** 条件工厂：由条件名 + 参数构造谓词。 */
     public interface ConditionFactory {
         Predicate<BehaviorContext> create(List<String> args);
@@ -235,6 +285,9 @@ public final class SkillCatalog {
         return java.util.Map.ofEntries(
                 java.util.Map.entry("has-target", (ConditionFactory) a -> {
                     // 参数可选：省略视为 true；显式 false 表示「无目标时满足」
+                    if (a.size() > 1 || (a.size() == 1 && a.get(0).isBlank())) {
+                        throw new IllegalArgumentException("has-target expects true or false");
+                    }
                     boolean expect = bool(a, 0, true);
                     return ctx -> ctx.targetEntity().isPresent() == expect;
                 }),
@@ -651,6 +704,7 @@ public final class SkillCatalog {
                 }),
                 java.util.Map.entry("damage-target", (ActionFactory) a -> {
                     var dmg = dynamicNum(a, 0, 0.0);
+                    var tags = damageTags(a);
                     return ctx -> {
                         double amount = dmg.applyAsDouble(ctx);
                         if (amount <= 0) return;
@@ -660,7 +714,7 @@ public final class SkillCatalog {
                                 ? ctx.instance().baseEntity().orElse(null) : ctx.trigger().orElse(null);
                         for (LivingEntity target : activeTargets(ctx)) {
                             if (target == null || !origin.getWorld().equals(target.getWorld())) continue;
-                            target.damage(amount, source);
+                            withDamageTags(target, tags, () -> target.damage(amount, source));
                         }
                     };
                 }),
@@ -671,6 +725,13 @@ public final class SkillCatalog {
                      return ctx -> {
                          float strength = (float) Math.max(0, power.applyAsDouble(ctx));
                          if (strength <= 0) return;
+                         Location locationTarget = ctx.targetLocation().orElse(null);
+                         if (locationTarget != null) {
+                             if (locationTarget.getWorld() != null) {
+                                 locationTarget.getWorld().createExplosion(locationTarget, strength, fire, breakBlocks);
+                             }
+                             return;
+                         }
                          List<LivingEntity> targets = activeTargets(ctx);
                          if (!targets.isEmpty()) {
                              for (LivingEntity target : targets) {
@@ -840,7 +901,8 @@ public final class SkillCatalog {
                 java.util.Map.entry("sound", (ActionFactory) a -> {
                     String name = str(a, 0, "");
                     return ctx -> {
-                        Location l = ctx.instanceValid() ? ctx.instance().location() : null;
+                        Location l = ctx.targetLocation().orElseGet(
+                                () -> ctx.instanceValid() ? ctx.instance().location() : null);
                         if (l == null || l.getWorld() == null || name.isBlank()) return;
                         try {
                             l.getWorld().playSound(l, Sound.valueOf(name.toUpperCase(Locale.ROOT)), 1f, 1f);
@@ -884,7 +946,8 @@ public final class SkillCatalog {
                 java.util.Map.entry("particle", (ActionFactory) a -> {
                     String name = str(a, 0, "");
                     return ctx -> {
-                        Location l = ctx.instanceValid() ? ctx.instance().location() : null;
+                        Location l = ctx.targetLocation().orElseGet(
+                                () -> ctx.instanceValid() ? ctx.instance().location() : null);
                         if (l == null || l.getWorld() == null || name.isBlank()) return;
                         try {
                             l.getWorld().spawnParticle(Particle.valueOf(name.toUpperCase(Locale.ROOT)),

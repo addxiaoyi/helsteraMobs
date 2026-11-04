@@ -10,6 +10,8 @@ menus:
         name: '&cDenied action'
         permission: integration.menu.denied
         command: 'say MENU_DENIED_ACTION_RAN'
+      '12':
+        item: SPONGE
     pagination:
       enabled: true
       previous-slot: 18

@@ -31,29 +31,71 @@ class MmConditionsTest {
     @DisplayName("血量百分比换成 0..1 比值，不换算会让条件恒假")
     void healthPercentIsConverted() {
         // 不换算会得到 health-below 50，而比值上限是 1.0 -> 条件永不成立 -> 规则永不生效
-        assertEquals("health-below 0.5", t("?health{<50%}"));
-        assertEquals("health-above 0.3", t("?health{>30%}"));
-        assertEquals("health-below 0.25", t("?health{<25%}"));
-        assertEquals("health-below 0.5", t("?health{amount=<50%}"));
-        assertEquals("health-above 0.5 include-absorption=true",
-                t("?health{h=>50%;includeabsorption=true}"));
+        assertEquals("health <50", t("?health{<50}"));
+        assertEquals("health >30", t("?health{>30}"));
+        assertEquals("health <25", t("?health{<25}"));
+        assertEquals("health <50", t("?health{amount=<50}"));
+        assertEquals("health >50 include-absorption=true",
+                t("?health{h=>50;includeabsorption=true}"));
         assertEquals("health-percent >=50 include-absorption=true",
                 t("?healthPercent{p=>=50%;ia=true}"));
+        assertEquals("health >10 include-absorption=true", t("?health{>10;ia=true}"));
+        assertEquals("health-percent >=50 include-absorption=true", t("?healthPercent{ia=true;>=0.5}"));
+        assertEquals("health =10", t("?health{ia=false;10}"));
+        assertFalse(translated("?health{ia=true}"));
     }
 
     @Test
     @DisplayName("不带百分号的数值：>1 视为百分数，<=1 视为比值")
     void bareNumbersInferScale() {
-        assertEquals("health-below 0.5", t("?health{<0.5}"), "0..1 区间应按比值处理");
-        assertEquals("health-below 0.5", t("?health{<50}"), ">1 的裸数按百分数换算");
+        assertEquals("health <0.5", t("?health{<0.5}"));
+        assertEquals("health <50", t("?health{<50}"));
+        assertEquals("health-percent <50", t("?healthPercent{p=<0.5}"));
+        assertEquals("health-percent >10", t("?hppercent{p=>0.1}"));
+        assertFalse(translated("?health{<50%}"));
+        assertFalse(translated("?health{h=10;ia=maybe}"));
+        assertFalse(translated("?health{h=NaN}"));
+        for (String invalid : List.of("?health{h=10;amount=20}",
+                "?health{h=10;ia=true;includeabsorption=false}",
+                "?health{h=10;20}", "?healthpercent{p=1e308}")) {
+            assertFalse(translated(invalid), invalid);
+            assertEquals(invalid, t(invalid));
+        }
+        assertEquals("health >1.0E20", t("?health{h=>1e20}"));
+    }
+
+    @Test
+    void healthRangesPreserveBoundsUnitsAndAbsorption() {
+        assertEquals("all{health >=10;health <=20}", t("?health{h=10-20}"));
+        assertEquals("all{health >=-5 include-absorption=true;health <=10 include-absorption=true}",
+                t("?health{-5to10;ia=true}"));
+        assertEquals("all{health-percent >=25;health-percent <=50}", t("?healthpercent{p=0.25to0.5}"));
+        assertEquals("all{health-percent >=25;health-percent <=50}", t("?healthpercent{p=25%to50%}"));
+        for (String invalid : List.of("?health{20to10}", "?health{-5-10}", "?health{10%to20%}",
+                "?healthpercent{p=25%to0.5}", "?healthpercent{p=1e307to1e308}")) {
+            assertFalse(translated(invalid), invalid);
+            assertEquals(invalid, t(invalid));
+        }
+    }
+
+    @Test
+    void targetHealthPreservesAbsoluteAndPercentageUnits() {
+        assertEquals("target-health =10", t("?targetHealth{h=10}"));
+        assertEquals("target-health-percent >=50", t("?targetHealthPercent{p=>=0.5}"));
+        assertEquals("target-health-percent <50", t("?targetHealthPercent{p=<50%}"));
+        for (String invalid : List.of("?targetHealth{50%}", "?targetHealthPercent{1e308}",
+                "?targetHealthPercent{p=NaN}")) {
+            assertFalse(translated(invalid), invalid);
+            assertEquals(invalid, t(invalid));
+        }
     }
 
     @Test
     @DisplayName("比较方向正确，不把 < 翻成 >")
     void directionIsPreserved() {
-        assertEquals("health-below 0.2", t("?health{<20%}"));
-        assertEquals("health-above 0.8", t("?health{>80%}"));
-        assertFalse(t("?health{<20%}").equals(t("?health{>20%}")),
+        assertEquals("health <20", t("?health{<20}"));
+        assertEquals("health >80", t("?health{>80}"));
+        assertFalse(t("?health{<20}").equals(t("?health{>20}")),
                 "方向翻错会让免疫条件恰好作用在反面上，且看起来完全正常");
     }
 
@@ -62,9 +104,33 @@ class MmConditionsTest {
     void distanceMapsToDistanceConditions() {
         // 距离是格数不是百分比：<5 必须是 5 格。
         // 误按百分数换算会得到 0.05 格，条件恒真，免疫范围悄悄缩到 1/20 格。
-        assertEquals("distance-below 5", t("?targetDistance{<5}"));
-        assertEquals("distance-above 8", t("?targetDistance{>8}"));
-        assertEquals("distance-below 5", t("?targetDistance{distance=<5}"));
+        assertEquals("distance <5", t("?targetDistance{<5}"));
+        assertEquals("distance >8", t("?targetDistance{>8}"));
+        assertEquals("distance <5", t("?targetDistance{distance=<5}"));
+        assertEquals("distance <=5", t("?targetDistance{<=5}"));
+        assertEquals("light-level >=8", t("?lightlevel{>=8}"));
+        assertEquals("light-level <8", t("?lightlevel{<8}"));
+        for (String invalid : List.of("?targetDistance{NaN}", "?targetDistance{5%}",
+                "?lightlevel{bad}", "?targethealth{invalid}", "?targethealthpercent{NaN}")) {
+            assertFalse(translated(invalid), invalid);
+            assertEquals(invalid, t(invalid));
+        }
+    }
+
+    @Test
+    @DisplayName("Pins 条件映射保留 pin 名称、比较符和区域端点")
+    void pinConditionsPreserveArguments() {
+        assertEquals("distance-from-pin pin=\"arena.center\" distance=<=12",
+                t("?DistanceFromPin{pin=arena.center;distance=<=12}"));
+        assertEquals("distance-from-pin pin=\"arena.center\" distance=5to12",
+                t("?DistanceFromPin{p=arena.center;d=5to12}"));
+        assertEquals("origin-distance-from-pin pin=\"arena.center\" distance=>3",
+                t("?OriginDistanceFromPin{p=arena.center;d=>3}"));
+        assertEquals("in-pin-region pin1=\"arena.min\" pin2=\"arena.max\"",
+                t("?InPinRegion{pin1=arena.min;pin2=arena.max}"));
+        assertFalse(translated("?DistanceFromPin{pin=arena;distance=NaN}"));
+        assertFalse(translated("?DistanceFromPin{pin=arena;distance=12to5}"));
+        assertFalse(translated("?InPinRegion{pin1=arena.min}"));
     }
 
     @Test
@@ -77,6 +143,67 @@ class MmConditionsTest {
         assertEquals("target-is-mob", t("?targetIsMob"));
         assertEquals("target-is-living", t("?targetIsLiving"));
         assertTrue(translated("?hasTarget"));
+        for (String condition : List.of("?isFrozen{unknown=true}", "?frozen{unknown=true}",
+                "?projectileHasEnded{unknown=true}")) {
+            assertFalse(translated(condition), condition);
+            assertEquals(condition, t(condition));
+        }
+        assertEquals("is-frozen", t("?isFrozen{}"));
+        assertEquals("projectile-has-ended", t("?projectileHasEnded{}"));
+        for (String name : List.of("hasTarget", "night", "isRaining", "isThundering", "isLiving",
+                "day", "daytime", "dawn", "dusk", "sunset", "morning", "noon", "midnight",
+                "clear", "sun", "sunny", "rain", "storm", "thunder", "thunderstorm",
+                "charged", "climbing", "isClimbing", "invisible", "isInvisible", "glowing", "isGlowing",
+                "falling", "isFalling", "targetIsClimbing", "targetIsInvisible", "targetIsGlowing",
+                "targetIsFrozen", "targetFrozen",
+                "isPlayer", "isMob", "isMonster", "isAnimal", "isVillager", "isTameable", "isRaider",
+                "isBaby", "isChild", "isAdult", "isTamed", "isSheared", "isSaddled", "isPowered", "isCharged",
+                "targetIsBaby", "targetIsChild", "targetIsAdult", "targetIsTamed", "targetIsSheared",
+                "targetIsSaddled", "targetIsPowered", "targetIsCharged", "isSneaking", "crouching",
+                "isSprinting", "sprinting", "isFlying", "flying", "isBlocking", "blocking", "isGliding",
+                "gliding", "isSwimming", "swimming", "inWater", "inLava", "onFire", "isBurning",
+                "burning", "inAir", "airborne", "targetIsSneaking", "targetIsSprinting", "targetIsFlying",
+                "targetIsBlocking", "targetIsGliding", "targetIsSwimming", "targetInWater", "targetInLava",
+                "targetOnFire", "targetBurning", "targetInAir", "targetAirborne", "targetIsPlayer",
+                "targetIsLiving", "targetIsMob", "targetIsMonster", "targetIsAnimal", "targetIsVillager",
+                "targetIsTameable", "targetIsRaider", "hasAI", "hasGravity", "isSilent", "isDead", "isAlive",
+                "isValid", "targetHasAI", "targetHasGravity", "targetIsSilent", "targetIsDead", "targetIsAlive",
+                "targetIsValid")) {
+            String invalid = "?" + name + "{unknown=true}";
+            assertFalse(translated(invalid), invalid);
+            assertEquals(invalid, t(invalid));
+            String negated = "?!" + name + "{unknown=true}";
+            assertFalse(translated(negated), negated);
+            assertEquals(negated, t(negated));
+            assertTrue(translated("?" + name + "{}"), name);
+        }
+    }
+
+    @Test
+    @DisplayName("malformed parameter blocks remain untranslated and balanced nested values are accepted")
+    void malformedParameterBlocksFailClosed() {
+        for (String raw : List.of("?isFrozen{", "?isFrozen}", "?isFrozen}x{value}", "?isFrozen{value}}",
+                "?isFrozen{{value}", "?world{world=arena;ignored=x}{}",
+                "?world{world=arena}{world=other}", "?world{world=arena}junk{}")) {
+            var result = MmConditions.translate(raw);
+            assertFalse(result.translated(), raw);
+            assertEquals(raw, result.condition(), raw);
+        }
+        assertTrue(translated("?stringEquals{value1=<caster.var{phase}>;value2=ready}"));
+    }
+
+    @Test
+    void environmentConditionsRejectIgnoredOrDuplicateArguments() {
+        assertEquals("world-is arena", t("?world{w=arena}"));
+        assertEquals("weather-is rain", t("?weather{type=rain}"));
+        assertEquals("time-is night", t("?time{t=night}"));
+        for (String raw : List.of("?world{world=arena;world=other}",
+                "?world{world=arena;unknown=true}", "?weather{unknown=rain}",
+                "?time{value=day;value=night}", "?time{day;night}",
+                "?world{world=arena other}")) {
+            assertFalse(translated(raw), raw);
+            assertEquals(raw, t(raw));
+        }
     }
 
     @Test
@@ -84,6 +211,7 @@ class MmConditionsTest {
     void environmentalAliasesMap() {
         assertEquals("night", t("?night"));
         assertEquals("raining", t("?isRaining"));
+        assertEquals("!raining", t("?!raining"));
         assertEquals("thundering", t("?isThundering"));
         assertEquals("time-is day", t("?day"));
         assertEquals("time-is dawn", t("?dawn"));
@@ -94,8 +222,17 @@ class MmConditionsTest {
         assertEquals("is-powered", t("?charged"));
         assertEquals("is-sneaking", t("?crouching"));
         assertEquals("random-chance 25", t("?chance{chance=25}"));
+        assertFalse(translated("?chance{chance=NaN}"));
+        assertFalse(translated("?chance{chance=Infinity}"));
+        assertFalse(translated("?chance{chance=101}"));
+        assertFalse(translated("?chance{chance=-1}"));
         assertEquals("falling", t("?falling"));
         assertEquals("drowning <=0", t("?drowning"));
+        assertEquals("drowning >10", t("?drowning{>10}"));
+        assertEquals("drowning <20", t("?drowning{air=<20}"));
+        assertFalse(translated("?drowning{>abc}"));
+        assertFalse(translated("?drowning{air=NaN}"));
+        assertFalse(translated("?drowning{air=Infinity}"));
         assertFalse(translated("?hasAuras"));
         assertFalse(translated("?hasAuras{effect=SPEED}"));
         assertEquals("mounted", t("?isRiding"));
@@ -123,10 +260,26 @@ class MmConditionsTest {
         assertEquals("player-within 10", t("?playerWithin{d=10}"));
         assertEquals("player-not-within 10", t("?playerNotWithin{distance=10}"));
         assertEquals("random-chance 25", t("?randomChance{chance=25}"));
+        assertFalse(translated("?randomChance{chance=invalid}"));
         assertEquals("global-cooldown __mythic_gcd 1", t("?offgcd"));
         assertEquals("target-count-at-least 2", t("?targetCount{min=2}"));
         assertEquals("hunger-below 10", t("?hungerBelow{level=10}"));
         assertTrue(translated("?mobsInRadius{radius=8}"));
+    }
+
+    @Test
+    @DisplayName("半径条件拒绝负数、非有限值和非法数量")
+    void radiusConditionsFailClosed() {
+        for (String condition : List.of(
+                "?playersInRadius{r=-1}",
+                "?entitiesInRadius{radius=NaN}",
+                "?mobsInRadius{radius=Infinity}",
+                "?livingInRadius{r=-0.5}",
+                "?playerWithin{d=-2}")) {
+            assertFalse(translated(condition), condition);
+        }
+        assertFalse(translated("?playersInRadius{r=8;amount=invalid}"));
+        assertFalse(translated("?livingInRadius{r=8;a=NaN}"));
     }
 
     @Test
@@ -171,9 +324,9 @@ class MmConditionsTest {
         assertEquals("is-blocked", t("?inBlock"));
         assertEquals("is-blocked 2", t("?inBlock{height=2}"));
         assertEquals("stand-on STONE", t("?standingOn{material=STONE}"));
-        assertEquals("light-level-below 8", t("?lightLevel{<8}"));
-        assertEquals("light-level-above 4", t("?lightLevel{>4}"));
-        assertEquals("light-level-below 8", t("?lightLevel{level=<8}"));
+        assertEquals("light-level <8", t("?lightLevel{<8}"));
+        assertEquals("light-level >4", t("?lightLevel{>4}"));
+        assertEquals("light-level <8", t("?lightLevel{level=<8}"));
         assertEquals("daylight 0", t("?daylight"));
         assertEquals("daylight 0.5", t("?daylight{value=0.5}"));
         assertEquals("facing-target", t("?facingTarget"));
@@ -357,6 +510,15 @@ class MmConditionsTest {
         assertEquals("damage-amount 1to5", t("?amount{a=1to5}"));
         assertTrue(translated("?damageAmount{a=>=2}"));
         assertFalse(translated("?damageAmount{a=invalid}"));
+    }
+
+    @Test
+    void officialDamageTagConditionMapsAliasesAndBooleanValue() {
+        assertEquals("damage-tag tag=FIRE", t("?damageTag{tag=FIRE}"));
+        assertEquals("damage-tag tag=FIRE value=false", t("?damageHasTag{t=FIRE;value=false}"));
+        assertTrue(translated("?damageTag{tag=FIRE}"));
+        assertFalse(translated("?damageTag{tag=FIRE;value=maybe}"));
+        assertFalse(translated("?damageTag{value=true}"));
     }
 
     @Test
@@ -560,6 +722,9 @@ class MmConditionsTest {
                 t("?lunarPhase{p=0,2,4,6}"));
         assertEquals("lunar-phase 0", t("?lunarPhase"));
         assertFalse(translated("?lunarPhase{p=8}"));
+        assertFalse(translated("?lunarPhase{p=1,invalid}"));
+        assertFalse(translated("?lunarPhase{p=1,}"));
+        assertFalse(translated("?lunarPhase{p=}"));
     }
 
     @Test
@@ -567,6 +732,13 @@ class MmConditionsTest {
         assertEquals("last-signal fireCannonShot",
                 t("?lastSignal{s=fireCannonShot}"));
         assertEquals("last-signal DEFAULT", t("?lastSignal"));
+        assertEquals("last-signal phase2", t("?lastSignal{signal=phase2}"));
+        for (String raw : List.of("?lastSignal{s=}", "?lastSignal{unknown=phase2}",
+                "?lastSignal{s=phase2;unknown=x}", "?lastSignal{s=phase two}")) {
+            var result = MmConditions.translate(raw);
+            assertFalse(result.translated(), raw);
+            assertEquals(raw, result.condition(), raw);
+        }
     }
 
     @Test
@@ -792,6 +964,19 @@ class MmConditionsTest {
     }
 
     @Test
+    void officialParameterlessTimeAndWeatherAliasesMapToRuntimeConditions() {
+        assertEquals("time-is morning", t("?morning"));
+        assertEquals("time-is noon", t("?noon"));
+        assertEquals("time-is midnight", t("?midnight"));
+        assertEquals("weather-is clear", t("?clear"));
+        assertEquals("weather-is clear", t("?sun"));
+        assertEquals("weather-is rain", t("?rain"));
+        assertEquals("weather-is thunder", t("?storm"));
+        assertEquals("weather-is thunder", t("?thunder"));
+        assertEquals("weather-is thunder", t("?thunderstorm"));
+    }
+
+    @Test
     void officialSpyglassConditionMaps() {
         assertEquals("is-using-spyglass", t("?isUsingSpyglass"));
         assertEquals("is-using-spyglass", t("?isScoping"));
@@ -876,7 +1061,12 @@ class MmConditionsTest {
         assertEquals("ender-dragon-phase CIRCLING", t("?enderDragonPhase{phase=CIRCLING}"));
         assertEquals("ender-dragon-phase FLY_TO_PORTAL,LEAVE_PORTAL",
                 t("?enderDragonPhase{phases=FLY_TO_PORTAL,LEAVE_PORTAL}"));
+        assertEquals("ender-dragon-phase CIRCLING,LEAVE_PORTAL",
+                t("?edragonPhase{p=circling, leave_portal}"));
         assertTrue(translated("?enderDragonPhase{p=CIRCLING}"));
+        assertFalse(translated("?enderDragonPhase{p=CIRCLING,INVALID}"));
+        assertFalse(translated("?enderDragonPhase{p=CIRCLING,}"));
+        assertFalse(translated("?enderDragonPhase{p=}"));
     }
 
     @Test
@@ -888,6 +1078,8 @@ class MmConditionsTest {
         assertEquals("has-passenger", t("?hasPassengers"));
         assertEquals("is-leashed", t("?isLeashed"));
         assertEquals("is-leashed", t("?leashed"));
+        assertEquals("target-is-leashed", t("?targetIsLeashed"));
+        assertEquals("target-is-leashed", t("?targetLeashed"));
         assertEquals("has-owner", t("?hasOwner"));
         assertEquals("has-parent", t("?hasParent"));
         assertEquals("is-parent", t("?isParent"));
@@ -951,6 +1143,8 @@ class MmConditionsTest {
         assertEquals("target-is-glowing", t("?targetIsGlowing"));
         assertEquals("target-is-invisible", t("?targetIsInvisible"));
         assertEquals("target-is-climbing", t("?targetIsClimbing"));
+        assertEquals("target-is-frozen", t("?targetIsFrozen"));
+        assertEquals("target-is-frozen", t("?targetFrozen"));
         assertEquals("target-is-blocked", t("?targetIsBlocked"));
         assertEquals("target-dead", t("?targetIsDead"));
         assertEquals("target-is-alive", t("?targetIsAlive"));
@@ -984,6 +1178,9 @@ class MmConditionsTest {
         assertEquals("different-faction", t("?differentFaction"));
         assertEquals("owner-is-player", t("?ownerIsPlayer"));
         assertEquals("owner-is-online", t("?ownerIsOnline"));
+        assertEquals("target-has-owner", t("?targetHasOwner"));
+        assertEquals("target-owner-is-player", t("?targetOwnerIsPlayer"));
+        assertEquals("target-owner-is-online", t("?targetOwnerIsOnline"));
         assertEquals("target-health <=15", t("?targetHealth{h=<=15}"));
         assertEquals("target-health-percent >=50", t("?targetHealthPercent{p=>=50%}"));
         assertTrue(translated("?targetHasItem{item=SHIELD;amount=>=1}"));
@@ -996,10 +1193,18 @@ class MmConditionsTest {
         assertEquals("biome-is plains true", t("?biome{value=plains}"));
         assertEquals("biome-is minecraft:plains,false false", t("?biome{b=minecraft:plains,false;e=false}"));
         assertEquals("biome-is minecraft:plains true", t("?biome"));
+        assertEquals("biome-is minecraft:plains,desert false", t("?biome{e=false;b=minecraft:plains, desert}"));
+        assertEquals("biome-is minecraft:plains false", t("?biome{exact=false}"));
+        for (String invalid : List.of("?biome{b=plains,}", "?biome{b=,plains}",
+                "?biome{b=}", "?biome{e=}", "?biome{b=plains desert}", "?biome{b=plains;unknown=1}",
+                "?biome{b=plains;biome=desert}")) {
+            assertFalse(translated(invalid), invalid);
+            assertEquals(invalid, t(invalid));
+        }
         assertEquals("weather-is rain", t("?weather{type=rain}"));
         assertEquals("time-is night", t("?time{value=night}"));
         assertEquals("health-percent >=50", t("?healthPercent{p=>=50%}"));
-        assertEquals("health-below 0.5", t("?health <50%"));
+        assertEquals("health <50", t("?health <50"));
         assertEquals("has-permission loot.vip", t("?permission loot.vip"));
         assertTrue(translated("?world{world=arena}"));
     }
@@ -1007,20 +1212,20 @@ class MmConditionsTest {
     @Test
     @DisplayName("比较号带 = 时按同向处理，不改变方向")
     void nonStrictComparisons() {
-        assertEquals("health-below 0.5", t("?health{<=50%}"));
-        assertEquals("health-above 0.5", t("?health{>=50%}"));
+        assertEquals("health <=50", t("?health{<=50}"));
+        assertEquals("health >=50", t("?health{>=50}"));
     }
 
     @Test
     @DisplayName("等值与不等值比较器保留到通用运行时条件")
     void equalityComparisonsAreMapped() {
-        assertEquals("health =0.5", t("?health{==50%}"));
-        assertEquals("health !=0.5", t("?health{!=50%}"));
+        assertEquals("health =50", t("?health{==50}"));
+        assertEquals("health !=50", t("?health{!=50}"));
         assertEquals("distance =5", t("?targetDistance{distance==5}"));
         assertEquals("target-health =10", t("?targetHealth{h==10}"));
         assertEquals("target-health-percent !=50", t("?targetHealthPercent{p!=50%}"));
         assertEquals("light-level =8", t("?lightLevel{level==8}"));
-        assertTrue(translated("?health{!=50%}"));
+        assertTrue(translated("?health{!=50}"));
     }
 
     @Test
@@ -1053,8 +1258,8 @@ class MmConditionsTest {
         List<String> out = new ArrayList<>();
         List<String> unmapped = new ArrayList<>();
         MmConditions.translateAll(
-                List.of("?hasTarget", "?unsupportedCondition", "?health{<50%}"), out, unmapped);
-        assertEquals(List.of("has-target", "?unsupportedCondition", "health-below 0.5"), out,
+                List.of("?hasTarget", "?unsupportedCondition", "?health{<50}"), out, unmapped);
+        assertEquals(List.of("has-target", "?unsupportedCondition", "health <50"), out,
                 "顺序必须保持，否则条件语义（AND）虽不变但报告对不上原文件");
         assertEquals(List.of("?unsupportedCondition"), unmapped, "未映射项需单独收集，供报告告警");
     }

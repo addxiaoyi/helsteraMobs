@@ -25,7 +25,7 @@ public final class MythicSpec {
     public static String normalize(String spec) {
         if (spec == null) return null;
         String s = spec.trim();
-        int brace = s.indexOf('{');
+        int brace = mechanicOpen(s);
         if (brace < 0) return s;
         String head = s.substring(0, brace).trim();
         String body = s.substring(brace + 1);
@@ -38,12 +38,82 @@ public final class MythicSpec {
     /**
      * 切大括号内容。
      *
-     * <p>{@code ;} 永远是分隔符；{@code ,} 仅当下一个 {@code ;} 之前还出现
-     * {@code =} 时才算分隔符。这条不对称规则用来同时正确切分
+     * <p>{@code ;} 是分隔符；{@code ,} 仅当紧随其后的是参数键和
+     * {@code =} 时才算分隔符。这条规则用来同时正确切分
      * {@code {amount=5,aoe=true}}（逗号分隔参数对）与 {@code {loc=1,2,3}}
-     * （坐标值内含逗号）——两者只看当前片段无法区分，判错会让坐标静默错位。</p>
+     * （坐标值内含逗号）。</p>
      */
     private static List<String> splitBody(String body) {
+        return splitBody(body, true);
+    }
+
+    static List<String> keyedArguments(String spec) {
+        int open = mechanicOpen(spec);
+        int close = open < 0 ? -1 : matchingClose(spec, open);
+        return close < 0 ? List.of() : splitBody(spec.substring(open + 1, close), false);
+    }
+
+    static int mechanicOpen(String spec) {
+        if (spec == null) return -1;
+        for (int i = 0; i < spec.length(); i++) {
+            char c = spec.charAt(i);
+            if (c == '{') return i;
+            if (Character.isWhitespace(c)) return -1;
+        }
+        return -1;
+    }
+
+    static boolean ambiguousExecutionSuffix(String spec) {
+        List<String> tokens = new ArrayList<>();
+        StringBuilder token = new StringBuilder();
+        int depth = 0;
+        char quote = 0;
+        boolean escaped = false;
+        for (int i = 0; i < spec.length(); i++) {
+            char c = spec.charAt(i);
+            if (escaped) { token.append(c); escaped = false; continue; }
+            if (quote != 0 && c == '\\') { token.append(c); escaped = true; continue; }
+            if (quote != 0 && c == quote) quote = 0;
+            else if (quote == 0 && (c == '\'' || c == '"')) quote = c;
+            else if (quote == 0 && (c == '{' || c == '[' || c == '(')) depth++;
+            else if (quote == 0 && (c == '}' || c == ']' || c == ')')) depth--;
+            boolean chainSeparator = c == '>' && (token.length() > 0 && token.charAt(0) == '@'
+                    || token.isEmpty() && !tokens.isEmpty()
+                    && (tokens.get(tokens.size() - 1).startsWith("@")
+                    || tokens.get(tokens.size() - 1).equals(">")));
+            if (quote == 0 && depth == 0 && (Character.isWhitespace(c) || chainSeparator)) {
+                if (!token.isEmpty()) { tokens.add(token.toString()); token.setLength(0); }
+                if (chainSeparator) tokens.add(">");
+            } else token.append(c);
+        }
+        if (!token.isEmpty()) tokens.add(token.toString());
+        boolean targeter = false;
+        boolean chance = false;
+        for (int i = 1; i < tokens.size(); i++) {
+            String part = tokens.get(i);
+            if (part.equals("@") || part.equals("?")) return true;
+            if (part.equals(">")) {
+                if (i == 1 || !tokens.get(i - 1).startsWith("@")
+                        || i + 1 >= tokens.size() || !tokens.get(i + 1).startsWith("@")
+                        || tokens.get(i + 1).length() == 1) return true;
+                continue;
+            }
+            if (part.startsWith("@") && part.length() > 1) {
+                if (targeter && !tokens.get(i - 1).equals(">")) return true;
+                targeter = true;
+            } else if (part.endsWith("%")) {
+                if (chance || !part.matches("[+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?%")) return true;
+                double value;
+                try { value = Double.parseDouble(part.substring(0, part.length() - 1)); }
+                catch (NumberFormatException ignored) { return true; }
+                if (!Double.isFinite(value) || value < 0 || value > 100) return true;
+                chance = true;
+            }
+        }
+        return false;
+    }
+
+    private static List<String> splitBody(String body, boolean stripKeys) {
         List<String> out = new ArrayList<>();
         if (body == null || body.isEmpty()) return out;
         StringBuilder cur = new StringBuilder();
@@ -51,6 +121,11 @@ public final class MythicSpec {
         int bracket = 0;
         for (int i = 0; i < body.length(); i++) {
             char c = body.charAt(i);
+            if (quoted && c == '\\' && i + 1 < body.length()
+                    && (body.charAt(i + 1) == '"' || body.charAt(i + 1) == '\\')) {
+                cur.append(body.charAt(++i));
+                continue;
+            }
             if (c == '"') {
                 quoted = !quoted;
                 continue;
@@ -60,36 +135,41 @@ public final class MythicSpec {
                 else if (c == ']' || c == ')') bracket = Math.max(0, bracket - 1);
                 else if (bracket == 0) {
                     if (c == ';') {
-                        flush(out, cur);
+                        flush(out, cur, stripKeys);
                         continue;
                     }
                     if (c == ',' && keyFollows(body, i)) {
-                        flush(out, cur);
+                        flush(out, cur, stripKeys);
                         continue;
                     }
                 }
             }
             cur.append(c);
         }
-        flush(out, cur);
+        flush(out, cur, stripKeys);
         return out;
     }
 
-    /** 从逗号位置往后扫到下一个 {@code ;}，其间出现 {@code =} 则是参数分隔符。 */
+    /** 只检查逗号后紧邻的键，避免跨越值中的其他逗号。 */
     private static boolean keyFollows(String body, int from) {
-        for (int i = from + 1; i < body.length(); i++) {
+        int i = from + 1;
+        while (i < body.length() && Character.isWhitespace(body.charAt(i))) i++;
+        int start = i;
+        while (i < body.length()) {
             char c = body.charAt(i);
-            if (c == ';') return false;
-            if (c == '=') return true;
+            if (!Character.isLetterOrDigit(c) && c != '_' && c != '-') break;
+            i++;
         }
-        return false;
+        if (i == start) return false;
+        while (i < body.length() && Character.isWhitespace(body.charAt(i))) i++;
+        return i < body.length() && body.charAt(i) == '=';
     }
 
-    private static void flush(List<String> out, StringBuilder cur) {
+    private static void flush(List<String> out, StringBuilder cur, boolean stripKeys) {
         String v = cur.toString().trim();
         cur.setLength(0);
         if (v.isEmpty()) return;
-        out.add(stripKey(v));
+        out.add(stripKeys ? stripKey(v) : v);
     }
 
     private static String stripKey(String v) {
@@ -117,20 +197,43 @@ public final class MythicSpec {
         if (brace < 0) return null;
         String head = s.substring(0, brace).trim().toLowerCase(Locale.ROOT);
         if (!head.equals("skill") && !head.equals("skillmechanic")) return null;
-        String body = s.substring(brace + 1);
-        int close = body.lastIndexOf('}');
-        if (close >= 0) body = body.substring(0, close);
-        for (String part : body.split("[;,]")) {
+        int close = matchingBrace(s, brace);
+        if (close < 0) return null;
+        String body = s.substring(brace + 1, close);
+        String ref = null;
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (String part : splitBody(body, false)) {
             String p = part.trim();
             int eq = p.indexOf('=');
-            if (eq <= 0) continue;
+            if (eq <= 0) return null;
             String k = p.substring(0, eq).trim().toLowerCase(Locale.ROOT);
-            if (k.equals("s") || k.equals("skill")) {
-                String v = p.substring(eq + 1).trim();
-                return v.isEmpty() ? null : v;
+            if (k.equals("repeat-interval")) k = "repeatinterval";
+            if (k.equals("skill")) k = "s";
+            if (!java.util.Set.of("s", "delay", "repeat", "repeatinterval").contains(k)
+                    || !seen.add(k)) return null;
+            String v = p.substring(eq + 1).trim();
+            if (v.isEmpty()) return null;
+            if (k.equals("s")) {
+                ref = v;
             }
         }
-        return null;
+        return ref != null && ref.chars().noneMatch(Character::isWhitespace) ? ref : null;
+    }
+
+    private static int matchingBrace(String text, int open) {
+        int depth = 0;
+        boolean quoted = false;
+        boolean escaped = false;
+        for (int i = open; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (escaped) { escaped = false; continue; }
+            if (c == '\\' && quoted) { escaped = true; continue; }
+            if (c == '"') { quoted = !quoted; continue; }
+            if (quoted) continue;
+            if (c == '{') depth++;
+            else if (c == '}' && --depth == 0) return i;
+        }
+        return -1;
     }
 
     /**
@@ -156,7 +259,7 @@ public final class MythicSpec {
 
     /** 取大括号内第 N 个参数（位置语义）。 */
     public static String argAt(String spec, int index) {
-        int brace = spec == null ? -1 : spec.indexOf('{');
+        int brace = mechanicOpen(spec);
         if (brace < 0) return null;
         String body = spec.substring(brace + 1);
         int close = body.lastIndexOf('}');
@@ -167,12 +270,11 @@ public final class MythicSpec {
 
     /** 定义行的大括号键值（不含大括号）。 */
     public static String keyOf(String spec, String key) {
-        int brace = spec == null ? -1 : spec.indexOf('{');
+        int brace = mechanicOpen(spec);
         if (brace < 0) return null;
-        String body = spec.substring(brace + 1);
         int close = matchingClose(spec, brace);
-        if (close > brace) body = spec.substring(brace + 1, close);
-        for (String part : body.split("[;,]")) {
+        String body = close > brace ? spec.substring(brace + 1, close) : spec.substring(brace + 1);
+        for (String part : splitBody(body, false)) {
             String p = part.trim();
             int eq = p.indexOf('=');
             if (eq <= 0) continue;
@@ -184,15 +286,6 @@ public final class MythicSpec {
     }
 
     private static int matchingClose(String value, int open) {
-        int depth = 0;
-        boolean quoted = false;
-        for (int i = open; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if (c == '"') quoted = !quoted;
-            if (quoted) continue;
-            if (c == '{') depth++;
-            else if (c == '}' && --depth == 0) return i;
-        }
-        return -1;
+        return matchingBrace(value, open);
     }
 }

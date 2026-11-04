@@ -9,6 +9,10 @@ $ErrorActionPreference = 'Stop'
 if ($Strict -and $Exploratory) {
     throw 'Exploratory mode cannot be combined with Strict mode.'
 }
+if ($Strict -and ($env:PAPER_MENU_WORKFLOW -ne 'true' -or $env:PAPER_WEB_RELOAD_PROBE -ne 'true' -or
+        $env:PAPER_RAW_POTION_WORKFLOW -ne 'true' -or $env:PAPER_RAW_POTION_SHORT -ne 'true')) {
+    throw 'Strict mode requires PAPER_MENU_WORKFLOW, PAPER_WEB_RELOAD_PROBE, PAPER_RAW_POTION_WORKFLOW, and PAPER_RAW_POTION_SHORT set to true.'
+}
 $pythonInfo = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
 if ($LASTEXITCODE -ne 0 -or $null -eq $pythonInfo) {
     throw 'Python 3 with encodings/jsonschema is required for strict report validation.'
@@ -105,6 +109,10 @@ if (-not [string]::IsNullOrWhiteSpace($env:PAPER_LIBRARIES_PATH)) {
 }
 if (-not (Test-Path -LiteralPath $plugin -PathType Leaf)) { throw "Build plugin first: $plugin" }
 if (-not (Test-Path -LiteralPath $server)) { New-Item -ItemType Directory -Path $server | Out-Null }
+$webProbeResultPath = Join-Path $server 'web-reload-probe.json'
+if (Test-Path -LiteralPath $webProbeResultPath -PathType Leaf) {
+    Remove-Item -LiteralPath $webProbeResultPath -Force
+}
 Copy-Item -LiteralPath $paper -Destination (Join-Path $server 'paper.jar') -Force
 if ($env:PAPER_SKILLTREE_REUSE -ne 'true' -or
         -not (Test-Path -LiteralPath (Join-Path $server 'server.properties'))) {
@@ -113,7 +121,9 @@ if ($env:PAPER_SKILLTREE_REUSE -ne 'true' -or
 Set-Content -LiteralPath (Join-Path $server 'eula.txt') -Value 'eula=true' -Encoding ascii
 $plugins = Join-Path $server 'plugins'
 New-Item -ItemType Directory -Path $plugins -Force | Out-Null
-Copy-Item -LiteralPath $plugin -Destination (Join-Path $plugins 'helsteraMobs.jar') -Force
+$installedPlugin = Join-Path $plugins 'helsteraMobs.jar'
+Copy-Item -LiteralPath $plugin -Destination $installedPlugin -Force
+$pluginSha256 = (Get-FileHash -LiteralPath $installedPlugin -Algorithm SHA256).Hash.ToLowerInvariant()
 $pluginData = Join-Path $plugins 'helsteraMobs'
 if ($env:PAPER_SKILLTREE_REUSE -ne 'true' -and (Test-Path -LiteralPath $pluginData)) {
     Remove-Item -LiteralPath $pluginData -Recurse -Force
@@ -141,9 +151,27 @@ if ($env:PAPER_SPAWNER_PERSISTENCE_STAGE) {
         "  self-test-spawner-persistence-stage: $env:PAPER_SPAWNER_PERSISTENCE_STAGE")
     Set-Content -LiteralPath $pluginConfig -Value $yaml -Encoding utf8
 }
+if ($env:PAPER_WEB_RELOAD_PROBE -eq 'true') {
+    $pluginConfig = Join-Path $pluginData 'config.yml'
+    $yaml = Get-Content -LiteralPath $pluginConfig -Raw
+    $yaml = [regex]::Replace($yaml, '(?m)^web:\s*\r?\n\s+enabled:\s*false\s*$',
+        "web:`n  enabled: true`n  host: 127.0.0.1`n  port: 18765`n  token: paper-web-probe")
+    Set-Content -LiteralPath $pluginConfig -Value $yaml -Encoding utf8
+}
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'loot.yml') -Destination (Join-Path $pluginData 'loot.yml') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'items.yml') -Destination (Join-Path $pluginData 'items.yml') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'spawners.yml') -Destination (Join-Path $pluginData 'spawners.yml') -Force
+if ($env:PAPER_SPAWNER_NATURAL_REPAIR_PROBE -eq 'true') {
+    $configPath = Join-Path $pluginData 'config.yml'
+    $configText = [System.IO.File]::ReadAllText($configPath)
+    $configText = [regex]::Replace($configText, '(?m)^  self-test-spawner: true[ \t]*\r?$', '  self-test-spawner: false')
+    [System.IO.File]::WriteAllText($configPath, $configText)
+    $spawnerPath = Join-Path $pluginData 'spawners.yml'
+    $spawnerText = [System.IO.File]::ReadAllText($spawnerPath)
+    $probe = "spawners:`n  guard_natural_probe:`n    mob: emberling`n    x: 20.5`n    y: 70`n    z: 6.5`n    radius: 1.0`n    interval: 20`n    max-alive: 1`n    max-spawns: 1`n    enabled: true`n"
+    $spawnerText = [regex]::Replace($spawnerText, '^spawners:\s*\r?\n', $probe, 1)
+    [System.IO.File]::WriteAllText($spawnerPath, $spawnerText)
+}
 $mobs = Join-Path $pluginData 'mobs'
 New-Item -ItemType Directory -Path $mobs -Force | Out-Null
 Copy-Item -Path (Join-Path $PSScriptRoot 'mobs/*') -Destination $mobs -Force
@@ -198,6 +226,89 @@ try {
             -not (Select-String -LiteralPath $logPath -Pattern 'Done \(' -Quiet)) {
         throw 'Paper startup timed out before the server became ready'
     }
+    if ($env:PAPER_SPAWNER_STATE_GUARD_PROBE -eq 'true') {
+        $process.StandardInput.WriteLine('helstera spawner force persistence_probe')
+        $process.StandardInput.Flush()
+    }
+    if ($env:PAPER_SPAWNER_STATE_REPAIR_PROBE -eq 'true') {
+        $deadline = [DateTime]::UtcNow.AddSeconds(20)
+        while ([DateTime]::UtcNow -lt $deadline -and -not $process.HasExited -and
+                -not (Select-String -LiteralPath $logPath -Pattern '强制生成 0 只（persistence_probe）' -Quiet)) {
+            Start-Sleep -Milliseconds 250
+        }
+        if (-not (Select-String -LiteralPath $logPath -Pattern '强制生成 0 只（persistence_probe）' -Quiet)) {
+            throw 'Guard probe did not reject the initial forced spawn'
+        }
+        Copy-Item -LiteralPath (Join-Path $server 'valid-spawner-state.yml') -Destination (Join-Path $pluginData 'spawner-state.yml') -Force
+        $process.StandardInput.WriteLine('helstera spawner reload')
+        $process.StandardInput.WriteLine('forceload add 20 6')
+        $process.StandardInput.Flush()
+        Start-Sleep -Seconds 3
+        $process.StandardInput.WriteLine('helstera spawner force persistence_probe')
+        $process.StandardInput.Flush()
+    }
+    if ($env:PAPER_SPAWNER_NATURAL_REPAIR_PROBE -eq 'true') {
+        $process.StandardInput.WriteLine('forceload add 20 6')
+        $process.StandardInput.Flush()
+        Start-Sleep -Seconds 6
+        $logOffset = ([System.IO.File]::ReadAllText($logPath)).Length
+        $process.StandardInput.WriteLine('helstera spawner list')
+        $process.StandardInput.Flush()
+        $deadline = [DateTime]::UtcNow.AddSeconds(15)
+        do {
+            Start-Sleep -Milliseconds 250
+            $pausedLog = ([System.IO.File]::ReadAllText($logPath)).Substring($logOffset)
+        } while ([DateTime]::UtcNow -lt $deadline -and $pausedLog -notmatch 'guard_natural_probe[^\r\n]*累计 \d+')
+        if ($pausedLog -notmatch 'guard_natural_probe[^\r\n]*累计 0\b') {
+            throw 'Natural spawner did not remain at zero while state was unavailable'
+        }
+        Copy-Item -LiteralPath (Join-Path $server 'valid-spawner-state.yml') -Destination (Join-Path $pluginData 'spawner-state.yml') -Force
+        $process.StandardInput.WriteLine('helstera spawner reload')
+        $process.StandardInput.Flush()
+        Start-Sleep -Seconds 8
+        $logOffset = ([System.IO.File]::ReadAllText($logPath)).Length
+        $process.StandardInput.WriteLine('helstera spawner list')
+        $process.StandardInput.Flush()
+        $deadline = [DateTime]::UtcNow.AddSeconds(15)
+        do {
+            Start-Sleep -Milliseconds 250
+            $restoredLog = ([System.IO.File]::ReadAllText($logPath)).Substring($logOffset)
+        } while ([DateTime]::UtcNow -lt $deadline -and $restoredLog -notmatch 'guard_natural_probe[^\r\n]*累计 \d+')
+        if ($restoredLog -notmatch 'guard_natural_probe[^\r\n]*累计 1\b') {
+            throw 'Natural spawner did not resume after state repair'
+        }
+        Write-Host 'Natural spawner guard passed: paused=0 restored=1'
+    }
+    if ($env:PAPER_WEB_RELOAD_PROBE -eq 'true') {
+        $spawnerPath = Join-Path $pluginData 'spawners.yml'
+        $originalSpawners = [System.IO.File]::ReadAllText($spawnerPath)
+        $headers = @{ Authorization = 'Bearer paper-web-probe' }
+        $endpoint = 'http://127.0.0.1:18765/api/spawners/reload'
+        try {
+            [System.IO.File]::WriteAllText($spawnerPath, 'spawners: [broken')
+            $invalid = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -Body '{}' -ContentType 'application/json'
+            if ($invalid.ok -ne $false) { throw 'Web reload accepted invalid spawner YAML' }
+        } finally {
+            [System.IO.File]::WriteAllText($spawnerPath, $originalSpawners)
+        }
+        $valid = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -Body '{}' -ContentType 'application/json'
+        if ($valid.ok -ne $true -or @($valid.spawners).Count -eq 0) {
+            throw 'Web reload did not restore valid spawners'
+        }
+        $reloadLog = Get-Content -LiteralPath $logPath -Raw -Encoding utf8
+        if ($reloadLog -notmatch '(?s)\[Server thread/WARN\]: \[helsteraMobs\] 刷怪点重载失败[^\r\n]*.*?\[Server thread/INFO\]: \[helsteraMobs\] 已装载刷怪点') {
+            throw 'Web reload did not record failure and recovery on the server thread'
+        }
+        [ordered]@{
+            pluginSha256 = $pluginSha256
+            invalidOk = $invalid.ok
+            invalidMessage = $invalid.message
+            restoredOk = $valid.ok
+            restoredSpawnerCount = @($valid.spawners).Count
+            serverThread = $true
+        } | ConvertTo-Json | Set-Content -LiteralPath $webProbeResultPath -Encoding utf8
+        Write-Host 'Web spawner reload probe passed: invalid=false restored=true'
+    }
 
     # Paper can log Done before the local socket accepts the first client.
     # Give the loopback listener a short settling window before Mineflayer starts.
@@ -211,7 +322,13 @@ try {
         if (Test-Path -LiteralPath $nodeModules) {
             $clientOut = Join-Path $server 'menu-client.stdout.log'
             $clientErr = Join-Path $server 'menu-client.stderr.log'
+            $clientProcessOut = Join-Path $server 'menu-client.process.stdout.log'
             $audienceOut = Join-Path $server 'audience-client.stdout.log'
+            foreach ($clientLog in @($clientOut, $clientErr, $clientProcessOut, $audienceOut)) {
+                if (Test-Path -LiteralPath $clientLog -PathType Leaf) {
+                    Remove-Item -LiteralPath $clientLog -Force
+                }
+            }
             $playerOnly = $env:PAPER_MENU_WORKFLOW -ne 'true'
             $twoPlayers = $env:PAPER_TWO_PLAYER_WORKFLOW -eq 'true'
             $rawPotion = $env:PAPER_RAW_POTION_WORKFLOW -eq 'true'
@@ -232,7 +349,8 @@ try {
             while ([DateTime]::UtcNow -lt $joinDeadline) {
                 if ($null -eq $client -or $client.HasExited) {
                     $client = Start-Process -FilePath 'node' -ArgumentList $clientArguments `
-                        -WorkingDirectory $PSScriptRoot -NoNewWindow -PassThru
+                        -WorkingDirectory $PSScriptRoot -NoNewWindow -PassThru `
+                        -RedirectStandardOutput $clientProcessOut -RedirectStandardError $clientErr
                 }
                 if (Select-String -LiteralPath $logPath -Pattern 'HelsteraTester joined the game' -Quiet) {
                     if ($playerOnly -and $env:PAPER_SKIP_PLAYER_POTION -ne 'true') {
@@ -288,9 +406,6 @@ try {
             $adminWindowDeadline = [DateTime]::UtcNow.AddSeconds(90)
             while ([DateTime]::UtcNow -lt $adminWindowDeadline -and -not $client.HasExited) {
                 if (Select-String -LiteralPath $logPath -Pattern 'MENU_PAGE_ONE_READY' -Quiet) {
-                    # 按钮渲染的断言放在服务端：
-                    # 客户端库解析 Paper 1.21.1 物品组件会失败，格子恒为空，
-                    # 在客户端断言「按钮没渲染」只会把解析失败记成插件缺陷。
                     if (-not (Select-String -LiteralPath $logPath -Pattern 'menu-render id=parity-page-1 .*10=REDSTONE' -Quiet)) {
                         throw 'Menu render check failed: parity-page-1 did not render REDSTONE at slot 10'
                     }
@@ -304,8 +419,6 @@ try {
             $permissionCheckDeadline = [DateTime]::UtcNow.AddSeconds(90)
             while ([DateTime]::UtcNow -lt $permissionCheckDeadline -and -not $client.HasExited) {
                 if (Select-String -LiteralPath $logPath -Pattern 'MENU_PERMISSION_CHECK_COMPLETE' -Quiet) {
-                    # 拒绝语义在服务端校验：被撤权后点 slot 10 必须是
-                    # permitted=false 且 ran=false（既不放行也不关闭）。
                     if (-not (Select-String -LiteralPath $logPath -Pattern 'menu-click id=parity-page-1 .*slot=10 permitted=false ran=false' -Quiet)) {
                         throw 'Menu denial check failed: slot 10 click was not recorded as denied'
                     }
@@ -328,13 +441,20 @@ try {
                 }
                 Start-Sleep -Milliseconds 250
             }
-            if (-not $client.WaitForExit(45000)) { $client.Kill() }
+            $clientWaitMs = if ($env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW -eq 'true') { 60000 } else { 45000 }
+            if (-not $client.WaitForExit($clientWaitMs)) { $client.Kill() }
             if ($client.ExitCode -ne 0) { throw "Paper menu/audience client failed with exit code $($client.ExitCode)" }
-            # 第二页的动作按钮必须真的渲染出来。翻页点击本身无法由该客户端驱动
-            # （item-component 解析失败导致 stateId 失步，Click Container 被丢弃），
-            # 所以改验「直接打开第二页时 slot 13 是 EMERALD」这一服务端事实。
+            # Mineflayer does not decode the menu contents reliably on 1.21.1.
+            # Verify rendered materials and accepted clicks from the server log;
+            # the client report is limited to window and action observations.
             if (-not (Select-String -LiteralPath $logPath -Pattern 'menu-render id=parity-page-2 .*13=EMERALD' -Quiet)) {
                 throw 'Menu pagination action failed: parity-page-2 did not render EMERALD at slot 13'
+            }
+            if (-not (Select-String -LiteralPath $logPath -Pattern 'menu-click id=parity-page-1 .*slot=26 permitted=true ran=true pagination=next' -Quiet)) {
+                throw 'Menu pagination check failed: next-page click was not accepted'
+            }
+            if (-not (Select-String -LiteralPath $logPath -Pattern 'menu-click id=parity-page-2 .*slot=13 permitted=true ran=true close=true' -Quiet)) {
+                throw 'Menu action check failed: allowed action did not run and close the inventory'
             }
             if (-not (Test-Path -LiteralPath $clientOut -PathType Leaf) -or
                     -not (Select-String -LiteralPath $clientOut -Pattern '^PAPER_MENU_REPORT ' -Quiet)) {
@@ -352,7 +472,10 @@ try {
                 Select-Object -Last 1) -replace '^PAPER_AUDIENCE_REPORT ', '' | ConvertFrom-Json
             $filterPayload = ($audienceReports | Where-Object { $_ -match '^PAPER_AUDIENCE_FILTER_REPORT ' } |
                 Select-Object -Last 1) -replace '^PAPER_AUDIENCE_FILTER_REPORT ', '' | ConvertFrom-Json
-            if ($menuPayload.status -ne 'passed' -or $audiencePayload.status -ne 'passed' -or
+            if ($menuPayload.status -ne 'passed' -or $menuPayload.observations.paginationClick -ne $true -or
+                    $menuPayload.observations.allowedActionMessage -ne $true -or
+                    $menuPayload.observations.actionClosedInventory -ne $true -or
+                    $audiencePayload.status -ne 'passed' -or
                     $filterPayload.status -ne 'passed') {
                 throw 'Paper menu, audience delivery, or audience filter assertions failed'
             }
@@ -428,11 +551,15 @@ try {
     }
 }
 if ($process.ExitCode -ne 0) { throw "Paper exited with code $($process.ExitCode)" }
+if (-not (Test-Path -LiteralPath $installedPlugin -PathType Leaf) -or
+        (Get-FileHash -LiteralPath $installedPlugin -Algorithm SHA256).Hash.ToLowerInvariant() -cne $pluginSha256) {
+    throw 'Installed plugin JAR changed or disappeared during the Paper run.'
+}
 $evidenceMode = if ($Exploratory) { 'exploratory' } else { 'release' }
 & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $server `
     -EvidenceMode $evidenceMode `
     -RandomSpawnTolerance $RandomSpawnTolerance `
-    -StartedAtUtc $runStartedUtc
+    -StartedAtUtc $runStartedUtc -PluginSha256 $pluginSha256
 if ($Strict) {
     $strictReportPath = Join-Path $server 'integration-report.json'
     $schemaPath = Join-Path $PSScriptRoot 'integration-report.schema.json'
@@ -443,5 +570,6 @@ if ($Strict) {
     }
     & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') `
         -ReportPath $strictReportPath `
-        -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+        -RequireTargetPaperVersion -RequireFullReleaseCatalog -ExpectedPaperVersion '1.21.1' `
+        -ExpectedPluginSha256 $pluginSha256
 }

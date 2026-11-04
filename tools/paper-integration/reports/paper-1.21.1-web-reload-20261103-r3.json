@@ -1,0 +1,8 @@
+{
+  "pluginSha256": "82b509e07d06497e7169647b9b3185423b534c93fae976ea3eb58c408a27e735",
+  "invalidOk": false,
+  "invalidMessage": "掉落表或刷怪点重载失败，请检查服务器日志。",
+  "restoredOk": true,
+  "restoredSpawnerCount": 43,
+  "serverThread": true
+}

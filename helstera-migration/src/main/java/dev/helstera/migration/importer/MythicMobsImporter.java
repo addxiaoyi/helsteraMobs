@@ -262,53 +262,296 @@ public final class MythicMobsImporter implements MigrationImporter {
     @Override
     public List<Path> scan(Path pluginDataFolder) {
         List<Path> out = new ArrayList<>();
-        collect(pluginDataFolder.resolve("Mobs"), out, 3);
+        collect(pluginDataFolder.resolve("Mobs"), out);
         // Skills 目录一并扫：Mobs 里 skill{s=X} 引用的定义在这里，
         // 只导 Mobs 会得到一堆指向空技能的悬空引用。
-        collect(pluginDataFolder.resolve("Skills"), out, 3);
-        collect(pluginDataFolder.resolve("Items"), out, 3);
-        collect(pluginDataFolder.resolve("Spawners"), out, 3);
+        collect(pluginDataFolder.resolve("Skills"), out);
+        collect(pluginDataFolder.resolve("Items"), out);
+        collect(pluginDataFolder.resolve("Spawners"), out);
+        collect(pluginDataFolder.resolve("DropTables"), out);
         return out;
     }
 
-    private void collect(Path dir, List<Path> out, int depth) {
-        if (!Files.isDirectory(dir)) return;
-        try (var s = Files.walk(dir, depth)) {
-            s.filter(p -> p.toString().endsWith(".yml")).forEach(out::add);
-        } catch (Exception ignored) {
+    private void collect(Path dir, List<Path> out) {
+        if (Files.notExists(dir, java.nio.file.LinkOption.NOFOLLOW_LINKS)) return;
+        try (var s = Files.walk(dir)) {
+            if (!Files.readAttributes(dir, java.nio.file.attribute.BasicFileAttributes.class).isDirectory()) {
+                throw new java.io.IOException("Expected a directory: " + dir);
+            }
+            s.filter(MythicMobsImporter::isYamlFile).filter(path -> {
+                try {
+                    return Files.readAttributes(path, java.nio.file.attribute.BasicFileAttributes.class).isRegularFile();
+                } catch (java.io.IOException ex) {
+                    throw new java.io.UncheckedIOException("Cannot inspect " + path, ex);
+                }
+            }).forEach(out::add);
+        } catch (java.io.IOException ex) {
+            throw new java.io.UncheckedIOException("Cannot scan MythicMobs directory " + dir, ex);
         }
+    }
+
+    static boolean isYamlFile(Path path) {
+        String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+        return name.endsWith(".yml") || name.endsWith(".yaml");
     }
 
     @Override
     public List<Map<String, Object>> convert(Path sourceFile) {
+        return convertInCategory(sourceFile, sourceCategory(sourceFile));
+    }
+
+    @Override
+    public List<Map<String, Object>> convert(Path sourceFile, Path pluginDataFolder) {
+        Path root = pluginDataFolder.toAbsolutePath().normalize();
+        Path file = sourceFile.toAbsolutePath().normalize();
+        if (!file.startsWith(root) || root.relativize(file).getNameCount() < 2) {
+            throw new IllegalArgumentException("Source file is outside a MythicMobs category: " + sourceFile);
+        }
+        Path category = root.resolve(root.relativize(file).getName(0));
+        if (!Set.of("Mobs", "Skills", "Items", "Spawners", "DropTables").contains(category.getFileName().toString())) {
+            throw new IllegalArgumentException("Unknown MythicMobs category: " + category);
+        }
+        return convertInCategory(sourceFile, category);
+    }
+
+    private List<Map<String, Object>> convertInCategory(Path sourceFile, Path category) {
         List<Map<String, Object>> entries = new ArrayList<>();
-        YamlConfiguration src = ImporterUtil.load(sourceFile);
-        boolean isItemsDir = sourceFile.getParent() != null
-                && sourceFile.getParent().getFileName() != null
-                && "items".equalsIgnoreCase(sourceFile.getParent().getFileName().toString());
+        YamlConfiguration src = new YamlConfiguration();
+        try {
+            src.load(sourceFile.toFile());
+        } catch (java.io.IOException | org.bukkit.configuration.InvalidConfigurationException | SecurityException ex) {
+            throw new IllegalArgumentException("Cannot read MythicMobs YAML " + sourceFile + ": " + ex.getMessage(), ex);
+        }
+        String categoryName = category == null ? "" : category.getFileName().toString();
+        boolean isItemsDir = "items".equalsIgnoreCase(categoryName);
         if (isItemsDir) return convertItems(src, sourceFile, entries);
 
-        boolean isSkillsDir = sourceFile.getParent() != null
-                && sourceFile.getParent().getFileName() != null
-                && "skills".equalsIgnoreCase(sourceFile.getParent().getFileName().toString());
+        boolean isSkillsDir = "skills".equalsIgnoreCase(categoryName);
 
         if (isSkillsDir) {
             return convertSkills(src, sourceFile, entries);
         }
-        boolean isSpawnersDir = sourceFile.getParent() != null
-                && sourceFile.getParent().getFileName() != null
-                && "spawners".equalsIgnoreCase(sourceFile.getParent().getFileName().toString());
-        if (isSpawnersDir) return convertSpawners(src, sourceFile, entries);
+        boolean isSpawnersDir = "spawners".equalsIgnoreCase(categoryName);
+        if (isSpawnersDir) {
+            preserveNullSpawnerConditions(src, sourceFile);
+            return convertSpawners(src, sourceFile, entries);
+        }
+        boolean isDropTablesDir = "droptables".equalsIgnoreCase(categoryName);
+        if (isDropTablesDir) preserveNullDropTableConditions(src, sourceFile);
+        else preserveNullImmunityConditions(src, sourceFile);
+        MythicDropCatalog dropCatalog = MythicDropCatalog.read(sourceFile, category);
+        if (!dropCatalog.issues().isEmpty()) {
+            note(entries, sourceFile.toString(), "drop-catalog", "loot.yml", dropCatalog.issues(),
+                    "unsupported", "Source drop catalog could not be read completely; affected drop entries were preserved.", "WARN");
+        }
+        if (isDropTablesDir) return convertDropTables(src, sourceFile, entries, dropCatalog);
 
-        ConfigurationSection mobs = src.getConfigurationSection("mobs");
-        if (mobs == null) return entries;
-
-        for (String mobKey : mobs.getKeys(false)) {
-            ConfigurationSection mob = mobs.getConfigurationSection(mobKey);
-            if (mob == null) continue;
-            convertMob(mobKey, mob, sourceFile.toString(), entries);
+        for (String mobKey : src.getKeys(false)) {
+            ConfigurationSection mob = src.getConfigurationSection(mobKey);
+            if (mob == null) {
+                note(entries, sourceFile.toString(), mobKey, "mobs", src.get(mobKey), "unsupported",
+                        "Mob definition must be a configuration section; original value preserved in migration report.", "WARN");
+                continue;
+            }
+            boolean nestedMobDefinitions = mob.getKeys(false).stream().anyMatch(key -> {
+                ConfigurationSection nested = mob.getConfigurationSection(key);
+                return nested != null && ciGet(nested, "Type", "MobType", "EntityType") != null;
+            });
+            Object mobType = ciGet(mob, "Type", "MobType", "EntityType");
+            if ("mobs".equals(mobKey) && ((nestedMobDefinitions && (mobType == null || mobType instanceof ConfigurationSection)) || ciGet(mob, "Type", "MobType", "EntityType", "Health", "Damage",
+                    "Display", "Options", "Skills", "Drops") == null)) {
+                for (String nestedKey : mob.getKeys(false)) {
+                    ConfigurationSection nested = mob.getConfigurationSection(nestedKey);
+                    if (nested != null) {
+                        convertMob(nestedKey, nested, sourceFile.toString(), entries, dropCatalog);
+                    } else {
+                        note(entries, sourceFile.toString(), "mobs." + nestedKey, "mobs", mob.get(nestedKey),
+                                "unsupported", "Mob definition must be a configuration section; original value preserved in migration report.", "WARN");
+                    }
+                }
+            } else if (ciGet(mob, "Type", "MobType", "EntityType", "Health", "Damage", "Display",
+                    "Options", "Skills", "Drops", "Equipment", "Disguise", "Faction", "LevelModifiers") != null) {
+                convertMob(mobKey, mob, sourceFile.toString(), entries, dropCatalog);
+            } else {
+                note(entries, sourceFile.toString(), mobKey, "mobs", mob.getValues(true), "unsupported",
+                        "Unrecognized top-level mob definition preserved in migration report.", "WARN");
+            }
         }
         return entries;
+    }
+
+    private static void preserveNullImmunityConditions(YamlConfiguration config, Path sourceFile) {
+        try {
+            dev.helstera.api.util.NullImmunityConditions.restore(config, sourceFile);
+        } catch (java.io.IOException | org.yaml.snakeyaml.error.YAMLException ex) {
+            throw new IllegalArgumentException("Cannot inspect MythicMobs YAML " + sourceFile + ": " + ex.getMessage(), ex);
+        }
+    }
+
+    private static void preserveNullSpawnerConditions(YamlConfiguration config, Path sourceFile) {
+        try (var reader = Files.newBufferedReader(sourceFile)) {
+            var yaml = new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.SafeConstructor(
+                    new org.yaml.snakeyaml.LoaderOptions()));
+            Object parsed = yaml.load(reader);
+            if (!(parsed instanceof Map<?, ?> root)) return;
+            boolean nested = config.getConfigurationSection("spawners") != null;
+            Object definitions = nested ? root.get("spawners") : root;
+            ConfigurationSection sections = nested ? config.getConfigurationSection("spawners") : config;
+            if (!(definitions instanceof Map<?, ?> map)) return;
+            for (var entry : map.entrySet()) {
+                if (!(entry.getKey() instanceof String name) || !(entry.getValue() instanceof Map<?, ?> fields)) continue;
+                ConfigurationSection section = sections.getConfigurationSection(name);
+                if (section == null) continue;
+                boolean invalid = fields.entrySet().stream().anyMatch(field -> field.getKey() instanceof String key
+                        && (key.equalsIgnoreCase("conditions") || key.equalsIgnoreCase("spawn-conditions"))
+                        && field.getValue() == null);
+                if (invalid) {
+                    for (String key : section.getKeys(false)) {
+                        if (key.equalsIgnoreCase("conditions") || key.equalsIgnoreCase("spawn-conditions")) {
+                            section.set(key, ConditionListParser.INVALID_CONDITION);
+                        }
+                    }
+                    section.set("conditions", ConditionListParser.INVALID_CONDITION);
+                }
+            }
+        } catch (java.io.IOException | org.yaml.snakeyaml.error.YAMLException | SecurityException ex) {
+            throw new IllegalArgumentException("Cannot inspect MythicMobs YAML " + sourceFile + ": " + ex.getMessage(), ex);
+        }
+    }
+
+    static void preserveNullDropTableConditions(YamlConfiguration config, Path sourceFile) {
+        try (var reader = Files.newBufferedReader(sourceFile)) {
+            var yaml = new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.SafeConstructor(
+                    new org.yaml.snakeyaml.LoaderOptions()));
+            Object root = yaml.load(reader);
+            if (!(root instanceof Map<?, ?> tables)) return;
+            for (var tableEntry : tables.entrySet()) {
+                if (tableEntry.getKey() == null) continue;
+                String tableKey = String.valueOf(tableEntry.getKey());
+                if (tableEntry.getValue() == null) {
+                    config.set(tableKey, ConditionListParser.INVALID_CONDITION);
+                    continue;
+                }
+                if (!(tableEntry.getValue() instanceof Map<?, ?> fields)) continue;
+                ConfigurationSection table = config.getConfigurationSection(tableKey);
+                if (table == null) continue;
+                for (var field : fields.entrySet()) {
+                    if (!(field.getKey() instanceof String name) || field.getValue() != null) continue;
+                    if (!name.equalsIgnoreCase("Conditions") && !name.equalsIgnoreCase("TriggerConditions")) continue;
+                    for (String existing : table.getKeys(false)) {
+                        if (existing.equalsIgnoreCase(name)) table.set(existing, ConditionListParser.INVALID_CONDITION);
+                    }
+                    table.set(name, ConditionListParser.INVALID_CONDITION);
+                }
+            }
+        } catch (java.io.IOException | org.yaml.snakeyaml.error.YAMLException | SecurityException ex) {
+            throw new IllegalArgumentException("Cannot inspect MythicMobs YAML " + sourceFile + ": " + ex.getMessage(), ex);
+        }
+    }
+
+    static Path sourceCategory(Path sourceFile) {
+        for (Path directory = sourceFile.getParent(); directory != null; directory = directory.getParent()) {
+            Path name = directory.getFileName();
+            if (name != null && Set.of("mobs", "skills", "items", "spawners", "droptables")
+                    .contains(name.toString().toLowerCase(Locale.ROOT))) return directory;
+        }
+        return null;
+    }
+
+    private List<Map<String, Object>> convertDropTables(YamlConfiguration src, Path file,
+                                                         List<Map<String, Object>> entries,
+                                                         MythicDropCatalog dropCatalog) {
+        for (String sourceName : src.getKeys(false)) {
+            ConfigurationSection table = src.getConfigurationSection(sourceName);
+            if (dropCatalog.ambiguousTable(sourceName)) {
+                note(entries, file.toString(), sourceName, "loot.yml", table == null ? src.get(sourceName) : table.getValues(true),
+                        "unsupported", "Multiple source DropTables resolve to the same ID; original definition preserved.", "WARN");
+                entries.add(Map.of("status", "conflict", "conflict-type", "duplicate-loot-table",
+                        "table", normalizeId(sourceName), "file", file.toString(),
+                        "note", "Multiple source DropTables resolve to the same ID."));
+                continue;
+            }
+            if (table == null) {
+                Object raw = src.get(sourceName);
+                String message = ConditionListParser.INVALID_CONDITION.equals(raw)
+                        ? "Null DropTable definition rejected; marker shown, consult source YAML for the original value."
+                        : "DropTable definition must be a configuration section; original value preserved.";
+                note(entries, file.toString(), sourceName, "loot.yml", raw, "unsupported", message, "WARN");
+                continue;
+            }
+            List<String> dropperConditions = conditionValues(table, "Conditions");
+            Object drops = ciGet(table, "Drops");
+            List<?> rawEntries = drops instanceof List<?> list ? list
+                    : drops == null ? List.of() : List.of(drops);
+            List<String> translatedDropperConditions = new ArrayList<>();
+            List<String> unmappedDropperConditions = new ArrayList<>();
+            MmConditions.translateAll(dropperConditions, translatedDropperConditions, unmappedDropperConditions);
+            if (!unmappedDropperConditions.isEmpty()) {
+                note(entries, file.toString(), sourceName, "loot.yml", table.getValues(true),
+                        "unsupported", "Unmapped dropper conditions prevent projection; original table preserved.", "WARN");
+                continue;
+            }
+            List<String> triggerConditions = conditionValues(table, "TriggerConditions");
+            List<String> translatedTriggers = new ArrayList<>();
+            List<String> unmappedTriggers = new ArrayList<>();
+            MmConditions.translateAll(triggerConditions, translatedTriggers, unmappedTriggers);
+            if (!unmappedTriggers.isEmpty()) {
+                note(entries, file.toString(), sourceName + ".TriggerConditions", "loot.yml",
+                        table.getValues(true), "unsupported",
+                        "Unmapped killer conditions prevent projection; original table preserved.", "WARN");
+                continue;
+            }
+            String targetName = normalizeId(sourceName);
+            if (targetName.isBlank() || rawEntries.isEmpty()) {
+                note(entries, file.toString(), sourceName, "loot.yml", table.getValues(true),
+                        "unsupported", "Empty or invalid standalone DropTable was preserved.", "WARN");
+                continue;
+            }
+            List<MythicDropSpec> resolvedDrops = rawEntries.stream().map(dropCatalog::parse).toList();
+            YamlConfiguration projected = MythicDropTableProjection.project(targetName, table, resolvedDrops);
+            ConfigurationSection projectedEntries = projected.getConfigurationSection(
+                    "tables." + targetName + ".entries");
+            if (projectedEntries == null || projectedEntries.getKeys(false).isEmpty()) {
+                note(entries, file.toString(), sourceName, "loot.yml", table.getValues(true),
+                        "unsupported", "No DropTable entries could be safely mapped; original table preserved.", "WARN");
+                continue;
+            }
+            entries.add(Map.of("target-file", "loot.yml", "content", projected.saveToString(),
+                    "status", "mapped", "note", "Safe standalone Mythic DropTable projected."));
+            note(entries, file.toString(), sourceName, "loot.yml.tables." + targetName,
+                    targetName, "mapped", "Standalone Mythic DropTable projected to loot.yml.");
+            Object biasStat = firstIgnoreCase(table, "BiasStat");
+            if (biasStat != null) {
+                note(entries, file.toString(), sourceName + ".BiasStat", "loot.yml", biasStat,
+                        "unsupported", "BiasStat has no runtime loot-bias input and was preserved in the migration report.", "WARN");
+            }
+            List<Object> unsafeDrops = new ArrayList<>();
+            for (int i = 0; i < rawEntries.size(); i++) {
+                MythicDropSpec spec = resolvedDrops.get(i);
+                if (spec == null || spec.runtimeEntry().isEmpty()) unsafeDrops.add(rawEntries.get(i));
+            }
+            if (!unsafeDrops.isEmpty()) {
+                note(entries, file.toString(), sourceName + ".Drops", "loot.yml", unsafeDrops,
+                        "unsupported", "Unmapped drop lines were preserved in the migration report.", "WARN");
+            }
+            Set<String> recognized = Set.of("drops", "totalitems", "minitems", "maxitems",
+                    "bonuslevelitems", "bonusluckitems", "conditions", "triggerconditions", "biasstat");
+            for (String key : table.getKeys(false)) {
+                if (!recognized.contains(key.toLowerCase(Locale.ROOT))) {
+                    note(entries, file.toString(), sourceName + "." + key, "loot.yml",
+                            table.get(key), "unsupported",
+                            "Unmapped DropTable option was preserved in the migration report.", "WARN");
+                }
+            }
+        }
+        return entries;
+    }
+
+    private static Object firstIgnoreCase(ConfigurationSection section, String key) {
+        for (String candidate : section.getKeys(false)) {
+            if (candidate.equalsIgnoreCase(key)) return section.get(candidate);
+        }
+        return null;
     }
 
     // ------------------------------------------------------------------
@@ -321,11 +564,23 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (root == null) root = src;
         YamlConfiguration target = new YamlConfiguration();
         int converted = 0;
+        Map<String, String> seenItems = new LinkedHashMap<>();
         for (String key : root.getKeys(false)) {
             ConfigurationSection item = root.getConfigurationSection(key);
             if (item == null) continue;
+            if (duplicateDefinition(seenItems, key, "item", file, entries)) continue;
             String path = "items." + normalizeId(key);
-            copyFirst(item, target, path + ".template", "Template", "template", "Parent", "parent");
+            Object template = ciGet(item, "Template", "template", "Parent", "parent");
+            if (template instanceof String value && !value.isBlank()) {
+                String normalizedTemplate = normalizeId(value);
+                target.set(path + ".template", normalizedTemplate);
+                note(entries, file.toString(), "Items." + key + ".Template", path + ".template",
+                        normalizedTemplate, "mapped", "Item template reference normalized to its imported ID.");
+            } else if (template != null) {
+                target.set(path + ".unsupported.template", template);
+                note(entries, file.toString(), "Items." + key + ".Template", path + ".unsupported.template",
+                        template, "unsupported", "Item template must be a non-empty name.", "WARN");
+            }
             Object rawId = ciGet(item, "Id", "Material", "material");
             String sourceId = rawId == null ? null : String.valueOf(rawId).trim();
             Object rawData = ciGet(item, "Data", "data");
@@ -507,10 +762,12 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (root == null) root = src;
         YamlConfiguration target = new YamlConfiguration();
         ConfigurationSection regions = src.getConfigurationSection("regions");
+        Map<String, String> seenRegions = new LinkedHashMap<>();
         if (regions != null) {
             for (String region : regions.getKeys(false)) {
                 ConfigurationSection section = regions.getConfigurationSection(region);
                 if (section == null) continue;
+                if (duplicateDefinition(seenRegions, region, "region", file, entries)) continue;
                 // SpawnerService receives the `spawners` section, so named
                 // regions must live below that same section in the output.
                 String regionPath = "spawners.regions." + normalizeId(region);
@@ -524,11 +781,18 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
         }
         int converted = 0;
+        Map<String, String> seenSpawners = new LinkedHashMap<>();
         for (String key : root.getKeys(false)) {
             ConfigurationSection sp = root.getConfigurationSection(key);
             if (sp == null) continue;
             String mob = firstString(sp, "mob", "mobname", "mob-name", "mobtype");
             if (mob == null || mob.isBlank()) continue;
+            if ("regions".equals(normalizeId(key))) {
+                entries.add(Map.of("status", "conflict", "conflict-type", "duplicate-definition-id",
+                        "file", file.toString(), "note", "Spawner " + key + " uses the reserved regions ID."));
+                continue;
+            }
+            if (duplicateDefinition(seenSpawners, key, "spawner", file, entries)) continue;
             String path = "spawners." + normalizeId(key);
             target.set(path + ".mob", mob);
             copyFirst(sp, target, path + ".world", "world", "worldname", "world-name");
@@ -554,8 +818,9 @@ public final class MythicMobsImporter implements MigrationImporter {
             target.set(path + ".enabled", sp.getBoolean("enabled", true));
             converted++;
         }
-        if (converted == 0) return entries;
+        if (converted == 0 && target.getConfigurationSection("spawners.regions") == null) return entries;
         entries.add(Map.of("target-file", "spawners.yml", "content", target.saveToString(),
+                "source-regions", seenRegions,
                 "status", "mapped", "note", "MythicMobs spawners converted."));
         return entries;
     }
@@ -568,18 +833,44 @@ public final class MythicMobsImporter implements MigrationImporter {
         return null;
     }
 
+    private static boolean duplicateDefinition(Map<String, String> seen, String name, String kind,
+                                               Path file, List<Map<String, Object>> entries) {
+        String id = normalizeId(name);
+        String previous = seen.putIfAbsent(id, name);
+        if (previous == null) return false;
+        entries.add(Map.of("status", "conflict", "conflict-type", "duplicate-definition-id",
+                "file", file.toString(), "id", id,
+                "note", kind + " definitions " + previous + " and " + name + " resolve to the same ID."));
+        return true;
+    }
+
     private void mapSpawnerConditions(ConfigurationSection source, String srcFile,
                                       List<Map<String, Object>> entries,
                                       YamlConfiguration target, String spawnerKey,
                                       String targetPath) {
         Object raw = ciGet(source, "conditions", "Conditions", "spawn-conditions");
-        List<String> input = conditionList(raw);
+        List<String> input = new ArrayList<>();
+        boolean invalid = false;
+        if (raw != null) {
+            List<?> values = raw instanceof List<?> list ? list : List.of(raw);
+            for (Object value : values) {
+                List<String> parsed = value instanceof String text ? ConditionListParser.parseFailClosed(text) : List.of();
+                if (parsed.isEmpty() || parsed.contains(ConditionListParser.INVALID_CONDITION)) invalid = true;
+                for (String condition : parsed) {
+                    if (!ConditionListParser.INVALID_CONDITION.equals(condition)) input.add(condition);
+                }
+            }
+        }
+        if (invalid) input.add("");
         if (input.isEmpty()) return;
 
         List<String> mapped = new ArrayList<>();
         List<String> unmapped = new ArrayList<>();
         for (String condition : input) {
-            if (condition == null || condition.isBlank()) continue;
+            if (condition == null || condition.isBlank()) {
+                mapped.add("");
+                continue;
+            }
             String value = condition.trim();
             boolean negated = value.startsWith("!");
             String leaf = negated ? value.substring(1).trim() : value;
@@ -597,6 +888,9 @@ public final class MythicMobsImporter implements MigrationImporter {
                 mapped, "mapped", "Spawner conditions translated while preserving native spawner predicates.");
         noteUnmappedSkillConditions(entries, srcFile, "Spawners." + spawnerKey + ".Conditions",
                 targetPath + ".conditions", unmapped);
+        if (invalid) note(entries, srcFile, "Spawners." + spawnerKey + ".Conditions",
+                targetPath + ".conditions", String.valueOf(raw), "unsupported",
+                "Invalid condition entries are preserved as a fail-closed condition.");
     }
 
     private static List<String> conditionList(Object raw) {
@@ -638,14 +932,40 @@ public final class MythicMobsImporter implements MigrationImporter {
     }
 
     private void convertMob(String mobKey, ConfigurationSection mob, String srcFile,
-                            List<Map<String, Object>> entries) {
+                            List<Map<String, Object>> entries, MythicDropCatalog dropCatalog) {
+        List<String> typeKeys = mob.getKeys(false).stream()
+                .filter(key -> key.equalsIgnoreCase("Type") || key.equalsIgnoreCase("MobType")
+                        || key.equalsIgnoreCase("EntityType"))
+                .toList();
+        if (typeKeys.size() > 1) {
+            note(entries, srcFile, mobKey, "mobs", mob.getValues(true), "unsupported",
+                    "Multiple entity type fields are ambiguous; original mob preserved in migration report.", "WARN");
+            return;
+        }
+        String normalizedType = null;
+        if (!typeKeys.isEmpty()) {
+            Object rawType = mob.get(typeKeys.get(0));
+            try {
+                if (!(rawType instanceof String name) || name.isBlank()) throw new IllegalArgumentException();
+                org.bukkit.entity.EntityType type = org.bukkit.entity.EntityType.valueOf(name.trim().toUpperCase(Locale.ROOT));
+                if (!type.isSpawnable()) throw new IllegalArgumentException();
+                normalizedType = type.name();
+            } catch (IllegalArgumentException ex) {
+                note(entries, srcFile, mobKey, "mobs", mob.getValues(true), "unsupported",
+                        "Entity type is invalid or not spawnable; original mob preserved in migration report.", "WARN");
+                return;
+            }
+        }
         String targetId = "mythic_" + normalizeId(mobKey);
         YamlConfiguration target = new YamlConfiguration();
         target.set("schema-version", 1);
         target.set("id", targetId);
 
         // ---- 基础属性 ----
-        mapScalar(mob, "type", srcFile, entries, target, "mob.entity-type");
+        if (normalizedType != null) {
+            target.set("mob.entity-type", normalizedType);
+            note(entries, srcFile, typeKeys.get(0), "mob.entity-type", normalizedType, "mapped", null);
+        }
         mapScalar(mob, "health", srcFile, entries, target, "mob.health");
         mapScalar(mob, "damage", srcFile, entries, target, "mob.attack-damage");
         mapScalar(mob, "display", srcFile, entries, target, "mob.display-name");
@@ -673,7 +993,18 @@ public final class MythicMobsImporter implements MigrationImporter {
         // ---- Options：MythicMobs 里最常改的语义配置 ----
         ConfigurationSection options = ciSection(mob, "Options");
         boolean preventConversionMapped = true;
+        boolean reviveHealthMapped = false;
         if (options != null) {
+            Object revive = ciGet(options, "ReviveHealth");
+            if (revive instanceof Number number) {
+                double value = number.doubleValue();
+                if (Double.isFinite(value) && (value == -1 || value > 0)) {
+                    target.set("mob.revive-health", value);
+                    note(entries, srcFile, mobKey + ".Options.ReviveHealth", "mob.revive-health", value,
+                            "mapped", "Applied when a death event is cancelled.");
+                    reviveHealthMapped = true;
+                }
+            }
             mapOption(options, srcFile, entries, target, "FollowRange", "mob.sight-radius");
             mapOption(options, srcFile, entries, target, "MovementSpeed", "mob.move-speed");
             mapOption(options, srcFile, entries, target, "KnockbackResistance", "mob.knockback-resistance");
@@ -819,6 +1150,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                 removeIgnoreCase(leftover, mapped);
             }
             if (preventConversionMapped) removeIgnoreCase(leftover, "PreventConversion");
+            if (reviveHealthMapped) removeIgnoreCase(leftover, "ReviveHealth");
             removeIgnoreCase(leftover, "PreventSuicide");
             if (!leftover.isEmpty()) {
                 target.set("mob.unsupported.Options", leftover);
@@ -833,15 +1165,40 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (mobAttributes != null) mapEquipmentAttributes(mobAttributes, "main-hand", srcFile, entries, target, mobKey);
 
         // ---- Drops ----
+        Map<String, Object> dropSources = new LinkedHashMap<>();
+        for (String key : mob.getKeys(false)) {
+            if (key.equalsIgnoreCase("DropTable-1") || key.equalsIgnoreCase("DropTable1")
+                    || key.equalsIgnoreCase("Drops")) {
+                dropSources.put(key, mob.get(key));
+            }
+        }
         Object drops = firstOf(mob, "DropTable-1", "DropTable1", "Drops");
-        if (drops != null) {
+        if (dropSources.size() > 1) {
+            target.set("mob.unsupported.Drops.conflicting-sources", dropSources);
+            note(entries, srcFile, mobKey + ".Drops", "mob.unsupported.Drops.conflicting-sources",
+                    dropSources, "unsupported", "Multiple drop sources require manual conversion; none was projected.", "WARN");
+            List<Object> combined = new ArrayList<>();
+            for (Object source : dropSources.values()) {
+                if (source instanceof List<?> list) combined.addAll(list);
+                else combined.add(source);
+            }
+            mapExternalDropTypes(combined, srcFile, entries, target, mobKey);
+        } else if (drops != null) {
             if (drops instanceof String || drops instanceof Number) {
-                target.set("mob.drops.table", drops);
-                note(entries, srcFile, mobKey + ".DropTable-1", "mob.drops.table", drops, "mapped", null);
+                String tableName = normalizeId(String.valueOf(drops));
+                if (dropCatalog.safeTableReference(String.valueOf(drops))) {
+                    target.set("mob.drops.table", tableName);
+                    note(entries, srcFile, mobKey + ".DropTable-1", "mob.drops.table", tableName, "mapped", null);
+                } else {
+                    target.set("mob.unsupported.Drops.entries", drops);
+                    note(entries, srcFile, mobKey + ".DropTable-1", "mob.unsupported.Drops.entries", drops,
+                            "unsupported", "Unsafe or ambiguous DropTable reference preserved for manual conversion.", "WARN");
+                }
             } else if (drops instanceof List<?> list) {
                 String tableName = normalizeId(mobKey) + "_drops";
+                List<MythicDropSpec> resolvedDrops = list.stream().map(dropCatalog::parse).toList();
                 org.bukkit.configuration.file.YamlConfiguration projection =
-                        MythicDropTableProjection.project(tableName, list);
+                        MythicDropTableProjection.project(tableName, resolvedDrops);
                 var tableEntries = projection.getConfigurationSection("tables." + tableName + ".entries");
                 if (tableEntries != null && !tableEntries.getKeys(false).isEmpty()) {
                     target.set("mob.drops.table", tableName);
@@ -851,9 +1208,9 @@ public final class MythicMobsImporter implements MigrationImporter {
                             "mapped", "Safe structured Drops were projected to a generated DropTable.");
                 }
                 List<Object> unsafe = new ArrayList<>();
-                for (Object raw : list) {
-                    MythicDropSpec spec = MythicDropSpec.parse(raw);
-                    if (spec == null || spec.runtimeEntry().isEmpty()) unsafe.add(raw);
+                for (int i = 0; i < list.size(); i++) {
+                    MythicDropSpec spec = resolvedDrops.get(i);
+                    if (spec == null || spec.runtimeEntry().isEmpty()) unsafe.add(list.get(i));
                 }
                 if (!unsafe.isEmpty()) {
                     target.set("mob.unsupported.Drops.entries", unsafe);
@@ -914,6 +1271,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         entries.add(Map.of(
                 "target-file", "mobs/" + targetId + ".yml",
                 "content", target.saveToString(),
+                "source-mob-id", mobKey,
+                "target-mob-id", targetId,
                 "status", "mapped",
                 "note", "MythicMobs 生物 " + mobKey + " 已转换"));
     }
@@ -1022,20 +1381,156 @@ public final class MythicMobsImporter implements MigrationImporter {
         // 纯注释
         if (raw.startsWith("#")) return;
 
+        if (MythicSpec.ambiguousExecutionSuffix(raw)) {
+            scan.unsupported.add(raw);
+            note(entries, srcFile, mobKey + ".Skills[]",
+                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                    "unsupported", "Invalid or ambiguous targeter, condition or chance suffix; original line preserved.", "WARN");
+            return;
+        }
+
+        String variableTargeter = locationTargeter(raw);
+        boolean variableLocation = variableTargeter != null && dev.helstera.api.behavior.Targeters
+                .isVariableLocationName(variableTargeter.substring(1).split("\\{", 2)[0]);
+        if (variableTargeter != null && !(variableLocation
+                ? dev.helstera.api.behavior.Targeters.validVariableLocationSpec(variableTargeter)
+                : dev.helstera.api.behavior.Targeters.validLocationTargeterSpec(variableTargeter))) {
+            scan.unsupported.add(raw);
+            note(entries, srcFile, mobKey + ".Skills[]",
+                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                    "unsupported", "Invalid " + (variableLocation ? "VariableLocation" : "Location")
+                            + " targeter; original line preserved.", "WARN");
+            return;
+        }
+
+        String mechanic = raw.split("[\\s{:]+", 2)[0].toLowerCase(Locale.ROOT);
+        if (!java.util.Set.of("skill", "skillmechanic", "dropitem").contains(mechanic)
+                && invalidExecutionOptions(raw)) {
+            scan.unsupported.add(raw);
+            note(entries, srcFile, mobKey + ".Skills[]",
+                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                    "unsupported", "Invalid mechanic execution options; original line preserved.", "WARN");
+            return;
+        }
+        if ((mechanic.equals("skill") || mechanic.equals("skillmechanic"))
+                && MythicSpec.skillRef(raw) == null) {
+            scan.unsupported.add(raw);
+            note(entries, srcFile, mobKey + ".Skills[]",
+                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                    "unsupported", "Invalid skill reference or unsupported skill arguments; original line preserved.", "WARN");
+            return;
+        }
+        if ((mechanic.equals("skill") || mechanic.equals("skillmechanic"))
+                && invalidExecutionOptions(raw)) {
+            scan.unsupported.add(raw);
+            note(entries, srcFile, mobKey + ".Skills[]",
+                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                    "unsupported", "Invalid skill execution options; original line preserved.", "WARN");
+            return;
+        }
+        if (mechanic.equals("dropitem")) {
+            if (hasUnsupportedDropItemArguments(raw)) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Unsupported dropitem argument; original line preserved.", "WARN");
+                return;
+            }
+            if (invalidExecutionOptions(raw)) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid dropitem execution options; original line preserved.", "WARN");
+                return;
+            }
+            if (invalidDropItemNaturally(raw)) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid dropitem naturally flag; original line preserved.", "WARN");
+                return;
+            }
+            String item = dropItemName(raw);
+            if (invalidDropItemItemFields(raw) || item == null || item.isBlank()
+                    || item.startsWith("@") || item.startsWith("~") || item.startsWith("?")
+                    || item.chars().anyMatch(Character::isWhitespace)) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid dropitem item; original line preserved.", "WARN");
+                return;
+            }
+            String amount = firstArg(raw, "amount", "a");
+            if (amount == null && raw.indexOf('{') < 0) amount = positionalArg(raw, 1);
+            if (invalidDropItemAmountFields(raw) || amount != null && !amount.startsWith("@") && !amount.startsWith("~")
+                    && !amount.startsWith("?") && !validDropItemCount(amount)) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid dropitem amount; original line preserved.", "WARN");
+                return;
+            }
+        }
+        if (mechanic.equals("teleport") || mechanic.equals("tp")) {
+            scan.unsupported.add(raw);
+            note(entries, srcFile, mobKey + ".Skills[]",
+                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                    "unsupported", "Mythic teleport moves the caster to the selected target; "
+                            + "safe landing, spread and orientation semantics are not implemented.", "WARN");
+            return;
+        }
+
+        // Event suffixes must never fall through to the periodic decision list.
+        List<Integer> eventPositions = eventTokens(raw);
+        if (!eventPositions.isEmpty() && !raw.startsWith("~")) {
+            int pos = eventPositions.get(0);
+            int end = pos;
+            while (end < raw.length() && !Character.isWhitespace(raw.charAt(end))) end++;
+            String event = raw.substring(pos, end);
+            String trigger = event.equalsIgnoreCase("~onSpawn") ? "on-spawn"
+                    : event.equalsIgnoreCase("~onDeath") ? "on-death"
+                    : event.equalsIgnoreCase("~onDamaged") || event.equalsIgnoreCase("~onHurt")
+                    ? "on-damage" : null;
+            String action = (raw.substring(0, pos) + raw.substring(end)).trim();
+            String normalized = MythicSpec.skillRef(action) != null ? action : mapSkillMechanic(action);
+            if (normalized == null) normalized = MythicSpec.normalize(action);
+            if (!standaloneSkill && eventPositions.size() == 1 && trigger != null
+                    && !(trigger.equals("on-damage") && action.toLowerCase(Locale.ROOT).contains("<skill.var.damage-"))
+                    && normalized != null && (MythicSpec.skillRef(action) != null || isSupportedAction(normalized))) {
+                scan.add(trigger, normalized);
+            } else {
+                preserveEventLine(raw, scan, entries, srcFile, mobKey, standaloneSkill);
+            }
+            return;
+        }
+
         // 1) ~onSpawn:Skill
         String call = MythicSpec.triggerCall(raw);
         if (call != null) {
             int bar = call.indexOf('|');
             String trigger = call.substring(0, bar);
             String skill = call.substring(bar + 1);
-            scan.add(trigger, "cast-skill " + skill);
+            if (!standaloneSkill && (trigger.equals("on-spawn") || trigger.equals("on-death"))
+                    && skill.matches("[A-Za-z0-9_.-]+")) {
+                scan.add(trigger, "cast-skill " + skill);
+            } else {
+                preserveEventLine(raw, scan, entries, srcFile, mobKey, standaloneSkill);
+            }
+            return;
+        }
+        if (!eventPositions.isEmpty()) {
+            preserveEventLine(raw, scan, entries, srcFile, mobKey, standaloneSkill);
             return;
         }
 
         // 2) skill{s=X}：转为技能引用，交给 skills.yml 解析
         String ref = MythicSpec.skillRef(raw);
         if (ref != null) {
-            if (standaloneSkill) decisions.add("cast-skill " + ref);
+            String suffix = executionSuffix(raw).trim();
+            boolean executionMetadata = firstArg(raw, "delay", "repeat", "repeatinterval", "repeat-interval") != null
+                    || suffix.startsWith("@") || suffix.startsWith("?") || suffix.endsWith("%");
+            if (executionMetadata) decisions.add(raw);
+            else if (standaloneSkill) decisions.add("cast-skill " + ref);
             else skillRefs.add(ref);
             return;
         }
@@ -1059,6 +1554,187 @@ public final class MythicMobsImporter implements MigrationImporter {
         decisions.add(normalized);
         note(entries, srcFile, mobKey + ".Skills[]", "mob.on-decision", normalized,
                 "mapped", "Mythic mechanic normalized to a Helstera action.");
+    }
+
+    private static boolean validDropItemCount(String value) {
+        if (value.indexOf('<') >= 0) return true;
+        try {
+            double count = Double.parseDouble(value);
+            return Double.isFinite(count) && count >= 1 && count <= Integer.MAX_VALUE
+                    && count == Math.rint(count);
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean invalidDropItemAmountFields(String raw) {
+        return invalidDropItemFields(raw, "amount", "a");
+    }
+
+    private static boolean invalidExecutionOptions(String raw) {
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        int repeat = 0;
+        long interval = 0;
+        for (String argument : MythicSpec.keyedArguments(raw)) {
+            int equals = argument.indexOf('=');
+            if (equals <= 0) continue;
+            String name = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            if (name.equals("repeat-interval")) name = "repeatinterval";
+            if (!java.util.Set.of("delay", "repeat", "repeatinterval").contains(name)) continue;
+            String value = argument.substring(equals + 1).trim().toLowerCase(Locale.ROOT);
+            if (!seen.add(name) || value.isEmpty()) return true;
+            try {
+                if (name.equals("repeat")) {
+                    repeat = Integer.parseInt(value);
+                    if (repeat < 0) return true;
+                } else {
+                    double ticks;
+                    if (value.endsWith("ms")) ticks = Double.parseDouble(value.substring(0, value.length() - 2)) / 50.0;
+                    else if (value.endsWith("s")) ticks = Double.parseDouble(value.substring(0, value.length() - 1)) * 20.0;
+                    else ticks = Double.parseDouble(value);
+                    if (!Double.isFinite(ticks) || ticks < 0 || ticks >= Long.MAX_VALUE) return true;
+                    if (name.equals("repeatinterval")) interval = (long) Math.ceil(ticks);
+                }
+            } catch (NumberFormatException ignored) {
+                return true;
+            }
+        }
+        return repeat == Integer.MAX_VALUE && interval > 0;
+    }
+
+    private static boolean hasUnsupportedDropItemArguments(String raw) {
+        for (String argument : MythicSpec.keyedArguments(raw)) {
+            int equals = argument.indexOf('=');
+            if (equals <= 0) return true;
+            String name = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            if (!java.util.Set.of("item", "items", "i", "material", "amount", "a", "naturally", "natural", "n", "delay", "repeat",
+                    "repeatinterval", "repeat-interval").contains(name)) return true;
+        }
+        return false;
+    }
+
+    private static boolean invalidDropItemNaturally(String raw) {
+        if (invalidDropItemFields(raw, "naturally", "natural", "n")) return true;
+        for (String argument : MythicSpec.keyedArguments(raw)) {
+            int equals = argument.indexOf('=');
+            if (equals < 0) continue;
+            String name = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            if (!java.util.Set.of("naturally", "natural", "n").contains(name)) continue;
+            String value = argument.substring(equals + 1).trim();
+            if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return true;
+        }
+        return false;
+    }
+
+    private static boolean invalidDropItemItemFields(String raw) {
+        if (invalidDropItemFields(raw, "item", "items", "i", "material")) return true;
+        String value = dropItemRawItem(raw);
+        if (value != null) {
+            String[] items = value.split(",", -1);
+            if (items.length > 1 && (firstArg(raw, "amount", "a") != null || invalidDropItemAmountFields(raw))) return true;
+            for (String item : items) {
+                String trimmed = item.trim();
+                if (trimmed.isEmpty()) return true;
+                String[] parts = trimmed.split("\\s+");
+                if (parts.length > 2 || parts[0].startsWith("@") || parts[0].startsWith("~")
+                        || parts[0].startsWith("?")) return true;
+                if (parts.length == 2 && (!validDropItemCount(parts[1])
+                        || firstArg(raw, "amount", "a") != null || invalidDropItemAmountFields(raw))) return true;
+            }
+        }
+        return false;
+    }
+
+    private static String dropItemRawItem(String raw) {
+        for (String argument : MythicSpec.keyedArguments(raw)) {
+            int equals = argument.indexOf('=');
+            if (equals < 0) continue;
+            String name = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            if (java.util.Set.of("item", "items", "i", "material").contains(name)) {
+                return argument.substring(equals + 1).trim();
+            }
+        }
+        return null;
+    }
+
+    private static String dropItemName(String raw) {
+        String value = dropItemRawItem(raw);
+        if (value == null) return raw.indexOf('{') < 0 ? positionalArg(raw, 0) : null;
+        return value.isBlank() ? "" : value.split(",", 2)[0].trim().split("\\s+", 2)[0];
+    }
+
+    private static boolean invalidDropItemFields(String raw, String... names) {
+        int count = 0;
+        for (String argument : MythicSpec.keyedArguments(raw)) {
+            int equals = argument.indexOf('=');
+            if (equals < 0) continue;
+            String name = argument.substring(0, equals).trim();
+            if (java.util.Arrays.stream(names).noneMatch(name::equalsIgnoreCase)) continue;
+            if (++count > 1 || argument.substring(equals + 1).isBlank()) return true;
+        }
+        return false;
+    }
+
+    private void preserveEventLine(String raw, SkillScan scan, List<Map<String, Object>> entries,
+                                          String srcFile, String key, boolean standalone) {
+        scan.unsupported.add(raw);
+        note(entries, srcFile, key + ".Skills[]", standalone ? "skills.unsupported" : "mob.unsupported.Skills",
+                raw, "unsupported", "Event trigger requires manual conversion; original line preserved.", "WARN");
+    }
+
+    private static String locationTargeter(String raw) {
+        int depth = 0;
+        char quote = 0;
+        boolean escaped = false;
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (escaped) { escaped = false; continue; }
+            if (quote != 0) {
+                if (c == '\\') escaped = true;
+                else if (c == quote) quote = 0;
+                continue;
+            }
+            if (c == '\'' || c == '"') { quote = c; continue; }
+            if (c == '{' || c == '[' || c == '(') { depth++; continue; }
+            if (c == '}' || c == ']' || c == ')') { depth = Math.max(0, depth - 1); continue; }
+            if (depth != 0 || c != '@' || (i > 0 && !Character.isWhitespace(raw.charAt(i - 1)))) continue;
+            int end = i + 1;
+            int targetDepth = 0;
+            while (end < raw.length()) {
+                char current = raw.charAt(end);
+                if (Character.isWhitespace(current) && targetDepth == 0) break;
+                if (current == '{') targetDepth++;
+                else if (current == '}') targetDepth = Math.max(0, targetDepth - 1);
+                end++;
+            }
+            String target = raw.substring(i, end);
+            int brace = target.indexOf('{');
+            String name = (brace < 0 ? target : target.substring(0, brace)).toLowerCase(Locale.ROOT);
+            if (dev.helstera.api.behavior.Targeters.isVariableLocationName(name.substring(1))
+                    || dev.helstera.api.behavior.Targeters.isLocationName(name.substring(1))) return target;
+            i = end - 1;
+        }
+        return null;
+    }
+
+    private static List<Integer> eventTokens(String raw) {
+        List<Integer> positions = new ArrayList<>();
+        int depth = 0;
+        char quote = 0;
+        boolean escaped = false;
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (escaped) { escaped = false; continue; }
+            if (c == '\\') { escaped = true; continue; }
+            if (quote != 0) { if (c == quote) quote = 0; continue; }
+            if (c == '\'' || c == '"') { quote = c; continue; }
+            if (c == '{' || c == '[' || c == '(') depth++;
+            else if (c == '}' || c == ']' || c == ')') depth = Math.max(0, depth - 1);
+            else if (depth == 0 && c == '~' && (i == 0 || Character.isWhitespace(raw.charAt(i - 1)))) {
+                positions.add(i);
+            }
+        }
+        return positions;
     }
 
     private static boolean isSupportedAction(String normalized) {
@@ -1086,10 +1762,11 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "set-invulnerable", "start-cast", "cancel-cast", "start-dialogue", "dismount",
                     "suicide", "kill-targets", "set-nameplate", "broadcast",
                     "set-variable", "var-set", "var-add", "var-math", "variable-unset",
-                    "variable-location-set", "location-unset", "remove-self", "equip", "set-item", "drop-item",
+                    "variable-location-set", "location-unset", "remove-self", "equip", "set-item", "drop-item", "drop-items",
                     "give-item", "take-item", "close-inventory", "clear-inventory", "clear-experience",
                     "clear-experience-levels", "give-experience-levels", "give-experience", "set-absorption", "oxygen", "consume-slot",
                     "set-block", "break-block", "mount", "cancel-event",
+                    "move-pin",
                     "disarm", "set-material-cooldown", "set-game-mode", "set-offhand", "set-armor", "set-faction", "set-level", "set-weather", "set-time", "lightning", "feed",
                     "swing", "swing-main-hand", "swing-off-hand",
                     "set-name", "set-ai", "set-gravity", "set-silent", "set-collidable",
@@ -1114,7 +1791,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (raw == null || raw.isBlank()) return null;
         String trimmed = raw.trim();
         String head = trimmed;
-        int brace = trimmed.indexOf('{');
+        int brace = MythicSpec.mechanicOpen(trimmed);
         if (brace >= 0) head = trimmed.substring(0, brace).trim();
         else {
             int space = trimmed.indexOf(' ');
@@ -1165,7 +1842,6 @@ public final class MythicMobsImporter implements MigrationImporter {
                         + " " + (icon == null ? "true" : icon);
                 yield effect.isBlank() ? null : "effect-targets " + effect + " " + duration + " " + amplifier + flags;
             }
-            case "teleport" -> "teleport-targets @target";
             case "teleportself", "teleport-self" -> "teleport-self "
                     + firstArgOrPositional(trimmed, 0, "0", "x", "dx") + " "
                     + firstArgOrPositional(trimmed, 1, "0", "y", "dy") + " "
@@ -1351,9 +2027,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     + firstArgOrPositional(trimmed, 0, "", "item", "material") + " "
                     + firstArgOrPositional(trimmed, 1, "hand", "slot") + " "
                     + firstArgOrPositional(trimmed, 2, "1", "amount", "a");
-            case "dropitem" -> "drop-item "
-                    + firstArgOrPositional(trimmed, 0, "", "item", "material") + " "
-                    + firstArgOrPositional(trimmed, 1, "1", "amount", "a");
+            case "dropitem" -> dropItemTranslation(trimmed);
             case "giveitem", "give" -> "give-item "
                     + firstArgOrPositional(trimmed, 0, "", "item", "material") + " "
                     + firstArgOrPositional(trimmed, 1, "1", "amount", "a");
@@ -1431,9 +2105,14 @@ public final class MythicMobsImporter implements MigrationImporter {
                 if (time == null) time = positionalArg(trimmed, 0);
                 yield "set-time " + (time == null ? "day" : time);
             }
-            case "lightning", "strike-lightning", "strike-lightning-effect" ->
-                    "lightning " + firstArgOrPositional(trimmed, 0, "false",
-                            "effectonly", "effect-only", "visual", "visual-only");
+            case "movepin", "move-pin" -> "move-pin "
+                    + firstArgOrPositional(trimmed, 0, "", "pin", "p", "name");
+            case "strike-lightning-effect" -> "lightning true";
+            case "lightning", "strike-lightning" -> {
+                String visual = firstArgOrPositional(trimmed, 0, "false",
+                        "effectonly", "effect-only", "visual", "visual-only");
+                yield "lightning " + (visual.isBlank() ? "false" : visual);
+            }
             case "feed", "food" -> "feed " + (amount == null ? "1" : amount);
             case "swing" -> {
                 String hand = firstArg(trimmed, "hand", "h");
@@ -1596,7 +2275,7 @@ public final class MythicMobsImporter implements MigrationImporter {
     }
 
     private static String positionalArg(String raw, int index) {
-        int brace = raw.indexOf('{');
+        int brace = MythicSpec.mechanicOpen(raw);
         int close = mechanicClose(raw, brace);
         String tail;
         if (brace < 0) {
@@ -1610,16 +2289,38 @@ public final class MythicMobsImporter implements MigrationImporter {
     }
 
     private static String executionSuffix(String raw) {
-        int close = mechanicClose(raw, raw.indexOf('{'));
+        int close = mechanicClose(raw, MythicSpec.mechanicOpen(raw));
         if (close >= 0) {
             return close + 1 < raw.length()
                     ? normalizeTargeterSuffix(raw.substring(close + 1).trim()) : "";
         }
         int firstSpace = raw.indexOf(' ');
         if (firstSpace < 0) return "";
-        String suffix = raw.substring(firstSpace + 1).trim();
-        int at = suffix.indexOf('@');
-        return at < 0 ? "" : normalizeTargeterSuffix(suffix.substring(at));
+        int start = firstSpace + 1;
+        while (start < raw.length()) {
+            while (start < raw.length() && Character.isWhitespace(raw.charAt(start))) start++;
+            int end = start;
+            int depth = 0;
+            char quote = 0;
+            boolean escaped = false;
+            while (end < raw.length()) {
+                char c = raw.charAt(end);
+                if (escaped) escaped = false;
+                else if (quote != 0 && c == '\\') escaped = true;
+                else if (quote != 0 && c == quote) quote = 0;
+                else if (quote == 0 && (c == '"' || c == '\'')) quote = c;
+                else if (quote == 0 && (c == '{' || c == '[' || c == '(')) depth++;
+                else if (quote == 0 && (c == '}' || c == ']' || c == ')')) depth--;
+                else if (quote == 0 && depth == 0 && Character.isWhitespace(c)) break;
+                end++;
+            }
+            if (start < end && (raw.charAt(start) == '@' || raw.charAt(start) == '?'
+                    || raw.charAt(end - 1) == '%')) {
+                return normalizeTargeterSuffix(raw.substring(start));
+            }
+            start = end;
+        }
+        return "";
     }
 
     private static String normalizeTargeterSuffix(String suffix) {
@@ -1664,6 +2365,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "nearestlivingentity" -> "nearestlivingentity";
             case "nearestmob" -> "nearestmob";
             case "playersinworld" -> "playersinworld";
+            case "playersonserver", "server", "everyone" -> "playersonserver";
             case "mobsinworld" -> "mobsinworld";
             case "entitiesinworld" -> "entitiesinworld";
             case "livingentitiesinworld" -> "livingentitiesinworld";
@@ -1676,8 +2378,11 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (raw == null || open < 0) return -1;
         int depth = 0;
         boolean quoted = false;
+        boolean escaped = false;
         for (int i = open; i < raw.length(); i++) {
             char c = raw.charAt(i);
+            if (escaped) { escaped = false; continue; }
+            if (quoted && c == '\\') { escaped = true; continue; }
             if (c == '"') quoted = !quoted;
             if (quoted) continue;
             if (c == '{') depth++;
@@ -1710,6 +2415,38 @@ public final class MythicMobsImporter implements MigrationImporter {
         return value == null ? fallback : value;
     }
 
+    private static String dropItemAmount(String raw) {
+        String value = firstArg(raw, "amount", "a");
+        String item = dropItemRawItem(raw);
+        if (value == null && item != null) {
+            String[] parts = item.split("\\s+");
+            if (parts.length == 2) value = parts[1];
+        }
+        if (value == null && raw.indexOf('{') < 0) value = positionalArg(raw, 1);
+        return value == null || value.startsWith("@") || value.startsWith("~") || value.startsWith("?")
+                ? "1" : value;
+    }
+
+    private static String dropItemNaturallyOption(String raw) {
+        String value = firstArg(raw, "naturally", "natural", "n");
+        return value == null ? "" : " " + value.toLowerCase(Locale.ROOT);
+    }
+
+    private static String dropItemTranslation(String raw) {
+        String item = dropItemRawItem(raw);
+        if (item != null && item.indexOf(',') >= 0) {
+            String naturally = firstArg(raw, "naturally", "natural", "n");
+            var result = new StringBuilder("drop-items ").append(naturally == null ? "true" : naturally.toLowerCase(Locale.ROOT));
+            for (String entry : item.split(",", -1)) {
+                String[] parts = entry.trim().split("\\s+");
+                result.append(' ').append(parts[0]).append(' ').append(parts.length == 2 ? parts[1] : "1");
+            }
+            return result.toString();
+        }
+        return "drop-item " + java.util.Objects.toString(dropItemName(raw), "") + " "
+                + dropItemAmount(raw) + dropItemNaturallyOption(raw);
+    }
+
     private static String escape(String value) {
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
@@ -1734,6 +2471,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (root == null) root = src;
 
         int converted = 0;
+        Map<String, String> seenSkills = new LinkedHashMap<>();
         for (String key : root.getKeys(false)) {
             ConfigurationSection skill = root.getConfigurationSection(key);
             if (skill == null) continue;
@@ -1741,6 +2479,13 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (lines.isEmpty()) continue;
 
             String skillId = normalizeId(key);
+            String previous = seenSkills.putIfAbsent(skillId, key);
+            if (previous != null) {
+                entries.add(Map.of("status", "conflict", "conflict-type", "duplicate-skill-id",
+                        "file", file.toString(), "skill", skillId,
+                        "note", "Skills " + previous + " and " + key + " resolve to the same ID."));
+                continue;
+            }
             List<String> actions = new ArrayList<>();
             List<String> refs = new ArrayList<>();
             List<Map<String, Object>> skillNotes = new ArrayList<>();
@@ -1750,8 +2495,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
             if (!actions.isEmpty()) target.set("skills." + skillId + ".on-decision", actions);
             if (!scan.unsupported.isEmpty()) target.set("skills." + skillId + ".unsupported", scan.unsupported);
-            List<String> targetConditions = stringOrList(skill, "TargetConditions");
-            List<String> triggerConditions = stringOrList(skill, "TriggerConditions");
+            List<String> targetConditions = conditionValues(skill, "TargetConditions");
+            List<String> triggerConditions = conditionValues(skill, "TriggerConditions");
             if (!targetConditions.isEmpty()) {
                 List<String> translated = new ArrayList<>();
                 List<String> unmapped = new ArrayList<>();
@@ -1805,7 +2550,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
         if (target.getConfigurationSection("skills") == null) return entries;
         entries.add(Map.of(
-                "target-file", "skills/" + normalizeId(fileStem) + ".yml",
+                "target-file", "skills.yml",
                 "content", target.saveToString(),
                 "status", "mapped",
                 "note", "MythicMobs skills file " + fileStem + " converted"));
@@ -2918,7 +3663,42 @@ public final class MythicMobsImporter implements MigrationImporter {
         Object immRaw = ciGet(mob, "Immunities");
         List<String> immunities = new ArrayList<>();
         if (immRaw instanceof ConfigurationSection sec) {
-            for (String k : sec.getKeys(false)) immunities.add(k);
+            for (String k : sec.getKeys(false)) {
+                Object value = sec.get(k);
+                String path = "mob.immunities." + k;
+                if (value instanceof ConfigurationSection conditionSection) {
+                    List<String> rawConditions = new ArrayList<>();
+                    rawConditions.addAll(ConditionListParser.parseFailClosed(ciGet(conditionSection, "when")));
+                    rawConditions.addAll(ConditionListParser.parseFailClosed(ciGet(conditionSection, "conditions")));
+                    List<String> unknownKeys = conditionSection.getKeys(false).stream()
+                            .filter(name -> !name.equalsIgnoreCase("when") && !name.equalsIgnoreCase("conditions"))
+                            .toList();
+                    if (!unknownKeys.isEmpty()) rawConditions.add(ConditionListParser.INVALID_CONDITION);
+                    List<String> conditions = new ArrayList<>();
+                    List<String> unmapped = new ArrayList<>();
+                    MmConditions.translateAll(rawConditions, conditions, unmapped);
+                    if (conditions.isEmpty()) target.set(path, true);
+                    else target.set(path + ".conditions", conditions);
+                    if (!unmapped.isEmpty() || !unknownKeys.isEmpty()) {
+                        target.set("mob.unsupported.Immunities." + k, sectionValues(conditionSection));
+                        note(entries, srcFile, mobKey + ".Immunities." + k, path,
+                                conditionSection.getValues(true).toString(), "unsupported",
+                                "Immunity contains unsupported conditions or fields; review required: "
+                                        + unmapped + " " + unknownKeys, "WARN");
+                    }
+                } else if (Boolean.TRUE.equals(value)) {
+                    target.set(path, true);
+                } else {
+                    target.set(path + ".conditions", List.of(ConditionListParser.INVALID_CONDITION));
+                    target.set("mob.unsupported.Immunities." + k, value);
+                    note(entries, srcFile, mobKey + ".Immunities." + k, path,
+                            String.valueOf(value), "unsupported", "Unsupported immunity entry; rule disabled.", "WARN");
+                }
+            }
+            if (!sec.getKeys(false).isEmpty()) {
+                note(entries, srcFile, mobKey + ".Immunities", "mob.immunities",
+                        sec.getValues(true).toString(), "mapped", "Immunity conditions are retained when supported.");
+            }
         } else if (immRaw != null) {
             for (String value : stringOrList(mob, "Immunities")) {
                 immunities.addAll(splitOptionList(value));
@@ -2939,13 +3719,43 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (raw == null) continue;
             String path = "mob.damage-modifiers." + key;
             if (raw instanceof Number n) {
+                if (!Double.isFinite(n.doubleValue())) {
+                    target.set("mob.unsupported.DamageModifiers." + key, String.valueOf(raw));
+                    note(entries, srcFile, mobKey + ".DamageModifiers." + key,
+                            "mob.unsupported.DamageModifiers." + key, String.valueOf(raw), "unsupported",
+                            "Invalid multiplier; original value preserved.", "WARN");
+                    continue;
+                }
                 target.set(path, n);
                 note(entries, srcFile, mobKey + ".DamageModifiers." + key, path,
                         n, "mapped", "裸倍率已直接转为 helstera damage-modifiers");
                 mapped++;
             } else if (raw instanceof ConfigurationSection sub) {
-                Double mul = sub.contains("multiplier") ? sub.getDouble("multiplier") : null;
-                List<String> rawConds = conditionList(sub.get("conditions"));
+                Object rawMultiplier = ciGet(sub, "multiplier");
+                if (rawMultiplier != null && (!(rawMultiplier instanceof Number n)
+                        || !Double.isFinite(n.doubleValue()))) {
+                    String preservePath = "mob.unsupported.DamageModifiers." + key;
+                    target.set(preservePath, sectionValues(sub));
+                    note(entries, srcFile, mobKey + ".DamageModifiers." + key, preservePath,
+                            rawMultiplier, "unsupported", "Invalid multiplier; rule was not migrated.", "WARN");
+                    continue;
+                }
+                Double mul = rawMultiplier instanceof Number n ? n.doubleValue() : null;
+                List<String> rawConds = new ArrayList<>();
+                rawConds.addAll(ConditionListParser.parseFailClosed(ciGet(sub, "when")));
+                rawConds.addAll(ConditionListParser.parseFailClosed(ciGet(sub, "conditions")));
+                List<String> unknownKeys = sub.getKeys(false).stream()
+                        .filter(name -> !name.equalsIgnoreCase("multiplier")
+                                && !name.equalsIgnoreCase("conditions") && !name.equalsIgnoreCase("when"))
+                        .toList();
+                if (!unknownKeys.isEmpty()) {
+                    rawConds.add(ConditionListParser.INVALID_CONDITION);
+                    Map<String, Object> preserved = sectionValues(sub);
+                    target.set("mob.unsupported.DamageModifiers." + key, preserved);
+                    note(entries, srcFile, mobKey + ".DamageModifiers." + key,
+                            "mob.unsupported.DamageModifiers." + key, preserved, "unsupported",
+                            "Unsupported modifier fields " + unknownKeys + "; rule disabled.", "WARN");
+                }
                 List<String> conds = new ArrayList<>();
                 List<String> unmapped = new ArrayList<>();
                 MmConditions.translateAll(rawConds, conds, unmapped);
@@ -2958,17 +3768,21 @@ public final class MythicMobsImporter implements MigrationImporter {
                     target.set(path + ".immune", true);
                     target.set(path + ".conditions", conds);
                 } else {
-                    note(entries, srcFile, mobKey + ".DamageModifiers." + key, path,
+                    String preservePath = "mob.unsupported.DamageModifiers." + key;
+                    target.set(preservePath, sectionValues(sub));
+                    note(entries, srcFile, mobKey + ".DamageModifiers." + key, preservePath,
                             sub.getValues(true).toString(), "unsupported",
                             "该条既无 multiplier 也无 conditions，无法判定语义，请手工确认", "WARN");
                     continue;
                 }
                 if (!unmapped.isEmpty()) {
+                    target.set("mob.unsupported.DamageModifiers." + key, sectionValues(sub));
                     // 未映射的条件已原样保留，但必须告警：条件求值是 fail-closed，
                     // 一个永不成立的条件会让整条免疫规则静默失效
                     note(entries, srcFile, mobKey + ".DamageModifiers." + key + ".conditions",
                             path + ".conditions", unmapped, "mapped",
-                            "以下条件在 helstera 无等价物，已原样保留，需手工改写: " + unmapped,
+                            "以下条件在 helstera 无等价物，原始条目保留于 mob.unsupported.DamageModifiers."
+                                    + key + "，需手工改写: " + unmapped,
                             "WARN");
                 }
                 note(entries, srcFile, mobKey + ".DamageModifiers." + key, path,
@@ -2980,8 +3794,47 @@ public final class MythicMobsImporter implements MigrationImporter {
                 // 注意 YAML 列表里的 map 元素反序列化成 Map 而不是 ConfigurationSection，
                 // 只判 section 会让这条分支永远进不去（表现为该 cause 静默不迁移）
                 Object first = list.get(0);
+                if (list.size() > 1) {
+                    String preservePath = "mob.unsupported.DamageModifiers." + key;
+                    target.set(preservePath, list);
+                    note(entries, srcFile, mobKey + ".DamageModifiers." + key, preservePath,
+                            list, "unsupported", "Only the first modifier is migrated; remaining entries need review (需手工合并).", "WARN");
+                }
                 Double mul = mapDouble(first, "multiplier");
-                List<String> conds = mapList(first, "conditions");
+                if (first instanceof Map<?, ?> m && m.entrySet().stream().anyMatch(e ->
+                        String.valueOf(e.getKey()).equalsIgnoreCase("multiplier")) && mul == null) {
+                    String preservePath = "mob.unsupported.DamageModifiers." + key;
+                    target.set(preservePath, list);
+                    note(entries, srcFile, mobKey + ".DamageModifiers." + key, preservePath,
+                            String.valueOf(first), "unsupported", "Invalid multiplier; rule was not migrated.", "WARN");
+                    continue;
+                }
+                List<String> rawConds = mapList(first, "conditions");
+                rawConds = new ArrayList<>(rawConds);
+                rawConds.addAll(mapList(first, "when"));
+                if (first instanceof Map<?, ?> m) {
+                    var unknownKeys = m.keySet().stream().map(String::valueOf)
+                            .filter(name -> !name.equalsIgnoreCase("multiplier")
+                                    && !name.equalsIgnoreCase("conditions") && !name.equalsIgnoreCase("when"))
+                            .toList();
+                    if (!unknownKeys.isEmpty()) {
+                        rawConds.add(ConditionListParser.INVALID_CONDITION);
+                        String preservePath = "mob.unsupported.DamageModifiers." + key;
+                        target.set(preservePath, list);
+                        note(entries, srcFile, mobKey + ".DamageModifiers." + key, preservePath,
+                                list, "unsupported", "Unsupported modifier fields " + unknownKeys + "; rule disabled.", "WARN");
+                    }
+                }
+                List<String> conds = new ArrayList<>();
+                List<String> unmapped = new ArrayList<>();
+                MmConditions.translateAll(rawConds, conds, unmapped);
+                if (!unmapped.isEmpty()) {
+                    target.set("mob.unsupported.DamageModifiers." + key, list);
+                    note(entries, srcFile, mobKey + ".DamageModifiers." + key + ".conditions",
+                            path + ".conditions", unmapped, "mapped",
+                            "Unmapped conditions require manual review; original entry preserved at mob.unsupported.DamageModifiers."
+                                    + key + ".", "WARN");
+                }
                 if (mul != null) {
                     target.set(path + ".multiplier", mul);
                     if (!conds.isEmpty()) target.set(path + ".conditions", conds);
@@ -3005,9 +3858,16 @@ public final class MythicMobsImporter implements MigrationImporter {
                     mapped++;
                     continue;
                 }
-                note(entries, srcFile, mobKey + ".DamageModifiers." + key, path,
+                String preservePath = "mob.unsupported.DamageModifiers." + key;
+                target.set(preservePath, list);
+                note(entries, srcFile, mobKey + ".DamageModifiers." + key, preservePath,
                         list.toString(), "unsupported",
                         "多条目写法未能识别出 multiplier，请手工确认", "WARN");
+            } else {
+                String preservePath = "mob.unsupported.DamageModifiers." + key;
+                target.set(preservePath, raw);
+                note(entries, srcFile, mobKey + ".DamageModifiers." + key, preservePath,
+                        raw, "unsupported", "Unrecognized modifier; original value preserved.", "WARN");
             }
         }
         if (mapped == 0) {
@@ -3015,6 +3875,15 @@ public final class MythicMobsImporter implements MigrationImporter {
                     mods.getValues(true).toString(), "unsupported",
                     "未能识别出任何可迁移的倍率条目", "WARN");
         }
+    }
+
+    private static Map<String, Object> sectionValues(ConfigurationSection section) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        for (String key : section.getKeys(false)) {
+            Object value = section.get(key);
+            values.put(key, value instanceof ConfigurationSection child ? sectionValues(child) : value);
+        }
+        return values;
     }
 
     private void noteUnmappedSkillConditions(List<Map<String, Object>> entries,
@@ -3075,6 +3944,15 @@ public final class MythicMobsImporter implements MigrationImporter {
         return List.of(String.valueOf(raw));
     }
 
+    private static List<String> conditionValues(ConfigurationSection section, String key) {
+        Object raw = ciGet(section, key);
+        if (raw == null) return List.of();
+        List<?> values = raw instanceof List<?> list ? list : List.of(raw);
+        List<String> result = new ArrayList<>();
+        for (Object value : values) result.add(value instanceof String text ? text : "");
+        return result;
+    }
+
     /**
      * 从 YAML 列表里的 map 元素取数值。
      *
@@ -3087,7 +3965,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (!(element instanceof Map<?, ?> m)) return null;
         for (Map.Entry<?, ?> e : m.entrySet()) {
             if (String.valueOf(e.getKey()).equalsIgnoreCase(key) && e.getValue() instanceof Number n) {
-                return n.doubleValue();
+                double value = n.doubleValue();
+                return Double.isFinite(value) ? value : null;
             }
         }
         return null;
@@ -3099,7 +3978,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         for (Map.Entry<?, ?> e : m.entrySet()) {
             if (!String.valueOf(e.getKey()).equalsIgnoreCase(key)) continue;
             Object v = e.getValue();
-            return ConditionListParser.parse(v);
+            return v == null ? List.of(ConditionListParser.INVALID_CONDITION)
+                    : ConditionListParser.parseFailClosed(v);
         }
         return List.of();
     }

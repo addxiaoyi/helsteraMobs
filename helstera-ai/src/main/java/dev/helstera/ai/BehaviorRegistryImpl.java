@@ -70,15 +70,21 @@ public final class BehaviorRegistryImpl implements BehaviorRegistry {
 
     @Override
     public boolean testCondition(String name, BehaviorContext ctx) {
-        Predicate<BehaviorContext> c = conditions.get(key(name));
-        if (c == null) return false;
+        if (!hasCondition(name)) return false;
         try {
-            return c.test(ctx);
+            return testConditionForComposition(name, ctx);
         } catch (Throwable t) {
             var l = log;
             if (l != null) l.warning("自定义条件 \"" + name + "\" 抛异常，按 false 处理: " + t);
             return false;
         }
+    }
+
+    @Override
+    public boolean testConditionForComposition(String name, BehaviorContext ctx) {
+        Predicate<BehaviorContext> condition = conditions.get(key(name));
+        if (condition == null) throw new IllegalArgumentException("Unknown condition: " + name);
+        return condition.test(ctx);
     }
 
     @Override

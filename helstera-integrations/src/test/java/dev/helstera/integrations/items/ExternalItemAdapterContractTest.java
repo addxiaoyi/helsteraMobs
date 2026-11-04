@@ -4,10 +4,12 @@ import dev.helstera.api.integration.Capability;
 import dev.helstera.integrations.mythicmobs.MythicMobsAdapter;
 import dev.helstera.integrations.region.WorldGuardAdapter;
 import dev.helstera.integrations.economy.VaultEconomyAdapter;
+import dev.helstera.integrations.BlockedExternalAdapter;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -65,6 +67,20 @@ class ExternalItemAdapterContractTest {
         assertFalse(adapter.hasCapability(Capability.ECONOMY_BALANCE));
         assertTrue(adapter.supportedVersions().contains("not CI-verified"));
         assertTrue(adapter.balance(null).isEmpty());
+    }
+
+    @Test
+    void blockedExternalAdapterNeverClaimsAResolvedCapability() {
+        var adapter = new BlockedExternalAdapter("MMOItems", "none verified");
+
+        assertEquals("MMOItems", adapter.pluginName());
+        assertEquals("none verified", adapter.supportedVersions());
+        assertFalse(adapter.isConnected());
+        assertTrue(adapter.capabilities().isEmpty());
+        assertFalse(adapter.hasCapability(Capability.CUSTOM_ITEM_RESOLVE));
+        adapter.disable();
+        assertFalse(adapter.isConnected());
+        assertTrue(adapter.capabilities().isEmpty());
     }
 
 }

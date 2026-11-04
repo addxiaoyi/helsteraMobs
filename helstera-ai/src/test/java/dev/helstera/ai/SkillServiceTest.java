@@ -2,6 +2,7 @@ package dev.helstera.ai;
 
 import dev.helstera.ai.skill.SkillCatalog;
 import dev.helstera.ai.skill.SkillExtras;
+import dev.helstera.ai.skill.PinRegistry;
 import dev.helstera.ai.skill.SkillService;
 import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.api.instance.ModelInstance;
@@ -45,6 +46,121 @@ import static org.mockito.ArgumentMatchers.anyDouble;
  */
 class SkillServiceTest {
 
+    @Test
+    void actionBindingRejectsUnroutedEventSuffix() {
+        var svc = service();
+        assertNull(svc.bindAction("set-block STONE ~onAttack"));
+        assertTrue(svc.warnings().stream().anyMatch(w -> w.contains("event trigger requires event routing")));
+        assertNull(svc.bindAction("set-block STONE ~onAttack ~onDeath"));
+        assertTrue(svc.warnings().stream().anyMatch(w -> w.contains("multiple event triggers")));
+        assertNull(svc.bindAction("set-block STONE ~ONAttack"));
+        assertNull(svc.bindAction("set-block STONE ~unknown"));
+        assertNull(svc.bindAction("set-block STONE ~on"));
+        assertNull(svc.bindAction("set-block STONE ?"));
+        assertNull(svc.bindAction("set-block STONE @"));
+        assertNotNull(svc.bindAction("set-block STONE"));
+        assertNotNull(svc.bindAction("message-target \"~onAttack\""));
+    }
+
+    @Test
+    void locationTargeterDispatchesLocationWithoutSelectingNearbyEntities() {
+        World world = mock(World.class);
+        var block = mock(org.bukkit.block.Block.class);
+        Location destination = new Location(world, 4, 5, 6);
+        when(world.getBlockAt(destination)).thenReturn(block);
+        BehaviorContext context = BehaviorContext.execution(null, null, 1, -1, 0,
+                "skill", null, null, List.of(), new Location(world, 0, 64, 0));
+        var svc = service();
+
+        String valid = svc.bindAction("set-block STONE @location{x=4;y=5;z=6}");
+        assertNotNull(valid);
+        assertTrue(svc.runAction(valid, context));
+        verify(block).setType(Material.STONE, false);
+        String alias = svc.bindAction("set-block STONE @loc{loc=4,5,6,0,0}");
+        assertNotNull(alias);
+        assertTrue(svc.runAction(alias, context));
+        verify(block, org.mockito.Mockito.times(2)).setType(Material.STONE, false);
+        org.mockito.Mockito.verify(world, org.mockito.Mockito.never())
+                .getNearbyEntities(org.mockito.ArgumentMatchers.any(Location.class),
+                        anyDouble(), anyDouble(), anyDouble());
+
+        String invalid = svc.bindAction("set-block STONE @location{x=NaN;y=5;z=6}");
+        assertNotNull(invalid);
+        assertTrue(svc.runAction(invalid, context));
+        verify(block, org.mockito.Mockito.times(2)).setType(Material.STONE, false);
+    }
+
+    @Test
+    void officialLocationTargeterDispatchesForwardCoordinatesToMechanics() {
+        World world = mock(World.class);
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        Location casterLocation = new Location(world, 10, 64, 20, 90, 0);
+        Location destination = new Location(world, 7, 64, 20, 90, 0);
+        var block = mock(org.bukkit.block.Block.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(casterLocation);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getLocation()).thenReturn(casterLocation);
+        when(world.getBlockAt(destination)).thenReturn(block);
+        BehaviorContext context = BehaviorContext.execution(instance, null, 1, -1, 0,
+                "skill", null, null, List.of(), casterLocation);
+        var svc = service();
+
+        String action = svc.bindAction("set-block STONE @Forward{f=3}");
+        assertNotNull(action);
+        assertTrue(svc.runAction(action, context));
+        verify(block).setType(Material.STONE, false);
+        org.mockito.Mockito.verify(world, org.mockito.Mockito.never())
+                .getNearbyEntities(org.mockito.ArgumentMatchers.any(Location.class),
+                        anyDouble(), anyDouble(), anyDouble());
+    }
+
+    @Test
+    void variableLocationTargeterDispatchesStoredLocationAndRejectsAmbiguousArguments() {
+        World world = mock(World.class);
+        Location destination = new Location(world, 4, 5, 6);
+        var block = mock(org.bukkit.block.Block.class);
+        when(world.getBlockAt(destination)).thenReturn(block);
+        BehaviorContext context = BehaviorContext.execution(null, null, 1, -1, 0,
+                "skill", null, null, List.of(), new Location(world, 0, 64, 0));
+        context.skillTree().orElseThrow().setLocation("mark", destination);
+        var svc = service();
+        assertEquals(destination, dev.helstera.api.behavior.Targeters.resolveLocation(
+                "@variable-location{mark;scope=skill}", context).orElseThrow());
+        String valid = svc.bindAction("set-block STONE @VariableLocation{var=skill.mark}");
+        assertNotNull(valid);
+        assertTrue(svc.runAction(valid, context));
+        verify(block).setType(Material.STONE, false);
+
+        for (String spec : List.of("@VariableLocation{var=skill.mark;var=skill.other}",
+                "@VariableLocation{var=skill.mark;unknown=1}",
+                "@VariableLocation{var=skill.mark}tail",
+                "@VariableLocation{var=skill.missing}")) {
+            assertTrue(dev.helstera.api.behavior.Targeters.resolveLocation(spec, context).isEmpty(), spec);
+            String action = svc.bindAction("set-block DIRT " + spec);
+            if (action != null) assertTrue(svc.runAction(action, context));
+        }
+        context.skillTree().orElseThrow().setLocation("no-world", new Location(null, 1, 2, 3));
+        String noWorld = svc.bindAction("set-block DIRT @VariableLocation{var=skill.no-world}");
+        assertNotNull(noWorld);
+        assertTrue(svc.runAction(noWorld, context));
+        verify(block, org.mockito.Mockito.never()).setType(Material.DIRT, false);
+    }
+
+    @Test
+    void explicitLocationDefaultsToCasterWorldRatherThanExecutionOriginWorld() {
+        var instance = mock(ModelInstance.class);
+        var casterWorld = mock(World.class);
+        var originWorld = mock(World.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(new Location(casterWorld, 1, 2, 3));
+        var context = BehaviorContext.execution(instance, null, 1, -1, 0,
+                "skill", null, null, List.of(), new Location(originWorld, 5, 6, 7));
+        assertEquals(casterWorld, dev.helstera.api.behavior.Targeters
+                .resolveLocation("@location{x=4}", context).orElseThrow().getWorld());
+    }
+
     private final BehaviorRegistryImpl registry = new BehaviorRegistryImpl();
 
     private SkillService service() {
@@ -57,6 +173,70 @@ class SkillServiceTest {
 
     private static BehaviorContext ctxWithState(String state) {
         return BehaviorContext.of(null, null, 1.0, -1, 0, state);
+    }
+
+    @Test
+    void rejectedConditionDoesNotBecomeBoundOnRetryOrNegation() {
+        var svc = service();
+        for (int i = 0; i < 3; i++) {
+            assertNull(svc.bindCondition("last-signal first second"));
+            assertNull(svc.bindCondition("is-frozen unknown=true"));
+            assertNull(svc.bindCondition("projectile-has-ended unknown=true"));
+            for (String name : List.of("has-target", "night", "raining", "thundering", "is-living",
+                    "is-player", "is-mob", "is-monster", "is-animal", "is-villager", "is-tameable", "is-raider",
+                    "is-baby", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered",
+                    "target-is-baby", "target-is-adult", "target-is-tamed", "target-is-sheared",
+                    "target-is-saddled", "target-is-powered", "target-is-player", "target-is-living",
+                    "target-is-mob", "target-is-monster", "target-is-animal", "target-is-villager",
+                    "target-is-tameable", "target-is-raider", "has-ai", "has-gravity", "is-silent", "is-dead",
+                    "is-alive", "is-valid", "target-has-ai", "target-has-gravity", "target-is-silent",
+                    "target-dead", "target-is-alive", "target-is-valid", "in-water", "target-is-sneaking")) {
+                assertNull(svc.bindCondition(name + " unknown=true"), name);
+                assertNull(svc.bindCondition("!" + name + " unknown=true"), name);
+                assertNotNull(svc.bindCondition(name), name);
+            }
+            assertNotNull(svc.bindCondition("has-target false"));
+            for (String alias : List.of("isChild", "isCharged", "targetIsChild", "targetIsCharged")) {
+                assertNull(svc.bindCondition(alias + "{unknown=true}"), alias);
+                assertNotNull(svc.bindCondition(alias), alias);
+            }
+            assertNull(svc.bindCondition("!last-signal first second"));
+            assertNull(svc.bindCondition("random-chance NaN"));
+            assertNull(svc.bindCondition("not{random-chance NaN}"));
+        }
+        assertNotNull(svc.bindCondition("last-signal phase2"));
+        assertNotNull(svc.bindCondition("is-frozen"));
+        assertNotNull(svc.bindCondition("projectile-has-ended"));
+        assertNull(svc.bindCondition("lastSignal{s=first;s=second}"));
+        assertNull(svc.bindCondition("lastSignal{s=first,s=second}"));
+        assertNotNull(svc.bindCondition("lastSignal{s=first}"));
+    }
+
+    @Test
+    void rejectedActionFactoryIsRetriedWithoutCreatingPhantomBinding() {
+        var attempts = new AtomicInteger();
+        SkillCatalog.ActionFactory factory = args -> {
+            attempts.incrementAndGet();
+            throw new IllegalArgumentException("invalid argument");
+        };
+        var svc = new SkillService(registry, null, Map.of(), Map.of("reject-probe", factory));
+        for (int i = 0; i < 3; i++) {
+            assertNull(svc.bindAction("reject-probe invalid"));
+            assertFalse(registry.hasAction("reject-probe:invalid"));
+        }
+        assertEquals(3, attempts.get());
+    }
+
+    @Test
+    void malformedCompositeConditionsDoNotDropOperands() {
+        var svc = service();
+        for (String spec : List.of("not{has-target;is-caster}", "all{has-target;}",
+                "any{;has-target}", "all{has-target;;is-caster}", "has-target ||",
+                "not{has-target}extra", "all{has-target}}")) {
+            assertNull(svc.bindCondition(spec), spec);
+        }
+        assertNotNull(svc.bindCondition("not{has-target}"));
+        assertNotNull(svc.bindCondition("all{has-target;is-caster}"));
     }
 
     @Test
@@ -177,6 +357,27 @@ class SkillServiceTest {
         assertTrue(registry.testCondition(svc.bindCondition("target-game-mode-is CREATIVE"), context));
         assertTrue(registry.testCondition(svc.bindCondition("target-food-level >=14"), context));
         assertTrue(registry.testCondition(svc.bindCondition("target-air-level <=50"), context));
+    }
+
+    @Test
+    void lightningEffectAliasNeverCreatesDamagingLightning() {
+        var svc = service();
+        var target = mock(LivingEntity.class);
+        var world = mock(World.class);
+        var location = new Location(world, 3, 64, 0);
+        when(target.getLocation()).thenReturn(location);
+        var context = BehaviorContext.of(null, target, 1.0, 3.0, 0, "IDLE");
+
+        String visual = svc.bindAction("strike-lightning-effect");
+        assertNotNull(visual, svc.warnings().toString());
+        assertTrue(registry.runAction(visual, context));
+        verify(world).strikeLightningEffect(location);
+        org.mockito.Mockito.verify(world, org.mockito.Mockito.never()).strikeLightning(location);
+
+        String real = svc.bindAction("strike-lightning");
+        assertNotNull(real, svc.warnings().toString());
+        assertTrue(registry.runAction(real, context));
+        verify(world).strikeLightning(location);
     }
 
     @Test
@@ -429,6 +630,54 @@ class SkillServiceTest {
             verify(stack).setAmount(1);
         } finally {
             SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    void customItemConditionsAndRemovalRespectItemIdentity() {
+        var svc = service();
+        Player player = mock(Player.class);
+        var inventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        var material = mock(org.bukkit.Material.class);
+        when(material.name()).thenReturn("DIAMOND");
+        var expected = mock(org.bukkit.inventory.ItemStack.class);
+        var other = mock(org.bukkit.inventory.ItemStack.class);
+        var matching = mock(org.bukkit.inventory.ItemStack.class);
+        when(expected.getType()).thenReturn(material);
+        when(other.getType()).thenReturn(material);
+        when(matching.getType()).thenReturn(material);
+        when(other.getAmount()).thenReturn(5);
+        when(matching.getAmount()).thenReturn(2);
+        when(matching.isSimilar(expected)).thenReturn(true);
+        when(player.getInventory()).thenReturn(inventory);
+        when(inventory.getContents()).thenReturn(new org.bukkit.inventory.ItemStack[]{other, matching});
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+        SkillExtras.itemResolver(name -> expected);
+        try {
+            assertFalse(registry.testCondition(svc.bindCondition("has-item custom:gem >=3"), context));
+            assertTrue(registry.testCondition(svc.bindCondition("has-item custom:gem >=2"), context));
+            assertTrue(registry.testCondition(svc.bindCondition("has-item DIAMOND >=7"), context));
+            SkillExtras.actions().get("take-item").create(List.of("custom:gem", "1")).accept(context);
+            verify(matching).setAmount(1);
+            verify(other, org.mockito.Mockito.never()).setAmount(org.mockito.ArgumentMatchers.anyInt());
+        } finally {
+            SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    void claimedInvalidItemDoesNotFallBackInSkillConditions() {
+        var svc = service();
+        var player = mock(Player.class);
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+        SkillExtras.itemResolver(name -> null);
+        SkillExtras.claimedItemPredicate(name -> name.equals("DIAMOND"));
+        try (var construction = org.mockito.Mockito.mockConstruction(org.bukkit.inventory.ItemStack.class)) {
+            assertFalse(registry.testCondition(svc.bindCondition("has-item DIAMOND >=1"), context));
+            assertTrue(construction.constructed().isEmpty());
+        } finally {
+            SkillExtras.itemResolver(null);
+            SkillExtras.claimedItemPredicate(null);
         }
     }
 
@@ -898,8 +1147,8 @@ class SkillServiceTest {
     }
 
     @Test
-    @DisplayName("技能里引用未知名时，条件部分跳过并告警，其余仍可用")
-    void namedSkillToleratesUnknownMembers() {
+    @DisplayName("技能引用未知条件时告警并拒绝执行")
+    void namedSkillRejectsUnknownConditions() {
         var svc = service();
         YamlConfiguration y = YamlConfiguration.loadConfiguration(new StringReader("""
                 skills:
@@ -916,7 +1165,142 @@ class SkillServiceTest {
 
         String c = svc.bindCondition("skill:broken");
         assertNotNull(c);
-        assertTrue(registry.testCondition(c, ctx(0.9, 0)), "跳过的未知条件不应让整体恒为 false");
+        assertFalse(registry.testCondition(c, ctx(0.9, 0)));
+        assertFalse(svc.castSkill("broken", ctx(0.9, 0)));
+    }
+
+    @Test
+    void negatedSkillConditionsFailClosedOnInvalidOrThrowingRequirements() {
+        var svc = service();
+        registry.registerCondition("broken-check", context -> { throw new IllegalStateException("failure"); });
+        registry.registerCondition("normal-false", context -> false);
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  throwing:
+                    require: [broken-check]
+                  invalid:
+                    require: [unknown-check]
+                  ordinary:
+                    require: [normal-false]
+                """));
+        svc.loadSkills(yaml.getConfigurationSection("skills"));
+        for (String spec : List.of("!skill:throwing", "!skill:invalid", "not{not{skill:throwing}}")) {
+            String condition = svc.bindCondition(spec);
+            assertNotNull(condition, spec);
+            assertFalse(registry.testCondition(condition, ctx(1.0, 0)), spec);
+        }
+        assertTrue(registry.testCondition(svc.bindCondition("!skill:ordinary"), ctx(1.0, 0)));
+        var calls = new AtomicInteger();
+        registry.registerAction("probe", context -> calls.incrementAndGet());
+        String action = svc.bindAction("probe ?!skill:throwing");
+        assertNotNull(action);
+        assertTrue(registry.runAction(action, ctx(1.0, 0)));
+        assertEquals(0, calls.get());
+    }
+
+    @Test
+    void removedNamedSkillDoesNotSurviveReloadInRegistry() {
+        var svc = service();
+        var calls = new AtomicInteger();
+        registry.registerAction("probe", context -> calls.incrementAndGet());
+        var original = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  example:
+                    on-decision: [probe]
+                """));
+        svc.loadSkills(original.getConfigurationSection("skills"));
+        String condition = svc.bindCondition("skill:example");
+        String negated = svc.bindCondition("!skill:example");
+        assertTrue(registry.testCondition(condition, ctx(1.0, 0)));
+        registry.runAction("skill:example", ctx(1.0, 0));
+        assertEquals(1, calls.get());
+
+        svc.loadSkills(null);
+        assertFalse(registry.testCondition(condition, ctx(1.0, 0)));
+        assertFalse(registry.testCondition(negated, ctx(1.0, 0)));
+        registry.runAction("skill:example", ctx(1.0, 0));
+        assertEquals(1, calls.get());
+
+        svc.loadSkills(original.getConfigurationSection("skills"));
+        assertTrue(registry.testCondition(condition, ctx(1.0, 0)));
+        registry.runAction("skill:example", ctx(1.0, 0));
+        assertEquals(2, calls.get());
+    }
+
+    @Test
+    void reloadDuringDirectNamedSkillStopsRemainingActions() {
+        var svc = service();
+        var calls = new AtomicInteger();
+        registry.registerAction("reload-now", context -> svc.loadSkills(null));
+        registry.registerAction("probe", context -> calls.incrementAndGet());
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  example:
+                    on-decision: [reload-now, probe]
+                """));
+        svc.loadSkills(yaml.getConfigurationSection("skills"));
+        registry.runAction("skill:example", ctx(1.0, 0));
+        assertEquals(0, calls.get());
+    }
+
+    @Test
+    void reloadDuringNamedSkillRequirementFailsClosedUnderNegation() {
+        var svc = service();
+        registry.registerCondition("reload-check", context -> {
+            svc.loadSkills(null);
+            return false;
+        });
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  example:
+                    require: [reload-check]
+                """));
+        svc.loadSkills(yaml.getConfigurationSection("skills"));
+        String condition = svc.bindCondition("!skill:example");
+        assertNotNull(condition);
+        assertFalse(registry.testCondition(condition, ctx(1.0, 0)));
+    }
+
+    @Test
+    void namedSkillConditionsResolveBeforeDefinitionsAreBound() {
+        var svc = service();
+        var calls = new AtomicInteger();
+        registry.registerAction("probe", context -> calls.incrementAndGet());
+        registry.registerCondition("probe-false", context -> false);
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  Parent:
+                    require: ['!skill:Child']
+                    on-decision: [probe]
+                  Child:
+                    require: [probe-false]
+                  Missing:
+                    require: ['!skill:Absent']
+                    on-decision: [probe]
+                """));
+        svc.loadSkills(yaml.getConfigurationSection("skills"));
+        assertTrue(svc.castSkill("parent", ctx(1.0, 0)));
+        assertEquals(1, calls.get());
+        assertFalse(svc.castSkill("missing", ctx(1.0, 0)));
+        assertNull(svc.bindCondition("!skill:absent"));
+        assertEquals(1, calls.get());
+    }
+
+    @Test
+    void namedSkillConditionCyclesFailClosedAndDoNotPoisonLaterEvaluations() {
+        var svc = service();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  first:
+                    require: ['!skill:second']
+                  second:
+                    require: ['!skill:first']
+                  ordinary: {}
+                """));
+        svc.loadSkills(yaml.getConfigurationSection("skills"));
+        assertFalse(registry.testCondition(svc.bindCondition("!skill:first"), ctx(1.0, 0)));
+        assertFalse(registry.testCondition(svc.bindCondition("skill:second"), ctx(1.0, 0)));
+        assertTrue(registry.testCondition(svc.bindCondition("skill:ordinary"), ctx(1.0, 0)));
     }
 
     @Test
@@ -1019,6 +1403,37 @@ class SkillServiceTest {
         assertTrue(acts.keySet().containsAll(List.of(
                 "set-scale", "play-animation", "stop-animation",
                 "set-intent", "message-target")), acts.keySet().toString());
+    }
+
+    @Test
+    @DisplayName("Pin position targeters invoke actions once per location without entity targets")
+    void pinTargeterDispatchesLocationContexts() {
+        World world = mock(World.class);
+        PinRegistry pins = new PinRegistry(name -> "world".equals(name) ? world : null);
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("pins.Route.locations", List.of("world,1,2,3", "world,4,5,6"));
+        pins.load(config);
+        SkillExtras.pinRegistry(pins);
+        List<Location> received = new java.util.ArrayList<>();
+        registry.registerAction("location-probe", context -> {
+            assertTrue(context.targetEntity().isEmpty());
+            assertTrue(context.targets().isEmpty());
+            received.add(context.targetLocation().orElseThrow());
+        });
+        try {
+            var svc = service();
+            String key = svc.bindAction("location-probe @Pin{name=route}");
+            assertNotNull(key);
+            BehaviorContext context = BehaviorContext.execution(null, null, 1, -1, 0,
+                    "skill", null, null, List.of(), new Location(world, 0, 0, 0));
+
+            assertTrue(registry.runAction(key, context));
+            assertEquals(2, received.size());
+            assertEquals(new Location(world, 1, 2, 3), received.get(0));
+            assertEquals(new Location(world, 4, 5, 6), received.get(1));
+        } finally {
+            SkillExtras.pinRegistry(null);
+        }
     }
 
     @Test
@@ -1534,6 +1949,91 @@ class SkillServiceTest {
             assertTrue(registry.runAction(action, ctx));
             verify(item).setAmount(3);
             verify(world).dropItemNaturally(location, item);
+        } finally {
+            dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    void dropItemUsesLocationTargetAndSkipsMissingVariable() {
+        var svc = service();
+        var template = mock(org.bukkit.inventory.ItemStack.class);
+        var dropped = mock(org.bukkit.inventory.ItemStack.class);
+        when(template.clone()).thenReturn(dropped);
+        var world = mock(World.class);
+        var origin = new Location(world, 0, 64, 0);
+        var destination = new Location(world, 4, 5, 6);
+        dev.helstera.ai.skill.SkillExtras.itemResolver(name -> template);
+        var ctx = BehaviorContext.execution(null, null, 1, -1, 0, "skill", null, null,
+                List.of(), origin);
+        try {
+            String missing = svc.bindAction("drop-item DIAMOND 3 @VariableLocation{var=skill.missing}");
+            assertNotNull(missing);
+            assertTrue(registry.runAction(missing, ctx));
+            verify(world, org.mockito.Mockito.never()).dropItemNaturally(
+                    org.mockito.ArgumentMatchers.any(Location.class), org.mockito.ArgumentMatchers.any());
+            String action = svc.bindAction("drop-item DIAMOND 3 @location{x=4;y=5;z=6}");
+            assertNotNull(action);
+            assertTrue(registry.runAction(action, ctx));
+            verify(dropped).setAmount(3);
+            verify(world).dropItemNaturally(destination, dropped);
+        } finally {
+            dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    void dropItemRejectsInvalidNaturallyFlag() {
+        var svc = service();
+        assertNull(svc.bindAction("drop-item DIAMOND 1 maybe @location{x=4;y=5;z=6}"));
+    }
+
+    @Test
+    void exactDropUsesCasterAndEntityTargetLocations() {
+        var template = mock(org.bukkit.inventory.ItemStack.class);
+        var dropped = mock(org.bukkit.inventory.ItemStack.class);
+        when(template.clone()).thenReturn(dropped);
+        var world = mock(World.class);
+        var casterLocation = new Location(world, 1, 64, 1);
+        var targetLocation = new Location(world, 4, 64, 4);
+        var instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(casterLocation);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(target.getLocation()).thenReturn(targetLocation);
+        var context = BehaviorContext.continueExecution(instance, target, 1, 1, 0, "skill", null, null,
+                List.of(target), casterLocation, null);
+        dev.helstera.ai.skill.SkillExtras.itemResolver(name -> template);
+        try {
+            var actions = dev.helstera.ai.skill.SkillExtras.actions();
+            actions.get("drop-item").create(List.of("DIAMOND", "2", "false")).accept(context);
+            actions.get("drop-item-targets").create(List.of("DIAMOND", "2", "false")).accept(context);
+            verify(world).dropItem(casterLocation, template);
+            verify(world).dropItem(targetLocation, dropped);
+            verify(world, org.mockito.Mockito.never()).dropItemNaturally(
+                    org.mockito.ArgumentMatchers.any(Location.class), org.mockito.ArgumentMatchers.any());
+        } finally {
+            dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    void dropItemRejectsInvalidCountsInsteadOfDroppingOne() {
+        var svc = service();
+        var template = mock(org.bukkit.inventory.ItemStack.class);
+        var world = mock(World.class);
+        var origin = new Location(world, 0, 64, 0);
+        var ctx = BehaviorContext.execution(null, null, 1, -1, 0, "skill", null, null,
+                List.of(), origin);
+        dev.helstera.ai.skill.SkillExtras.itemResolver(name -> template);
+        try {
+            for (String amount : List.of("0", "-1", "1.5", "2147483648", "<skill.var.missing>")) {
+                String action = svc.bindAction("drop-item DIAMOND " + amount + " @location{x=4;y=5;z=6}");
+                assertNotNull(action, amount);
+                assertTrue(registry.runAction(action, ctx));
+            }
+            verify(world, org.mockito.Mockito.never()).dropItemNaturally(
+                    org.mockito.ArgumentMatchers.any(Location.class), org.mockito.ArgumentMatchers.any());
         } finally {
             dev.helstera.ai.skill.SkillExtras.itemResolver(null);
         }
@@ -2223,9 +2723,44 @@ class SkillServiceTest {
     }
 
     @Test
+    void compositeConditionFailuresCannotBecomeTrueThroughNegation() {
+        var svc = service();
+        registry.registerCondition("broken", context -> { throw new IllegalStateException("failure"); });
+        registry.registerCondition("no", context -> false);
+        for (String spec : List.of("!broken", "not{not{broken}}", "!any{no;broken}",
+                "any{no;!broken}", "!all{broken;no}")) {
+            String key = svc.bindCondition(spec);
+            assertNotNull(key, spec);
+            assertFalse(registry.testCondition(key, ctx(1.0, 0)), spec);
+        }
+        assertTrue(registry.testCondition(svc.bindCondition("!no"), ctx(1.0, 0)));
+        var calls = new AtomicInteger();
+        registry.registerAction("probe", context -> calls.incrementAndGet());
+        String failedAction = svc.bindAction("probe ?!broken");
+        String validAction = svc.bindAction("probe ?!no");
+        assertNotNull(failedAction);
+        assertNotNull(validAction);
+        assertTrue(registry.runAction(failedAction, ctx(1.0, 0)));
+        assertEquals(0, calls.get());
+        assertTrue(registry.runAction(validAction, ctx(1.0, 0)));
+        assertEquals(1, calls.get());
+    }
+
+    @Test
     @DisplayName("condition composition honors unary not and boolean precedence")
     void conditionCompositionHonorsPrecedence() {
         var svc = service();
+        registry.registerCondition("yes", context -> true);
+        registry.registerCondition("no", context -> false);
+        for (String spec : List.of("!yes && no", "yes && (no || no)",
+                "all{yes;yes} && no")) {
+            String key = svc.bindCondition(spec);
+            assertNotNull(key, spec);
+            assertFalse(registry.testCondition(key, ctx(1.0, 0)), spec);
+        }
+        String groupedOr = svc.bindCondition("no && (no || yes) || yes");
+        assertNotNull(groupedOr);
+        assertTrue(registry.testCondition(groupedOr, ctx(1.0, 0)));
         String negated = svc.bindCondition("!has-target");
         assertNotNull(negated);
         assertTrue(registry.testCondition(negated, BehaviorContext.of(null, null, 1.0, -1, 0, "IDLE")));
@@ -2237,6 +2772,20 @@ class SkillServiceTest {
         String grouped = svc.bindCondition("(has-target false && state-is IDLE)");
         assertNotNull(grouped);
         assertTrue(registry.testCondition(grouped, BehaviorContext.of(null, null, 1.0, -1, 0, "IDLE")));
+    }
+
+    @Test
+    void scalarConditionListPreservesOrForRuntimeEvaluation() {
+        var svc = service();
+        registry.registerCondition("yes", context -> true);
+        registry.registerCondition("no", context -> false);
+        var conditions = dev.helstera.api.util.ConditionListParser.parseFailClosed("no || yes | yes");
+        assertEquals(List.of("no || yes", "yes"), conditions);
+        for (String condition : conditions) {
+            String key = svc.bindCondition(condition);
+            assertNotNull(key);
+            assertTrue(registry.testCondition(key, ctx(1.0, 0)));
+        }
     }
 
     @Test
@@ -2478,6 +3027,7 @@ class SkillServiceTest {
                       - 'branch-unlock{branch=combat}'
                   gated:
                     branch: combat
+                    cooldown: 60s
                     on-decision:
                       - probe
                 """));
@@ -2492,6 +3042,91 @@ class SkillServiceTest {
         assertTrue(svc.castSkill("unlock", context));
         assertTrue(svc.castSkill("gated", context));
         assertEquals(1, fired.get());
+    }
+
+    @Test
+    void lockedBranchCannotEnterBusyInstanceQueue() {
+        var fired = new AtomicInteger();
+        registry.registerAction("probe", context -> fired.incrementAndGet());
+        var svc = service();
+        svc.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  charged:
+                    cast-duration: 60s
+                    on-decision: [probe]
+                  gated:
+                    branch: combat
+                    cooldown: 60s
+                    on-decision: [probe]
+                """)).getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(43);
+        when(instance.isValid()).thenReturn(true);
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        var context = BehaviorContext.continueExecution(instance, (LivingEntity) null,
+                1, -1, 0, "IDLE", null, null, List.of(), null, tree);
+
+        assertTrue(svc.castSkill("charged", context));
+        assertFalse(svc.castSkill("gated", context));
+        assertEquals(0, svc.queuedSkillCount());
+        assertTrue(tree.unlockBranch("combat"));
+        assertTrue(svc.castSkill("gated", context));
+        assertEquals(1, svc.queuedSkillCount());
+        assertTrue(svc.cancelCast(43));
+        assertEquals(1, fired.get());
+    }
+
+    @Test
+    void queuedSkillsRestoreLatestAutomaticallyManagedTree() throws Exception {
+        var svc = service();
+        svc.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  charged:
+                    cast-duration: 20ms
+                    on-decision: ['var-set marker 4']
+                  queued:
+                    on-decision: ['var-add marker 3']
+                """)).getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(44);
+        when(instance.isValid()).thenReturn(true);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1, -1, 0, "IDLE");
+
+        assertTrue(svc.castSkill("charged", context));
+        assertTrue(svc.castSkill("queued", context));
+        assertEquals(1, svc.queuedSkillCount());
+        Thread.sleep(40);
+        svc.tickCasts();
+        var value = svc.snapshotOf(44).orElseThrow().variables().get("marker");
+        assertEquals(7.0, ((Number) value).doubleValue());
+    }
+
+    @Test
+    void queuedSkillKeepsExplicitTreeContext() {
+        var seen = new java.util.concurrent.atomic.AtomicReference<dev.helstera.api.behavior.SkillTreeContext>();
+        registry.registerAction("capture-tree", context -> seen.set(context.skillTree().orElseThrow()));
+        var svc = service();
+        svc.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  charged:
+                    cast-duration: 60s
+                    on-decision: ['var-set marker 4']
+                  queued:
+                    on-decision: [capture-tree]
+                """)).getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(45);
+        when(instance.isValid()).thenReturn(true);
+        var plain = BehaviorContext.of(instance, (LivingEntity) null, 1, -1, 0, "IDLE");
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        var explicit = BehaviorContext.continueExecution(instance, (LivingEntity) null,
+                1, -1, 0, "IDLE", null, null, List.of(), null, tree);
+        assertTrue(svc.castSkill("charged", plain));
+        assertTrue(svc.castSkill("queued", explicit));
+        svc.restoreSkillTreeSnapshot(45,
+                new dev.helstera.api.behavior.SkillTreeContext(null, List.of()).snapshot());
+        assertTrue(svc.cancelCast(45));
+        assertTrue(tree == seen.get());
     }
 
     @Test
@@ -2568,6 +3203,29 @@ class SkillServiceTest {
         assertTrue(registry.hasAction(svc.bindAction("teleport-self 1 2 3")));
     }
     @Test
+    void invalidExecutionOptionsAreRejectedAtBinding() {
+        var svc = service();
+        for (String option : List.of("delay=bad", "delay=-1", "delay=NaN", "delay=Infinity",
+                "delay=1e100s", "repeat=-1", "repeat=1.5", "repeat=2147483648",
+                "repeatinterval=-1", "repeat-interval=bad", "repeat=2147483647;repeatinterval=1",
+                "delay=-1;DELAY=2", "repeat=1;repeat=2", "repeatinterval=1;repeat-interval=2",
+                "repeat-interval=2;repeatinterval=1")) {
+            String spec = "damage-target{" + option + "} 4";
+            assertNull(svc.bindAction(spec), spec);
+            assertTrue(svc.warnings().stream().anyMatch(w -> w.contains(spec)), spec);
+        }
+        String valid = svc.bindAction("damage-target{delay=50ms;repeat=2;repeatinterval=0.1s} 4");
+        assertNotNull(valid, svc.warnings().toString());
+        assertTrue(valid.contains("delay=1:repeat=2:interval=2"), valid);
+        assertNull(svc.bindAction("skill{s=child;delay=bad}"));
+        assertNull(svc.bindAction("randomskill{skills=child;repeat=-1}"));
+        for (String spec : List.of("damage-target 4 0% 100%", "damage-target 4 @self @target")) {
+            assertNull(svc.bindAction(spec), spec);
+            assertTrue(svc.warnings().stream().anyMatch(w -> w.contains(spec)), spec);
+        }
+    }
+
+    @Test
     @DisplayName("delay and repeat metadata wrap registered actions instead of bypassing them")
     void timingMetadataWrapsRegisteredAction() {
         registry.registerAction("probe", ctx -> { });
@@ -2629,6 +3287,108 @@ class SkillServiceTest {
     }
 
     @Test
+    void forgettingInstanceCancelsItsDelayedWorkButAllowsNewWork() {
+        var fired = new java.util.ArrayList<Integer>();
+        var scheduled = new java.util.ArrayList<Runnable>();
+        registry.registerAction("capture-instance", context -> fired.add(context.instance().instanceId()));
+        var svc = service();
+        var removed = mock(ModelInstance.class);
+        var other = mock(ModelInstance.class);
+        when(removed.instanceId()).thenReturn(101);
+        when(other.instanceId()).thenReturn(102);
+        var removedContext = BehaviorContext.of(removed, (LivingEntity) null, 1, -1, 0, "IDLE");
+        var otherContext = BehaviorContext.of(other, (LivingEntity) null, 1, -1, 0, "IDLE");
+        dev.helstera.ai.skill.SkillCatalog.taskScheduler((task, delay) -> {
+            scheduled.add(task);
+            return true;
+        });
+        try {
+            String action = svc.bindAction("capture-instance{delay=2}");
+            assertTrue(registry.runAction(action, removedContext));
+            assertTrue(registry.runAction(action, otherContext));
+            svc.forget(101);
+            assertTrue(registry.runAction(action, removedContext));
+            scheduled.forEach(Runnable::run);
+            assertEquals(List.of(102, 101), fired);
+        } finally {
+            dev.helstera.ai.skill.SkillCatalog.taskScheduler(null);
+        }
+    }
+
+    @Test
+    void forgettingInstanceDuringRepeatStopsRemainingExecutions() {
+        var scheduled = new java.util.ArrayList<Runnable>();
+        var fired = new AtomicInteger();
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(103);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1, -1, 0, "IDLE");
+        registry.registerAction("forget-self", ignored -> {
+            fired.incrementAndGet();
+            svc.forget(103);
+        });
+        dev.helstera.ai.skill.SkillCatalog.taskScheduler((task, delay) -> {
+            scheduled.add(task);
+            return true;
+        });
+        try {
+            String action = svc.bindAction("forget-self{delay=1;repeat=2;repeatinterval=1}");
+            assertTrue(registry.runAction(action, context));
+            for (int index = 0; index < scheduled.size(); index++) scheduled.get(index).run();
+            assertEquals(1, fired.get());
+        } finally {
+            dev.helstera.ai.skill.SkillCatalog.taskScheduler(null);
+        }
+    }
+
+    @Test
+    void forgettingInstanceDuringSkillStopsActionsAndDoesNotRestoreSnapshot() {
+        var svc = service();
+        var fired = new AtomicInteger();
+        registry.registerAction("detach-self", context -> svc.forget(context.instance().instanceId()));
+        registry.registerAction("after-detach", context -> fired.incrementAndGet());
+        svc.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  removed:
+                    on-decision: ['var-set marker 1', detach-self, after-detach]
+                  replacement:
+                    on-decision: ['var-set marker 2']
+                """)).getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(107);
+        when(instance.isValid()).thenReturn(true);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1, -1, 0, "IDLE");
+
+        assertTrue(svc.castSkill("removed", context));
+        assertEquals(0, fired.get());
+        assertTrue(svc.snapshotOf(107).isEmpty());
+        assertTrue(svc.castSkill("replacement", context));
+        assertEquals(2.0, ((Number) svc.snapshotOf(107).orElseThrow().variables().get("marker")).doubleValue());
+    }
+
+    @Test
+    void forgettingInstanceInNestedSkillStopsOuterActions() {
+        var svc = service();
+        var fired = new AtomicInteger();
+        registry.registerAction("detach-self", context -> svc.forget(context.instance().instanceId()));
+        registry.registerAction("after-detach", context -> fired.incrementAndGet());
+        svc.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  inner:
+                    on-decision: [detach-self, after-detach]
+                  outer:
+                    on-decision: ['cast-skill inner', after-detach]
+                """)).getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(108);
+        when(instance.isValid()).thenReturn(true);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1, -1, 0, "IDLE");
+        assertTrue(svc.castSkill("outer", context));
+        assertEquals(0, fired.get());
+        assertTrue(svc.snapshotOf(108).isEmpty());
+    }
+
+    @Test
     @DisplayName("reload invalidates every old delayed continuation")
     void reloadInvalidatesOldDelayedWork() throws Exception {
         var fired = new AtomicInteger();
@@ -2656,6 +3416,52 @@ class SkillServiceTest {
         } finally {
             dev.helstera.ai.skill.SkillCatalog.taskScheduler(null);
         }
+    }
+
+    @Test
+    void reloadDuringSkillStopsOldChainAndAllowsNewDefinition() {
+        var svc = service();
+        var oldActions = new AtomicInteger();
+        var newActions = new AtomicInteger();
+        registry.registerAction("old-action", ignored -> oldActions.incrementAndGet());
+        registry.registerAction("new-action", ignored -> newActions.incrementAndGet());
+        var replacement = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  replacement:
+                    on-decision: ['var-set marker 2', new-action]
+                """));
+        registry.registerAction("reload-now", context -> {
+            svc.loadSkills(replacement.getConfigurationSection("skills"));
+            assertTrue(svc.castSkill("replacement", context));
+        });
+        svc.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  old:
+                    on-decision: ['var-set marker 1', reload-now, old-action]
+                """)).getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(109);
+        when(instance.isValid()).thenReturn(true);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1, -1, 0, "IDLE");
+        assertTrue(svc.castSkill("old", context));
+        assertEquals(0, oldActions.get());
+        assertEquals(1, newActions.get());
+        assertEquals(2.0, ((Number) svc.snapshotOf(109).orElseThrow().variables().get("marker")).doubleValue());
+    }
+
+    @Test
+    void reloadDuringSkillWithoutInstanceStopsOldChain() {
+        var svc = service();
+        var fired = new AtomicInteger();
+        registry.registerAction("reload-now", context -> svc.loadSkills(null));
+        registry.registerAction("old-action", context -> fired.incrementAndGet());
+        svc.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  old:
+                    on-decision: [reload-now, old-action]
+                """)).getConfigurationSection("skills"));
+        assertTrue(svc.castSkill("old", ctx(1, 0)));
+        assertEquals(0, fired.get());
     }
 
     @Test
@@ -2753,6 +3559,109 @@ class SkillServiceTest {
         svc.tickCasts();
         assertEquals(1, fired.get());
         assertEquals(0, svc.activeCastCount());
+    }
+
+    @Test
+    void startCastHonorsNamedSkillConditionsBranchAndCooldown() {
+        var svc = service();
+        registry.registerAction("probe", context -> { });
+        registry.registerCondition("reject-cast", context -> false);
+        svc.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  invalid:
+                    cast-duration: 60s
+                    require: [missing-condition]
+                    on-decision: [probe]
+                  rejected:
+                    cast-duration: 60s
+                    require: [reject-cast]
+                    on-decision: [probe]
+                  gated:
+                    cast-duration: 60s
+                    cooldown: 60s
+                    branch: combat
+                    on-decision: [probe]
+                  instant:
+                    on-decision: [probe]
+                """)).getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(104);
+        when(instance.isValid()).thenReturn(true);
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        var context = BehaviorContext.continueExecution(instance, (LivingEntity) null,
+                1, -1, 0, "IDLE", null, null, List.of(), null, tree);
+
+        assertFalse(svc.startCast("invalid", context));
+        assertFalse(svc.startCast("rejected", context));
+        assertFalse(svc.startCast("gated", context));
+        assertFalse(svc.startCast("instant", context));
+        assertEquals(0, svc.activeCastCount());
+        assertTrue(tree.unlockBranch("combat"));
+        assertTrue(svc.startCast("gated", context));
+        assertEquals(1, svc.activeCastCount());
+        assertTrue(svc.cancelCast(104));
+        assertFalse(svc.startCast("gated", context));
+        assertEquals(0, svc.activeCastCount());
+    }
+
+    @Test
+    void startCastActionCannotBypassNamedSkillConditions() {
+        var svc = service();
+        registry.registerAction("probe", context -> { });
+        registry.registerCondition("reject-cast", context -> false);
+        svc.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  gated:
+                    cast-duration: 60s
+                    require: [reject-cast]
+                    on-decision: [probe]
+                """)).getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(105);
+        when(instance.isValid()).thenReturn(true);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1, -1, 0, "IDLE");
+        dev.helstera.ai.skill.SkillCatalog.skillService(svc);
+        try {
+            String action = svc.bindAction("start-cast gated");
+            assertNotNull(action);
+            assertTrue(registry.runAction(action, context));
+            assertEquals(0, svc.activeCastCount());
+        } finally {
+            dev.helstera.ai.skill.SkillCatalog.skillService(null);
+        }
+    }
+
+    @Test
+    void castActionsUseTheirOwningServiceInsteadOfGlobalHook() {
+        var owning = service();
+        var otherRegistry = new BehaviorRegistryImpl();
+        var other = new SkillService(otherRegistry, null);
+        var configuration = YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  charged:
+                    cast-duration: 60s
+                    on-decision: []
+                """));
+        owning.loadSkills(configuration.getConfigurationSection("skills"));
+        other.loadSkills(configuration.getConfigurationSection("skills"));
+        var instance = mock(ModelInstance.class);
+        when(instance.instanceId()).thenReturn(106);
+        when(instance.isValid()).thenReturn(true);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1, -1, 0, "IDLE");
+        dev.helstera.ai.skill.SkillCatalog.skillService(other);
+        try {
+            String start = owning.bindAction("start-cast charged");
+            String cancel = owning.bindAction("cancel-cast");
+            assertTrue(owning.runAction(start, context));
+            assertEquals(1, owning.activeCastCount());
+            assertEquals(0, other.activeCastCount());
+            assertTrue(other.startCast("charged", context));
+            assertTrue(owning.runAction(cancel, context));
+            assertEquals(0, owning.activeCastCount());
+            assertEquals(1, other.activeCastCount());
+        } finally {
+            dev.helstera.ai.skill.SkillCatalog.skillService(null);
+        }
     }
 
     @Test
@@ -2993,6 +3902,56 @@ class SkillServiceTest {
                 "target-is-child", "target-is-adult", "target-is-tamed", "target-is-sheared",
                 "target-is-saddled", "target-is-powered", "target-is-charged")) {
             assertNotNull(service.bindCondition(alias), alias);
+        }
+    }
+
+    @Test
+    void parameterlessMovementAndEnvironmentConditionsRejectArguments() {
+        SkillService service = service();
+        for (String name : List.of("is-sneaking", "is-sprinting", "is-flying", "is-blocking",
+                "is-gliding", "is-swimming", "in-water", "in-lava", "on-fire", "in-air",
+                "target-is-sneaking", "target-is-sprinting", "target-is-flying", "target-is-blocking",
+                "target-is-gliding", "target-is-swimming", "target-in-water", "target-in-lava",
+                "target-on-fire", "target-in-air")) {
+            assertNotNull(service.bindCondition(name), name);
+            assertNull(service.bindCondition(name + " unknown=true"), name);
+            assertNull(service.bindCondition(name + "{unknown=true}"), name);
+        }
+        Player player = mock(Player.class);
+        when(player.isSneaking()).thenReturn(true);
+        BehaviorContext targetContext = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("target-is-sneaking"), targetContext));
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.isInWater()).thenReturn(true);
+        BehaviorContext casterContext = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+        assertTrue(registry.testCondition(service.bindCondition("in-water"), casterContext));
+    }
+
+    @Test
+    void parameterlessTimeAndWeatherAliasesRejectArguments() {
+        SkillService service = service();
+        for (String name : List.of("day", "daytime", "dawn", "dusk", "sunset", "morning", "noon",
+                "midnight", "clear", "sun", "sunny", "rain", "storm", "thunder", "thunderstorm")) {
+            assertNotNull(service.bindCondition(name), name);
+            assertNull(service.bindCondition(name + "{unknown=true}"), name);
+            assertNull(service.bindCondition(name + " unknown=true"), name);
+        }
+    }
+
+    @Test
+    void parameterlessVisibilityAndClimbingConditionsRejectArguments() {
+        SkillService service = service();
+        for (String name : List.of("is-climbing", "climbing", "isClimbing", "is-invisible", "invisible",
+                "isInvisible", "is-glowing", "glowing", "isGlowing", "falling", "isFalling",
+                "target-is-climbing", "targetIsClimbing", "target-is-invisible", "targetIsInvisible",
+                "target-is-glowing", "targetIsGlowing", "target-is-frozen", "targetIsFrozen", "targetFrozen",
+                "charged")) {
+            assertNotNull(service.bindCondition(name), name);
+            assertNull(service.bindCondition(name + "{unknown=true}"), name);
+            assertNull(service.bindCondition(name + " unknown=true"), name);
         }
     }
 

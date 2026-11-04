@@ -167,7 +167,7 @@ public final class ImmunityListener implements Listener {
         }
         var ctx = dev.helstera.api.behavior.BehaviorContext.of(
                 inst, attacker, healthRatio, distance, 0, "damage-immunity");
-        return spec -> reg.testCondition(spec, ctx);
+        return spec -> ai.testCondition(spec, ctx);
     }
 
     /** 反查实体所属实例；非受控实体返回 null。 */

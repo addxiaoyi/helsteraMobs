@@ -15,6 +15,7 @@ import java.util.Set;
  * plain {@code String.split(",")}.</p>
  */
 public final class ConditionListParser {
+    public static final String INVALID_CONDITION = "__helstera_invalid_condition__";
 
     private static final Set<String> CONDITION_STARTS = Set.of(
             "all", "any", "not", "day", "night", "raining", "thundering", "sunny",
@@ -54,6 +55,19 @@ public final class ConditionListParser {
         return List.copyOf(out);
     }
 
+    /** Preserves malformed entries as a marker that consumers must reject. */
+    public static List<String> parseFailClosed(Object raw) {
+        if (raw == null) return List.of();
+        List<?> values = raw instanceof List<?> list ? list : List.of(raw);
+        List<String> out = new ArrayList<>();
+        for (Object value : values) {
+            List<String> parsed = value instanceof String text ? splitScalar(text, true) : List.of();
+            if (parsed.isEmpty()) out.add(INVALID_CONDITION);
+            else out.addAll(parsed);
+        }
+        return List.copyOf(out);
+    }
+
     private static void append(List<String> out, Object raw) {
         if (raw == null) return;
         if (raw instanceof Iterable<?> values) {
@@ -71,6 +85,10 @@ public final class ConditionListParser {
     }
 
     private static List<String> splitScalar(String raw) {
+        return splitScalar(raw, false);
+    }
+
+    private static List<String> splitScalar(String raw, boolean failClosed) {
         if (raw == null || raw.isBlank()) return List.of();
         List<String> out = new ArrayList<>();
         StringBuilder current = new StringBuilder();
@@ -79,6 +97,8 @@ public final class ConditionListParser {
         int braces = 0;
         int brackets = 0;
         int parentheses = 0;
+        boolean invalidStructure = false;
+        java.util.ArrayDeque<Character> delimiters = new java.util.ArrayDeque<>();
         for (int i = 0; i < raw.length(); i++) {
             char c = raw.charAt(i);
             if (quote != 0) {
@@ -93,31 +113,45 @@ public final class ConditionListParser {
                 current.append(c);
                 continue;
             }
+            if (c == '{' || c == '[' || c == '(') delimiters.push(c);
+            else if (c == '}' || c == ']' || c == ')') {
+                char expected = c == '}' ? '{' : c == ']' ? '[' : '(';
+                if (delimiters.isEmpty() || delimiters.pop() != expected) invalidStructure = true;
+            }
             if (c == '{') braces++;
-            else if (c == '}' && braces > 0) braces--;
+            else if (c == '}') { if (braces > 0) braces--; else invalidStructure = true; }
             else if (c == '[') brackets++;
-            else if (c == ']' && brackets > 0) brackets--;
+            else if (c == ']') { if (brackets > 0) brackets--; else invalidStructure = true; }
             else if (c == '(') parentheses++;
-            else if (c == ')' && parentheses > 0) parentheses--;
+            else if (c == ')') { if (parentheses > 0) parentheses--; else invalidStructure = true; }
 
             boolean topLevel = braces == 0 && brackets == 0 && parentheses == 0;
+            if (topLevel && c == '|' && i + 1 < raw.length() && raw.charAt(i + 1) == '|') {
+                current.append("||");
+                i++;
+                continue;
+            }
             if (topLevel && (c == ';' || c == '|')) {
-                addPart(out, current);
+                addPart(out, current, failClosed);
                 continue;
             }
             if (topLevel && c == ',' && commaSeparates(raw, i, current.toString())) {
-                addPart(out, current);
+                addPart(out, current, failClosed);
                 continue;
             }
             current.append(c);
         }
-        addPart(out, current);
+        addPart(out, current, failClosed);
+        if (failClosed && (invalidStructure || quote != 0 || braces != 0 || brackets != 0 || parentheses != 0)) {
+            out.add(INVALID_CONDITION);
+        }
         return out;
     }
 
-    private static void addPart(List<String> out, StringBuilder current) {
+    private static void addPart(List<String> out, StringBuilder current, boolean failClosed) {
         String value = current.toString().trim();
         if (!value.isBlank()) out.add(value);
+        else if (failClosed) out.add(INVALID_CONDITION);
         current.setLength(0);
     }
 

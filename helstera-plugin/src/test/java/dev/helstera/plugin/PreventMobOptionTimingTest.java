@@ -106,6 +106,24 @@ class PreventMobOptionTimingTest {
     }
 
     @Test
+    void dropLuckUsesEffectivePlayerLuckAttributeAndFailsClosedWhenUnavailable() {
+        var attribute = (org.bukkit.attribute.AttributeInstance) Proxy.newProxyInstance(
+                org.bukkit.attribute.AttributeInstance.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.attribute.AttributeInstance.class},
+                (proxy, method, args) -> method.getName().equals("getValue") ? 4.25 : null);
+        var killer = (org.bukkit.entity.Player) Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(), new Class<?>[]{org.bukkit.entity.Player.class},
+                (proxy, method, args) -> method.getName().equals("getAttribute") ? attribute : null);
+        var noLuckAttribute = (org.bukkit.entity.Player) Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(), new Class<?>[]{org.bukkit.entity.Player.class},
+                (proxy, method, args) -> null);
+
+        assertEquals(4.25, HelsteraPlugin.resolveDropLuck(killer));
+        assertEquals(0.0, HelsteraPlugin.resolveDropLuck(noLuckAttribute));
+        assertEquals(0.0, HelsteraPlugin.resolveDropLuck(null));
+    }
+
+    @Test
     void preventSunburnOnlyClassifiesTheBaseCombustEventAsSunlight() {
         var entity = (org.bukkit.entity.Entity) Proxy.newProxyInstance(
                 org.bukkit.entity.Entity.class.getClassLoader(),

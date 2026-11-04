@@ -30,6 +30,7 @@ class SkillTreeContextTest {
     void nestedTreeReadsParentButWritesLocally() {
         SkillTreeContext parent = new SkillTreeContext(null, null);
         parent.setVariable("score", 7);
+        parent.damageTags(java.util.Set.of("FIRE"));
         parent.setLocation("marker", new Location(null, 8, 9, 10));
         SkillTreeContext child = new SkillTreeContext(null, null, null, parent);
 
@@ -56,6 +57,7 @@ class SkillTreeContextTest {
     void snapshotRestoresNestedVariablesAndLocations() {
         SkillTreeContext parent = new SkillTreeContext(null, null);
         parent.setVariable("score", 7);
+        parent.damageTags(java.util.Set.of("FIRE"));
         parent.setLocation("origin", new Location(null, 1, 2, 3, 4, 5));
         SkillTreeContext child = new SkillTreeContext(null, null, null, parent);
         child.setVariable("branch", "left");
@@ -64,6 +66,7 @@ class SkillTreeContextTest {
         SkillTreeContext restored = SkillTreeContext.restore(child.snapshot(), null, null, name -> null);
 
         assertEquals(7, restored.variable("score").orElseThrow());
+        assertEquals(java.util.Set.of("FIRE"), restored.damageTags());
         assertEquals("left", restored.variable("branch").orElseThrow());
         assertEquals(1, restored.location("origin").orElseThrow().getX());
         assertEquals(8, restored.location("marker").orElseThrow().getX());
@@ -81,12 +84,14 @@ class SkillTreeContextTest {
     void snapshotStoreRoundTripsYaml() throws Exception {
         SkillTreeContext tree = new SkillTreeContext(null, null);
         tree.setVariable("score", 12);
+        tree.damageTags(java.util.Set.of("FIRE", "RAW:Ice"));
         tree.setLocation("marker", new Location(null, 4, 5, 6, 7, 8));
         var file = Files.createTempFile("skill-tree", ".yml").toFile();
         try {
             SkillTreeSnapshotStore.save(file, tree.snapshot());
             var loaded = SkillTreeSnapshotStore.load(file);
             assertEquals(12, ((Number) loaded.variables().get("score")).intValue());
+            assertEquals(java.util.Set.of("FIRE", "RAW:Ice"), loaded.damageTags());
             assertEquals(4, loaded.locations().get("marker").x());
             assertTrue(loaded.parent().isEmpty());
         } finally {

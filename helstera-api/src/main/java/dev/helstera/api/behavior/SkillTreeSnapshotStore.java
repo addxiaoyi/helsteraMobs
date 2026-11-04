@@ -54,6 +54,7 @@ public final class SkillTreeSnapshotStore {
             branches.set(name + ".requires", new java.util.ArrayList<>(requirements));
         });
         branches.set("unlocked", new java.util.ArrayList<>(snapshot.unlockedBranches()));
+        section.set("damage-tags", new java.util.ArrayList<>(snapshot.damageTags()));
         snapshot.parent().ifPresent(parent -> write(section.createSection("parent"), parent));
     }
 
@@ -88,6 +89,7 @@ public final class SkillTreeSnapshotStore {
                 if (branch != null) requirements.put(name, new java.util.LinkedHashSet<>(branch.getStringList("requires")));
             }
         }
-        return new SkillTreeContext.Snapshot(variables, locations, requirements, unlocked, parent);
+        return new SkillTreeContext.Snapshot(variables, locations, requirements, unlocked,
+                new java.util.LinkedHashSet<>(section.getStringList("damage-tags")), parent);
     }
 }

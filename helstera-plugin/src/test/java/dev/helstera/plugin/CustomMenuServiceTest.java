@@ -9,6 +9,119 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CustomMenuServiceTest {
+    @Test void paginationRequiresRenderedIconAndOpensNextPage(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("pages.yml");
+        Files.writeString(file, """
+                menus:
+                  first:
+                    page-group: shop
+                    page: 1
+                    pagination: {next-slot: 26, previous-slot: 18, page-info-slot: 22}
+                  second:
+                    page-group: shop
+                    page: 2
+                """);
+        var menus = new CustomMenuService();
+        menus.load(file.toFile());
+        var first = org.mockito.Mockito.mock(org.bukkit.inventory.Inventory.class);
+        var second = org.mockito.Mockito.mock(org.bukkit.inventory.Inventory.class);
+        var view = org.mockito.Mockito.mock(org.bukkit.inventory.InventoryView.class);
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        var event = org.mockito.Mockito.mock(org.bukkit.event.inventory.InventoryClickEvent.class);
+        org.mockito.Mockito.when(player.getName()).thenReturn("Tester");
+        org.mockito.Mockito.when(player.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        org.mockito.Mockito.when(first.getSize()).thenReturn(27);
+        org.mockito.Mockito.when(second.getSize()).thenReturn(27);
+        org.mockito.Mockito.when(view.getTopInventory()).thenReturn(first);
+        org.mockito.Mockito.when(event.getView()).thenReturn(view);
+        org.mockito.Mockito.when(event.getRawSlot()).thenReturn(26);
+        org.mockito.Mockito.when(event.getWhoClicked()).thenReturn(player);
+        org.mockito.Mockito.when(event.getAction()).thenReturn(org.bukkit.event.inventory.InventoryAction.PICKUP_ALL);
+        var menuField = CustomMenuService.class.getDeclaredField("menus");
+        var openField = CustomMenuService.class.getDeclaredField("open");
+        menuField.setAccessible(true);
+        openField.setAccessible(true);
+        @SuppressWarnings("unchecked") var definitions = (java.util.Map<String, Object>) menuField.get(menus);
+        @SuppressWarnings("unchecked") var open = (java.util.Map<org.bukkit.inventory.Inventory, Object>) openField.get(menus);
+        open.put(first, definitions.get("first"));
+        try (var bukkit = org.mockito.Mockito.mockStatic(org.bukkit.Bukkit.class)) {
+            menus.onClick(event);
+            org.mockito.Mockito.verify(player, org.mockito.Mockito.never()).openInventory(
+                    org.mockito.ArgumentMatchers.any(org.bukkit.inventory.Inventory.class));
+            var icon = org.mockito.Mockito.mock(org.bukkit.inventory.ItemStack.class);
+            org.mockito.Mockito.when(icon.getType()).thenReturn(org.bukkit.Material.ARROW);
+            org.mockito.Mockito.when(first.getItem(26)).thenReturn(icon);
+            bukkit.when(org.bukkit.Bukkit::getLogger).thenReturn(java.util.logging.Logger.getAnonymousLogger());
+            bukkit.when(() -> org.bukkit.Bukkit.createInventory(null, 27, "second")).thenReturn(second);
+            menus.onClick(event);
+            org.mockito.Mockito.verify(player).openInventory(second);
+        }
+    }
+
+    @Test void emptyRenderedSlotCannotRunButtonCommand(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("menu.yml");
+        Files.writeString(file, "menus:\n  test:\n    buttons:\n      '0':\n        material: DIAMOND\n        command: 'say executed'\n");
+        CustomMenuService menus = new CustomMenuService();
+        menus.load(file.toFile());
+        var inventory = org.mockito.Mockito.mock(org.bukkit.inventory.Inventory.class);
+        var view = org.mockito.Mockito.mock(org.bukkit.inventory.InventoryView.class);
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        org.mockito.Mockito.when(player.getName()).thenReturn("Tester");
+        org.mockito.Mockito.when(player.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        var event = org.mockito.Mockito.mock(org.bukkit.event.inventory.InventoryClickEvent.class);
+        org.mockito.Mockito.when(view.getTopInventory()).thenReturn(inventory);
+        org.mockito.Mockito.when(inventory.getSize()).thenReturn(27);
+        org.mockito.Mockito.when(event.getView()).thenReturn(view);
+        org.mockito.Mockito.when(event.getRawSlot()).thenReturn(0);
+        org.mockito.Mockito.when(event.getAction()).thenReturn(org.bukkit.event.inventory.InventoryAction.PICKUP_ALL);
+        org.mockito.Mockito.when(event.getWhoClicked()).thenReturn(player);
+        var menuField = CustomMenuService.class.getDeclaredField("menus");
+        menuField.setAccessible(true);
+        var openField = CustomMenuService.class.getDeclaredField("open");
+        openField.setAccessible(true);
+        @SuppressWarnings("unchecked") var definitions = (java.util.Map<String, Object>) menuField.get(menus);
+        @SuppressWarnings("unchecked") var open = (java.util.Map<org.bukkit.inventory.Inventory, Object>) openField.get(menus);
+        open.put(inventory, definitions.get("test"));
+        try (var bukkit = org.mockito.Mockito.mockStatic(org.bukkit.Bukkit.class)) {
+            menus.onClick(event);
+            org.mockito.Mockito.verify(event).setCancelled(true);
+            bukkit.verifyNoInteractions();
+            var item = org.mockito.Mockito.mock(org.bukkit.inventory.ItemStack.class);
+            org.mockito.Mockito.when(item.getType()).thenReturn(org.bukkit.Material.DIAMOND);
+            org.mockito.Mockito.when(inventory.getItem(0)).thenReturn(item);
+            bukkit.when(org.bukkit.Bukkit::getLogger).thenReturn(java.util.logging.Logger.getAnonymousLogger());
+            var sender = org.mockito.Mockito.mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(sender);
+            menus.onClick(event);
+            bukkit.verify(() -> org.bukkit.Bukkit.dispatchCommand(sender, "say executed"));
+        }
+    }
+
+    @Test void customItemCollisionAndInvalidClaimAreHandled(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("menu.yml");
+        Files.writeString(file, "menus:\n  test:\n    buttons:\n      '0':\n        material: DIAMOND\n");
+        CustomMenuService menus = new CustomMenuService();
+        menus.setClaimedItemPredicate(id -> id.equals("DIAMOND"));
+        menus.setItemResolver(id -> null);
+        assertThrows(IllegalArgumentException.class, () -> menus.load(file.toFile()));
+        var custom = org.mockito.Mockito.mock(org.bukkit.inventory.ItemStack.class);
+        var copy = org.mockito.Mockito.mock(org.bukkit.inventory.ItemStack.class);
+        org.mockito.Mockito.when(custom.getType()).thenReturn(org.bukkit.Material.EMERALD);
+        org.mockito.Mockito.when(custom.clone()).thenReturn(copy);
+        menus.setItemResolver(id -> custom);
+        menus.load(file.toFile());
+        var method = CustomMenuService.class.getDeclaredMethod("resolveMenuItem", String.class,
+                CustomMenuService.ItemResolver.class, java.util.function.Predicate.class);
+        method.setAccessible(true);
+        CustomMenuService.ItemResolver resolver = id -> custom;
+        java.util.function.Predicate<String> claimed = id -> true;
+        assertSame(copy, method.invoke(null, "DIAMOND", resolver, claimed));
+        CustomMenuService.ItemResolver missing = id -> null;
+        assertNull(method.invoke(null, "DIAMOND", missing, claimed));
+        assertNull(method.invoke(null, "external:DIAMOND", missing,
+                (java.util.function.Predicate<String>) id -> false));
+    }
+
     @Test void menuServiceCleansNavigationOnPlayerQuit() throws Exception {
         String source = Files.readString(Path.of("src/main/java/dev/helstera/plugin/CustomMenuService.java"));
         assertTrue(source.contains("void onQuit(PlayerQuitEvent event)"));

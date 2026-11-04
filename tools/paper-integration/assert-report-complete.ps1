@@ -2,13 +2,22 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ReportPath,
     [switch]$RequireTargetPaperVersion,
+    [switch]$RequireFullReleaseCatalog,
+    [string]$ExpectedPluginSha256 = '',
     [string]$ExpectedPaperVersion = '1.21.1'
 )
 
 $ErrorActionPreference = 'Stop'
 $report = Get-Content -LiteralPath $ReportPath -Raw -Encoding utf8 | ConvertFrom-Json
 
-if ($RequireTargetPaperVersion) {
+if ($ExpectedPluginSha256) {
+    if ($ExpectedPluginSha256 -cnotmatch '^[0-9a-f]{64}$' -or
+            [string]$report.pluginSha256 -cne $ExpectedPluginSha256) {
+        throw 'Paper integration report plugin SHA-256 is missing, invalid, or mismatched'
+    }
+}
+
+if ($RequireTargetPaperVersion -or $RequireFullReleaseCatalog) {
     if ($report.schemaVersion -ne 1) {
         throw "Paper integration report schema mismatch: $($report.schemaVersion)"
     }
@@ -55,6 +64,62 @@ if ($RequireTargetPaperVersion) {
     if ($unexpectedProbeIds.Count -gt 0) {
         throw "Paper integration report contains unregistered probes: $($unexpectedProbeIds -join ', ')"
     }
+}
+
+if ($RequireFullReleaseCatalog) {
+    $catalogPath = Join-Path $PSScriptRoot 'release-probe-catalog.json'
+    $catalog = Get-Content -LiteralPath $catalogPath -Raw -Encoding utf8 | ConvertFrom-Json
+    if ($catalog.catalogVersion -ne 1 -or $catalog.paperVersion -ne $ExpectedPaperVersion -or
+            @($catalog.probes).Count -eq 0) {
+        throw 'Invalid or incompatible release probe catalog'
+    }
+    $catalogIds = @($catalog.probes | ForEach-Object { [string]$_.id })
+    if (@($catalogIds | Sort-Object -Unique).Count -ne $catalogIds.Count) {
+        throw 'Release probe catalog contains duplicate IDs'
+    }
+    foreach ($required in $catalog.probes) {
+        $requiredId = [string]$required.id
+        if ([string]::IsNullOrWhiteSpace($requiredId) -or
+                $required.status -notin @('passed', 'observed-rejected')) {
+            throw "Invalid release probe catalog entry: $requiredId"
+        }
+        $matches = @($report.probes | Where-Object { $_.id -ceq $requiredId })
+        if ($requiredId -cnotin @($report.expectedProbeIds) -or $matches.Count -ne 1 -or
+                $matches[0].status -cne $required.status) {
+            throw "Paper integration report lacks required release probe: $requiredId (expected $($required.status))"
+        }
+        if ($null -ne $required.requiredObservation) {
+            $observation = [string]$required.requiredObservation
+            if ([string]::IsNullOrWhiteSpace($observation) -or
+                    $observation -cnotin @($matches[0].observations)) {
+                throw "Paper integration report lacks required observation for ${requiredId}: $observation"
+            }
+        }
+        if ($null -ne $required.requiredObservationContains) {
+            $fragment = [string]$required.requiredObservationContains
+            if ([string]::IsNullOrWhiteSpace($fragment) -or
+                    @($matches[0].observations | Where-Object { ([string]$_).Contains($fragment) }).Count -eq 0) {
+                throw "Paper integration report lacks required observation for ${requiredId}: $fragment"
+            }
+        }
+        if ($required.status -ceq 'observed-rejected') {
+            $reason = [string]$required.rejectionReason
+            if ([string]::IsNullOrWhiteSpace($reason)) {
+                throw "Release probe catalog lacks rejection reason: $requiredId"
+            }
+            $reasonPattern = '(?:^|\s)requested=false\s+failure=' + [regex]::Escape($reason) + '\s*$'
+            if (@($matches[0].observations | Where-Object { $_ -cmatch $reasonPattern }).Count -eq 0) {
+                throw "Paper integration report lacks expected rejection reason for ${requiredId}: $reason"
+            }
+        }
+    }
+}
+
+$invalidStatus = @($report.probes | Where-Object {
+    $_.status -cnotin @('passed', 'observed-rejected', 'observed', 'failed', 'insufficient-sample', 'not-observed')
+})
+if ($invalidStatus.Count -gt 0) {
+    throw "Paper integration report contains invalid probe status: $(($invalidStatus | ForEach-Object { $_.id }) -join ', ')"
 }
 
 $incomplete = @($report.probes | Where-Object {

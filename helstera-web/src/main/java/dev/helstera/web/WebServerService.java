@@ -1349,13 +1349,13 @@ public final class WebServerService {
         String version = backup(f, "loot", "loot");
         Files.createDirectories(f.getParent());
         Files.writeString(f, content, StandardCharsets.UTF_8);
-        bridge.reloadLoot();
+        boolean reloaded = bridge.reloadLoot();
         broadcastReload("loot");
         audit("loot-save", "loot.yml", version == null ? "-" : version);
-        out.put("ok", true);
+        out.put("ok", reloaded);
         out.put("version", version);
         out.put("tables", bridge.lootTables());
-        out.put("message", "已保存 loot.yml 并重载掉落表。");
+        out.put("message", reloaded ? "已保存 loot.yml 并重载掉落表。" : "文件已保存，但掉落表或刷怪点重载失败，请检查服务器日志。");
         return out;
     }
 
@@ -1455,13 +1455,13 @@ public final class WebServerService {
         String version = backup(f, "spawners", "spawners");
         Files.createDirectories(f.getParent());
         Files.writeString(f, content, StandardCharsets.UTF_8);
-        bridge.reloadLoot();
+        boolean reloaded = bridge.reloadLoot();
         broadcastReload("spawners");
         audit("spawners-save", "spawners.yml", version == null ? "-" : version);
-        out.put("ok", true);
+        out.put("ok", reloaded);
         out.put("version", version);
         out.put("spawners", bridge.spawnerInfo());
-        out.put("message", "已保存 spawners.yml 并重载刷怪点。");
+        out.put("message", reloaded ? "已保存 spawners.yml 并重载刷怪点。" : "文件已保存，但掉落表或刷怪点重载失败，请检查服务器日志。");
         return out;
     }
 
@@ -1472,7 +1472,7 @@ public final class WebServerService {
         audit("spawners-reload", "spawners.yml", "-");
         out.put("ok", ok);
         out.put("spawners", bridge.spawnerInfo());
-        out.put("message", "已重载 spawners.yml。");
+        out.put("message", ok ? "已重载 spawners.yml。" : "掉落表或刷怪点重载失败，请检查服务器日志。");
         return out;
     }
 

@@ -50,8 +50,541 @@ class ImportersTest {
         write(root, "Mobs/extra/b.yml", "mobs:\n  B:\n    Health: 1\n");
         write(root, "other/c.yml", "x: 1\n");
         List<Path> found = new MythicMobsImporter().scan(root);
-        assertEquals(2, found.size(), "只应扫 Mobs 目录，且限深 3 层");
+        assertEquals(2, found.size(), "只应扫描 Mobs 目录");
         assertTrue(found.stream().allMatch(p -> p.toString().contains("Mobs")));
+    }
+
+    @Test
+    void scansDeepSourcesAndResolvesDeepDropAndItemReferences(@TempDir Path root) throws Exception {
+        Path mob = write(root, "Mobs/a/b/c/boss.yml", "Boss: {Type: ZOMBIE}\n");
+        Path item = write(root, "Items/a/b/c/gear.yml", "Boss-Sword: {Id: DIAMOND_SWORD}\n");
+        Path child = write(root, "DropTables/a/b/c/child.yml", "reward: {Drops: [Boss-Sword 1 1]}\n");
+        Path parent = write(root, "DropTables/a/b/c/parent.yml", "parent: {Drops: [reward 1 1]}\n");
+        var importer = new MythicMobsImporter();
+        var scanned = importer.scan(root);
+        assertTrue(scanned.containsAll(List.of(mob, item, child, parent)));
+        var childPlan = importer.convert(child).stream().filter(e -> "loot.yml".equals(e.get("target-file"))
+                && "mapped".equals(e.get("status"))).findFirst().orElseThrow();
+        var childYaml = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(childPlan.get("content"))));
+        assertEquals("boss_sword", childYaml.getString("tables.reward.entries.0.item"));
+        var parentPlan = importer.convert(parent).stream().filter(e -> "loot.yml".equals(e.get("target-file"))
+                && "mapped".equals(e.get("status"))).findFirst().orElseThrow();
+        var parentYaml = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(parentPlan.get("content"))));
+        assertEquals("reward", parentYaml.getString("tables.parent.entries.0.table"));
+    }
+
+    @Test
+    void mythicScansYamlExtensionsAndResolvesTheirDropTables(@TempDir Path root) throws Exception {
+        Path child = write(root, "DropTables/child.YAML", "reward:\n  Drops: [BREAD 1 1]\n");
+        Path parent = write(root, "DropTables/parent.YML", "parent:\n  Drops: [reward 1 1]\n");
+        Files.createDirectories(root.resolve("DropTables/not-a-file.yml"));
+        var importer = new MythicMobsImporter();
+        var scanned = importer.scan(root);
+        assertTrue(scanned.contains(child));
+        assertTrue(scanned.contains(parent));
+        assertEquals(2, scanned.size());
+        var plan = importer.convert(parent).stream().filter(entry -> "loot.yml".equals(entry.get("target-file"))
+                && "mapped".equals(entry.get("status"))).findFirst().orElseThrow();
+        var loot = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(plan.get("content"))));
+        assertEquals("reward", loot.getString("tables.parent.entries.0.table"));
+    }
+
+    @Test
+    void distinguishesNamedMobFromWrapperWithReservedChildName(@TempDir Path root) throws Exception {
+        Path wrapped = write(root, "Mobs/wrapped.yml", "mobs:\n  Skills: {Type: ZOMBIE}\n");
+        Path named = write(root, "Mobs/named.yml", "mobs: {Type: SKELETON, Health: 12}\n");
+        var importer = new MythicMobsImporter();
+        assertTrue(importer.convert(wrapped).stream().anyMatch(e -> "mobs/mythic_skills.yml".equals(e.get("target-file"))));
+        assertTrue(importer.convert(named).stream().anyMatch(e -> "mobs/mythic_mobs.yml".equals(e.get("target-file"))));
+    }
+
+    @Test
+    void preservesInvalidMobEntriesAlongsideValidDefinitions(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/mixed.yml", """
+                invalid: [zombie, 42]
+                mobs:
+                  broken: invalid-mob
+                  Guard: {Type: SKELETON}
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        assertTrue(entries.stream().anyMatch(e -> "mobs/mythic_guard.yml".equals(e.get("target-file"))));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "invalid".equals(e.get("source-key")) && String.valueOf(e.get("value")).contains("42")));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "mobs.broken".equals(e.get("source-key")) && "invalid-mob".equals(e.get("value"))));
+    }
+
+    @Test
+    void mapsMobTypeAliasesAndPreservesAmbiguousTypes(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/types.yml", """
+                First: {MobType: SKELETON}
+                Second: {EntityType: CREEPER}
+                Spaced: {Type: ' skeleton '}
+                Lowercase: {MobType: creeper}
+                Conflict: {Type: ZOMBIE, MobType: SKELETON}
+                Invalid: {Type: NOT_A_MOB}
+                Numeric: {Type: 12}
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        for (var pair : Map.of("first", "SKELETON", "second", "CREEPER",
+                "spaced", "SKELETON", "lowercase", "CREEPER").entrySet()) {
+            var plan = entries.stream().filter(e -> ("mobs/mythic_" + pair.getKey() + ".yml").equals(e.get("target-file")))
+                    .findFirst().orElseThrow();
+            var yaml = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(plan.get("content"))));
+            assertEquals(pair.getValue(), yaml.getString("mob.entity-type"));
+            assertEquals(org.bukkit.entity.EntityType.valueOf(pair.getValue()),
+                    org.bukkit.entity.EntityType.valueOf(yaml.getString("mob.entity-type").toUpperCase(java.util.Locale.ROOT)));
+        }
+        assertTrue(entries.stream().anyMatch(e -> "Type".equals(e.get("source-key"))
+                && "mob.entity-type".equals(e.get("target-key")) && "SKELETON".equals(e.get("value"))));
+        assertTrue(entries.stream().noneMatch(e -> "mobs/mythic_conflict.yml".equals(e.get("target-file"))));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "Conflict".equals(e.get("source-key")) && String.valueOf(e.get("value")).contains("SKELETON")));
+        for (String name : List.of("Invalid", "Numeric")) {
+            assertTrue(entries.stream().noneMatch(e -> ("mobs/mythic_" + name.toLowerCase() + ".yml").equals(e.get("target-file"))));
+            assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status")) && name.equals(e.get("source-key"))));
+        }
+    }
+
+    @Test
+    void convertsContentInScannedSubdirectories(@TempDir Path root) throws Exception {
+        var importer = new MythicMobsImporter();
+        Path item = write(root, "Items/area/items.yml", "blade:\n  Id: DIAMOND_SWORD\n");
+        Path skill = write(root, "Skills/area/skills.yml", "skills:\n  blast:\n    Skills: ['damage{amount=2}']\n");
+        Path spawner = write(root, "Spawners/area/spawner.yml", "gate:\n  Mob: boss\n  X: 0\n  Z: 0\n");
+        assertTrue(importer.convert(item).stream().anyMatch(e -> "items.yml".equals(e.get("target-file"))));
+        assertTrue(importer.convert(skill).stream().anyMatch(e -> "skills.yml".equals(e.get("target-file"))));
+        assertTrue(importer.convert(spawner).stream().anyMatch(e -> "spawners.yml".equals(e.get("target-file"))));
+    }
+
+    @Test
+    @DisplayName("MythicMobs: imports standalone DropTables and preserves unsupported table conditions")
+    void mythicImportsStandaloneDropTables(@TempDir Path root) throws Exception {
+        Path file = write(root, "DropTables/boss.yml", """
+                boss_reward:
+                  TotalItems: 2
+                  BonusLevelItems: 0.5
+                  Conditions:
+                    - is-monster
+                  TriggerConditions:
+                    - is-player
+                  Drops:
+                    - DIAMOND 1 0.25
+                    - exp 5 100%
+                    - MMOItems:SWORD 1 1
+                conditional_reward:
+                  Conditions:
+                    - future-condition{value=x}
+                  Drops:
+                    - EMERALD 1 1
+                trigger_reward:
+                  TriggerConditions: [future-trigger]
+                  Drops: [BREAD 1 1]
+                """);
+        MythicMobsImporter importer = new MythicMobsImporter();
+        assertTrue(importer.scan(root).contains(file));
+
+        List<Map<String, Object>> converted = importer.convert(file);
+        Map<String, Object> plan = converted.stream()
+                .filter(entry -> "mapped".equals(entry.get("status")) && "loot.yml".equals(entry.get("target-file")))
+                .findFirst().orElseThrow();
+        YamlConfiguration loot = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan.get("content"))));
+        assertEquals(2, loot.getInt("tables.boss_reward.total-items"));
+        assertEquals(0.5, loot.getDouble("tables.boss_reward.bonus-level-items"), 1e-9);
+        assertEquals(List.of("is-monster"), loot.getStringList("tables.boss_reward.conditions"));
+        assertEquals("is-player", loot.getStringList("tables.boss_reward.trigger-conditions").get(0));
+        assertEquals("DIAMOND", loot.getString("tables.boss_reward.entries.0.item"));
+        assertEquals("exp", loot.getString("tables.boss_reward.entries.1.item"));
+        assertEquals(5, loot.getInt("tables.boss_reward.entries.1.amount-min"));
+        assertFalse(loot.contains("tables.conditional_reward"));
+        assertTrue(converted.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "conditional_reward".equals(entry.get("source-key"))));
+        assertTrue(converted.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && String.valueOf(entry.get("value")).contains("MMOItems:SWORD")));
+        var triggerWarning = converted.stream().filter(entry -> "trigger_reward.TriggerConditions".equals(entry.get("source-key"))
+                && "unsupported".equals(entry.get("status"))).findFirst().orElseThrow();
+        assertTrue(String.valueOf(triggerWarning.get("value")).contains("future-trigger"));
+        assertTrue(String.valueOf(triggerWarning.get("value")).contains("BREAD 1 1"));
+    }
+
+    @Test
+    void invalidDropTableConditionEntriesPreventProjection(@TempDir Path root) throws Exception {
+        Path file = write(root, "DropTables/invalid.yml", """
+                null_dropper:
+                  Conditions: [null]
+                  Drops: [DIAMOND 1 1]
+                numeric_trigger:
+                  TriggerConditions: [42]
+                  Drops: [EMERALD 1 1]
+                blank_dropper:
+                  Conditions: ['']
+                  Drops: [BREAD 1 1]
+                valid:
+                  Conditions: [is-monster]
+                  Drops: [GOLD_INGOT 1 1]
+                """);
+        var converted = new MythicMobsImporter().convert(file);
+        var projected = converted.stream().filter(e -> "loot.yml".equals(e.get("target-file")))
+                .findFirst().orElseThrow();
+        var yaml = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(projected.get("content"))));
+        assertTrue(yaml.contains("tables.valid"));
+        for (String name : List.of("null_dropper", "numeric_trigger", "blank_dropper")) {
+            assertFalse(yaml.contains("tables." + name), name);
+            assertTrue(converted.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                    && String.valueOf(e.get("source-key")).startsWith(name)), name);
+        }
+    }
+
+    @Test
+    void mergedNullDropConditionsRejectTablesAndParentReferences(@TempDir Path root) throws Exception {
+        Path file = write(root, "DropTables/merged.yml", """
+                defaults: &defaults
+                  Conditions: null
+                  TriggerConditions: null
+                allowed: &allowed
+                  Conditions: [is-monster]
+                  TriggerConditions: [is-player]
+                unsafe:
+                  <<: *defaults
+                  Drops: [DIAMOND 1 1]
+                unsafe_first:
+                  <<: [*defaults, *allowed]
+                  Drops: [IRON_INGOT 1 1]
+                safe_first:
+                  <<: [*allowed, *defaults]
+                  Drops: [GOLD_INGOT 1 1]
+                safe:
+                  <<: *defaults
+                  Conditions: [is-monster]
+                  TriggerConditions: [is-player]
+                  Drops: [BREAD 1 1]
+                parent:
+                  Drops: [unsafe 1 1, BREAD 1 1]
+                intermediate:
+                  Drops: [unsafe 1 1]
+                grandparent:
+                  Drops: [intermediate 1 1, BREAD 1 1]
+                """);
+        var converted = new MythicMobsImporter().convert(file);
+        var plans = converted.stream().filter(e -> "loot.yml".equals(e.get("target-file"))
+                && "mapped".equals(e.get("status")) && e.containsKey("content"))
+                .map(e -> YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(e.get("content"))))).toList();
+        assertTrue(plans.stream().noneMatch(yaml -> yaml.contains("tables.unsafe")));
+        assertTrue(plans.stream().noneMatch(yaml -> yaml.contains("tables.unsafe_first")));
+        assertTrue(plans.stream().anyMatch(yaml -> yaml.contains("tables.safe")));
+        assertTrue(plans.stream().anyMatch(yaml -> yaml.contains("tables.safe_first")));
+        assertTrue(converted.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && String.valueOf(e.get("source-key")).startsWith("unsafe")));
+        assertTrue(converted.stream().anyMatch(e -> "parent.Drops".equals(e.get("source-key"))
+                && "unsupported".equals(e.get("status")) && String.valueOf(e.get("value")).contains("unsafe")));
+        assertTrue(converted.stream().anyMatch(e -> "grandparent.Drops".equals(e.get("source-key"))
+                && "unsupported".equals(e.get("status")) && String.valueOf(e.get("value")).contains("intermediate")));
+    }
+
+    @Test
+    void explicitNullDropTableConditionsPreventProjection(@TempDir Path root) throws Exception {
+        Path file = write(root, "DropTables/null-conditions.yml", """
+                null_dropper:
+                  Conditions: null
+                  Drops: [DIAMOND 1 1]
+                null_trigger:
+                  TriggerConditions: ~
+                  Drops: [EMERALD 1 1]
+                mixed_case:
+                  cOnDiTiOnS:
+                  Drops: [IRON_INGOT 1 1]
+                null_element:
+                  Conditions: [null]
+                  Drops: [COAL 1 1]
+                conflicting_case:
+                  Conditions: [is-monster]
+                  conditions: null
+                  Drops: [REDSTONE 1 1]
+                unconditional:
+                  Drops: [BREAD 1 1]
+                conditional:
+                  Conditions: [is-monster]
+                  Drops: [GOLD_INGOT 1 1]
+                """);
+        var converted = new MythicMobsImporter().convert(file);
+        var plans = converted.stream().filter(e -> "loot.yml".equals(e.get("target-file"))
+                && "mapped".equals(e.get("status")) && e.containsKey("content"))
+                .map(e -> YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(e.get("content")))))
+                .toList();
+        for (String name : List.of("null_dropper", "null_trigger", "mixed_case", "null_element", "conflicting_case")) {
+            assertTrue(plans.stream().noneMatch(yaml -> yaml.contains("tables." + name)), name);
+            assertTrue(converted.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                    && "WARN".equals(e.get("severity"))
+                    && String.valueOf(e.get("source-key")).startsWith(name)), name);
+        }
+        for (String name : List.of("unconditional", "conditional")) {
+            assertTrue(plans.stream().anyMatch(yaml -> yaml.contains("tables." + name)), name);
+        }
+    }
+
+    @Test
+    void standaloneDropTableReportsOnlyUnsafeRawEntries(@TempDir Path root) throws Exception {
+        Path file = write(root, "DropTables/mixed.yml", """
+                mixed:
+                  Drops:
+                    - {item: DIAMOND, chance: 1}
+                    - {item: EMERALD, DropIf: ""}
+                    - {item: BREAD, future-condition: required}
+                    - GOLD_INGOT 1 1 unexpected-option
+                    - {item: IRON_INGOT, Chance: ""}
+                    - {item: COAL, table: another}
+                    - {item: LAPIS_LAZULI, DropIf: ";"}
+                    - {item: REDSTONE, NoDropIf: "|"}
+                invalid_table:
+                  Conditions: [""]
+                  Drops:
+                    - DIAMOND 1 1
+                """);
+        List<Map<String, Object>> converted = new MythicMobsImporter().convert(file);
+        var plan = converted.stream().filter(entry -> "mapped".equals(entry.get("status"))
+                && "loot.yml".equals(entry.get("target-file"))).findFirst().orElseThrow();
+        var loot = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(plan.get("content"))));
+        assertEquals("DIAMOND", loot.getString("tables.mixed.entries.0.item"));
+        assertEquals(1, loot.getConfigurationSection("tables.mixed.entries").getKeys(false).size());
+        var warning = converted.stream().filter(entry -> "mixed.Drops".equals(entry.get("source-key"))
+                && "unsupported".equals(entry.get("status"))).findFirst().orElseThrow();
+        String rejected = String.valueOf(warning.get("value"));
+        assertTrue(rejected.contains("EMERALD"));
+        assertTrue(rejected.contains("BREAD"));
+        assertTrue(rejected.contains("GOLD_INGOT"));
+        assertTrue(rejected.contains("IRON_INGOT"));
+        assertTrue(rejected.contains("COAL"));
+        assertTrue(rejected.contains("LAPIS_LAZULI"));
+        assertTrue(rejected.contains("REDSTONE"));
+        assertFalse(rejected.contains("DIAMOND"));
+        assertTrue(converted.stream().anyMatch(entry -> "invalid_table".equals(entry.get("source-key"))
+                && "unsupported".equals(entry.get("status"))));
+    }
+
+    @Test
+    void malformedDropChancesRemainInMigrationWarningWithSafeSibling(@TempDir Path root) throws Exception {
+        Path file = write(root, "DropTables/chances.yml", """
+                rewards:
+                  Drops:
+                    - DIAMOND 1 1%0
+                    - {item: EMERALD, chance: '25%%'}
+                    - COAL 1 0x1p-1
+                    - {item: IRON_INGOT, chance: '0.5d'}
+                    - GOLD_INGOT 1 25%
+                """);
+        var converted = new MythicMobsImporter().convert(file);
+        var plan = converted.stream().filter(entry -> "loot.yml".equals(entry.get("target-file"))
+                && "mapped".equals(entry.get("status")) && entry.containsKey("content"))
+                .findFirst().orElseThrow();
+        var loot = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(plan.get("content"))));
+        var entries = loot.getConfigurationSection("tables.rewards.entries");
+        assertEquals(1, entries.getKeys(false).size());
+        assertEquals("GOLD_INGOT", entries.getString("0.item"));
+        assertEquals(0.25, entries.getDouble("0.chance"), 1e-9);
+        var warning = converted.stream().filter(entry -> "rewards.Drops".equals(entry.get("source-key"))
+                && "unsupported".equals(entry.get("status")) && "WARN".equals(entry.get("severity")))
+                .findFirst().orElseThrow();
+        String preserved = String.valueOf(warning.get("value"));
+        assertTrue(preserved.contains("DIAMOND 1 1%0"), preserved);
+        assertTrue(preserved.contains("25%%"), preserved);
+        assertTrue(preserved.contains("0x1p-1"), preserved);
+        assertTrue(preserved.contains("0.5d"), preserved);
+        assertFalse(preserved.contains("GOLD_INGOT"), preserved);
+    }
+
+    @Test
+    void standalonePreservesNestedAmountsForBareAndStructuredReferences(@TempDir Path root) throws Exception {
+        Path file = write(root, "DropTables/nested.yml", """
+                child:
+                  Drops: [BREAD 1 1]
+                parent:
+                  Drops:
+                    - child 2 1
+                    - {table: child, amount-min: 1, amount-max: 3}
+                    - {table: child, amount: 1}
+                    - {item: DIAMOND}
+                """);
+        List<Map<String, Object>> converted = new MythicMobsImporter().convert(file);
+        var plan = converted.stream().filter(entry -> "loot.yml".equals(entry.get("target-file"))
+                && String.valueOf(entry.get("content")).contains("parent:"))
+                .findFirst().orElseThrow();
+        var loot = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(plan.get("content"))));
+        var entries = loot.getConfigurationSection("tables.parent.entries");
+        assertEquals(2, entries.getKeys(false).size());
+        assertEquals("child", entries.getString("0.table"));
+        assertEquals("DIAMOND", entries.getString("1.item"));
+        var warning = converted.stream().filter(entry -> "parent.Drops".equals(entry.get("source-key"))
+                && "unsupported".equals(entry.get("status")) && "WARN".equals(entry.get("severity")))
+                .findFirst().orElseThrow();
+        String preserved = String.valueOf(warning.get("value"));
+        assertTrue(preserved.contains("child 2 1"), preserved);
+        assertTrue(preserved.contains("amount-max=3"), preserved);
+        assertFalse(preserved.contains("DIAMOND"), preserved);
+    }
+
+    @Test
+    void normalizedTableCollisionsPreserveBareAndStructuredReferences(@TempDir Path root) throws Exception {
+        write(root, "DropTables/children.yml", """
+                Boss-A:
+                  Drops: [BREAD 1 1]
+                Boss_A:
+                  Drops: [GOLD_INGOT 1 1]
+                """);
+        Path file = write(root, "DropTables/parent.yml", """
+                parent:
+                  Drops:
+                    - Boss-A 1 1
+                    - {table: Boss_A}
+                    - {item: DIAMOND}
+                """);
+        List<Map<String, Object>> converted = new MythicMobsImporter().convert(file);
+        var plan = converted.stream().filter(entry -> "loot.yml".equals(entry.get("target-file"))
+                && "mapped".equals(entry.get("status"))).findFirst().orElseThrow();
+        var loot = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(plan.get("content"))));
+        var entries = loot.getConfigurationSection("tables.parent.entries");
+        assertEquals(1, entries.getKeys(false).size());
+        assertEquals("DIAMOND", entries.getString("0.item"));
+        var warning = converted.stream().filter(entry -> "parent.Drops".equals(entry.get("source-key"))
+                && "unsupported".equals(entry.get("status")) && "WARN".equals(entry.get("severity")))
+                .findFirst().orElseThrow();
+        String preserved = String.valueOf(warning.get("value"));
+        assertTrue(preserved.contains("Boss-A 1 1"), preserved);
+        assertTrue(preserved.contains("Boss_A"), preserved);
+    }
+
+    @Test
+    void collidingTableDefinitionsAreNeverProjectedIndividually(@TempDir Path root) throws Exception {
+        Path first = write(root, "DropTables/one.yml", "Boss-A:\n  Drops: [DIAMOND 1 1]\n");
+        Path second = write(root, "DropTables/two.yml", "Boss_A: null\n");
+        var importer = new MythicMobsImporter();
+        for (Path source : List.of(first, second)) {
+            var converted = importer.convert(source);
+            assertTrue(converted.stream().noneMatch(e -> "mapped".equals(e.get("status"))
+                    && "loot.yml".equals(e.get("target-file")) && e.containsKey("content")));
+            assertTrue(converted.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                    && "WARN".equals(e.get("severity"))
+                    && String.valueOf(e.get("note")).contains("same ID")));
+        }
+    }
+
+    @Test
+    void ambiguousBareDropTableNamesArePreserved(@TempDir Path root) throws Exception {
+        write(root, "Items/items.yml", "rewards:\n  Id: DIAMOND\n");
+        write(root, "DropTables/duplicate.yml", "repeated:\n  Drops: [BREAD 1 1]\n");
+        Path file = write(root, "DropTables/tables.yml", """
+                rewards:
+                  Drops: [DIAMOND 1 1]
+                DIAMOND:
+                  Drops: [BREAD 1 1]
+                repeated:
+                  Drops: [BREAD 1 1]
+                parent:
+                  Drops: [rewards 1 1, DIAMOND 1 1, repeated 1 1, GOLD_INGOT 1 1]
+                """);
+        var converted = new MythicMobsImporter().convert(file);
+        var warning = converted.stream().filter(e -> "parent.Drops".equals(e.get("source-key"))
+                && "unsupported".equals(e.get("status"))).findFirst().orElseThrow();
+        assertTrue(String.valueOf(warning.get("value")).contains("rewards 1 1"));
+        assertTrue(String.valueOf(warning.get("value")).contains("DIAMOND 1 1"));
+        assertTrue(String.valueOf(warning.get("value")).contains("repeated 1 1"));
+        var plan = converted.stream().filter(e -> "loot.yml".equals(e.get("target-file"))
+                && String.valueOf(e.get("content")).contains("parent:")).findFirst().orElseThrow();
+        var loot = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(plan.get("content"))));
+        assertEquals("GOLD_INGOT", loot.getString("tables.parent.entries.0.item"));
+        assertEquals(1, loot.getConfigurationSection("tables.parent.entries").getKeys(false).size());
+    }
+
+    @Test
+    void unreadableCatalogPreservesBareDropsAndReportsSource(@TempDir Path root) throws Exception {
+        write(root, "Items/broken.yml", "item: [unterminated\n");
+        Path file = write(root, "DropTables/tables.yml", """
+                rewards:
+                  Drops: [{item: DIAMOND}]
+                parent:
+                  Drops: [rewards 1 1, DIAMOND 1 1, {item: GOLD_INGOT}, {table: rewards}]
+                """);
+        var converted = new MythicMobsImporter().convert(file);
+        var catalogWarning = converted.stream().filter(e -> "drop-catalog".equals(e.get("source-key")))
+                .findFirst().orElseThrow();
+        assertTrue(String.valueOf(catalogWarning.get("value")).contains("broken.yml"));
+        var warning = converted.stream().filter(e -> "parent".equals(e.get("source-key"))
+                && "unsupported".equals(e.get("status"))).findFirst().orElseThrow();
+        assertTrue(String.valueOf(warning.get("value")).contains("rewards 1 1"));
+        assertTrue(String.valueOf(warning.get("value")).contains("DIAMOND 1 1"));
+        assertTrue(converted.stream().noneMatch(e -> "mapped".equals(e.get("status"))
+                && String.valueOf(e.get("content")).contains("parent:")));
+        assertTrue(String.valueOf(warning.get("value")).contains("GOLD_INGOT"));
+        assertTrue(String.valueOf(warning.get("value")).contains("rewards"));
+    }
+
+    @Test
+    void unreadableTableCatalogPreservesStructuredTableReference(@TempDir Path root) throws Exception {
+        write(root, "DropTables/broken.yml", "broken: [unterminated\n");
+        write(root, "Items/gear.yml", "Boss-Sword: {Id: DIAMOND_SWORD}\n");
+        Path file = write(root, "DropTables/tables.yml", """
+                parent:
+                  Drops:
+                    - {table: child}
+                    - {item: DIAMOND}
+                    - {item: Boss-Sword}
+                """);
+        var converted = new MythicMobsImporter().convert(file);
+        assertTrue(converted.stream().anyMatch(e -> "drop-catalog".equals(e.get("source-key"))
+                && String.valueOf(e.get("value")).contains("broken.yml")));
+        var warning = converted.stream().filter(e -> "parent.Drops".equals(e.get("source-key"))
+                && "unsupported".equals(e.get("status"))).findFirst().orElseThrow();
+        assertTrue(String.valueOf(warning.get("value")).contains("child"));
+        var plan = converted.stream().filter(e -> "loot.yml".equals(e.get("target-file"))
+                && "mapped".equals(e.get("status"))).findFirst().orElseThrow();
+        var loot = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(plan.get("content"))));
+        assertEquals("DIAMOND", loot.getString("tables.parent.entries.0.item"));
+        assertEquals("boss_sword", loot.getString("tables.parent.entries.1.item"));
+        assertEquals(2, loot.getConfigurationSection("tables.parent.entries").getKeys(false).size());
+    }
+
+    @Test
+    void normalizesKnownCustomDropItemsAndPreservesCollidingNames(@TempDir Path root) throws Exception {
+        write(root, "Items/gear.yml", """
+                Boss-Sword: {Id: DIAMOND_SWORD}
+                Clash-Item: {Id: DIAMOND}
+                Clash_Item: {Id: EMERALD}
+                """);
+        Path file = write(root, "DropTables/rewards.yml", """
+                rewards:
+                  Drops:
+                    - Boss-Sword 1 1
+                    - {item: Boss-Sword, chance: 1}
+                    - Clash-Item 1 1
+                """);
+        var converted = new MythicMobsImporter().convert(file);
+        var plan = converted.stream().filter(e -> "loot.yml".equals(e.get("target-file")))
+                .findFirst().orElseThrow();
+        var loot = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(plan.get("content"))));
+        assertEquals("boss_sword", loot.getString("tables.rewards.entries.0.item"));
+        assertEquals("boss_sword", loot.getString("tables.rewards.entries.1.item"));
+        assertEquals(2, loot.getConfigurationSection("tables.rewards.entries").getKeys(false).size());
+        var warning = converted.stream().filter(e -> "rewards.Drops".equals(e.get("source-key"))
+                && "unsupported".equals(e.get("status"))).findFirst().orElseThrow();
+        assertTrue(String.valueOf(warning.get("value")).contains("Clash-Item"));
+    }
+
+    @Test
+    void standaloneTableWithCaseVariantConditionsIsPreserved(@TempDir Path root) throws Exception {
+        Path file = write(root, "DropTables/ambiguous.yml", """
+                rewards:
+                  Conditions: [is-player]
+                  conditions: [is-monster]
+                  Drops: [DIAMOND 1 1]
+                """);
+        var converted = new MythicMobsImporter().convert(file);
+        assertTrue(converted.stream().noneMatch(e -> "mapped".equals(e.get("status"))
+                && "loot.yml".equals(e.get("target-file"))));
+        var warning = converted.stream().filter(e -> "unsupported".equals(e.get("status"))
+                && "rewards".equals(e.get("source-key"))).findFirst().orElseThrow();
+        assertTrue(String.valueOf(warning.get("value")).contains("is-player"));
+        assertTrue(String.valueOf(warning.get("value")).contains("is-monster"));
+        assertTrue(String.valueOf(warning.get("value")).contains("DIAMOND"));
     }
 
     @Test
@@ -100,6 +633,69 @@ class ImportersTest {
     }
 
     @Test
+    void eventSkillsAreRoutedOrPreserved(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/events.yml", """
+                mobs:
+                  Boss:
+                    Skills:
+                      - damage{amount=4} @Target ~onSpawn
+                      - damage{amount=5} @Target ~ONSPAWN
+                      - skill{s=Child;delay=2} @Target ~onDeath
+                      - damage{amount=3} @Trigger ~onDamaged
+                      - damage{amount=2} @Trigger ~onHurt
+                      - damage{amount=<skill.var.damage-amount>} @Trigger ~onDamaged
+                      - damage{amount=1} ~onTimer:20
+                      - damage{amount=1} ~unknown
+                      - damage{amount=2} ~onSpawn ~onDeath
+                      - teleport @Target ~onSpawn
+                      - ~onSpawn:Child
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(f);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(3, target.getStringList("mob.triggers.on-spawn.do").size());
+        assertEquals(List.of("skill{s=Child;delay=2} @Target"), target.getStringList("mob.triggers.on-death.do"));
+        assertEquals(List.of("damage-target 3 @trigger", "damage-target 2 @trigger"),
+                target.getStringList("mob.triggers.on-damage.do"));
+        assertTrue(target.getStringList("mob.on-decision").isEmpty());
+        assertEquals(List.of("damage{amount=<skill.var.damage-amount>} @Trigger ~onDamaged",
+                        "damage{amount=1} ~onTimer:20", "damage{amount=1} ~unknown",
+                        "damage{amount=2} ~onSpawn ~onDeath",
+                        "teleport @Target ~onSpawn"),
+                target.getStringList("mob.unsupported.Skills"));
+        assertTrue(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))));
+    }
+
+    @Test
+    void invalidReviveHealthIsPreserved(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/revive.yml", "mobs:\n  Boss:\n    Options:\n      ReviveHealth: 0\n");
+        var entries = new MythicMobsImporter().convert(f);
+        var target = YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertFalse(target.contains("mob.revive-health"));
+        assertEquals(0, target.getInt("mob.unsupported.Options.ReviveHealth"));
+        assertTrue(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))));
+    }
+
+    @Test
+    void standaloneEventSkillsArePreserved(@TempDir Path root) throws Exception {
+        Path f = write(root, "Skills/events.yml", """
+                skills:
+                  Parent:
+                    Skills:
+                      - damage{amount=4} ~onSpawn
+                      - ~onDeath:Child
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(f);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(List.of("damage{amount=4} ~onSpawn", "~onDeath:Child"),
+                target.getStringList("skills.parent.unsupported"));
+        assertFalse(target.contains("skills.parent.triggers"));
+        assertFalse(target.contains("skills.parent.on-decision"));
+    }
+
+    @Test
     @DisplayName("MythicMobs common named mechanics convert to native action syntax")
     void mythicMapsNamedSkillMechanics(@TempDir Path root) throws Exception {
         Path f = write(root, "Skills/combat.yml", """
@@ -142,6 +738,8 @@ class ImportersTest {
                       - setfaction{faction=guards}
                       - setlevel 5
                       - setweather{weather=rain;duration=20}
+                      - movepin{pin=arena.spawn}
+                      - movepin arena.exit
                       - settime noon
                       - lightning{effectonly=true}
                       - jump 0.5
@@ -210,6 +808,8 @@ class ImportersTest {
         assertTrue(actions.contains("set-faction guards"));
         assertTrue(actions.contains("set-level 5"));
         assertTrue(actions.contains("set-weather rain 20"));
+        assertTrue(actions.contains("move-pin arena.spawn"));
+        assertTrue(actions.contains("move-pin arena.exit"));
         assertTrue(actions.contains("set-time noon"));
         assertTrue(actions.contains("lightning true"));
         assertTrue(actions.contains("jump 0.5"));
@@ -238,8 +838,7 @@ class ImportersTest {
         assertTrue(actions.contains("look-at"));
         assertTrue(actions.contains("set-rotation 90 15"));
         assertTrue(actions.contains("set-stance enraged"));
-        assertEquals(List.of("cast-skill KillReward"),
-                target.getStringList("skills.blast.triggers.on-kill.do"));
+        assertEquals(List.of("~onKill:KillReward"), target.getStringList("skills.blast.unsupported"));
     }
 
     @Test
@@ -255,6 +854,58 @@ class ImportersTest {
                 new java.io.StringReader(String.valueOf(plan(new MythicMobsImporter().convert(f)).get().get("content"))));
         String action = target.getStringList("skills.blast.on-decision").get(0);
         assertEquals("damage-target 10 @playersinradius{r=8} 50% ?onGround", action);
+    }
+
+    @Test
+    void positionalMechanicKeepsChanceAndConditionsWithoutTargeter(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/positional-context.yml", """
+                skills:
+                  blast:
+                    Skills:
+                      - 'damage 4 0%'
+                      - 'damage 5 ?onGround'
+                      - 'damage 6 50% ?onGround'
+                      - 'damage 7 ?health{amount=10}'
+                      - 'damage 8 @Target{limit=1}'
+                """);
+        var target = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(
+                plan(new MythicMobsImporter().convert(file)).orElseThrow().get("content"))));
+        assertEquals(List.of("damage-target 4 0%", "damage-target 5 ?onGround",
+                "damage-target 6 50% ?onGround", "damage-target 7 ?health{amount=10}",
+                "damage-target 8 @target{limit=1}"), target.getStringList("skills.blast.on-decision"));
+    }
+
+    @Test
+    void ambiguousExecutionSuffixesArePreserved(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/ambiguous.yml", """
+                skills:
+                  test:
+                    Skills:
+                      - 'damage 4 0% 100%'
+                      - 'damage 4 @self @target'
+                      - 'damage 4 @self > > @target'
+                      - 'damage 4 @self >'
+                      - 'damage 4 101%'
+                      - 'damage 4 NaN%'
+                      - 'damage 4 1e999%'
+                      - 'damage 4 ?'
+                      - 'damage 4 @'
+                      - 'damage 4 @self > @target'
+                      - 'message{m="@self 0% 100%"} @target'
+                      - 'message <target.name>'
+                      - 'damage 4 ?health{h=>5}'
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(
+                plan(entries).orElseThrow().get("content"))));
+        assertEquals(List.of("damage 4 0% 100%", "damage 4 @self @target",
+                        "damage 4 @self > > @target", "damage 4 @self >",
+                        "damage 4 101%", "damage 4 NaN%", "damage 4 1e999%", "damage 4 ?", "damage 4 @"),
+                target.getStringList("skills.test.unsupported"));
+        assertEquals(4, target.getStringList("skills.test.on-decision").size());
+        assertTrue(target.getStringList("skills.test.on-decision").contains("message-target \"<target.name>\""));
+        assertEquals(9, entries.stream().filter(e -> "WARN".equals(e.get("severity"))
+                && String.valueOf(e.get("note")).contains("Invalid or ambiguous targeter, condition or chance suffix")).count());
     }
 
     @Test
@@ -288,6 +939,7 @@ class ImportersTest {
                       - message{m=Animal} @Animals-In-Radius{r=8}
                       - message{m=Villager} @VillagersInRadius{r=8}
                       - message{m=Tamed} @TamedInRadius{r=8}
+                      - message{m=Blocks} @BlocksInPinRegion{pin1=arena.min;pin2=arena.max}
                 """);
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(
@@ -297,6 +949,8 @@ class ImportersTest {
         assertTrue(actions.contains("message-target \"Animal\" @animalsinradius{r=8}"), actions.toString());
         assertTrue(actions.contains("message-target \"Villager\" @villagersinradius{r=8}"), actions.toString());
         assertTrue(actions.contains("message-target \"Tamed\" @tamedinradius{r=8}"), actions.toString());
+        assertTrue(actions.contains("message-target \"Blocks\" @blocksinpinregion{pin1=arena.min;pin2=arena.max}"),
+                actions.toString());
     }
 
     @Test
@@ -314,6 +968,9 @@ class ImportersTest {
                       - message{m=Mob} @Nearest_Mob
                       - message{m=Living} @Nearest-Living-Entity
                       - message{m=World} @Players_In_World{limit=2}
+                      - message{m=Skipped} @Players_In_World{stuti=1;limit=1}
+                      - message{m=Server} @PlayersOnServer{targetself=true}
+                      - message{m=Everyone} @everyone
                       - message{m=Chain} @Players_In_World{limit=2} > @Nearest_Mob
                 """);
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
@@ -328,6 +985,9 @@ class ImportersTest {
         assertTrue(actions.contains("message-target \"Mob\" @nearestmob"), actions.toString());
         assertTrue(actions.contains("message-target \"Living\" @nearestlivingentity"), actions.toString());
         assertTrue(actions.contains("message-target \"World\" @playersinworld{limit=2}"), actions.toString());
+        assertTrue(actions.contains("message-target \"Skipped\" @playersinworld{stuti=1;limit=1}"), actions.toString());
+        assertTrue(actions.contains("message-target \"Server\" @playersonserver{targetself=true}"), actions.toString());
+        assertTrue(actions.contains("message-target \"Everyone\" @playersonserver"), actions.toString());
         assertTrue(actions.contains("message-target \"Chain\" @playersinworld{limit=2} > @nearestmob"), actions.toString());
     }
 
@@ -376,6 +1036,90 @@ class ImportersTest {
     }
 
     @Test
+    void skillReferenceStopsAtMechanicClosingBrace() {
+        assertEquals("child", MythicSpec.skillRef("skill{s=child} @Target{limit=1}"));
+        assertEquals("child", MythicSpec.skillRef("skill{delay=2;skill=child} ?health{value=>1}"));
+        assertNull(MythicSpec.skillRef("skill{s=child"));
+        assertNull(MythicSpec.skillRef("skill{note=\"text;s=child\"}"));
+        assertNull(MythicSpec.skillRef("skill{s=child;skill=other}"));
+        assertNull(MythicSpec.skillRef("skill{s=child;repeatinterval=2;repeat-interval=3}"));
+        assertNull(MythicSpec.skillRef("skill{s=child;unknown=true}"));
+        assertNull(MythicSpec.skillRef("skill{s=\"child other\"}"));
+        assertEquals("child", MythicSpec.skillRef("skill{s=\"child\",delay=2}"));
+    }
+
+    @Test
+    void skillReferenceExecutionOptionsAreValidatedBeforeMigration(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/invalid-timing.yml", """
+                skills:
+                  parent:
+                    Skills:
+                      - 'skill{s=child;delay=-1}'
+                      - 'skill{s=child;delay=NaN}'
+                      - 'skill{s=child;repeat=1.5}'
+                      - 'skill{s=child;repeat=2147483647;repeatinterval=1}'
+                      - 'skill{s=child;repeatinterval=1e100s}'
+                      - 'skill{s=child;delay=50ms;repeat=1;repeatinterval=0.25s}'
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(new StringReader(
+                String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(List.of("skill{s=child;delay=50ms;repeat=1;repeatinterval=0.25s}"),
+                target.getStringList("skills.parent.on-decision"));
+        assertEquals(5, target.getStringList("skills.parent.unsupported").size());
+        assertEquals(5, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid skill execution options")).count());
+        Path mob = write(root, "Mobs/invalid-timing.yml", """
+                mobs:
+                  boss:
+                    Skills:
+                      - 'skill{s=child;repeat=-1} ~onSpawn'
+                """);
+        var mobEntries = new MythicMobsImporter().convert(mob);
+        var mobTarget = YamlConfiguration.loadConfiguration(new StringReader(
+                String.valueOf(plan(mobEntries).orElseThrow().get("content"))));
+        assertEquals(List.of("skill{s=child;repeat=-1} ~onSpawn"), mobTarget.getStringList("mob.unsupported.Skills"));
+        assertTrue(mobTarget.getStringList("mob.triggers.on-spawn.do").isEmpty());
+    }
+
+    @Test
+    void unsupportedSkillReferencesArePreservedWithoutScheduling(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/references.yml", """
+                skills:
+                  parent:
+                    Skills:
+                      - 'skill{note="text;s=child"}'
+                      - 'skill{s=child;skill=other}'
+                      - 'skill{s=child;unknown=true}'
+                      - 'skill{s=child}'
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(new StringReader(
+                String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(List.of("cast-skill child"), target.getStringList("skills.parent.on-decision"));
+        assertEquals(List.of("skill{note=\"text;s=child\"}", "skill{s=child;skill=other}",
+                "skill{s=child;unknown=true}"), target.getStringList("skills.parent.unsupported"));
+        assertEquals(3, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid skill reference or unsupported skill arguments")).count());
+    }
+
+    @Test
+    void mythicNestedSkillRetainsExecutionMetadata(@TempDir Path root) throws Exception {
+        Path f = write(root, "Skills/nested-timing.yml", """
+                skills:
+                  parent:
+                    Skills:
+                      - skill{s=Child;delay=2;repeat=1} @Target 50%
+                      - skill{s=Child} @Target{limit=1}
+                """);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(
+                plan(new MythicMobsImporter().convert(f)).orElseThrow().get("content"))));
+        assertEquals(List.of("skill{s=Child;delay=2;repeat=1} @Target 50%",
+                        "skill{s=Child} @Target{limit=1}"),
+                target.getStringList("skills.parent.on-decision"));
+    }
+
+    @Test
     @DisplayName("Mythic execution metadata survives mechanic conversion")
     void mythicPreservesDelayAndRepeatMetadata(@TempDir Path root) throws Exception {
         Path f = write(root, "Skills/timing.yml", """
@@ -390,6 +1134,59 @@ class ImportersTest {
         String action = target.getStringList("skills.timed.on-decision").get(0);
         assertTrue(action.startsWith("damage-target{delay=5;repeat=2;repeatinterval=3} 4"), action);
         assertTrue(action.contains("@target"), action);
+    }
+
+    @Test
+    void invalidMechanicTimingIsPreservedForSkillsAndMobEvents(@TempDir Path root) throws Exception {
+        Path skills = write(root, "Skills/mechanic-timing.yml", """
+                skills:
+                  timed:
+                    Skills:
+                      - 'damage{amount=4;delay=NaN} @Target'
+                      - 'heal{amount=2;repeat=-1} @Target'
+                      - 'damage{amount=4;repeatinterval=1;repeat-interval=2} @Target'
+                      - 'damage{amount=4;delay=2;repeat=1;repeatinterval=3} @Target'
+                """);
+        var entries = new MythicMobsImporter().convert(skills);
+        var target = YamlConfiguration.loadConfiguration(new StringReader(
+                String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(3, target.getStringList("skills.timed.unsupported").size());
+        assertEquals(1, target.getStringList("skills.timed.on-decision").size());
+        assertEquals(3, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid mechanic execution options")).count());
+
+        Path mob = write(root, "Mobs/mechanic-timing.yml", """
+                mobs:
+                  boss:
+                    Skills:
+                      - 'damage{amount=4;delay=-1} @Target ~onSpawn'
+                """);
+        var mobEntries = new MythicMobsImporter().convert(mob);
+        var mobTarget = YamlConfiguration.loadConfiguration(new StringReader(
+                String.valueOf(plan(mobEntries).orElseThrow().get("content"))));
+        assertEquals(List.of("damage{amount=4;delay=-1} @Target ~onSpawn"),
+                mobTarget.getStringList("mob.unsupported.Skills"));
+        assertTrue(mobTarget.getStringList("mob.triggers.on-spawn.do").isEmpty());
+    }
+
+    @Test
+    void mythicMessagesPreserveCommasAndDoNotReadQuotedTextAsArguments(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/messages.yml", """
+                skills:
+                  messages:
+                    Skills:
+                      - 'message{m=Hello, world} @self'
+                      - 'messageall{m="Hello, radius=10; world"} @self'
+                      - 'messageall{m=Hello, world,radius=12} @self'
+                      - 'message{m="Say \\"hi; radius=10\\" at } now"} @target'
+                """);
+        var target = YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                String.valueOf(plan(new MythicMobsImporter().convert(file)).orElseThrow().get("content"))));
+        assertEquals(List.of("message-target \"Hello, world\" @self",
+                        "message-all \"Hello, radius=10; world\" 32 @self",
+                        "message-all \"Hello, world\" 12 @self",
+                        "message-target \"Say \\\"hi; radius=10\\\" at } now\" @target"),
+                target.getStringList("skills.messages.on-decision"));
     }
 
     @Test
@@ -480,9 +1277,7 @@ class ImportersTest {
         assertTrue(actions.contains("set-global-cooldown __mythic_gcd 40t"), actions.toString());
         assertTrue(actions.contains("set-skill-cooldown child 10"), actions.toString());
         assertTrue(actions.contains("dot damage=2 duration=100 interval=20 @target"), actions.toString());
-        assertEquals(List.of("cast-skill SignalReceiver"),
-                target.getStringList("skills.utility.triggers.on-signal.do"));
-        assertFalse(target.contains("skills.utility.unsupported"));
+        assertEquals(List.of("~onSignal:SignalReceiver"), target.getStringList("skills.utility.unsupported"));
     }
 
     @Test
@@ -571,6 +1366,22 @@ class ImportersTest {
     }
 
     @Test
+    void mythicLightningEffectAliasRemainsVisualOnly(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/lightning.yml", """
+                skills:
+                  storm:
+                    Skills:
+                      - strike-lightning-effect @Target
+                      - strike-lightning
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(new StringReader(
+                String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(List.of("lightning true @target", "lightning false"),
+                target.getStringList("skills.storm.on-decision"));
+    }
+
+    @Test
     @DisplayName("Mythic setitem mechanic maps item, slot, and amount")
     void mythicMapsSetItemMechanic(@TempDir Path root) throws Exception {
         Path file = write(root, "Skills/item.yml", """
@@ -604,6 +1415,126 @@ class ImportersTest {
         assertEquals(List.of("drop-item DIAMOND 3"),
                 target.getStringList("skills.reward.on-decision"));
         assertFalse(target.contains("skills.reward.unsupported"));
+    }
+
+    @Test
+    void invalidDropItemCountsArePreservedForSkillsAndMobEvents(@TempDir Path root) throws Exception {
+        Path skill = write(root, "Skills/drop-invalid.yml", """
+                skills:
+                  reward:
+                    Skills:
+                      - dropitem{item=DIAMOND;amount=0}
+                      - dropitem{item=DIAMOND;a=-2}
+                      - dropitem{item=DIAMOND;amount=1.5}
+                      - dropitem{item=DIAMOND;amount=2147483648}
+                      - dropitem{item=DIAMOND;amount=NaN}
+                      - dropitem{item=DIAMOND;amount=}
+                      - dropitem{item=DIAMOND;amount=3;a=2}
+                      - dropitem{item=DIAMOND;amount=3;AMOUNT=4}
+                      - dropitem{item=DIAMOND;amount=<skill.var.count>}
+                """);
+        var entries = new MythicMobsImporter().convert(skill);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(8, target.getStringList("skills.reward.unsupported").size());
+        assertEquals(List.of("drop-item DIAMOND <skill.var.count>"),
+                target.getStringList("skills.reward.on-decision"));
+        assertEquals(8, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid dropitem amount")).count());
+
+        Path mob = write(root, "Mobs/drop-invalid.yml", """
+                mobs:
+                  Boss:
+                    Skills:
+                      - dropitem{item=DIAMOND;amount=0} @self ~onSpawn
+                      - dropitem{item=DIAMOND} @self ~onSpawn
+                """);
+        var mobEntries = new MythicMobsImporter().convert(mob);
+        var mobTarget = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(mobEntries).orElseThrow().get("content"))));
+        assertEquals(List.of("dropitem{item=DIAMOND;amount=0} @self ~onSpawn"),
+                mobTarget.getStringList("mob.unsupported.Skills"));
+        assertEquals(List.of("drop-item DIAMOND 1 @self"), mobTarget.getStringList("mob.triggers.on-spawn.do"));
+        assertTrue(mobEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid dropitem amount")));
+    }
+
+    @Test
+    void invalidDropItemIdentifiersArePreserved(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/drop-items-invalid.yml", """
+                skills:
+                  reward:
+                    Skills:
+                      - dropitem{amount=2} @self
+                      - dropitem{item=;amount=2}
+                      - dropitem{item=STONE;material=DIRT}
+                      - dropitem{item=STONE;ITEM=DIRT}
+                      - dropitem{material=STONE;amount=2}
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(4, target.getStringList("skills.reward.unsupported").size());
+        assertEquals(List.of("drop-item STONE 2"), target.getStringList("skills.reward.on-decision"));
+        assertEquals(4, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid dropitem item")).count());
+    }
+
+    @Test
+    void unsupportedDropItemArgumentsArePreservedForSkillsAndMobEvents(@TempDir Path root) throws Exception {
+        Path skill = write(root, "Skills/drop-options.yml", """
+                skills:
+                  reward:
+                    Skills:
+                      - dropitem{item=STONE;unknown=true}
+                      - dropitem{item=STONE;unmapped}
+                      - dropitem{item=STONE;amount=2;delay=5;repeat=1;repeatinterval=2}
+                """);
+        var entries = new MythicMobsImporter().convert(skill);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(2, target.getStringList("skills.reward.unsupported").size());
+        assertEquals(List.of("drop-item{delay=5;repeat=1;repeatinterval=2} STONE 2"),
+                target.getStringList("skills.reward.on-decision"));
+        assertEquals(2, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Unsupported dropitem argument")).count());
+
+        Path mob = write(root, "Mobs/drop-options.yml", """
+                mobs:
+                  Boss:
+                    Skills:
+                      - dropitem{item=STONE;unknown=true} @self ~onSpawn
+                """);
+        var mobEntries = new MythicMobsImporter().convert(mob);
+        var mobTarget = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(mobEntries).orElseThrow().get("content"))));
+        assertEquals(List.of("dropitem{item=STONE;unknown=true} @self ~onSpawn"),
+                mobTarget.getStringList("mob.unsupported.Skills"));
+        assertTrue(mobEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Unsupported dropitem argument")));
+    }
+
+    @Test
+    void invalidDropItemExecutionOptionsArePreserved(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/drop-timing.yml", """
+                skills:
+                  reward:
+                    Skills:
+                      - dropitem{item=STONE;delay=}
+                      - dropitem{item=STONE;delay=-1}
+                      - dropitem{item=STONE;repeat=1.5}
+                      - dropitem{item=STONE;repeat=2147483647;repeatinterval=1}
+                      - dropitem{item=STONE;repeatinterval=2;repeat-interval=3}
+                      - dropitem{item=STONE;delay=50ms;repeat=2;repeatinterval=0.5s}
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(5, target.getStringList("skills.reward.unsupported").size());
+        assertEquals(List.of("drop-item{delay=50ms;repeat=2;repeatinterval=0.5s} STONE 1"),
+                target.getStringList("skills.reward.on-decision"));
+        assertEquals(5, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid dropitem execution options")).count());
     }
 
     @Test
@@ -794,6 +1725,220 @@ class ImportersTest {
     }
 
     @Test
+    void mythicDropItemNaturallyMapsAndInvalidValuesArePreserved(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/drop-natural.yml", """
+                skills:
+                  reward:
+                    Skills:
+                      - dropitem{item=STONE;naturally=false} @self
+                      - dropitem{items=DIAMOND;natural=true} @self
+                      - dropitem{i=STONE;n=FALSE} @self
+                      - dropitem{item=STONE;n=maybe} @self
+                      - dropitem{item=STONE;n=} @self
+                      - dropitem{item=STONE;n=false;natural=true} @self
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(List.of("drop-item STONE 1 false @self", "drop-item DIAMOND 1 true @self",
+                "drop-item STONE 1 false @self"), target.getStringList("skills.reward.on-decision"));
+        assertEquals(3, target.getStringList("skills.reward.unsupported").size());
+        assertEquals(3, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid dropitem naturally flag")).count());
+    }
+
+    @Test
+    void mythicDropItemAliasesMapSingleItemsAndPreserveLists(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/drop-aliases.yml", """
+                skills:
+                  reward:
+                    Skills:
+                      - dropitem{items=DIAMOND;amount=2} @self
+                      - dropitem{i=STONE} @self
+                      - dropitem{items=STONE,DIAMOND} @self
+                      - dropitem{items=STONE 2,DIAMOND 3;n=false} @self
+                      - dropitem{items=STONE 2,DIAMOND 3,n=false} @self
+                      - dropitem{items=STONE,DIAMOND,n=maybe} @self
+                      - dropitem{items=STONE 2,DIAMOND 0} @self
+                      - dropitem{items=STONE,,DIAMOND} @self
+                      - dropitem{items=STONE,DIAMOND;amount=2} @self
+                      - dropitem{items=STONE 3} @self
+                      - dropitem{i=DIAMOND <skill.var.count>;n=false} @self
+                      - dropitem{items=STONE 0} @self
+                      - dropitem{items=STONE 3;amount=3} @self
+                      - dropitem{items=STONE 2 extra} @self
+                      - dropitem{item=STONE;i=DIAMOND} @self
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(List.of("drop-item DIAMOND 2 @self", "drop-item STONE 1 @self",
+                        "drop-items true STONE 1 DIAMOND 1 @self", "drop-items false STONE 2 DIAMOND 3 @self",
+                        "drop-items false STONE 2 DIAMOND 3 @self", "drop-item STONE 3 @self",
+                        "drop-item DIAMOND <skill.var.count> false @self"),
+                target.getStringList("skills.reward.on-decision"));
+        assertEquals(List.of("dropitem{items=STONE,DIAMOND,n=maybe} @self", "dropitem{items=STONE 2,DIAMOND 0} @self", "dropitem{items=STONE,,DIAMOND} @self",
+                        "dropitem{items=STONE,DIAMOND;amount=2} @self", "dropitem{items=STONE 0} @self",
+                        "dropitem{items=STONE 3;amount=3} @self", "dropitem{items=STONE 2 extra} @self",
+                        "dropitem{item=STONE;i=DIAMOND} @self"),
+                target.getStringList("skills.reward.unsupported"));
+        assertEquals(7, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid dropitem item")).count());
+        assertTrue(entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid dropitem naturally flag")));
+        Path mob = write(root, "Mobs/drop-inline.yml", """
+                mobs:
+                  Boss:
+                    Skills:
+                      - dropitem{items=DIAMOND 4;n=false} @self ~onSpawn
+                      - dropitem{items=STONE 0} @self ~onSpawn
+                """);
+        var mobEntries = new MythicMobsImporter().convert(mob);
+        var mobTarget = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(mobEntries).orElseThrow().get("content"))));
+        assertEquals(List.of("drop-item DIAMOND 4 false @self"),
+                mobTarget.getStringList("mob.triggers.on-spawn.do"));
+        assertEquals(List.of("dropitem{items=STONE 0} @self ~onSpawn"),
+                mobTarget.getStringList("mob.unsupported.Skills"));
+    }
+
+    @Test
+    void mythicTeleportIsPreservedUntilCasterAndSafeLandingSemanticsAreSupported(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/teleport-unsupported.yml", """
+                skills:
+                  move:
+                    Skills:
+                      - teleport @target
+                      - tp{spreadh=5} @target
+                      - teleport @target ~onSpawn
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertTrue(target.getStringList("skills.move.on-decision").isEmpty());
+        assertEquals(List.of("teleport @target", "tp{spreadh=5} @target", "teleport @target ~onSpawn"),
+                target.getStringList("skills.move.unsupported"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && String.valueOf(entry.get("note")).contains("safe landing")));
+    }
+
+    @Test
+    void mythicBlockMechanicPreservesLocationTargeter(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/location.yml", """
+                skills:
+                  place:
+                    Skills:
+                      - setblock{material=STONE} @location{x=4;y=5;z=6}
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(List.of("set-block STONE @location{x=4;y=5;z=6}"),
+                target.getStringList("skills.place.on-decision"));
+        assertTrue(target.getStringList("skills.place.unsupported").isEmpty());
+    }
+
+    @Test
+    void officialLocationTargetersAreValidatedAndPreservedDuringMigration(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/location-targeters.yml", """
+                skills:
+                  place:
+                    Skills:
+                      - setblock{material=STONE} @Forward{f=3;uel=true}
+                      - setblock{material=STONE} @SelfEyeLocation
+                      - setblock{material=STONE} @eyeDirection
+                      - setblock{material=STONE} @casterEyeLocation
+                      - setblock{material=STONE} @bossEyeLocation
+                      - setblock{material=STONE} @mobEyeLocation
+                      - setblock{material=STONE} @targetLoc
+                      - setblock{material=STONE} @TargetPredictedLoc{ticks=10;max=4}
+                      - setblock{material=STONE} @ProjectileForward{amount=2}
+                      - setblock{material=STONE} @SpawnLocation
+                      - setblock{material=STONE} @CasterSpawn
+                      - setblock{material=DIRT} @Forward{f=3;unknown=true}
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+
+        assertEquals(List.of(
+                "set-block STONE @forward{f=3;uel=true}",
+                "set-block STONE @selfeyelocation",
+                "set-block STONE @eyedirection",
+                "set-block STONE @castereyelocation",
+                "set-block STONE @bosseyelocation",
+                "set-block STONE @mobeyelocation",
+                "set-block STONE @targetloc",
+                "set-block STONE @targetpredictedloc{ticks=10;max=4}",
+                "set-block STONE @projectileforward{amount=2}",
+                "set-block STONE @spawnlocation",
+                "set-block STONE @casterspawn"), target.getStringList("skills.place.on-decision"));
+        assertEquals(List.of("setblock{material=DIRT} @Forward{f=3;unknown=true}"),
+                target.getStringList("skills.place.unsupported"));
+        assertTrue(entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid Location targeter")));
+    }
+
+    @Test
+    void invalidVariableLocationOnMobEventIsPreserved(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/location.yml", """
+                mobs:
+                  Boss:
+                    Skills:
+                      - setblock{material=STONE} @VariableLocation{var=skill.mark} ~onSpawn
+                      - setblock{material=DIRT} @VariableLocation{var=skill.mark;scope=bad} ~onSpawn
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(1, target.getStringList("mob.triggers.on-spawn.do").size());
+        assertEquals(List.of("setblock{material=DIRT} @VariableLocation{var=skill.mark;scope=bad} ~onSpawn"),
+                target.getStringList("mob.unsupported.Skills"));
+        assertTrue(entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid VariableLocation")));
+    }
+
+    @Test
+    void invalidExplicitLocationsArePreservedWithWarnings(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/invalid-location.yml", """
+                skills:
+                  place:
+                    Skills:
+                      - setblock{material=STONE} @loc{l=1,2,3,0,0}
+                      - setblock{material=DIRT} @location{x=NaN;y=2;z=3}
+                      - setblock{material=DIRT} @l{x=1;x=2}
+                      - setblock{material=DIRT} @loc{l=1,2,3,0,0;y=1}
+                      - setblock{material=DIRT} @location{world={other}}
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(1, target.getStringList("skills.place.on-decision").size());
+        assertEquals(4, target.getStringList("skills.place.unsupported").size());
+        assertEquals(4, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid Location targeter")).count());
+    }
+
+    @Test
+    void invalidExplicitLocationOnMobEventIsPreserved(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/invalid-location.yml", """
+                mobs:
+                  Boss:
+                    Skills:
+                      - setblock{material=STONE} @loc{x=1;y=2;z=3} ~onSpawn
+                      - setblock{material=DIRT} @location{x=Infinity} ~onSpawn
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertEquals(1, target.getStringList("mob.triggers.on-spawn.do").size());
+        assertEquals(List.of("setblock{material=DIRT} @location{x=Infinity} ~onSpawn"),
+                target.getStringList("mob.unsupported.Skills"));
+        assertTrue(entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid Location targeter")));
+    }
+
+    @Test
     @DisplayName("Mythic mob drop experience maps beside the drop table reference")
     void mythicMapsDropExperience(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/experience.yml", """
@@ -812,6 +1957,74 @@ class ImportersTest {
         assertEquals(8, target.getInt("mob.drops.experience-max"));
         assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
                 && "mob.drops.experience-min".equals(entry.get("target-key"))));
+    }
+
+    @Test
+    void conflictingMobDropSourcesArePreservedWithoutProjection(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/conflicting-drops.yml", """
+                mobs:
+                  Boss:
+                    DropTable-1: first_table
+                    DropTable1: second_table
+                    Drops:
+                      - DIAMOND 1 1
+                      - MMOItems:SWORD 1 1
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertFalse(target.contains("mob.drops.table"));
+        var preserved = target.getConfigurationSection("mob.unsupported.Drops.conflicting-sources");
+        assertNotNull(preserved);
+        assertEquals("first_table", preserved.getString("DropTable-1"));
+        assertEquals("second_table", preserved.getString("DropTable1"));
+        assertEquals(List.of("DIAMOND 1 1", "MMOItems:SWORD 1 1"), preserved.getStringList("Drops"));
+        assertTrue(entries.stream().noneMatch(e -> "loot.yml".equals(e.get("target-file"))));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "mob.unsupported.Drops.conflicting-sources".equals(e.get("target-key"))
+                && "WARN".equals(e.get("severity"))));
+        assertTrue(entries.stream().anyMatch(e -> "external-plugin".equals(e.get("dependency"))
+                && String.valueOf(e.get("value")).contains("MMOItems:SWORD")));
+    }
+
+    @Test
+    void malformedInlineDropChancesArePreservedAndNeverProjected(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/chances.yml", """
+                mobs:
+                  Boss:
+                    Drops:
+                      - DIAMOND 1 1%0
+                      - {item: EMERALD, chance: '25%%'}
+                      - GOLD_INGOT 1 25%
+                  Broken:
+                    Drops:
+                      - DIAMOND 1 1%0
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var bossPlan = entries.stream().filter(e -> "mobs/mythic_boss.yml".equals(e.get("target-file"))
+                && e.containsKey("content")).findFirst().orElseThrow();
+        var boss = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(bossPlan.get("content"))));
+        assertEquals("boss_drops", boss.getString("mob.drops.table"));
+        String preserved = String.valueOf(boss.get("mob.unsupported.Drops.entries"));
+        assertTrue(preserved.contains("DIAMOND 1 1%0"), preserved);
+        assertTrue(preserved.contains("25%%"), preserved);
+        assertFalse(preserved.contains("GOLD_INGOT"), preserved);
+        var lootPlan = entries.stream().filter(e -> "loot.yml".equals(e.get("target-file"))
+                && e.containsKey("content")).findFirst().orElseThrow();
+        var loot = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(lootPlan.get("content"))));
+        var projected = loot.getConfigurationSection("tables.boss_drops.entries");
+        assertEquals(1, projected.getKeys(false).size());
+        assertEquals("GOLD_INGOT", projected.getString("0.item"));
+        assertEquals(0.25, projected.getDouble("0.chance"), 1e-9);
+        var brokenPlan = entries.stream().filter(e -> "mobs/mythic_broken.yml".equals(e.get("target-file"))
+                && e.containsKey("content")).findFirst().orElseThrow();
+        var broken = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(brokenPlan.get("content"))));
+        assertFalse(broken.contains("mob.drops.table"));
+        assertEquals(List.of("DIAMOND 1 1%0"), broken.getStringList("mob.unsupported.Drops.entries"));
+        for (String mob : List.of("Boss", "Broken")) {
+            assertTrue(entries.stream().anyMatch(e -> (mob + ".Drops").equals(e.get("source-key"))
+                    && "WARN".equals(e.get("severity")) && "unsupported".equals(e.get("status"))), mob);
+        }
     }
 
     @Test
@@ -877,6 +2090,61 @@ class ImportersTest {
         assertTrue(content.contains("chance: 0.25"));
     }
 
+    @Test
+    @DisplayName("unmapped structured drop conditions remain unsupported instead of becoming unconditional")
+    void mythicPreservesStructuredDropsWithUnmappedConditions(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/conditional-drops.yml", """
+                mobs:
+                  Boss:
+                    Drops:
+                      - item: DIAMOND
+                        chance: 1.0
+                        conditions:
+                          - world-is arena
+                          - future-condition{value=x}
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        Map<String, Object> mob = entries.stream()
+                .filter(e -> String.valueOf(e.get("target-file")).startsWith("mobs/"))
+                .findFirst().orElseThrow();
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(mob.get("content"))));
+        String preserved = String.valueOf(target.get("mob.unsupported.Drops.entries"));
+
+        assertTrue(preserved.contains("future-condition"), preserved);
+        assertTrue(preserved.contains("world-is arena"), preserved);
+        assertFalse(entries.stream().filter(e -> "loot.yml".equals(e.get("target-file")))
+                .map(e -> String.valueOf(e.get("content")))
+                .anyMatch(content -> content.contains("item: DIAMOND")));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "Boss.Drops".equals(e.get("source-key"))
+                && "WARN".equals(e.get("severity"))));
+    }
+
+    @Test
+    void mythicPreservesUnsupportedNestedTableAmount(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/nested-amount.yml", """
+                mobs:
+                  Boss:
+                    Drops:
+                      - table: nested
+                        amount: 2
+                      - item: DIAMOND
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        Map<String, Object> mob = entries.stream()
+                .filter(e -> String.valueOf(e.get("target-file")).startsWith("mobs/"))
+                .findFirst().orElseThrow();
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(mob.get("content"))));
+        assertTrue(String.valueOf(target.get("mob.unsupported.Drops.entries")).contains("nested"));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "Boss.Drops".equals(e.get("source-key")) && "WARN".equals(e.get("severity"))));
+        assertTrue(entries.stream().filter(e -> "loot.yml".equals(e.get("target-file")))
+                .map(e -> String.valueOf(e.get("content")))
+                .anyMatch(content -> content.contains("DIAMOND") && !content.contains("nested")));
+    }
+
 
     @Test
     @DisplayName("Mythic entity disguise is preserved as unsupported external behavior")
@@ -926,10 +2194,13 @@ class ImportersTest {
     }
 
     @Test
-    @DisplayName("MythicMobs：无 mobs 节时不产生写入计划")
+    @DisplayName("MythicMobs：无法识别的顶层节保留在报告中")
     void mythicWithoutMobs(@TempDir Path root) throws Exception {
         Path f = write(root, "Mobs/b.yml", "something-else:\n  x: 1\n");
-        assertTrue(new MythicMobsImporter().convert(f).isEmpty());
+        var entries = new MythicMobsImporter().convert(f);
+        assertTrue(entries.stream().noneMatch(e -> e.containsKey("target-file")));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "something-else".equals(e.get("source-key")) && String.valueOf(e.get("value")).contains("x=1")));
     }
 
     // ---------- MythicMobs：免疫 / 伤害倍率 ----------
@@ -1046,6 +2317,87 @@ class ImportersTest {
         assertTrue(entries.stream().anyMatch(e ->
                         "unsupported".equals(e.get("status")) && "WARN".equals(e.get("severity"))),
                 "识别不出的条目必须告警，静默丢弃正是本项目最想消灭的失败模式");
+    }
+
+    @Test
+    void mythicPreservesUnrecognizedModifierValues(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/b.yml", """
+                mobs:
+                  Boss:
+                    DamageModifiers:
+                      FIRE: invalid
+                      PROJECTILE: []
+                      MAGIC: [unexpected]
+                      FALL: {nonsense: true}
+                      LAVA: 0.5
+                """);
+        var entries = new MythicMobsImporter().convert(f);
+        var target = converted(f);
+        for (String key : List.of("FIRE", "PROJECTILE", "MAGIC", "FALL")) {
+            assertTrue(target.contains("mob.unsupported.DamageModifiers." + key), key);
+            assertTrue(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))
+                    && String.valueOf(e.get("source-key")).endsWith(".DamageModifiers." + key)), key);
+        }
+        assertEquals(0.5, target.getDouble("mob.damage-modifiers.LAVA"), 1e-9);
+    }
+
+    @Test
+    void mythicPreservesUnsupportedImmunityAndModifierSectionsAsYaml(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/b.yml", """
+                mobs:
+                  Boss:
+                    Immunities:
+                      FIRE:
+                        conditions: ['isLiving']
+                        custom:
+                          levels: [1, 2]
+                      FALL: false
+                    DamageModifiers:
+                      PROJECTILE:
+                        multiplier: invalid
+                        custom:
+                          levels: [3, 4]
+                      MAGIC:
+                        multiplier: 0.5
+                        custom:
+                          enabled: true
+                """);
+        var entries = new MythicMobsImporter().convert(f);
+        var target = converted(f);
+        assertEquals(List.of(1, 2), target.getIntegerList("mob.unsupported.Immunities.FIRE.custom.levels"));
+        assertEquals(false, target.get("mob.unsupported.Immunities.FALL"));
+        assertEquals("invalid", target.getString("mob.unsupported.DamageModifiers.PROJECTILE.multiplier"));
+        assertEquals(List.of(3, 4), target.getIntegerList("mob.unsupported.DamageModifiers.PROJECTILE.custom.levels"));
+        assertTrue(target.getBoolean("mob.unsupported.DamageModifiers.MAGIC.custom.enabled"));
+        assertTrue(entries.stream().filter(e -> "WARN".equals(e.get("severity"))).count() >= 4);
+    }
+
+    @Test
+    void mythicPreservesNestedNullFieldsAsInvalidMarkers(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/b.yml", """
+                mobs:
+                  Boss:
+                    Immunities:
+                      FIRE:
+                        custom:
+                          nested:
+                            missing: null
+                    DamageModifiers:
+                      PROJECTILE:
+                        multiplier: 0.5
+                        custom:
+                          nested:
+                            missing: ~
+                """);
+        var entries = new MythicMobsImporter().convert(f);
+        var target = converted(f);
+        String marker = dev.helstera.api.util.ConditionListParser.INVALID_CONDITION;
+        assertEquals(marker, target.getString("mob.unsupported.Immunities.FIRE.custom.nested.missing"));
+        assertEquals(marker, target.getString("mob.unsupported.DamageModifiers.PROJECTILE.custom.nested.missing"));
+        assertTrue(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))
+                && String.valueOf(e.get("source-key")).endsWith(".Immunities.FIRE")));
+        assertTrue(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))
+                && String.valueOf(e.get("source-key")).endsWith(".DamageModifiers.PROJECTILE")));
     }
 
     @Test
@@ -2602,6 +3954,30 @@ class ImportersTest {
     }
 
     @Test
+    void mythicSpawnerNullConditionsFailClosedThroughMerges(@TempDir Path root) throws Exception {
+        for (String prefix : List.of("spawners:\n", "")) {
+            String indent = prefix.isEmpty() ? "" : "  ";
+            Path file = write(root, "Spawners/nulls.yml", prefix + ("""
+                    base: &base {Mob: boss, Conditions: null}
+                    merged: {<<: *base}
+                    override: {<<: *base, Conditions: []}
+                    alias: {Mob: boss, spawn-conditions: null}
+                    absent: {Mob: boss}
+                    """).lines().map(line -> indent + line + "\n").collect(java.util.stream.Collectors.joining()));
+            var entries = new MythicMobsImporter().convert(file);
+            var plan = entries.stream().filter(e -> "spawners.yml".equals(e.get("target-file")))
+                    .findFirst().orElseThrow();
+            var target = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(plan.get("content"))));
+            for (String name : List.of("base", "merged", "alias")) {
+                assertEquals(List.of(""), target.getStringList("spawners." + name + ".conditions"), name);
+            }
+            assertFalse(target.contains("spawners.override.conditions"));
+            assertFalse(target.contains("spawners.absent.conditions"));
+            assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))));
+        }
+    }
+
+    @Test
     @DisplayName("MythicMobs spawner conditions translate Mythic leaves and preserve native predicates")
     void mythicSpawnerConditionsTranslate(@TempDir Path root) throws Exception {
         Path file = write(root, "Spawners/conditions.yml", """
@@ -2610,7 +3986,7 @@ class ImportersTest {
                     Mob: boss
                     Conditions:
                       - isRaining
-                      - "?health{<50%}"
+                      - "?health{<50}"
                       - lunar-phase-is=FULL
                 """);
         Map<String, Object> plan = new MythicMobsImporter().convert(file).stream()
@@ -2619,7 +3995,7 @@ class ImportersTest {
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
 
-        assertEquals(List.of("raining", "health-below 0.5", "lunar-phase-is=FULL"),
+        assertEquals(List.of("raining", "health <50", "lunar-phase-is=FULL"),
                 target.getStringList("spawners.arena.conditions"));
     }
 
@@ -2630,14 +4006,14 @@ class ImportersTest {
                 spawners:
                   arena:
                     Mob: boss
-                    Conditions: "isRaining, ?health{<50%}, time-between=0,12000"
+                    Conditions: "isRaining, ?health{<50}, time-between=0,12000"
                 """);
         Map<String, Object> plan = new MythicMobsImporter().convert(file).stream()
                 .filter(e -> "spawners.yml".equals(e.get("target-file")))
                 .findFirst().orElseThrow();
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
-        assertEquals(List.of("raining", "health-below 0.5", "time-between=0,12000"),
+        assertEquals(List.of("raining", "health <50", "time-between=0,12000"),
                 target.getStringList("spawners.arena.conditions"));
     }
 
@@ -2848,5 +4224,18 @@ class ImportersTest {
         assertEquals("base", target.getString("items.enchanted.template"));
         assertEquals("ATTACK_DAMAGE",
                 target.getString("items.enchanted.attributes.mainhand.attack.attribute"));
+    }
+
+    @Test
+    void invalidItemTemplateIsPreservedWithWarning(@TempDir Path root) throws Exception {
+        Path file = write(root, "Items/invalid-template.yml", "broken:\n  Id: DIAMOND\n  Template: 42\n");
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(
+                entries.stream().filter(e -> "items.yml".equals(e.get("target-file")))
+                        .findFirst().orElseThrow().get("content"))));
+        assertFalse(target.contains("items.broken.template"));
+        assertEquals(42, target.getInt("items.broken.unsupported.template"));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "Items.broken.Template".equals(e.get("source-key"))));
     }
 }

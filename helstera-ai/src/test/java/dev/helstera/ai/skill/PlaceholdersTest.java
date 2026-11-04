@@ -32,6 +32,17 @@ class PlaceholdersTest {
     }
 
     @Test
+    void skillVariablesPreserveNameCaseAndMissingValues() {
+        var c = BehaviorContext.execution(null, null, 1, -1, 0, "skill", null, null,
+                java.util.List.of(), null);
+        c.skillTree().orElseThrow().setVariable("Count", 5);
+        c.skillTree().orElseThrow().setVariable("flag", true);
+        c.skillTree().orElseThrow().setVariable("unsupported", new Object());
+        assertEquals("5 true <skill.var.count> <skill.var.unsupported>",
+                Placeholders.resolve("<SKILL.VAR.Count> <skill.var.flag> <skill.var.count> <skill.var.unsupported>", c));
+    }
+
+    @Test
     @DisplayName("血量占位符按一位小数输出")
     void formatsHealthWithOneDecimal() {
         var c = ctx(0.2299999, -1, "IDLE");

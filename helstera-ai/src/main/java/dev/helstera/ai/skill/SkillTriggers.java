@@ -750,30 +750,43 @@ public final class SkillTriggers implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onDamage(EntityDamageByEntityEvent e) {
-        var inst = find(e.getEntity());
-        if (inst == null && plugin.getConfig().getBoolean("debug.trace-triggers", false)) {
+        var damageInstance = find(e.getEntity(), SkillTrigger.DAMAGE);
+        var attackedInstance = find(e.getEntity(), SkillTrigger.ATTACKED);
+        if (plugin.getConfig().getBoolean("debug.trace-triggers", false)) {
+            log.info("[trigger-debug] damage-route entity=" + e.getEntity().getUniqueId()
+                    + " cause=" + e.getCause()
+                    + " tags=" + SkillCatalog.currentDamageTags(e.getEntity())
+                    + " damage-instance=" + (damageInstance == null ? null : damageInstance.instanceId())
+                    + " attacked-instance=" + (attackedInstance == null ? null : attackedInstance.instanceId()));
+        }
+        if (damageInstance == null && attackedInstance == null
+                && plugin.getConfig().getBoolean("debug.trace-triggers", false)) {
             log.info("[trigger-debug] damage entity=" + e.getEntity().getUniqueId()
                     + " candidates=" + ai.allInstances().stream()
                     .map(candidate -> candidate.instanceId() + ":"
                             + candidate.boundEntityId().map(Object::toString).orElse("null"))
                     .toList());
         }
-        if (inst == null) return;
+        if (damageInstance == null && attackedInstance == null) return;
         LivingEntity attacker = e.getDamager() instanceof LivingEntity living ? living : null;
-        dispatch(SkillTrigger.DAMAGE, inst, attacker, e.getEntity().getLocation(), e.getDamager(),
-                livingTargets(e.getEntity()), e, e.getCause());
+        if (damageInstance != null) {
+            dispatch(SkillTrigger.DAMAGE, damageInstance, attacker, e.getEntity().getLocation(), e.getDamager(),
+                    livingTargets(e.getEntity()), e, e.getCause());
+        }
         // Mythic distinguishes the caster's damage trigger from the victim's
         // attacked trigger even though Bukkit exposes both through one event.
-        dispatch(SkillTrigger.ATTACKED, inst, attacker, e.getEntity().getLocation(), e.getDamager(),
-                livingTargets(e.getEntity()), e, e.getCause());
+        if (attackedInstance != null) {
+            dispatch(SkillTrigger.ATTACKED, attackedInstance, attacker, e.getEntity().getLocation(), e.getDamager(),
+                    livingTargets(e.getEntity()), e, e.getCause());
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEnvironmentalDamage(EntityDamageEvent e) {
         if (e instanceof EntityDamageByEntityEvent) return;
-        var inst = find(e.getEntity());
+        var inst = find(e.getEntity(), SkillTrigger.DAMAGE);
         if (inst == null) return;
-        dispatch(SkillTrigger.DAMAGE, inst, null, e.getEntity().getLocation(), e.getEntity(),
+        dispatch(SkillTrigger.DAMAGE, inst, null, e.getEntity().getLocation(), null,
                 livingTargets(e.getEntity()), e, e.getCause());
     }
 
@@ -1033,21 +1046,29 @@ public final class SkillTriggers implements Listener {
                 contextEntity == null ? java.util.List.of() : java.util.List.of(contextEntity), e);
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onDeath(EntityDeathEvent e) {
         LivingEntity victim = e.getEntity();
         var victimInst = find(victim);
+        Entity killer = killerEntity(victim);
+        LivingEntity livingKiller = killer instanceof LivingEntity living ? living : null;
         if (victimInst != null) {
-            Player playerKiller = victim.getKiller();
-            dispatch(SkillTrigger.DEATH, victimInst, playerKiller, victim.getLocation(), victim,
-                    livingTargets(victim));
+            dispatch(SkillTrigger.DEATH, victimInst, livingKiller, victim.getLocation(), killer,
+                    livingTargets(victim), e);
             // on-death-skill is an alias for on-death; both are intentionally dispatched.
             if (victimInst.baseEntity().orElse(null) instanceof LivingEntity le && le.getMaxHealth() > 0) {
-                dispatch(SkillTrigger.ON_DEATH_SKILL, victimInst, playerKiller,
-                        victim.getLocation(), victim, livingTargets(victim));
+                dispatch(SkillTrigger.ON_DEATH_SKILL, victimInst, livingKiller,
+                        victim.getLocation(), killer, livingTargets(victim), e);
             }
         }
 
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onConfirmedDeath(EntityDeathEvent e) {
+        if (e.isCancelled()) return;
+        LivingEntity victim = e.getEntity();
+        var victimInst = find(victim);
         Entity killer = killerEntity(victim);
         var killerInst = find(killer);
         if (killerInst != null && killer != victim) {
@@ -1073,6 +1094,19 @@ public final class SkillTriggers implements Listener {
                 streaks.record(killerInst.instanceId(), playerKiller.getUniqueId(), now);
             }
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onCancelledDeath(EntityDeathEvent e) {
+        if (!e.isCancelled()) return;
+        LivingEntity victim = e.getEntity();
+        var inst = find(victim);
+        AiProfile profile = inst == null ? null : ai.profileOf(inst.instanceId());
+        if (profile == null || !Double.isFinite(profile.reviveHealth)) return;
+        double maxHealth = victim.getMaxHealth();
+        if (!Double.isFinite(maxHealth) || maxHealth <= 0) return;
+        double health = profile.reviveHealth == -1 ? maxHealth : Math.min(profile.reviveHealth, maxHealth);
+        if (health > 0) e.setReviveHealth(health);
     }
 
     /**
@@ -1493,9 +1527,14 @@ public final class SkillTriggers implements Listener {
                 && target.getWorld().equals(loc.getWorld())) {
             distance = target.getLocation().distance(loc);
         }
+        var skillTree = new dev.helstera.api.behavior.SkillTreeContext(
+                triggerEntity, inheritedTargets, loc);
+        Entity damageVictim = cancellableEvent instanceof org.bukkit.event.entity.EntityDamageEvent damageEvent
+                ? damageEvent.getEntity() : null;
+        skillTree.damageTags(SkillCatalog.currentDamageTags(damageVictim));
         BehaviorContext ctx = BehaviorContext.continueExecution(instance, target, healthRatio, distance,
                 0, trigger.configName(), null, triggerEntity, inheritedTargets, loc,
-                new dev.helstera.api.behavior.SkillTreeContext(triggerEntity, inheritedTargets, loc),
+                skillTree,
                 cancellableEvent, damageCause);
 
         // 阶段切换独立于事件触发器：血量可能在任意一次事件里跨过阈值，
@@ -1503,7 +1542,10 @@ public final class SkillTriggers implements Listener {
         firePhaseTransition(profile, instance, ctx);
 
         for (String cond : spec.require) {
-            if (!registry.testCondition(cond, ctx)) return;
+            if (!registry.testCondition(cond, ctx)) {
+                trace(trigger, "条件未通过 " + cond);
+                return;
+            }
         }
         runActions(trigger, spec.actions, ctx);
         fired.incrementAndGet();

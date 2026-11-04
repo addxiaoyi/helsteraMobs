@@ -13,6 +13,239 @@ Status values:
 
 Evidence baseline: 2026-10-21, Paper API 1.21.1-R0.1-SNAPSHOT.
 
+The supported-version declaration is machine-readable at
+`tools/paper-integration/version-matrix.json` and is checked by
+`tools/paper-integration/test-version-matrix.ps1`. Only Paper 1.21.1-133 on
+Minecraft 1.21.1 has strict release validation; Paper 1.21.4 and 1.21.11 are
+exploratory entries, and unlisted combinations remain unverified.
+
+Incremental condition grammar update: Mythic condition parameter blocks with
+unbalanced braces are now kept verbatim and reported as untranslated instead
+of allowing a malformed presence condition such as `isFrozen{` to map as a
+valid no-argument condition. Balanced nested values remain accepted for
+placeholder syntax. `MmConditionsTest` covers missing, extra, and unbalanced
+braces plus a nested placeholder value; the importer continues to preserve
+unknown condition source text with a migration warning.
+
+Incremental condition evidence: `distance-from-spawn` has unit coverage for an
+exact 3-4-5 distance, inclusive/exclusive comparator boundaries, invalid
+numeric input, and missing location context. Strict Paper 1.21.1-133 fixture
+`srv-paper-distance-from-spawn-strict-20261102-r1` checks the production
+condition service against a real entity and the world's spawn location; the
+inclusive exact boundary passes and the exclusive over-boundary check rejects.
+The full Conditions catalog remains `mapped-unverified`.
+
+Location targeter validation: `@location` accepts finite `x`, `y`, `z` and an
+optional `world`; malformed, duplicate or unknown fields and trailing text are
+rejected. API tests cover parsing, and `SkillActionsTest` checks valid and
+invalid destinations through the `teleport`, `teleport-caster` and
+`teleport-targets` consumers. The official context-based location targeter
+slice is listed below; other official location targeters and broader
+importer-to-runtime behavior remain unverified.
+`setblock{material=STONE} @location{x=4;y=5;z=6}` is mapped to `set-block`
+with its location targeter preserved. SkillService dispatches that location
+directly to the block action without selecting nearby entities; importer and
+runtime unit tests cover the path and invalid-coordinate rejection. Strict Paper
+fixture `srv-paper-location-dispatch-strict-20261104-r2` verifies block dispatch
+and rejection of a duplicate non-finite coordinate; it does not exercise every
+invalid input or the teleport-action consumers.
+Subsequent source changes dispatch `@VariableLocation` to location-aware actions
+and reject duplicate, unknown or malformed arguments. Unit tests cover skill-scope
+resolution, block dispatch, missing variables and missing worlds.
+`MigrationRuntimeConditionContractTest` also imports and executes a `setblock`
+line with `@VariableLocation`. The importer uses the same syntax validation as
+runtime, preserving malformed lines and issuing a warning; standalone skill and
+mob-event tests cover this behavior. Strict Paper fixture
+`srv-paper-variable-location-strict-20261104-r1` verifies dispatch, duplicate
+argument rejection, and migration preservation with a warning. Other scopes,
+argument variants and imported action execution are not covered by this probe.
+Later source changes add official `@varLocation` and variable-name aliases
+`variable`, `name`, `n`, `var`, `key`, `k`, plus scope alias `s`. API and
+importer-to-runtime tests cover the aliases and reject conflicting aliases;
+the Paper probes do not individually exercise every alias. The official
+`@Location` now supports zero coordinate defaults, five-component location
+tuples, yaw/pitch, `world` alias `w`, and targeter aliases `l`/`loc`. API tests
+cover valid and malformed coordinates; SkillService and importer-to-runtime
+tests cover the tuple alias. The Paper probes do not exercise every tuple or
+alias; general location targeter modifiers remain unverified.
+The resolver handles official `@SelfLocation` aliases (`@casterLocation`,
+`@bossLocation`, `@mobLocation`) and `@SelfEyeLocation` aliases (`@eyeDirection`,
+`@casterEyeLocation`, `@bossEyeLocation`, `@mobEyeLocation`). SelfEyeLocation
+requires a living caster and fails closed for missing or non-living caster
+context. API and importer tests cover all five aliases and invalid arguments;
+strict Paper fixture `srv-paper-self-eye-location-strict-20261104-r1` exercises
+real `set-block` dispatch through each alias. The resolver also handles
+`@TargetLocation` aliases (`@targetloc`,
+`@TL`), `@TargetPredictedLocation` aliases, `@TriggerLocation`,
+`@SpawnLocation`, `@CasterSpawnLocation`/`@casterSpawn`, `@Forward`, and
+`@ProjectileForward`. Forward targeters apply their documented distance,
+rotation, eye-location and pitch options; predicted target locations use target
+velocity, the configured tick horizon and max-distance cap, and stop at a block
+ray trace. The runtime resolver and importer share strict targeter argument
+validation, and `SkillService` dispatches resolved positions to location-aware
+mechanics. API tests cover aliases, context resolution, movement, caps and
+fail-closed arguments; importer tests cover preservation and invalid syntax;
+`SkillServiceTest` verifies a Forward target reaches `set-block`. Strict Paper
+fixture `srv-paper-self-eye-location-strict-20261104-r1` passed 339 probes on
+Paper 1.21.1-133; its `locationTargeterDispatch` probe verifies the real block
+action for SelfEyeLocation and SelfLocation aliases, caster/world spawn, explicit non-player target,
+trigger, forward, a moving Arrow projectile, and velocity-predicted target
+locations. Invalid coordinates remain rejected. Player `TargetLocation` ray
+tracing is implemented; Mythic's threat/combat/last-damage fallbacks, additional
+location modifiers and full mechanic-by-mechanic parity remain unverified.
+The importer now shares the explicit `@Location` syntax validator with runtime;
+malformed standalone skill and mob-event lines are preserved with warnings.
+This importer validation is covered by automated tests, not the archived Paper fixture.
+Imported `explosion{yield=3} @location{x=4;y=5;z=6}` now dispatches the
+explosion at the selected location instead of the caster origin; an
+importer-to-runtime contract verifies the world call. A separate imported
+`@VariableLocation` test covers a stored position and confirms a missing value
+does not cause an explosion at the origin. Paper fixture
+`srv-paper-explosion-location-20261104-r3` observes the block explosion event
+at the selected position and no event for a missing variable; the listener
+cancels the event. The probe does not cover imported execution on Paper or
+uninterrupted block damage. Broader explosion parity remains open.
+The native `drop-item` action now consumes an explicit location target, and a
+missing location variable produces no drop. `SkillServiceTest` and
+`MigrationRuntimeConditionContractTest` cover both through the imported
+`dropitem{item=DIAMOND;amount=3}` mapping and runtime consumer. Paper fixture
+`srv-paper-drop-location-20261104-r2` observes the native action spawning the
+requested item at the selected location and rejects zero count and a missing
+location variable. Fixture `srv-paper-drop-import-20261104-r1` imports and
+executes a Mythic skill on Paper, checks the missing variable, and verifies
+preservation and warnings for zero amount and an unknown argument. Other
+official parameters remain unverified.
+Native `drop-item` now accepts only finite positive integer counts at execution;
+zero, negative, fractional, overflow and unresolved placeholder counts do not
+produce a drop. The importer preserves static invalid counts with warnings in
+standalone skills and mob events; placeholder-backed counts are checked at
+execution. Empty, repeated and conflicting amount aliases are also preserved
+with warnings. Missing, empty or conflicting item/material identifiers are
+preserved rather than being mapped to an unusable action. These checks have
+automated coverage; the Paper import probe covers zero amount. Unmapped `dropitem` arguments are
+preserved with a migration warning instead of being silently discarded;
+delay/repeat execution options remain mapped when valid under current runtime
+rules. Empty, malformed, conflicting and overflowing execution options are
+preserved with warnings; official timing parity and Paper evidence remain open.
+Official `items` and `i` aliases now import a single item through the same
+runtime path as `item`; importer-to-runtime tests cover both aliases. Invalid
+inline counts, empty list entries and conflicting item aliases are preserved
+with a warning instead of silently truncating the value. A single inline count maps
+to the existing count consumer; strict fixture `srv-paper-drop-inline-20261104-r2`
+checks fixed and skill-variable counts, missing variables and invalid count
+preservation. `naturally` and aliases
+`natural`/`n` select natural or exact placement and default to natural;
+invalid or conflicting values are preserved with warnings. Unit tests cover
+caster and entity targets. Fixture `srv-paper-drop-natural-20261104-r1` imports
+`i` and `n=false`, observes an exact-location drop, and checks invalid-flag
+preservation. Comma-separated item lists execute as one action with per-item
+counts; fixture `srv-paper-drop-list-20261104-r1` verifies two actual drops and
+invalid-list preservation. Unresolved dynamic counts skip their own item; this
+is unit-tested. Fixture `srv-paper-drop-list-comma-20261104-r1` verifies a
+comma-separated `n=false` parameter after a list and preserves an invalid flag.
+List-specific DropTable references, ambiguous global `amount`, `onDropSkill`,
+`dynamic` and `owner` still require implementation and validation.
+References: https://wiki.mythiccraft.io/mythicmobs/Skills/Targeters/VariableLocation
+and https://wiki.mythiccraft.io/mythicmobs/Skills/Targeters/Location;
+drop-item attributes: https://wiki.mythiccraft.io/mythicmobs/Skills/Mechanics/dropitem.
+
+Mythic `teleport`/`tp` is preserved as unsupported with a migration warning:
+the official mechanic moves the caster to the selected location and defines safe
+landing, spread and orientation behavior. The former mapping to
+`teleport-targets @target` did not implement that contract. Importer tests cover
+standalone and mob-event lines; full mechanic implementation and Paper evidence
+remain open. The separately named native teleport actions remain available.
+The official defaults are zero horizontal and vertical spread, preserved yaw
+and pitch, and safe landing enabled; `unsafe` bypasses safe landing and spread.
+Reference: https://wiki.mythiccraft.io/mythicmobs/Skills/Mechanics/teleport.
+
+Incremental targeter update: `@PlayersInWorld` now selects all valid online
+players in the caster's world without applying implicit faction filtering;
+`targetself=true` opts the caster in. `@PlayersOnServer` selects valid online
+players across worlds, with `@server` and `@everyone` aliases. Unit and
+importer tests cover world isolation, online/valid/dead boundaries, caster
+inclusion, and alias normalization. Strict Paper 1.21.1-133 fixture
+`srv-paper-targeter-players-strict-20261102-r1` observes the production
+`ai-selector-core` path and verifies the server-wide player set and alias
+equivalence; its archived report completes 272 probes (260 passed, 12
+expected negative controls, zero incomplete). Cross-world live-client target
+evidence and the full official targeter catalog remain open.
+
+Incremental targeter-control update: direct context targeters including `@targets`,
+`@children`, and `@passengers` now apply generic filter, radius, sorting, skip,
+and limit controls instead of bypassing them. `TargeterOrderingTest` covers
+combined controls, cross-world radius exclusion, and invalid values. Strict
+Paper fixture `srv-paper-context-targeters-strict-20261102-r1` confirms
+ordering, radius, and invalid-value rejection with real Zombie entities;
+cross-world behavior remains covered by unit tests only.
+
+Context-aware chains now retain the original trigger and condition context in
+subsequent stages, intersect direct context targets with the previous stage,
+and prevent later world selectors from expanding the set. API tests cover
+matching and excluded triggers, inherited targets, and conditional selectors.
+Strict Paper fixture `srv-paper-context-chain-strict-20261102-r7` verifies these
+paths on real Zombie entities using the production condition provider. It also
+exposed and verified a lifecycle fix: `AiManager.start()` reinstalls the
+provider after `stop()` clears it; start, restart, and stop have unit coverage.
+An additional unit test verifies that stopping an older manager does not clear
+a newer manager's provider. The provider remains global, with the most recently
+installed provider taking precedence; concurrent manager isolation is not
+established by this test or the Paper fixture.
+The threat targeter provider now also unregisters only its owning manager on
+stop and is reinstalled on start. Unit tests cover restart, missing-provider
+fail-closed behavior, and an older manager stopping after a newer registration;
+the provider is still global. Strict fixture
+`srv-paper-threat-provider-strict-20261102-r1` verifies production threat
+sorting, faction filters and actions after startup using synthetic damage
+events and real entities; it does not exercise restart or overlapping managers.
+
+Generic targeter parameters support `skipTargetsUpToIndex` and alias `stuti`.
+Selection ordering is explicit:
+filter and sort candidates, skip the first N entries, then apply `limit`;
+negative and malformed skip values fail closed. API tests cover the full name,
+alias, out-of-range skip, and invalid values; importer tests verify that `stuti`
+is preserved. Strict Paper 1.21.1-133 fixture
+`srv-paper-targeter-skip-index-strict-20261102-r3` observes nearest-order skip
+and alias equivalence through the production targeter path. Its archived
+271-probe report has 259 passed, 12 expected negative controls, and zero
+incomplete. The full targeter catalog and cross-world live-client coverage
+remain open.
+
+Incremental targeter-sorting update: generic `{sort=...}` now supports
+`NONE`, `RANDOM`, `NEAREST`/`CLOSEST`, `FURTHEST`, `HIGHEST_HEALTH`,
+`LOWEST_HEALTH`, `HIGHEST_THREAT`, `LOWEST_THREAT`, `OLDEST`, and `NEWEST`.
+Unknown modes and missing or non-finite threat data fail closed. API coverage
+checks ordering and rejection boundaries; strict Paper 1.21.1-133 fixture
+`srv-paper-targeter-sorting-strict-20261102-r1` verifies real health and age
+ordering and unsupported-mode rejection. Its archived report has 272 probes,
+260 passed, 12 expected negative controls, and zero incomplete. Complete
+targeter parameter and cross-world live-client coverage remain open.
+
+Targeter argument parsing now rejects empty top-level semicolon clauses,
+unmatched quotes and mismatched nested delimiters instead of silently dropping
+malformed fragments. `TargeterOrderingTest` covers these fail-closed cases;
+valid targeter paths retain the existing Paper evidence above. Full strict
+fixture `srv-paper-targeter-syntax-20261104-r2` adds a Paper runtime assertion:
+`@targets{limit=1;;}` returns no targets and valid `@targets{limit=1}` selects
+the real online player. The release probe catalog requires the
+`targeter-syntax=true` observation. Unmatched quotes and other delimiter errors
+remain covered by API tests.
+
+Incremental damage-tag update: Mythic `DamageTag`/`DamageHasTag` aliases now
+map to a fail-closed `damage-tag` condition with the documented default
+`value=true` and strict boolean parsing. `damage-target` scopes normalized
+`tags`, case-preserving `rawtags`, and normalized `damagetype` values to the
+matching victim's synchronous Bukkit damage event; the nested SkillTreeContext
+snapshot also preserves tags, while older YAML snapshots default to no tags.
+Migration, runtime, scope-isolation, and snapshot tests pass. Strict Paper
+fixture `srv-paper-damage-tag-strict-20261102-r3` proves the full mechanic to
+trigger path on Paper 1.21.1-133: an untagged event is rejected, a tagged
+`damage-target` event passes `damage-tag`, cause, and final-damage checks, then
+the configured action equips the probe and cancels the event. The shared-entity
+event router now selects bindings that declare the specific `on-damage` or
+`on-attacked` trigger. This capability has strict runtime evidence, while the
+overall Conditions catalog remains `mapped-unverified`.
+
 Incremental mob-option update: Mythic `Options.MaxCombatDistance` is mapped to
 the per-mob AI profile and cancels melee damage beyond the configured radius.
 Strict Paper fixture `srv-paper-mob-max-combat-distance-20261101-r5` exercises
@@ -29,12 +262,39 @@ production instance as `mode=NORMAL distance=8.0`. Follow-up strict fixtures
 nearby-retention check and the production AI scheduler removing both the
 managed instance and Bukkit entity after it moves beyond the configured radius.
 The latest r5 report records 254 observed probes with zero incomplete.
+Strict client fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3`
+then uses a Mineflayer player that moves 14.01 blocks; Paper observes 8.47
+blocks of displacement and confirms both the managed instance and Bukkit
+entity are removed. Its 264-probe report passes schema and release completeness
+gates with 253 passed, 11 expected negative controls, and zero incomplete.
 
 Incremental condition-boundary update: `compare-values` now rejects `NaN`,
 `Infinity`, and `-Infinity` for DOUBLE/FLOAT/NUMBER comparisons instead of
 letting `Double.compare` treat them as ordered values. The new regression test
 passes alongside the full `SkillConditionsTest`; this improves fail-closed
 coverage but does not establish Paper or complete-catalog parity.
+
+Incremental radius-condition update: `PlayersInRadius`, `EntitiesInRadius`,
+`MobsInRadius`, `LivingInRadius`, `PlayerWithin`, and `PlayerNotWithin` now
+reject negative, non-finite, or malformed radii during migration. Their count
+and amount arguments also reject non-finite and malformed numeric ranges,
+preventing invalid input from being silently projected into a runtime default.
+`MmConditionsTest` covers the fail-closed cases; the full Conditions catalog
+and a dedicated Paper radius fixture remain open.
+
+Runtime parameter-boundary update: the shared `SpecArgs.num` loader now rejects
+`NaN` and infinities before any condition or mechanic factory captures them.
+`SpecArgValidationTest` covers the load-time rejection and warning path for
+skill arguments; this closes a parser boundary across direct skill configs but
+does not replace per-condition runtime and Paper evidence.
+
+Runtime radius-condition update: the `SkillExtras` implementations for
+`players-in-radius`, `entities-in-radius`, `mobs-in-radius`, `mobs-near-origin`,
+and `living-in-radius` now reject negative or non-finite radii. The three
+minimum-count variants also require a non-negative integer count instead of
+silently truncating negative or fractional values. `SpecArgValidationTest`
+covers these factory-boundary failures; the full Conditions catalog and a
+dedicated Paper radius fixture remain open.
 
 Incremental block-condition update: Mythic `BlockType`, `OnBlock`, and
 `BlockTypeInRadius` now preserve exact material lists, Bukkit block tags
@@ -140,16 +400,604 @@ effect-only/visual mode and targeter support. Importer, unit, self-test, and
 report-contract coverage are included. Exploratory Paper 1.21.4 fixture r135
 and strict Paper 1.21.1-133 both record `lightningMechanic=passed`.
 
+The `strike-lightning-effect` compatibility alias now always uses Bukkit's
+visual-only lightning API, including after migration; `strike-lightning` keeps
+the damaging strike behavior. Regression tests cover both paths; an
+importer-to-runtime contract also verifies selected-target execution and that
+an empty explicit target does not strike the origin. This alias correction has
+not yet been verified on a running Paper server.
+
 Incremental mob-drop update: Mythic root `Exp` now maps to a managed instance
 experience override, while explicit `drops.experience` and
 `drops.experience-min/max` values take precedence over the root default. The
 death hook applies fixed or inclusive ranged values even when no loot table is
 configured or the referenced table is missing. Importer, overflow-safe range,
 drop-policy, and report-contract tests are included. Strict Paper 1.21.1-133
-fixture `srv-paper-integration-exp-20261031-r16` records
-`exp-options result=true experience=13 event=true` in a 240-probe release
-report with zero incomplete probes; the same 240-probe report also records the
-complete managed vehicle lifecycle.
+fixture `srv-paper-integration-exp-20261031-r16` records the synthetic
+`exp-options result=true experience=13 event=true` probe. Follow-up strict
+fixture `srv-paper-exp-natural-death-20261101-r3` separately applies Bukkit
+damage to a production managed Zombie and observes `dead=true experience=13`
+from newly spawned experience orbs. Its 255-probe release report has 243
+passed, 12 expected negative controls, and zero incomplete. This verifies the
+root `Exp` natural-death path. Follow-up fixture
+`srv-paper-drops-natural-death-20261101-r4` records a second real Bukkit
+damage death using `integration_death`: the condition-matched Diamond stack
+spawns, the rejected Bread entry stays absent, and 9 experience points are
+spawned from the table's inclusive 9..11 range. Its 255-probe release report
+also has zero incomplete. Natural DropTable death is now covered for this
+condition/range case; looting interaction, broader placeholder expressions,
+and the full official drop catalog remain incomplete.
+
+Dynamic DropTable chance evaluations that return NaN or infinity now fail
+closed for ordinary item drops, weighted selection, and experience entries.
+Native loot parsing also rejects explicit null,
+blank, non-string and conflicting dynamic chance expression aliases instead of
+falling back to the static chance. `LootServiceTest` exercises YAML list and
+indexed entries, inherited nulls, explicit overrides and valid siblings. Strict
+fixture `srv-paper-drop-dynamic-strict-20261104-r1` verifies those file-loading
+and rolling cases on Paper; natural death is not part of that probe.
+Native loot validation rejects invalid `min-tier-level` values
+instead of ignoring the restriction. `LootServiceTest` covers item and XP
+entries, list and indexed YAML, inherited nulls, valid overrides and known-tier
+boundaries. Unknown killer tiers retain the existing behavior. Strict fixture
+`srv-paper-drop-tier-strict-20261104-r1` verifies native file loading and
+rolling; this probe does not exercise natural death.
+Drop migration rejects malformed
+percent signs in both text and structured chance values, while retaining valid
+siblings in the projected table. `MythicDropSpecTest` and
+`MythicDropTableProjectionTest`, `ImportersTest` and
+`MigrationRuntimeConditionContractTest` cover parsing, migration warnings and
+runtime table consumption. `ImportersTest` also covers inline mob drops, including
+mixed valid and invalid entries and tables with no safe entries. Strict fixture
+`srv-paper-drop-chance-strict-20261104-r1` verifies independent-table import and
+rolling for malformed percentages; inline mob drops are not part of that probe.
+`LootServiceTest` covers non-finite dynamic chances; no separate Paper fixture
+exercises those values.
+Native DropTable entries with an explicitly invalid or non-finite static
+`chance` are skipped with a diagnostic, including when luck scaling is enabled;
+an omitted chance still defaults to one. Unit tests cover this parsing behavior,
+but it has not been separately verified on Paper or established as Mythic parity.
+Explicit null is detected in YAML list entries before conversion to a Bukkit
+configuration section. Native file loading also restores null `chance` in indexed
+entries, including YAML merges, so those entries are rejected with a diagnostic;
+already parsed configuration sections cannot recover discarded null keys. The
+indexed-file behavior has automated tests and a Paper service probe for merged
+null item chance and explicit null XP chance; natural death remains untested.
+Table-level experience ranges now use overflow-safe inclusive sampling across
+the full nonnegative integer range; unit tests cover the maximum boundary.
+Amount-tier weights reject non-finite values and use normalized sampling to
+avoid overflowing the total weight; deterministic unit coverage checks large
+equal weights. This boundary has no separate Paper fixture.
+Amount-tier ranges now reject invalid, null, fractional, non-positive,
+non-finite, out-of-range and reversed bounds with a warning instead of silently
+substituting a different range. Valid sibling tiers remain eligible; when no
+valid tiers remain, the existing base-amount fallback still applies. Tests cover
+list entries and explicit null in native indexed single-tier files. This change
+Strict Paper fixture `srv-paper-tier-range-20261104-r1` verifies invalid list
+and indexed ranges, valid sibling selection and the null-indexed base fallback
+through native file loading; no natural death event is part of this probe.
+Explicit malformed or blank tier weights are also rejected with a diagnostic;
+an omitted weight defaults to one. Unit tests cover parsing and selection.
+Explicit null weights in list-form tiers are rejected before conversion to a
+Bukkit section. Native file loading also restores a null weight in a single
+mapping tier under an indexed entry, including a merged null; explicit overrides
+and omitted weights retain their usual behavior. When no valid tier remains,
+the entry falls back to its base amount. Strict Paper fixture
+`srv-paper-native-numeric-20261103-r1` verifies the merged null weight, base
+amount fallback, valid overrides, and diagnostics through the server-side
+service (305 probes); it does not test natural death for invalid values.
+Already parsed sections cannot recover
+discarded null keys.
+Weighted entry selection also normalizes finite dynamic weights before summing;
+`LootServiceTest` covers two equal weights whose unscaled sum would overflow.
+This numerical boundary has not been separately verified on Paper.
+Migration preview also detects duplicate imported loot table IDs across write
+plans, ignoring case, and apply rejects these conflicts before writing. Existing
+target tables may still be replaced, including differently cased variants.
+Unit tests and an importer-to-apply contract test cover conflict detection,
+preservation of the existing file, and successful replacement after resolving
+the conflict; this change has no separate Paper fixture.
+Migration preview also rejects multiple mob write plans resolving to the same
+case-insensitive target file before apply. An importer-to-apply contract test
+checks normalized name collisions and preservation of an existing mob file;
+reimport replaces the mob definition as a unit after backing up the old file,
+so stale entity type and option fields cannot override the imported values. A
+cross-module test checks backup and runtime type selection; no separate Paper
+fixture covers this. Backup IDs include a unique suffix so rapid successive
+imports retain separate snapshots; a cross-module test restores both after a
+service restart. Rollback reports file restoration failures. Standalone skill migration now writes
+to the runtime's `skills.yml`, replacing imported definitions without stale
+fields and rejecting normalized skill ID collisions within and across source
+files. An importer-to-apply contract loads the result into `SkillService`; no
+separate Paper fixture covers this change. Item, spawner and named-region
+normalized ID collisions within a source and across write plans now block apply;
+replacing existing definitions preserves unrelated entries. Importer-to-apply
+and merge tests cover these cases; no separate Paper fixture covers them.
+Existing shared target YAML and generated write plans are parsed strictly before
+any write; malformed target YAML aborts migration without overwriting that file
+or writing sibling plans. A cross-module test covers this failure boundary.
+Migration preview resolves spawner primary and random-pool mob references to
+the IDs of mobs included in the same import. Unknown references are preserved
+with a diagnostic; colliding resolved pool entries block apply. A cross-module
+contract loads the written configuration into `SpawnerService`; no separate
+Paper fixture verifies natural spawning through this migration path.
+Standalone spawner region files now produce write plans, and `region=`
+conditions referencing regions imported in the same batch follow normalized
+IDs, including negation. An importer-to-runtime contract checks inside and
+outside locations; external region names are preserved. This has no separate
+Paper fixture.
+Spawner condition parsing now fails closed for blank, non-string, null list
+entries and delimiter-only values, even with a permissive external condition
+tester; an empty list remains unconditional. Migration preserves malformed
+entries as a fail-closed marker and emits an unsupported diagnostic. Unit and
+importer-to-runtime tests cover these cases; no separate Paper fixture does.
+Native spawner file loading and Mythic spawner import also preserve explicit
+null condition fields, including merged YAML values, as fail-closed markers.
+File-level and migration-to-runtime tests cover nested and direct roots, valid
+overrides, absent fields, and failed reload cleanup. Paper strict fixture
+`srv-paper-web-strict-20261103-r1` additionally verifies HTTP spawner reload
+failure and recovery on the server thread; browser rendering and loot reload
+failure are outside that probe. `srv-paper-spawner-null-20261103-r2` verifies direct and merged native null
+rejection and an empty-list override through forced spawn, not natural scheduling
+or imported spawners on Paper.
+Spawner state loading now detects malformed YAML before Bukkit can silently
+return an empty configuration, allowing the existing backup fallback to restore
+spawn counters. A unit test supplies a Bukkit server logger to exercise the
+production error-handling path. Independent two-boot Paper fixture
+`srv-paper-spawner-corrupt-restart-20261103-r1` verifies primary YAML corruption,
+backup fallback and restoration of one generated count; scoped counters and
+cooldown restoration after corruption remain unverified on Paper.
+After a failed spawner file reload, state writes are suppressed until a
+successful load, preventing a subsequent reload or shutdown from overwriting
+the saved counters with an empty snapshot. A unit test covers failure, retry,
+restoration and later writes; this recovery sequence has no Paper fixture yet.
+Independent Paper fixture `srv-paper-web-reload-20261103-r2` checks HTTP reload
+failure for malformed spawner YAML and successful reload after repair. Server
+logs show both reloads on the primary thread; browser rendering, loot failure,
+and persisted counters across this particular failure are not covered.
+Spawner height, count, time-range, and region conditions now reject invalid
+arguments before negation, including unknown regions without an external
+resolution; valid negation remains supported. Unit tests cover these paths.
+Invalid moon phases, unknown biome enum names, and blank world names likewise
+fail before negation; valid named negation is covered by unit tests. Strict
+Paper 1.21.1 fixture `srv-paper-named-conditions-strict-20261102-r1` verifies
+the three rejections and valid negated world selection through force-spawn;
+natural scheduled spawning and valid biome/moon negation remain unit-only.
+Spawner player-faction relation conditions now retain the full faction name;
+blank arguments for faction equality, allied, and hostile checks fail closed
+even when negated. Unit tests cover both relation directions and negation with a
+mock faction table; this correction does not yet have a Paper fixture.
+Negated light conditions now reject invalid comparisons, unloaded chunks and
+light-read exceptions before applying negation; valid negation and `!=`
+comparisons have unit coverage. Strict fixture
+`srv-paper-negated-conditions-strict-20261102-r1` verifies a valid negated
+height condition and rejects invalid negated height and light comparisons on
+Paper 1.21.1 (280 probes, 266 passed, 14 expected rejections). Unloaded-chunk
+and exception behavior for negated light still has unit coverage only.
+
+Incremental DropTable condition update: table-level `TriggerConditions` are
+parsed separately from entry conditions and evaluated against the killer
+before that table rolls, including nested tables. Missing killer context or a
+missing condition evaluator fails closed. Table-level trigger and dropper
+conditions accept a single scalar as well as a list; scalar conditions and
+nested tables have unit coverage. Blank or non-string list entries produce a
+warning and fail closed even if an evaluator accepts them; empty lists remain
+unconditional. This malformed-input behavior has unit coverage only. Drop
+entry list maps with explicit `conditions: null` also fail closed for items
+and experience. Native `loot.yml` file loading restores explicit null table
+conditions and indexed entry conditions discarded by Bukkit, so they fail
+closed as well, including conditions inherited through YAML merge keys; explicit
+overrides and merge-list priority are respected. Invalid file reloads clear the loaded tables. The
+strict Paper fixture `srv-paper-native-null-20261103-r1` verifies inherited null
+conditions, indexed entries, experience rejection, and an explicit valid override
+through the server-side service (304 probes); it does not test invalid conditions
+on natural death. Merge-list priority and failed reload have automated coverage.
+Callers
+that pass an already parsed configuration section cannot recover discarded nulls.
+Table projection also rejects blank, null, or non-string condition entries rather than
+discarding them, with a migration warning; this has projection unit coverage.
+Standalone tables containing case-insensitive duplicate fields are preserved
+without projection so conflicting condition lists cannot be silently ignored.
+Unmapped trigger-condition warnings retain the complete source table. Importer
+and projection tests cover these cases; Paper validation remains pending.
+Drop-entry `conditions`, `DropIf`, and `NoDropIf` reject malformed values, and
+a bare inline `?` is rejected instead of losing its restriction; importer unit
+tests cover these cases.
+Structured drop entries now merge all recognized condition aliases, including
+`Conditions`, instead of silently discarding later aliases. Unknown structured
+entry fields and unrecognized text before the first inline condition are not
+projected; standalone table migration reports the original unsafe entries.
+Ambiguous item/table, amount, chance, and expression aliases, as well as blank
+or non-scalar recognized values, are also rejected and preserved rather than
+silently choosing a value or defaulting an empty chance to one.
+When a mob has multiple `DropTable-1`, `DropTable1`, or `Drops` sources, all
+are retained in `mob.unsupported.Drops.conflicting-sources` with a warning and
+none is projected; the combined source semantics remain unverified. External
+drop dependencies are still reported. Importer tests cover preservation and
+the absence of generated loot; no Paper fixture covers this migration case.
+Parser, projection, and importer tests cover these cases. A cross-module test
+also loads the migrated table into `LootService` and rejects a roll when any
+merged condition fails or the evaluator is absent; it uses a controlled
+evaluator, and no Paper fixture verifies this migration change.
+Standalone table import now validates original YAML drop objects when recording
+unsupported entries, avoiding false warnings for mapped entries; a file-level
+import test covers mixed valid and invalid mappings and the report contents.
+Applying an imported loot table replaces that table as a unit, removing stale
+entries and conditions while retaining other tables; this merge behavior has
+unit coverage and no separate Paper fixture.
+Experience uses the same top-level trigger gate, while a rejected nested child does not erase experience
+from an accepted parent. The context-free experience overloads also fail
+closed when killer or dropper conditions require unavailable context; this
+overload behavior has unit coverage, not separate Paper evidence. Focused
+`LootServiceTest` covers accepted, rejected,
+nested, and unavailable-evaluator paths. Strict fixture
+`srv-paper-drops-trigger-conditions-20261101-r5` uses natural player-caused
+deaths to verify a passing nested table, a rejected nested table, and zero
+experience for the rejected parent table.
+Native loot entries also accept a fixed `amount` for items and XP, with
+`amount-min` and `amount-max` taking precedence. Unit tests cover fixed values,
+ranges and invalid values. Paper fixture `srv-paper-fixed-amount-strict-20261102-r1`
+observed 4 Bread and the expected tiered XP in both real Bukkit-damage death
+events. Its overall strict gate failed because the separate delayed
+`deathLootExperience` orb observation recorded 8 XP; it is not release evidence.
+Strict fixture `srv-paper-visibility-arguments-20261103-r1` passed 301 catalog probes
+(284 passed and 17 expected rejections); its report is
+`tools/paper-integration/reports/paper-1.21.1-visibility-arguments-20261103-r1.json`.
+On a real Zombie, target mob, alive and gravity conditions pass; invalid target
+sneaking, mob and alive arguments, including negated invalid mob, are rejected
+after migration. A separate probe verifies a Zombie target's sneaking and
+non-sneaking states gate an imported skill and its action. Other condition
+variants still need Paper positive controls and dedicated argument evidence.
+The parameterless day/time and weather aliases reject unexpected arguments at
+import and runtime, preserving the original condition and warning on import;
+tests include negated invalid conditions. Paper verifies valid morning and
+clear against the current world state and rejects invalid morning, rain and
+negated thunder while preserving their source and emitting warnings.
+Climbing, invisibility, glowing, falling and target frozen aliases have the
+same argument validation, with importer-to-runtime and negation tests. Paper
+verifies glowing, invisible and frozen Zombie target states and rejects six
+invalid inputs with individual preservation and warnings; positive climbing,
+falling and charged states still need dedicated Paper evidence.
+Real damage events cover imported conditional reduction, condition rejection,
+and rejection of an invalid native multiplier. Explicit null multipliers and
+multiple same-type rules lack dedicated Paper probes; profile reload also lacks one.
+Native false, null, and unknown-field immunity entries and null scalar modifier
+entries are rejected with warnings during real damage events. Null multipliers
+inside modifier sections and multiple same-type rules need dedicated Paper evidence.
+`isFrozen` and `projectileHasEnded` argument validation preserves unknown
+arguments with migration warnings and rejects them at runtime; importer and
+runtime tests cover both. Paper verifies `isLiving`, `isBaby` and `isFrozen`
+positive controls and rejection of their unknown arguments on a real Zombie.
+The same fail-closed argument checks cover `hasTarget`, night/rain/thunder
+state and living/player/mob/monster/animal/villager/tameable/raider checks.
+Age, taming, shearing, saddling and charged-state aliases and their target
+variants have the same importer and runtime checks.
+Movement and environmental states (sneaking, sprinting, flying, blocking,
+gliding, swimming, water, lava, fire and air) and their target variants now
+reject unexpected arguments during import and runtime binding. Tests cover
+preservation, warnings, and execution rejection; this later change is not in the
+archived Paper JAR.
+Target entity categories and caster/target AI, gravity, silent, alive, dead and
+valid states also reject unexpected arguments. Importer and runtime tests cover
+aliases, retries, negation and prevented skill execution; this subsequent change
+has no dedicated Paper probe and is not in the archived Paper JAR.
+Other parameterless condition aliases remain to be audited.
+Later migration changes preserve unsupported `Immunities` and `DamageModifiers`
+sections as structured YAML under `mob.unsupported.Immunities` and
+`mob.unsupported.DamageModifiers`, with warnings and importer/runtime tests.
+Nested mapping nulls under immunity and modifier entries are restored as invalid
+markers, including in preserved unsupported sections. Paper verifies a nested
+modifier field and rejection in real damage events; markers
+do not preserve the original null value and other YAML shapes remain unverified.
+Modifier sections and lists with unmapped conditions preserve the original entry
+under `mob.unsupported.DamageModifiers` and report that location. Importer-to-runtime
+tests and Paper verify a list-form null condition survives YAML reload and rejects
+real damage. Other preserved shapes are not covered by that Paper probe.
+The preceding `srv-paper-immunity-preservation-20261103-r1` run failed the strict
+gate: the death event reported 13 XP but only 10 orb XP was observed; its report
+and log are archived as `paper-1.21.1-immunity-preservation-20261103-r1-failed`.
+That historical run did not record orb counts.
+Non-strict diagnostic fixture `srv-paper-xp-spawn-diagnostic-20261103-r1`
+recorded 13 event XP and three uncancelled orbs of 7, 3 and 3 at the death
+location; each orb generated duplicate spawn notifications. Its report and log
+are archived under `tools/paper-integration/reports/`. Follow-up non-strict
+fixture `srv-paper-xp-repeat-20261103-r3` observed eight `7x1,3x2` stacks in
+400 deaths: face values total 10, while the count-weighted total is 13 for all
+400. The natural-death, death-loot, and imported drop-table probes now count
+stacks and restore pre-existing orb state; the latest strict run includes them.
+The historical failed run did not record counts and cannot be conclusively
+classified. The 400-death diagnostic is not itself release evidence.
+Unknown direct immunity/modifier fields, including nulls, and invalid native
+`immune` values fail closed with warnings. Real damage events verify null immunity
+fields, null and true unknown modifier fields, and invalid and null `immune` values.
+Recent migration backup and failure handling lack dedicated Paper probes.
+`lastSignal` migration now preserves explicit blank, unknown, multiple, or
+unrepresentable signal arguments as untranslated rather than defaulting or
+discarding input. Runtime binding rejects invalid keyed or multiple arguments;
+an importer-to-runtime test covers preserved invalid and duplicate-key skill gates. No Paper
+fixture covers these boundaries.
+Failed condition factories no longer leave a cached binding behind; repeated
+invalid bindings and negated invalid conditions are covered by runtime tests.
+Action factories likewise clear failed bindings, preventing retries from
+returning unregistered action keys; this has unit coverage but no Paper probe.
+Composite conditions reject empty operands, extra text or braces, and `not`
+with multiple operands instead of discarding them. Runtime tests cover these
+fail-closed syntax cases; no separate Paper fixture covers them.
+Runtime composition respects parentheses and applies unary negation before
+top-level `&&`/`||`; unit tests cover grouped and mixed expressions.
+Scalar condition lists preserve `||` as a boolean operator while retaining
+single `|` as a list separator; parser and runtime evaluation tests cover both.
+Fail-closed scalar parsing now retains empty semicolon or single-pipe list
+entries as invalid markers, including in spawner import and runtime loading.
+Structured drop-entry condition validation also rejects these empty elements
+instead of silently weakening `DropIf` or `NoDropIf`; importer tests cover it.
+Native dropper, killer and entry conditions apply the same fail-closed scalar
+parsing; runtime tests use permissive evaluators to verify empty entries reject.
+Strict condition-list parsing also marks unmatched delimiters and quotes as
+invalid, including cross-nested delimiter pairs; parser, drop and spawner tests
+cover these cases without Paper evidence.
+Previous-build strict fixture `srv-paper-current-strict-20261103-r2` passed
+292 probes (275 passed and 17 expected rejections) on Paper 1.21.1-133; its
+archived report is `tools/paper-integration/reports/paper-1.21.1-current-strict-20261103-r2.json`.
+This reruns the existing catalog and does not independently verify every recent
+drop-parser boundary.
+Follow-up strict fixture `srv-paper-orb-detail-strict-20261102-r1` passed the
+fixed amount checks and the full gate. Its separate death-loot event recorded
+15 XP, with orbs 7+7+1 both immediately and at the delayed check; this does
+not establish the cause of the earlier 8 XP observation.
+Experience entries now apply `min-tier-level` using the same effective player
+tier and mob level policy as item entries. Unit tests cover below-threshold,
+matching, unknown, and mob-level cases; a simulated death event also verifies
+the plugin handler passes mob level to the real loot service. Strict fixture
+`srv-paper-exp-tier-strict-20261102-r1` observes real Bukkit-damage deaths with
+no player killer: level 2 produces 2 XP and level 3 produces 7 XP. It does not
+verify player tier integration or experience orb pickup.
+
+Nested item expansion does not currently add child-table experience to the parent
+experience roll, and the amount range or tiers on a nested reference are not consumed.
+The importer now preserves nested references with a non-unit amount as unsupported
+instead of projecting an amount that runtime ignores; mob imports retain the
+source under `mob.unsupported.Drops.entries`, and standalone table imports
+retain it in the migration report with a warning. Importer tests cover this;
+standalone tests exercise both bare table names and structured references while
+confirming that safe sibling drops remain projected. The change has not been
+separately validated on Paper.
+Nested table references whose normalized identifier contains no ASCII letters
+or digits are preserved as unsupported rather than resolving to `unnamed`;
+unit tests cover punctuation-only and prefixed punctuation-only names.
+When multiple source DropTable names normalize to the same ID, bare and
+structured references to that ID are preserved with a migration warning instead
+of choosing a table. Importer tests cover collisions across source files; no
+separate Paper fixture covers this migration boundary.
+If the DropTables catalog cannot be read completely, structured table references
+are also preserved because hidden ID collisions cannot be excluded; an unrelated
+Items catalog failure does not block explicit table references. Importer tests
+cover both paths.
+If the Items catalog is incomplete, structured item drops are preserved rather
+than projected with an unverified identifier. An incomplete DropTables catalog
+does not bypass normalization and collision checks for structured item drops;
+importer tests cover both boundaries. No Paper fixture validates this change.
+Malformed or unreadable Mythic source YAML now produces a conversion conflict in
+preview and blocks apply before any writes; a migration service contract test
+covers a broken source alongside a valid mob. This is not Paper evidence.
+Scanning also fails with a path-specific error for inaccessible or invalid
+category directories instead of silently applying a partial result; a service
+contract test covers a category path that is a file. Missing optional category
+directories remain supported. Permission failures have not been tested on Paper.
+Mythic source scanning and the drop/item reference catalog both recognize
+`.yml` and `.yaml` extensions case-insensitively; an importer test covers
+cross-file table resolution and excludes directories with YAML-like names.
+Both now scan nested category directories without the previous three-level
+limit. An importer test covers deep mobs, items, and cross-file drop references;
+this change has no separate Paper fixture.
+Migration service conversion now uses the scanned plugin root to identify the
+top-level content category, so nested folders named `Items` or `Skills` cannot
+change file classification. A service contract test covers nested category
+names and custom-item drop resolution; direct context-free importer calls retain
+their legacy path inference. This change has no Paper fixture.
+Mob migration now accepts top-level definitions as well as the legacy `mobs:`
+wrapper, including both in one file; a service test applies both forms. This
+change has not yet been verified on Paper.
+An importer test also covers a wrapped mob named `Skills` and a top-level mob
+named `mobs`; unusual structurally ambiguous inputs remain a compatibility edge.
+Non-section mob entries at the top level or inside the wrapper are now reported
+with their source values while valid sibling mobs are still projected. This has
+importer test coverage but no separate Paper evidence.
+`MobType` and `EntityType` now project to the same `mob.entity-type` consumer as
+`Type`. Multiple type aliases on one mob are preserved in the migration report
+without generating that mob; importer tests cover both aliases and conflicts.
+No separate Paper fixture covers these aliases.
+Explicit invalid or non-spawnable Bukkit entity types are preserved as an
+unsupported mob report instead of producing a runtime fallback entity. Importer
+tests cover unknown and numeric types; no Paper fixture covers this boundary.
+Valid entity types are normalized to their Bukkit enum names in generated YAML
+and mapping reports, including lowercase values and surrounding whitespace;
+importer tests cover the runtime enum lookup, without a separate Paper fixture.
+Load warnings now inspect transitive child tables for omitted experience, with
+cycle-safe unit coverage; this warning change has not yet been tested on Paper.
+Loading now reports these limitations and missing child tables; unit tests cover the
+diagnostics and current behavior. These cases have no Paper parity evidence and remain open.
+
+Follow-up strict fixture `srv-paper-drops-trigger-conditions-20261101-r7`
+adds real Bukkit permission-context evidence: an OP player passes
+`has-permission loot.vip`, while a non-OP player fails it. The observed line
+confirms both permission results, accepted nested output, rejected nested
+output with the parent's 4 XP retained, and zero item/XP output for the parent
+rejected by its own condition. The 258-probe report contains 246 passed and 12
+expected negative controls, with zero incomplete. This still covers only the
+registered DropTable fixtures; looting interaction, broader placeholder
+expressions, importer-wide drop semantics, and the official drop catalog remain
+incomplete.
+
+Incremental importer safety update: structured Mythic Drop entries now enter a
+generated runtime table only when every condition translates. If any condition
+is unknown, the entire original entry is preserved under
+`mob.unsupported.Drops.entries` with an importer warning; known sibling
+conditions are not allowed to turn that entry into an unconditional drop.
+`MythicDropTableProjectionTest` and `ImportersTest` cover both the excluded
+runtime projection and preserved source data. This closes a silent data-loss
+path, but does not expand the set of supported Mythic drop conditions.
+
+Incremental amount-range update: official inline Mythic drop ranges use an
+exclusive upper bound (`1-3` and `1to3` both mean 1..2). `MythicDropSpec`
+now parses both separators, keeps fixed amounts unchanged, and rejects empty
+or reversed ranges so the importer preserves the original source entry rather
+than changing its meaning. `MythicDropTableProjectionTest` covers these cases.
+Migration tests verify the importer converts the official `GOLD_INGOT 1-3 1`
+entry to an exclusive 1..2 range. Strict fixture
+`srv-paper-drops-range-strict-20261102-r4` verifies the corresponding runtime
+range on natural Bukkit death: its fixture `loot.yml` contains the projected
+`amount-min: 1` / `amount-max: 2` values and observes
+`exclusive-range-drop=true range-amount=2`. This proves the runtime behavior
+for the projected config, not an importer-to-Paper execution. That end-to-end
+imported-range fixture remains open; weighted DropTable semantics and the
+broader drop catalog also remain incomplete.
+
+Official DropTable semantics audit (MythicCraft Wiki, updated 2026-08-19):
+`TotalItems` counts generated drop lines and treats entry chances as weights;
+`MinItems`/`MaxItems` also constrain drop-line count, with weighted selection
+when both are set. `BonusLevelItems` and `BonusLuckItems` modify generated line
+count from mob level and killer luck respectively, and require a table item
+bound (`TotalItems`, `MinItems`, or `MaxItems`). Either bonus option also switches
+entry chances to relative weights, including when only one bound is configured.
+Fractional bonus results add their integer part plus one line with probability
+equal to the fractional part; this follows the official statement that decimal
+bonuses provide an additional chance per level. The documented luck input includes
+the Bukkit Luck attribute and Luck-based effects/enchantments; `BiasStat`
+affects rare-item weights. The death hook reads the killer's effective Bukkit
+`GENERIC_LUCK` attribute; the plugin test verifies the value and missing-
+attribute fallback. This proves the Bukkit attribute input only; conversion
+from Mythic custom Luck enchantments/curses has no defined runtime provider or
+verified formula yet. Helstera now
+parses `TotalItems`/`total-items` as generated row count, treats eligible entry
+chance as relative weight for `TotalItems`, two-sided `MinItems`/`MaxItems`, or
+either Bonus option. Single-sided bounds without a Bonus option preserve entry
+order. A row is an output `Hit`,
+independent of the stack amount. Conditions and dynamic chance expressions are
+resolved before weighted selection, and nested expansion is capped at the
+parent's remaining row count. These semantics have unit coverage. Strict Paper
+fixture `srv-paper-drops-total-items-strict-20261102-r1` verifies the production
+generated-line path during a real player-caused managed Zombie death: exactly
+128 items are produced, observed as 33 DIAMOND and 95 EMERALD by amount for
+configured 1:3 weights. Its archived report requires and passes
+`deathLootGeneratedLines`, with 266 probes complete and zero incomplete.
+`BonusLevelItems` and `BonusLuckItems` parse fixed and ranged multipliers and
+add `mob_level * multiplier` and `luck * multiplier` generated lines when any
+item-count bound is configured. A single `MinItems` or `MaxItems` uses that
+bound as the base count. Either bonus option switches eligible entry chances
+to relative weights, even with a single bound. Fractional bonuses add their
+integer part and probabilistically add one line at the fractional remainder;
+negative combined results use the same floor-based sampling and generated line
+count is clamped at zero. Unit tests cover fixed/ranged values, fractional
+probabilities, single-sided weighted selection, negative Luck, and fail-closed
+invalid/unbounded config. Strict Paper fixture
+`srv-paper-drops-bonus-semantics-strict-20261102-r1` verifies natural-death
+level-only, Luck-only, combined and zero-bonus cases plus single-bound weighted
+selection; its 273-probe report has 262 passed, 11 expected negative controls,
+and zero incomplete. The earlier strict fixture
+`srv-paper-drops-bonus-order-strict-20261102-r4` incorrectly asserted ordered
+selection under a single bound and is historical for that behavior. The Mythic
+importer now scans standalone `DropTables/` files
+and projects safe entries, line bounds, bonuses, and killer `TriggerConditions`;
+the plugin contract test feeds that projection into the production `DropTable`
+parser. Explicit null `Conditions` or `TriggerConditions` now block projection
+and produce a warning; the report uses an invalid-condition marker, while the
+source YAML retains the original null spelling. Importer tests also reject
+inherited null table conditions and unsafe parent references,
+including multi-level references and YAML merge priority. Strict Paper fixture
+`srv-paper-merged-null-20261103-r1` checks inherited null rejection, cross-file
+parent warnings, stale-table rejection and a valid sibling through the importer
+and runtime service (306 probes); it does not test invalid merged conditions
+through natural death. A cross-module apply-and-reload test
+also confirms a stale same-name destination cannot be rolled by the imported
+parent; another checks that a mob's direct reference remains unsupported.
+Importer and runtime contract
+tests verify that rejected tables cannot be rolled while a valid sibling can.
+Paper 1.21.1 strict fixture `srv-paper-null-drop-conditions-20261103-r1`
+confirms those importer, warning and runtime-service outcomes in the server
+process; it does not kill a mob for the invalid tables. Its report has 302
+probes (285 passed, 17 expected rejections), zero incomplete. A subsequent
+importer-to-runtime test also rejects bare and structured parent references to
+null-condition children, including with stale same-name destination tables;
+the same validation now rejects unsupported conditions and case-conflicting
+keys for parent and direct mob references. Tables with no projectable entries,
+and parent-only chains depending on them, are also rejected as references so
+stale target tables cannot replace them. Strict Paper fixture
+`srv-paper-unsafe-drop-references-20261103-r1` verifies parent references to
+null-condition, unknown-condition and indirect empty children are warned and
+do not roll stale same-name tables; a valid sibling still rolls. The direct mob
+reference and case-conflict variants have automated tests only. Malformed scalar
+and explicit null table definitions also block parent and mob
+references; null is represented by a marker in the warning report. This later
+handling has automated tests but no new Paper evidence. Strict fixture
+`srv-paper-drops-imported-range-strict-20261102-r5` verifies importer output,
+runtime table loading, and a real player-caused natural death with one Diamond,
+two Gold Ingots from the imported exclusive `1-3` range, and 5 XP in
+`deathLootImportedDropTable` (273 probes, zero incomplete). Table-level
+dropper conditions and killer trigger conditions are both present in the
+source file and exercised by the imported table.
+Source DropTables that normalize to the same ID are each preserved with a
+warning, including collisions between a valid and an invalid definition; this
+collision handling has automated coverage but not yet Paper evidence.
+The follow-up strict fixture `srv-paper-imported-drop-contract-strict-20261102-r1`
+extends this with condition-alias binding and conflicting-source preservation:
+the runtime report records `conditions-mapped=true`,
+`conflict-preserved=true`, and a real natural managed-Zombie death with one
+Diamond, one Gold Ingot, and 5 XP. Its 284-probe report has 267 passed,
+17 expected rejected, and zero incomplete. This verifies the migration
+contract for ambiguous `DropTable-1`/`DropTable1`/`Drops` sources without
+claiming that unsupported Mythic drop semantics are equivalent.
+Table-level dropper `Conditions` now translate and evaluate against the
+death entity independently of killer `TriggerConditions`; migration, fail-
+closed evaluator, and runtime-binding tests cover this context. Strict fixture
+`srv-paper-dropper-conditions-strict-20261102-r1` completes 268 release probes
+and verifies natural deaths: `is-monster` allows Emerald and 3 XP, while
+`is-animal` rejects BREAD and its 7 XP. Unsafe entries and unknown options are
+surfaced as unsupported report values. Standalone `exp`/`xp`/`experience`
+entries now project as conditional, chance-based runtime experience drops and
+are excluded from item generation; importer and runtime tests cover the path.
+Strict fixture `srv-paper-exp-lines-strict-20261102-r2` verifies an additional
+5 XP from a natural managed-Zombie death; its 268-probe report is archived in
+the release evidence manifest. Strict fixture
+`srv-paper-fractional-bonus-strict-20261102-r4` samples 128 natural deaths
+with a level-one 0.5 bonus; 63 produce an extra line. Its 273-probe report
+omits the unrequested raw Potion workflow and is scoped to the recorded probes.
+`BiasStat`, Mythic custom Luck
+enchantment/curses inputs, and broader Mythic entry compatibility remain
+incomplete. The official DropTables catalog does not define a separate
+`Looting` table option.
+See the official
+[Drops](https://wiki.mythiccraft.io/mythicmobs/drops/Drops) and
+[DropTables](https://wiki.mythiccraft.io/mythicmobs/drops/DropTables) references.
+
+Strict Paper 1.21.1-133 fixture
+`srv-paper-drops-luck-attribute-strict-20261102-r2` validates the runtime Luck
+input on a real player-caused death. It temporarily sets the killer's base
+`GENERIC_LUCK` to 1, records effective `luck=1.0`, and observes an IRON_INGOT
+whose configured base chance is zero but whose existing per-entry `luck-factor`
+raises it to one. The prior player attribute is restored immediately. The
+266-probe report has 255 passed, 11 expected negative controls, and zero
+incomplete. This is Bukkit Luck-to-current-scaler evidence only. Separate
+strict fixture `srv-paper-drops-bonus-order-strict-20261102-r4` verifies
+`BonusLuckItems` with the Bukkit Luck attribute; neither fixture covers Mythic
+custom Luck enchantment/curses inputs or `BiasStat`.
+
+Incremental condition update: official `IsRaiderPatrolLeader` and the
+`isPatrolLeader` alias map to the Bukkit `Raider#isPatrolLeader()` state. Unit
+tests cover both boolean states and fail-closed behavior without a raider;
+importer tests cover both source names. Strict fixture
+`srv-paper-raider-patrol-condition-strict-20261101-r1` verifies the positive
+and negative branches on a real Pillager and restores the original flag. Its
+dedicated `raiderPatrolLeaderCondition` report probe is required by the release
+contract. The full Conditions catalog remains `mapped-unverified`.
+
+Incremental condition update: official `IsCreeperPrimed` maps to Bukkit
+`Creeper#isIgnited()`. Unit tests cover ignited and non-ignited states plus
+fail-closed behavior without a Creeper; importer tests verify the Mythic name.
+Strict fixture `srv-paper-creeper-primed-condition-strict-20261101-r1` checks
+both states on a real Creeper, restores its ignited state, and requires the
+dedicated `creeperPrimedCondition` report probe. The complete Conditions
+catalog remains `mapped-unverified`.
 
 Incremental vehicle-trigger update: the Paper self-test now uses an independent
 managed ArmorStand passenger instead of the online player, so player death and
@@ -174,14 +1022,62 @@ both forms; keyed mappings remain unchanged.
 The existing `take-item` runtime now also accepts official `RemoveItem` aliases
 (`removeitem`/`remove-item`), preserving the same target-aware inventory
 semantics without introducing a second removal implementation.
+For custom item identifiers, `has-item`, `target-has-item`, and `take-item`
+now require item similarity instead of accepting any stack of the same material;
+vanilla material identifiers retain type-based matching. Unit tests cover mixed
+custom stacks and removal, but this change has not yet been verified on Paper
+with an external item plugin. Identifiers that are also vanilla material names
+retain vanilla matching semantics.
+
+Entity equipment, horse armor, and armor-stand item options now try the full
+custom item identifier before parsing vanilla material/amount syntax. The
+vanilla parser rejects a nonnumeric suffix in the amount position, avoiding a
+fallback from `stone:custom` to STONE; unit tests cover the parser and invoke
+all three equipment paths with a mock integration adapter, including numeric
+custom IDs, an unresolved ID, and vanilla fallback. A numeric
+suffix such as `stone:2` remains ambiguous with the documented vanilla amount
+syntax when no custom resolver accepts it. External-plugin and Paper runtime
+verification of these equipment paths remains outstanding.
 
 Incremental trigger update: killer-side `on-kill` and `on-kill-player` now
 resolve managed mob killers from the damage event and unwrap projectile
 shooters. `PlayerKills` now adds a lifetime counter per managed mob instance,
 records only player victims on the killer-side path, and clears the counter at
 instance teardown. Exploratory Paper 1.21.4 killprobe records the real-player
-`on-kill-player` path and `PlayerKills` range checks as passed; strict Paper
-1.21.1 evidence remains pending.
+kill path and `PlayerKills` range checks as passed. Strict Paper 1.21.1-133
+fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` also
+passes `killTrigger` through a real Bukkit mob-damage/death chain and
+`playerKillTrigger` through the real online-player death event with controlled
+`lastDamageCause` attribution; the same probe passes `player-kills >=1` and
+rejects `player-kills >1`. This verifies death-event dispatch and the managed
+counter, but not a naturally delivered PvP damage packet.
+
+Death cancellation timing update: native killer-side triggers and persistent
+chunk release run at `MONITOR` with `ignoreCancelled`; custom loot is added to
+the death event instead of spawning items during the listener. Revive health
+is applied at `HIGHEST` to deaths cancelled before that handler. A contract
+test covers cancelled and confirmed killer-side dispatch. Paper 1.21.1-133
+fixture `srv-paper-revive-late-20261102-r1` verifies real lethal damage
+cancelled by a separate HIGH-priority self-test listener, followed by survival,
+instance retention, 8 health and no observed diamond drop after 60 ticks.
+Third-party plugin interoperability, cancellation later at the same `HIGHEST` priority, and plugins that
+modify events at `MONITOR` remain unverified. Mythic `~onKill` skill lines are
+still preserved as unsupported by the importer; native `on-kill` support and
+the historical runtime evidence do not establish an importer mapping. The
+official trigger catalog consulted on 2026-11-02 does not list `onKill`.
+
+Mythic `~onDamaged` and its documented `~onHurt` alias now map supported
+inline mob skill actions to `mob.triggers.on-damage.do`. Importer and runtime
+contract tests cover both aliases and an entity attacker as `@Trigger`;
+environmental damage supplies no trigger entity. Multiple event suffixes and
+unsupported mechanics and direct uses of `<skill.var.damage-...>` remain
+preserved. Official `<skill.var.damage-amount>`,
+`<skill.var.damage-type>` and `<skill.var.damage-cause>` behavior remain
+unverified. Paper fixture `srv-paper-damaged-import-20261102-r2` converts both
+aliases and executes actions on a real attacker using Bukkit damage; a no-source
+damage call lowers victim health without selecting it as `@Trigger`. Natural
+combat AI and projectile semantics remain unverified. Source:
+https://wiki.mythiccraft.io/mythicmobs/Skills/Triggers/ondamaged
 
 Incremental condition update: official `Absorption` now reads Bukkit
 `Damageable#getAbsorptionAmount()` through the active target/caster entity,
@@ -245,12 +1141,35 @@ semantics and fresh Paper evidence remain pending.
 Incremental geometry-condition update: official `Cuboid` and `InBounds` now
 evaluate inclusive cuboids, spheres, and upright cylinders against the active
 target/origin using coordinate triples, location targeters, relative cuboid
-coordinates, and world isolation. Pin names and malformed/unknown shapes fail
-closed because this adapter has no pin registry. Migration, binder, runtime,
+coordinates, and world isolation. Named pin references in these geometry
+conditions remain unsupported and fail closed. Migration, binder, runtime,
 and self-test coverage are included. Exploratory Paper 1.21.4 fixture
 `srv-paper-integration-exploratory-1.21.4-r121` records
 `bounds-condition=true`; strict Paper 1.21.1-133 fixture
 `srv-paper-integration-final-r8` also records the bounds probe passed.
+
+Incremental Pins condition update: plugin-owned `plugins/helsteraMobs/pins.yml`
+loads named single or multiple world locations, rejects unloaded worlds and
+non-finite coordinates with warnings, resolves names case-insensitively, and
+refreshes on `/helstera reload skills`. `DistanceFromPin`,
+`OriginDistanceFromPin`, and `InPinRegion` now have importer mappings and
+fail-closed runtime factories; finite comparator and inclusive range parsing
+are covered by importer and runtime tests. `MovePin` now maps keyed and
+positional pin names and updates a single-point pin to the active target's
+location; unknown pins, absent targets, invalid destinations, and multi-point
+pins are no-ops. Location-valued `@Pin` returns all named locations by default
+or one random location with `random=true`; location contexts remain separate
+from entity targets and are consumed by lightning, particle, sound, and
+location-variable actions. `@BlocksInPinRegion` now enumerates inclusive
+same-world cuboids and feeds block locations to `set-block`/`break-block`; an
+enumeration above 16,384 blocks fails closed to bound synchronous work.
+Registry, targeter, context, service, mechanic, and importer tests cover these
+paths. Strict Paper 1.21.1-133 fixture
+`srv-paper-pin-conditions-strict-20261102-r1` records `pinConditions` and
+`pinTargeters` as passed in a complete 270-probe report with zero incomplete.
+This is a project-native registry, not proof of Mythic pack `pins.yml`
+serialization compatibility; official pack loading and full Conditions and
+Targeters catalog coverage remain open.
 
 Incremental skill-condition update: official `IsSkill` now checks the loaded
 named-skill registry through a lifecycle-safe SkillService lookup, recognizes
@@ -417,10 +1336,13 @@ pending.
 
 Incremental condition update: official `LunarPhase` now reuses the existing
 vanilla eight-phase full-time calculation used by spawners, accepts numeric
-phase lists `0..7`, and fails closed for invalid phases. Migration, runtime,
-unit, and condition-catalog self-test coverage are included. Exploratory Paper
-1.21.4 fixture r8 records `lunarPhaseCondition=passed`; strict Paper 1.21.1
-evidence remains pending.
+phase lists `0..7`, and fails closed for invalid phases. Both migration and
+runtime reject a list containing any invalid or empty token, including a
+trailing comma; focused regression coverage protects mixed, empty, and
+out-of-range inputs. Strict Paper 1.21.1-133 fixture
+`srv-paper-runtime-alias-20261031-r2` records
+`lunarPhaseCondition=passed`; exploratory Paper 1.21.4 fixture r8 is
+additional evidence.
 
 Incremental signal-condition update: official `LastSignal` now records the
 most recent signal delivered to each managed instance, reads it through a
@@ -512,6 +1434,117 @@ generation state to be reclaimed instead of leaking during plugin shutdown.
 Delayed action exception update: continuation cleanup now runs in `finally`, so
 an action that throws cannot strand pending scheduling or generation state; a
 dedicated regression covers the throwing-action path.
+
+Execution option validation now rejects malformed, negative, non-finite and
+overflowing delay/repeat values at binding with a diagnostic containing the
+source line. Valid tick, second and millisecond durations remain supported.
+Unit tests cover the boundary; the timing fixture below exercises two invalid
+values on Paper. Runtime parsing also rejects duplicate execution options and
+conflicting interval aliases instead of silently overriding them. Strict fixture
+`srv-paper-skill-duplicate-20261104-r1` verifies binding rejection and diagnostics
+for duplicate delay, repeat and interval aliases on Paper. Named and random
+skill references now enter the same execution wrapper as ordinary actions, and
+the importer preserves execution metadata on nested references. Unit tests cover
+delay, repeat and zero chance; an importer-to-runtime contract covers delayed
+repeated nested damage. Unit tests also cover `skill`, `cast-skill` and
+`randomskill` with an explicit target and a passing or failing inline
+condition. The migration reference parser matches the mechanic's own closing
+brace, and the cross-module delayed-damage test includes `@Target{limit=1}`;
+broader combinations remain open.
+The migration reference parser now respects quoted delimiters and preserves
+invalid references, duplicate reference aliases and unsupported arguments with
+a warning instead of executing a partial reference. Importer tests cover those
+negative cases; an importer-to-runtime test verifies a quoted reference with
+delay, repeat and targeter while rejected sibling lines do not execute. Strict
+fixture `srv-paper-skill-reference-20261104-r1` verifies a quoted reference
+with zero delay on a real entity, plus preservation, warnings and non-execution
+for three invalid sibling references.
+The importer additionally rejects invalid nested-skill delay and repeat values
+with a warning and preserves the original line; negative, non-finite,
+fractional count and overflow cases have importer tests, and the runtime
+contract confirms invalid siblings do not execute. Strict fixture
+`srv-paper-skill-timing-20261104-r1` observes a nonzero delay and one repeat
+on a real entity, and verifies preservation, warnings and non-execution for
+`delay=NaN` and `repeat=-1`. Other timing boundaries remain unit-tested only.
+The same importer validation now applies to other mechanics: invalid or
+duplicate timing options are preserved with a warning instead of being mapped
+to an action that runtime binding rejects. Importer tests cover standalone
+skills and mob-event lines; an importer-to-runtime contract verifies rejected
+damage siblings do not execute. Strict fixture
+`srv-paper-mechanic-timing-20261104-r1` verifies three invalid heal lines are
+preserved with warnings and do not affect a real entity; it does not cover
+every mechanic or timing boundary.
+For positional mechanics without a targeter, migration now retains standalone
+chance and inline-condition suffixes rather than dropping them; importer tests
+cover both and an importer-to-runtime contract confirms `damage 40 0%` does
+not execute. Strict fixture `srv-paper-positional-chance-20261104-r1` verifies
+imported positional heal with 0% and 100% on a real entity. Positional lines with
+braced targeter or condition suffixes now distinguish those braces from the
+mechanic body, preventing suffix arguments from overriding action arguments.
+Importer tests cover both forms, and an importer-to-runtime contract checks
+passing and failing target conditions, including a braced condition. Strict
+fixture `srv-paper-positional-condition-20261104-r1` also exercises these
+conditions and a braced targeter on a real entity.
+Runtime skill parsing rejects multiple independent targeters or chance values
+instead of silently taking the last one. The importer preserves such lines with
+a warning; focused tests cover valid targeter chains and quoted text as well
+as rejected duplicates. Strict fixture `srv-paper-suffix-grammar-20261104-r1`
+checks duplicate chance, independent targeters and an incomplete chain on Paper.
+Incomplete targeter chains are likewise preserved with warnings during
+migration, and an importer-to-runtime contract confirms ambiguous sibling
+actions do not execute.
+The migration chain scanner distinguishes targeter separators from `>` in
+positional placeholders and braced comparisons; importer regressions cover
+both alongside incomplete chains. The strict fixture checks that a positional
+placeholder and valid targeter chain remain mapped; it does not execute them.
+Invalid chance suffixes, including out-of-range and non-finite values, are now
+preserved with migration warnings. Importer and importer-to-runtime tests cover
+these cases. Strict fixture `srv-paper-invalid-chance-20261104-r1` checks
+`101%`, `NaN%`, and `1e999%` are preserved, warned, rejected and do not heal
+a real entity.
+The subsequent direct `MythicSkillSpec` constructor check for non-finite
+chance values has a unit test and is included in the newer strict fixture's JAR.
+Direct action binding now rejects parsed `~on...` suffixes instead of silently
+discarding event routing, and duplicate event suffixes are rejected. Importer
+tests cover supported mob event routing and preservation of unsupported or
+duplicate events; parser and binding unit tests cover the runtime rejection.
+Strict fixture `srv-paper-event-suffix-20261104-r1` independently verifies
+binding rejection and diagnostics; it does not test natural event dispatch.
+Parser and importer tests additionally cover mixed-case event prefixes, unknown
+and incomplete event suffixes, and quoted literal text. Strict fixture
+`srv-paper-event-variants-20261104-r1` checks binding and diagnostics for these
+variants, but does not test delivery of the quoted message to a client.
+Standalone `?` and `@` suffixes are now preserved with migration warnings and
+rejected by runtime binding instead of being treated as positional arguments.
+Importer, parser, binding and importer-to-runtime tests cover these cases.
+Strict fixture `srv-paper-orphan-suffix-20261104-r1` verifies preservation,
+warnings, rejection and unchanged health on a real entity.
+Composite conditions now propagate evaluation failures through nested `not`,
+`all` and `any` until the outer registry fails closed. Unit tests exercise
+throwing custom conditions and verify guarded actions do not run. Custom
+`BehaviorRegistry` implementations must implement `testConditionForComposition`
+to support composite conditions; its default rejects evaluation. Strict fixture
+`srv-paper-condition-failure-20261104-r1` checks throwing registered conditions
+block healing under nested negation and a normal false-condition control heals.
+Named `skill:...` conditions now propagate throwing or invalid requirements to
+outer composites rather than turning them into a negatable false; unit tests
+cover nested negation, a normal false control and a guarded action. Strict
+fixture `srv-paper-named-condition-20261104-r1` verifies throwing and unknown
+named skill requirements block healing, with a normal false control on a real
+entity through the production skill binder.
+After configuration reload, stale named-skill registry entries now fail closed
+as conditions and cannot execute old actions; a reload during evaluation or a
+direct action chain also stops the old definition. Unit tests cover removal,
+reintroduction and in-flight reload. Strict fixture
+`srv-paper-named-reload-20261104-r1` verifies deletion and reintroduction on a
+real entity through direct skill action and negated condition self-tests;
+in-flight reload remains covered by unit tests.
+Named-skill requirements can now reference definitions declared later in the
+same configuration, including mixed-case names; unknown references fail binding
+and cyclic condition evaluation fails closed. Unit tests cover the runtime
+action, missing references and cycles. Strict fixture
+`srv-paper-named-reference-20261104-r1` verifies a mixed-case forward reference,
+unknown reference rejection and cyclic guard against a real entity.
 
 Projectile targeter update: `@attacker` now unwraps a projectile's living
 shooter when the Bukkit trigger entity is a Projectile; direct entity attackers
@@ -635,6 +1668,16 @@ Runtime action audit update: Mythic `damage-melee`, threat aliases
 (`messageall`, `messageself`, `randommessage`) now map to their existing
 Helstera action factories. Direct short aliases bind through the same
 canonical action names, and importer regression coverage protects the mapping.
+Keyed message values now retain commas and quoted delimiters during migration;
+importer tests cover message and radius isolation, and an importer-to-runtime
+contract verifies delivery of the complete text to a mocked player. Strict
+Paper fixture `srv-paper-message-comma-20261104-r1` imports a quoted message
+with commas, an embedded key-like expression and a semicolon, and the online
+client confirms exact receipt. Escaped double quotes and backslashes have
+lexical, targeter-suffix and importer-to-runtime tests, including embedded
+semicolons and braces. Strict fixture `srv-paper-message-escape-20261104-r2`
+also verifies exact online-client receipt through `@trigger`. Other quoting
+and escape forms remain unverified.
 `threat-focus` now delegates to `ThreatTable.focus`, so it always promotes the
 current target above the existing leader instead of adding a size-dependent
 fixed amount. Exploratory Paper 1.21.11 r41 and strict Paper 1.21.1-133
@@ -682,19 +1725,22 @@ regression coverage.
 Food saturation parity update: Mythic `FoodSaturation`/`hungerSaturation` now
 map to caster-context `food-saturation` (and explicit target context maps to
 `target-food-saturation`) using Bukkit `HumanEntity#getSaturation`; migration,
-unit, and Paper self-test coverage protect comparator behavior.
+unit, and strict Paper self-test coverage protect comparator behavior. Strict
+fixture `srv-paper-drowning-strict-20261102-r2` requires and passes the
+`foodSaturationCondition` probe: a real online player at saturation 1.0 passes
+`<=1`, 2.0 rejects it, and the original value is restored.
 
-Exploratory Paper 1.21.11 r47 records `foodSaturationCondition=true` after
-checking real saturation values at 1.0 and 2.0 and restoring the player's
-original saturation.
+Exploratory Paper 1.21.11 r47 also records `foodSaturationCondition=true`.
 
 Last-damage-cause parity update: official Mythic `LastDamageCause` now has a
 separate entity-state evaluator reading `Entity#getLastDamageCause`, distinct
-from the current event-context `damage-cause`; importer, unit, and exploratory
-Paper self-test coverage protect both semantics.
+from the current event-context `damage-cause`; importer, unit, and strict Paper
+coverage protect both semantics. Strict Paper 1.21.1-133 fixture
+`srv-paper-drowning-strict-20261102-r2` requires the dedicated
+`lastDamageCauseCondition` report probe and records it as `passed`; the probe
+accepts stored FIRE and rejects ENTITY_ATTACK.
 
-Exploratory Paper 1.21.11 r48 records `lastDamageCauseCondition=true` after a
-real managed Zombie stores a FIRE damage event and rejects ENTITY_ATTACK.
+Exploratory Paper 1.21.11 r48 also records `lastDamageCauseCondition=true`.
 
 Damage-amount parity update: official `DamageAmount` now reads the current
 `EntityDamageEvent#getFinalDamage()` from the event-aware context, defaults to
@@ -912,6 +1958,25 @@ Condition grammar fix: bare Mythic leaves with whitespace arguments (for example
 `?world-is arena` and `?permission loot.vip`) now split into a condition name
 and argument before translation, matching brace-based forms.
 
+Skill grammar boundary update: `MythicSkillSpec` now accepts finite chance
+percentages in ordinary decimal, leading-decimal, and scientific notation forms
+such as `25%`, `.5%`, and `1e1%`. Values outside `0..100`, non-numeric tokens,
+and malformed percent tokens such as `-1%` or `NaN%` fail closed instead of
+being passed through as positional mechanic arguments. `MythicSkillSpecTest`
+covers accepted and rejected forms, including trailing text after a closed
+argument block. `SkillService` now routes every skill line containing `%`
+through the same parser, so malformed percentages cannot bypass validation at
+the runtime binding entry point; complete official skill grammar remains
+mapped-unverified.
+
+Drop chance syntax rejects misplaced or repeated percent signs, preserves the
+invalid source entries with warnings, and retains valid siblings. Strict Paper
+fixture `srv-paper-drop-chance-strict-20261104-r1` verifies import and runtime
+rolling for these cases; it does not verify them through natural death.
+Fixture `srv-paper-drop-numeric-strict-20261104-r1` extends this check to Java
+hexadecimal floating-point syntax and numeric type suffixes. Decimal and
+scientific notation remain supported; inline mob death remains unverified.
+
 Spawner importer fix: Mythic spawner condition lists now translate known leaves
 while preserving Helstera-native lunar/faction/region predicates; unknown
 conditions remain visible with warnings.
@@ -1124,6 +2189,9 @@ skill path in addition to importer mappings.
 Time/weather catalog update: `day`, `daytime`, `dawn`, `morning`, `noon`, `dusk`,
 `sunset`, `midnight`, `nighttime`, `clear`, `sun`, `sunny`, `rain`, `storm`,
 `thunder`, and `thunderstorm` now have direct `SkillExtras` condition factories.
+The importer also translates their parameterless Mythic spellings to registered
+runtime conditions; `MmConditionsTest` covers the aliases and the runtime binding
+contract keeps missing factories fail-closed.
 `TimeWeatherConditionTest` verifies registration and fail-closed behavior without
 a context; the full Mythic condition catalog remains open.
 
@@ -1141,11 +2209,15 @@ managed Sheep; natural event timing remains unverified.
 | TargetConditions and TriggerConditions | implemented-runtime | separate entity contexts and per-target filtering in `SkillService` |
 | Variables and location variables | implemented-runtime | scoped variables, `variable-unset`, `VariableLocations`, `@VariableLocation` tests |
 | Inline conditions | mapped-unverified | parser and repeat guards exist; full Mythic condition catalog is not covered |
-| Context targeters | mapped-unverified | `@trigger`, `@attacker`, `@owner`, `@parent`, `@children`, `@passengers`, `@vehicle`, `@threat`, `@target`, `@targets`, `@VariableLocation`, direct `@EntitiesInRadius`/`@LivingEntitiesInRadius`, `@NearestEntity`/`@NearestLiving`/`@NearestLivingEntity`/`@NearestMob` aliases, `@NearestPlayer`/`@NearestMonster`/`@NearestAnimal`/`@NearestVillager`/`@NearestTamed`, world-scoped `@PlayersInWorld`/`@MobsInWorld`/`@EntitiesInWorld`/`@LivingEntitiesInWorld`, radius/filter/chain targeters, and category selectors `@MonstersInRadius`, `@AnimalsInRadius`, `@VillagersInRadius`, `@TamedInRadius` have runtime paths and focused API/importer tests; strict Paper 1.21.1-133 fixture `srv-paper-runtime-alias-20261031-r2` records the same real world/nearest/category selections using underscore aliases, alongside target mechanic assertions; complete Mythic targeter parameter parity and broader Paper-native selection evidence remain open |
+| Context targeters | mapped-unverified | `@trigger`, `@attacker`, `@owner`, `@parent`, `@children`, `@passengers`, `@vehicle`, `@threat`, `@target`, `@targets`, `@VariableLocation`, location-valued `@Pin` (all named points by default; `random=true` selects one) and `@BlocksInPinRegion` (inclusive cuboids, capped at 16,384 block positions; both consumed by location-aware mechanics), direct `@EntitiesInRadius`/`@LivingEntitiesInRadius`, `@NearestEntity`/`@NearestLiving`/`@NearestLivingEntity`/`@NearestMob` aliases, `@NearestPlayer`/`@NearestMonster`/`@NearestAnimal`/`@NearestVillager`/`@NearestTamed`, world-scoped `@PlayersInWorld`/`@MobsInWorld`/`@EntitiesInWorld`/`@LivingEntitiesInWorld`, server-wide `@PlayersOnServer`/`@server`/`@everyone`, radius/filter/chain targeters, and category selectors `@MonstersInRadius`, `@AnimalsInRadius`, `@VillagersInRadius`, `@TamedInRadius` have runtime paths and focused API/importer tests; strict Paper fixtures `srv-paper-runtime-alias-20261031-r2` and `srv-paper-targeter-players-strict-20261102-r1` record real world/nearest/category and server-player selection; fixture `srv-paper-pin-targeters-strict-20261102-r2` requires and passes `pinTargeters`, exercising SkillService multi-point/random dispatch, `MovePin` single-point movement and multi-point rejection, cuboid block set/break/restoration, and fail-closed rejection of a 16,385-block region before action dispatch; project pin YAML now accepts `pins`/`Pins` section and point-field casing variants, while official Mythic pack serialization, cross-world live-client coverage, and complete targeter parameter parity remain unverified |
+| SelfEyeLocation targeter | implemented-runtime | `@SelfEyeLocation`, `@eyeDirection`, `@casterEyeLocation`, `@bossEyeLocation`, and `@mobEyeLocation` resolve to the living caster's eye position; unknown arguments and missing/non-living caster contexts fail closed. API/importer tests cover aliases and rejection; strict Paper 1.21.1-133 fixture `srv-paper-self-eye-location-strict-20261104-r1` verifies all five aliases through the production `set-block` action. |
+| Targeter argument validation | implemented-runtime | Runtime rejects duplicate generic option aliases, trailing syntax, incomplete chains, and unknown negated entity filters instead of selecting unintended targets. `TargeterOrderingTest` covers direct, context and chained paths; strict fixture `srv-paper-target-filters-20261104-r1` verifies rejection and a positive control using real Paper entities. This does not establish complete targeter grammar parity. |
+| Entity `target`/`ignore` filters | implemented-runtime | Generic targeters accept comma-separated `target=` and `ignore=` filters for player, mob, living, animal, monster, creature, villager, tamed, self/caster categories, and Bukkit `EntityType` names; `targetself=true/false` controls caster inclusion. Empty, unknown, repeated and malformed values fail closed. `TargeterOrderingTest` covers category filters, quoted lists, caster inclusion/exclusion and rejection; strict Paper 1.21.1-133 fixture `srv-paper-target-filters-20261104-r1` observes real-player inclusion/exclusion and invalid-filter rejection (`targeterArgumentValidation`). Mythic-specific ground/water/flight, game-mode, NPC and MythicMob filters are not covered; the overall targeter catalog remains incomplete. |
+| Generic targeter skip/limit ordering | implemented-runtime | `skipTargetsUpToIndex`/`stuti` is applied after sorting and before `limit`; negative, malformed, and out-of-range values fail closed. Generic sorting supports none, random, nearest/farthest, health, threat, oldest, and newest with unknown modes and unavailable threat data rejected. API tests and strict Paper fixtures `srv-paper-targeter-skip-index-strict-20261102-r3` and `srv-paper-targeter-sorting-strict-20261102-r1` cover skip/limit semantics, health/age order, and invalid controls; the targeter sorting report has 272 probes, 260 passed, 12 expected negative controls, zero incomplete |
 | Audience actions | mapped-unverified | message/full title with subtitle and timing/actionbar/particle delivery plus dual-client Paper evidence for radius, permission, explicit faction include/exclude, and combined `radius{r=...;permission=...;faction=...}` filters; `!permission`/`-faction` exclusion syntax now has parser/unit coverage, while broader Paper/client combinations remain unverified |
-| Mechanics catalog | mapped-unverified | common actions including caster `remove`, material/slot/amount `equip`/`set-item`/`set-offhand`/`set-armor`, player `clear-inventory`/`set-material-cooldown`/`set-game-mode`, `jump`/`force-pull`, main/off-hand `swing`, entity state `set-ai`/`set-gravity`/`set-silent`/`set-collidable`/`set-sneaking`/`set-gliding`/`set-swimming`, player state `set-sprinting`/`set-flying`/`set-walk-speed`, no-damage-tick controls, caster `set-fire`/`clear-fire`, caster/target orientation `set-rotation`/`look-at` (`setrotation`/`lookat` importer aliases), execution-time numeric placeholders in damage/heal/health/movement mechanics, caster `pull`/`leap`/`set-tick-speed` and caster movement `dash`/`blink`, multi-target `damage`/`damage-percent`/`message`/`explode`, player-target `give-item`/`take-item` (`giveitem`/`consume` importer aliases), target/caster `set-block`/`break-block` (`setblock`/`breakblock` importer aliases), caster-location `drop-item`, potion duration/amplifier/flags, caster-target `mount`, caster `dismount`, caster/location `teleport` aliases, event-aware `cancel-event` for damage/interact triggers, colored visible/hidden `set-name`, and the plugin custom item resolver are registered and importer-tested; latest strict fixture `srv-paper-runtime-alias-20261031-r2` retains the production `set-target`/`clear-target`, oxygen, consume-slot, faction, level, weather, time, lightning, score, and targeter evidence; Mythic entity `disguise`/`removedisguise` are explicitly preserved as unsupported because model appearance is not equivalent; broader mechanic/event parity remains unverified |
-| Conditions catalog | mapped-unverified | high-frequency subset now includes world/biome/time/weather, variable, target, permission, entity type, direct entity category aliases (`isLiving`/`isPlayer`/`isMob`/`isMonster`/`isAnimal`/`isVillager`/`isTameable`/`isRaider`), undead/creature and age aliases (`isUndead`/`isCreature`/`isBaby`/`isAdult`/`isChild`→`is-baby`; the separate `is-child` name is a parent relation), tame/shear/saddle/powered/collidable/offhand state aliases (`isTamed`/`isSheared`/`isSaddled`/`isPowered`/`isCollidable`/`hasOffhand`), caster/target lifecycle state aliases (`has-ai`/`has-gravity`/`is-silent`/`is-dead`/`is-alive`/`target-is-alive`/`is-valid`), caster environmental aliases (`on-ground`, `in-water`, `in-lava`, `in-air`, `is-blocked`, `stand-on`, `daylight`, `facing-target`, `light-level-below/above`), exact farmland hydration aliases (`moist`/`ismoist` and `moisture-level`/`moistureness`/`moistness` with `l` ranges), size aliases (`mob-size`/`mobsize`/`size`) for Slime/MagmaCube/Phantom, exact block counts (`block-type-in-radius`) with material/radius/amount ranges, exact `BiomeType` lists and the 18 documented `exact=false` categories (including alternatives; unknown categories fail migration rather than becoming false no-op conditions; strict Paper fixture `srv-paper-biome-type-category-strict-20261101-r1` verifies positive/negative category matching and exact mode), target-prefixed aliases and importer mappings (`target-is-undead`, `target-is-creature`, `target-is-baby`, `target-is-adult`, `target-is-tamed`, `target-is-sheared`, `target-is-saddled`, `target-is-powered`, `target-is-collidable`, `target-has-offhand`, `target-has-ai`, `target-has-gravity`, `target-is-silent`, `target-is-valid`, `target-is-sneaking`, `target-is-sprinting`, `target-is-flying`, `target-is-blocking`, `target-is-gliding`, `target-is-swimming`, `target-on-fire`, `target-in-air`, `target-in-water`, `target-in-lava`), target categories (`mob`/`monster`/`animal`/`villager`/`tameable`/`raider`), stance, radius, line-of-sight, fire, game-mode, `food-level`, `has-item`, `air-level`, `damage-cause`, `damage-amount`, potion, invulnerability, `player-kills`, common no-separator aliases, keyed caster/target health and distance comparisons, target raw-health/percent comparators, player state aliases (`is-flying`, `is-sneaking`, `is-gliding`), and nested `all`/`any`/`not`; variable checks include typed string/list equality and contains, numeric List index `gte/lte/in-range`, Map value numeric `gte/lte/in-range` and negative range checks, positive/negative Map key and value checks, scope isolation for caster/target/world/global, and unset fail-closed coverage; time supports named windows, wrapping ranges and comparators, and weather accepts thunder aliases; fixtures `srv-paper-integration-condition-states-20261016` and `srv-paper-integration-entity-states-20261016` verify real online-player and real entity state conditions, including tame/sheared/saddle/powered, with cleanup; full Mythic placeholders, comparator edge cases, and the complete catalog remain unverified |
-| Trigger catalog | mapped-unverified | `on-damage` and `on-attacked` dispatch from entity damage events, with a separate environmental path; `on-interact` now listens to the Bukkit entity-interaction parent event so ordinary and `AtEntity` clicks share one path; killer-side `on-kill` and `on-kill-player` now resolve managed mob killers from the death damage event and unwrap projectile shooters, and exploratory Paper fixture `srv-paper-integration-exploratory-1.21.4-r27` passes the real-death `kill-trigger`; Paper 1.21.4 killprobe now passes the deterministic real-player death and `PlayerKills` range assertions; Mythic `onConsume`/`onEat` aliases now normalize to `on-consume` and dispatch from Bukkit `PlayerItemConsumeEvent`; `on-teleport` has real Paper evidence in `srv-paper-integration-teleport-trigger`; bound-player block break/place and `on-item-pickup` have real Mineflayer evidence in `srv-paper-integration-item-pickup`; `on-vehicle-enter`/`on-vehicle-exit`/`on-vehicle-destroy` and `dismount` have real Paper Boat evidence in `srv-paper-integration-vehicle-fix-20261015`; `cancel-event` followed by nested `is-cancelled` now has real Paper evidence in `srv-paper-integration-cancelled-20261016-r5`; `on-potion-effect-end` has a registered listener and mapping tests, with managed-entity and real-player natural expiry verified on strict Paper 1.21.1-133 fixture `srv-paper-potion-expiry-strict-20261101-r1`; exploratory r33 verifies mechanic-driven removal dispatch and exploratory r136/r137 provide additional real-client evidence; clean delayed native-target fixture `srv-paper-integration-target-reason-clean-20261016` proves `target-events=1`, `target-find-misses=0`, `target-reason=CLOSEST_PLAYER`, `target-cancelled=false`, and delayed `entity-target-trigger=true`; `srv-paper-integration-environmental-event-20261015` proves a direct no-attacker `EntityDamageEvent` dispatch, while autonomous lava-tick timing and several other natural-event paths remain unverified |
+| Mechanics catalog | mapped-unverified | common actions including caster `remove`, material/slot/amount `equip`/`set-item`/`set-offhand`/`set-armor`, player `clear-inventory`/`set-material-cooldown`/`set-game-mode`, `jump`/`force-pull`, main/off-hand `swing`, entity state `set-ai`/`set-gravity`/`set-silent`/`set-collidable`/`set-sneaking`/`set-gliding`/`set-swimming`, player state `set-sprinting`/`set-flying`/`set-walk-speed`, no-damage-tick controls, caster `set-fire`/`clear-fire`, caster/target orientation `set-rotation`/`look-at` (`setrotation`/`lookat` importer aliases), execution-time numeric placeholders in damage/heal/health/movement mechanics, caster `pull`/`leap`/`set-tick-speed` and caster movement `dash`/`blink`, multi-target `damage`/`damage-percent`/`message`/`explode`, player-target `give-item`/`take-item` (`giveitem`/`consume` importer aliases), target/caster `set-block`/`break-block` (`setblock`/`breakblock` importer aliases), caster-location `drop-item`, potion duration/amplifier/flags, caster-target `mount`, caster `dismount`, caster/location `teleport` aliases, event-aware `cancel-event` for damage/interact triggers, colored visible/hidden `set-name`, and the plugin custom item resolver are registered and importer-tested; strict fixture `srv-paper-runtime-alias-20261031-r2` retains the production `set-target`/`clear-target`, oxygen, consume-slot, faction, level, weather, time, lightning, score, and targeter evidence; Mythic entity `disguise`/`removedisguise` are explicitly preserved as unsupported because model appearance is not equivalent; broader mechanic/event parity remains unverified |
+| Conditions catalog | mapped-unverified | high-frequency subset now includes world/biome/time/weather, including parameterless `morning`/`noon`/`midnight`/`clear`/`sun`/`rain`/`storm`/`thunder`/`thunderstorm` importer aliases bound to registered runtime conditions, variable, target, permission, entity type, direct entity category aliases (`isLiving`/`isPlayer`/`isMob`/`isMonster`/`isAnimal`/`isVillager`/`isTameable`/`isRaider`), undead/creature and age aliases (`isUndead`/`isCreature`/`isBaby`/`isAdult`/`isChild`→`is-baby`; the separate `is-child` name is a parent relation), tame/shear/saddle/powered/collidable/offhand state aliases (`isTamed`/`isSheared`/`isSaddled`/`isPowered`/`isCollidable`/`hasOffhand`), caster/target lifecycle state aliases (`has-ai`/`has-gravity`/`is-silent`/`is-dead`/`is-alive`/`target-is-alive`/`is-valid`), caster environmental aliases (`on-ground`, `in-water`, `in-lava`, `in-air`, `is-blocked`, `stand-on`, `daylight`, `facing-target`, `light-level-below/above`), exact farmland hydration aliases (`moist`/`ismoist` and `moisture-level`/`moistureness`/`moistness` with `l` ranges), size aliases (`mob-size`/`mobsize`/`size`) for Slime/MagmaCube/Phantom, exact block counts (`block-type-in-radius`) with material/radius/amount ranges, exact `BiomeType` lists and the 18 documented `exact=false` categories (including alternatives; unknown categories fail migration rather than becoming false no-op conditions; strict Paper fixture `srv-paper-biome-type-category-strict-20261101-r1` verifies positive/negative category matching and exact mode), target-prefixed aliases and importer mappings (`target-is-undead`, `target-is-creature`, `target-is-baby`, `target-is-adult`, `target-is-tamed`, `target-is-sheared`, `target-is-saddled`, `target-is-powered`, `target-is-collidable`, `target-has-offhand`, `target-has-ai`, `target-has-gravity`, `target-is-silent`, `target-is-valid`, `target-is-sneaking`, `target-is-sprinting`, `target-is-flying`, `target-is-blocking`, `target-is-gliding`, `target-is-swimming`, `target-is-frozen`, `target-is-leashed`, `target-has-owner`, `target-owner-is-player`, `target-owner-is-online`, `target-on-fire`, `target-in-air`, `target-in-water`, `target-in-lava`), target categories (`mob`/`monster`/`animal`/`villager`/`tameable`/`raider`), stance, radius, line-of-sight, fire, game-mode, `food-level`, `has-item`, `air-level`, `damage-cause`, `damage-amount`, potion, invulnerability, `player-kills`, common no-separator aliases, keyed caster/target health and distance comparisons, target raw-health/percent comparators, player state aliases (`is-flying`, `is-sneaking`, `is-gliding`), and nested `all`/`any`/`not`; variable checks include typed string/list equality and contains, numeric List index `gte/lte/in-range`, Map value numeric `gte/lte/in-range` and negative range checks, positive/negative Map key and value checks, scope isolation for caster/target/world/global, and unset fail-closed coverage; time supports named windows, wrapping ranges and comparators, and weather accepts thunder aliases; fixtures `srv-paper-integration-condition-states-20261016` and `srv-paper-integration-entity-states-20261016` verify real online-player and real entity state conditions, including tame/sheared/saddle/powered, with cleanup; full Mythic placeholders, comparator edge cases, and the complete catalog remain unverified |
+| Trigger catalog | mapped-unverified | `on-damage` and `on-attacked` dispatch from entity damage events, with a separate environmental path; strict Paper fixture `srv-paper-environmental-natural-strict-20261102-r1` proves autonomous Lava contact produces `DamageCause.LAVA` and executes the managed mob's configured `on-damage` action after 16 ticks; `on-interact` listens to the Bukkit entity-interaction parent event so ordinary and `AtEntity` clicks share one path; killer-side `on-kill` and `on-kill-player` resolve managed mob killers from death attribution and unwrap projectile shooters; strict Paper fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` passes `killTrigger` through a real mob-damage/death chain and `playerKillTrigger` through a real online-player death event with controlled `lastDamageCause` attribution, including positive/negative `PlayerKills` ranges; this does not prove naturally delivered PvP damage attribution. Mythic `onConsume`/`onEat` aliases normalize to `on-consume` and dispatch from Bukkit `PlayerItemConsumeEvent`; `on-teleport` has real Paper evidence in `srv-paper-integration-teleport-trigger`; bound-player block break/place and `on-item-pickup` have real Mineflayer evidence in `srv-paper-integration-item-pickup`; `on-vehicle-enter`/`on-vehicle-exit`/`on-vehicle-destroy` and `dismount` have real Paper Boat evidence in `srv-paper-integration-vehicle-fix-20261015`; `cancel-event` followed by nested `is-cancelled` has real Paper evidence in `srv-paper-integration-cancelled-20261016-r5`; `on-potion-effect-end` has a registered listener and mapping tests, with managed-entity and real-player natural expiry verified on strict Paper 1.21.1-133 fixture `srv-paper-potion-expiry-strict-20261101-r1`; exploratory r33 verifies mechanic-driven removal dispatch and exploratory r136/r137 provide additional real-client evidence; clean delayed native-target fixture `srv-paper-integration-target-reason-clean-20261016` proves `target-events=1`, `target-find-misses=0`, `target-reason=CLOSEST_PLAYER`, `target-cancelled=false`, and delayed `entity-target-trigger=true`; real PvP attribution and several other natural-event paths remain unverified |
 
 Event routing update: when multiple managed instances share one Bukkit entity,
 single-trigger events now prefer the binding whose profile declares that exact
@@ -1180,6 +2252,7 @@ lava-tick timing and other uncovered natural-event paths remain open.
 | Area | Status | Evidence / remaining work |
 | --- | --- | --- |
 | Universal options | mapped-unverified | `SpawnOptions` and entity application cover many fields; reason/cause options accept both YAML lists and Mythic delimited scalar values; strict fixtures r36/r37/r41 verify vanilla and killer-owned drop prevention, including custom victim loot suppression; r42/r43 verify Silverfish block infection and Snow Golem snow formation guards; r44 verifies family-aware `PreventConversion`; r47 verifies Enderman `HeldBlock` maps into `entity.held-block` and production `setCarriedBlock` reads OBSIDIAN back; `PreventSunburn` strict fixture verifies sunlight-only cancellation; event probes cover leash/rename/target/projectile/explosion/drowning/fall/fire/pickup/item-use/teleport/mount/transformation policies and cause allowlists; r38 spawn-option runtime probe verifies pickup precedence, random gear clearing while retaining explicit equipment, and `NoDamageTicks`; broader natural event ordering remains unverified |
+| `Options.SpawningDistance` | implemented-runtime | Importer maps the Mythic option to `mob.spawning-distance`; `configuredDespawnDistance` consumes it into `SpawnOptions.despawnDistance` when explicit `mob.despawn-distance` is absent, with a 32-block fallback. Importer and precedence tests cover legacy and explicit values. Strict Paper fixtures `srv-paper-spawning-distance-runtime-20261101-r4`/`r5` verify production config loading, nearby retention, and scheduler removal outside the radius; `srv-paper-spawning-distance-client-walk-strict-20261102-r3` verifies a real Mineflayer client walking beyond range and both managed-instance/Bukkit-entity removal. Remaining boundary: other entity-family defaults and interactions are part of the unfinished universal Mob Options catalog. |
 | Interactable | mapped-unverified | Mythic `Options.Interactable` maps to `mob.interactable`, applying the documented Mythic default `false` on imported configs; managed entity and Armor Stand manipulation events are denied when false, while `PreventItemUse` continues to deny item interactions independently. Strict Paper 1.21.1-133 fixture `srv-paper-integration-armor-stand-20261031` dispatches real-player interaction and Armor Stand manipulation events against protected/control pairs, recording `interactable=true interactable-armor-stand=true`; broader client timing remains open |
 | Age, Baby, Adult, AgeLock | mapped-unverified | `Ageable` setter path and proxy/importer tests now include explicit `Adult`; strict Paper 1.21.1-133 fixture `srv-paper-integration-patrol-spawn-20261031` applies `age=-24000`, `baby=true`, `adult=true`, and `age-lock=true` through the production path on real Sheep and records `age-options result=true`; non-Ageable entity-specific baby APIs remain separate |
 | Angry, Tamed, Raider flags | mapped-unverified | Wolf/PigZombie/Raider/Tameable setters and tests; strict Paper 1.21.1-133 fixture `srv-paper-integration-patrol-spawn-20261031` applies and reads back real Wolf `Tamed`/`Angry` and Pillager `PatrolLeader`/`PatrolSpawnPoint`, while `CanJoinRaid` is verified as a successful production setter call because Paper 1.21.1 exposes no getter |
@@ -1204,11 +2277,59 @@ warning instead of silently becoming size 1.
 | Legacy numeric IDs and data | mapped-unverified | common tools, armor, stable item IDs through 452, `minecraft:` namespaced vanilla material normalization, music discs `2256–2267`, numeric `ID:DATA` shorthand, common legacy spawn eggs (`383:DATA`), known potion/tipped/splash/lingering encodings with ordinary/long/strong `PotionType` output, classic water/lava and piston IDs, base blocks, colored Shulker/Glazed Terracotta blocks, colors, flowers, leaves (including decay bits), fish, banners, infested blocks, quartz, prismarine, logs, stairs, slabs, double plants and durability-bearing fishing rods/shears/shields/elytra are covered; unknown spawn-egg ids and unknown/invalid potion data remain explicit under `unsupported.legacy-id/data`, and the legacy table is still incomplete |
 | Item Options and PDC identity | implemented-runtime | ItemMeta/PDC proxy tests; anvil and inventory behavior unverified. MythicMobs `ItemModel` and `DamageType` remain under `unsupported.options`: Paper 1.21.1 `ItemMeta` exposes no public component API for either value, so conversion requires a future version-gated adapter |
 | Entity and item attributes | mapped-unverified | alias/slot/operation normalization and stable UUID deduplication exist; fixture `srv-paper-integration-item-attributes-50ba050d42e7442db9a58584ae06270e` proves Paper entity base 3.0 -> value 3.3 with one `ADD_SCALAR` modifier and one ItemMeta modifier, while full attribute catalog and client coverage remain unverified |
-| Drops and DropTables | mapped-unverified | amount ranges, weighted tiers, luck scaling, nested table expansion with cycle protection, entry conditions, table/mob experience ranges, root `Exp` overrides, explicit dynamic-chance evaluator hooks, and isolated Paper LootService plus EntityDeathEvent item/experience evidence are implemented; fixed and ranged mob experience overrides remain effective without a usable loot table, while `MythicDropSpec` and `MythicDropTableProjection` are wired into importer list Drops, safe entries generate `loot.yml` tables and mob references, unsafe/external entries remain unsupported, r36/r37/r41 verify native drop filtering, killer-owned filtering, and custom-table suppression before optional loot materialization, and strict fixture `srv-paper-integration-exp-20261031-r16` verifies the real `Exp` event path; full Mythic placeholder expressions and broader natural death/drop parity remain incomplete |
+| Drops and DropTables | mapped-unverified | Amount ranges, weighted tiers, luck scaling, generated-line `TotalItems`, two-sided bounds, bonus-weighted single-sided selection, nested expansion with cycle protection and parent line caps, table-level killer `TriggerConditions`, dropper `Conditions`, entry conditions, table/mob experience, root `Exp`, and per-entry experience drops have importer/runtime and fail-closed tests. Strict fixture `srv-paper-drops-bonus-semantics-strict-20261102-r1` verifies natural-death level-only (4), Luck-only (3), combined (5), and zero-bonus (2) cases plus single-bound weighted selection in 273 probes (262 passed, 11 expected negative controls). Fixture `srv-paper-drops-imported-range-strict-20261102-r5` verifies standalone `DropTables/` import through runtime loading and real natural death: one Diamond, two Gold Ingots from imported exclusive `1-3`, and 5 XP; all 273 probes complete. Earlier strict fixture `srv-paper-imported-drop-contract-strict-20261102-r1` additionally verifies condition aliases, ambiguous source preservation, and imported natural-death output in 284 probes (267 passed, 17 expected rejected, zero incomplete). Separate strict fixtures cover natural `TotalItems` output, exclusive inline ranges, Bukkit Luck scaling, dropper conditions, and XP entries. Strict fixture `srv-paper-fractional-bonus-strict-20261102-r4` observes 63 extra lines across 128 natural deaths at level 1 with a 0.5 bonus; its report omits the unrequested raw Potion workflow; `BiasStat`, custom Mythic Luck enchantment/curses, broader placeholders, and the full official catalog remain incomplete. The official DropTables catalog does not define a separate `Looting` table option |
 | External drop and economy types | blocked-by-external-plugin | Vault `HasCurrency` has a reflective Economy service adapter and fail-closed runtime condition; contract tests now exercise both `getBalance(OfflinePlayer)` and legacy `getBalance(String)` provider signatures, but no installed Vault/provider fixture verifies service discovery or a provider version range. MythicCrucible mechanics/items and MMOItems drops remain preserved and are not materialized as vanilla placeholders |
-| External item and model adapters | blocked-by-external-plugin | ItemAdder and CraftEngine are detected as installed but no supported API bridge is implemented; adapters declare no capabilities and resolve no placeholder item. Vault exposes `ECONOMY_BALANCE` only after reflective service registration succeeds; installed-provider integration evidence is still required. ModelEngine runtime rendering and external model state, plus MMOItems/MythicCrucible runtime behavior, remain blocked pending API/version contracts and installed-plugin fixtures |
+| External item and model adapters | blocked-by-external-plugin | ItemAdder and CraftEngine are detected as installed but no supported API bridge is implemented; adapters declare no capabilities and resolve no placeholder item. MMOItems, MythicCrucible, and ModelEngine now have explicit runtime `BlockedExternalAdapter` entries: diagnostics report whether each plugin is absent or detected, but capabilities remain empty and no item/model result is materialized. Vault exposes `ECONOMY_BALANCE` only after reflective service registration succeeds; installed-provider integration evidence is still required. ModelEngine runtime rendering and external model state, plus MMOItems/MythicCrucible runtime behavior, remain blocked pending API/version contracts and installed-plugin fixtures |
 | MythicMobs model bridge | mapped-unverified | Reflection adapter binds configured MythicMobSpawnEvent entities and registers model mechanics/conditions only when their external registrars accept them; declared `5.3.x-5.7.x` range is not installed-plugin CI-verified, and no Paper fixture runs with MythicMobs present |
 | WorldGuard region provider | mapped-unverified | Reflection adapter probes the WorldGuard 7.x region API at startup and queries named/union/intersection regions; its `REGION_QUERY` capability is exposed only while connected, but no installed-WorldGuard runtime fixture verifies version behavior |
+
+Drop import follow-up: entry conditions containing only delimiters, or a delimiter-separated
+empty `?` condition, are rejected and preserved in migration diagnostics instead of
+becoming unconditional drops. Unit and importer tests cover this behavior; the change
+has not yet been verified in a new Paper fixture.
+Runtime loot materialization now rejects unresolved non-`minecraft` namespaces instead of
+turning their suffix into a vanilla item. Unit tests cover missing and throwing resolvers,
+an accepted custom resolver, and vanilla fallback; no new Paper fixture covers this change.
+Structured nested table references now use the same ID normalization as imported table
+definitions. A migration-apply-to-runtime test verifies `Boss-A` resolves to `boss_a`
+and produces the child table's item; this normalization change has no new Paper evidence.
+Scalar mob `DropTable-1` references use the same normalization and have a migration-to-roll
+contract test. Bare drop-line names (for example `- rewards`) are resolved against source
+DropTables across files for mob and table drops. Duplicate names and collisions with source
+items or vanilla materials are preserved as unsupported rather than guessed. Importer and
+migration-to-roll tests cover these paths. Strict fixture
+`srv-paper-nested-import-strict-20261102-r1` verifies a bare reference across files,
+including a parent in a subdirectory, through natural Zombie death.
+If a source Items or DropTables catalog cannot be read or parsed, the migration report
+identifies the source and preserves bare drop lines; explicit structured entries remain
+eligible for projection. This failure path has importer coverage only.
+Known source custom-item references in bare and structured drops use the same normalized
+ID as imported `items.yml`; collisions after normalization are preserved as unsupported.
+Importer tests and a runtime resolver contract test cover this change. The resolver in
+the contract test is controlled; no new Paper fixture verifies custom-item drops.
+Item `Template`/`Parent` references are normalized to the imported item ID, including
+across source files. A migration-apply test verifies the resulting reference and target;
+invalid non-string or blank template values are preserved with a warning. Runtime
+template inheritance rejects missing, blank, non-string, cyclic, and preserved
+unsupported templates with a warning instead of constructing the child material;
+unit tests cover valid inheritance and importer-to-runtime rejection. Declared
+invalid item IDs block external and vanilla fallback in equipment, loot, and
+skills, including collisions with vanilla material names. Custom-menu buttons
+and pagination also prefer custom resolution, reject declared invalid items at
+load time, and leave unresolved items empty at render time; empty slots cannot
+execute actions. Unit tests cover item resolution and load rejection; these
+include a simulated inventory click proving an empty slot cannot execute a
+button command while a populated slot can, and a pagination click proving an
+empty icon does not navigate while a populated next icon opens the next page.
+Strict fixture `srv-paper-menu-collision-strict-20261102-r1` verifies real-client
+permission, pagination, and button workflows. Its Paper render log also shows a
+custom `SPONGE` item rendered as `GOLD_INGOT` in a menu button. Invalid-item
+collision paths and external-plugin integration have no Paper evidence.
+Files in scanned content subdirectories are now classified by their containing content
+directory, and bare-table lookup uses that directory's MythicMobs root. Importer tests
+cover nested Items, Skills, and Spawners; a migration-to-roll test covers nested Mobs
+and DropTables across directories. The strict fixture above verifies the DropTables
+subdirectory case; the other content types have no separate Paper fixture.
 
 The earlier strict fixture `srv-paper-integration-exp-20261031-r14` recorded
 the root `Exp` event probe in a complete 239-probe report. It is superseded by
@@ -1243,19 +2364,49 @@ restores the player's prior glowing state.
 | --- | --- | --- |
 | Shared skill-tree variables and locations | implemented-runtime | `SkillTreeContext`, nested skill tests, immutable snapshot/restore, and YAML snapshot-store round-trip coverage for primitive variables and locations |
 | Audience parsing and delivery | mapped-unverified | isolated dual-client Paper workflow proves message/title/actionbar/particle delivery, radius include/exclude, permission include/exclude, explicit faction include/exclude, and combined filter parsing; `!permission`/`-faction` exclusion syntax now has parser/unit coverage, while broader combinations remain unverified |
-| Full Mythic condition/filter grammar | mapped-unverified | nested `all`/`any`/`not`, unary `!`, grouped parentheses, and top-level `&&`/`||` composition with `||` precedence now have runtime tests; caster/target permission conditions and entity-state placeholders now cover common Bukkit flags including age, AI, gravity, silent, validity, powered, movement and player state, with Paper `caster-permission=true` evidence from an online trigger context; unsupported condition names, remaining placeholders, and operators remain |
+| `DamageTag` / `DamageHasTag` and scoped damage tags | implemented-runtime | Mythic aliases map to fail-closed `damage-tag` (`value=true` by default); `damage-target` scopes normalized `tags`, case-preserving `rawtags`, and normalized `damagetype` to the synchronous victim damage event, and SkillTree snapshots preserve the tag set. `MmConditionsTest`, `SkillConditionsTest`, `SkillCatalogDamageTagsTest`, and `SkillTreeContextTest` cover mapping, malformed values, event scope, and snapshot restore; strict Paper 1.21.1-133 fixture `srv-paper-damage-tag-strict-20261102-r3` verifies untagged rejection, tagged action, cause/final-damage conditions, event cancellation, and unchanged victim health. Raw tags remain case-sensitive, and asynchronous damage or non-Bukkit damage pipelines are outside this implementation |
+| Full Mythic condition/filter grammar | mapped-unverified | nested `all`/`any`/`not`, unary `!`, grouped parentheses, and top-level `&&`/`||` composition with `||` precedence now have runtime tests; caster/target permission conditions and entity-state placeholders now cover common Bukkit flags including age, AI, gravity, silent, validity, powered, movement and player state, with Paper `caster-permission=true` evidence from an online trigger context; strict Paper fixture `srv-paper-chance-condition-strict-20261101-r1` verifies `Chance` at 0% and 100% and rejects 101%; unsupported condition names, remaining placeholders, and operators remain |
+
+Health migration correction: official [`health`](https://wiki.mythiccraft.io/mythicmobs/Skills/Conditions/health) compares absolute health, while [`healthpercent`](https://wiki.mythiccraft.io/mythicmobs/Skills/Conditions/healthpercent) accepts percentages and multipliers. Scalar comparisons map to `health` and `health-percent`, preserving strict operators and absorption; `MmConditionsTest` and `MigrationRuntimeConditionContractTest` cover migration and runtime boundaries. Paper fixture `srv-paper-health-import-strict-20261104-r1` verifies translated comparisons and invalid-input preservation against a real Zombie; `healthImportedCondition` is required by the strict catalog. Percent syntax on `health` remains unmapped.
+
+Paper fixture `srv-paper-health-range-strict-20261104-r1` additionally verifies translated absolute and percentage ranges, inclusive endpoints, absorption and invalid range preservation on a real Zombie. The strict catalog requires `healthRangeImportedCondition`.
+
+After that fixture, `targetDistance` and `lightLevel` scalar comparisons were corrected to preserve strict and inclusive operators through the registered `distance` and `light-level` runtime consumers. `MmConditionsTest` and `MigrationRuntimeConditionContractTest` verify boundary behavior and preservation of invalid input; strict fixture `srv-paper-comparison-boundary-strict-20261104-r1` additionally verifies these boundaries on real entities and block light levels through required `comparisonBoundaryImportedCondition` evidence.
+
+Subsequently, target health percent migration was aligned with the percentage runtime consumer: bare multipliers are multiplied by 100 and explicit percentages remain unchanged; percentages on absolute target health and overflowing values remain unmapped. Mapping and cross-module tests cover boundary comparisons and missing targets. Paper fixture `srv-paper-target-health-strict-20261104-r1` verifies these behaviors on a real target, and the strict catalog requires `targetHealthImportedCondition`.
+
+After that fixture, migration rejects multiple outer parameter blocks and rejects duplicate or unknown arguments in `world`, `weather` and `time` conditions, preserving source text for the migration warning. Runtime binding also rejects invalid arguments so unprefixed or negated preserved conditions cannot silently run. `MmConditionsTest` and `MigrationRuntimeConditionContractTest` cover source import, warnings and skill execution. Strict fixture `srv-paper-environment-validation-strict-20261104-r1` verifies mapped conditions against real world state and rejects invalid bindings; `environmentImportedCondition` is required by the release catalog.
+
+Subsequent source changes reject duplicate health/absorption arguments and percentage conversion overflow, and preserve large finite scalar thresholds without integer truncation. `MmConditionsTest` covers these cases; they have not yet been exercised by a new Paper strict fixture.
+
+The subsequent positional health comparison plus `includeabsorption` combination is covered by migration and importer-to-runtime tests. Paper fixture `srv-paper-health-validation-strict-20261104-r1` predates this source change, so a new strict run is required for the current build.
+
+Health and health-percent ranges using `to` or `-` now translate into inclusive `all{}` comparisons, including absorption and percentage multiplier conversion. Negative bounds require `to`; reversed, mixed-unit, non-finite and unsupported percentage health ranges remain unmapped. Migration and runtime contract tests cover bounds and rejection; no Paper range probe has been run on this build.
+
+Incremental Conditions closure: Mythic `Drowning`/`IsDrowning` maps its
+optional air comparator to the canonical `drowning` condition, whose runtime
+consumer reads Bukkit `LivingEntity#getRemainingAir()`. Importer coverage accepts
+finite numeric comparators and rejects malformed/non-finite values; runtime
+binding rejects invalid numeric comparators rather than creating an always-false
+predicate. `MmConditionsTest`, `EntityStateConditionTest`, and
+`MigrationRuntimeConditionContractTest` cover translation and runtime binding.
+Strict Paper 1.21.1-133 fixture `srv-paper-drowning-strict-20261102-r2` verifies
+both sides of the caster remaining-air threshold through the production
+condition service; its report completes 262 probes (250 passed, 12 expected
+negative controls, zero incomplete). The condition now has strict runtime
+evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Full SkillTree semantics | mapped-unverified | isolated two-boot Paper 1.21.11 exploratory fixture `srv-paper-skilltree-restart-034f7c7c184b48a9b2c57db5453effdb` proves force-loaded persistent-chunk loading, stable PDC mob reattachment, and SkillTree marker restoration; the focused Paper 1.21.1 restart fixture also restores branch requirements/unlocked state and continues by unlocking the dependent branch. Strict Paper 1.21.1-133 `skillTreeBranches` verifies condition-denied/condition-allowed `branch-unlock` and prerequisite-blocked/unlocked transitions, while `skillTreeCastPersistence` verifies a named skill is blocked before prerequisites, unlocks branches in order, snapshots per-instance state, and then executes the gated skill from a fresh context. Branch metadata is now predeclared from loaded skill definitions and branch condition evaluators are service-local. Death cleanup releases retained chunks; complete Mythic SkillTree semantics and broader reload/client parity remain open |
 
 ## 6. Spawner, Random Spawn, Custom Menu
 
 | Area | Status | Evidence / remaining work |
 | --- | --- | --- |
-| Spawner parsing, cooldown, max-alive, persistence | mapped-unverified | `SpawnerServiceTest`, state file and diagnostic APIs; Mythic `cooldown` now aliases `interval`; `max-per-world`/`max-per-player` plus `per-world-limit`/`per-player-limit` aliases enforce lifetime scoped quotas, scoped counters survive state round trips, and config reload retains alive-instance tracking; shared scheduler cooldowns now advance by real elapsed server ticks instead of multiplying the configured interval by the scheduler period; latest strict fixture `srv-paper-runtime-alias-20261031-r2` verifies live scheduler timing, failed-spawn cooldown preservation, scoped quotas, max-spawns, and natural instance recycling; two-boot Paper 1.21.1-133 fixture `srv-paper-spawner-restart-20261031-r2` verifies the production shutdown state write and next-boot counter restore (`before=1 after=1`); broader restart scheduling and natural lifecycle semantics remain open |
+| Spawner parsing, cooldown, max-alive, persistence | mapped-unverified | `SpawnerServiceTest`, state file and diagnostic APIs; Mythic `cooldown` now aliases `interval`; `max-per-world`/`max-per-player` plus `per-world-limit`/`per-player-limit` aliases enforce lifetime scoped quotas, scoped counters survive state round trips, and config reload retains alive-instance tracking; shared scheduler cooldowns now advance by real elapsed server ticks instead of multiplying the configured interval by the scheduler period; strict fixture `srv-paper-runtime-alias-20261031-r2` verifies live scheduler timing, failed-spawn cooldown preservation, scoped quotas, max-spawns, and natural instance recycling; two-boot Paper 1.21.1-133 fixture `srv-paper-spawner-restart-20261031-r2` verifies the production shutdown state write and next-boot counter restore (`before=1 after=1`); broader restart scheduling and natural lifecycle semantics remain open |
 | Random weighted mob pools | mapped-unverified | `RandomSpawnPoolTest` plus strict fixture `srv-paper-integration-armor-stand-20261031`, which records 100 production samples near the expected 0.5/0.5 distribution with max deviation 0.02; broader sample sizes and drop-table coupling remain unverified |
 | Spawner conditions and regions | mapped-unverified | condition/region hooks and composite `all{}` evaluation exist; scalar/list condition parsing preserves range and coordinate commas; strict fixture `srv-paper-integration-exp-20261031-r27` proves passing/rejected weather, time, biome, composite, world/Y, player/world, and named-region gates with fail-closed results; broader randomized combinations remain unverified |
-| Heightmap, ground, border and player gates | mapped-unverified | strict Paper 1.21.1-133 fixture `srv-paper-integration-armor-stand-20261031` proves natural ground spawn, heightmap surface selection, border clipping/rejection, closed player-gate rejection, player-scoped limit rejection, unloaded-chunk rejection, unreadable-light rejection, and `max-spawns=1`; `player-distance` is accepted as a runtime alias for `players-radius`, while broader randomized terrain combinations remain unverified |
+| Heightmap, ground, border and player gates | mapped-unverified | strict Paper 1.21.1-133 fixtures `srv-paper-integration-armor-stand-20261031` and `srv-paper-parity-continuation-strict-20261102-r1` prove natural ground spawn, heightmap surface selection, border clipping/rejection, `player_gate_fail` rejection (`requested=false`, `failure=player gate closed`), player-scoped limit rejection, unloaded-chunk rejection, unreadable-light rejection, and `max-spawns=1`; `player-distance` is accepted as a runtime alias for `players-radius`, while broader randomized terrain combinations remain unverified |
 | Custom menu pagination and visibility | mapped-unverified | parser/pagination tests plus an isolated Mineflayer + Paper workflow proving permission denial, page navigation, command dispatch and close behavior; player navigation history now clears on `PlayerQuitEvent`, and button/pagination visibility now supports separated positive clauses plus `!`/`-` exclusions for permission/world/faction/region, while broader Mythic menu conditions and client versions remain unverified |
-| Mythic Random Spawns and DropTables | mapped-unverified | weighted random pools and nested loot expansion exist; Spawner conditions now include vanilla lunar phase aliases with unit coverage, and Paper fixture `srv-paper-integration-lunar` verifies `lunar-phase-is=FULL` accepts a real spawn request; full condition combinations, experience and broader Paper spawn/drop semantics remain incomplete |
+| Mythic Random Spawns and DropTables | mapped-unverified | Weighted random pools and nested loot expansion exist; strict fixture `srv-paper-drops-bonus-semantics-strict-20261102-r1` verifies natural-death bonus counts and weighted selection with a single bound in 273 probes (262 passed, 11 expected negative controls, zero incomplete). `TotalItems`, exclusive range, Bukkit Luck input, and dropper `Conditions` have separate strict evidence. Standalone DropTables import has an importer-to-runtime parser contract, with unmapped table conditions rejected fail-closed. Strict fixture `srv-paper-fractional-bonus-strict-20261102-r4` observes 63 extra lines across 128 natural deaths at level 1 with a 0.5 bonus; its report omits the unrequested raw Potion workflow; `BiasStat`, custom Mythic Luck enchantment/curses integration, complete condition combinations, and the broader official catalog remain incomplete |
 
 ## 7. Migration and Verification
 
@@ -1266,10 +2417,56 @@ restores the player's prior glowing state.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | strict Paper 1.21.1-133 fixtures now include `srv-paper-potion-expiry-strict-20261101-r1` (255 probes, 244 passed, 11 expected negative controls, zero incomplete) and `srv-paper-block-selector-strict-20261101-r2` (253 probes, 242 passed, 11 expected negative controls, zero incomplete). Together they cover real-player Potion consumption/natural expiry, block tags/wildcards, and the SpawningDistance near/far lifecycle. Prior probe counts are historical checkpoints; the complete Mythic catalog and broader natural/client semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-target-filters-20261104-r1` completes 339 probes (320 passed, 19 expected rejections, zero incomplete); `targeterArgumentValidation` verifies online-player inclusion/exclusion and invalid-filter rejection, while `locationTargeterDispatch` verifies real block-action dispatch for SelfLocation and all five SelfEyeLocation aliases, caster/world spawn, explicit target and trigger, forward, projectile, and velocity-predicted locations. The exact JAR, report and compressed logs are in `tools/paper-integration/release-evidence.json`. Earlier strict fixture `srv-paper-imported-drop-contract-strict-20261102-r1` completes 284 probes (267 passed, 17 expected negative controls, zero incomplete); `deathLootImportedDropTable` verifies standalone DropTables import, condition alias binding, conflicting-source preservation, and natural death. The earlier full strict fixture `srv-paper-integration` completes 271 probes (259 passed, 12 expected negative controls, zero incomplete), covering autonomous Lava damage, Survival-mode conditions, Ender Dragon alive state, player-gate rejection, natural Potion consumption/expiry, menu/Audience workflows, and Pin targeters. Separate strict targeter follow-up `srv-paper-targeter-sorting-strict-20261102-r1` completes 272 probes (260 passed, 12 expected negative controls, zero incomplete) and verifies live health/age sorting plus unknown-mode rejection. The real menu client performs denied and allowed clicks, pagination, observes action feedback, and confirms close; Paper render/click logs assert button material and server-side outcomes because Mineflayer does not decode menu contents reliably on 1.21.1. Reports are archived at `tools/paper-integration/reports/paper-1.21.1-imported-drop-contract-20261102.json`, `tools/paper-integration/reports/paper-1.21.1-full-strict-20261102.json`, and `tools/paper-integration/reports/paper-1.21.1-targeter-sorting-20261102.json`. Separate strict fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` verifies real client movement and production removal of both the managed instance and Bukkit entity. The complete Mythic catalog and broader version/client semantics remain open |
 
-The latest strict report is `srv-paper-potion-expiry-strict-20261101-r1`:
-255 probes, 244 passed, 11 expected negative controls, and zero incomplete.
+An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
+277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
+Its report is `tools/paper-integration/reports/paper-1.21.1-plugin-hash-20261102.json`
+and records the tested input JAR SHA-256.
+The earlier archived strict fixture is `srv-paper-threat-provider-strict-20261102-r1`:
+277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
+Its report is `tools/paper-integration/reports/paper-1.21.1-threat-provider-20261102.json`.
+The earlier archived strict fixture is `srv-paper-context-chain-strict-20261102-r7`:
+277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
+Its report is `tools/paper-integration/reports/paper-1.21.1-context-chain-20261102.json`.
+The earlier archived strict fixture is `srv-paper-context-targeters-strict-20261102-r1`:
+276 probes, 264 passed, 12 expected negative controls, and zero incomplete.
+Its `contextTargeterControls` probe checks ordering, radius, and invalid values
+with real Zombie entities. The archived report is
+`tools/paper-integration/reports/paper-1.21.1-context-targeters-20261102.json`.
+The earlier archived strict fixture is `srv-paper-full-catalog-strict-20261102-r2`:
+275 probes, 263 passed, 12 expected negative controls, and zero incomplete.
+It includes real player Potion consumption and natural expiry, with an observed
+expiry event and skill action, and 69 extra fractional Bonus lines in 128
+natural deaths. The report is
+`tools/paper-integration/reports/paper-1.21.1-full-catalog-20261102.json`.
+The earlier archived strict follow-up is `srv-paper-fractional-bonus-strict-20261102-r4`:
+273 probes, 261 passed, 12 expected negative controls, and zero incomplete.
+It records 63 extra lines in 128 natural-death samples with a level-one 0.5
+bonus; the raw Potion workflow was not requested. The previous archived report is
+`srv-paper-drops-imported-range-strict-20261102-r5`: 273 probes, 262 passed,
+11 expected negative controls, and zero incomplete. Its imported DropTable
+probe verifies migration, runtime parsing, and natural-death drops. The latest
+targeter-specific report is
+`srv-paper-targeter-sorting-strict-20261102-r1`: 272 probes, 260 passed, 12
+expected negative controls, and zero incomplete. It verifies health and age
+sorting with live Bukkit entities and rejects an unsupported sort mode. The previous targeter report
+`srv-paper-targeter-skip-index-strict-20261102-r3` has 271 probes, 259 passed,
+12 expected negative controls, and zero incomplete; it verifies sorted
+skip-before-limit behavior for `skipTargetsUpToIndex` and `stuti`. The older
+targeter report `srv-paper-targeter-players-strict-20261102-r1`
+has 272 probes, 260 passed, 12 expected negative controls, and zero incomplete;
+it adds `@PlayersOnServer` and `@everyone` runtime evidence to the registered
+AI selector probe. The full baseline report `srv-paper-integration` has
+271 probes, 259 passed, 12 expected negative controls, and zero incomplete.
+It adds required Survival-mode and Ender Dragon alive condition evidence,
+completes the dual-player menu workflow, and retains the autonomous Lava-damage
+and Pin targeter paths, including fail-closed rejection of an oversized pin
+region. Its archived report is
+`tools/paper-integration/reports/paper-1.21.1-full-strict-20261102.json`.
+The focused strict movement report is
+`srv-paper-spawning-distance-client-walk-strict-20261102-r3`: 264 probes, 253
+passed, 11 expected negative controls, and zero incomplete.
 The focused strict block-selector report
 `srv-paper-block-selector-strict-20261101-r2` has 253 probes, 242 passed, 11
 expected negative controls, and zero incomplete. It includes isolated Paper
@@ -1423,7 +2620,7 @@ armor-options result=true base=8.0
 This reads back the configured root `Armor: 8` from the real
 `mobs/armor_probe.yml` through `spawnMobCore` and Bukkit's `ARMOR` attribute.
 
-The latest strict Paper 1.21.1-133 fixture
+The historical strict Paper 1.21.1-133 fixture
 `srv-paper-integration-entity-flags-20261031-r12` passed with 238 observed
 probes: 227 `passed`, 11 expected `observed-rejected`, and zero incomplete.
 Its configured entity flag line is:
@@ -1449,8 +2646,10 @@ the implemented entity-option, condition, item, loot, spawner, and Audience
 probes and recorded real player-driven `VehicleDestroyEvent` handling with
 `enter=true exit=true dismount=true destroy=true`. A separate fixture also
 verified the real no-attacker `EntityDamageEvent` path with
-`environmental-damage trigger=true`; autonomous lava-tick timing remains
-unverified, so the trigger row remains `mapped-unverified`.
+`environmental-damage trigger=true`. Follow-up strict fixture
+`srv-paper-environmental-natural-strict-20261102-r1` now observes natural Lava
+damage and its configured action; this closes only the Lava-tick evidence gap,
+not the overall Trigger catalog.
 
 Runtime/importer follow-up coverage also now includes target environmental and
 visibility aliases: `target-is-on-fire`, `target-in-air`, `target-in-water`,
@@ -1701,7 +2900,15 @@ valid Bukkit `Mob` entities in the active chunk, and `Dimension` matches the
 Bukkit world environment with `OVERWORLD`/`END` aliases. Migration and runtime
 unit coverage protect the argument mappings; exploratory Paper
 `srv-paper-integration-exploratory-1.21.11-r60` verifies all three through the
-passing `conditionUtilityAliases` probe.
+passing `conditionUtilityAliases` probe. Strict Paper 1.21.1-133 fixture
+`srv-paper-drowning-strict-20261102-r2` passes the aggregate utility probe, and
+follow-up `srv-paper-mobs-in-chunk-condition-strict-20261102-r1` adds the
+required dedicated `mobsInChunkCondition`: a real valid Bukkit Mob passes
+`mobs-in-chunk >=1`, while `>=999999` rejects. Boundary fixture
+`srv-paper-mobs-in-chunk-boundary-strict-20261102-r1` adds zero-count and
+adjacent-chunk isolation checks with two explicitly loaded neighboring chunks;
+only the occupied chunk receives the controlled Mob. The required probe passes
+all boundary assertions on Paper 1.21.1-133.
 
 Official spatial condition update: `Height`, `HeightAbove`, `HeightBelow`,
 `Pitch`, `Yaw`, and `OnBlock` now use Mythic numeric-range parsing and Bukkit
@@ -1723,10 +2930,10 @@ Official block/biome condition update: `BlockType` supports exact material
 lists, Bukkit block tags, and material-name globs through migration and runtime.
 Strict Paper fixture `srv-paper-block-selector-strict-20261101-r2` records the
 aggregate spatial condition probe passed with isolated tag and wildcard checks.
-MMOItem names and
-`BiomeType exact=false` category semantics remain explicitly unmapped;
-exploratory Paper `srv-paper-integration-exploratory-1.21.11-r66` records the
-exact `block-type=true biome-type=true` path.
+MMOItem names remain explicitly unmapped. The earlier exploratory Paper
+`srv-paper-integration-exploratory-1.21.11-r66` records the exact
+`block-type=true biome-type=true` path; the later category fixture is described
+in the Conditions catalog above.
 
 Official `Biome` conditions now preserve namespaced and comma-separated biome
 IDs plus the `exact`/`e` flag through migration. Runtime matching defaults
@@ -1737,6 +2944,69 @@ category matching remains separate. Strict Paper 1.21.1-133 fixture
 comma-alternative, non-exact substring, exact rejection, and mismatched-key
 paths through the production `SkillService`; its `biomeCondition` and
 `conditionUtilityAliases` report probes pass with zero incomplete probes.
+Importer tests and a cross-module runtime contract cover reversed `exact`
+and biome argument order, whitespace around alternatives, and preservation of
+malformed or unknown arguments. Strict fixture `srv-paper-biome-import-20261102-r1`
+also evaluates translated reversed arguments in a real world and checks an
+invalid list remains untranslated; it does not exercise a complete YAML import.
+The cross-module contract now additionally imports a `Skills/` YAML file and
+checks successful and rejected target-condition casts. Unbindable named-skill
+conditions block casting, preview, and direct registered skill actions instead
+of being silently discarded; the tests cover all three condition fields. This
+runtime change is covered by unit and cross-module tests.
+Blank and non-string entries in imported skill and standalone DropTable
+condition lists are retained as invalid gates or reject table projection, with
+warnings; runtime named-skill condition lists also reject these entries. These
+malformed-input paths have importer and cross-module tests.
+Damage modifier condition lists now preserve malformed entries with an explicit
+invalid marker for both section and list forms. Immunity evaluation rejects that
+marker even when its caller supplies a permissive condition evaluator; importer
+and cross-module tests cover null and numeric entries. Strict Paper fixture
+`srv-paper-invalid-conditions-20261102-r2` imports YAML and invokes valid and
+invalid target-condition skills on a Zombie; it also evaluates both damage
+modifier forms with a permissive evaluator and checks warnings. It does not
+exercise a natural trigger or a Bukkit damage event. Non-player trigger context
+preservation has unit coverage.
+Named skills with `TriggerConditions` now reject a missing or non-living
+trigger rather than evaluating against the selected target. Skill preview also
+checks target and trigger gates without changing the skill tree's targets.
+These newer changes have unit coverage; their specific behavior has not been
+independently verified on Paper.
+Branch-gated named skills now check the branch before recording cooldown or
+entering a busy instance's queue. Unit tests cover rejection while locked,
+unlock followed by casting, and queued execution after unlocking. This change
+has unit coverage; queue timing and cross-restart behavior still require
+separate runtime evidence.
+Queued skills whose tree was created by the service now restore the latest
+per-instance snapshot when execution starts, preventing a preceding cast's
+variables from being overwritten by the stale enqueue-time tree. An explicit
+caller-supplied tree remains shared. Unit tests cover both paths; conditions and
+branch admission are still evaluated at enqueue time. Strict fixture
+`srv-paper-queue-snapshot-20261102-r2` verifies a preceding timed cast sets a
+variable and an automatically managed queued skill adds to it, using an
+isolated service and real managed Zombie; it does not test a restart.
+Instance teardown now invalidates delayed skill actions, including repeats when
+teardown occurs inside an executing action. Unit tests cover cancellation,
+isolation from another instance, and reuse of an instance ID. This change
+is partly verified by `srv-paper-skill-lifecycle-20261102-r1`: an isolated
+service directly calls `forget` and confirms one delayed action does not run.
+Repeat cancellation and natural entity teardown remain unit-only.
+Teardown during a named skill also stops its remaining actions, including
+enclosing nested chains, and prevents the removed instance's SkillTree snapshot
+from being written again. These paths have unit coverage, not Paper evidence.
+Reloading skill definitions while a named skill is running now invalidates that
+old action chain, including instance-free contexts; a new skill started during
+the reload can execute and retain its state. Unit tests cover both paths; this
+reload behavior is partly verified by `srv-paper-skill-lifecycle-20261102-r1`,
+which calls `loadSkills(null)` during a managed Zombie's skill and observes the
+remaining old action is skipped. New definitions and instance-free contexts
+remain unit-only.
+The `start-cast` action now uses the same named-skill conditions, branch,
+cooldown and queue gates as `castSkill`; unit tests cover the action and direct
+entry point. This newer change has not yet been verified on Paper.
+Actions bound by `SkillService` for `start-cast` and `cancel-cast` also use
+their owning service instead of a global service hook. A two-service unit test
+checks both actions; direct catalog factories still use the global hook.
 
 Server/player state condition update: official `ServerIsPaper` now recognizes
 Paper-family server identity from Bukkit name/version metadata, while
@@ -1797,7 +3067,12 @@ exploratory Paper `srv-paper-integration-exploratory-1.21.11-r76` records
 Ender Dragon condition update: official `EnderDragonAlive` now scans the
 target world's valid `EnderDragon` entities; exploratory Paper
 `srv-paper-integration-exploratory-1.21.11-r77` verifies a real temporary
-dragon. `PlayerKills` is now implemented as a managed-instance lifetime
+dragon. Strict Paper 1.21.1-133 fixture
+`srv-paper-ender-dragon-alive-strict-20261102-r1` passes the dedicated
+`enderDragonAliveCondition`: a real dragon is accepted, then removed and
+rejected, and entity cleanup is confirmed. Its release report has 263 probes
+(252 passed, 11 expected negative controls, zero incomplete). `PlayerKills` is
+now implemented as a managed-instance lifetime
 counter rather than a Bukkit player statistic. The runtime records one count
 only when a managed killer causes a real Player death; `playerKills`/
 `player-kills` aliases, range parsing, migration, condition tests, and instance
@@ -1814,7 +3089,22 @@ Ender Dragon phase update: official `EnderDragonPhase` now matches one or more
 Bukkit `EnderDragon.Phase` enum names on the explicit target. Migration/runtime
 tests cover phase lists, and exploratory Paper
 `srv-paper-integration-exploratory-1.21.11-r78` verifies the live `CIRCLING`
-phase before removing the temporary dragon.
+phase before removing the temporary dragon. Strict Paper 1.21.1-133 fixture
+`srv-paper-ender-dragon-phase-strict-20261101-r1` additionally verifies a real
+dragon positive match, a phase list, a negative match, rejection of the mixed
+list `CIRCLING,INVALID`, and restoration. The dedicated
+`enderDragonPhaseCondition` report probe passed. The aggregate strict report
+has one unrelated incomplete probe, `spawnerBorderClipped`, so this fixture is
+not a complete release-gate pass.
+
+Strict follow-up `srv-paper-ender-dragon-phase-strict-20261101-r3` passes the
+full Paper 1.21.1-133 release report with all 260 probes observed: 248 passed,
+12 expected negative controls, and zero incomplete. It retains the real-dragon
+phase and invalid-list assertions, and now also passes the natural
+border-clipped spawn probe and real-player `LookingAt` condition. The border
+fixture retries up to eight random ground samples only for the positive
+natural-location probe when a sample has no valid spawn location; the final
+observed attempt count is recorded in the log.
 
 Altitude condition update: official `Altitude` now measures the active target
 height above `World#getHighestBlockAt` surface, applies the Mythic height range,
@@ -1932,3 +3222,67 @@ the service is created, fixing the prior initialization-order gap. Exploratory
 Paper `srv-paper-integration-exploratory-1.21.11-r106` verifies start/open/stop/
 closed transitions through `dialogue-condition=true`; strict Paper 1.21.1
 evidence remains open.
+
+### Event skill migration update
+
+Mob skill lines with top-level `~onSpawn` or `~onDeath` are routed to the
+corresponding mob trigger, preserving their action metadata. Other event
+suffixes, parameterized or conflicting triggers, and event lines in standalone
+skill files are preserved as unsupported with a warning. Standalone skill
+trigger fields are not consumed by the runtime. Importer tests cover routing
+and preservation. A cross-module test loads a migrated mob trigger into an AI
+profile and executes its bound nested skill with a targeter, delay and repeat.
+Another cross-module test posts a synthetic `ModelSpawnEvent` through the event
+bus and verifies the migrated `@Self` action executes. A synthetic Bukkit death
+callback also verifies migrated `@Target` and `@Trigger` actions against a
+player killer and a non-player projectile shooter, and no trigger target when
+there is no killer. The [official onDeath documentation](https://wiki.mythiccraft.io/mythicmobs/Skills/Triggers/ondeath)
+specifies the killer as `@Trigger`. Synchronous `cancel-event` is now passed
+the Paper death event before Helstera loot handling; the loot and AI cleanup
+listeners ignore already-cancelled events. A synthetic cross-module test checks
+the cancellation call and listener ordering. Explicit `Options.ReviveHealth`
+values map to `mob.revive-health`: `-1` uses maximum health, positive values
+are capped at maximum health, and invalid values are preserved with a warning.
+Synthetic cross-module tests exercise these values after synchronous cancellation.
+Exploratory Paper 1.21.1-133 run `srv-paper-revive-20261102-r4` applied lethal
+damage to a `despawn: NEVER` zombie and observed `alive=true attached=true
+health=8.0` after 60 ticks. Strict run `srv-paper-revive-strict-20261102-r2`
+also passed the new mandatory `reviveNatural` probe, but its full gate failed
+because `expNaturalDeath` observed 10 rather than 13 XP. This uses native
+Helstera configuration and is not an imported configuration test. Default revive health,
+delayed cancellation, and interactions with other plugins that cancel later in
+the event pipeline remain open.
+
+Strict follow-up `srv-paper-exp-revive-strict-20261102-r1` observed 13 XP and
+passed `reviveNatural`, but failed the full gate because the
+`spawner:player_gate_fail` negative control spawned. The experience probe now
+accounts for increases in existing nearby orbs; the earlier discrepancy's exact
+cause is not established by this run.
+
+Strict follow-up `srv-paper-gate-strict-20261102-r1` passes all 285 report
+probes (268 passed, 17 expected rejections). The player gate negative control
+now uses a remote loaded location: the nearest player was approximately 4367
+blocks away and the configured radius was 8, producing `player gate closed`.
+The same run observed 13 XP and successful natural revive. Its report is
+archived at `tools/paper-integration/reports/paper-1.21.1-revive-player-gate-20261102.json`.
+
+Earlier strict fixture `srv-paper-death-cancel-20261102-r2` passes the same 285
+probes after the death event timing changes. The synthetic custom-loot probe
+checks the event drop list, while natural death verifies actual item output.
+It does not test cancellation by another plugin. The archived report is
+`tools/paper-integration/reports/paper-1.21.1-death-cancel-20261102.json`.
+
+Earlier strict fixture `srv-paper-revive-late-20261102-r1` passes 286 probes
+(269 passed, 17 expected rejections), including the HIGH-priority self-test
+listener cancellation described above. Its archived report is
+`tools/paper-integration/reports/paper-1.21.1-revive-late-20261102.json`.
+
+Earlier strict fixture `srv-paper-damaged-alias-20261102-r1` passes the same
+286 probes with the importer and environmental damage changes. The imported
+aliases are covered by contract tests, not this Paper fixture. Its report is
+`tools/paper-integration/reports/paper-1.21.1-damaged-alias-20261102.json`.
+
+Earlier strict fixture `srv-paper-damaged-import-20261102-r2` passes 287 probes
+(270 passed, 17 expected rejections), including the imported damage trigger
+probe described above. Its report is
+`tools/paper-integration/reports/paper-1.21.1-damaged-import-20261102.json`.

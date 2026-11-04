@@ -669,6 +669,18 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("TargetIsFrozen 读取目标实体状态并在缺少目标时拒绝")
+    void officialTargetIsFrozenConditionReadsTargetState() {
+        LivingEntity entity = mock(LivingEntity.class);
+        when(entity.isFrozen()).thenReturn(true);
+        var context = BehaviorContext.of(null, entity, 1.0, -1, 0, "IDLE");
+        assertTrue(extraFactory("target-is-frozen").create(List.of()).test(context));
+        when(entity.isFrozen()).thenReturn(false);
+        assertFalse(extraFactory("target-is-frozen").create(List.of()).test(context));
+        assertFalse(extraFactory("target-is-frozen").create(List.of()).test(ctx()));
+    }
+
+    @Test
     @DisplayName("MythicMobType 无管理实例时 fail-closed")
     void officialMythicMobTypeConditionRequiresManagedInstance() {
         assertFalse(extraFactory("mythic-mob-type").create(List.of("example/emberling")).test(ctx()));
@@ -688,6 +700,21 @@ class SkillConditionsTest {
         assertTrue(extraFactory("lunar-phase").create(List.of("1")).test(context));
         assertTrue(extraFactory("lunar-phase").create(List.of("0,1,2")).test(context));
         assertFalse(extraFactory("lunar-phase").create(List.of("2")).test(context));
+        assertFalse(extraFactory("lunar-phase").create(List.of("1,invalid")).test(context));
+        assertFalse(extraFactory("lunar-phase").create(List.of("1,")).test(context));
+        assertFalse(extraFactory("lunar-phase").create(List.of("8")).test(context));
+        assertFalse(extraFactory("lunar-phase").create(List.of("")).test(context));
+    }
+
+    @Test
+    @DisplayName("Chance 仅接受有限的 0..100 百分数")
+    void randomChanceRejectsInvalidPercentAtBindTime() {
+        var factory = extraFactory("random-chance");
+        assertFalse(factory.create(List.of("0")).test(ctx()));
+        assertTrue(factory.create(List.of("100")).test(ctx()));
+        for (String invalid : List.of("NaN", "Infinity", "-Infinity", "-1", "101", "invalid")) {
+            assertThrows(IllegalArgumentException.class, () -> factory.create(List.of(invalid)), invalid);
+        }
     }
 
     @Test
@@ -1140,6 +1167,21 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("survival-mode condition accepts Survival and rejects other player modes")
+    void survivalModeConditionMatchesExplicitPlayerMode() {
+        Player player = mock(Player.class);
+        BehaviorContext context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+        var condition = extraFactory("is-in-survival-mode").create(List.of());
+
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.ADVENTURE);
+        assertFalse(condition.test(context));
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        assertTrue(condition.test(context));
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SPECTATOR);
+        assertFalse(condition.test(context));
+    }
+
+    @Test
     @DisplayName("spyglass condition reads a target player's active item")
     void officialSpyglassConditionReadsActiveItem() {
         Player player = mock(Player.class);
@@ -1181,9 +1223,36 @@ class SkillConditionsTest {
     }
 
     @Test
-    @DisplayName("raider patrol leader condition is registered and fails closed without a raider")
+    @DisplayName("raider patrol leader condition matches the live Bukkit flag and fails closed without a raider")
     void officialRaiderPatrolLeaderConditionIsRegistered() {
-        assertFalse(extraFactory("is-raider-patrol-leader").create(List.of()).test(ctx()));
+        var condition = extraFactory("is-raider-patrol-leader").create(List.of());
+        assertFalse(condition.test(ctx()));
+
+        var raider = mock(org.bukkit.entity.Raider.class);
+        var context = BehaviorContext.of(null, raider, 1.0, -1, 0, "IDLE");
+        when(raider.isPatrolLeader()).thenReturn(true, false);
+        assertTrue(condition.test(context));
+        assertFalse(condition.test(context));
+    }
+
+    @Test
+    @DisplayName("DamageTag checks scoped damage tags and fails closed without a tag context")
+    void damageTagRequiresMatchingDamageContext() {
+        var hasTag = extraFactory("damage-tag").create(List.of("tag=FIRE"));
+        var lacksTag = extraFactory("damage-tag").create(List.of("tag=FIRE", "value=false"));
+        assertFalse(hasTag.test(ctx()));
+        assertFalse(lacksTag.test(ctx()));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("damage-tag").create(List.of("tag=FIRE", "value=maybe")));
+
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        var context = BehaviorContext.continueExecution(null, (LivingEntity) null,
+                1.0, -1, 0, "damage", null, null, List.of(), null, tree);
+        assertFalse(hasTag.test(context));
+        tree.damageTags(Set.of("FIRE"));
+        assertTrue(hasTag.test(context));
+        assertFalse(lacksTag.test(context));
+        assertTrue(extraFactory("damage-tag").create(List.of("tag=ICE", "value=false")).test(context));
     }
 
     @Test
@@ -1193,15 +1262,36 @@ class SkillConditionsTest {
     }
 
     @Test
-    @DisplayName("creeper primed condition is registered and fails closed without a creeper")
+    @DisplayName("creeper primed condition matches the live Bukkit state and fails closed without a creeper")
     void officialCreeperPrimedConditionIsRegistered() {
-        assertFalse(extraFactory("is-creeper-primed").create(List.of()).test(ctx()));
+        var condition = extraFactory("is-creeper-primed").create(List.of());
+        assertFalse(condition.test(ctx()));
+
+        var creeper = mock(org.bukkit.entity.Creeper.class);
+        var context = BehaviorContext.of(null, creeper, 1.0, -1, 0, "IDLE");
+        when(creeper.isIgnited()).thenReturn(true, false);
+        assertTrue(condition.test(context));
+        assertFalse(condition.test(context));
     }
 
     @Test
-    @DisplayName("distance-from-spawn fails closed without a location")
+    @DisplayName("distance-from-spawn measures from world spawn and fails closed without a location")
     void officialDistanceFromSpawnConditionIsRegistered() {
-        assertFalse(extraFactory("distance-from-spawn").create(List.of("<100")).test(ctx()));
+        var factory = extraFactory("distance-from-spawn");
+        assertFalse(factory.create(List.of("<100")).test(ctx()));
+
+        var world = mock(World.class);
+        var instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(new Location(world, 3, 64, 4));
+        when(world.getSpawnLocation()).thenReturn(new Location(world, 0, 64, 0));
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+
+        assertTrue(factory.create(List.of("5to5")).test(context));
+        assertTrue(factory.create(List.of(">=5")).test(context));
+        assertFalse(factory.create(List.of(">5")).test(context));
+        assertFalse(factory.create(List.of("<5")).test(context));
+        assertFalse(factory.create(List.of("NaN")).test(context));
     }
 
     @Test
@@ -1211,9 +1301,24 @@ class SkillConditionsTest {
     }
 
     @Test
-    @DisplayName("ender dragon phase condition is registered and fails closed without a dragon")
+    @DisplayName("ender dragon phase condition matches phase lists and rejects invalid values")
     void officialEnderDragonPhaseConditionIsRegistered() {
-        assertFalse(extraFactory("ender-dragon-phase").create(List.of("CIRCLING")).test(ctx()));
+        var factory = extraFactory("ender-dragon-phase");
+        var exact = factory.create(List.of("circling"));
+        var list = factory.create(List.of("FLY_TO_PORTAL,CIRCLING"));
+        assertFalse(exact.test(ctx()));
+
+        var dragon = mock(org.bukkit.entity.EnderDragon.class);
+        var context = BehaviorContext.of(null, dragon, 1.0, -1, 0, "IDLE");
+        when(dragon.getPhase()).thenReturn(org.bukkit.entity.EnderDragon.Phase.CIRCLING);
+        assertTrue(exact.test(context));
+        assertTrue(list.test(context));
+        when(dragon.getPhase()).thenReturn(org.bukkit.entity.EnderDragon.Phase.HOVER);
+        assertFalse(exact.test(context));
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.create(List.of("CIRCLING,INVALID")));
+        assertThrows(IllegalArgumentException.class, () -> factory.create(List.of("CIRCLING,")));
+        assertThrows(IllegalArgumentException.class, () -> factory.create(List.of("")));
     }
 
     @Test

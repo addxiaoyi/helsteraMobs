@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "releasePolicy": {
+    "requiresExactServerBuild": true,
+    "requiresMatchingPluginSha256": true,
+    "unlistedCombinationsAreUnverified": true
+  },
+  "combinations": [
+    {
+      "id": "paper-1.21.1-133-minecraft-1.21.1",
+      "serverFamily": "Paper",
+      "serverVersion": "1.21.1-133",
+      "minecraftVersion": "1.21.1",
+      "evidenceLevel": "strict",
+      "releaseValidated": true,
+      "releaseFixtureId": "srv-paper-target-filters-20261104-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-target-filters-strict-20261104-r1.json"
+    },
+    {
+      "id": "paper-1.21.4-minecraft-1.21.4",
+      "serverFamily": "Paper",
+      "serverVersion": "1.21.4",
+      "minecraftVersion": "1.21.4",
+      "evidenceLevel": "exploratory",
+      "releaseValidated": false,
+      "releaseFixtureId": null,
+      "releaseReport": null
+    },
+    {
+      "id": "paper-1.21.11-minecraft-1.21.11",
+      "serverFamily": "Paper",
+      "serverVersion": "1.21.11",
+      "minecraftVersion": "1.21.11",
+      "evidenceLevel": "exploratory",
+      "releaseValidated": false,
+      "releaseFixtureId": null,
+      "releaseReport": null
+    }
+  ]
+}

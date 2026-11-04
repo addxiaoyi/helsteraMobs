@@ -10,6 +10,7 @@ ai:
       require:
         - damage-cause ENTITY_ATTACK
         - damage-amount >=2
+        - damage-tag tag=FIRE
       do:
         - set-item DIAMOND_SWORD main-hand 1
         - cancel-event
