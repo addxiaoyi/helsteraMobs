@@ -83,30 +83,53 @@ if ($RequireFullReleaseCatalog) {
                 $required.status -notin @('passed', 'observed-rejected')) {
             throw "Invalid release probe catalog entry: $requiredId"
         }
-        $matches = @($report.probes | Where-Object { $_.id -ceq $requiredId })
-        if ($requiredId -cnotin @($report.expectedProbeIds) -or $matches.Count -ne 1 -or
-                $matches[0].status -cne $required.status) {
+        $probeMatches = @($report.probes | Where-Object { $_.id -ceq $requiredId })
+        if ($requiredId -cnotin @($report.expectedProbeIds) -or $probeMatches.Count -ne 1 -or
+                $probeMatches[0].status -cne $required.status) {
             throw "Paper integration report lacks required release probe: $requiredId (expected $($required.status))"
         }
         if ($null -ne $required.requiredObservation) {
             $observation = [string]$required.requiredObservation
             if ([string]::IsNullOrWhiteSpace($observation) -or
-                    $observation -cnotin @($matches[0].observations)) {
+                    $observation -cnotin @($probeMatches[0].observations)) {
                 throw "Paper integration report lacks required observation for ${requiredId}: $observation"
             }
         }
         if ($null -ne $required.requiredObservationContains) {
             $fragment = [string]$required.requiredObservationContains
             if ([string]::IsNullOrWhiteSpace($fragment) -or
-                    @($matches[0].observations | Where-Object { ([string]$_).Contains($fragment) }).Count -eq 0) {
+                    @($probeMatches[0].observations | Where-Object { ([string]$_).Contains($fragment) }).Count -eq 0) {
                 throw "Paper integration report lacks required observation for ${requiredId}: $fragment"
             }
         }
         if ($null -ne $required.requiredObservationPattern) {
             $pattern = [string]$required.requiredObservationPattern
             if ([string]::IsNullOrWhiteSpace($pattern) -or
-                    @($matches[0].observations | Where-Object { ([string]$_) -cmatch $pattern }).Count -eq 0) {
+                    @($probeMatches[0].observations | Where-Object { ([string]$_) -cmatch $pattern }).Count -eq 0) {
                 throw "Paper integration report lacks required observation for ${requiredId}: $pattern"
+            }
+        }
+        if ($null -ne $required.elapsedTicksField -or $null -ne $required.maximumTicksField) {
+            $elapsedField = [string]$required.elapsedTicksField
+            $maximumField = [string]$required.maximumTicksField
+            if ([string]::IsNullOrWhiteSpace($elapsedField) -or
+                    [string]::IsNullOrWhiteSpace($maximumField)) {
+                throw "Release probe catalog has an incomplete tick bound: $requiredId"
+            }
+            $tickPattern = '(?:^|\s)' + [regex]::Escape($elapsedField) + '=(?<elapsed>[0-9]+)(?=\s|$).*?(?:^|\s)' +
+                [regex]::Escape($maximumField) + '=(?<maximum>[0-9]+)(?:\s|$)'
+            $tickMatch = $null
+            foreach ($observation in $probeMatches[0].observations) {
+                $candidate = [regex]::Match([string]$observation, $tickPattern)
+                if ($candidate.Success) { $tickMatch = $candidate; break }
+            }
+            [long]$elapsedTicks = 0
+            [long]$maximumTicks = 0
+            if ($null -eq $tickMatch -or
+                    -not [long]::TryParse($tickMatch.Groups['elapsed'].Value, [ref]$elapsedTicks) -or
+                    -not [long]::TryParse($tickMatch.Groups['maximum'].Value, [ref]$maximumTicks) -or
+                    $maximumTicks -le 0 -or $elapsedTicks -gt $maximumTicks) {
+                throw "Paper integration probe exceeds or lacks its required tick bound: $requiredId"
             }
         }
         if ($required.status -ceq 'observed-rejected') {
@@ -115,7 +138,7 @@ if ($RequireFullReleaseCatalog) {
                 throw "Release probe catalog lacks rejection reason: $requiredId"
             }
             $reasonPattern = '(?:^|\s)requested=false\s+failure=' + [regex]::Escape($reason) + '\s*$'
-            if (@($matches[0].observations | Where-Object { $_ -cmatch $reasonPattern }).Count -eq 0) {
+            if (@($probeMatches[0].observations | Where-Object { $_ -cmatch $reasonPattern }).Count -eq 0) {
                 throw "Paper integration report lacks expected rejection reason for ${requiredId}: $reason"
             }
         }

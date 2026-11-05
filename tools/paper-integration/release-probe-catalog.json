@@ -1303,7 +1303,9 @@
     {
       "id": "spawningDistanceClientWalk",
       "status": "passed",
-      "requiredObservationPattern": "^spawning-distance-client-walk result=true player-displacement=(?:8|9|[1-9][0-9]+)(?:\\.[0-9]+)? player-entity-distance=(?!(?:[0-7](?:\\.[0-9]+)?|8(?:\\.0+)?)(?:\\s|$))[0-9]+(?:\\.[0-9]+)? instance-removed=true entity-removed=true$"
+      "requiredObservationPattern": "^spawning-distance-client-walk result=true player-displacement=(?:8|9|[1-9][0-9]+)(?:\\.[0-9]+)? player-entity-distance=(?!(?:[0-7](?:\\.[0-9]+)?|8(?:\\.0+)?)(?:\\s|$))[0-9]+(?:\\.[0-9]+)? instance-removed=true entity-removed=true despawn-elapsed-ticks=[0-9]+ decision-period-ticks=[1-9][0-9]*$",
+      "elapsedTicksField": "despawn-elapsed-ticks",
+      "maximumTicksField": "decision-period-ticks"
     },
     {
       "id": "spyglassCondition",

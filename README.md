@@ -4,13 +4,15 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-inside-outside-strict-20261105-r2`
+Latest strict fixture `srv-paper-spawning-timing-20261105-r3`
 completes 346 probes (327 passed, 19 expected rejections, zero incomplete).
-`insideOutsideCondition` verifies positive and negative `inside`/`outside`
-results and restores the original block state. Report:
-`tools/paper-integration/reports/paper-1.21.1-inside-outside-strict-20261105-r2.json`.
+`spawningDistanceClientWalk` records a real player leaving the configured
+radius and both managed/Bukkit entity removal 2 ticks later, within the
+10-tick AI decision period. The same report verifies positive and negative
+`inside`/`outside` results and restores the original block state. Report:
+`tools/paper-integration/reports/paper-1.21.1-spawning-distance-timing-20261105-r3.json`.
 The plugin SHA-256 is
-`d90dea6e153557afab20c9847e29f492c55fcc52d287ce282d40f31b87105df3`.
+`842a3dfd96d10e23c844652ed0fe05736ed3c10d2996d258d81bbd6c870ca4c9`.
 
 Previous full strict fixture `srv-paper-snowing-strict-20261105-r2`
 completes 345 probes (326 passed, 19 expected rejections, zero incomplete).
@@ -367,7 +369,7 @@ This is a partial parity release. The matrix currently has `41`
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
    Current fixture inventory: 450 cited IDs; 362 report files; 4 directories
-   without reports; 84 missing directories; 126 archived release reports. The
+   without reports; 84 missing directories; 127 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -534,7 +536,7 @@ the entire MythicMobs feature catalog.
 - Strict Paper 1.21.1-133 fixture `srv-paper-strict-potion-20261101-r5` closes the player Potion-consumption evidence gap: after the menu client disconnects, a raw protocol 1.21.1 client reconnects in Survival, drinks the server-equipped Swiftness Potion, and records `playerPotionConsume=passed`; the fixture completes 252 probes (241 passed, 11 expected negative controls rejected). The standalone exploratory fixtures remain separate from this strict release evidence.
 - Strict Paper 1.21.1-133 fixture `srv-paper-potion-expiry-strict-20261101-r1` completes 255 probes and records both `playerPotionConsume=passed` and `playerPotionNaturalExpiry=passed`; the short-effect player event is observed as `expired=true action-observed=true`.
 - Strict Paper follow-up `srv-paper-mob-max-combat-distance-20261101-r5` verifies imported per-mob `MaxCombatDistance=8`: a production-spawned Zombie allows the 7-block damage control and cancels the 9-block event. The complete 253-probe report has 241 passed, 12 expected negative controls rejected, and zero incomplete; raw player Potion consumption also passed.
-- Strict Paper fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` verifies imported legacy `SpawningDistance=8` through a real Mineflayer client moving 14.01 blocks; Paper observes 8.47 blocks of player displacement and removes both the managed instance and Bukkit entity. Its 264-probe report has 253 passed, 11 expected negative controls, and zero incomplete. The current full strict fixture `srv-paper-in-combat-strict-20261105-r3` also requires `spawningDistanceClientWalk`, observing 174.56 blocks of real player displacement and removal of both entities. Earlier fixtures separately establish nearby retention and server-driven out-of-range removal.
+- Strict Paper fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` verifies imported legacy `SpawningDistance=8` through a real Mineflayer client moving 14.01 blocks; Paper observes 8.47 blocks of player displacement and removes both the managed instance and Bukkit entity. Its 264-probe report has 253 passed, 11 expected negative controls, and zero incomplete. Latest full strict fixture `srv-paper-spawning-timing-20261105-r3` additionally measures removal 2 server ticks after the client is first observed beyond range, against the configured 10-tick AI decision period. Earlier fixtures separately establish nearby retention and server-driven out-of-range removal.
 - Strict Paper 1.21.1-133 fixture `srv-paper-biome-condition-strict-20261101-r1` verifies `Biome` exact namespaced matching, non-exact key substring matching, comma-separated alternatives, exact-mode rejection of the substring, and a negative mismatched key. Its 254-probe report has 242 passed, 12 expected negative controls, and zero incomplete.
 - Raw Potion r136/r137 re-arm hotbar slot 1 immediately before use; r136 records `playerPotionConsume=passed` with `item=POTION`, and r137 records both `playerPotionConsume=passed` and `playerPotionNaturalExpiry=passed`.
 - Exploratory Paper 1.21.11 r133 records `vehicleEvents=passed` and `ejectPassenger=passed`; the fixture now exercises a real Bukkit `VehicleDestroyEvent` dispatch in addition to enter/exit/dismount/eject coverage.

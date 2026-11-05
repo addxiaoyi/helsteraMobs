@@ -144,7 +144,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] despawn-options result=true mode=PERSISTENT distance=0 persistent=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-options result=true mode=NORMAL distance=8',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-runtime result=true inside-retained=true outside-removed=true',
-        '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true despawn-elapsed-ticks=3 decision-period-ticks=10',
         '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
@@ -707,7 +707,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'spawningDistanceClientWalk'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'spawningDistanceClientWalk'; status = 'passed'; observations = @('spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true')
+        id = 'spawningDistanceClientWalk'; status = 'passed'; observations = @('spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true despawn-elapsed-ticks=3 decision-period-ticks=10')
     }
     $fullCatalogReport.expectedProbeIds += 'webSpawnerReload'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -1133,9 +1133,17 @@ try {
         Assert-True $withinRangeRejected "full release gate rejects SpawningDistance distance $distance"
     }
     $spawningDistanceProbe.observations = @(
-        'spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=8.0001 instance-removed=true entity-removed=true')
+        'spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=8.0001 instance-removed=true entity-removed=true despawn-elapsed-ticks=3 decision-period-ticks=10')
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    $spawningDistanceProbe.observations = @(
+        'spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true despawn-elapsed-ticks=11 decision-period-ticks=10')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $lateDespawnRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $lateDespawnRejected = $_.Exception.Message -match 'tick bound' }
+    Assert-True $lateDespawnRejected 'full release gate rejects SpawningDistance removal beyond its AI decision period'
     $spawningDistanceProbe.observations = $originalSpawningDistanceObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $inCombatProbe = $fullCatalogReport.probes | Where-Object id -eq 'inCombatCondition'

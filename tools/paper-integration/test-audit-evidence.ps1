@@ -110,7 +110,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'spawningDistanceClientWalk'
     $fullReport.probes += [pscustomobject]@{
-        id = 'spawningDistanceClientWalk'; status = 'passed'; observations = @('spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true')
+        id = 'spawningDistanceClientWalk'; status = 'passed'; observations = @('spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true despawn-elapsed-ticks=3 decision-period-ticks=10')
     }
     $fullReport.expectedProbeIds += 'targeterIdentityFilter'
     $fullReport.probes += [pscustomobject]@{
