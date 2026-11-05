@@ -1,6 +1,25 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-has-enchantment-import-strict-20261105-r1` passed the full
+Fixture `srv-paper-trigger-types-import-strict-20261105-r2` passed the full
+strict gate on Paper 1.21.1-133: 356 probes, 337 passed, 19 expected
+rejections, and zero incomplete. `importedTriggerItemTypeCondition` verifies
+the `?triggerItemType`/`?triggeringItemType` importer paths against a real
+Bukkit dropped Item; `importedTriggerBlockTypeCondition` verifies
+`?triggerBlockType`/`?triggeringBlockType`, material rejection, and wrong-state
+rejection against a real block. Both use explicitly constructed
+`BehaviorContext` values, so this evidence does not claim natural Bukkit event
+delivery. Report and compressed server/client logs are listed in
+`release-evidence.json`; plugin SHA-256:
+`41cf9e79c81657f05acb68a95a78ad5fdda073de60b7502d17b79e428538ec4a`.
+
+Previous fixture `srv-paper-trigger-types-import-strict-20261105-r1` also passed
+356 probes (337 passed, 19 expected rejections, zero incomplete) against the
+previous probe JAR. The r2 fixture reruns these controls against the current
+exact JAR. Report and compressed server/client logs are listed in
+`release-evidence.json`; plugin SHA-256:
+`071ceebd2da8a904dfbc3aef8a2594fb5d22c04d83e23acf4e798f9943ebe65e`.
+
+Previous fixture `srv-paper-has-enchantment-import-strict-20261105-r1` passed the full
 strict gate on Paper 1.21.1-133: 354 probes, 335 passed, 19 expected
 rejections, and zero incomplete. `importedHasEnchantmentCondition` verifies
 Mythic `?hasEnchantment` and `?hasEnchant` on a real managed Zombie, including

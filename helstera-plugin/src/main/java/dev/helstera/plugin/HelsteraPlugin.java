@@ -1950,6 +1950,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean endermanCondition = false;
             boolean enchantmentCondition = false;
             boolean importedHasEnchantmentCondition = false;
+            boolean importedTriggerItemTypeCondition = false;
+            boolean importedTriggerBlockTypeCondition = false;
             boolean colorCondition = false;
             boolean importedColorCondition = false;
             boolean materialCooldownCondition = false;
@@ -2667,6 +2669,42 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean triggerItemNegative = !behaviors.testCondition(
                         skills.bindCondition("trigger-item-type DIAMOND"), triggerItemContext);
                 triggerItemTypeCondition = triggerItemPositive && triggerItemNegative;
+                var importedTriggerItemPrimary = dev.helstera.migration.importer.MmConditions.translate(
+                        "?triggerItemType{mat=STONE,DIRT}");
+                var importedTriggerItemAlias = dev.helstera.migration.importer.MmConditions.translate(
+                        "?triggeringItemType{item=STONE}");
+                var importedTriggerItemNegative = dev.helstera.migration.importer.MmConditions.translate(
+                        "?triggerItemType{types=DIAMOND}");
+                boolean importedTriggerItemPrimaryMapped = importedTriggerItemPrimary.translated()
+                        && "trigger-item-type STONE,DIRT".equals(importedTriggerItemPrimary.condition());
+                boolean importedTriggerItemAliasMapped = importedTriggerItemAlias.translated()
+                        && "trigger-item-type STONE".equals(importedTriggerItemAlias.condition());
+                boolean importedTriggerItemNegativeMapped = importedTriggerItemNegative.translated()
+                        && "trigger-item-type DIAMOND".equals(importedTriggerItemNegative.condition());
+                String importedTriggerItemPrimaryKey = importedTriggerItemPrimaryMapped
+                        ? skills.bindCondition(importedTriggerItemPrimary.condition()) : null;
+                String importedTriggerItemAliasKey = importedTriggerItemAliasMapped
+                        ? skills.bindCondition(importedTriggerItemAlias.condition()) : null;
+                String importedTriggerItemNegativeKey = importedTriggerItemNegativeMapped
+                        ? skills.bindCondition(importedTriggerItemNegative.condition()) : null;
+                boolean importedTriggerItemContextConstructed = triggerItemContext.trigger()
+                        .orElse(null) == triggerItemProbe
+                        && "on-item-pickup".equals(triggerItemContext.state());
+                boolean importedTriggerItemPositive = importedTriggerItemPrimaryKey != null
+                        && behaviors.testCondition(importedTriggerItemPrimaryKey, triggerItemContext);
+                boolean importedTriggerItemAliasPositive = importedTriggerItemAliasKey != null
+                        && behaviors.testCondition(importedTriggerItemAliasKey, triggerItemContext);
+                boolean importedTriggerItemRejected = importedTriggerItemNegativeKey != null
+                        && !behaviors.testCondition(importedTriggerItemNegativeKey, triggerItemContext);
+                importedTriggerItemTypeCondition = importedTriggerItemPrimaryMapped
+                        && importedTriggerItemAliasMapped && importedTriggerItemNegativeMapped
+                        && importedTriggerItemContextConstructed && importedTriggerItemPositive
+                        && importedTriggerItemAliasPositive && importedTriggerItemRejected;
+                getLogger().info("[自检] imported-trigger-item-type-condition primary-mapped="
+                        + importedTriggerItemPrimaryMapped + " alias-mapped=" + importedTriggerItemAliasMapped
+                        + " positive=" + importedTriggerItemPositive + " alias-positive="
+                        + importedTriggerItemAliasPositive + " negative=" + importedTriggerItemRejected
+                        + " constructed-context=" + importedTriggerItemContextConstructed);
                 boolean entityItemPositive = behaviors.testCondition(
                         skills.bindCondition("entity-item-type STONE"), triggerItemContext)
                         && behaviors.testCondition(
@@ -3374,6 +3412,46 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("trigger-block-type STONE"), wrongBlockContext);
                     triggerBlockTypeCondition = triggerBlockPositive && triggerBlockNegative
                             && triggerBlockStateRejected;
+                    var importedTriggerBlockPrimary = dev.helstera.migration.importer.MmConditions.translate(
+                            "?triggerBlockType{mat=STONE,DIRT}");
+                    var importedTriggerBlockAlias = dev.helstera.migration.importer.MmConditions.translate(
+                            "?triggeringBlockType{block=STONE}");
+                    var importedTriggerBlockNegative = dev.helstera.migration.importer.MmConditions.translate(
+                            "?triggerBlockType{types=DIAMOND}");
+                    boolean importedTriggerBlockPrimaryMapped = importedTriggerBlockPrimary.translated()
+                            && "trigger-block-type STONE,DIRT".equals(importedTriggerBlockPrimary.condition());
+                    boolean importedTriggerBlockAliasMapped = importedTriggerBlockAlias.translated()
+                            && "trigger-block-type STONE".equals(importedTriggerBlockAlias.condition());
+                    boolean importedTriggerBlockNegativeMapped = importedTriggerBlockNegative.translated()
+                            && "trigger-block-type DIAMOND".equals(importedTriggerBlockNegative.condition());
+                    String importedTriggerBlockPrimaryKey = importedTriggerBlockPrimaryMapped
+                            ? skills.bindCondition(importedTriggerBlockPrimary.condition()) : null;
+                    String importedTriggerBlockAliasKey = importedTriggerBlockAliasMapped
+                            ? skills.bindCondition(importedTriggerBlockAlias.condition()) : null;
+                    String importedTriggerBlockNegativeKey = importedTriggerBlockNegativeMapped
+                            ? skills.bindCondition(importedTriggerBlockNegative.condition()) : null;
+                    boolean importedTriggerBlockContextConstructed = "on-block-break".equals(
+                            triggerBlockContext.state()) && triggerBlockContext.origin()
+                            .map(origin -> origin.getBlock().equals(triggerBlock)).orElse(false);
+                    boolean importedTriggerBlockPositive = importedTriggerBlockPrimaryKey != null
+                            && behaviors.testCondition(importedTriggerBlockPrimaryKey, triggerBlockContext);
+                    boolean importedTriggerBlockAliasPositive = importedTriggerBlockAliasKey != null
+                            && behaviors.testCondition(importedTriggerBlockAliasKey, triggerBlockContext);
+                    boolean importedTriggerBlockRejected = importedTriggerBlockNegativeKey != null
+                            && !behaviors.testCondition(importedTriggerBlockNegativeKey, triggerBlockContext);
+                    boolean importedTriggerBlockStateRejected = importedTriggerBlockPrimaryKey != null
+                            && !behaviors.testCondition(importedTriggerBlockPrimaryKey, wrongBlockContext);
+                    importedTriggerBlockTypeCondition = importedTriggerBlockPrimaryMapped
+                            && importedTriggerBlockAliasMapped && importedTriggerBlockNegativeMapped
+                            && importedTriggerBlockContextConstructed && importedTriggerBlockPositive
+                            && importedTriggerBlockAliasPositive && importedTriggerBlockRejected
+                            && importedTriggerBlockStateRejected;
+                    getLogger().info("[自检] imported-trigger-block-type-condition primary-mapped="
+                            + importedTriggerBlockPrimaryMapped + " alias-mapped=" + importedTriggerBlockAliasMapped
+                            + " positive=" + importedTriggerBlockPositive + " alias-positive="
+                            + importedTriggerBlockAliasPositive + " negative=" + importedTriggerBlockRejected
+                            + " state-rejected=" + importedTriggerBlockStateRejected
+                            + " constructed-context=" + importedTriggerBlockContextConstructed);
                     getLogger().info("trigger-block-type-condition-details positive=" + triggerBlockPositive
                             + " negative=" + triggerBlockNegative
                             + " state-rejected=" + triggerBlockStateRejected);
@@ -3741,9 +3819,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean managedInCombatNegative = false;
                 boolean managedInCombatRestored = false;
                 boolean managedInCombatControllerPath = false;
-                org.bukkit.entity.Mob managedCombatMob = modelInstance == null ? null
-                        : modelInstance.baseEntity().orElse(null) instanceof org.bukkit.entity.Mob mob
-                        ? mob : null;
+                org.bukkit.entity.Mob managedCombatMob =
+                        modelInstance.baseEntity().orElse(null) instanceof org.bukkit.entity.Mob mob
+                                ? mob : null;
                 dev.helstera.ai.AiController managedCombatController =
                         modelInstance instanceof dev.helstera.runtime.instance.ModelInstanceImpl managed
                                 && managed.aiController instanceof dev.helstera.ai.AiController controller
@@ -3940,7 +4018,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && enchantmentCondition
                         && colorCondition
                         && triggerItemTypeCondition
+                        && importedTriggerItemTypeCondition
                         && triggerBlockTypeCondition
+                        && importedTriggerBlockTypeCondition
                         && originLocationCondition
                         && playerKillsCondition
                         && absorptionCondition
@@ -5988,6 +6068,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " enderman-condition=" + endermanCondition
                         + " enchantment-condition=" + enchantmentCondition
                         + " imported-has-enchantment-condition=" + importedHasEnchantmentCondition
+                        + " imported-trigger-item-type-condition=" + importedTriggerItemTypeCondition
+                        + " imported-trigger-block-type-condition=" + importedTriggerBlockTypeCondition
                         + " color-condition=" + colorCondition
                         + " imported-color-condition=" + importedColorCondition
                         + " material-cooldown-condition=" + materialCooldownCondition

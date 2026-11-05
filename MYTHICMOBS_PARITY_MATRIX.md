@@ -2447,7 +2447,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-has-enchantment-import-strict-20261105-r1` completes 354 probes (335 passed, 19 expected rejections, zero incomplete), including imported HasEnchantment/HasEnchant with real Paper positive and negative evidence. Previous strict fixtures verify Aerial, Color, and `MaterialIsOnCooldown` aliases with real Paper entities and a player cooldown; imported `?isChild` parent relation against related adult/unrelated baby entities; real Sheep Age/Adult/Baby/AgeLock and Zombie Baby behavior; a real Enderman positive and managed-Zombie negative; in-audience cinematic state and rejection/cleanup; and `inside`/`outside`, block restoration, and real-player `Options.SpawningDistance` removal 2 ticks after leaving range. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, Survival-mode conditions, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-trigger-types-import-strict-20261105-r2` completes 356 probes (337 passed, 19 expected rejections, zero incomplete), including imported TriggerItemType/TriggerBlockType aliases and material/state controls against real Bukkit objects in constructed contexts. Previous strict fixtures verify imported HasEnchantment/HasEnchant with real Paper positive and negative evidence; Aerial, Color, and `MaterialIsOnCooldown` aliases; imported `?isChild` parent relation against related adult/unrelated baby entities; real Sheep Age/Adult/Baby/AgeLock and Zombie Baby behavior; a real Enderman positive and managed-Zombie negative; in-audience cinematic state and rejection/cleanup; and `inside`/`outside`, block restoration, and real-player `Options.SpawningDistance` removal 2 ticks after leaving range. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, Survival-mode conditions, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
@@ -3253,10 +3253,17 @@ Item entity from `BehaviorContext.trigger()` and matches comma-separated
 material names with `types/type/material/m` aliases. Exploratory Paper
 `srv-paper-integration-exploratory-1.21.11-r113` verifies STONE/DIRT positive
 and DIAMOND negative trigger paths through `trigger-item-type-condition=true`.
-The same fixture maps `TriggerBlockType` to the origin block for block trigger
-states and verifies positive, material-negative, and wrong-state paths through
-`trigger-block-type-condition=true`. Strict Paper 1.21.1 evidence remains
-open.
+Strict Paper 1.21.1-133 fixture
+`srv-paper-trigger-types-import-strict-20261105-r2` verifies the Mythic
+`?triggerItemType` and `?triggeringItemType` importer paths against a real
+dropped Bukkit Item. Official `TriggerBlockType` maps to the origin block for
+block trigger states; the same fixture verifies `?triggerBlockType` and
+`?triggeringBlockType`, STONE positive, DIAMOND negative, and wrong-state
+rejection against a real block. Both probes construct `BehaviorContext` values
+for their event states, so they prove importer-to-evaluator behavior but do not
+prove natural Bukkit pickup/break event delivery. The report records the exact
+plugin SHA-256 from the successful Paper run. The overall Conditions catalog
+remains mapped-unverified.
 
 Coordinate difference update: official `XDiff`, `YDiff`, and `ZDiff` now
 compare target-minus-caster Bukkit coordinates with Mythic numeric ranges and

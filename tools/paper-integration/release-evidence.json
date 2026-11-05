@@ -1,5 +1,25 @@
 [
   {
+    "fixtureId": "srv-paper-trigger-types-import-strict-20261105-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-trigger-types-import-strict-20261105-r2.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-trigger-types-import-strict-20261105-r2.log.gz",
+    "logSha256": "2a8530bd814dcdb2c48c862dc51fd08f6bb4b475d205aa4a91dc96f7170ca31c",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-trigger-types-import-strict-20261105-r2-client-logs.tar.gz",
+    "clientLogSha256": "75e2533995200865b6f31bee2b9a862bcff9b5f3daddd2587daa0987534486bf",
+    "pluginSha256": "41cf9e79c81657f05acb68a95a78ad5fdda073de60b7502d17b79e428538ec4a",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-trigger-types-import-strict-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-trigger-types-import-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-trigger-types-import-strict-20261105-r1.log.gz",
+    "logSha256": "04a4c84100b7744b8357280a791c0507c7026e85dd65547d3df1eb59af614c47",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-trigger-types-import-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "374b25807ef455bbc7cfac7e17c171acbe9de19064c3fba8e934ac5e95d6869b",
+    "pluginSha256": "071ceebd2da8a904dfbc3aef8a2594fb5d22c04d83e23acf4e798f9943ebe65e",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-has-enchantment-import-strict-20261105-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-has-enchantment-import-strict-20261105-r1.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-has-enchantment-import-strict-20261105-r1.log.gz",
