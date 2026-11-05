@@ -1,5 +1,35 @@
 [
   {
+    "fixtureId": "srv-paper-condition-import-strict-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-condition-import-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-condition-import-strict-20261105-r1.log.gz",
+    "logSha256": "3e5634018ff9ff0e14a4fd9a30a9bf8d73f561f1d7a22adcab959070513736b4",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-condition-import-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "8aab3f3ed2fba9adccd48b0c941eace51531161b934d03d8caf47a27358e923c",
+    "pluginSha256": "75b5bf2bde256454caa90aa1bea652ac67754b0f65b3e38633d3ddbf7933104a",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-color-import-strict-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-color-import-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-color-import-strict-20261105-r1.log.gz",
+    "logSha256": "38ae391d5f24491ae6fff0b8d5954f685e2f105b719bc7b88d2b848fd0d3fd4d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-color-import-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "2fe21739ecabcc9353975a45ee6db723c388a517a105548bdd85f46bb7c789bd",
+    "pluginSha256": "6411d68946e2d04082086609dba9ff8f74e5d404c99df577ae93d6588bf8a51e",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-aerial-import-strict-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-aerial-import-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-aerial-import-strict-20261105-r1.log.gz",
+    "logSha256": "ada4b9b884ed4c63892609aa19f09d848c883eb8a5188dd2e36b7aa8784734ac",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-aerial-import-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "5bf50898089e85f85475df079c5278241d4ad5673b5ced258bfd9b90ab12e994",
+    "pluginSha256": "30315bb483240a5386d7d47ab6d4ca88ab9f0bff2d83c203924a7d1a20903722",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-is-child-import-strict-20261105-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-is-child-import-strict-20261105-r1.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-is-child-import-strict-20261105-r1.log.gz",

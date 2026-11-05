@@ -116,6 +116,18 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'aerialCondition'; status = 'passed'; observations = @('aerial-condition-details positive=true alias-positive=true negative=true ground-entity=player ground=true')
     }
+    $fullReport.expectedProbeIds += 'importedAerialCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedAerialCondition'; status = 'passed'; observations = @('imported-aerial-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true ground=true')
+    }
+    $fullReport.expectedProbeIds += 'importedColorCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedColorCondition'; status = 'passed'; observations = @('imported-color-condition red-mapped=true blue-alias-mapped=true positive=true negative=true entity-color=RED')
+    }
+    $fullReport.expectedProbeIds += 'importedMaterialCooldownCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedMaterialCooldownCondition'; status = 'passed'; observations = @('imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true')
+    }
     $fullReport.expectedProbeIds += 'snowingCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'snowingCondition'; status = 'passed'; observations = @('snowing-condition result=true target-location-isolated=true target-positive=true alias-positive=true warm-rejected=true clear-rejected=true missing-context-rejected=true invalid-arguments-rejected=true restored=true')

@@ -1946,10 +1946,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean waterMobCondition = false;
             boolean zombieCondition = false;
             boolean aerialCondition = false;
+            boolean importedAerialCondition = false;
             boolean endermanCondition = false;
             boolean enchantmentCondition = false;
             boolean colorCondition = false;
+            boolean importedColorCondition = false;
             boolean materialCooldownCondition = false;
+            boolean importedMaterialCooldownCondition = false;
             boolean materialCooldownMechanic = false;
             boolean setGameModeMechanic = false;
             boolean triggerItemTypeCondition = false;
@@ -2560,6 +2563,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills.bindCondition("aerial"), aerialContext);
                 boolean aerialAliasPositive = behaviors.testCondition(
                         skills.bindCondition("isAerial"), aerialContext);
+                var importedAerial = dev.helstera.migration.importer.MmConditions.translate("?aerial");
+                var importedAerialAlias = dev.helstera.migration.importer.MmConditions.translate("?isAerial");
+                boolean importedAerialMapped = importedAerial.translated()
+                        && "aerial".equals(importedAerial.condition());
+                boolean importedAerialAliasMapped = importedAerialAlias.translated()
+                        && "aerial".equals(importedAerialAlias.condition());
+                String importedAerialKey = importedAerialMapped
+                        ? skills.bindCondition(importedAerial.condition()) : null;
+                String importedAerialAliasKey = importedAerialAliasMapped
+                        ? skills.bindCondition(importedAerialAlias.condition()) : null;
+                boolean importedAerialPositive = importedAerialKey != null
+                        && behaviors.testCondition(importedAerialKey, aerialContext);
+                boolean importedAerialAliasPositive = importedAerialAliasKey != null
+                        && behaviors.testCondition(importedAerialAliasKey, aerialContext);
                 var groundPlayer = getServer().getOnlinePlayers().stream()
                         .filter(Player::isOnGround).findFirst().orElse(null);
                 org.bukkit.entity.LivingEntity groundEntity = groundPlayer == null
@@ -2569,12 +2586,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean grounded = groundEntity.isOnGround();
                 boolean aerialNegative = grounded && !behaviors.testCondition(
                         skills.bindCondition("aerial"), groundContext);
+                boolean importedAerialNegative = grounded && importedAerialKey != null
+                        && !behaviors.testCondition(importedAerialKey, groundContext);
                 aerialCondition = aerialPositive && aerialAliasPositive
                         && aerialNegative && grounded;
+                importedAerialCondition = importedAerialMapped && importedAerialAliasMapped
+                        && importedAerialPositive && importedAerialAliasPositive
+                        && importedAerialNegative && grounded;
                 getLogger().info("aerial-condition-details positive=" + aerialPositive
                         + " alias-positive=" + aerialAliasPositive
                         + " negative=" + aerialNegative
                         + " ground-entity=" + (groundPlayer == null ? "zombie" : "player")
+                        + " ground=" + grounded);
+                getLogger().info("[自检] imported-aerial-condition primary-mapped=" + importedAerialMapped
+                        + " alias-mapped=" + importedAerialAliasMapped
+                        + " positive=" + importedAerialPositive
+                        + " alias-positive=" + importedAerialAliasPositive
+                        + " negative=" + importedAerialNegative
                         + " ground=" + grounded);
                 var endermanProbe = world.spawn(location.clone().add(8, 0, 0),
                         org.bukkit.entity.Enderman.class);
@@ -2605,8 +2633,29 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean colorTypeNegative = !behaviors.testCondition(
                         skills.bindCondition("color RED"), context);
                 colorCondition = colorPositive && colorNegative && colorTypeNegative;
+                var importedColorRed = dev.helstera.migration.importer.MmConditions.translate("?color{c=RED}");
+                var importedColorBlue = dev.helstera.migration.importer.MmConditions.translate("?clr{color=BLUE}");
+                boolean importedColorRedMapped = importedColorRed.translated()
+                        && "color RED".equals(importedColorRed.condition());
+                boolean importedColorBlueMapped = importedColorBlue.translated()
+                        && "color BLUE".equals(importedColorBlue.condition());
+                String importedColorRedKey = importedColorRedMapped
+                        ? skills.bindCondition(importedColorRed.condition()) : null;
+                String importedColorBlueKey = importedColorBlueMapped
+                        ? skills.bindCondition(importedColorBlue.condition()) : null;
+                boolean importedColorPositive = importedColorRedKey != null
+                        && behaviors.testCondition(importedColorRedKey, colorContext);
+                boolean importedColorNegative = importedColorBlueKey != null
+                        && !behaviors.testCondition(importedColorBlueKey, colorContext);
+                importedColorCondition = importedColorRedMapped && importedColorBlueMapped
+                        && importedColorPositive && importedColorNegative;
                 getLogger().info("color-condition-details positive=" + colorPositive
                         + " negative=" + colorNegative + " type-rejected=" + colorTypeNegative);
+                getLogger().info("[自检] imported-color-condition red-mapped=" + importedColorRedMapped
+                        + " blue-alias-mapped=" + importedColorBlueMapped
+                        + " positive=" + importedColorPositive
+                        + " negative=" + importedColorNegative
+                        + " entity-color=" + colorProbe.getColor());
                 var triggerItemProbe = world.dropItem(location.clone().add(12, 0, 0),
                         new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE));
                 var triggerItemContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
@@ -5342,6 +5391,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " attack-applied=" + attackApplied);
                     int oldEnderPearlCooldown = permissionProbe.getCooldown(org.bukkit.Material.ENDER_PEARL);
                     permissionProbe.setCooldown(org.bukkit.Material.ENDER_PEARL, 20);
+                    var importedPearlCooldown = dev.helstera.migration.importer.MmConditions.translate(
+                            "?materialIsOnCooldown{m=ENDER_PEARL}");
+                    var importedDiamondCooldown = dev.helstera.migration.importer.MmConditions.translate(
+                            "?matCooldown{material=DIAMOND}");
+                    boolean importedPearlCooldownMapped = importedPearlCooldown.translated()
+                            && "material-on-cooldown ENDER_PEARL".equals(importedPearlCooldown.condition());
+                    boolean importedDiamondCooldownMapped = importedDiamondCooldown.translated()
+                            && "material-on-cooldown DIAMOND".equals(importedDiamondCooldown.condition());
+                    String importedPearlCooldownKey = importedPearlCooldownMapped
+                            ? skills.bindCondition(importedPearlCooldown.condition()) : null;
+                    String importedDiamondCooldownKey = importedDiamondCooldownMapped
+                            ? skills.bindCondition(importedDiamondCooldown.condition()) : null;
+                    boolean importedPearlCooldownPositive = importedPearlCooldownKey != null
+                            && behaviors.testCondition(importedPearlCooldownKey, stateContext);
+                    boolean importedDiamondCooldownNegative = importedDiamondCooldownKey != null
+                            && !behaviors.testCondition(importedDiamondCooldownKey, stateContext);
+                    importedMaterialCooldownCondition = importedPearlCooldownMapped
+                            && importedDiamondCooldownMapped && importedPearlCooldownPositive
+                            && importedDiamondCooldownNegative;
                     boolean cooldownPositive = behaviors.testCondition(
                             skills.bindCondition("materialIsOnCooldown{m=ENDER_PEARL}"), stateContext);
                     boolean cooldownWrongMaterial = !behaviors.testCondition(
@@ -5352,6 +5420,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     materialCooldownCondition = cooldownPositive && cooldownWrongMaterial && cooldownNegative;
                     getLogger().info("material-cooldown-condition-details positive=" + cooldownPositive
                             + " wrong-material=" + cooldownWrongMaterial + " negative=" + cooldownNegative);
+                    getLogger().info("[自检] imported-material-cooldown-condition primary-mapped="
+                            + importedPearlCooldownMapped + " alias-mapped=" + importedDiamondCooldownMapped
+                            + " positive=" + importedPearlCooldownPositive
+                            + " wrong-material-rejected=" + importedDiamondCooldownNegative);
                     boolean materialCooldownDispatched = runIntegrationAction(skills, behaviors,
                             "set-item-cooldown ENDER_PEARL 20", stateContext);
                     materialCooldownMechanic = materialCooldownDispatched
@@ -5861,10 +5933,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " water-mob-condition=" + waterMobCondition
                         + " zombie-condition=" + zombieCondition
                         + " aerial-condition=" + aerialCondition
+                        + " imported-aerial-condition=" + importedAerialCondition
                         + " enderman-condition=" + endermanCondition
                         + " enchantment-condition=" + enchantmentCondition
                         + " color-condition=" + colorCondition
+                        + " imported-color-condition=" + importedColorCondition
                         + " material-cooldown-condition=" + materialCooldownCondition
+                        + " imported-material-cooldown-condition=" + importedMaterialCooldownCondition
                         + " material-cooldown-mechanic=" + materialCooldownMechanic
                         + " set-game-mode-mechanic=" + setGameModeMechanic
                         + " trigger-item-type-condition=" + triggerItemTypeCondition
