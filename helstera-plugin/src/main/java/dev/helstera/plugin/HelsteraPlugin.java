@@ -2551,20 +2551,24 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         modelInstance, aerialProbe, 1.0, 3.0, 0, "integration");
                 boolean aerialPositive = behaviors.testCondition(
                         skills.bindCondition("aerial"), aerialContext);
+                boolean aerialAliasPositive = behaviors.testCondition(
+                        skills.bindCondition("isAerial"), aerialContext);
                 var groundPlayer = getServer().getOnlinePlayers().stream()
                         .filter(Player::isOnGround).findFirst().orElse(null);
-                var groundContext = groundPlayer == null
-                        ? context
-                        : dev.helstera.api.behavior.BehaviorContext.of(
-                        modelInstance, groundPlayer, 1.0, -1, 0, "integration");
-                boolean aerialNegative = !behaviors.testCondition(
-                        skills.bindCondition("isAerial"), groundContext);
-                aerialCondition = aerialPositive && aerialNegative;
+                org.bukkit.entity.LivingEntity groundEntity = groundPlayer == null
+                        ? zombie : groundPlayer;
+                var groundContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, groundEntity, 1.0, -1, 0, "integration");
+                boolean grounded = groundEntity.isOnGround();
+                boolean aerialNegative = grounded && !behaviors.testCondition(
+                        skills.bindCondition("aerial"), groundContext);
+                aerialCondition = aerialPositive && aerialAliasPositive
+                        && aerialNegative && grounded;
                 getLogger().info("aerial-condition-details positive=" + aerialPositive
+                        + " alias-positive=" + aerialAliasPositive
                         + " negative=" + aerialNegative
                         + " ground-entity=" + (groundPlayer == null ? "zombie" : "player")
-                        + " ground=" + (groundPlayer == null ? zombie.isOnGround()
-                        : groundPlayer.isOnGround()));
+                        + " ground=" + grounded);
                 var endermanProbe = world.spawn(location.clone().add(8, 0, 0),
                         org.bukkit.entity.Enderman.class);
                 conditionCategoryEntities.add(endermanProbe);

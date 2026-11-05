@@ -1,5 +1,23 @@
 # Paper Startup Evidence
 
+Fixture `srv-paper-aerial-condition-strict-20261105-r2` passed the complete
+strict gate on Paper 1.21.1-133: 349 probes, 330 passed and 19 expected
+rejections, with zero incomplete. `aerialCondition` verifies a floating
+ArmorStand through both `aerial` and `isAerial`, then rejects a grounded
+player and records `ground-entity=player`. The full report also includes the
+two-client menu/Audience, raw Potion, and player-movement workflows. Report and
+compressed logs are listed in `release-evidence.json`; plugin SHA-256:
+`97f61a7392ad0051acc0ee55cdcc0272c0512d2675347c138be3ce3f918eaa6a`.
+
+Fixture `srv-paper-aerial-condition-strict-20261105-r1` passed the complete
+strict gate on Paper 1.21.1-133: 349 probes, 330 passed and 19 expected
+rejections, with zero incomplete. `aerialCondition` verifies a floating
+ArmorStand through both `aerial` and `isAerial`, then rejects a grounded
+player. The full report also includes the two-client menu/Audience, raw Potion,
+and player-movement workflows. Report and compressed logs are listed in
+`release-evidence.json`; plugin SHA-256:
+`0c35898c00b2b52ebebe8aa8b0ee53665682188c53e10a8149d2fce67df98159`.
+
 Fixture `srv-paper-enderman-condition-strict-20261105-r1` passed the complete
 strict gate on Paper 1.21.1-133: 348 probes, 329 passed and 19 expected
 rejections, with zero incomplete. `endermanCondition` accepts a real Enderman

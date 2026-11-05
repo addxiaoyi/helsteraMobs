@@ -147,6 +147,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true despawn-elapsed-ticks=3 decision-period-ticks=10',
         '[Server thread/INFO]: [helsteraMobs] [自检] is-in-cinematic-condition player-open=true player-out-of-range-rejected=true non-player-rejected=true closed=true',
         '[Server thread/INFO]: [helsteraMobs] enderman-condition-details positive=true negative=true',
+        '[Server thread/INFO]: [helsteraMobs] aerial-condition-details positive=true alias-positive=true negative=true ground-entity=player ground=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
@@ -331,7 +332,7 @@ try {
     Assert-True $wrongPluginHashRejected 'strict gate rejects mismatched plugin SHA-256'
     foreach ($requiredProbeId in @('custom-menu-player-workflow', 'audience-player-delivery',
             'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates',
-            'spawningDistanceClientWalk', 'isInCinematicCondition', 'endermanCondition')) {
+            'spawningDistanceClientWalk', 'isInCinematicCondition', 'aerialCondition', 'endermanCondition')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -715,6 +716,10 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'endermanCondition'; status = 'passed'; observations = @('enderman-condition-details positive=true negative=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'aerialCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'aerialCondition'; status = 'passed'; observations = @('aerial-condition-details positive=true alias-positive=true negative=true ground-entity=player ground=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'spawningDistanceClientWalk'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'spawningDistanceClientWalk'; status = 'passed'; observations = @('spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true despawn-elapsed-ticks=3 decision-period-ticks=10')
@@ -984,6 +989,29 @@ try {
     Assert-True $missingEndermanRejected 'full release gate rejects missing Enderman condition evidence'
     $fullCatalogReport.expectedProbeIds += 'endermanCondition'
     $fullCatalogReport.probes += $endermanProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $aerialProbe = $fullCatalogReport.probes | Where-Object id -eq 'aerialCondition'
+    $aerialObservations = $aerialProbe.observations
+    $aerialProbe.observations = @('aerial-condition-details positive=true alias-positive=true negative=false ground=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badAerialRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badAerialRejected = $_.Exception.Message -match 'required observation for aerialCondition' }
+    Assert-True $badAerialRejected 'full release gate rejects a false Aerial negative control'
+    $aerialProbe.observations = $aerialObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'aerialCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'aerialCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingAerialRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingAerialRejected = $_.Exception.Message -match 'aerialCondition' }
+    Assert-True $missingAerialRejected 'full release gate rejects missing Aerial condition evidence'
+    $fullCatalogReport.expectedProbeIds += 'aerialCondition'
+    $fullCatalogReport.probes += $aerialProbe
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $missingReviveRejected = $false
     try {
