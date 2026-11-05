@@ -1,6 +1,20 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-in-combat-strict-20261105-r3` passed the complete strict
+Fixture `srv-paper-snowing-strict-20261105-r2` passed the complete strict gate
+on Paper 1.21.1-133: 345 probes, 326 passed and 19 expected rejections, with
+zero incomplete. `snowingCondition` verifies the target location in a cold
+biome while the caster is in a warm biome, both `snowing`/`is-snowing` runtime
+names, warm and clear rejection, missing context, invalid arguments, and full
+state restoration. The public Paper API does not expose local precipitation
+type, so cold custom biomes configured without precipitation remain a boundary.
+`spawningDistanceClientWalk` records 11.143 blocks of server-observed player
+displacement and 10.899 blocks from the managed mob at the same sample, then
+confirms removal of both the instance and Bukkit entity. The client stops after
+the server observes both distances beyond eight blocks. Report and compressed
+server/client logs are listed in `release-evidence.json`; plugin SHA-256:
+`1b6fe0a823faadc268149f90df680f3550bab8a2059f41ac1477fa992fd31a44`.
+
+Previous fixture `srv-paper-in-combat-strict-20261105-r3` passed the complete strict
 gate on Paper 1.21.1-133: 344 probes, 325 passed and 19 expected rejections,
 with zero incomplete. The independent `inCombatCondition` probe verifies the
 `in-combat` condition against the managed caster and a native Mob: positive

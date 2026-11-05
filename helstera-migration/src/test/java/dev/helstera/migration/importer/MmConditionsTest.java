@@ -144,13 +144,15 @@ class MmConditionsTest {
         assertEquals("target-is-living", t("?targetIsLiving"));
         assertTrue(translated("?hasTarget"));
         for (String condition : List.of("?isFrozen{unknown=true}", "?frozen{unknown=true}",
-                "?projectileHasEnded{unknown=true}")) {
+                "?projectileHasEnded{unknown=true}", "?snowing{unknown=true}",
+                "?isSnowing{unknown=true}")) {
             assertFalse(translated(condition), condition);
             assertEquals(condition, t(condition));
         }
         assertEquals("is-frozen", t("?isFrozen{}"));
         assertEquals("projectile-has-ended", t("?projectileHasEnded{}"));
         for (String name : List.of("hasTarget", "night", "isRaining", "isThundering", "isLiving",
+                "snowing", "isSnowing",
                 "day", "daytime", "dawn", "dusk", "sunset", "morning", "noon", "midnight",
                 "clear", "sun", "sunny", "rain", "storm", "thunder", "thunderstorm",
                 "charged", "climbing", "isClimbing", "invisible", "isInvisible", "glowing", "isGlowing",
@@ -1002,6 +1004,8 @@ class MmConditionsTest {
         assertEquals("weather-is thunder", t("?storm"));
         assertEquals("weather-is thunder", t("?thunder"));
         assertEquals("weather-is thunder", t("?thunderstorm"));
+        assertEquals("snowing", t("?snowing"));
+        assertEquals("snowing", t("?isSnowing"));
     }
 
     @Test

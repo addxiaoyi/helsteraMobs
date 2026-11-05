@@ -9,6 +9,7 @@ const timeoutMs = 30000;
 const events = [];
 let shieldTimer = null;
 let spawningDistanceWalkReady = false;
+let spawningDistanceWalkOutside = false;
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`Invalid Paper port: ${rawPort}`);
@@ -79,6 +80,9 @@ bot.on('message', message => {
   }
   if (text.includes('PAPER_SPAWNING_DISTANCE_WALK_READY')) {
     spawningDistanceWalkReady = true;
+  }
+  if (text.includes('PAPER_SPAWNING_DISTANCE_WALK_OUTSIDE')) {
+    spawningDistanceWalkOutside = true;
   }
 });
 bot.on('title', (message, type) => events.push(`title:${type}:${packetText(message)}`));
@@ -283,7 +287,7 @@ run().catch(error => {
       await bot.look(0, 0, true);
       bot.setControlState('forward', true);
       const deadline = Date.now() + 15000;
-      while (!bot.ended && Date.now() < deadline &&
+      while (!bot.ended && !spawningDistanceWalkOutside && Date.now() < deadline &&
           bot.entity.position.distanceTo(start) <= 14) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
@@ -293,6 +297,10 @@ run().catch(error => {
       const line = `PAPER_SPAWNING_DISTANCE_WALK displacement=${displacement.toFixed(2)}`;
       if (reportPath) fs.appendFileSync(reportPath, `${line}\n`, 'utf8');
       console.log(line);
+      if (!spawningDistanceWalkOutside) {
+        console.error('PAPER_SPAWNING_DISTANCE_WALK_ERROR server did not observe outside movement');
+        process.exitCode = 1;
+      }
       if (displacement <= 8) {
         if (reportPath) fs.appendFileSync(reportPath,
           'PAPER_SPAWNING_DISTANCE_WALK_ERROR client movement stayed inside radius\n', 'utf8');

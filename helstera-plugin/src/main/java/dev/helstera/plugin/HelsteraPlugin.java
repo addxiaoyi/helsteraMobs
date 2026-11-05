@@ -1750,19 +1750,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         return;
                     }
                     double distance = onlinePlayer.getLocation().distance(entity.getLocation());
-                    if (distance > 8.0) {
+                    double displacement = onlinePlayer.getLocation().distance(playerStart);
+                    if (distance > 8.0 && displacement > 8.0) {
+                        onlinePlayer.sendMessage("PAPER_SPAWNING_DISTANCE_WALK_OUTSIDE");
                         cancel();
                         getServer().getScheduler().runTaskLater(HelsteraPlugin.this, () -> {
-                            var currentPlayer = getServer().getPlayer(playerId);
-                            double displacement = currentPlayer == null ? 0.0
-                                    : currentPlayer.getLocation().distance(playerStart);
                             boolean removed = instances().impl(instanceId) == null && !entity.isValid();
-                            boolean passed = currentPlayer != null && displacement > 8.0 && removed;
-                            double finalDistance = currentPlayer == null ? Double.NaN
-                                    : currentPlayer.getLocation().distance(entity.getLocation());
+                            boolean passed = displacement > 8.0 && distance > 8.0 && removed;
                             getLogger().info("[自检] spawning-distance-client-walk result=" + passed
                                     + " player-displacement=" + displacement
-                                    + " player-entity-distance=" + finalDistance
+                                    + " player-entity-distance=" + distance
                                     + " instance-removed=" + (instances().impl(instanceId) == null)
                                     + " entity-removed=" + !entity.isValid());
                             getLogger().info("[自检] spawning-distance-runtime result=" + passed
@@ -1878,6 +1875,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean originalStorm = world.hasStorm();
             boolean originalThundering = world.isThundering();
             int originalWeatherDuration = world.getWeatherDuration();
+            int originalClearWeatherDuration = world.getClearWeatherDuration();
             int originalThunderDuration = world.getThunderDuration();
             boolean dynamicPlaceholderAction = false;
             boolean gameplayPlaceholders = false;
@@ -1894,6 +1892,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean targetKillMechanic = false;
             boolean damageMeleeMechanic = false;
             boolean conditionUtilityAliases = false;
+            boolean snowingCondition = false;
+            boolean snowingTargetMoved = false;
+            boolean snowingTargetPositive = false;
+            boolean snowingAliasPositive = false;
+            boolean snowingWarmRejected = false;
+            boolean snowingClearRejected = false;
+            boolean snowingMissingContextRejected = false;
+            boolean snowingInvalidArgumentsRejected = false;
+            boolean snowingStateRestored = false;
             boolean survivalModeCondition = false;
             boolean mobsInChunkCondition = false;
             boolean chanceCondition = false;
@@ -2310,6 +2317,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     world.setStorm(originalStorm);
                     world.setThundering(originalThundering);
                     world.setWeatherDuration(originalWeatherDuration);
+                    world.setClearWeatherDuration(originalClearWeatherDuration);
                     world.setThunderDuration(originalThunderDuration);
                 }
                 var originalJumpVelocity = zombie.getVelocity().clone();
@@ -5042,6 +5050,88 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && behaviors.testCondition(skills.bindCondition("time-is noon"), conditionContext)
                         && behaviors.testCondition(skills.bindCondition("time-is >=6000"), conditionContext)
                         && behaviors.testCondition(skills.bindCondition("weather-is clear"), conditionContext);
+
+                Location snowingOriginalTargetLocation = conditionTarget.getLocation().clone();
+                Location snowingCasterLocation = zombie.getLocation();
+                int snowingCasterX = snowingCasterLocation.getBlockX();
+                int snowingCasterY = snowingCasterLocation.getBlockY();
+                int snowingCasterZ = snowingCasterLocation.getBlockZ();
+                boolean snowingOriginalStorm = world.hasStorm();
+                boolean snowingOriginalThundering = world.isThundering();
+                int snowingOriginalWeatherDuration = world.getWeatherDuration();
+                int snowingOriginalClearDuration = world.getClearWeatherDuration();
+                int snowingOriginalThunderDuration = world.getThunderDuration();
+                org.bukkit.block.Biome snowingCasterBiome = world.getBiome(
+                        snowingCasterX, snowingCasterY, snowingCasterZ);
+                org.bukkit.block.Biome snowingProbeBiome = null;
+                int snowingProbeX = snowingCasterX;
+                int snowingProbeY = snowingCasterY;
+                int snowingProbeZ = snowingCasterZ;
+                try {
+                    snowingTargetMoved = conditionTarget.teleport(
+                            snowingOriginalTargetLocation.clone().add(8, 0, 0));
+                    Location snowingTargetLocation = conditionTarget.getLocation();
+                    snowingProbeX = snowingTargetLocation.getBlockX();
+                    snowingProbeY = snowingTargetLocation.getBlockY();
+                    snowingProbeZ = snowingTargetLocation.getBlockZ();
+                    snowingProbeBiome = world.getBiome(snowingProbeX, snowingProbeY, snowingProbeZ);
+                    world.setBiome(snowingCasterX, snowingCasterY, snowingCasterZ,
+                            org.bukkit.block.Biome.DESERT);
+                    world.setBiome(snowingProbeX, snowingProbeY, snowingProbeZ,
+                            org.bukkit.block.Biome.SNOWY_PLAINS);
+                    world.setStorm(true);
+                    world.setThundering(false);
+                    snowingTargetPositive = behaviors.testCondition(
+                            skills.bindCondition("snowing"), conditionContext);
+                    snowingAliasPositive = behaviors.testCondition(
+                            skills.bindCondition("is-snowing"), conditionContext);
+                    world.setBiome(snowingProbeX, snowingProbeY, snowingProbeZ,
+                            org.bukkit.block.Biome.DESERT);
+                    snowingWarmRejected = !behaviors.testCondition(
+                            skills.bindCondition("snowing"), conditionContext);
+                    world.setBiome(snowingProbeX, snowingProbeY, snowingProbeZ,
+                            org.bukkit.block.Biome.SNOWY_PLAINS);
+                    world.setStorm(false);
+                    snowingClearRejected = !behaviors.testCondition(
+                            skills.bindCondition("snowing"), conditionContext);
+                    world.setStorm(true);
+                    snowingMissingContextRejected = !behaviors.testCondition(
+                            skills.bindCondition("snowing"),
+                            dev.helstera.api.behavior.BehaviorContext.of(null, null,
+                                    1.0, -1, 0, "integration"));
+                    try {
+                        snowingInvalidArgumentsRejected = !behaviors.testCondition(
+                                skills.bindCondition("snowing unexpected=true"), conditionContext);
+                    } catch (IllegalArgumentException ignored) {
+                        snowingInvalidArgumentsRejected = true;
+                    }
+                    snowingCondition = snowingTargetPositive && snowingAliasPositive
+                            && snowingTargetMoved
+                            && snowingWarmRejected && snowingClearRejected
+                            && snowingMissingContextRejected && snowingInvalidArgumentsRejected;
+                } finally {
+                    if (snowingProbeBiome != null) {
+                        world.setBiome(snowingProbeX, snowingProbeY, snowingProbeZ, snowingProbeBiome);
+                    }
+                    world.setBiome(snowingCasterX, snowingCasterY, snowingCasterZ, snowingCasterBiome);
+                    conditionTarget.teleport(snowingOriginalTargetLocation);
+                    world.setStorm(snowingOriginalStorm);
+                    world.setThundering(snowingOriginalThundering);
+                    world.setWeatherDuration(snowingOriginalWeatherDuration);
+                    world.setThunderDuration(snowingOriginalThunderDuration);
+                    world.setClearWeatherDuration(snowingOriginalClearDuration);
+                    snowingStateRestored = conditionTarget.getLocation().distance(
+                            snowingOriginalTargetLocation) < 0.01
+                            && world.getBiome(snowingCasterX, snowingCasterY, snowingCasterZ)
+                            == snowingCasterBiome
+                            && world.getBiome(snowingProbeX, snowingProbeY, snowingProbeZ)
+                            == snowingProbeBiome
+                            && world.hasStorm() == snowingOriginalStorm
+                            && world.isThundering() == snowingOriginalThundering
+                            && world.getWeatherDuration() == snowingOriginalWeatherDuration
+                            && world.getClearWeatherDuration() == snowingOriginalClearDuration
+                            && world.getThunderDuration() == snowingOriginalThunderDuration;
+                }
                 world.setStorm(true);
                 world.setThundering(true);
                 boolean stormWeather = behaviors.testCondition(
@@ -5771,6 +5861,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " offset-distance=" + String.format(java.util.Locale.ROOT, "%.3f", offsetDistance)
                         + " moved-distance=" + String.format(java.util.Locale.ROOT, "%.3f",
                         beforeTeleport.distance(zombie.getLocation())));
+                getLogger().info("[helsteraMobs] snowing-condition result=" + snowingCondition
+                        + " target-location-isolated=" + snowingTargetMoved
+                        + " target-positive=" + snowingTargetPositive
+                        + " alias-positive=" + snowingAliasPositive
+                        + " warm-rejected=" + snowingWarmRejected
+                        + " clear-rejected=" + snowingClearRejected
+                        + " missing-context-rejected=" + snowingMissingContextRejected
+                        + " invalid-arguments-rejected=" + snowingInvalidArgumentsRejected
+                        + " restored=" + snowingStateRestored);
             } catch (Throwable t) {
                 getLogger().warning("[自检] skill-actions 异常: " + t);
             } finally {
@@ -5778,6 +5877,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 world.setStorm(originalStorm);
                 world.setThundering(originalThundering);
                 world.setWeatherDuration(originalWeatherDuration);
+                world.setClearWeatherDuration(originalClearWeatherDuration);
                 world.setThunderDuration(originalThunderDuration);
                 if (zombie != null) zombie.remove();
                 if (targetGroundProbeEntity != null) targetGroundProbeEntity.remove();

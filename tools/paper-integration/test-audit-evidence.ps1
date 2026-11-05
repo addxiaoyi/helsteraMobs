@@ -15,7 +15,7 @@ try {
             'README.md' {
                 'The matrix currently has `1`' + [Environment]::NewLine +
                     '`mapped-unverified` rows.' + [Environment]::NewLine +
-                    'Latest strict report has 344 probes, zero incomplete' + [Environment]::NewLine +
+                    'Latest strict report has 345 probes, zero incomplete' + [Environment]::NewLine +
                     'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine
             }
             'MYTHICMOBS_PARITY_MATRIX.md' {
@@ -99,6 +99,10 @@ try {
     $fullReport.expectedProbeIds += 'inCombatCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'inCombatCondition'; status = 'passed'; observations = @('in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true')
+    }
+    $fullReport.expectedProbeIds += 'snowingCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'snowingCondition'; status = 'passed'; observations = @('snowing-condition result=true target-location-isolated=true target-positive=true alias-positive=true warm-rejected=true clear-rejected=true missing-context-rejected=true invalid-arguments-rejected=true restored=true')
     }
     $fullReport.expectedProbeIds += 'spawningDistanceClientWalk'
     $fullReport.probes += [pscustomobject]@{
