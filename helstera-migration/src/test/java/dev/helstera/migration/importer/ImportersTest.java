@@ -2603,6 +2603,33 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("execution audience conditions are preserved with their missing-context reason")
+    void mythicPreservesExecutionAudienceConditions(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/AudienceGate.yml", """
+                AudienceGate:
+                  TargetConditions:
+                    - '?isInAudience'
+                    - '?inaudience'
+                    - '?audienceContains{}'
+                  Skills:
+                    - message{m=hello}
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var plan = entries.stream().filter(e -> e.containsKey("target-file")).findFirst().orElseThrow();
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan.get("content"))));
+        List<String> preserved = List.of("?isInAudience", "?inaudience", "?audienceContains{}");
+
+        assertEquals(preserved, target.getStringList("skills.audiencegate.target-conditions"));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "WARN".equals(e.get("severity"))
+                && String.valueOf(e.get("source-key")).endsWith("TargetConditions.unmapped")
+                && String.valueOf(e.get("target-key")).equals("skills.audiencegate.target-conditions")
+                && String.valueOf(e.get("note")).contains("execution audience")
+                && String.valueOf(e.get("note")).contains("per action")));
+    }
+
+    @Test
     @DisplayName("Mythic ranged AI options map to the runtime projectile profile")
     void mythicMapsRangedAiOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/ranged.yml", """

@@ -3890,10 +3890,34 @@ public final class MythicMobsImporter implements MigrationImporter {
                                              String srcFile, String srcKey,
                                              String targetKey, List<String> unmapped) {
         if (unmapped == null || unmapped.isEmpty()) return;
+        List<String> details = new ArrayList<>();
+        for (String condition : unmapped) {
+            if (isMythicExecutionAudienceCondition(condition)) {
+                details.add(condition + " requires Mythic's per-skill execution audience; Helstera has no equivalent context. "
+                        + "Its audience actions resolve recipients per action.");
+            } else {
+                details.add(condition + " has no verified Helstera equivalent.");
+            }
+        }
         note(entries, srcFile, srcKey + ".unmapped", targetKey, unmapped,
-                "mapped",
-                "以下技能条件没有已验证的等价物，已原样保留并需要手工改写: " + unmapped,
+                "unsupported",
+                "Unmapped Mythic conditions were preserved verbatim at " + targetKey
+                        + " and need manual conversion. " + String.join(" ", details),
                 "WARN");
+    }
+
+    private static boolean isMythicExecutionAudienceCondition(String condition) {
+        if (condition == null) return false;
+        String name = condition.trim();
+        while (!name.isEmpty() && (name.charAt(0) == '?' || name.charAt(0) == '~' || name.charAt(0) == '!')) {
+            name = name.substring(1).trim();
+        }
+        int arguments = name.indexOf('{');
+        if (arguments >= 0) name = name.substring(0, arguments).trim();
+        String normalized = name.toLowerCase(Locale.ROOT).replace("-", "").replace("_", "");
+        return normalized.equals("isinaudience")
+                || normalized.equals("inaudience")
+                || normalized.equals("audiencecontains");
     }
 
     private void note(List<Map<String, Object>> entries, String srcFile, String srcKey,
