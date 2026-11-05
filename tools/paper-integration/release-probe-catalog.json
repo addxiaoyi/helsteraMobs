@@ -327,6 +327,11 @@
       "requiredObservation": "imported-color-condition red-mapped=true blue-alias-mapped=true positive=true negative=true entity-color=RED"
     },
     {
+      "id": "importedHasEnchantmentCondition",
+      "status": "passed",
+      "requiredObservation": "imported-has-enchantment-condition primary-mapped=true alias-mapped=true positive=true any-positive=true level-rejected=true type-rejected=true restored=true"
+    },
+    {
       "id": "importedMaterialCooldownCondition",
       "status": "passed",
       "requiredObservation": "imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true"

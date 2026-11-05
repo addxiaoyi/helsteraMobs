@@ -27,8 +27,20 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-condition-import-strict-20261105-r1` passed 353
-probes (334 passed, 19 expected rejections, zero incomplete). It verifies
+Latest strict fixture `srv-paper-has-enchantment-import-strict-20261105-r1`
+passed 354 probes (335 passed, 19 expected rejections, zero incomplete). It
+verifies imported `?hasEnchantment`/`?hasEnchant`, Sharpness and `ANY`
+positives, level/type negatives, and equipment restoration on a real managed
+Zombie. Report:
+`reports/paper-1.21.1-has-enchantment-import-strict-20261105-r1.json`; server
+log: `reports/paper-1.21.1-has-enchantment-import-strict-20261105-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-has-enchantment-import-strict-20261105-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`81492669538c1c4358a4ac7f8537e76791a31fb08d55c1246137ad6afe149fbe`.
+
+Previous strict fixture `srv-paper-condition-import-strict-20261105-r1` passed
+353 probes (334 passed, 19 expected rejections, zero incomplete). It verifies
 imported Aerial and Color aliases and `MaterialIsOnCooldown` against a real
 player cooldown. Report:
 `reports/paper-1.21.1-condition-import-strict-20261105-r1.json`; server log:
@@ -1019,8 +1031,11 @@ remains separate.
 The catalog also checks official `HasEnchantment` against a temporary Sharpness
 III diamond sword on the real managed Zombie. Sharpness `>2` and `ANY=3` pass;
 Sharpness `>3` and Looting reject. Exploratory Paper 1.21.11 r104 records
-`enchantment-condition=true`; strict Paper 1.21.1 release evidence remains
-separate.
+`enchantment-condition=true`. Strict Paper 1.21.1-133 fixture
+`srv-paper-has-enchantment-import-strict-20261105-r1` additionally verifies
+Mythic import mapping and SkillService evaluation for `?hasEnchantment` and
+`?hasEnchant`, with positive, level/type negative, and equipment-restoration
+observations in `importedHasEnchantmentCondition`.
 
 The catalog also checks official `Color` on a real red Sheep: RED passes,
 BLUE rejects, and the Zombie type rejects the color condition. Exploratory

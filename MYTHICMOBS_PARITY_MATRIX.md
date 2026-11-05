@@ -2447,7 +2447,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-condition-import-strict-20261105-r1` completes 353 probes (334 passed, 19 expected rejections, zero incomplete), including imported Aerial, Color, and `MaterialIsOnCooldown` aliases with real Paper positive/negative evidence. Previous strict fixtures verify color aliases on a real Sheep, imported `?aerial`/`?isAerial`, imported `?isChild` parent relation against related adult/unrelated baby entities, real Sheep Age/Adult/Baby/AgeLock and Zombie Baby behavior; a real Enderman positive and managed-Zombie negative; in-audience cinematic state and rejection/cleanup; and `inside`/`outside`, block restoration, and real-player `Options.SpawningDistance` removal 2 ticks after leaving range. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, Survival-mode conditions, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-has-enchantment-import-strict-20261105-r1` completes 354 probes (335 passed, 19 expected rejections, zero incomplete), including imported HasEnchantment/HasEnchant with real Paper positive and negative evidence. Previous strict fixtures verify Aerial, Color, and `MaterialIsOnCooldown` aliases with real Paper entities and a player cooldown; imported `?isChild` parent relation against related adult/unrelated baby entities; real Sheep Age/Adult/Baby/AgeLock and Zombie Baby behavior; a real Enderman positive and managed-Zombie negative; in-audience cinematic state and rejection/cleanup; and `inside`/`outside`, block restoration, and real-player `Options.SpawningDistance` removal 2 ticks after leaving range. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, Survival-mode conditions, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
@@ -3216,7 +3216,12 @@ main-hand, off-hand, and armor equipment with `enchantment/type/e` selection,
 registry state fail closed; exploratory Paper
 `srv-paper-integration-exploratory-1.21.11-r104` verifies Sharpness/ANY positive
 paths plus level/type negatives through `enchantment-condition=true`. Strict
-Paper 1.21.1 evidence remains open.
+Paper 1.21.1-133 fixture
+`srv-paper-has-enchantment-import-strict-20261105-r1` verifies imported
+`?hasEnchantment` and `?hasEnchant` through `SkillService`: Sharpness and `ANY`
+positives, level/type negatives, and item restoration pass in the required
+`importedHasEnchantmentCondition` probe. The overall Conditions catalog remains
+mapped-unverified.
 
 Color condition update: official `Color` now matches Bukkit dye colors and
 entity variants for Sheep/Shulker, Cat, Parrot, Horse, and Llama targets, with

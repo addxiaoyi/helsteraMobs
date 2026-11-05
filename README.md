@@ -4,7 +4,17 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-condition-import-strict-20261105-r1` completes
+Latest strict fixture `srv-paper-has-enchantment-import-strict-20261105-r1`
+completes 354 probes (335 passed, 19 expected rejections, zero incomplete).
+Its `importedHasEnchantmentCondition` probe runs Mythic `?hasEnchantment` and
+`?hasEnchant` through the importer and SkillService on a real managed Zombie:
+Sharpness and `ANY` pass, level/type mismatches fail, and the temporary item is
+restored. Report:
+`tools/paper-integration/reports/paper-1.21.1-has-enchantment-import-strict-20261105-r1.json`.
+The plugin SHA-256 is
+`81492669538c1c4358a4ac7f8537e76791a31fb08d55c1246137ad6afe149fbe`.
+
+Previous strict fixture `srv-paper-condition-import-strict-20261105-r1` completes
 353 probes (334 passed, 19 expected rejections, zero incomplete). It verifies
 imported Aerial, Color, and `MaterialIsOnCooldown` aliases with real Paper
 entities and a player cooldown. Report:
@@ -421,7 +431,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 353 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 354 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -437,8 +447,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 459 cited IDs; 371 report files; 4 directories
-   without reports; 84 missing directories; 136 archived release reports. The
+   Current fixture inventory: 460 cited IDs; 372 report files; 4 directories
+   without reports; 84 missing directories; 137 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -561,7 +571,7 @@ the entire MythicMobs feature catalog.
 - Official `IsWaterMob` and `IsZombie` now use Bukkit's `WaterMob` marker and `Zombie` type checks; exploratory Paper 1.21.11 r99 records real Cod/Zombie positive paths and cross-type negative controls.
 - Official `Aerial` evaluates the active target's Bukkit `isOnGround()` state with `aerial`/`isAerial` aliases; exploratory Paper 1.21.11 r102 and strict Paper 1.21.1-133 fixture `srv-paper-aerial-condition-strict-20261105-r2` verify floating-ArmorStand positives through both aliases and a grounded-player negative through the dedicated `aerialCondition` probe.
 - Official `IsEnderman` now uses Bukkit's `Enderman` type check; exploratory Paper 1.21.11 r103 and strict Paper fixture `srv-paper-enderman-condition-strict-20261105-r1` verify a real Enderman positive path and managed Zombie negative control through the dedicated `endermanCondition` probe.
-- Official `HasEnchantment` now checks all Bukkit equipment slots with `enchantment/type/e` and `level/l` range arguments; exploratory Paper 1.21.11 r104 verifies Sharpness positive, `ANY` matching, level rejection, and wrong-type rejection.
+- Official `HasEnchantment` checks Bukkit equipment slots with `enchantment/type/e` and `level/l` range arguments; exploratory Paper 1.21.11 r104 and strict Paper 1.21.1-133 fixture `srv-paper-has-enchantment-import-strict-20261105-r1` verify imported `?hasEnchantment`/`?hasEnchant`, Sharpness and `ANY` positives, level/type negatives, and equipment restoration. The complete Conditions catalog remains open.
 - Official `Color` now matches Bukkit Sheep/Shulker dye colors, Cat types, Parrot variants, Horse colors, and Llama colors; exploratory Paper 1.21.11 r108 verifies a real red Sheep positive, wrong-color rejection, and unsupported Zombie rejection.
 - Official `MaterialIsOnCooldown` now reads target-player Bukkit material cooldowns with `material/m` arguments and an `ENDER_PEARL` default; exploratory Paper 1.21.11 r110 verifies positive, wrong-material, and cleared negative paths alongside the passing aggregate condition catalog.
 - Official `TriggerItemType` now matches the Bukkit Item entity carried by the trigger context with `types/type/material/m` aliases; exploratory Paper 1.21.11 r113 verifies STONE/DIAMOND trigger-item positive and negative paths.
