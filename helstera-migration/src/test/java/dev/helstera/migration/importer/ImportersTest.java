@@ -3510,6 +3510,7 @@ class ImportersTest {
                       PreventBlockExplosions: true
                       PreventEntityExplosions: true
                 """);
+        var entries = new MythicMobsImporter().convert(file);
         YamlConfiguration target = converted(file);
 
         assertEquals("HUSK", target.getString("mob.entity-type"));
@@ -3522,8 +3523,10 @@ class ImportersTest {
         assertTrue(target.getBoolean("mob.prevent-slime-split"));
         assertTrue(target.getBoolean("mob.prevent-block-infection"));
         assertTrue(target.getBoolean("mob.prevent-snow-formation"));
-        assertEquals(-1, target.getInt("entity.age"));
-        assertTrue(target.getBoolean("entity.age-lock"));
+        assertFalse(target.contains("entity.age"));
+        assertFalse(target.contains("entity.age-lock"));
+        assertEquals(-1, target.getInt("entity.unsupported.Options.Age"));
+        assertTrue(target.getBoolean("entity.unsupported.Options.AgeLock"));
         assertTrue(target.getBoolean("entity.adult"));
         assertTrue(target.getBoolean("entity.baby"));
         assertTrue(target.getBoolean("entity.saddled"));
@@ -3545,7 +3548,73 @@ class ImportersTest {
         assertTrue(target.getBoolean("mob.prevent-explosions"));
         assertTrue(target.getBoolean("mob.prevent-block-explosions"));
         assertTrue(target.getBoolean("mob.prevent-entity-explosions"));
-        assertFalse(target.contains("mob.unsupported.Options"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.AgeLock".equals(entry.get("source-key"))
+                && String.valueOf(entry.get("note")).contains("animal-only AgeLock")));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.Age".equals(entry.get("source-key"))
+                && String.valueOf(entry.get("note")).contains("exact Age ticks")));
+    }
+
+    @Test
+    @DisplayName("age options are preserved with a warning for non-Ageable entity types")
+    void mythicPreservesAgeOptionsForNonAgeableEntities(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/non-ageable.yml", """
+                mobs:
+                  Allay:
+                    Type: ALLAY
+                    Options:
+                      Age: -24000
+                      AgeLock: true
+                      Adult: false
+                      Baby: true
+                """);
+
+        var entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = converted(file);
+
+        assertFalse(target.contains("entity.age"));
+        assertFalse(target.contains("entity.age-lock"));
+        assertFalse(target.contains("entity.adult"));
+        assertFalse(target.contains("entity.baby"));
+        assertEquals(-24000, target.getInt("entity.unsupported.Options.Age"));
+        assertTrue(target.getBoolean("entity.unsupported.Options.AgeLock"));
+        assertFalse(target.getBoolean("entity.unsupported.Options.Adult"));
+        assertTrue(target.getBoolean("entity.unsupported.Options.Baby"));
+        assertEquals(4, entries.stream().filter(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("does not implement Bukkit Ageable")
+                && String.valueOf(entry.get("target-key")).startsWith("entity.unsupported.Options."))
+                .count());
+    }
+
+    @Test
+    @DisplayName("numeric age and AgeLock are preserved for ageable non-animal mobs")
+    void mythicPreservesNumericAgeAndAgeLockForAgeableNonAnimals(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/zombie-age-lock.yml", """
+                mobs:
+                  BabyHusk:
+                    Type: HUSK
+                    Options:
+                      Baby: true
+                      Age: -24000
+                      AgeLock: true
+                """);
+
+        var entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = converted(file);
+
+        assertTrue(target.getBoolean("entity.baby"));
+        assertFalse(target.contains("entity.age"));
+        assertFalse(target.contains("entity.age-lock"));
+        assertEquals(-24000, target.getInt("entity.unsupported.Options.Age"));
+        assertTrue(target.getBoolean("entity.unsupported.Options.AgeLock"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "entity.unsupported.Options.AgeLock".equals(entry.get("target-key"))
+                && String.valueOf(entry.get("note")).contains("animal-only AgeLock")));
     }
 
     @Test

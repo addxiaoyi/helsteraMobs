@@ -1065,10 +1065,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "PreventSlimeSplit", "mob.prevent-slime-split");
             mapOption(options, srcFile, entries, target, "PreventBlockInfection", "mob.prevent-block-infection");
             mapOption(options, srcFile, entries, target, "PreventSnowFormation", "mob.prevent-snow-formation");
-            mapOption(options, srcFile, entries, target, "Age", "entity.age");
-            mapOption(options, srcFile, entries, target, "AgeLock", "entity.age-lock");
-            mapOption(options, srcFile, entries, target, "Adult", "entity.adult");
-            mapOption(options, srcFile, entries, target, "Baby", "entity.baby");
+            mapAgeOptions(options, srcFile, entries, target, normalizedType);
             mapOption(options, srcFile, entries, target, "Saddled", "entity.saddled");
             mapOption(options, srcFile, entries, target, "HorseArmor", "entity.horse-armor");
             mapOption(options, srcFile, entries, target, "CarryingChest", "entity.carrying-chest");
@@ -3572,6 +3569,51 @@ public final class MythicMobsImporter implements MigrationImporter {
         target.set(path, v instanceof ConfigurationSection ? resolved : v);
         note(entries, srcFile, "Options." + optionName, path, resolved, "mapped",
                 v instanceof ConfigurationSection ? "该 Options 项是嵌套节，helstera 侧结构不同，需人工确认" : null);
+    }
+
+    private void mapAgeOptions(ConfigurationSection options, String srcFile,
+                               List<Map<String, Object>> entries, YamlConfiguration target,
+                               String normalizedType) {
+        String entityTypeName = normalizedType == null ? "ZOMBIE" : normalizedType;
+        org.bukkit.entity.EntityType entityType = org.bukkit.entity.EntityType.valueOf(entityTypeName);
+        Class<? extends org.bukkit.entity.Entity> entityClass = entityType.getEntityClass();
+        boolean ageable = entityClass != null
+                && org.bukkit.entity.Ageable.class.isAssignableFrom(entityClass);
+        boolean animal = entityClass != null
+                && org.bukkit.entity.Animals.class.isAssignableFrom(entityClass);
+        if (animal) {
+            mapOption(options, srcFile, entries, target, "Age", "entity.age");
+            mapOption(options, srcFile, entries, target, "AgeLock", "entity.age-lock");
+        } else {
+            String reason = ageable
+                    ? "Entity type " + entityTypeName
+                    + " exposes only boolean age state; exact Age ticks and animal-only AgeLock are preserved and will not be applied."
+                    : "Entity type " + entityTypeName
+                    + " does not implement Bukkit Ageable; the value was preserved and will not be applied.";
+            preserveUnsupportedAgeOption(options, srcFile, entries, target, "Age", reason);
+            preserveUnsupportedAgeOption(options, srcFile, entries, target, "AgeLock", reason);
+        }
+
+        if (ageable) {
+            mapOption(options, srcFile, entries, target, "Adult", "entity.adult");
+            mapOption(options, srcFile, entries, target, "Baby", "entity.baby");
+        } else {
+            String reason = "Entity type " + entityTypeName
+                    + " does not implement Bukkit Ageable; the value was preserved and will not be applied.";
+            preserveUnsupportedAgeOption(options, srcFile, entries, target, "Adult", reason);
+            preserveUnsupportedAgeOption(options, srcFile, entries, target, "Baby", reason);
+        }
+    }
+
+    private void preserveUnsupportedAgeOption(ConfigurationSection options, String srcFile,
+                                              List<Map<String, Object>> entries, YamlConfiguration target,
+                                              String optionName, String reason) {
+        Object value = ciGet(options, optionName);
+        if (value == null) return;
+        String targetPath = "entity.unsupported.Options." + optionName;
+        target.set(targetPath, value);
+        note(entries, srcFile, "Options." + optionName, targetPath, value, "unsupported",
+                reason, "WARN");
     }
 
     private static List<String> splitOptionList(String raw) {

@@ -149,7 +149,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] enderman-condition-details positive=true negative=true',
         '[Server thread/INFO]: [helsteraMobs] aerial-condition-details positive=true alias-positive=true negative=true ground-entity=player ground=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
-        '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
@@ -704,6 +704,10 @@ try {
     if ($fullCatalogAiSelector.Count -ne 1) { throw 'Synthetic full catalog report must contain aiSelectorCore.' }
     $fullCatalogAiSelector[0].observations = @($fullCatalogAiSelector[0].observations) +
         @('ai-selector-core targeter-syntax=true')
+    $fullCatalogAgeOptions = @($fullCatalogReport.probes | Where-Object id -eq 'ageOptions')
+    if ($fullCatalogAgeOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain ageOptions.' }
+    $fullCatalogAgeOptions[0].observations = @(
+        'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true')
     $fullCatalogReport.expectedProbeIds += 'inCombatCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'inCombatCondition'; status = 'passed'; observations = @('in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true')
@@ -989,6 +993,19 @@ try {
     Assert-True $missingEndermanRejected 'full release gate rejects missing Enderman condition evidence'
     $fullCatalogReport.expectedProbeIds += 'endermanCondition'
     $fullCatalogReport.probes += $endermanProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $ageOptionsProbe = $fullCatalogReport.probes | Where-Object id -eq 'ageOptions'
+    $ageOptionsObservations = $ageOptionsProbe.observations
+    $ageOptionsProbe.observations = @(
+        'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badAgeOptionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badAgeOptionsRejected = $_.Exception.Message -match 'required observation for ageOptions' }
+    Assert-True $badAgeOptionsRejected 'full release gate rejects a false zombie Baby observation'
+    $ageOptionsProbe.observations = $ageOptionsObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $aerialProbe = $fullCatalogReport.probes | Where-Object id -eq 'aerialCondition'
     $aerialObservations = $aerialProbe.observations

@@ -1483,13 +1483,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var adultConfig = new org.bukkit.configuration.file.YamlConfiguration();
                 adultConfig.set("adult", true);
                 applyAgeOptions(adultSheep, adultConfig);
+                var babyZombie = world.spawn(origin.clone().add(5, 0, 0), org.bukkit.entity.Zombie.class);
+                entities.add(babyZombie);
+                var zombieAgeConfig = new org.bukkit.configuration.file.YamlConfiguration();
+                zombieAgeConfig.set("baby", true);
+                applyAgeOptions(babyZombie, zombieAgeConfig);
+                boolean zombieBaby = babyZombie.isBaby();
                 getLogger().info("[自检] age-options result="
                         + (sheep.getAge() == -24000 && !sheep.isAdult() && sheep.getAgeLock()
-                        && adultSheep.isAdult())
+                        && adultSheep.isAdult() && zombieBaby)
                         + " age=" + sheep.getAge()
                         + " baby=" + !sheep.isAdult()
                         + " adult=" + adultSheep.isAdult()
-                        + " age-lock=" + sheep.getAgeLock());
+                        + " age-lock=" + sheep.getAgeLock()
+                        + " zombie-baby=" + zombieBaby);
                 getLogger().info("[自检] sheep-options result="
                         + (sheep.getColor() == org.bukkit.DyeColor.RED && sheep.isSheared()));
 
@@ -13889,14 +13896,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (!(entity instanceof org.bukkit.entity.Ageable ageable) || options == null) return;
         if (options.contains("age")) ageable.setAge(options.getInt("age"));
         if (options.contains("adult")) {
-            if (options.getBoolean("adult")) ageable.setAdult();
-            else ageable.setBaby();
+            setAgeableBaby(entity, ageable, !options.getBoolean("adult"));
         }
         if (options.contains("baby")) {
-            if (options.getBoolean("baby")) ageable.setBaby();
-            else ageable.setAdult();
+            setAgeableBaby(entity, ageable, options.getBoolean("baby"));
         }
         if (options.contains("age-lock")) ageable.setAgeLock(options.getBoolean("age-lock"));
+    }
+
+    private static void setAgeableBaby(org.bukkit.entity.LivingEntity entity,
+                                       org.bukkit.entity.Ageable ageable, boolean baby) {
+        if (entity instanceof org.bukkit.entity.Zombie zombie) {
+            zombie.setBaby(baby);
+        } else if (entity instanceof org.bukkit.entity.PiglinAbstract piglin) {
+            piglin.setBaby(baby);
+        } else if (baby) {
+            ageable.setBaby();
+        } else {
+            ageable.setAdult();
+        }
     }
 
     static void applyMobPickupOption(org.bukkit.entity.Mob mob,

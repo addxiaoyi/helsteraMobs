@@ -27,7 +27,17 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-aerial-condition-strict-20261105-r2` passed
+Latest strict fixture `srv-paper-age-options-strict-20261105-r3` passed 349
+probes (330 passed, 19 expected rejections, zero incomplete). The required
+`ageOptions` probe reads exact animal age/AgeLock and Adult/Baby from real
+Sheep and verifies the Zombie-specific Baby setter on a real Zombie. Report:
+`reports/paper-1.21.1-age-options-strict-20261105-r3.json`; server log:
+`reports/paper-1.21.1-age-options-strict-20261105-r3.log.gz`; client logs:
+`reports/paper-1.21.1-age-options-strict-20261105-r3-client-logs.tar.gz`.
+Plugin SHA-256:
+`62051171e7637e3c9d1d40bcc7d254bc6d565d1cca3428a6fff62d019380b50e`.
+
+Previous strict fixture `srv-paper-aerial-condition-strict-20261105-r2` passed
 349 probes (330 passed, 19 expected rejections, zero incomplete).
 `aerialCondition` verifies a floating ArmorStand through both `aerial` and
 `isAerial`, and rejects a grounded player with `ground-entity=player`. Report:

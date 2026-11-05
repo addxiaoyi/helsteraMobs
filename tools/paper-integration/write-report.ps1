@@ -99,7 +99,7 @@ $probeSpecs = [ordered]@{
     creeper = 'creeper-options result=true'
     bee = 'bee-options result=true'
     entitySizeRange = 'entity-size-range result=true samples=64 configured=2\.\.5 observed=[2-5]\.\.[2-5]'
-    ageOptions = 'age-options result=true'
+    ageOptions = 'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true'
     entityFlagOptions = 'entity-flag-options result=true .*patrol-spawn-point=true'
     endermanHeldBlock = 'enderman-held-block result=true material=OBSIDIAN'
     mobPickupOption = 'mob-pickup-option result=true disabled=true explicit-overrides-default=true'

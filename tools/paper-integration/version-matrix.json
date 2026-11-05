@@ -13,8 +13,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-aerial-condition-strict-20261105-r2",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-aerial-condition-strict-20261105-r2.json"
+      "releaseFixtureId": "srv-paper-age-options-strict-20261105-r3",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-age-options-strict-20261105-r3.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

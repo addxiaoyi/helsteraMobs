@@ -97,6 +97,26 @@ class MythicAgeOptionsTest {
     }
 
     @Test
+    void appliesZombieBabyOptionsThroughTheZombieSpecificSetter() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        org.bukkit.entity.Zombie entity = proxy(org.bukkit.entity.Zombie.class, calls);
+        var options = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                age: -24000
+                baby: true
+                """));
+
+        HelsteraPlugin.applyAgeOptions(entity, options);
+
+        assertEquals(-24000, calls.get("setAge"));
+        assertEquals(true, calls.get("setBaby"), calls.toString());
+
+        calls.clear();
+        HelsteraPlugin.applyAgeOptions(entity,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("adult: true")));
+        assertEquals(false, calls.get("setBaby"), calls.toString());
+    }
+
+    @Test
     void appliesPickupOverrideAndInitialNoDamageTicks() {
         Map<String, Object> calls = new LinkedHashMap<>();
         var mob = proxy(org.bukkit.entity.Mob.class, calls);

@@ -4,7 +4,15 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-aerial-condition-strict-20261105-r2`
+Latest strict fixture `srv-paper-age-options-strict-20261105-r3` completes 349
+probes (330 passed, 19 expected rejections, zero incomplete). Its `ageOptions`
+probe verifies exact animal age and AgeLock, Adult/Baby setters on a real
+Sheep, and the Zombie-specific Baby setter. Report:
+`tools/paper-integration/reports/paper-1.21.1-age-options-strict-20261105-r3.json`.
+The plugin SHA-256 is
+`62051171e7637e3c9d1d40bcc7d254bc6d565d1cca3428a6fff62d019380b50e`.
+
+Previous strict fixture `srv-paper-aerial-condition-strict-20261105-r2`
 completes 349 probes (330 passed, 19 expected rejections, zero incomplete).
 The dedicated `aerialCondition` probe verifies a floating ArmorStand through
 both `aerial` and `isAerial`, then rejects a grounded player, explicitly
@@ -393,15 +401,15 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 ### Current Development Goals
 
-This is a partial parity release. The matrix currently has `41`
+This is a partial parity release. The matrix currently has `40`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-05). The full remaining work is:
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 454 cited IDs; 366 report files; 4 directories
-   without reports; 84 missing directories; 131 archived release reports. The
+   Current fixture inventory: 455 cited IDs; 367 report files; 4 directories
+   without reports; 84 missing directories; 132 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -582,7 +590,7 @@ the entire MythicMobs feature catalog.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` records `targetStateConditions=passed`, including target glowing positive and no-target negative checks; the separate exploratory client fixture also covers a real player's glowing state restoration.
 - Mythic `Options.Interactable` now maps to the managed runtime policy with its documented imported default, and strict Paper 1.21.1 fixture `srv-paper-integration-armor-stand-20261031` records protected/control player interaction and Armor Stand manipulation pairs as `interactable=true` and `interactable-armor-stand=true`.
 - Mythic `Options.PatrolSpawnPoint` now maps to Raider patrol target blocks, and strict Paper 1.21.1 fixture `srv-paper-integration-patrol-spawn-20261031` reads back a real Pillager patrol target at its spawn block.
-- Mythic `Options.Adult` now maps to the Ageable adult setter independently of `Age`; strict Paper 1.21.1 fixture `srv-paper-integration-adult-20261031-r2` records `age-options result=true` with both baby and adult controls.
+- Mythic `Options.Adult` and `Baby` use Bukkit age setters, including Zombie/Piglin-specific baby APIs. Exact tick `Age` and `AgeLock` apply to `Animals`; for ageable non-animal types such as Zombies/Husks, those two values are preserved under `entity.unsupported.Options.*` with migration warnings while `Adult`/`Baby` remain mapped. Non-Ageable values are also preserved with warnings. Importer/runtime tests cover animal, Husk, and Allay cases; strict Paper 1.21.1-133 fixture `srv-paper-age-options-strict-20261105-r3` records `age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true` on real Sheep and Zombie entities. Other Mob Options remain incomplete.
 - Official Armor Stand options `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` now map through the migration/runtime path; strict Paper 1.21.1 fixture `srv-paper-integration-armor-options-20261031-r3` reads back the production can-move/can-tick state.
 - Official Armor Stand item options `ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`, `ItemHead`, and `ItemLegs` now resolve through the existing ItemStack/custom-item path; strict fixture `srv-paper-integration-armor-options-20261031-r3` reads back all six equipment slots.
 - Mythic `Options.Saddled` now applies through Paper `Steerable` and `AbstractHorse` APIs; strict fixture `srv-paper-integration-saddled-20261031-r2` reads back a real Horse saddle.
