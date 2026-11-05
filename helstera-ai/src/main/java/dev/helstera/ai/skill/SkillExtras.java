@@ -111,6 +111,11 @@ public final class SkillExtras {
     private static volatile ScoreLookup scoreLookup;
     private static volatile java.util.function.IntPredicate dialogueLookup;
     @FunctionalInterface
+    public interface CinematicLookup {
+        boolean isActiveForPlayer(int instanceId, Player player);
+    }
+    private static volatile CinematicLookup cinematicLookup;
+    @FunctionalInterface
     public interface ManagedEntityLookup {
         boolean isManaged(Entity entity);
     }
@@ -198,6 +203,10 @@ public final class SkillExtras {
     /** Bridges HasDialogOpen to the host dialogue runner without retaining the service. */
     public static void dialogueLookup(java.util.function.IntPredicate lookup) {
         dialogueLookup = lookup;
+    }
+
+    public static void cinematicLookup(CinematicLookup lookup) {
+        cinematicLookup = lookup;
     }
 
     public static void managedEntityLookup(ManagedEntityLookup lookup) {
@@ -294,6 +303,7 @@ public final class SkillExtras {
         globalScoreLookup = null;
         scoreLookup = null;
         dialogueLookup = null;
+        cinematicLookup = null;
         managedEntityLookup = null;
         audienceDiagnostic = null;
         skillCooldownSetter = null;
@@ -2515,9 +2525,9 @@ public final class SkillExtras {
                     return lookup != null && lookup.test(id(ctx));
                 }),
                 Map.entry("is-in-cinematic", (SkillCatalog.ConditionFactory) a -> ctx -> {
-                    if (!hasInstance(ctx) || !(conditionEntity(ctx) instanceof Player)) return false;
-                    java.util.function.IntPredicate lookup = dialogueLookup;
-                    return lookup != null && lookup.test(id(ctx));
+                    if (!hasInstance(ctx) || !(conditionEntity(ctx) instanceof Player player)) return false;
+                    CinematicLookup lookup = cinematicLookup;
+                    return lookup != null && lookup.isActiveForPlayer(id(ctx), player);
                 }),
                 Map.entry("material-on-cooldown", (SkillCatalog.ConditionFactory) a -> {
                     String materialName = keyedArg(a, "material", "mat", "m");

@@ -1391,10 +1391,11 @@ evidence remains open.
 
 Cinematic condition update: official `IsInCinematic` now requires an explicit
 player target and reads the active DialogueService cinematic state, with
-`isInCinematic`/`inCinematic` aliases and migration coverage. Exploratory Paper
-`srv-paper-integration-exploratory-1.21.11-r107` verifies player-target
-open/closed transitions through the combined dialogue probe. Strict Paper
-1.21.1 evidence remains open.
+`isInCinematic`/`inCinematic` aliases and migration coverage. Strict Paper
+fixture `srv-paper-cinematic-condition-20261105-r1` verifies the player is
+inside the same-world 16-block dialogue audience, rejects an out-of-range
+player and a non-player, and clears when the runner stops. Report:
+`tools/paper-integration/reports/paper-1.21.1-is-in-cinematic-condition-strict-20261105-r1.json`.
 
 Reload lifecycle update: `SkillExtras` and `SkillCatalog` now expose complete
 runtime-hook reset paths, including plugin-owned services, static state maps,
@@ -2445,7 +2446,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-spawning-timing-20261105-r3` completes 346 probes (327 passed, 19 expected rejections, zero incomplete), including positive/negative `inside` and `outside` checks, block-state restoration, and real-player `Options.SpawningDistance` removal measured at 2 ticks within the configured 10-tick AI decision period. Exact report, compressed server/client logs, and plugin hash are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, Survival-mode conditions, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat target behavior. Complete Mythic catalog and broader Paper/client version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-enderman-condition-strict-20261105-r1` completes 348 probes (329 passed, 19 expected rejections, zero incomplete), including the real-Enderman positive and managed-Zombie negative `endermanCondition` probe. Previous strict fixture `srv-paper-cinematic-condition-20261105-r1` verifies in-audience cinematic state, out-of-range/non-player rejection, and stopped-runner state. `srv-paper-spawning-timing-20261105-r3` verifies positive/negative `inside` and `outside`, block-state restoration, and real-player `Options.SpawningDistance` removal measured at 2 ticks within the configured 10-tick AI decision period. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, Survival-mode conditions, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat target behavior. Complete Mythic catalog and broader Paper/client version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
@@ -3191,7 +3192,10 @@ Enderman condition update: official `IsEnderman` now uses Bukkit's
 `Enderman` type with `isEnderman`/`enderman` aliases and migration coverage.
 Exploratory Paper `srv-paper-integration-exploratory-1.21.11-r103` verifies a
 real Enderman positive and managed Zombie negative through
-`enderman-condition=true`. Strict Paper 1.21.1 evidence remains open.
+`enderman-condition=true`. Strict Paper 1.21.1-133 fixture
+`srv-paper-enderman-condition-strict-20261105-r1` now passes the independent
+`endermanCondition` release probe with a real Enderman positive and managed
+Zombie negative. The overall Conditions catalog remains mapped-unverified.
 
 Enchantment condition update: official `HasEnchantment` now checks Bukkit
 main-hand, off-hand, and armor equipment with `enchantment/type/e` selection,
@@ -3246,10 +3250,12 @@ comma-separated coordinates.
 Dialogue condition update: official `HasDialogOpen` now reads the active
 DialogueService runner for the model instance, with `hasDialogOpen`/
 `dialogOpen` aliases and migration coverage. Dialogue hooks are injected after
-the service is created, fixing the prior initialization-order gap. Exploratory
-Paper `srv-paper-integration-exploratory-1.21.11-r106` verifies start/open/stop/
-closed transitions through `dialogue-condition=true`; strict Paper 1.21.1
-evidence remains open.
+the service is created, fixing the prior initialization-order gap. The strict
+Paper fixture `srv-paper-cinematic-condition-20261105-r1` records successful
+start/open/stop/closed transitions and independently checks player audience
+scope through `isInCinematicCondition`. Earlier exploratory Paper
+`srv-paper-integration-exploratory-1.21.11-r106` also covers the combined
+`dialogue-condition=true` path.
 
 ### Event skill migration update
 

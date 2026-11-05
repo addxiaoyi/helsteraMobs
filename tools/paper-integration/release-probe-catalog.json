@@ -296,6 +296,16 @@
       "requiredObservation": "in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true"
     },
     {
+      "id": "isInCinematicCondition",
+      "status": "passed",
+      "requiredObservation": "is-in-cinematic-condition player-open=true player-out-of-range-rejected=true non-player-rejected=true closed=true"
+    },
+    {
+      "id": "endermanCondition",
+      "status": "passed",
+      "requiredObservation": "enderman-condition-details positive=true negative=true"
+    },
+    {
       "id": "consumeSlotMechanic",
       "status": "passed"
     },

@@ -27,7 +27,27 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-spawning-timing-20261105-r3`
+Latest strict fixture `srv-paper-enderman-condition-strict-20261105-r1` passed
+348 probes (329 passed, 19 expected rejections, zero incomplete).
+`endermanCondition` verifies a real Enderman positive and managed Zombie
+negative. Report:
+`reports/paper-1.21.1-enderman-condition-strict-20261105-r1.json`; server log:
+`reports/paper-1.21.1-enderman-condition-strict-20261105-r1.log.gz`; client logs:
+`reports/paper-1.21.1-enderman-condition-strict-20261105-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`d575844f655ae2812475c18dd550d4e47aa7f235ed73dd974a8153ac23f51478`.
+
+Previous strict fixture `srv-paper-cinematic-condition-20261105-r1` passed
+347 probes (328 passed, 19 expected rejections, zero incomplete).
+`isInCinematicCondition` verifies in-audience positive, out-of-range and
+non-player rejection, and the stopped-cinematic state. Report:
+`reports/paper-1.21.1-is-in-cinematic-condition-strict-20261105-r1.json`;
+server log: `reports/paper-1.21.1-is-in-cinematic-condition-strict-20261105-r1.log.gz`;
+client logs: `reports/paper-1.21.1-is-in-cinematic-condition-strict-20261105-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`d575844f655ae2812475c18dd550d4e47aa7f235ed73dd974a8153ac23f51478`.
+
+Previous strict fixture `srv-paper-spawning-timing-20261105-r3`
 passed 346 probes (327 passed, 19 expected rejections, zero incomplete).
 `spawningDistanceClientWalk` records player displacement of 174.12 blocks,
 entity distance of 176.84 blocks, and removal of both the managed instance and
@@ -1233,13 +1253,16 @@ evidence remains pending.
 The catalog also checks official `HasDialogOpen` through a temporary loaded
 cinematic: starting it makes the condition pass, stopping it makes the
 condition reject. Exploratory Paper 1.21.11 r106 records
-`dialogue-condition=true`; strict Paper 1.21.1 release evidence remains
-separate.
+`dialogue-condition=true`. The later strict fixture
+`srv-paper-cinematic-condition-20261105-r1` records the same lifecycle in its
+aggregate condition observations.
 
 The same probe checks official `IsInCinematic` against the connected player
 target: it passes while the temporary cinematic is active and rejects after
 stop. Exploratory Paper 1.21.11 r107 records the combined dialogue condition
-probe as passed; strict Paper 1.21.1 release evidence remains separate.
+probe as passed. The later strict fixture
+`srv-paper-cinematic-condition-20261105-r1` additionally verifies audience
+range, non-player rejection, and stopped state.
 
 Target water/lava checks use a dedicated delayed probe: Paper updates an
 entity's cached fluid state on the tick after block placement, so the probe

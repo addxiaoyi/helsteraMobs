@@ -15,7 +15,7 @@ try {
             'README.md' {
                 'The matrix currently has `1`' + [Environment]::NewLine +
                     '`mapped-unverified` rows.' + [Environment]::NewLine +
-                    'Latest strict report has 346 probes, zero incomplete' + [Environment]::NewLine +
+                    'Latest strict report has 0 probes, zero incomplete' + [Environment]::NewLine +
                     'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine
             }
             'MYTHICMOBS_PARITY_MATRIX.md' {
@@ -100,6 +100,14 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'inCombatCondition'; status = 'passed'; observations = @('in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true')
     }
+    $fullReport.expectedProbeIds += 'isInCinematicCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'isInCinematicCondition'; status = 'passed'; observations = @('is-in-cinematic-condition player-open=true player-out-of-range-rejected=true non-player-rejected=true closed=true')
+    }
+    $fullReport.expectedProbeIds += 'endermanCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'endermanCondition'; status = 'passed'; observations = @('enderman-condition-details positive=true negative=true')
+    }
     $fullReport.expectedProbeIds += 'snowingCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'snowingCondition'; status = 'passed'; observations = @('snowing-condition result=true target-location-isolated=true target-positive=true alias-positive=true warm-rejected=true clear-rejected=true missing-context-rejected=true invalid-arguments-rejected=true restored=true')
@@ -161,6 +169,11 @@ try {
         pluginSha256 = $testPluginHash
     }) | ConvertTo-Json -Depth 4))
 
+    $readmePath = Join-Path $temporaryRoot 'README.md'
+    [System.IO.File]::WriteAllText($readmePath, [regex]::Replace(
+        [System.IO.File]::ReadAllText($readmePath),
+        'Latest strict report has \d+ probes, zero incomplete',
+        "Latest strict report has $latestProbeCount probes, zero incomplete"))
     $auditScript = Join-Path $PSScriptRoot 'audit-evidence.ps1'
     $output = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
     if ($LASTEXITCODE -ne 0) {
@@ -182,7 +195,6 @@ try {
         throw "Paper jar directory was treated as an evidence fixture: $output"
     }
 
-    $readmePath = Join-Path $temporaryRoot 'README.md'
     $originalReadme = [System.IO.File]::ReadAllText($readmePath)
     [System.IO.File]::WriteAllText($readmePath, $originalReadme.Replace(
         "Latest strict report has $latestProbeCount probes", 'Latest strict report has 290 probes'))

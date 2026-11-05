@@ -572,19 +572,28 @@ class SkillConditionsTest {
         when(instance.instanceId()).thenReturn(42);
         BehaviorContext context = BehaviorContext.of(instance, (LivingEntity) null,
                 1.0, -1, 0, "IDLE");
+        Player cinematicPlayer = mock(Player.class);
         try {
             SkillExtras.dialogueLookup(id -> id == 42);
             assertTrue(extraFactory("has-dialog-open").create(List.of()).test(context));
-            Player player = mock(Player.class);
-            BehaviorContext playerContext = BehaviorContext.of(instance, player,
+            BehaviorContext playerContext = BehaviorContext.of(instance, cinematicPlayer,
                     1.0, -1, 0, "IDLE");
-            assertTrue(extraFactory("is-in-cinematic").create(List.of()).test(playerContext));
+            var cinematic = extraFactory("is-in-cinematic").create(List.of());
+            assertFalse(cinematic.test(playerContext));
+            SkillExtras.cinematicLookup((id, player) -> id == 42 && player == cinematicPlayer);
+            assertTrue(cinematic.test(playerContext));
+            assertFalse(cinematic.test(BehaviorContext.of(instance, mock(Player.class),
+                    1.0, -1, 0, "IDLE")));
+            assertFalse(cinematic.test(BehaviorContext.of(instance, mock(LivingEntity.class),
+                    1.0, -1, 0, "IDLE")));
             SkillExtras.dialogueLookup(id -> false);
+            SkillExtras.cinematicLookup((id, player) -> false);
             assertFalse(extraFactory("has-dialog-open").create(List.of()).test(context));
-            assertFalse(extraFactory("is-in-cinematic").create(List.of()).test(playerContext));
+            assertFalse(cinematic.test(playerContext));
             assertFalse(extraFactory("has-dialog-open").create(List.of()).test(ctx()));
         } finally {
             SkillExtras.dialogueLookup(null);
+            SkillExtras.cinematicLookup(null);
         }
     }
 

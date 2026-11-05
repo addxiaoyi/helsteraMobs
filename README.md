@@ -4,7 +4,23 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-spawning-timing-20261105-r3`
+Latest strict fixture `srv-paper-enderman-condition-strict-20261105-r1`
+completes 348 probes (329 passed, 19 expected rejections, zero incomplete).
+The dedicated `endermanCondition` probe accepts a real Enderman and rejects a
+managed Zombie. Report:
+`tools/paper-integration/reports/paper-1.21.1-enderman-condition-strict-20261105-r1.json`.
+The plugin SHA-256 is
+`d575844f655ae2812475c18dd550d4e47aa7f235ed73dd974a8153ac23f51478`.
+
+Previous strict fixture `srv-paper-cinematic-condition-20261105-r1`
+completes 347 probes (328 passed, 19 expected rejections, zero incomplete).
+`isInCinematicCondition` verifies that an active cinematic matches a player
+inside its 16-block audience, rejects an out-of-range player and non-player,
+and becomes false when the cinematic stops. Report:
+`tools/paper-integration/reports/paper-1.21.1-is-in-cinematic-condition-strict-20261105-r1.json`.
+The plugin SHA-256 is unchanged.
+
+Previous strict fixture `srv-paper-spawning-timing-20261105-r3`
 completes 346 probes (327 passed, 19 expected rejections, zero incomplete).
 `spawningDistanceClientWalk` records a real player leaving the configured
 radius and both managed/Bukkit entity removal 2 ticks later, within the
@@ -352,7 +368,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 346 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 348 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -368,8 +384,8 @@ This is a partial parity release. The matrix currently has `41`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 450 cited IDs; 362 report files; 4 directories
-   without reports; 84 missing directories; 127 archived release reports. The
+   Current fixture inventory: 452 cited IDs; 364 report files; 4 directories
+   without reports; 84 missing directories; 129 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -491,7 +507,7 @@ the entire MythicMobs feature catalog.
 - Official `SpawnReason` now matches the target entity's Bukkit `Entity#getEntitySpawnReason()` with case-insensitive enum parsing and fail-closed missing/invalid values; exploratory Paper 1.21.11 r98 records `spawn-reason-condition=true` with actual `CUSTOM` and a different-enum negative control.
 - Official `IsWaterMob` and `IsZombie` now use Bukkit's `WaterMob` marker and `Zombie` type checks; exploratory Paper 1.21.11 r99 records real Cod/Zombie positive paths and cross-type negative controls.
 - Official `Aerial` now evaluates the active target's Bukkit `isOnGround()` state with `aerial`/`isAerial` aliases; exploratory Paper 1.21.11 r102 verifies a real airborne ArmorStand and a grounded online-player negative control.
-- Official `IsEnderman` now uses Bukkit's `Enderman` type check; exploratory Paper 1.21.11 r103 verifies a real Enderman positive path and a Zombie negative control.
+- Official `IsEnderman` now uses Bukkit's `Enderman` type check; exploratory Paper 1.21.11 r103 and strict Paper fixture `srv-paper-enderman-condition-strict-20261105-r1` verify a real Enderman positive path and managed Zombie negative control through the dedicated `endermanCondition` probe.
 - Official `HasEnchantment` now checks all Bukkit equipment slots with `enchantment/type/e` and `level/l` range arguments; exploratory Paper 1.21.11 r104 verifies Sharpness positive, `ANY` matching, level rejection, and wrong-type rejection.
 - Official `Color` now matches Bukkit Sheep/Shulker dye colors, Cat types, Parrot variants, Horse colors, and Llama colors; exploratory Paper 1.21.11 r108 verifies a real red Sheep positive, wrong-color rejection, and unsupported Zombie rejection.
 - Official `MaterialIsOnCooldown` now reads target-player Bukkit material cooldowns with `material/m` arguments and an `ENDER_PEARL` default; exploratory Paper 1.21.11 r110 verifies positive, wrong-material, and cleared negative paths alongside the passing aggregate condition catalog.
@@ -499,8 +515,8 @@ the entire MythicMobs feature catalog.
 - Official `TriggerBlockType` now matches the origin block for `on-block-break`/`on-block-place` trigger states with block-material aliases; exploratory Paper 1.21.11 r113 verifies STONE positive, DIAMOND negative, and wrong-state rejection.
 - Official `XDiff`/`YDiff`/`ZDiff` now compare target-minus-caster Bukkit coordinates with Mythic numeric ranges; exploratory Paper 1.21.11 r114 verifies positive ranges and an out-of-range rejection.
 - Official `OriginLocation` now matches `BehaviorContext.origin()` by block coordinates or exact coordinates with `loc/l/c`, `x/y/z`, and `exact/e`; exploratory Paper 1.21.11 r116 verifies block, exact, and mismatch paths.
-- Official `HasDialogOpen` now bridges the active DialogueService state by model instance, with lifecycle-safe hook injection; exploratory Paper 1.21.11 r106 verifies start/open/stop/closed transitions.
-- Official `IsInCinematic` now checks explicit player targets against the active DialogueService cinematic state; exploratory Paper 1.21.11 r107 verifies player-target open/closed transitions.
+- Official `HasDialogOpen` bridges the active DialogueService state by model instance, with lifecycle-safe hook injection; strict fixture `srv-paper-cinematic-condition-20261105-r1` records the start/open/stop/closed transitions.
+- Official `IsInCinematic` checks explicit player targets against the active DialogueService cinematic and same-world 16-block audience; strict fixture `srv-paper-cinematic-condition-20261105-r1` verifies in-range, out-of-range, non-player, and stopped states.
 - Mythic `Name` now matches the active entity's exact custom name, falling back to its Bukkit entity name when no custom name is present.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies custom-name positive matching and default-name rejection on a real managed entity (`nameCondition=passed`).
 - `TargetWithin`/`TargetNotWithin` and target-AI line-of-sight conditions now inspect the active entity's vanilla AI target; caster-to-target `LineOfSight` remains separate.
