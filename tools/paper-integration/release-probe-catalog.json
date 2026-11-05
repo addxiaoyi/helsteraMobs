@@ -312,9 +312,24 @@
       "requiredObservation": "aerial-condition-details positive=true alias-positive=true negative=true ground-entity=player ground=true"
     },
     {
+      "id": "importedAerialCondition",
+      "status": "passed",
+      "requiredObservation": "imported-aerial-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true ground=true"
+    },
+    {
       "id": "endermanCondition",
       "status": "passed",
       "requiredObservation": "enderman-condition-details positive=true negative=true"
+    },
+    {
+      "id": "importedColorCondition",
+      "status": "passed",
+      "requiredObservation": "imported-color-condition red-mapped=true blue-alias-mapped=true positive=true negative=true entity-color=RED"
+    },
+    {
+      "id": "importedMaterialCooldownCondition",
+      "status": "passed",
+      "requiredObservation": "imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true"
     },
     {
       "id": "consumeSlotMechanic",

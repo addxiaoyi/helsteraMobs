@@ -1,5 +1,29 @@
 # Paper Startup Evidence
 
+Fixture `srv-paper-condition-import-strict-20261105-r1` passed the full strict
+gate on Paper 1.21.1-133: 353 probes, 334 passed, 19 expected rejections, and
+zero incomplete. It verifies imported Aerial and Color aliases plus
+`MaterialIsOnCooldown` against a real player cooldown. Report and compressed
+server/client logs are listed in `release-evidence.json`; plugin SHA-256:
+`75b5bf2bde256454caa90aa1bea652ac67754b0f65b3e38633d3ddbf7933104a`.
+
+Fixture `srv-paper-color-import-strict-20261105-r1` passed the full strict
+gate on Paper 1.21.1-133: 352 probes, 333 passed, 19 expected rejections, and
+zero incomplete. `importedColorCondition` verifies `?color{c=RED}` and
+`?clr{color=BLUE}` against a real red Sheep; the same fixture retains both
+imported Aerial aliases and their floating/grounded controls. Report and
+compressed server/client logs are listed in `release-evidence.json`; plugin
+SHA-256:
+`6411d68946e2d04082086609dba9ff8f74e5d404c99df577ae93d6588bf8a51e`.
+
+Fixture `srv-paper-aerial-import-strict-20261105-r1` passed the full strict
+gate on Paper 1.21.1-133: 351 probes, 332 passed, 19 expected rejections, and
+zero incomplete. `importedAerialCondition` verifies that `?aerial` and
+`?isAerial` both map to runtime `aerial`, pass on a floating ArmorStand, and
+reject a grounded entity. Report and compressed server/client logs are listed
+in `release-evidence.json`; plugin SHA-256:
+`30315bb483240a5386d7d47ab6d4ca88ab9f0bff2d83c203924a7d1a20903722`.
+
 Fixture `srv-paper-is-child-import-strict-20261105-r1` passed the full strict
 gate on Paper 1.21.1-133: 350 probes, 331 passed, 19 expected rejections, and
 zero incomplete. `importedIsChildCondition` executes `?isChild` through

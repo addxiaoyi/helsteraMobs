@@ -148,6 +148,9 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] is-in-cinematic-condition player-open=true player-out-of-range-rejected=true non-player-rejected=true closed=true',
         '[Server thread/INFO]: [helsteraMobs] enderman-condition-details positive=true negative=true',
         '[Server thread/INFO]: [helsteraMobs] aerial-condition-details positive=true alias-positive=true negative=true ground-entity=player ground=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-aerial-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true ground=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-color-condition red-mapped=true blue-alias-mapped=true positive=true negative=true entity-color=RED',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
@@ -332,13 +335,18 @@ try {
     Assert-True $wrongPluginHashRejected 'strict gate rejects mismatched plugin SHA-256'
     foreach ($requiredProbeId in @('custom-menu-player-workflow', 'audience-player-delivery',
             'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates',
-            'spawningDistanceClientWalk', 'isInCinematicCondition', 'aerialCondition', 'endermanCondition')) {
+            'spawningDistanceClientWalk', 'isInCinematicCondition', 'aerialCondition',
+            'importedAerialCondition', 'endermanCondition', 'importedColorCondition',
+            'importedMaterialCooldownCondition')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
     Assert-True $report.pluginEnabled 'plugin enabled detection'
     Assert-True (($report.probes | Where-Object id -eq 'pathfinderClear').status -eq 'passed') 'native Pathfinder clear probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawningDistanceClientWalk').status -eq 'passed') 'real client movement despawn probe'
+    Assert-True (($report.probes | Where-Object id -eq 'importedAerialCondition').status -eq 'passed') 'imported Aerial aliases require strict Paper positive and negative evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedColorCondition').status -eq 'passed') 'imported Color and clr require strict Paper positive and negative evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedMaterialCooldownCondition').status -eq 'passed') 'imported MaterialIsOnCooldown aliases require strict Paper positive and negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriority').status -eq 'passed') 'AI selector priority arbitration probe'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriorityTargets').status -eq 'passed') 'AI priority probe target setup'
     Assert-True (($report.probes | Where-Object id -eq 'aiSelectorCore').status -eq 'passed') 'AI selector core Paper probe'
@@ -730,6 +738,18 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'aerialCondition'; status = 'passed'; observations = @('aerial-condition-details positive=true alias-positive=true negative=true ground-entity=player ground=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'importedAerialCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedAerialCondition'; status = 'passed'; observations = @('imported-aerial-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true ground=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedColorCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedColorCondition'; status = 'passed'; observations = @('imported-color-condition red-mapped=true blue-alias-mapped=true positive=true negative=true entity-color=RED')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedMaterialCooldownCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedMaterialCooldownCondition'; status = 'passed'; observations = @('imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'spawningDistanceClientWalk'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'spawningDistanceClientWalk'; status = 'passed'; observations = @('spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true despawn-elapsed-ticks=3 decision-period-ticks=10')
@@ -1035,6 +1055,75 @@ try {
     Assert-True $missingAerialRejected 'full release gate rejects missing Aerial condition evidence'
     $fullCatalogReport.expectedProbeIds += 'aerialCondition'
     $fullCatalogReport.probes += $aerialProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $importedAerialProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedAerialCondition'
+    $importedAerialObservations = $importedAerialProbe.observations
+    $importedAerialProbe.observations = @('imported-aerial-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=false ground=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badImportedAerialRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badImportedAerialRejected = $_.Exception.Message -match 'required observation for importedAerialCondition' }
+    Assert-True $badImportedAerialRejected 'full release gate rejects a false imported Aerial negative control'
+    $importedAerialProbe.observations = $importedAerialObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'importedAerialCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'importedAerialCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingImportedAerialRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingImportedAerialRejected = $_.Exception.Message -match 'importedAerialCondition' }
+    Assert-True $missingImportedAerialRejected 'full release gate rejects missing imported Aerial evidence'
+    $fullCatalogReport.expectedProbeIds += 'importedAerialCondition'
+    $fullCatalogReport.probes += $importedAerialProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $importedColorProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedColorCondition'
+    $importedColorObservations = $importedColorProbe.observations
+    $importedColorProbe.observations = @('imported-color-condition red-mapped=true blue-alias-mapped=true positive=true negative=false entity-color=RED')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badImportedColorRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badImportedColorRejected = $_.Exception.Message -match 'required observation for importedColorCondition' }
+    Assert-True $badImportedColorRejected 'full release gate rejects a false imported Color negative control'
+    $importedColorProbe.observations = $importedColorObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'importedColorCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'importedColorCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingImportedColorRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingImportedColorRejected = $_.Exception.Message -match 'importedColorCondition' }
+    Assert-True $missingImportedColorRejected 'full release gate rejects missing imported Color evidence'
+    $fullCatalogReport.expectedProbeIds += 'importedColorCondition'
+    $fullCatalogReport.probes += $importedColorProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $importedCooldownProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedMaterialCooldownCondition'
+    $importedCooldownObservations = $importedCooldownProbe.observations
+    $importedCooldownProbe.observations = @('imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badImportedCooldownRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badImportedCooldownRejected = $_.Exception.Message -match 'required observation for importedMaterialCooldownCondition' }
+    Assert-True $badImportedCooldownRejected 'full release gate rejects a false imported cooldown negative control'
+    $importedCooldownProbe.observations = $importedCooldownObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'importedMaterialCooldownCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'importedMaterialCooldownCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingImportedCooldownRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingImportedCooldownRejected = $_.Exception.Message -match 'importedMaterialCooldownCondition' }
+    Assert-True $missingImportedCooldownRejected 'full release gate rejects missing imported cooldown evidence'
+    $fullCatalogReport.expectedProbeIds += 'importedMaterialCooldownCondition'
+    $fullCatalogReport.probes += $importedCooldownProbe
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $missingReviveRejected = $false
     try {

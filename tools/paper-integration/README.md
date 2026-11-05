@@ -27,7 +27,29 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-is-child-import-strict-20261105-r1` passed 350
+Latest strict fixture `srv-paper-condition-import-strict-20261105-r1` passed 353
+probes (334 passed, 19 expected rejections, zero incomplete). It verifies
+imported Aerial and Color aliases and `MaterialIsOnCooldown` against a real
+player cooldown. Report:
+`reports/paper-1.21.1-condition-import-strict-20261105-r1.json`; server log:
+`reports/paper-1.21.1-condition-import-strict-20261105-r1.log.gz`; client logs:
+`reports/paper-1.21.1-condition-import-strict-20261105-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`75b5bf2bde256454caa90aa1bea652ac67754b0f65b3e38633d3ddbf7933104a`.
+
+Previous strict fixture `srv-paper-color-import-strict-20261105-r1` passed 352
+probes (333 passed, 19 expected rejections, zero incomplete). It verifies
+imported `?color{c=RED}`/`?clr{color=BLUE}` on a real red Sheep. Report:
+`reports/paper-1.21.1-color-import-strict-20261105-r1.json`; server log:
+`reports/paper-1.21.1-color-import-strict-20261105-r1.log.gz`; client logs:
+`reports/paper-1.21.1-color-import-strict-20261105-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`6411d68946e2d04082086609dba9ff8f74e5d404c99df577ae93d6588bf8a51e`.
+
+Previous strict fixture `srv-paper-aerial-import-strict-20261105-r1` passed 351
+probes; it verifies both Aerial aliases against floating and grounded entities.
+
+Previous strict fixture `srv-paper-is-child-import-strict-20261105-r1` passed 350
 probes (331 passed, 19 expected rejections, zero incomplete).
 `importedIsChildCondition` executes Mythic `?isChild` through the importer and
 `SkillService`: an adult Pig related to its caster matches without being a baby,

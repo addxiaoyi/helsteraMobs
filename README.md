@@ -4,7 +4,27 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-is-child-import-strict-20261105-r1` completes
+Latest strict fixture `srv-paper-condition-import-strict-20261105-r1` completes
+353 probes (334 passed, 19 expected rejections, zero incomplete). It verifies
+imported Aerial, Color, and `MaterialIsOnCooldown` aliases with real Paper
+entities and a player cooldown. Report:
+`tools/paper-integration/reports/paper-1.21.1-condition-import-strict-20261105-r1.json`.
+The plugin SHA-256 is
+`75b5bf2bde256454caa90aa1bea652ac67754b0f65b3e38633d3ddbf7933104a`.
+
+Previous strict fixture `srv-paper-color-import-strict-20261105-r1` completes
+352 probes (333 passed, 19 expected rejections, zero incomplete). Its
+`importedColorCondition` probe verifies `?color{c=RED}` and `?clr{color=BLUE}`
+against a real red Sheep; it also retains the imported Aerial checks. Report:
+`tools/paper-integration/reports/paper-1.21.1-color-import-strict-20261105-r1.json`.
+The plugin SHA-256 is
+`6411d68946e2d04082086609dba9ff8f74e5d404c99df577ae93d6588bf8a51e`.
+
+Previous strict fixture `srv-paper-aerial-import-strict-20261105-r1` completes
+351 probes (332 passed, 19 expected rejections, zero incomplete). Report:
+`tools/paper-integration/reports/paper-1.21.1-aerial-import-strict-20261105-r1.json`.
+
+Previous strict fixture `srv-paper-is-child-import-strict-20261105-r1` completes
 350 probes (331 passed, 19 expected rejections, zero incomplete). Its
 `importedIsChildCondition` probe executes Mythic `?isChild` through the importer
 and SkillService, confirming parent-relation semantics remain distinct from
@@ -401,7 +421,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 350 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 353 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -417,8 +437,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 456 cited IDs; 368 report files; 4 directories
-   without reports; 84 missing directories; 133 archived release reports. The
+   Current fixture inventory: 459 cited IDs; 371 report files; 4 directories
+   without reports; 84 missing directories; 136 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
