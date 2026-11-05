@@ -4935,6 +4935,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean ownerOnlineCondition = false;
                 boolean parentRelation = false;
                 boolean isChildCondition = false;
+                boolean importedIsChildCondition = false;
+                boolean importedIsChildAdultPositive = false;
+                boolean importedIsChildAdultNotBaby = false;
+                boolean importedIsChildBabyNotChild = false;
+                boolean importedIsBabyPositive = false;
                 boolean parentDerivedConditions = false;
                 if (ownerProbe != null) {
                     wolf.setTamed(true);
@@ -5027,6 +5032,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             && parentClearedOnQuit && parentSetAgain && parentRemoved && parentCleared;
                     var childProbe = world.spawn(wolf.getLocation(), org.bukkit.entity.Pig.class);
                     conditionCategoryEntities.add(childProbe);
+                    childProbe.setAdult();
                     boolean childRelationSet = dev.helstera.api.behavior.MobRelations.setParent(childProbe, wolf);
                     childrenCondition = childRelationSet
                             && behaviors.testCondition(skills.bindCondition("children"), ownerContext)
@@ -5036,6 +5042,30 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             ownerInstance, childProbe, 1.0, 0.0, 0, "integration");
                     isChildCondition = childRelationSet && behaviors.testCondition(
                             skills.bindCondition("is-child"), childContext);
+                    var importedIsChild = dev.helstera.migration.importer.MmConditions.translate("?isChild");
+                    boolean importedIsChildMapped = importedIsChild.translated()
+                            && "is-child".equals(importedIsChild.condition());
+                    String importedIsChildKey = importedIsChildMapped
+                            ? skills.bindCondition(importedIsChild.condition()) : null;
+                    var importedIsBaby = dev.helstera.migration.importer.MmConditions.translate("?isBaby");
+                    String importedIsBabyKey = importedIsBaby.translated()
+                            ? skills.bindCondition(importedIsBaby.condition()) : null;
+                    importedIsChildAdultPositive = childRelationSet && importedIsChildKey != null
+                            && behaviors.testCondition(importedIsChildKey, childContext);
+                    importedIsChildAdultNotBaby = childProbe.isAdult() && importedIsBabyKey != null
+                            && !behaviors.testCondition(importedIsBabyKey, childContext);
+                    var unrelatedBaby = world.spawn(wolf.getLocation(), org.bukkit.entity.Pig.class);
+                    conditionCategoryEntities.add(unrelatedBaby);
+                    unrelatedBaby.setBaby();
+                    var unrelatedBabyContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            ownerInstance, unrelatedBaby, 1.0, 0.0, 0, "integration");
+                    importedIsChildBabyNotChild = importedIsChildKey != null
+                            && !behaviors.testCondition(importedIsChildKey, unrelatedBabyContext);
+                    importedIsBabyPositive = !unrelatedBaby.isAdult() && importedIsBabyKey != null
+                            && behaviors.testCondition(importedIsBabyKey, unrelatedBabyContext);
+                    importedIsChildCondition = importedIsChildMapped && importedIsChildAdultPositive
+                            && importedIsChildAdultNotBaby && importedIsChildBabyNotChild
+                            && importedIsBabyPositive;
                     var childTargets = dev.helstera.api.behavior.Targeters.select(
                             "@children", ownerContext, java.util.List.of(childProbe), java.util.List.of());
                     childrenTargeter = childRelationSet && childTargets.size() == 1
@@ -5799,6 +5829,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " owner-online-condition=" + ownerOnlineCondition
                         + " parent-relation=" + parentRelation
                         + " is-child-condition=" + isChildCondition
+                        + " is-child-import-condition=" + importedIsChildCondition
+                        + " adult-parent-positive=" + importedIsChildAdultPositive
+                        + " adult-not-baby=" + importedIsChildAdultNotBaby
+                        + " unrelated-baby-not-child=" + importedIsChildBabyNotChild
+                        + " baby-positive=" + importedIsBabyPositive
                         + " parent-derived-conditions=" + parentDerivedConditions
                         + " world-biome=" + worldBiome
                         + " world-biome-reject=" + worldBiomeReject

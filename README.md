@@ -4,7 +4,16 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-age-options-strict-20261105-r3` completes 349
+Latest strict fixture `srv-paper-is-child-import-strict-20261105-r1` completes
+350 probes (331 passed, 19 expected rejections, zero incomplete). Its
+`importedIsChildCondition` probe executes Mythic `?isChild` through the importer
+and SkillService, confirming parent-relation semantics remain distinct from
+baby age checks on real Paper entities. Report:
+`tools/paper-integration/reports/paper-1.21.1-is-child-import-strict-20261105-r1.json`.
+The plugin SHA-256 is
+`e0c6fdaf31e96003a68bd589d1ca88e0786dabb0ecdf8333022474d1d52ddc7b`.
+
+Previous strict fixture `srv-paper-age-options-strict-20261105-r3` completes 349
 probes (330 passed, 19 expected rejections, zero incomplete). Its `ageOptions`
 probe verifies exact animal age and AgeLock, Adult/Baby setters on a real
 Sheep, and the Zombie-specific Baby setter. Report:
@@ -392,7 +401,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 349 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 350 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -408,8 +417,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 455 cited IDs; 367 report files; 4 directories
-   without reports; 84 missing directories; 132 archived release reports. The
+   Current fixture inventory: 456 cited IDs; 368 report files; 4 directories
+   without reports; 84 missing directories; 133 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -472,7 +481,7 @@ the entire MythicMobs feature catalog.
 - Mechanics: `remove`, `suicide`, target-aware `kill`, bounded `dot` damage-over-time, radial `damage-melee` with caster exclusion, `setnameplate`, `equip`, `set-name`, `set-item`/`set-offhand`/`set-armor`, `set-health`, `set-max-health`, `modify-max-health`, `feed`, `swing` (main/off-hand), `disarm`/`remove-held-item`, `clear-inventory`, `set-material-cooldown`, `set-game-mode`, `jump`, target-aware `force-pull`, `addtag`/`removetag` scoreboard tags (including targeters), `setscore`/`addscore` instance scores, Mythic `setvariable`/`variableunset`/`variableadd`/`variablemath`, `setvariablelocation`/`locationunset`, `signal`/`~onSignal`, Mythic `shoot`/`shootprojectile`, `setintent`, `command`/`commandself`/`commandtarget`, `set-stance`, `randomskill`, `leap`, `set-tick-speed`, `pull`, actionbar, full `title`/`subtitle`/timing delivery, target-aware `damage`/`damage-percent`/`message`/`explode` multi-target dispatch, caster movement `dash`/`blink` with direction modes and placeholder distances, target-aware entity state actions including `set-ai`/`set-gravity`/`set-silent`/`set-collidable`/`set-sneaking`/`set-gliding`/`set-swimming`/`set-fire`/`clear-fire`/`invisible`/`glowing`/`set-invulnerable`, player `set-sprinting`/`set-flying`/`set-walk-speed`, no-damage-tick controls, `look-at`, `set-rotation`, `give-item`, `take-item`, `set-block`, `break-block`, `drop-item`, potion effects, teleport, mount/dismount, `cancel-event`, and custom item resolver integration.
 - Scoreboard tag evidence: exploratory Paper 1.21.11 r22 passes real caster/targeter `addtag`/`removetag` mutations; the current strict Paper 1.21.1-133 aggregate also completes the registered tag probes.
 - DoT evidence: exploratory Paper self-test verifies bounded `dot` damage across multiple intervals and confirms no damage after `duration`; the current strict Paper 1.21.1-133 aggregate completes the registered DoT probe.
-- Conditions: world/biome/time/weather, `night`/`raining`/`thundering`, health/distance/permission/stance/entity state (including caster and target `on-ground`, `has-ai`, `has-gravity`, `is-silent`, `is-dead`, `is-alive`, `target-is-alive`, `is-valid`, `is-collidable`, and `has-offhand` from Bukkit entity state), `ownerIsPlayer`, exact faction conditions (`faction`, `targetfaction`, `samefaction`, `differentfaction`), Mythic `isChild`/`child` parent-relation semantics distinct from `isBaby` age checks, explicit `target-has-tag`/`targetHasScoreboardTag`, strict target-only permission/game-mode/food/air/item/potion/holding/wearing conditions, vehicle/passenger aliases (`hasPassenger`, `isVehicle`, `targetHasPassenger`, `targetIsVehicle`), `branch-unlocked`/`branch-locked` SkillTree gates, `falling`, `drowning`, `target-within`, equality/inequality comparators for health/target-health/distance/light-level, variables, composition, `food-level`, `has-item`, `air-level`, `damage-cause`, `damage-amount`, and `is-cancelled`. The historical `is-child` Paper probe verifies runtime relation behavior only; imported Mythic conditions still need a dedicated Paper probe. Mythic Aura conditions remain unmapped and are preserved with a migration warning until an Aura data provider is implemented.
+- Conditions: world/biome/time/weather, `night`/`raining`/`thundering`, health/distance/permission/stance/entity state (including caster and target `on-ground`, `has-ai`, `has-gravity`, `is-silent`, `is-dead`, `is-alive`, `target-is-alive`, `is-valid`, `is-collidable`, and `has-offhand` from Bukkit entity state), `ownerIsPlayer`, exact faction conditions (`faction`, `targetfaction`, `samefaction`, `differentfaction`), Mythic `isChild`/`child` parent-relation semantics distinct from `isBaby` age checks (strict Paper fixture `srv-paper-is-child-import-strict-20261105-r1` verifies the importer-to-SkillService path), explicit `target-has-tag`/`targetHasScoreboardTag`, strict target-only permission/game-mode/food/air/item/potion/holding/wearing conditions, vehicle/passenger aliases (`hasPassenger`, `isVehicle`, `targetHasPassenger`, `targetIsVehicle`), `branch-unlocked`/`branch-locked` SkillTree gates, `falling`, `drowning`, `target-within`, equality/inequality comparators for health/target-health/distance/light-level, variables, composition, `food-level`, `has-item`, `air-level`, `damage-cause`, `damage-amount`, and `is-cancelled`. Mythic Aura conditions remain unmapped and are preserved with a migration warning until an Aura data provider is implemented.
 - Mythic `isInAudience` (`inaudience`, `audiencecontains`) is preserved with an `unsupported` migration warning: it depends on a per-skill execution-audience set that Helstera does not currently model. The warning distinguishes that missing context from Helstera's per-action audience recipient filters; no runtime equivalence is claimed.
 - Condition migration aliases now also cover Mythic `inCombat`, `playersInRadius`, `entitiesInRadius`, `mobsInRadius`, `randomChance`, `targetCount`, and `hungerBelow`; `mobsInRadius` uses a mob-only runtime evaluator.
 - Official condition aliases `Burning`, `Blocking`, `Charged`, `Crouching`, movement states, `Chance`, `Day`, `Dawn`, `Dusk`, and `Sunny` now map to runtime evaluators; strict fixture `srv-paper-chance-condition-strict-20261101-r1` verifies 0%, 100%, and fail-closed rejection of 101% on Paper 1.21.1-133.

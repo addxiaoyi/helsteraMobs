@@ -27,7 +27,18 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-age-options-strict-20261105-r3` passed 349
+Latest strict fixture `srv-paper-is-child-import-strict-20261105-r1` passed 350
+probes (331 passed, 19 expected rejections, zero incomplete).
+`importedIsChildCondition` executes Mythic `?isChild` through the importer and
+`SkillService`: an adult Pig related to its caster matches without being a baby,
+while an unrelated baby Pig fails `isChild` and passes the `isBaby` control.
+Report: `reports/paper-1.21.1-is-child-import-strict-20261105-r1.json`; server
+log: `reports/paper-1.21.1-is-child-import-strict-20261105-r1.log.gz`; client
+logs: `reports/paper-1.21.1-is-child-import-strict-20261105-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`e0c6fdaf31e96003a68bd589d1ca88e0786dabb0ecdf8333022474d1d52ddc7b`.
+
+Previous strict fixture `srv-paper-age-options-strict-20261105-r3` passed 349
 probes (330 passed, 19 expected rejections, zero incomplete). The required
 `ageOptions` probe reads exact animal age/AgeLock and Adult/Baby from real
 Sheep and verifies the Zombie-specific Baby setter on a real Zombie. Report:

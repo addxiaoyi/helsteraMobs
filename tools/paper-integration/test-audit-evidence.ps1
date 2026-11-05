@@ -36,6 +36,10 @@ try {
     $archivePath = Join-Path $temporaryRoot 'tools/paper-integration/reports/test-release.json'
     [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($archivePath))
     $fullReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-drop-inline-20261104-r2.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullReport.expectedProbeIds += 'importedIsChildCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedIsChildCondition'; status = 'passed'; observations = @('skill-actions is-child-import-condition=true adult-parent-positive=true adult-not-baby=true unrelated-baby-not-child=true baby-positive=true')
+    }
     $fullReport.expectedProbeIds += 'dropItemListImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'dropItemListImported'; status = 'passed'; observations = @('drop-item-list-import valid=true invalid-preserved=true')

@@ -280,6 +280,11 @@
       "status": "passed"
     },
     {
+      "id": "importedIsChildCondition",
+      "status": "passed",
+      "requiredObservationContains": "is-child-import-condition=true adult-parent-positive=true adult-not-baby=true unrelated-baby-not-child=true baby-positive=true"
+    },
+    {
       "id": "conditionLeashed",
       "status": "passed"
     },
