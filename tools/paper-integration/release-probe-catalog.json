@@ -13,7 +13,8 @@
     },
     {
       "id": "ageOptions",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservation": "age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true"
     },
     {
       "id": "aiPriority",

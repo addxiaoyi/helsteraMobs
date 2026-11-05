@@ -128,6 +128,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'targeterIdentityFilter'; status = 'passed'; observations = @('targeter-identity-filter managed=true target-mythic=true target-nonmythic=true ignore-mythic=true ignore-vanilla=true targetvanilla=true targetnonmythic=true targetnonmythic-false=true duplicate-rejected=true owner-target=true owner-target-disabled=true owner-ignore=true owner-priority=true faction-target=true faction-ignore=true same-faction=true same-faction-disabled=true faction-priority=true same-faction-world=true targetall-relations=true relation-options-rejected=true passed=true')
     }
+    $ageOptionsProbe = @($fullReport.probes | Where-Object id -eq 'ageOptions')
+    if ($ageOptionsProbe.Count -ne 1) { throw 'Synthetic release report must contain ageOptions.' }
+    $ageOptionsProbe[0].observations = @(
+        'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true')
     $aiSelectorCore = @($fullReport.probes | Where-Object id -eq 'aiSelectorCore')
     if ($aiSelectorCore.Count -ne 1) { throw 'Synthetic release report must contain aiSelectorCore.' }
     $aiSelectorCore[0].observations = @($aiSelectorCore[0].observations) +

@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-age-options-strict-20261105-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-age-options-strict-20261105-r3.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-age-options-strict-20261105-r3.log.gz",
+    "logSha256": "2b193dc28cc2622407e4d78338849b0334340b21f5cc39a692f2de6337a4afd3",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-age-options-strict-20261105-r3-client-logs.tar.gz",
+    "clientLogSha256": "1cc13af8357290c5bcd5493bc52bfe5e71cc9ffaa0a53c5d5615b0d528804bc5",
+    "pluginSha256": "62051171e7637e3c9d1d40bcc7d254bc6d565d1cca3428a6fff62d019380b50e",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-aerial-condition-strict-20261105-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-aerial-condition-strict-20261105-r2.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-aerial-condition-strict-20261105-r2.log.gz",

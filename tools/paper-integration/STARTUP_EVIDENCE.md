@@ -1,5 +1,17 @@
 # Paper Startup Evidence
 
+Fixture `srv-paper-age-options-strict-20261105-r3` passed the full strict
+gate on Paper 1.21.1-133: 349 probes, 330 passed and 19 expected rejections,
+with zero incomplete. Its required `ageOptions` observation is
+`age-options result=true age=-24000 baby=true adult=true age-lock=true
+zombie-baby=true`: exact animal age/AgeLock and both age controls were read
+from real Sheep, while the Zombie-specific Baby setter was read from a real
+Zombie. The importer preserves numeric `Age` and `AgeLock` with warnings for
+ageable non-animal mobs because Bukkit does not retain exact tick ages for
+those types. Report and compressed logs are listed in `release-evidence.json`;
+plugin SHA-256:
+`62051171e7637e3c9d1d40bcc7d254bc6d565d1cca3428a6fff62d019380b50e`.
+
 Fixture `srv-paper-aerial-condition-strict-20261105-r2` passed the complete
 strict gate on Paper 1.21.1-133: 349 probes, 330 passed and 19 expected
 rejections, with zero incomplete. `aerialCondition` verifies a floating
