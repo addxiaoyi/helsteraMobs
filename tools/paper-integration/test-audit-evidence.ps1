@@ -15,7 +15,7 @@ try {
             'README.md' {
                 'The matrix currently has `1`' + [Environment]::NewLine +
                     '`mapped-unverified` rows.' + [Environment]::NewLine +
-                    'Latest strict report has 340 probes, zero incomplete' + [Environment]::NewLine +
+                    'Latest strict report has 344 probes, zero incomplete' + [Environment]::NewLine +
                     'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine
             }
             'MYTHICMOBS_PARITY_MATRIX.md' {
@@ -88,9 +88,25 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'dropNativeTierRange'; status = 'passed'; observations = @('drop-native-tier-range valid=true fallback=true warnings=true')
     }
+    $fullReport.expectedProbeIds += 'entityAngryPollination'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'entityAngryPollination'; status = 'passed'; observations = @('entity-angry-pollination result=true bee-angry-positive=true bee-angry-negative=true wolf-angry-positive=true wolf-angry-negative=true vex-angry-positive=true vex-angry-negative=true bee-pollinated-positive=true bee-pollinated-negative=true unsupported-angry-rejected=true missing-context-rejected=true aliases=true')
+    }
+    $fullReport.expectedProbeIds += 'entityShearedStates'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'entityShearedStates'; status = 'passed'; observations = @('entity-sheared-states result=true sheep-self-positive=true sheep-target-positive=true sheep-self-negative=true sheep-target-negative=true bogged-self-positive=true bogged-target-positive=true bogged-self-negative=true bogged-target-negative=true snow-golem-self-positive=true snow-golem-target-positive=true snow-golem-self-negative=true snow-golem-target-negative=true unsupported-rejected=true missing-context-rejected=true aliases=true')
+    }
+    $fullReport.expectedProbeIds += 'inCombatCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'inCombatCondition'; status = 'passed'; observations = @('in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true')
+    }
+    $fullReport.expectedProbeIds += 'spawningDistanceClientWalk'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'spawningDistanceClientWalk'; status = 'passed'; observations = @('spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true')
+    }
     $fullReport.expectedProbeIds += 'targeterIdentityFilter'
     $fullReport.probes += [pscustomobject]@{
-        id = 'targeterIdentityFilter'; status = 'passed'; observations = @('targeter-identity-filter managed=true target-mythic=true target-nonmythic=true ignore-mythic=true ignore-vanilla=true targetvanilla=true targetnonmythic=true targetnonmythic-false=true duplicate-rejected=true passed=true')
+        id = 'targeterIdentityFilter'; status = 'passed'; observations = @('targeter-identity-filter managed=true target-mythic=true target-nonmythic=true ignore-mythic=true ignore-vanilla=true targetvanilla=true targetnonmythic=true targetnonmythic-false=true duplicate-rejected=true owner-target=true owner-target-disabled=true owner-ignore=true owner-priority=true faction-target=true faction-ignore=true same-faction=true same-faction-disabled=true faction-priority=true same-faction-world=true targetall-relations=true relation-options-rejected=true passed=true')
     }
     $aiSelectorCore = @($fullReport.probes | Where-Object id -eq 'aiSelectorCore')
     if ($aiSelectorCore.Count -ne 1) { throw 'Synthetic release report must contain aiSelectorCore.' }
@@ -105,6 +121,7 @@ try {
     $locationTargeterProbe = @($fullReport.probes | Where-Object id -eq 'locationTargeterDispatch')
     if ($locationTargeterProbe.Count -ne 1) { throw 'Synthetic release report must contain locationTargeterDispatch.' }
     $locationTargeterProbe[0].observations = @('location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true')
+    $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-current-release'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'
     [System.IO.File]::WriteAllText($testJarPath, 'test release artifact')
@@ -160,7 +177,7 @@ try {
     $readmePath = Join-Path $temporaryRoot 'README.md'
     $originalReadme = [System.IO.File]::ReadAllText($readmePath)
     [System.IO.File]::WriteAllText($readmePath, $originalReadme.Replace(
-        'Latest strict report has 340 probes', 'Latest strict report has 290 probes'))
+        "Latest strict report has $latestProbeCount probes", 'Latest strict report has 290 probes'))
     $staleProbeOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0 -or $staleProbeOutput -notmatch 'README latest strict report probe count does not match') {
         throw "Stale latest report probe count was not rejected: $staleProbeOutput"
@@ -169,7 +186,7 @@ try {
     [System.IO.File]::WriteAllText($readmePath,
         'The matrix currently has `1`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
-            'Latest strict report has 340 probes, zero incomplete' + [Environment]::NewLine +
+            "Latest strict report has $latestProbeCount probes, zero incomplete" + [Environment]::NewLine +
                     'Current fixture inventory: 4 cited IDs; 2 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
     $staleOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0 -or $staleOutput -notmatch 'README fixture inventory is stale') {
@@ -178,13 +195,13 @@ try {
     [System.IO.File]::WriteAllText($readmePath,
         'The matrix currently has `1`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
-            'Latest strict report has 340 probes, zero incomplete' + [Environment]::NewLine +
+            "Latest strict report has $latestProbeCount probes, zero incomplete" + [Environment]::NewLine +
                     'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
 
     [System.IO.File]::WriteAllText($readmePath,
         'The matrix currently has `2`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
-            'Latest strict report has 340 probes, zero incomplete' + [Environment]::NewLine +
+            "Latest strict report has $latestProbeCount probes, zero incomplete" + [Environment]::NewLine +
                     'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
     $staleStatusOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0 -or $staleStatusOutput -notmatch 'README mapped-unverified row count is stale') {
@@ -193,7 +210,7 @@ try {
     [System.IO.File]::WriteAllText($readmePath,
         'The matrix currently has `1`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
-            'Latest strict report has 340 probes, zero incomplete' + [Environment]::NewLine +
+            "Latest strict report has $latestProbeCount probes, zero incomplete" + [Environment]::NewLine +
                     'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
 
     $requiredOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -RequirePresent 2>&1 | Out-String)

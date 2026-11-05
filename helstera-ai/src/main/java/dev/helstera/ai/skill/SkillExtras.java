@@ -561,6 +561,23 @@ public final class SkillExtras {
         return entity instanceof LivingEntity living ? living : null;
     }
 
+    private static boolean inCombat(BehaviorContext ctx) {
+        LivingEntity entity = conditionEntity(ctx);
+        if (entity == null) return false;
+        if (ctx.instanceValid() && ctx.instance().baseEntity().orElse(null) == entity
+                && ctx.instance() instanceof dev.helstera.runtime.instance.ModelInstanceImpl instance
+                && instance.aiController instanceof dev.helstera.ai.AiController controller) {
+            return controller.isInCombat();
+        }
+        if (!(entity instanceof org.bukkit.entity.Mob mob)) return false;
+        try {
+            LivingEntity target = mob.getTarget();
+            return target != null && target.isValid() && !target.isDead();
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
     private static LivingEntity targetOnlyEntity(BehaviorContext ctx) {
         return ctx == null ? null : ctx.targetEntity().orElse(null);
     }
@@ -1253,6 +1270,12 @@ public final class SkillExtras {
         return saddle != null && !saddle.getType().isAir();
     }
 
+    private static boolean isShearedEntity(LivingEntity entity) {
+        if (entity instanceof org.bukkit.entity.Sheep sheep) return sheep.isSheared();
+        if (entity instanceof org.bukkit.entity.Bogged bogged) return bogged.isSheared();
+        return entity instanceof org.bukkit.entity.Snowman snowman && snowman.isDerp();
+    }
+
     private static int mobSize(LivingEntity entity) {
         if (entity instanceof org.bukkit.entity.Slime slime) return slime.getSize();
         if (entity instanceof org.bukkit.entity.Phantom phantom) return phantom.getSize();
@@ -1909,6 +1932,19 @@ public final class SkillExtras {
                 Map.entry("is-adult", (SkillCatalog.ConditionFactory) a ->
                         ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Ageable age
                                 && age.isAdult()),
+                Map.entry("angry", (SkillCatalog.ConditionFactory) a -> {
+                    if (a != null && !a.isEmpty()) throw new IllegalArgumentException("angry takes no arguments");
+                    return ctx -> {
+                        LivingEntity entity = conditionEntity(ctx);
+                        if (entity instanceof org.bukkit.entity.Bee bee) return bee.getAnger() > 0;
+                        if (entity instanceof org.bukkit.entity.Wolf wolf) return wolf.isAngry();
+                        return entity instanceof org.bukkit.entity.Vex vex && vex.isCharging();
+                    };
+                }),
+                Map.entry("pollinated", (SkillCatalog.ConditionFactory) a -> {
+                    if (a != null && !a.isEmpty()) throw new IllegalArgumentException("pollinated takes no arguments");
+                    return ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Bee bee && bee.hasNectar();
+                }),
                 Map.entry("mob-size", (SkillCatalog.ConditionFactory) a -> {
                     NumberRange range = numberRange(a, 0);
                     return ctx -> range != null && range.contains(mobSize(conditionEntity(ctx)));
@@ -1917,8 +1953,7 @@ public final class SkillExtras {
                         ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Tameable tameable
                                 && tameable.isTamed()),
                 Map.entry("is-sheared", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Sheep sheep
-                                && sheep.isSheared()),
+                        ctx -> isShearedEntity(conditionEntity(ctx))),
                 Map.entry("is-saddled", (SkillCatalog.ConditionFactory) a ->
                         ctx -> isSaddledEntity(conditionEntity(ctx))),
                 Map.entry("is-powered", (SkillCatalog.ConditionFactory) a ->
@@ -1968,7 +2003,7 @@ public final class SkillExtras {
                         ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Tameable tameable
                                 && tameable.isTamed()),
                 Map.entry("target-is-sheared", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Sheep sheep && sheep.isSheared()),
+                        ctx -> isShearedEntity(targetOnlyEntity(ctx))),
                 Map.entry("target-is-saddled", (SkillCatalog.ConditionFactory) a ->
                         ctx -> isSaddledEntity(targetOnlyEntity(ctx))),
                 Map.entry("target-is-powered", (SkillCatalog.ConditionFactory) a ->
@@ -2218,7 +2253,7 @@ public final class SkillExtras {
                             && wanted.equalsIgnoreCase(STANCES.getOrDefault(id(ctx), ""));
                 }),
                 Map.entry("in-combat", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx.targetEntity().isPresent()),
+                        ctx -> inCombat(ctx)),
                 Map.entry("target-faction-is", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = str(a, 0, "");
                     return ctx -> {

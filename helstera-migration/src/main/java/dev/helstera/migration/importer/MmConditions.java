@@ -31,6 +31,7 @@ public final class MmConditions {
             "SEARCH_FOR_BREATH_ATTACK_TARGET", "STRAFING");
     private static final Set<String> NO_ARGUMENT_CONDITIONS = Set.of(
             "hastarget", "night", "nighttime", "raining", "israining", "thundering", "isthundering",
+            "angry", "isangry", "pollinated", "ispollinated", "hasnectar",
             "day", "daytime", "dawn", "dusk", "sunset", "morning", "noon", "midnight",
             "clear", "sun", "sunny", "rain", "storm", "thunder", "thunderstorm",
             "isliving", "isplayer", "ismob", "ismonster", "isanimal", "isvillager", "istameable", "israider",
@@ -690,6 +691,10 @@ public final class MmConditions {
             if (value == null) value = normalizeScalar(body);
             return value == null || !validNumberRange(value) ? new Mapped(s, false)
                     : new Mapped("mob-size " + value, true);
+        }
+        if ("angry".equals(name) || "isangry".equals(name)) return new Mapped("angry", true);
+        if ("pollinated".equals(name) || "ispollinated".equals(name) || "hasnectar".equals(name)) {
+            return new Mapped("pollinated", true);
         }
         if ("istamed".equals(name)) return new Mapped("is-tamed", true);
         if ("issheared".equals(name)) return new Mapped("is-sheared", true);

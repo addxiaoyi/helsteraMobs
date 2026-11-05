@@ -23,21 +23,46 @@ $env:PAPER_MENU_WORKFLOW = 'true'
 $env:PAPER_WEB_RELOAD_PROBE = 'true'
 $env:PAPER_RAW_POTION_WORKFLOW = 'true'
 $env:PAPER_RAW_POTION_SHORT = 'true'
+$env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-targeter-identity-strict-20261105-r1`
-passed 340 probes (321 passed, 19 expected rejections, zero incomplete).
-`targeterIdentityFilter` verifies target and ignore filters for Helstera-managed
-entities and ordinary Bukkit entities, plus the `targetvanilla`/
-`targetnonmythic` boolean alias. The managed marker is placed on mobs spawned
-from Helstera mob definitions; an external MythicMobs plugin's entities are not
-identified. Report:
-`reports/paper-1.21.1-targeter-identity-strict-20261105-r1.json`; server log:
-`reports/paper-1.21.1-targeter-identity-strict-20261105-r1.log.gz`; client logs:
-`reports/paper-1.21.1-targeter-identity-strict-20261105-r1-client-logs.tar.gz`.
+Latest strict fixture `srv-paper-in-combat-strict-20261105-r3`
+passed 344 probes (325 passed, 19 expected rejections, zero incomplete).
+`inCombatCondition` independently verifies managed-caster and native-Mob
+positive, no-target rejection, and target restoration; `conditionUtilityAliases`
+retains aggregate coverage. The required `spawningDistanceClientWalk` probe
+also verifies real-player displacement beyond range and managed/Bukkit entity
+removal. Report:
+`reports/paper-1.21.1-in-combat-strict-20261105-r3.json`; server log:
+`reports/paper-1.21.1-in-combat-strict-20261105-r3.log.gz`; client logs:
+`reports/paper-1.21.1-in-combat-strict-20261105-r3-client-logs.tar.gz`.
+Plugin SHA-256:
+`5a5df5c3a02a33f6b0f7fdbc9b4071f04df93613e3c05d1aba98bb290dc86548`.
+The managed Paper path used Bukkit `Mob#setTarget`; controller-specific behavior
+remains covered by unit tests. The complete Conditions catalog remains open.
+
+Previous strict fixture `srv-paper-in-combat-strict-20261105-r2` passed 342
+probes (323 passed, 19 expected rejections, zero incomplete); it recorded the
+same runtime paths in the aggregate condition utility probe.
+
+Previous strict fixture `srv-paper-is-sheared-strict-20261105-r1`
+passed 342 probes (323 passed, 19 expected rejections, zero incomplete).
+`entityShearedStates` verifies self and target conditions for real Sheep,
+Bogged, and Snow Golems in positive and negative states, plus unsupported
+entities and missing context. Report:
+`reports/paper-1.21.1-is-sheared-strict-20261105-r1.json`; server log:
+`reports/paper-1.21.1-is-sheared-strict-20261105-r1.log.gz`; client logs:
+`reports/paper-1.21.1-is-sheared-strict-20261105-r1-client-logs.tar.gz`.
 The plugin SHA-256 is
-`35474b6d97d214b3e049a953f96b5080a29998d4d0c19aa8e8c04f8d22c3cc17`.
+`cef3fa45f41ff612dbcd89a9aa0fe8224a07702f4a71dd84aad40a5c323713d1`.
+
+Previous full-catalog fixture `srv-paper-targeter-relations-strict-20261105-r3`
+passed 340 probes (321 passed, 19 expected rejections, zero incomplete).
+It verifies owner/faction target filters and precedence, managed identity,
+`targetall` interaction, and fail-closed relation syntax. Exact same-faction
+matching uses Helstera's faction service; external MythicMobs/Citizens identity
+and premium filters remain open.
 
 Previous strict fixture `srv-paper-target-all-filter-strict-20261105-r1`
 passed 339 probes (320 passed, 19 expected rejections, zero incomplete). Its
@@ -489,8 +514,9 @@ and menu/Audience workflows. The real menu client performs denied and allowed
 clicks, paginates, observes the action feedback, and confirms the close. Menu
 button materials and click outcomes are verified from Paper's inventory/render
 and click logs because Mineflayer does not decode the 1.21.1 menu item contents
-reliably. The separate strict client-walk fixture remains the evidence for
-real-player SpawningDistance movement and entity removal.
+reliably. The earlier dedicated strict client-walk fixture remains archived;
+the current full strict release also requires that workflow and verifies real
+player SpawningDistance movement and entity removal.
 
 Strict targeter follow-up `srv-paper-targeter-players-strict-20261102-r1`
 completes all 272 registered probes (260 passed, 12 expected negative

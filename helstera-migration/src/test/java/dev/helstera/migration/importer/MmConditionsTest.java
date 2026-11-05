@@ -180,6 +180,22 @@ class MmConditionsTest {
     }
 
     @Test
+    @DisplayName("bee and anger state aliases map only without parameters")
+    void angryAndPollinatedConditions() {
+        assertEquals("angry", t("?angry"));
+        assertEquals("angry", t("?isAngry{}"));
+        assertEquals("pollinated", t("?pollinated"));
+        assertEquals("pollinated", t("?isPollinated{}"));
+        assertEquals("pollinated", t("?hasNectar"));
+        for (String raw : List.of("?angry{true}", "?isAngry{unknown=true}",
+                "?pollinated{false}", "?hasNectar{unknown=true}")) {
+            var mapped = MmConditions.translate(raw);
+            assertFalse(mapped.translated(), raw);
+            assertEquals(raw, mapped.condition(), raw);
+        }
+    }
+
+    @Test
     @DisplayName("malformed parameter blocks remain untranslated and balanced nested values are accepted")
     void malformedParameterBlocksFailClosed() {
         for (String raw : List.of("?isFrozen{", "?isFrozen}", "?isFrozen}x{value}", "?isFrozen{value}}",

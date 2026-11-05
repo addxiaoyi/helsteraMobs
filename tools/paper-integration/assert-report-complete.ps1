@@ -102,6 +102,13 @@ if ($RequireFullReleaseCatalog) {
                 throw "Paper integration report lacks required observation for ${requiredId}: $fragment"
             }
         }
+        if ($null -ne $required.requiredObservationPattern) {
+            $pattern = [string]$required.requiredObservationPattern
+            if ([string]::IsNullOrWhiteSpace($pattern) -or
+                    @($matches[0].observations | Where-Object { ([string]$_) -cmatch $pattern }).Count -eq 0) {
+                throw "Paper integration report lacks required observation for ${requiredId}: $pattern"
+            }
+        }
         if ($required.status -ceq 'observed-rejected') {
             $reason = [string]$required.rejectionReason
             if ([string]::IsNullOrWhiteSpace($reason)) {

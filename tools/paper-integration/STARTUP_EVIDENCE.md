@@ -1,15 +1,51 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-targeter-identity-strict-20261105-r1` passed the complete
+Fixture `srv-paper-in-combat-strict-20261105-r3` passed the complete strict
+gate on Paper 1.21.1-133: 344 probes, 325 passed and 19 expected rejections,
+with zero incomplete. The independent `inCombatCondition` probe verifies the
+`in-combat` condition against the managed caster and a native Mob: positive
+target, no-target rejection, and target restoration all passed on both paths.
+`conditionUtilityAliases` retains aggregate condition coverage. The Paper
+self-test used the managed caster's Bukkit `Mob#setTarget` fallback;
+controller-specific state is covered by unit tests. The same full strict report
+requires `spawningDistanceClientWalk`, which observes real-player movement
+beyond range and removal of both the managed instance and Bukkit entity. Report
+and compressed server/client logs are listed in `release-evidence.json`;
+plugin SHA-256:
+`5a5df5c3a02a33f6b0f7fdbc9b4071f04df93613e3c05d1aba98bb290dc86548`.
+
+Previous fixture `srv-paper-in-combat-strict-20261105-r2` passed 342 probes
+(323 passed, 19 expected rejections, zero incomplete) with these runtime paths
+included in the aggregate `conditionUtilityAliases` probe.
+
+Fixture `srv-paper-is-sheared-strict-20261105-r1` passed the complete strict
+gate on Paper 1.21.1-133: 342 probes, 323 passed and 19 expected rejections,
+with zero incomplete. `entityShearedStates` verifies `is-sheared` and
+`target-is-sheared` against real Sheep, Bogged, and Snow Golems in positive and
+negative states. Unsupported entities and missing context fail closed. The
+report and compressed server/client logs are listed in `release-evidence.json`;
+plugin SHA-256: `cef3fa45f41ff612dbcd89a9aa0fe8224a07702f4a71dd84aad40a5c323713d1`.
+
+Fixture `srv-paper-angry-pollination-strict-20261105-r1` passed the complete
+strict gate on Paper 1.21.1-133: 341 probes, 322 passed and 19 expected
+rejections, with zero incomplete. `entityAngryPollination` verifies `angry`
+for Bees, Wolves and Vexes, `pollinated` for Bees, the documented aliases, and
+fail-closed behavior for unsupported entities, invalid arguments and missing
+context. The report and compressed logs are listed in `release-evidence.json`;
+plugin SHA-256: `1ccbd718c489383e4099daba6ad06446ff7b51c2e3181e3a8df2c4895b47df15`.
+
+Previous fixture `srv-paper-targeter-relations-strict-20261105-r3` passed the complete
 strict gate on Paper 1.21.1-133: 340 probes, 321 passed and 19 expected
-rejections, with zero incomplete. `targeterIdentityFilter` verifies generic
-`target=mythic|vanilla|nonmythic` and `ignore=` filters plus the
-`targetvanilla`/`targetnonmythic` boolean alias against real Paper entities.
-The managed identity marker applies to entities spawned from Helstera mob
-definitions. Entities managed by an external MythicMobs plugin are not
-identified. Report and compressed server/client logs are listed in
-`release-evidence.json`; plugin SHA-256:
-`35474b6d97d214b3e049a953f96b5080a29998d4d0c19aa8e8c04f8d22c3cc17`.
+rejections, with zero incomplete. `targeterIdentityFilter` verifies owner and
+same-faction inclusion/exclusion, `ignore=owner|faction`, relation precedence
+over generic target categories, `targetall` interaction, and fail-closed
+rejection of unsupported relation syntax. It also retains managed identity,
+`targetvanilla`, and `targetnonmythic` coverage. Exact same-faction matching
+uses Helstera's faction service; managed identity only applies to mobs spawned
+from Helstera definitions. External MythicMobs/Citizens identity and premium
+filters remain unsupported. Report and compressed server/client logs are
+listed in `release-evidence.json`; plugin SHA-256:
+`686cc99d64b3edbcfe6d2653d0672b4b188ae275ab15b4cec4c021f6111f5f71`.
 
 Fixture `srv-paper-target-all-filter-strict-20261105-r1` passed the complete
 strict gate on Paper 1.21.1-133: 339 probes, 320 passed and 19 expected
@@ -519,10 +555,11 @@ Earlier full strict run: `srv-paper-menu-client-strict-20261102-r2`
 completed 264 probes (252 passed, 12 expected negative controls, zero
 incomplete) before Pin evidence became a required report entry.
 
-The separate strict client-walk fixture
-`srv-paper-spawning-distance-client-walk-strict-20261102-r3` remains the
-evidence for real player movement beyond the configured SpawningDistance and
-managed/Bukkit entity removal.
+The earlier dedicated strict client-walk fixture
+`srv-paper-spawning-distance-client-walk-strict-20261102-r3` remains archived;
+the current full strict release also requires `spawningDistanceClientWalk` for
+real player movement beyond the configured SpawningDistance and managed/Bukkit
+entity removal.
 
 Observed during an isolated run on 2026-10-14:
 

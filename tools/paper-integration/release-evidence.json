@@ -1,5 +1,55 @@
 [
   {
+    "fixtureId": "srv-paper-in-combat-strict-20261105-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-in-combat-strict-20261105-r3.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-in-combat-strict-20261105-r3.log.gz",
+    "logSha256": "f458561c0b84dff320a1294c82888e92a2a0330e70bdcec16b788cc0a067548d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-in-combat-strict-20261105-r3-client-logs.tar.gz",
+    "clientLogSha256": "4169667328dcc1666ddd1ef29ab50e0699eb02fa2481babcadc1a6fab5cb663d",
+    "pluginSha256": "5a5df5c3a02a33f6b0f7fdbc9b4071f04df93613e3c05d1aba98bb290dc86548",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-in-combat-strict-20261105-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-in-combat-strict-20261105-r2.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-in-combat-strict-20261105-r2.log.gz",
+    "logSha256": "9c43f9cb610217e9b03495a93774702d1bc91d0599809efe804db9d0d0d306e2",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-in-combat-strict-20261105-r2-client-logs.tar.gz",
+    "clientLogSha256": "5b357da83bfa2903e75c2c17014ae77e9c10fb3a76dcf6478810917f2e0e2940",
+    "pluginSha256": "5a5df5c3a02a33f6b0f7fdbc9b4071f04df93613e3c05d1aba98bb290dc86548",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-is-sheared-strict-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-is-sheared-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-is-sheared-strict-20261105-r1.log.gz",
+    "logSha256": "42edc92632614b9a7dff32350f9b834620f2bdaa67d9a759b126e1427a149e09",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-is-sheared-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "46a13cbe6b78b82568a05b0412e85d0df6d8b54ce8e6b67e0aa79403b831f372",
+    "pluginSha256": "cef3fa45f41ff612dbcd89a9aa0fe8224a07702f4a71dd84aad40a5c323713d1",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-angry-pollination-strict-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-angry-pollination-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-angry-pollination-strict-20261105-r1.log.gz",
+    "logSha256": "38c35fc03a252693f7e4f7f1117bac015b5704a0da73c1c8006ae3652886e913",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-angry-pollination-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "c60200cccd5c6441bb064a15535497980261d24a727955783741961dff2be64b",
+    "pluginSha256": "1ccbd718c489383e4099daba6ad06446ff7b51c2e3181e3a8df2c4895b47df15",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-targeter-relations-strict-20261105-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-targeter-relations-strict-20261105-r3.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-targeter-relations-strict-20261105-r3.log.gz",
+    "logSha256": "06bbcbc2277d5e5e0eebd17b8b04743889e5384b8bd17102ac3f5f07d942952c",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-targeter-relations-strict-20261105-r3-client-logs.tar.gz",
+    "clientLogSha256": "497c37461450356860c79bf6405cd3c5b505eb73dd6c16ac4e8211210467ed93",
+    "pluginSha256": "686cc99d64b3edbcfe6d2653d0672b4b188ae275ab15b4cec4c021f6111f5f71",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-targeter-identity-strict-20261105-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-targeter-identity-strict-20261105-r1.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-targeter-identity-strict-20261105-r1.log.gz",

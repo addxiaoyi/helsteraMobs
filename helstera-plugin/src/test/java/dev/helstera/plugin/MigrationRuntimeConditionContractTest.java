@@ -2573,6 +2573,131 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported angry and pollinated aliases reach their runtime state consumers")
+    void importedAngryAndPollinatedConditionsReachRuntime() {
+        var bee = mock(org.bukkit.entity.Bee.class);
+        var wolf = mock(org.bukkit.entity.Wolf.class);
+        var vex = mock(org.bukkit.entity.Vex.class);
+        when(bee.getAnger()).thenReturn(30, 0);
+        when(bee.hasNectar()).thenReturn(true, false);
+        when(wolf.isAngry()).thenReturn(true, false);
+        when(vex.isCharging()).thenReturn(true, false);
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+
+        assertImportedState(skills, registry, "?angry", bee, true);
+        assertImportedState(skills, registry, "?angry", bee, false);
+        assertImportedState(skills, registry, "?isAngry", wolf, true);
+        assertImportedState(skills, registry, "?isAngry", wolf, false);
+        assertImportedState(skills, registry, "?angry", vex, true);
+        assertImportedState(skills, registry, "?angry", vex, false);
+        assertImportedState(skills, registry, "?pollinated", bee, true);
+        assertImportedState(skills, registry, "?hasNectar", bee, false);
+        assertNotNull(skills.bindCondition("isAngry"));
+        assertNotNull(skills.bindCondition("is-pollinated"));
+        assertNotNull(skills.bindCondition("hasNectar"));
+
+        var unsupported = dev.helstera.migration.importer.MmConditions.translate("?angry");
+        var piglin = mock(org.bukkit.entity.PigZombie.class);
+        var piglinContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, piglin, 1, -1, 0, "IDLE", null, null, List.of(piglin), null, null);
+        assertFalse(registry.testCondition(skills.bindCondition(unsupported.condition()), piglinContext));
+        var missing = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, null, 1, -1, 0, "IDLE", null, null, List.of(), null, null);
+        assertFalse(registry.testCondition(skills.bindCondition(unsupported.condition()), missing));
+    }
+
+    @Test
+    @DisplayName("imported sheared aliases reach Sheep, Bogged and Snow Golem state")
+    void importedShearedConditionsReachRuntimeForSupportedEntities() {
+        var sheep = mock(org.bukkit.entity.Sheep.class);
+        var bogged = mock(org.bukkit.entity.Bogged.class);
+        var snowman = mock(org.bukkit.entity.Snowman.class);
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+
+        when(sheep.isSheared()).thenReturn(true);
+        assertImportedState(skills, registry, "?isSheared", sheep, true);
+        assertImportedState(skills, registry, "?targetIsSheared", sheep, true);
+        when(sheep.isSheared()).thenReturn(false);
+        assertImportedState(skills, registry, "?isSheared", sheep, false);
+        assertImportedState(skills, registry, "?targetIsSheared", sheep, false);
+
+        when(bogged.isSheared()).thenReturn(true);
+        assertImportedState(skills, registry, "?isSheared", bogged, true);
+        assertImportedState(skills, registry, "?targetIsSheared", bogged, true);
+        when(bogged.isSheared()).thenReturn(false);
+        assertImportedState(skills, registry, "?isSheared", bogged, false);
+        assertImportedState(skills, registry, "?targetIsSheared", bogged, false);
+
+        when(snowman.isDerp()).thenReturn(true);
+        assertImportedState(skills, registry, "?isSheared", snowman, true);
+        assertImportedState(skills, registry, "?targetIsSheared", snowman, true);
+        when(snowman.isDerp()).thenReturn(false);
+        assertImportedState(skills, registry, "?isSheared", snowman, false);
+        assertImportedState(skills, registry, "?targetIsSheared", snowman, false);
+
+        var unsupported = mock(org.bukkit.entity.Zombie.class);
+        assertImportedState(skills, registry, "?isSheared", unsupported, false);
+        assertImportedState(skills, registry, "?targetIsSheared", unsupported, false);
+        var missing = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, (org.bukkit.entity.LivingEntity) null, 1, -1, 0,
+                "IDLE", null, null, List.of(), null, null);
+        for (String source : List.of("?isSheared", "?targetIsSheared")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertFalse(registry.testCondition(skills.bindCondition(mapped.condition()), missing), source);
+        }
+    }
+
+    @Test
+    @DisplayName("imported inCombat checks a live entity target and rejects absent targets")
+    void importedInCombatUsesActiveRuntimeTarget() {
+        var mob = mock(org.bukkit.entity.Mob.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(target.isValid()).thenReturn(true);
+        when(target.isDead()).thenReturn(false);
+        when(mob.getTarget()).thenReturn(target);
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+        var mapped = dev.helstera.migration.importer.MmConditions.translate("?inCombat");
+        assertTrue(mapped.translated());
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, mob, 1, -1, 0, "IDLE", null, null, List.of(mob), null, null);
+        String condition = skills.bindCondition(mapped.condition());
+
+        assertTrue(registry.testCondition(condition, context));
+        when(mob.getTarget()).thenReturn(null);
+        assertFalse(registry.testCondition(condition, context));
+        when(mob.getTarget()).thenReturn(target);
+        when(target.isDead()).thenReturn(true);
+        assertFalse(registry.testCondition(condition, context));
+        when(target.isDead()).thenReturn(false);
+        when(target.isValid()).thenReturn(false);
+        assertFalse(registry.testCondition(condition, context));
+
+        var unsupported = mock(org.bukkit.entity.Player.class);
+        var unsupportedContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, unsupported, 1, -1, 0, "IDLE", null, null,
+                List.of(unsupported), null, null);
+        assertFalse(registry.testCondition(condition, unsupportedContext));
+        var missing = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, (org.bukkit.entity.LivingEntity) null, 1, -1, 0,
+                "IDLE", null, null, List.of(), null, null);
+        assertFalse(registry.testCondition(condition, missing));
+    }
+
+    private static void assertImportedState(SkillService skills, BehaviorRegistryImpl registry,
+                                            String source, org.bukkit.entity.LivingEntity entity,
+                                            boolean expected) {
+        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+        assertTrue(mapped.translated(), source);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, entity, 1, -1, 0, "IDLE", null, null, List.of(entity), null, null);
+        assertEquals(expected, registry.testCondition(skills.bindCondition(mapped.condition()), context), source);
+    }
+
+    @Test
     void importedDistanceAndLightComparisonsPreserveInclusiveAndStrictBoundaries() {
         var world = mock(org.bukkit.World.class);
         var block = mock(org.bukkit.block.Block.class);
