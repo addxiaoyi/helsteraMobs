@@ -1,5 +1,25 @@
 [
   {
+    "fixtureId": "srv-paper-enderman-condition-strict-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-enderman-condition-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-enderman-condition-strict-20261105-r1.log.gz",
+    "logSha256": "4d63a6fa180fa1f2507b4cde5539657255697574ff4320edfeecd996d4efe7ca",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-enderman-condition-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "a8c1b08056948b8d24d2aae58a2abe6ebf7674d3c8eaa2a106e070038032d8cf",
+    "pluginSha256": "d575844f655ae2812475c18dd550d4e47aa7f235ed73dd974a8153ac23f51478",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-cinematic-condition-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-is-in-cinematic-condition-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-is-in-cinematic-condition-strict-20261105-r1.log.gz",
+    "logSha256": "0b551d1fe45a409d7de98936fc43100062ad0994cf8755b93819b2d0a88b9ff4",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-is-in-cinematic-condition-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "38cfea6ca9e08b1f83f60b3129f8cd7d4e5b53afc887897077c45b78e0253da4",
+    "pluginSha256": "d575844f655ae2812475c18dd550d4e47aa7f235ed73dd974a8153ac23f51478",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-spawning-timing-20261105-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-spawning-distance-timing-20261105-r3.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-spawning-distance-timing-20261105-r3.log.gz",

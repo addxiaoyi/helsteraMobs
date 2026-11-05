@@ -145,6 +145,8 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-options result=true mode=NORMAL distance=8',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-runtime result=true inside-retained=true outside-removed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true despawn-elapsed-ticks=3 decision-period-ticks=10',
+        '[Server thread/INFO]: [helsteraMobs] [自检] is-in-cinematic-condition player-open=true player-out-of-range-rejected=true non-player-rejected=true closed=true',
+        '[Server thread/INFO]: [helsteraMobs] enderman-condition-details positive=true negative=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
@@ -329,7 +331,7 @@ try {
     Assert-True $wrongPluginHashRejected 'strict gate rejects mismatched plugin SHA-256'
     foreach ($requiredProbeId in @('custom-menu-player-workflow', 'audience-player-delivery',
             'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates',
-            'spawningDistanceClientWalk')) {
+            'spawningDistanceClientWalk', 'isInCinematicCondition', 'endermanCondition')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -705,6 +707,14 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'inCombatCondition'; status = 'passed'; observations = @('in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'isInCinematicCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'isInCinematicCondition'; status = 'passed'; observations = @('is-in-cinematic-condition player-open=true player-out-of-range-rejected=true non-player-rejected=true closed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'endermanCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'endermanCondition'; status = 'passed'; observations = @('enderman-condition-details positive=true negative=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'spawningDistanceClientWalk'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'spawningDistanceClientWalk'; status = 'passed'; observations = @('spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true despawn-elapsed-ticks=3 decision-period-ticks=10')
@@ -951,6 +961,29 @@ try {
     }
     Assert-True $disabledPluginRejected 'full release catalog alone rejects a disabled plugin'
     $fullCatalogReport.pluginEnabled = $originalPluginEnabled
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $endermanProbe = $fullCatalogReport.probes | Where-Object id -eq 'endermanCondition'
+    $endermanObservations = $endermanProbe.observations
+    $endermanProbe.observations = @('enderman-condition-details positive=true negative=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badEndermanRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badEndermanRejected = $_.Exception.Message -match 'required observation for endermanCondition' }
+    Assert-True $badEndermanRejected 'full release gate rejects a false Enderman negative control'
+    $endermanProbe.observations = $endermanObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'endermanCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'endermanCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingEndermanRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingEndermanRejected = $_.Exception.Message -match 'endermanCondition' }
+    Assert-True $missingEndermanRejected 'full release gate rejects missing Enderman condition evidence'
+    $fullCatalogReport.expectedProbeIds += 'endermanCondition'
+    $fullCatalogReport.probes += $endermanProbe
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $missingReviveRejected = $false
     try {

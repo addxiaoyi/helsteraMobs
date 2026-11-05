@@ -91,6 +91,12 @@ public final class DialogueService {
         return active.containsKey(instId);
     }
 
+    public boolean isActiveForPlayer(int instId, Player player) {
+        if (!isActive(instId) || player == null || instanceResolver == null) return false;
+        ModelInstance instance = instanceResolver.apply(instId);
+        return instance != null && instance.isValid() && inAudience(instance.location(), player);
+    }
+
     /** 当前活跃的 cinematic 数。 */
     public int activeCount() {
         return active.size();
@@ -181,7 +187,7 @@ public final class DialogueService {
                     String text = String.join(" ", step.args());
                     if (text.isBlank()) break;
                     for (Player p : loc.getWorld().getPlayers()) {
-                        if (p.getLocation().distance(loc) <= 16.0) {
+                        if (inAudience(loc, p)) {
                             p.sendMessage(text);
                         }
                     }
@@ -226,6 +232,18 @@ public final class DialogueService {
                     if (log != null) log.warning("[对话] 未知步进动作: " + step.type());
                 }
             }
+        }
+    }
+
+    static boolean inAudience(Location center, Player player) {
+        if (center == null || center.getWorld() == null || player == null || !player.isOnline()
+                || player.getWorld() != center.getWorld()) return false;
+        Location playerLocation = player.getLocation();
+        if (playerLocation == null || playerLocation.getWorld() != center.getWorld()) return false;
+        try {
+            return center.distanceSquared(playerLocation) <= 256.0;
+        } catch (RuntimeException ignored) {
+            return false;
         }
     }
 }

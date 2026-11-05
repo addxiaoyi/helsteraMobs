@@ -311,6 +311,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     dev.helstera.ai.skill.SkillCatalog.dialogueService(dialogueService);
                     dev.helstera.ai.skill.SkillCatalog.pluginRef(this);
                     dev.helstera.ai.skill.SkillExtras.dialogueLookup(dialogueService::isActive);
+                    dev.helstera.ai.skill.SkillExtras.cinematicLookup(dialogueService::isActiveForPlayer);
                 }
                 // 技能服务钩子：start-cast / cancel-cast 动作需要它来驱动读条
                 if (skills != null) {
@@ -468,6 +469,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             dev.helstera.ai.skill.SkillCatalog.dialogueService(ds);
             dev.helstera.ai.skill.SkillCatalog.pluginRef(this);
             dev.helstera.ai.skill.SkillExtras.dialogueLookup(ds::isActive);
+            dev.helstera.ai.skill.SkillExtras.cinematicLookup(ds::isActiveForPlayer);
         } catch (Throwable t) {
             getLogger().warning("对话系统不可用: " + t);
         }
@@ -2787,32 +2789,58 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     dialogueProbeConfig.set("dialogues.condition_probe.cinematics.intro.commands",
                             java.util.List.of("wait 2"));
                     var dialogueProblems = new java.util.ArrayList<String>();
+                    org.bukkit.entity.Player cinematicTarget = null;
+                    org.bukkit.Location originalCinematicTargetLocation = null;
                     try {
                         dialogueService.load(dialogueProbeConfig.getConfigurationSection("dialogues"),
                                 dialogueProblems);
+                        cinematicTarget = getServer().getOnlinePlayers().stream().findFirst().orElse(null);
+                        if (cinematicTarget != null) {
+                            originalCinematicTargetLocation = cinematicTarget.getLocation().clone();
+                            cinematicTarget.teleport(modelInstance.location().clone().add(1, 0, 0));
+                        }
                         boolean started = dialogueService.start(modelInstance.instanceId(),
                                 "condition_probe", this);
                         boolean open = behaviors.testCondition(
                                 skills.bindCondition("hasDialogOpen"), context);
-                        var cinematicTarget = getServer().getOnlinePlayers().stream()
-                                .findFirst().orElse(null);
                         var cinematicContext = cinematicTarget == null ? null
                                 : dev.helstera.api.behavior.BehaviorContext.of(
                                 modelInstance, cinematicTarget, 1.0, -1, 0, "integration");
                         boolean cinematicOpen = cinematicContext != null && behaviors.testCondition(
                                 skills.bindCondition("isInCinematic"), cinematicContext);
+                        var nonPlayerCinematicContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                modelInstance, conditionTarget, 1.0, -1, 0, "integration");
+                        boolean nonPlayerRejected = !behaviors.testCondition(
+                                skills.bindCondition("is-in-cinematic"), nonPlayerCinematicContext);
+                        boolean movedOutside = cinematicTarget != null
+                                && cinematicTarget.teleport(modelInstance.location().clone().add(32, 0, 0));
+                        boolean outsideRejected = movedOutside && !behaviors.testCondition(
+                                skills.bindCondition("is-in-cinematic"), cinematicContext);
+                        if (cinematicTarget != null && originalCinematicTargetLocation != null) {
+                            cinematicTarget.teleport(originalCinematicTargetLocation);
+                        }
                         dialogueService.stop(modelInstance.instanceId());
                         boolean closed = !behaviors.testCondition(
                                 skills.bindCondition("has-dialog-open"), context);
                         boolean cinematicClosed = cinematicContext == null || !behaviors.testCondition(
                                 skills.bindCondition("is-in-cinematic"), cinematicContext);
-                        dialogueCondition = started && open && cinematicOpen && closed
+                        boolean cinematicCondition = started && cinematicOpen && outsideRejected
+                                && nonPlayerRejected && cinematicClosed;
+                        dialogueCondition = started && open && cinematicCondition && closed
                                 && cinematicClosed && dialogueProblems.isEmpty();
+                        getLogger().info("[自检] is-in-cinematic-condition player-open=" + cinematicOpen
+                                + " player-out-of-range-rejected=" + outsideRejected
+                                + " non-player-rejected=" + nonPlayerRejected
+                                + " closed=" + cinematicClosed);
                         getLogger().info("dialogue-condition-details started=" + started
                                 + " open=" + open + " cinematic-open=" + cinematicOpen
                                 + " closed=" + closed + " cinematic-closed=" + cinematicClosed
                                 + " problems=" + dialogueProblems.size());
                     } finally {
+                        if (cinematicTarget != null && originalCinematicTargetLocation != null) {
+                            cinematicTarget.teleport(originalCinematicTargetLocation);
+                        }
+                        dialogueService.stop(modelInstance.instanceId());
                         var restoreProblems = new java.util.ArrayList<String>();
                         dialogueService.load(YamlConfiguration.loadConfiguration(
                                         new java.io.File(getDataFolder(), "dialogs.yml"))

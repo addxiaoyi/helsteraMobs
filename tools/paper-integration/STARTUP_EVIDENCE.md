@@ -1,5 +1,23 @@
 # Paper Startup Evidence
 
+Fixture `srv-paper-enderman-condition-strict-20261105-r1` passed the complete
+strict gate on Paper 1.21.1-133: 348 probes, 329 passed and 19 expected
+rejections, with zero incomplete. `endermanCondition` accepts a real Enderman
+and rejects a managed Zombie through the official `isEnderman` condition.
+The full strict report also includes the two-client menu/Audience, raw Potion,
+and player-movement workflows. Report and compressed logs are listed in
+`release-evidence.json`; plugin SHA-256:
+`d575844f655ae2812475c18dd550d4e47aa7f235ed73dd974a8153ac23f51478`.
+
+Fixture `srv-paper-cinematic-condition-20261105-r1` passed the complete strict
+gate on Paper 1.21.1-133: 347 probes, 328 passed and 19 expected rejections,
+with zero incomplete. `isInCinematicCondition` verifies an active cinematic
+for a player inside its 16-block audience, rejects an out-of-range player and
+a non-player, and clears when the cinematic stops. The full strict report also
+includes the two-client menu/Audience and raw Potion client workflows. Report
+and compressed logs are listed in `release-evidence.json`; plugin SHA-256:
+`d575844f655ae2812475c18dd550d4e47aa7f235ed73dd974a8153ac23f51478`.
+
 Fixture `srv-paper-spawning-timing-20261105-r3` passed the complete strict gate
 on Paper 1.21.1-133: 346 probes, 327 passed and 19 expected rejections, with
 zero incomplete. `spawningDistanceClientWalk` records 174.12 blocks of player
@@ -1286,8 +1304,9 @@ probe with official `IsInCinematic`. The connected player target satisfies
 `dialogue-condition-details started=true open=true cinematic-open=true
 closed=true cinematic-closed=true problems=0`. The `skill-actions` line keeps
 `dialogue-condition=true`, and both aggregate probes passed. This is
-exploratory Paper 1.21.11 evidence; the Paper 1.21.1 release target remains
-open.
+exploratory Paper 1.21.11 evidence. The later strict Paper 1.21.1 fixture
+`srv-paper-cinematic-condition-20261105-r1` independently verifies audience
+range, non-player rejection, and the stopped-cinematic state.
 
 Fixture `srv-paper-integration-exploratory-1.21.11-r106` adds official
 `HasDialogOpen` coverage and fixes dialogue hook ordering. A temporary
@@ -1296,7 +1315,9 @@ it is active, and `has-dialog-open` rejects after `stop`; the structured log
 records `dialogue-condition-details started=true open=true closed=true
 problems=0`, and the `skill-actions` line records `dialogue-condition=true`.
 Both aggregate probes passed. This is exploratory Paper 1.21.11 evidence; the
-Paper 1.21.1 release target remains open.
+later strict Paper 1.21.1 fixture
+`srv-paper-cinematic-condition-20261105-r1` also records the dialogue
+start/open/stop/closed transitions.
 
 Fixture `srv-paper-integration-exploratory-1.21.11-r104` adds official
 `HasEnchantment` coverage. A temporary Sharpness III diamond sword on the real
