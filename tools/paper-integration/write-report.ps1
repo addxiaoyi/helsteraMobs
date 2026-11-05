@@ -76,6 +76,7 @@ $probeSpecs = [ordered]@{
     conditionStateArguments = 'condition-state-arguments valid=true movement-rejected=true category-rejected=true alive-rejected=true negated-rejected=true preserved=true warnings=true'
     targetSneakingMob = 'target-sneaking-mob false-rejected=true true-passed=true'
     timeWeatherArguments = 'time-weather-arguments time-valid=true time-opposite=true weather-valid=true weather-opposite=true time-rejected=true rain-rejected=true negated-rejected=true preserved=true warnings=true'
+    snowingCondition = 'snowing-condition result=true target-location-isolated=true target-positive=true alias-positive=true warm-rejected=true clear-rejected=true missing-context-rejected=true invalid-arguments-rejected=true restored=true'
     visibilityStateArguments = 'visibility-state-arguments valid=true rejected=true preserved=true warnings=true'
     dropNullConditions = 'drop-null-conditions rejected=true warnings=true sibling=true'
     dropNativeNullConditions = 'drop-native-null-conditions rejected=true sibling=true warnings=true'

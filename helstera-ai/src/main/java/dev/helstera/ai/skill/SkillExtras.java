@@ -1676,6 +1676,8 @@ public final class SkillExtras {
                     return location != null && location.getWorld() != null
                             && location.getWorld().isThundering();
                 }),
+                Map.entry("snowing", snowingCondition()),
+                Map.entry("is-snowing", snowingCondition()),
                 Map.entry("day", timeAlias("day")),
                 Map.entry("daytime", timeAlias("daytime")),
                 Map.entry("dawn", timeAlias("dawn")),
@@ -3683,6 +3685,26 @@ public final class SkillExtras {
             case "rain", "raining" -> raining && !thundering;
             case "storm", "thunder", "thunderstorm", "thundering" -> thundering;
             default -> false;
+        };
+    }
+
+    static boolean isSnowingAt(Location location) {
+        if (location == null || location.getWorld() == null) return false;
+        try {
+            return location.getWorld().hasStorm()
+                    && location.getWorld().getBlockAt(location.getBlockX(), location.getBlockY(),
+                    location.getBlockZ()).getTemperature() < 0.15;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static SkillCatalog.ConditionFactory snowingCondition() {
+        return args -> {
+            if (args != null && !args.isEmpty()) {
+                throw new IllegalArgumentException("snowing takes no arguments");
+            }
+            return ctx -> isSnowingAt(conditionLocation(ctx));
         };
     }
 

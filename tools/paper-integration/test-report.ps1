@@ -766,6 +766,10 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'timeWeatherArguments'; status = 'passed'; observations = @('time-weather-arguments time-valid=true time-opposite=true weather-valid=true weather-opposite=true time-rejected=true rain-rejected=true negated-rejected=true preserved=true warnings=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'snowingCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'snowingCondition'; status = 'passed'; observations = @('snowing-condition result=true target-location-isolated=true target-positive=true alias-positive=true warm-rejected=true clear-rejected=true missing-context-rejected=true invalid-arguments-rejected=true restored=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'visibilityStateArguments'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'visibilityStateArguments'; status = 'passed'; observations = @('visibility-state-arguments valid=true rejected=true preserved=true warnings=true')
@@ -1340,6 +1344,28 @@ try {
     Assert-True $missingTimeWeatherRejected 'full release gate rejects missing time and weather evidence'
     $fullCatalogReport.expectedProbeIds += 'timeWeatherArguments'
     $fullCatalogReport.probes += $timeWeatherProbe
+    $snowingProbe = $fullCatalogReport.probes | Where-Object id -eq 'snowingCondition'
+    $snowingObservations = $snowingProbe.observations
+    $snowingProbe.observations = @('snowing-condition result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badSnowingRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badSnowingRejected = $_.Exception.Message -match 'required observation for snowingCondition' }
+    Assert-True $badSnowingRejected 'full release gate rejects incomplete snowing evidence'
+    $snowingProbe.observations = $snowingObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'snowingCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'snowingCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingSnowingRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingSnowingRejected = $_.Exception.Message -match 'snowingCondition' }
+    Assert-True $missingSnowingRejected 'full release gate rejects missing snowing evidence'
+    $fullCatalogReport.expectedProbeIds += 'snowingCondition'
+    $fullCatalogReport.probes += $snowingProbe
     $visibilityProbe = $fullCatalogReport.probes | Where-Object id -eq 'visibilityStateArguments'
     $visibilityObservations = $visibilityProbe.observations
     $visibilityProbe.observations = @('visibility-state-arguments valid=true')

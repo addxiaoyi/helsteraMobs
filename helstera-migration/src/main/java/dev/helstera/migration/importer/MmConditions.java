@@ -31,6 +31,7 @@ public final class MmConditions {
             "SEARCH_FOR_BREATH_ATTACK_TARGET", "STRAFING");
     private static final Set<String> NO_ARGUMENT_CONDITIONS = Set.of(
             "hastarget", "night", "nighttime", "raining", "israining", "thundering", "isthundering",
+            "snowing", "issnowing",
             "angry", "isangry", "pollinated", "ispollinated", "hasnectar",
             "day", "daytime", "dawn", "dusk", "sunset", "morning", "noon", "midnight",
             "clear", "sun", "sunny", "rain", "storm", "thunder", "thunderstorm",
@@ -299,6 +300,9 @@ public final class MmConditions {
         }
         if ("thundering".equals(name) || "isthundering".equals(name)) {
             return new Mapped("thundering", true);
+        }
+        if ("snowing".equals(name) || "issnowing".equals(name)) {
+            return new Mapped("snowing", true);
         }
         if ("burning".equals(name) || "blocking".equals(name)
                 || "charged".equals(name) || "crouching".equals(name)

@@ -4,7 +4,17 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-in-combat-strict-20261105-r3`
+Latest strict fixture `srv-paper-snowing-strict-20261105-r2`
+completes 345 probes (326 passed, 19 expected rejections, zero incomplete).
+`snowingCondition` verifies target-location isolation, both condition aliases,
+warm/clear rejection, missing context, invalid arguments, and state restoration.
+`spawningDistanceClientWalk` records an 11.14-block server-observed player
+displacement at 10.90 blocks from the managed mob, followed by instance and
+entity removal. Report: `tools/paper-integration/reports/paper-1.21.1-snowing-strict-20261105-r2.json`.
+The plugin SHA-256 is
+`1b6fe0a823faadc268149f90df680f3550bab8a2059f41ac1477fa992fd31a44`.
+
+Previous strict fixture `srv-paper-in-combat-strict-20261105-r3`
 completes 344 probes (325 passed, 19 expected rejections, zero incomplete).
 The independent `inCombatCondition` probe records managed-caster and native-Mob
 positive, no-target rejection, and target restoration. `conditionUtilityAliases`
@@ -333,7 +343,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 344 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 345 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -349,8 +359,8 @@ This is a partial parity release. The matrix currently has `41`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 448 cited IDs; 360 report files; 4 directories
-   without reports; 84 missing directories; 124 archived release reports. The
+   Current fixture inventory: 449 cited IDs; 361 report files; 4 directories
+   without reports; 84 missing directories; 125 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
