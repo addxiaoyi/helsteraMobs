@@ -26,22 +26,35 @@ $env:PAPER_RAW_POTION_SHORT = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-target-all-filter-strict-20261105-r1`
+Latest strict fixture `srv-paper-targeter-identity-strict-20261105-r1`
+passed 340 probes (321 passed, 19 expected rejections, zero incomplete).
+`targeterIdentityFilter` verifies target and ignore filters for Helstera-managed
+entities and ordinary Bukkit entities, plus the `targetvanilla`/
+`targetnonmythic` boolean alias. The managed marker is placed on mobs spawned
+from Helstera mob definitions; an external MythicMobs plugin's entities are not
+identified. Report:
+`reports/paper-1.21.1-targeter-identity-strict-20261105-r1.json`; server log:
+`reports/paper-1.21.1-targeter-identity-strict-20261105-r1.log.gz`; client logs:
+`reports/paper-1.21.1-targeter-identity-strict-20261105-r1-client-logs.tar.gz`.
+The plugin SHA-256 is
+`35474b6d97d214b3e049a953f96b5080a29998d4d0c19aa8e8c04f8d22c3cc17`.
+
+Previous strict fixture `srv-paper-target-all-filter-strict-20261105-r1`
 passed 339 probes (320 passed, 19 expected rejections, zero incomplete). Its
 `targeterArgumentValidation` probe verifies `targetall=true` overrides
 conflicting `target`, `ignore`, and specific category filters within the real
 candidate set. It retains animal, creature, villager, ArmorStand,
 invulnerability, player-mode, ground, water, and flying coverage against real
 entities, including a flying Phantom. Invalid and duplicate options still fail
-closed in API tests. Report:
+closed. Report:
 `reports/paper-1.21.1-target-all-filter-strict-20261105-r1.json`; server log:
 `reports/paper-1.21.1-target-all-filter-strict-20261105-r1.log.gz`; client logs:
 `reports/paper-1.21.1-target-all-filter-strict-20261105-r1-client-logs.tar.gz`.
 The plugin SHA-256 is
 `1a30a22c1274f045782daff576ebeb1ed4089cd963879d5a831602ef04cf1bf4`.
 `targetall` preserves the targeter's radius and world scope. Non-living
-display/interaction entities, NPC, Mythic identity, and premium filters remain
-open.
+display/interaction entities, NPC identity, external MythicMobs identity, and
+premium filters remain open.
 
 Previous strict fixture `srv-paper-target-armorstands-strict-20261105-r1`
 verified ArmorStand aliases, inclusion/exclusion, and invulnerability and

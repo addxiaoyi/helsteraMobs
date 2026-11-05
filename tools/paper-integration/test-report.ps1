@@ -168,7 +168,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] death-loot-count natural=true total-items=128 diamonds=31 emeralds=97 count-passed=true weights-passed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] death-loot-bonus natural=true level-only=4 luck-only=3 combined=5 zero=2 weighted-max=4 potion-luck=3 potion-effective-luck=1.0 weighted-item-count=true fractional-samples=128 fractional-extra-lines=64 fractional-range=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] death-loot-imported natural=true killer-player=true imported=true conditions-mapped=true conflict-preserved=true nested-mapped=true diamond=1 gold-range-amount=2 experience=5 restored=true passed=true',
-        '[Server thread/INFO]: [helsteraMobs] [自检] death-loot-trigger natural=true killer-player=true permission-allowed=true permission-denied=true nested-allowed-drop=true effective-luck=1.0 luck-scaled-drop=true nested-rejected-drop-absent=true nested-rejected-experience=4 parent-rejected-drop-absent=true parent-rejected-experience=0',
+        '[Server thread/INFO]: [helsteraMobs] [自检] death-loot-trigger natural=true killer-player=true permission-allowed=true permission-denied=true nested-allowed-drop=true effective-luck=1.0 luck-scaled-drop=true nested-rejected-drop-absent=true nested-rejected-experience=1 parent-rejected-drop-absent=true parent-rejected-experience=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawner-probe id=pass requested=true failure=null',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawner-probe id=reject requested=false failure=player gate closed',
         '[Server thread/INFO]: spawner-max-spawns id=max_spawn_probe first=true second=false total=1 failure=max spawns reached',
@@ -770,6 +770,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'targeterArgumentValidation'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'targeterArgumentValidation'; status = 'passed'; observations = @('targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true target-players-specific=true target-players-disabled=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true target-flying=true ignore-flying=true target-invulnerable-disabled=true target-invulnerable-priority=true target-armorstands-disabled=true target-armorstands-priority=true target-animals-disabled=true target-animals-priority=true target-creatures-disabled=true target-creatures-priority=true target-villagers-disabled=true target-villagers-priority=true target-all=true target-creative=true ignore-creative=true target-creative-priority=true target-creative-disabled=true target-spectator=true ignore-spectator=true target-spectator-priority=true target-spectator-disabled=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'targeterIdentityFilter'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'targeterIdentityFilter'; status = 'passed'; observations = @('targeter-identity-filter managed=true target-mythic=true target-nonmythic=true ignore-mythic=true ignore-vanilla=true targetvanilla=true targetnonmythic=true targetnonmythic-false=true duplicate-rejected=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds += 'locationTargeterDispatch'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -1429,6 +1433,18 @@ try {
     Assert-True $missingTargeterArgumentsRejected 'full release gate rejects missing targeter argument evidence'
     $fullCatalogReport.expectedProbeIds += 'targeterArgumentValidation'
     $fullCatalogReport.probes += $targeterArgumentsProbe
+    $targeterIdentityProbe = $fullCatalogReport.probes | Where-Object id -eq 'targeterIdentityFilter'
+    $targeterIdentityObservations = $targeterIdentityProbe.observations
+    $targeterIdentityProbe.observations = @('targeter-identity-filter managed=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badTargeterIdentityRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badTargeterIdentityRejected = $_.Exception.Message -match 'required observation for targeterIdentityFilter' }
+    Assert-True $badTargeterIdentityRejected 'full release gate rejects incomplete targeter identity evidence'
+    $targeterIdentityProbe.observations = $targeterIdentityObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $locationProbe = $fullCatalogReport.probes | Where-Object id -eq 'locationTargeterDispatch'
     $locationObservations = $locationProbe.observations
     $locationProbe.observations = @('location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=false caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true')

@@ -33,6 +33,11 @@
       "requiredObservationContains": "targeter-syntax=true"
     },
     {
+      "id": "targeterIdentityFilter",
+      "status": "passed",
+      "requiredObservation": "targeter-identity-filter managed=true target-mythic=true target-nonmythic=true ignore-mythic=true ignore-vanilla=true targetvanilla=true targetnonmythic=true targetnonmythic-false=true duplicate-rejected=true passed=true"
+    },
+    {
       "id": "airLevelCondition",
       "status": "passed"
     },

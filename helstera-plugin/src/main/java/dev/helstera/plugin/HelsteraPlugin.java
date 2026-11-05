@@ -10753,6 +10753,42 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         "@targets{limit=1}", worldTargetContext, List.of(monster), List.of());
                 boolean targeterSyntaxFailClosed = malformedTargetSyntax.isEmpty()
                         && validTargetSyntax.equals(List.of(holder));
+                var identityCandidates = java.util.List.<org.bukkit.entity.LivingEntity>of(
+                        holder, (org.bukkit.entity.LivingEntity) base, monster);
+                var noIdentitySource = (dev.helstera.api.instance.ModelInstance) null;
+                boolean managedMobMarked = "priority_attack_probe".equals(
+                        dev.helstera.api.behavior.ManagedMobIdentity.mobId(base));
+                var mythicTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{target=mythic}", noIdentitySource, identityCandidates, java.util.List.of());
+                var nonMythicTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{target=nonmythic}", noIdentitySource, identityCandidates, java.util.List.of());
+                var ignoredMythic = dev.helstera.api.behavior.Targeters.select(
+                        "@living{ignore=mythic}", noIdentitySource, identityCandidates, java.util.List.of());
+                var ignoredVanilla = dev.helstera.api.behavior.Targeters.select(
+                        "@living{ignore=vanilla}", noIdentitySource, identityCandidates, java.util.List.of());
+                var vanillaOptionTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{target=players;targetvanilla=true}", noIdentitySource,
+                        identityCandidates, java.util.List.of());
+                var nonMythicOptionTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{target=players;targetnonmythic=true}", noIdentitySource,
+                        identityCandidates, java.util.List.of());
+                var nonMythicDisabledTargets = dev.helstera.api.behavior.Targeters.select(
+                        "@living{targetnonmythic=false}", noIdentitySource,
+                        identityCandidates, java.util.List.of());
+                boolean duplicateIdentityAliasRejected = dev.helstera.api.behavior.Targeters.select(
+                        "@living{targetvanilla=true;targetnonmythic=false}", noIdentitySource,
+                        identityCandidates, java.util.List.of()).isEmpty();
+                boolean targeterIdentity = managedMobMarked
+                        && mythicTargets.equals(java.util.List.of(base))
+                        && nonMythicTargets.size() == 2
+                        && nonMythicTargets.containsAll(java.util.List.of(holder, monster))
+                        && ignoredMythic.equals(nonMythicTargets)
+                        && ignoredVanilla.equals(java.util.List.of(base))
+                        && vanillaOptionTargets.size() == 2
+                        && vanillaOptionTargets.containsAll(java.util.List.of(holder, monster))
+                        && nonMythicOptionTargets.equals(vanillaOptionTargets)
+                        && nonMythicDisabledTargets.equals(java.util.List.of(base))
+                        && duplicateIdentityAliasRejected;
                 double holderDistance = instance.location().distanceSquared(holder.getLocation());
                 double monsterDistance = instance.location().distanceSquared(monster.getLocation());
                 boolean nearestLivingTarget = nearestLiving.size() == 1
@@ -10766,7 +10802,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && worldPlayerTarget && worldMobTarget && worldCasterExcluded && worldChainFiltered
                         && serverPlayerTargets
                         && nearestLivingTarget && nearestMobTarget
-                        && targeterSyntaxFailClosed
+                        && targeterSyntaxFailClosed && targeterIdentity
                         && setTargetMechanic && clearTargetMechanic && contextChainAction
                         && mob.getTarget() == holder;
                 getLogger().info("ai-selector-core goals=" + goals
@@ -10785,6 +10821,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " nearest-living=" + nearestLivingTarget
                         + " nearest-mob=" + nearestMobTarget
                         + " targeter-syntax=" + targeterSyntaxFailClosed
+                        + " targeter-identity=" + targeterIdentity
                         + " set-target-mechanic=" + setTargetMechanic
                         + " clear-target-mechanic=" + clearTargetMechanic
                         + " context-chain-action=" + contextChainAction
@@ -10793,6 +10830,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " faction-holder=" + dev.helstera.api.behavior.Factions.factionOf(holder)
                         + " selector=" + controller.selectorDiagnostic()
                         + " passed=" + passed);
+                getLogger().info("targeter-identity-filter managed=" + managedMobMarked
+                        + " target-mythic=" + mythicTargets.equals(java.util.List.of(base))
+                        + " target-nonmythic=" + (nonMythicTargets.size() == 2
+                        && nonMythicTargets.containsAll(java.util.List.of(holder, monster)))
+                        + " ignore-mythic=" + ignoredMythic.equals(nonMythicTargets)
+                        + " ignore-vanilla=" + ignoredVanilla.equals(java.util.List.of(base))
+                        + " targetvanilla=" + (vanillaOptionTargets.size() == 2
+                        && vanillaOptionTargets.containsAll(java.util.List.of(holder, monster)))
+                        + " targetnonmythic=" + nonMythicOptionTargets.equals(vanillaOptionTargets)
+                        + " targetnonmythic-false=" + nonMythicDisabledTargets.equals(java.util.List.of(base))
+                        + " duplicate-rejected=" + duplicateIdentityAliasRejected
+                        + " passed=" + targeterIdentity);
 
                 Location routeOrigin = base.getLocation().clone();
                 int routeY = routeOrigin.getBlockY();
@@ -11227,6 +11276,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         } else {
             inst = instances().spawn(model, loc, opts);
+        }
+        if (inst != null) {
+            inst.baseEntity().ifPresent(entity ->
+                    dev.helstera.api.behavior.ManagedMobIdentity.mark(entity, mobId));
         }
         if (inst != null && inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity living) {
             markPersistentMob(living, mobId, opts);
