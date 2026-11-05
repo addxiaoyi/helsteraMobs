@@ -686,9 +686,7 @@ public final class MmConditions {
         if ("isundead".equals(name)) return new Mapped("is-undead", true);
         if ("iscreature".equals(name)) return new Mapped("is-creature", true);
         if ("isbaby".equals(name)) return new Mapped("is-baby", true);
-        // MythicMobs isChild means the entity's age state. Helstera's
-        // is-child condition is a separate parent/child relation condition.
-        if ("ischild".equals(name)) return new Mapped("is-baby", true);
+        if ("ischild".equals(name) || "child".equals(name)) return new Mapped("is-child", true);
         if ("isadult".equals(name)) return new Mapped("is-adult", true);
         if ("mobsize".equals(name) || "size".equals(name)) {
             String value = firstArgument(body, "size", "s");
@@ -1122,7 +1120,6 @@ public final class MmConditions {
                     : new Mapped("children " + amount, true);
         }
         if ("isparent".equals(name) || "parent".equals(name)) return new Mapped("is-parent", true);
-        if ("child".equals(name)) return new Mapped("is-child", true);
         if ("isparentalive".equals(name) || "parentalive".equals(name)) {
             return new Mapped("is-parent-alive", true);
         }
@@ -1293,6 +1290,7 @@ public final class MmConditions {
         }
         if ("targetisundead".equals(name)) return new Mapped("target-is-undead", true);
         if ("targetiscreature".equals(name)) return new Mapped("target-is-creature", true);
+        // targetIsChild is retained as a legacy Helstera alias; Mythic documents isChild instead as a parent relation.
         if ("targetisbaby".equals(name) || "targetischild".equals(name)) {
             return new Mapped("target-is-baby", true);
         }

@@ -1409,10 +1409,10 @@ the Paper 1.21.1 release target remains open.
 
 Fixture `srv-paper-integration-is-child-20261016` additionally created a real
 Pig child with the model-bound Wolf as parent and evaluated `is-child` against
-that Pig target. This is Helstera's custom parent relation, not evidence for
-Mythic's age `isChild` condition; migration maps that condition to `is-baby`.
-`conditionIsChild`, `parentRelation`, and aggregate
-`conditionCatalog` all passed; the Pig and relation were cleaned up.
+that Pig target. It verifies the relation evaluator now used for Mythic
+`isChild`/`child`, but predates the corrected importer mapping and is not
+evidence for the import path. `conditionIsChild`, `parentRelation`, and
+aggregate `conditionCatalog` all passed; the Pig and relation were cleaned up.
 
 Fixture `srv-paper-integration-parent-derived-20261016` checked the derived
 parent conditions on Paper 1.21.1: `is-sibling` passed for two children sharing

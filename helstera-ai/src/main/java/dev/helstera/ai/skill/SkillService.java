@@ -335,7 +335,7 @@ public final class SkillService {
                 "dusk", "sunset", "morning", "noon", "midnight", "clear", "sun", "sunny", "storm",
                 "thunderstorm", "is-living",
                 "is-player", "is-mob", "is-monster", "is-animal", "is-villager", "is-tameable", "is-raider",
-                "is-baby", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered",
+                "is-baby", "is-child", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered",
                 "target-is-baby", "target-is-adult", "target-is-tamed", "target-is-sheared",
                 "target-is-saddled", "target-is-powered", "is-sneaking", "is-sprinting", "is-flying",
                 "is-climbing", "is-invisible", "is-glowing", "falling", "target-is-climbing",
@@ -1809,7 +1809,8 @@ public final class SkillService {
             case "israiderpatrolleader", "is-patrol-leader" -> "is-raider-patrol-leader";
             case "isundead", "undead" -> "is-undead";
             case "iscreature", "creature" -> "is-creature";
-            case "isbaby", "baby", "ischild", "child" -> "is-baby";
+            case "isbaby", "baby" -> "is-baby";
+            case "ischild", "child", "is-child" -> "is-child";
             case "isadult", "adult" -> "is-adult";
             case "mobsize", "mob-size", "size" -> "mob-size";
             case "angry", "isangry", "is-angry" -> "angry";

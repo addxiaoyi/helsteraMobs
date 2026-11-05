@@ -359,7 +359,9 @@ class MmConditionsTest {
         assertEquals("is-raider", t("?isRaider"));
         assertEquals("is-undead", t("?isUndead"));
         assertEquals("is-creature", t("?isCreature"));
-        assertEquals("is-baby", t("?isChild"));
+        assertEquals("is-baby", t("?isBaby"));
+        assertEquals("is-child", t("?isChild"));
+        assertEquals("is-child", t("?child"));
         assertEquals("is-adult", t("?isAdult"));
         assertEquals("is-tamed", t("?isTamed"));
         assertEquals("is-sheared", t("?isSheared"));
@@ -1116,7 +1118,7 @@ class MmConditionsTest {
         assertEquals("has-parent", t("?hasParent"));
         assertEquals("is-parent", t("?isParent"));
         assertEquals("is-parent", t("?parent"));
-        assertEquals("is-baby", t("?isChild"));
+        assertEquals("is-child", t("?isChild"));
         assertEquals("is-child", t("?child"));
         assertEquals("is-parent-alive", t("?isParentAlive"));
         assertEquals("is-sibling", t("?isSibling"));

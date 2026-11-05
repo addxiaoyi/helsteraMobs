@@ -2573,6 +2573,41 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported isChild aliases evaluate caster-parent relations, not age")
+    void importedIsChildUsesParentRelationInsteadOfAge() {
+        var parent = mock(org.bukkit.entity.Entity.class);
+        var child = mock(org.bukkit.entity.Ageable.class);
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var data = mock(org.bukkit.persistence.PersistentDataContainer.class);
+        var parentId = java.util.UUID.randomUUID();
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(parent));
+        when(parent.isValid()).thenReturn(true);
+        when(parent.isDead()).thenReturn(false);
+        when(parent.getUniqueId()).thenReturn(parentId);
+        when(child.isValid()).thenReturn(true);
+        when(child.isDead()).thenReturn(false);
+        when(child.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        when(child.isAdult()).thenReturn(true);
+        when(child.getPersistentDataContainer()).thenReturn(data);
+        when(data.get(any(org.bukkit.NamespacedKey.class),
+                eq(org.bukkit.persistence.PersistentDataType.STRING))).thenReturn(parentId.toString());
+
+        var context = dev.helstera.api.behavior.BehaviorContext.of(instance,
+                (org.bukkit.entity.LivingEntity) child,
+                1, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+        for (String source : List.of("?isChild", "?child")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertEquals("is-child", mapped.condition(), source);
+            assertTrue(registry.testCondition(skills.bindCondition(mapped.condition()), context), source);
+        }
+        assertFalse(registry.testCondition(skills.bindCondition("is-baby"), context));
+    }
+
+    @Test
     @DisplayName("imported angry and pollinated aliases reach their runtime state consumers")
     void importedAngryAndPollinatedConditionsReachRuntime() {
         var bee = mock(org.bukkit.entity.Bee.class);
