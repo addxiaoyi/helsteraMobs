@@ -125,6 +125,12 @@ public final class AiController {
         return combatTarget != null ? combatTarget : target;
     }
 
+    /** Whether this controller currently has a live combat target. */
+    public boolean isInCombat() {
+        LivingEntity activeTarget = targetEntity();
+        return activeTarget != null && activeTarget.isValid() && !activeTarget.isDead();
+    }
+
     /** Updates the combat target from a skill mechanic or an external integration. */
     public void setCombatTarget(LivingEntity entity) {
         LivingEntity previous = targetEntity();

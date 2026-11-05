@@ -369,6 +369,108 @@ class TargeterOrderingTest {
     }
 
     @Test
+    @DisplayName("owner and exact faction filters obey specific-filter and targetall precedence")
+    void mythicOwnerAndSameFactionTargetFilters() {
+        var caster = relationLiving(org.bukkit.entity.Monster.class, java.util.UUID.randomUUID());
+        var owner = relationLiving(org.bukkit.entity.Player.class, java.util.UUID.randomUUID());
+        var sameFaction = relationLiving(org.bukkit.entity.Monster.class, java.util.UUID.randomUUID());
+        var alliedFaction = relationLiving(org.bukkit.entity.Monster.class, java.util.UUID.randomUUID());
+        var enemyFaction = relationLiving(org.bukkit.entity.Monster.class, java.util.UUID.randomUUID());
+        assertTrue(MobRelations.setOwner(caster, owner));
+
+        var factionIds = new java.util.IdentityHashMap<org.bukkit.entity.Entity, String>();
+        factionIds.put(caster, "guards");
+        factionIds.put(sameFaction, "GUARDS");
+        factionIds.put(alliedFaction, "raiders");
+        factionIds.put(enemyFaction, "undead");
+        FactionTable previous = Factions.table();
+        Factions.install(new FactionTable() {
+            @Override public String factionOf(org.bukkit.entity.Entity entity) { return factionIds.get(entity); }
+            @Override public boolean allied(org.bukkit.entity.Entity a, org.bukkit.entity.Entity b) {
+                return alliedFactions(factionOf(a), factionOf(b));
+            }
+            @Override public boolean alliedFactions(String a, String b) {
+                return a != null && b != null && (a.equalsIgnoreCase(b)
+                        || (a.equalsIgnoreCase("guards") && b.equalsIgnoreCase("raiders"))
+                        || (a.equalsIgnoreCase("raiders") && b.equalsIgnoreCase("guards")));
+            }
+            @Override public java.util.Collection<String> names() { return List.of("guards", "raiders", "undead"); }
+        });
+        var instance = (dev.helstera.api.instance.ModelInstance) Proxy.newProxyInstance(
+                dev.helstera.api.instance.ModelInstance.class.getClassLoader(),
+                new Class<?>[]{dev.helstera.api.instance.ModelInstance.class},
+                (proxy, method, args) -> method.getName().equals("baseEntity")
+                        ? java.util.Optional.of(caster) : defaultValue(method.getReturnType()));
+        List<LivingEntity> candidates = List.of(caster, owner, sameFaction, alliedFaction, enemyFaction);
+        try {
+            assertEquals(List.of(), Targeters.select(
+                    "@living{target=owner;targetself=false}", instance, candidates, List.of()));
+            assertEquals(List.of(owner), Targeters.select(
+                    "@living{target=players;targetowner=true;targetself=false}", instance, candidates, List.of()));
+            assertEquals(List.of(), Targeters.select(
+                    "@living{target=owner;targetowner=false;targetself=false}", instance, candidates, List.of()));
+            assertEquals(List.of(sameFaction, alliedFaction, enemyFaction), Targeters.select(
+                    "@living{ignore=owner;targetself=false}", instance, candidates, List.of()));
+            assertEquals(List.of(owner, sameFaction, alliedFaction, enemyFaction), Targeters.select(
+                    "@living{target=monsters;ignore=owner;targetowner=true;targetself=false}",
+                    instance, candidates, List.of()));
+
+            assertEquals(List.of(), Targeters.select(
+                    "@living{target=faction;targetself=false}", instance, candidates, List.of()));
+            assertEquals(List.of(owner, alliedFaction, enemyFaction), Targeters.select(
+                    "@living{ignore=faction;targetself=false}", instance, candidates, List.of()));
+            assertEquals(List.of(owner, sameFaction), Targeters.select(
+                    "@living{target=players;targetsamefaction=true;targetself=false}",
+                    instance, candidates, List.of()));
+            assertEquals(List.of(owner, alliedFaction, enemyFaction), Targeters.select(
+                    "@living{targetsamefaction=false;targetself=false}", instance, candidates, List.of()));
+            assertEquals(List.of(owner, sameFaction, alliedFaction, enemyFaction), Targeters.select(
+                    "@living{ignore=faction;targetsamefaction=true;targetself=false}",
+                    instance, candidates, List.of()));
+            assertEquals(candidates, Targeters.select(
+                    "@living{target=players;ignore=faction,owner;targetowner=false;targetsamefaction=false;targetall=true;targetself=false}",
+                    instance, candidates, List.of()));
+
+            for (String invalid : List.of("@living{targetowner=maybe}",
+                    "@living{targetowner=true;targetowner=false}",
+                    "@living{targetsamefaction=}",
+                    "@living{targetsamefaction=true;TargetSameFaction=false}",
+                    "@living{target=owner}", "@living{target=faction}")) {
+                assertEquals(List.of(), Targeters.select(invalid, instance, candidates, List.of()), invalid);
+            }
+        } finally {
+            Factions.install(previous);
+            MobRelations.clearOwner(caster);
+        }
+    }
+
+    @Test
+    @DisplayName("targetowner recognizes a native tameable owner")
+    void targetOwnerRecognizesNativeTameableOwner() {
+        var owner = relationLiving(org.bukkit.entity.Player.class, java.util.UUID.randomUUID());
+        var data = persistentDataProxy();
+        var wolf = (org.bukkit.entity.Wolf) Proxy.newProxyInstance(
+                org.bukkit.entity.Wolf.class.getClassLoader(), new Class<?>[]{org.bukkit.entity.Wolf.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getPersistentDataContainer" -> data;
+                    case "getUniqueId" -> java.util.UUID.randomUUID();
+                    case "isTamed" -> true;
+                    case "getOwner" -> owner;
+                    case "getType" -> org.bukkit.entity.EntityType.WOLF;
+                    case "getLocation" -> new org.bukkit.Location(null, 0, 0, 0);
+                    default -> defaultValue(method.getReturnType());
+                });
+        var instance = (dev.helstera.api.instance.ModelInstance) Proxy.newProxyInstance(
+                dev.helstera.api.instance.ModelInstance.class.getClassLoader(),
+                new Class<?>[]{dev.helstera.api.instance.ModelInstance.class},
+                (proxy, method, args) -> method.getName().equals("baseEntity")
+                        ? java.util.Optional.of(wolf) : defaultValue(method.getReturnType()));
+
+        assertEquals(List.of(owner), Targeters.select("@living{targetowner=true;targetself=false}",
+                instance, List.of(owner), List.of()));
+    }
+
+    @Test
     @DisplayName("ground, water, and flying filters use mutually exclusive Bukkit states")
     void mythicGroundAndWaterFilters() {
         var grounded = stateLivingProxy(true, false);
@@ -1000,6 +1102,37 @@ class TargeterOrderingTest {
         } finally {
             Targeters.conditionProvider(null);
         }
+    }
+
+    private static <T extends org.bukkit.entity.LivingEntity> T relationLiving(Class<T> type,
+                                                                                java.util.UUID id) {
+        var data = persistentDataProxy();
+        return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getPersistentDataContainer" -> data;
+                    case "getUniqueId" -> id;
+                    case "getType" -> org.bukkit.entity.Player.class.isAssignableFrom(type)
+                            ? org.bukkit.entity.EntityType.PLAYER : org.bukkit.entity.EntityType.ZOMBIE;
+                    case "getLocation" -> new org.bukkit.Location(null, 0, 0, 0);
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    default -> defaultValue(method.getReturnType());
+                }));
+    }
+
+    private static org.bukkit.persistence.PersistentDataContainer persistentDataProxy() {
+        var stored = new java.util.HashMap<org.bukkit.NamespacedKey, Object>();
+        return (org.bukkit.persistence.PersistentDataContainer) Proxy.newProxyInstance(
+                org.bukkit.persistence.PersistentDataContainer.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.persistence.PersistentDataContainer.class}, (proxy, method, args) -> {
+                    switch (method.getName()) {
+                        case "set" -> { stored.put((org.bukkit.NamespacedKey) args[0], args[2]); return null; }
+                        case "get" -> { return stored.get((org.bukkit.NamespacedKey) args[0]); }
+                        case "has" -> { return stored.containsKey((org.bukkit.NamespacedKey) args[0]); }
+                        case "remove" -> { stored.remove((org.bukkit.NamespacedKey) args[0]); return null; }
+                        default -> { return defaultValue(method.getReturnType()); }
+                    }
+                });
     }
 
     private static <T extends org.bukkit.entity.LivingEntity> T livingProxy(Class<T> type) {

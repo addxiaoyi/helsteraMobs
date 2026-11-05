@@ -681,6 +681,141 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("angry and pollinated inspect only the documented entity states")
+    void angryAndPollinatedConditionsCheckSupportedEntities() {
+        var bee = mock(org.bukkit.entity.Bee.class);
+        var wolf = mock(org.bukkit.entity.Wolf.class);
+        var vex = mock(org.bukkit.entity.Vex.class);
+        var piglin = mock(org.bukkit.entity.PigZombie.class);
+        when(bee.getAnger()).thenReturn(40, 0);
+        when(bee.hasNectar()).thenReturn(true, false);
+        when(wolf.isAngry()).thenReturn(true, false);
+        when(vex.isCharging()).thenReturn(true, false);
+        var angry = extraFactory("angry").create(List.of());
+        var pollinated = extraFactory("pollinated").create(List.of());
+
+        assertTrue(angry.test(entityConditionContext(bee)));
+        assertFalse(angry.test(entityConditionContext(bee)));
+        assertTrue(angry.test(entityConditionContext(wolf)));
+        assertFalse(angry.test(entityConditionContext(wolf)));
+        assertTrue(angry.test(entityConditionContext(vex)));
+        assertFalse(angry.test(entityConditionContext(vex)));
+        assertFalse(angry.test(entityConditionContext(piglin)),
+                "the Mythic condition excludes other anger-capable entities");
+        assertFalse(angry.test(ctx()));
+
+        assertTrue(pollinated.test(entityConditionContext(bee)));
+        assertFalse(pollinated.test(entityConditionContext(bee)));
+        assertFalse(pollinated.test(entityConditionContext(wolf)));
+        assertFalse(pollinated.test(ctx()));
+        assertThrows(IllegalArgumentException.class, () -> extraFactory("angry").create(List.of("true")));
+        assertThrows(IllegalArgumentException.class, () -> extraFactory("pollinated").create(List.of("false")));
+    }
+
+    @Test
+    @DisplayName("is-sheared supports Sheep, Bogged and Snow Golems for caster and target")
+    void shearedConditionsSupportAllDocumentedEntities() {
+        var sheep = mock(org.bukkit.entity.Sheep.class);
+        var bogged = mock(org.bukkit.entity.Bogged.class);
+        var snowman = mock(org.bukkit.entity.Snowman.class);
+        var unsupported = mock(org.bukkit.entity.Zombie.class);
+        var self = extraFactory("is-sheared").create(List.of());
+        var target = extraFactory("target-is-sheared").create(List.of());
+
+        when(sheep.isSheared()).thenReturn(true);
+        assertTrue(self.test(entityConditionContext(sheep)));
+        assertTrue(target.test(entityConditionContext(sheep)));
+        when(sheep.isSheared()).thenReturn(false);
+        assertFalse(self.test(entityConditionContext(sheep)));
+        assertFalse(target.test(entityConditionContext(sheep)));
+
+        when(bogged.isSheared()).thenReturn(true);
+        assertTrue(self.test(entityConditionContext(bogged)));
+        assertTrue(target.test(entityConditionContext(bogged)));
+        when(bogged.isSheared()).thenReturn(false);
+        assertFalse(self.test(entityConditionContext(bogged)));
+        assertFalse(target.test(entityConditionContext(bogged)));
+
+        when(snowman.isDerp()).thenReturn(true);
+        assertTrue(self.test(entityConditionContext(snowman)));
+        assertTrue(target.test(entityConditionContext(snowman)));
+        when(snowman.isDerp()).thenReturn(false);
+        assertFalse(self.test(entityConditionContext(snowman)));
+        assertFalse(target.test(entityConditionContext(snowman)));
+
+        assertFalse(self.test(entityConditionContext(unsupported)));
+        assertFalse(target.test(entityConditionContext(unsupported)));
+        assertFalse(self.test(ctx()));
+        assertFalse(target.test(ctx()));
+    }
+
+    @Test
+    @DisplayName("in-combat requires a managed or Bukkit mob with a live target")
+    void inCombatRequiresAnActiveTarget() {
+        var condition = extraFactory("in-combat").create(List.of());
+        var mob = mock(org.bukkit.entity.Mob.class);
+        var target = mock(LivingEntity.class);
+        when(target.isValid()).thenReturn(true);
+        when(target.isDead()).thenReturn(false);
+        when(mob.getTarget()).thenReturn(target);
+        assertTrue(condition.test(entityConditionContext(mob)));
+
+        when(mob.getTarget()).thenReturn(null);
+        assertFalse(condition.test(entityConditionContext(mob)));
+        when(mob.getTarget()).thenReturn(target);
+        when(target.isDead()).thenReturn(true);
+        assertFalse(condition.test(entityConditionContext(mob)));
+        when(target.isDead()).thenReturn(false);
+        when(target.isValid()).thenReturn(false);
+        assertFalse(condition.test(entityConditionContext(mob)));
+
+        var player = mock(Player.class);
+        assertFalse(condition.test(entityConditionContext(player)));
+        assertFalse(condition.test(ctx()));
+    }
+
+    @Test
+    @DisplayName("in-combat reads the managed AI controller for its own mob")
+    void inCombatUsesManagedControllerState() {
+        var instance = mock(dev.helstera.runtime.instance.ModelInstanceImpl.class);
+        var mob = mock(org.bukkit.entity.Mob.class);
+        var pathfinder = mock(com.destroystokyo.paper.entity.Pathfinder.class);
+        var location = mock(Location.class);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(mob));
+        when(instance.entity()).thenReturn(mob);
+        when(instance.location()).thenReturn(location);
+        when(instance.isValid()).thenReturn(true);
+        when(mob.isValid()).thenReturn(true);
+        when(mob.getLocation()).thenReturn(location);
+        when(mob.getPathfinder()).thenReturn(pathfinder);
+        var profile = new dev.helstera.ai.AiProfile("in-combat-condition");
+        profile.canChase = false;
+        profile.canAttack = false;
+        profile.canPatrol = false;
+        profile.goals.add("0 clear");
+        profile.targets.add("0 clear");
+        var controller = new dev.helstera.ai.AiController(instance, profile, null,
+                mock(dev.helstera.api.event.HelsteraEventBus.class));
+        instance.aiController = controller;
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+        var target = mock(LivingEntity.class);
+        when(target.isValid()).thenReturn(true);
+        when(target.isDead()).thenReturn(false);
+
+        var condition = extraFactory("in-combat").create(List.of());
+        assertFalse(condition.test(context));
+        controller.setCombatTarget(target);
+        assertTrue(condition.test(context));
+        controller.clearCombatTarget();
+        assertFalse(condition.test(context));
+    }
+
+    private static BehaviorContext entityConditionContext(LivingEntity entity) {
+        return BehaviorContext.continueExecution(null, entity, 1.0, -1, 0, "IDLE",
+                null, null, List.of(entity), null, null);
+    }
+
+    @Test
     @DisplayName("MythicMobType 无管理实例时 fail-closed")
     void officialMythicMobTypeConditionRequiresManagedInstance() {
         assertFalse(extraFactory("mythic-mob-type").create(List.of("example/emberling")).test(ctx()));

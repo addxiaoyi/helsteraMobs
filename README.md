@@ -4,17 +4,24 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-targeter-identity-strict-20261105-r1`
+Latest strict fixture `srv-paper-in-combat-strict-20261105-r3`
+completes 344 probes (325 passed, 19 expected rejections, zero incomplete).
+The independent `inCombatCondition` probe records managed-caster and native-Mob
+positive, no-target rejection, and target restoration. `conditionUtilityAliases`
+also retains aggregate coverage. Sheep/Bogged/Snow Golem shear states,
+angry/pollinated conditions, and owner/faction targeters remain in the release
+catalog. Report: `tools/paper-integration/reports/paper-1.21.1-in-combat-strict-20261105-r3.json`.
+The plugin SHA-256 is
+`5a5df5c3a02a33f6b0f7fdbc9b4071f04df93613e3c05d1aba98bb290dc86548`.
+The full MythicMobs Conditions catalog remains incomplete.
+
+Previous full-catalog fixture `srv-paper-targeter-relations-strict-20261105-r3`
 completes 340 probes (321 passed, 19 expected rejections, zero incomplete).
-`targeterIdentityFilter` verifies `target=mythic`, `target=vanilla`/
-`target=nonmythic`, their `ignore=` counterparts, and the
-`targetvanilla`/`targetnonmythic` boolean alias against real Paper entities.
-The identity marker is written only to entities spawned from a Helstera mob
-definition; this does not identify entities managed by an external MythicMobs
-plugin. Report:
-`tools/paper-integration/reports/paper-1.21.1-targeter-identity-strict-20261105-r1.json`.
-The exact plugin SHA-256 is
-`35474b6d97d214b3e049a953f96b5080a29998d4d0c19aa8e8c04f8d22c3cc17`.
+Its `targeterIdentityFilter` evidence verifies owner and same-faction filters,
+their precedence over generic categories and `targetall`, managed identity,
+and fail-closed relation syntax. The identity marker only recognizes mobs
+spawned by Helstera; external MythicMobs/Citizens identity and premium filters
+remain open.
 
 Previous strict fixture `srv-paper-target-all-filter-strict-20261105-r1`
 completes 339 probes (320 passed, 19 expected rejections, zero incomplete).
@@ -326,7 +333,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 340 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 344 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -342,8 +349,8 @@ This is a partial parity release. The matrix currently has `41`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 443 cited IDs; 355 report files; 4 directories
-   without reports; 84 missing directories; 119 archived release reports. The
+   Current fixture inventory: 448 cited IDs; 360 report files; 4 directories
+   without reports; 84 missing directories; 124 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -509,7 +516,7 @@ the entire MythicMobs feature catalog.
 - Strict Paper 1.21.1-133 fixture `srv-paper-strict-potion-20261101-r5` closes the player Potion-consumption evidence gap: after the menu client disconnects, a raw protocol 1.21.1 client reconnects in Survival, drinks the server-equipped Swiftness Potion, and records `playerPotionConsume=passed`; the fixture completes 252 probes (241 passed, 11 expected negative controls rejected). The standalone exploratory fixtures remain separate from this strict release evidence.
 - Strict Paper 1.21.1-133 fixture `srv-paper-potion-expiry-strict-20261101-r1` completes 255 probes and records both `playerPotionConsume=passed` and `playerPotionNaturalExpiry=passed`; the short-effect player event is observed as `expired=true action-observed=true`.
 - Strict Paper follow-up `srv-paper-mob-max-combat-distance-20261101-r5` verifies imported per-mob `MaxCombatDistance=8`: a production-spawned Zombie allows the 7-block damage control and cancels the 9-block event. The complete 253-probe report has 241 passed, 12 expected negative controls rejected, and zero incomplete; raw player Potion consumption also passed.
-- Strict Paper fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` verifies imported legacy `SpawningDistance=8` through a real Mineflayer client moving 14.01 blocks; Paper observes 8.47 blocks of player displacement and removes both the managed instance and Bukkit entity. Its 264-probe report has 253 passed, 11 expected negative controls, and zero incomplete. Earlier fixtures separately establish nearby retention and server-driven out-of-range removal.
+- Strict Paper fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` verifies imported legacy `SpawningDistance=8` through a real Mineflayer client moving 14.01 blocks; Paper observes 8.47 blocks of player displacement and removes both the managed instance and Bukkit entity. Its 264-probe report has 253 passed, 11 expected negative controls, and zero incomplete. The current full strict fixture `srv-paper-in-combat-strict-20261105-r3` also requires `spawningDistanceClientWalk`, observing 174.56 blocks of real player displacement and removal of both entities. Earlier fixtures separately establish nearby retention and server-driven out-of-range removal.
 - Strict Paper 1.21.1-133 fixture `srv-paper-biome-condition-strict-20261101-r1` verifies `Biome` exact namespaced matching, non-exact key substring matching, comma-separated alternatives, exact-mode rejection of the substring, and a negative mismatched key. Its 254-probe report has 242 passed, 12 expected negative controls, and zero incomplete.
 - Raw Potion r136/r137 re-arm hotbar slot 1 immediately before use; r136 records `playerPotionConsume=passed` with `item=POTION`, and r137 records both `playerPotionConsume=passed` and `playerPotionNaturalExpiry=passed`.
 - Exploratory Paper 1.21.11 r133 records `vehicleEvents=passed` and `ejectPassenger=passed`; the fixture now exercises a real Bukkit `VehicleDestroyEvent` dispatch in addition to enter/exit/dismount/eject coverage.

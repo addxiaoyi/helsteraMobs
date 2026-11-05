@@ -72,7 +72,8 @@ try {
         '[Server thread/INFO]: creeper-primed-condition positive=true negative=true restored=true',
         '[Server thread/INFO]: ender-dragon-alive-condition positive=true negative=true removed=true',
         '[Server thread/INFO]: ender-dragon-phase-condition positive=true list=true negative=true invalid-rejected=true restored=true',
-        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
+        '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true in-combat-condition=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
         '[Server thread/INFO]: condition-utility-details .*spawn-distance-exact=true .*spawn-distance-over-rejected=true .*mobs-chunk=true .*mobs-chunk-high-rejected=true .*mobs-chunk-zero=true .*mobs-chunk-occupied=true .*mobs-chunk-adjacent-excluded=true .*mobs-chunk-boundaries=true .*mobs-in-chunk-condition=true .*chance-100=true .*chance-0-rejected=true .*chance-invalid-rejected=true',
         '[Server thread/INFO]: spatial-condition-details biome-exact=true biome-partial=true biome-reject=true biome-type-category=true',
         '[Server thread/INFO]: biome-imported partial=true exact-rejected=true invalid-preserved=true',
@@ -128,6 +129,8 @@ try {
         '[Server thread/INFO]: [helsteraMobs] immunity-native-invalid result=true false-rejected=true null-rejected=true unknown-rejected=true null-modifier-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-invalid-fields null-immunity=true null-modifier-field=true unknown-modifier-field=true invalid-immune=true null-immune=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-preservation nested-preserved=true nested-closed=true list-null-preserved=true list-null-closed=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] entity-angry-pollination result=true bee-angry-positive=true bee-angry-negative=true wolf-angry-positive=true wolf-angry-negative=true vex-angry-positive=true vex-angry-negative=true bee-pollinated-positive=true bee-pollinated-negative=true unsupported-angry-rejected=true missing-context-rejected=true aliases=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] entity-sheared-states result=true sheep-self-positive=true sheep-target-positive=true sheep-self-negative=true sheep-target-negative=true bogged-self-positive=true bogged-target-positive=true bogged-self-negative=true bogged-target-negative=true snow-golem-self-positive=true snow-golem-target-positive=true snow-golem-self-negative=true snow-golem-target-negative=true unsupported-rejected=true missing-context-rejected=true aliases=true',
         '[Server thread/INFO]: [helsteraMobs] condition-arguments living-rejected=true baby-valid=true baby-rejected=true frozen-valid=true frozen-rejected=true warnings=true',
         '[Server thread/INFO]: [helsteraMobs] condition-state-arguments valid=true movement-rejected=true category-rejected=true alive-rejected=true negated-rejected=true preserved=true warnings=true',
         '[Server thread/INFO]: [helsteraMobs] target-sneaking-mob false-rejected=true true-passed=true',
@@ -325,7 +328,8 @@ try {
     } catch { $wrongPluginHashRejected = $_.Exception.Message -match 'plugin SHA-256' }
     Assert-True $wrongPluginHashRejected 'strict gate rejects mismatched plugin SHA-256'
     foreach ($requiredProbeId in @('custom-menu-player-workflow', 'audience-player-delivery',
-            'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates')) {
+            'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates',
+            'spawningDistanceClientWalk')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -366,6 +370,8 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'immunityNativeInvalid').status -eq 'passed') 'invalid native immunity probe'
     Assert-True (($report.probes | Where-Object id -eq 'immunityInvalidFields').status -eq 'passed') 'invalid immunity fields probe'
     Assert-True (($report.probes | Where-Object id -eq 'immunityPreservation').status -eq 'passed') 'immunity preservation probe'
+    Assert-True (($report.probes | Where-Object id -eq 'entityAngryPollination').status -eq 'passed') 'angry and pollinated state probe'
+    Assert-True (($report.probes | Where-Object id -eq 'entityShearedStates').status -eq 'passed') 'sheared entity state probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionArguments').status -eq 'passed') 'condition arguments probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionStateArguments').status -eq 'passed') 'condition state arguments probe'
     Assert-True (($report.probes | Where-Object id -eq 'targetSneakingMob').status -eq 'passed') 'target sneaking mob probe'
@@ -487,6 +493,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'scoreCondition').status -eq 'passed') 'score condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'targetKillMechanic').status -eq 'passed') 'target kill mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'damageMeleeMechanic').status -eq 'passed') 'damage melee mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'inCombatCondition').status -eq 'passed') 'in-combat condition Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionUtilityAliases').status -eq 'passed') 'condition utility alias probe'
     Assert-True (($report.probes | Where-Object id -eq 'survivalModeCondition').status -eq 'passed') 'survival mode condition Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'distanceFromSpawnCondition').status -eq 'passed') 'distance from spawn boundary probe'
@@ -694,6 +701,14 @@ try {
     if ($fullCatalogAiSelector.Count -ne 1) { throw 'Synthetic full catalog report must contain aiSelectorCore.' }
     $fullCatalogAiSelector[0].observations = @($fullCatalogAiSelector[0].observations) +
         @('ai-selector-core targeter-syntax=true')
+    $fullCatalogReport.expectedProbeIds += 'inCombatCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'inCombatCondition'; status = 'passed'; observations = @('in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'spawningDistanceClientWalk'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'spawningDistanceClientWalk'; status = 'passed'; observations = @('spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'webSpawnerReload'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'webSpawnerReload'; status = 'passed'; observations = @('web-reload invalid=false restored=true server-thread=true')
@@ -726,6 +741,14 @@ try {
     $fullCatalogReport.expectedProbeIds += 'immunityPreservation'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'immunityPreservation'; status = 'passed'; observations = @('immunity-preservation nested-preserved=true nested-closed=true list-null-preserved=true list-null-closed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'entityAngryPollination'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'entityAngryPollination'; status = 'passed'; observations = @('entity-angry-pollination result=true bee-angry-positive=true bee-angry-negative=true wolf-angry-positive=true wolf-angry-negative=true vex-angry-positive=true vex-angry-negative=true bee-pollinated-positive=true bee-pollinated-negative=true unsupported-angry-rejected=true missing-context-rejected=true aliases=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'entityShearedStates'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'entityShearedStates'; status = 'passed'; observations = @('entity-sheared-states result=true sheep-self-positive=true sheep-target-positive=true sheep-self-negative=true sheep-target-negative=true bogged-self-positive=true bogged-target-positive=true bogged-self-negative=true bogged-target-negative=true snow-golem-self-positive=true snow-golem-target-positive=true snow-golem-self-negative=true snow-golem-target-negative=true unsupported-rejected=true missing-context-rejected=true aliases=true')
     }
     $fullCatalogReport.expectedProbeIds += 'conditionArguments'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -773,7 +796,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'targeterIdentityFilter'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'targeterIdentityFilter'; status = 'passed'; observations = @('targeter-identity-filter managed=true target-mythic=true target-nonmythic=true ignore-mythic=true ignore-vanilla=true targetvanilla=true targetnonmythic=true targetnonmythic-false=true duplicate-rejected=true passed=true')
+        id = 'targeterIdentityFilter'; status = 'passed'; observations = @('targeter-identity-filter managed=true target-mythic=true target-nonmythic=true ignore-mythic=true ignore-vanilla=true targetvanilla=true targetnonmythic=true targetnonmythic-false=true duplicate-rejected=true owner-target=true owner-target-disabled=true owner-ignore=true owner-priority=true faction-target=true faction-ignore=true same-faction=true same-faction-disabled=true faction-priority=true same-faction-world=true targetall-relations=true relation-options-rejected=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds += 'locationTargeterDispatch'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -1070,6 +1093,66 @@ try {
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
         -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    $spawningDistanceProbe = $fullCatalogReport.probes | Where-Object id -eq 'spawningDistanceClientWalk'
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'spawningDistanceClientWalk' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'spawningDistanceClientWalk' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingSpawningDistanceRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingSpawningDistanceRejected = $_.Exception.Message -match 'spawningDistanceClientWalk' }
+    Assert-True $missingSpawningDistanceRejected 'full release gate rejects missing SpawningDistance client evidence'
+    $fullCatalogReport.expectedProbeIds += 'spawningDistanceClientWalk'
+    $fullCatalogReport.probes += $spawningDistanceProbe
+    $originalSpawningDistanceObservations = $spawningDistanceProbe.observations
+    $spawningDistanceProbe.observations = @('spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteSpawningDistanceRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteSpawningDistanceRejected = $_.Exception.Message -match 'required observation for spawningDistanceClientWalk' }
+    Assert-True $incompleteSpawningDistanceRejected 'full release gate rejects incomplete SpawningDistance client evidence'
+    foreach ($distance in @('7.99', '8', '8.0')) {
+        $spawningDistanceProbe.observations = @(
+            "spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=$distance instance-removed=true entity-removed=true")
+        $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+        $withinRangeRejected = $false
+        try {
+            & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath -RequireTargetPaperVersion -RequireFullReleaseCatalog
+        } catch { $withinRangeRejected = $_.Exception.Message -match 'required observation for spawningDistanceClientWalk' }
+        Assert-True $withinRangeRejected "full release gate rejects SpawningDistance distance $distance"
+    }
+    $spawningDistanceProbe.observations = @(
+        'spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=8.0001 instance-removed=true entity-removed=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    $spawningDistanceProbe.observations = $originalSpawningDistanceObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $inCombatProbe = $fullCatalogReport.probes | Where-Object id -eq 'inCombatCondition'
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'inCombatCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'inCombatCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingInCombatRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingInCombatRejected = $_.Exception.Message -match 'inCombatCondition' }
+    Assert-True $missingInCombatRejected 'full release gate rejects missing in-combat Paper evidence'
+    $fullCatalogReport.expectedProbeIds += 'inCombatCondition'
+    $fullCatalogReport.probes += $inCombatProbe
+    $originalInCombatObservations = $inCombatProbe.observations
+    $inCombatProbe.observations = @('in-combat-condition managed-positive=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteInCombatRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteInCombatRejected = $_.Exception.Message -match 'required observation for inCombatCondition' }
+    Assert-True $incompleteInCombatRejected 'full release gate rejects incomplete in-combat evidence'
+    $inCombatProbe.observations = $originalInCombatObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $naturalDeathProbe = $fullCatalogReport.probes | Where-Object id -eq 'expNaturalDeath'
     $originalNaturalDeathObservations = $naturalDeathProbe.observations
     $naturalDeathProbe.observations = @('incomplete evidence')

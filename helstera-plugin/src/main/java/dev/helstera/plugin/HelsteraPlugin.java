@@ -3553,8 +3553,84 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills.bindCondition("plugin __missing_plugin__"), conditionContext);
                 boolean vehicleDeadCondition = !behaviors.testCondition(
                         skills.bindCondition("vehicle-is-dead"), conditionContext);
-                boolean utilityInCombat = behaviors.testCondition(
-                        skills.bindCondition("incombat"), conditionContext);
+                boolean managedInCombatPositive = false;
+                boolean managedInCombatNegative = false;
+                boolean managedInCombatRestored = false;
+                boolean managedInCombatControllerPath = false;
+                org.bukkit.entity.Mob managedCombatMob = modelInstance == null ? null
+                        : modelInstance.baseEntity().orElse(null) instanceof org.bukkit.entity.Mob mob
+                        ? mob : null;
+                dev.helstera.ai.AiController managedCombatController =
+                        modelInstance instanceof dev.helstera.runtime.instance.ModelInstanceImpl managed
+                                && managed.aiController instanceof dev.helstera.ai.AiController controller
+                                ? controller : null;
+                if (managedCombatMob != null) {
+                    var previousMobTarget = managedCombatMob.getTarget();
+                    var previousControllerTarget = managedCombatController == null
+                            ? null : managedCombatController.targetEntity();
+                    var restoredMobTarget = previousMobTarget != null
+                            && previousMobTarget.isValid() && !previousMobTarget.isDead()
+                            ? previousMobTarget : null;
+                    var restoredControllerTarget = previousControllerTarget != null
+                            && previousControllerTarget.isValid() && !previousControllerTarget.isDead()
+                            ? previousControllerTarget : null;
+                    managedInCombatControllerPath = managedCombatController != null;
+                    var managedCombatContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            modelInstance, (org.bukkit.entity.LivingEntity) null,
+                            1.0, -1, 0, "integration");
+                    try {
+                        if (managedCombatController != null) {
+                            managedCombatController.clearCombatTarget();
+                        }
+                        managedCombatMob.setTarget(null);
+                        managedInCombatNegative = !behaviors.testCondition(
+                                skills.bindCondition("incombat"), managedCombatContext);
+                        if (managedCombatController != null) {
+                            managedCombatController.setCombatTarget(conditionTarget);
+                        }
+                        managedCombatMob.setTarget(conditionTarget);
+                        managedInCombatPositive = behaviors.testCondition(
+                                skills.bindCondition("inCombat"), managedCombatContext);
+                    } finally {
+                        if (managedCombatController != null) {
+                            if (restoredControllerTarget != null) {
+                                managedCombatController.setCombatTarget(restoredControllerTarget);
+                            } else {
+                                managedCombatController.clearCombatTarget();
+                            }
+                        }
+                        managedCombatMob.setTarget(restoredMobTarget);
+                        managedInCombatRestored = managedCombatMob.getTarget() == restoredMobTarget
+                                && (managedCombatController == null
+                                || managedCombatController.targetEntity() == restoredControllerTarget);
+                    }
+                }
+                boolean nativeInCombatNegative = false;
+                boolean nativeInCombatPositive = false;
+                boolean nativeInCombatRestored = false;
+                try {
+                    conditionTarget.setAI(false);
+                    conditionTarget.setTarget(null);
+                    nativeInCombatNegative = !behaviors.testCondition(
+                            skills.bindCondition("in-combat"), conditionContext);
+                    conditionTarget.setTarget(zombie);
+                    nativeInCombatPositive = behaviors.testCondition(
+                            skills.bindCondition("in-combat"), conditionContext);
+                } finally {
+                    conditionTarget.setTarget(null);
+                    nativeInCombatRestored = conditionTarget.getTarget() == null;
+                }
+                boolean utilityInCombat = managedInCombatPositive && managedInCombatNegative
+                        && managedInCombatRestored && nativeInCombatPositive
+                        && nativeInCombatNegative && nativeInCombatRestored;
+                getLogger().info("in-combat-condition managed-path="
+                        + (managedInCombatControllerPath ? "ai-controller" : "bukkit-mob-target")
+                        + " managed-positive=" + managedInCombatPositive
+                        + " managed-no-target-rejected=" + managedInCombatNegative
+                        + " managed-restored=" + managedInCombatRestored
+                        + " native-positive=" + nativeInCombatPositive
+                        + " native-no-target-rejected=" + nativeInCombatNegative
+                        + " native-restored=" + nativeInCombatRestored);
                 boolean utilityTargetCount = behaviors.testCondition(
                         skills.bindCondition("targetcount 1"), conditionContext);
                 boolean utilityMobsRadius = behaviors.testCondition(
@@ -3941,13 +4017,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var villager = world.spawn(location.clone().add(11, 0, 0), org.bukkit.entity.Villager.class);
                 var horse = world.spawn(location.clone().add(13, 0, 0), org.bukkit.entity.Horse.class);
                 var poweredCreeper = world.spawn(location.clone().add(15, 0, 0), org.bukkit.entity.Creeper.class);
+                var conditionAngryBee = world.spawn(location.clone().add(17, 0, 0), org.bukkit.entity.Bee.class);
+                var conditionAngryVex = world.spawn(location.clone().add(19, 0, 0), org.bukkit.entity.Vex.class);
+                var bogged = world.spawn(location.clone().add(21, 0, 0), org.bukkit.entity.Bogged.class);
+                var snowGolem = world.spawn(location.clone().add(23, 0, 0), org.bukkit.entity.Snowman.class);
                 wolf.setTamed(true);
                 sheep.setSheared(true);
+                bogged.setSheared(true);
+                snowGolem.setDerp(true);
                 horse.getInventory().setSaddle(new org.bukkit.inventory.ItemStack(org.bukkit.Material.SADDLE));
                 poweredCreeper.setPowered(true);
+                conditionAngryBee.setAnger(1200);
+                conditionAngryBee.setHasNectar(true);
+                conditionAngryVex.setCharging(true);
                 pillager.setPatrolLeader(true);
                 conditionCategoryEntities.addAll(java.util.List.of(
-                        wolf, pillager, sheep, villager, horse, poweredCreeper));
+                        wolf, pillager, sheep, villager, horse, poweredCreeper,
+                        conditionAngryBee, conditionAngryVex, bogged, snowGolem));
                 var flagConfig = new org.bukkit.configuration.file.YamlConfiguration();
                 flagConfig.set("tamed", true);
                 flagConfig.set("angry", true);
@@ -3985,11 +4071,106 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         modelInstance, horse, 1.0, 13.0, 0, "integration");
                 var poweredCreeperContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, poweredCreeper, 1.0, 15.0, 0, "integration");
+                var boggedContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, bogged, 1.0, 21.0, 0, "integration");
+                var snowGolemContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, snowGolem, 1.0, 23.0, 0, "integration");
                 boolean entityStateConditions = behaviors.testCondition(
                         skills.bindCondition("is-tamed"), wolfContext)
                         && behaviors.testCondition(skills.bindCondition("is-sheared"), sheepContext)
                         && behaviors.testCondition(skills.bindCondition("is-saddled"), horseContext)
                         && behaviors.testCondition(skills.bindCondition("is-powered"), poweredCreeperContext);
+                String isShearedCondition = skills.bindCondition("is-sheared");
+                String targetIsShearedCondition = skills.bindCondition("target-is-sheared");
+                boolean sheepSelfPositive = behaviors.testCondition(isShearedCondition, sheepContext);
+                boolean sheepTargetPositive = behaviors.testCondition(targetIsShearedCondition, sheepContext);
+                boolean boggedSelfPositive = behaviors.testCondition(isShearedCondition, boggedContext);
+                boolean boggedTargetPositive = behaviors.testCondition(targetIsShearedCondition, boggedContext);
+                boolean snowGolemSelfPositive = behaviors.testCondition(isShearedCondition, snowGolemContext);
+                boolean snowGolemTargetPositive = behaviors.testCondition(
+                        targetIsShearedCondition, snowGolemContext);
+                sheep.setSheared(false);
+                bogged.setSheared(false);
+                snowGolem.setDerp(false);
+                boolean sheepSelfNegative = !behaviors.testCondition(isShearedCondition, sheepContext);
+                boolean sheepTargetNegative = !behaviors.testCondition(targetIsShearedCondition, sheepContext);
+                boolean boggedSelfNegative = !behaviors.testCondition(isShearedCondition, boggedContext);
+                boolean boggedTargetNegative = !behaviors.testCondition(targetIsShearedCondition, boggedContext);
+                boolean snowGolemSelfNegative = !behaviors.testCondition(isShearedCondition, snowGolemContext);
+                boolean snowGolemTargetNegative = !behaviors.testCondition(
+                        targetIsShearedCondition, snowGolemContext);
+                boolean unsupportedShearedRejected = !behaviors.testCondition(
+                        isShearedCondition, pillagerContext)
+                        && !behaviors.testCondition(targetIsShearedCondition, pillagerContext);
+                var missingEntityContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+                boolean missingShearedContextRejected = !behaviors.testCondition(
+                        isShearedCondition, missingEntityContext)
+                        && !behaviors.testCondition(targetIsShearedCondition, missingEntityContext);
+                boolean shearedAliases = isShearedCondition != null && targetIsShearedCondition != null;
+                boolean entityShearedStates = sheepSelfPositive && sheepTargetPositive
+                        && sheepSelfNegative && sheepTargetNegative
+                        && boggedSelfPositive && boggedTargetPositive
+                        && boggedSelfNegative && boggedTargetNegative
+                        && snowGolemSelfPositive && snowGolemTargetPositive
+                        && snowGolemSelfNegative && snowGolemTargetNegative
+                        && unsupportedShearedRejected && missingShearedContextRejected && shearedAliases;
+                entityStateConditions &= entityShearedStates;
+                getLogger().info("[自检] entity-sheared-states result=" + entityShearedStates
+                        + " sheep-self-positive=" + sheepSelfPositive
+                        + " sheep-target-positive=" + sheepTargetPositive
+                        + " sheep-self-negative=" + sheepSelfNegative
+                        + " sheep-target-negative=" + sheepTargetNegative
+                        + " bogged-self-positive=" + boggedSelfPositive
+                        + " bogged-target-positive=" + boggedTargetPositive
+                        + " bogged-self-negative=" + boggedSelfNegative
+                        + " bogged-target-negative=" + boggedTargetNegative
+                        + " snow-golem-self-positive=" + snowGolemSelfPositive
+                        + " snow-golem-target-positive=" + snowGolemTargetPositive
+                        + " snow-golem-self-negative=" + snowGolemSelfNegative
+                        + " snow-golem-target-negative=" + snowGolemTargetNegative
+                        + " unsupported-rejected=" + unsupportedShearedRejected
+                        + " missing-context-rejected=" + missingShearedContextRejected
+                        + " aliases=" + shearedAliases);
+                var beeContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, conditionAngryBee, 1.0, 17.0, 0, "integration");
+                var vexContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, conditionAngryVex, 1.0, 19.0, 0, "integration");
+                String angryCondition = skills.bindCondition("angry");
+                String angryAliasCondition = skills.bindCondition("isAngry");
+                String pollinatedAliasCondition = skills.bindCondition("hasNectar");
+                boolean beeAngryPositive = behaviors.testCondition(angryCondition, beeContext);
+                conditionAngryBee.setAnger(0);
+                boolean beeAngryNegative = !behaviors.testCondition(angryCondition, beeContext);
+                boolean wolfAngryPositive = behaviors.testCondition(angryAliasCondition, wolfContext);
+                wolf.setAngry(false);
+                boolean wolfAngryNegative = !behaviors.testCondition(angryCondition, wolfContext);
+                wolf.setAngry(true);
+                boolean vexAngryPositive = behaviors.testCondition(angryCondition, vexContext);
+                conditionAngryVex.setCharging(false);
+                boolean vexAngryNegative = !behaviors.testCondition(angryCondition, vexContext);
+                boolean beePollinatedPositive = behaviors.testCondition(pollinatedAliasCondition, beeContext);
+                conditionAngryBee.setHasNectar(false);
+                boolean beePollinatedNegative = !behaviors.testCondition(pollinatedAliasCondition, beeContext);
+                boolean unsupportedAngryRejected = !behaviors.testCondition(angryCondition, pillagerContext);
+                boolean missingContextRejected = !behaviors.testCondition(angryCondition,
+                        dev.helstera.api.behavior.BehaviorContext.of(null, null, 1.0, -1, 0, "integration"));
+                boolean angerPollinationAliases = angryCondition != null && angryAliasCondition != null
+                        && pollinatedAliasCondition != null;
+                boolean angerPollinationConditions = beeAngryPositive && beeAngryNegative
+                        && wolfAngryPositive && wolfAngryNegative && vexAngryPositive && vexAngryNegative
+                        && beePollinatedPositive && beePollinatedNegative && unsupportedAngryRejected
+                        && missingContextRejected && angerPollinationAliases;
+                entityStateConditions &= angerPollinationConditions;
+                getLogger().info("[自检] entity-angry-pollination result=" + angerPollinationConditions
+                        + " bee-angry-positive=" + beeAngryPositive + " bee-angry-negative=" + beeAngryNegative
+                        + " wolf-angry-positive=" + wolfAngryPositive + " wolf-angry-negative=" + wolfAngryNegative
+                        + " vex-angry-positive=" + vexAngryPositive + " vex-angry-negative=" + vexAngryNegative
+                        + " bee-pollinated-positive=" + beePollinatedPositive
+                        + " bee-pollinated-negative=" + beePollinatedNegative
+                        + " unsupported-angry-rejected=" + unsupportedAngryRejected
+                        + " missing-context-rejected=" + missingContextRejected
+                        + " aliases=" + angerPollinationAliases);
                 var spatialTarget = world.spawn(location.clone().add(3, 0, 0), org.bukkit.entity.Zombie.class);
                 var facing = zombie.getLocation().getDirection().setY(0).normalize();
                 if (facing.lengthSquared() == 0) facing = new org.bukkit.util.Vector(0, 0, 1);
@@ -5467,6 +5648,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " target-kill=" + targetKillMechanic
                         + " damage-melee=" + damageMeleeMechanic
                         + " condition-utility=" + conditionUtilityAliases
+                        + " in-combat-condition=" + utilityInCombat
                         + " mobs-in-chunk-condition=" + mobsInChunkCondition
                         + " player-radius-conditions=" + playerRadiusConditions
                         + " cooldown-mechanics=" + cooldownMechanics
@@ -10778,6 +10960,92 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean duplicateIdentityAliasRejected = dev.helstera.api.behavior.Targeters.select(
                         "@living{targetvanilla=true;targetnonmythic=false}", noIdentitySource,
                         identityCandidates, java.util.List.of()).isEmpty();
+                var previousTargeterFactions = dev.helstera.api.behavior.Factions.table();
+                var targeterFactions = new dev.helstera.ai.FactionService();
+                targeterFactions.load(new dev.helstera.ai.FactionService.Config(null, true,
+                        java.util.Map.of("guards", "guards"), java.util.Map.of()));
+                targeterFactions.bindInstance(base.getUniqueId(), "guards");
+                targeterFactions.bindInstance(monster.getUniqueId(), "guards");
+                boolean ownerRelationSet = dev.helstera.api.behavior.MobRelations.setOwner(base, holder);
+                dev.helstera.api.behavior.Factions.install(targeterFactions);
+                boolean ownerRelationTarget;
+                boolean ownerTargetDisabled;
+                boolean ownerIgnored;
+                boolean ownerPriority;
+                boolean factionRelationTarget;
+                boolean factionIgnored;
+                boolean sameFactionTarget;
+                boolean sameFactionDisabled;
+                boolean sameFactionPriority;
+                boolean sameFactionWorldTarget;
+                boolean targetAllRelations;
+                boolean relationOptionsRejected;
+                try {
+                    var ownerTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@living{target=players;targetowner=true;targetself=false}",
+                            instance, identityCandidates, java.util.List.of());
+                    var ownerDisabledTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@living{target=players;targetowner=false;targetself=false}",
+                            instance, identityCandidates, java.util.List.of());
+                    var ownerIgnoredTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@living{ignore=owner;targetself=false}", instance, identityCandidates, java.util.List.of());
+                    var ownerPriorityTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@living{target=monsters;ignore=owner;targetowner=true;targetself=false}",
+                            instance, identityCandidates, java.util.List.of());
+                    var factionTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@living{target=players;targetsamefaction=true;targetself=false}",
+                            instance, identityCandidates, java.util.List.of());
+                    var factionIgnoredTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@living{ignore=faction;targetself=false}", instance, identityCandidates, java.util.List.of());
+                    var sameFactionTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@living{target=players;targetsamefaction=true;targetself=false}",
+                            instance, identityCandidates, java.util.List.of());
+                    var sameFactionDisabledTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@living{target=players;targetsamefaction=false;targetself=false}",
+                            instance, identityCandidates, java.util.List.of());
+                    var sameFactionPriorityTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@living{ignore=faction;targetsamefaction=true;targetself=false}",
+                            instance, identityCandidates, java.util.List.of());
+                    var sameFactionWorldTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@entitiesinworld{targetsamefaction=true}", worldTargetContext,
+                            java.util.List.of(monster), java.util.List.of());
+                    var targetAllRelationTargets = dev.helstera.api.behavior.Targeters.select(
+                            "@living{target=players;ignore=owner;targetowner=false;targetsamefaction=false;targetall=true;targetself=false}",
+                            instance, identityCandidates, java.util.List.of());
+                    relationOptionsRejected = dev.helstera.api.behavior.Targeters.select(
+                            "@living{targetowner=maybe}", instance, identityCandidates, java.util.List.of()).isEmpty()
+                            && dev.helstera.api.behavior.Targeters.select(
+                            "@living{targetowner=true;targetowner=false}",
+                            instance, identityCandidates, java.util.List.of()).isEmpty()
+                            && dev.helstera.api.behavior.Targeters.select(
+                            "@living{targetsamefaction=true;targetsamefaction=false}",
+                            instance, identityCandidates, java.util.List.of()).isEmpty()
+                            && dev.helstera.api.behavior.Targeters.select(
+                            "@living{target=owner}", instance, identityCandidates, java.util.List.of()).isEmpty()
+                            && dev.helstera.api.behavior.Targeters.select(
+                            "@living{target=faction}", instance, identityCandidates, java.util.List.of()).isEmpty();
+                    ownerRelationTarget = ownerTargets.equals(java.util.List.of(holder));
+                    ownerTargetDisabled = ownerDisabledTargets.isEmpty();
+                    ownerIgnored = ownerIgnoredTargets.equals(java.util.List.of(monster));
+                    ownerPriority = ownerPriorityTargets.size() == 2
+                            && ownerPriorityTargets.containsAll(java.util.List.of(holder, monster));
+                    factionRelationTarget = factionTargets.size() == 2
+                            && factionTargets.containsAll(java.util.List.of(holder, monster));
+                    factionIgnored = factionIgnoredTargets.equals(java.util.List.of(holder));
+                    sameFactionTarget = sameFactionTargets.size() == 2
+                            && sameFactionTargets.containsAll(java.util.List.of(holder, monster));
+                    sameFactionDisabled = sameFactionDisabledTargets.equals(java.util.List.of(holder));
+                    sameFactionPriority = sameFactionPriorityTargets.size() == 2
+                            && sameFactionPriorityTargets.containsAll(java.util.List.of(holder, monster));
+                    sameFactionWorldTarget = sameFactionWorldTargets.contains(monster);
+                    targetAllRelations = targetAllRelationTargets.size() == identityCandidates.size()
+                            && targetAllRelationTargets.containsAll(identityCandidates);
+                } finally {
+                    dev.helstera.api.behavior.MobRelations.clearOwner(base);
+                    targeterFactions.unbindInstance(base.getUniqueId());
+                    targeterFactions.unbindInstance(monster.getUniqueId());
+                    dev.helstera.api.behavior.Factions.install(previousTargeterFactions);
+                }
                 boolean targeterIdentity = managedMobMarked
                         && mythicTargets.equals(java.util.List.of(base))
                         && nonMythicTargets.size() == 2
@@ -10788,7 +11056,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && vanillaOptionTargets.containsAll(java.util.List.of(holder, monster))
                         && nonMythicOptionTargets.equals(vanillaOptionTargets)
                         && nonMythicDisabledTargets.equals(java.util.List.of(base))
-                        && duplicateIdentityAliasRejected;
+                        && duplicateIdentityAliasRejected && ownerRelationSet && ownerRelationTarget
+                        && ownerTargetDisabled && ownerIgnored && ownerPriority && factionTarget
+                        && factionRelationTarget && factionIgnored && sameFactionTarget && sameFactionDisabled
+                        && sameFactionPriority && sameFactionWorldTarget && targetAllRelations
+                        && relationOptionsRejected;
                 double holderDistance = instance.location().distanceSquared(holder.getLocation());
                 double monsterDistance = instance.location().distanceSquared(monster.getLocation());
                 boolean nearestLivingTarget = nearestLiving.size() == 1
@@ -10809,8 +11081,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " player-target=" + playerTarget
                         + " monster-target=" + monsterTarget
                         + " clear-no-fallback=" + clearNoFallback
-                        + " owner-target=" + ownerTarget
-                        + " faction-target=" + factionTarget
+                        + " owner-target=" + ownerRelationTarget
+                        + " faction-target=" + factionRelationTarget
                         + " conditional-target=" + conditionalTarget
                         + " players-in-world=" + worldPlayerTarget
                         + " players-on-server=" + serverPlayerTargets
@@ -10841,6 +11113,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " targetnonmythic=" + nonMythicOptionTargets.equals(vanillaOptionTargets)
                         + " targetnonmythic-false=" + nonMythicDisabledTargets.equals(java.util.List.of(base))
                         + " duplicate-rejected=" + duplicateIdentityAliasRejected
+                        + " owner-target=" + ownerTarget
+                        + " owner-target-disabled=" + ownerTargetDisabled
+                        + " owner-ignore=" + ownerIgnored
+                        + " owner-priority=" + ownerPriority
+                        + " faction-target=" + factionTarget
+                        + " faction-ignore=" + factionIgnored
+                        + " same-faction=" + sameFactionTarget
+                        + " same-faction-disabled=" + sameFactionDisabled
+                        + " faction-priority=" + sameFactionPriority
+                        + " same-faction-world=" + sameFactionWorldTarget
+                        + " targetall-relations=" + targetAllRelations
+                        + " relation-options-rejected=" + relationOptionsRejected
                         + " passed=" + targeterIdentity);
 
                 Location routeOrigin = base.getLocation().clone();

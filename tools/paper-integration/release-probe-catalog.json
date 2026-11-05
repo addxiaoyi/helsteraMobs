@@ -35,7 +35,7 @@
     {
       "id": "targeterIdentityFilter",
       "status": "passed",
-      "requiredObservation": "targeter-identity-filter managed=true target-mythic=true target-nonmythic=true ignore-mythic=true ignore-vanilla=true targetvanilla=true targetnonmythic=true targetnonmythic-false=true duplicate-rejected=true passed=true"
+      "requiredObservation": "targeter-identity-filter managed=true target-mythic=true target-nonmythic=true ignore-mythic=true ignore-vanilla=true targetvanilla=true targetnonmythic=true targetnonmythic-false=true duplicate-rejected=true owner-target=true owner-target-disabled=true owner-ignore=true owner-priority=true faction-target=true faction-ignore=true same-faction=true same-faction-disabled=true faction-priority=true same-faction-world=true targetall-relations=true relation-options-rejected=true passed=true"
     },
     {
       "id": "airLevelCondition",
@@ -286,6 +286,11 @@
       "status": "passed"
     },
     {
+      "id": "inCombatCondition",
+      "status": "passed",
+      "requiredObservation": "in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true"
+    },
+    {
       "id": "consumeSlotMechanic",
       "status": "passed"
     },
@@ -453,6 +458,16 @@
     {
       "id": "entityFlagOptions",
       "status": "passed"
+    },
+    {
+      "id": "entityAngryPollination",
+      "status": "passed",
+      "requiredObservation": "entity-angry-pollination result=true bee-angry-positive=true bee-angry-negative=true wolf-angry-positive=true wolf-angry-negative=true vex-angry-positive=true vex-angry-negative=true bee-pollinated-positive=true bee-pollinated-negative=true unsupported-angry-rejected=true missing-context-rejected=true aliases=true"
+    },
+    {
+      "id": "entityShearedStates",
+      "status": "passed",
+      "requiredObservation": "entity-sheared-states result=true sheep-self-positive=true sheep-target-positive=true sheep-self-negative=true sheep-target-negative=true bogged-self-positive=true bogged-target-positive=true bogged-self-negative=true bogged-target-negative=true snow-golem-self-positive=true snow-golem-target-positive=true snow-golem-self-negative=true snow-golem-target-negative=true unsupported-rejected=true missing-context-rejected=true aliases=true"
     },
     {
       "id": "entityItemSimilarCondition",
@@ -1279,6 +1294,11 @@
     {
       "id": "spawningDistanceRuntime",
       "status": "passed"
+    },
+    {
+      "id": "spawningDistanceClientWalk",
+      "status": "passed",
+      "requiredObservationPattern": "^spawning-distance-client-walk result=true player-displacement=(?:8|9|[1-9][0-9]+)(?:\\.[0-9]+)? player-entity-distance=(?!(?:[0-7](?:\\.[0-9]+)?|8(?:\\.0+)?)(?:\\s|$))[0-9]+(?:\\.[0-9]+)? instance-removed=true entity-removed=true$"
     },
     {
       "id": "spyglassCondition",

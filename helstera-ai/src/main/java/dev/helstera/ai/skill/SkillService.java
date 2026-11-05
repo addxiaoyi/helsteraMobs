@@ -1812,6 +1812,8 @@ public final class SkillService {
             case "isbaby", "baby", "ischild", "child" -> "is-baby";
             case "isadult", "adult" -> "is-adult";
             case "mobsize", "mob-size", "size" -> "mob-size";
+            case "angry", "isangry", "is-angry" -> "angry";
+            case "pollinated", "ispollinated", "is-pollinated", "hasnectar", "has-nectar" -> "pollinated";
             case "istamed", "tamed" -> "is-tamed";
             case "issheared", "sheared" -> "is-sheared";
             case "issaddled", "saddled" -> "is-saddled";
