@@ -211,6 +211,7 @@ $probeSpecs = [ordered]@{
     ownerOnlineCondition = 'skill-actions .*owner-online-condition=true'
     parentRelation = 'skill-actions .*parent-relation=true'
     conditionIsChild = 'skill-actions .*is-child-condition=true'
+    importedIsChildCondition = 'skill-actions .*is-child-import-condition=true adult-parent-positive=true adult-not-baby=true unrelated-baby-not-child=true baby-positive=true'
     parentDerivedConditions = 'skill-actions .*parent-derived-conditions=true'
     timeWeather = 'skill-actions .*time-weather=true'
     customItemResolver = 'skill-actions .*custom-item=true'

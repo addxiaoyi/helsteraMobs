@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-is-child-import-strict-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-is-child-import-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-is-child-import-strict-20261105-r1.log.gz",
+    "logSha256": "320bc881b0df313ef0f97d1dc2b472d1c614f83d01e9579af2312e681f566575",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-is-child-import-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "c17ae142d838ab366d656fb665dbd79d9a6b0988fce528655cdd46c17767b27b",
+    "pluginSha256": "e0c6fdaf31e96003a68bd589d1ca88e0786dabb0ecdf8333022474d1d52ddc7b",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-age-options-strict-20261105-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-age-options-strict-20261105-r3.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-age-options-strict-20261105-r3.log.gz",

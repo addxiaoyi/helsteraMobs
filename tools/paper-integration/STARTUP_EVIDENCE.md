@@ -1,5 +1,15 @@
 # Paper Startup Evidence
 
+Fixture `srv-paper-is-child-import-strict-20261105-r1` passed the full strict
+gate on Paper 1.21.1-133: 350 probes, 331 passed, 19 expected rejections, and
+zero incomplete. `importedIsChildCondition` executes `?isChild` through
+`MmConditions.translate` and `SkillService`: an adult Pig related to its caster
+matches, the same entity does not match `isBaby`, an unrelated baby Pig does
+not match `isChild`, and the baby control matches `isBaby`. Report and
+compressed server/client logs are listed in `release-evidence.json`; plugin
+SHA-256:
+`e0c6fdaf31e96003a68bd589d1ca88e0786dabb0ecdf8333022474d1d52ddc7b`.
+
 Fixture `srv-paper-age-options-strict-20261105-r3` passed the full strict
 gate on Paper 1.21.1-133: 349 probes, 330 passed and 19 expected rejections,
 with zero incomplete. Its required `ageOptions` observation is
@@ -1409,10 +1419,10 @@ the Paper 1.21.1 release target remains open.
 
 Fixture `srv-paper-integration-is-child-20261016` additionally created a real
 Pig child with the model-bound Wolf as parent and evaluated `is-child` against
-that Pig target. It verifies the relation evaluator now used for Mythic
-`isChild`/`child`, but predates the corrected importer mapping and is not
-evidence for the import path. `conditionIsChild`, `parentRelation`, and
-aggregate `conditionCatalog` all passed; the Pig and relation were cleaned up.
+that Pig target. It verified the runtime relation evaluator only. The later
+strict fixture `srv-paper-is-child-import-strict-20261105-r1` verifies the
+corrected `?isChild` importer mapping through `SkillService` on real Paper
+entities.
 
 Fixture `srv-paper-integration-parent-derived-20261016` checked the derived
 parent conditions on Paper 1.21.1: `is-sibling` passed for two children sharing
