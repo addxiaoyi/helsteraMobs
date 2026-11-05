@@ -1835,6 +1835,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             org.bukkit.entity.Zombie zombie = null;
             org.bukkit.entity.LivingEntity targetGroundProbeEntity = null;
             org.bukkit.entity.Zombie targetWaterProbeEntity = null;
+            org.bukkit.entity.Phantom targetFlyingProbeEntity = null;
+            org.bukkit.entity.Zombie targetVulnerableProbeEntity = null;
+            org.bukkit.entity.Sheep targetAnimalProbeEntity = null;
+            org.bukkit.entity.Villager targetVillagerProbeEntity = null;
             org.bukkit.entity.Zombie conditionTarget = null;
             org.bukkit.entity.Zombie locationProbeTarget = null;
             org.bukkit.entity.LivingEntity meleeProbeTarget = null;
@@ -4122,7 +4126,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean argumentsRejected = true;
                 for (String spec : java.util.List.of("@living{r=1;radius=10}",
                         "@living{count=1;limit=2}", "@living{filter=!unknown-entity}",
-                        "@living{limit=1}junk", "@living >")) {
+                        "@living{limit=1}junk", "@living >",
+                        "@living{targetplayers=maybe}", "@living{targetcreative=1}",
+                        "@living{targetspectator=true;targetspectator=false}",
+                        "@living{targetinvulnerable=maybe}",
+                        "@living{targetinvulnerable=true;targetinvulnerable=false}",
+                        "@living{targetarmorstands=maybe}",
+                        "@living{targetarmorstands=true;targetarmorstands=false}",
+                        "@living{targetanimals=maybe}",
+                        "@living{targetanimals=true;targetanimals=false}",
+                        "@living{targetcreatures=maybe}",
+                        "@living{targetcreatures=true;targetcreatures=false}",
+                        "@living{targetvillagers=maybe}",
+                        "@living{targetvillagers=true;targetvillagers=false}",
+                        "@living{targetall=maybe}",
+                        "@living{targetall=true;targetall=false}")) {
                     argumentsRejected &= dev.helstera.api.behavior.Targeters.select(spec, modelInstance,
                             chainCandidates, java.util.List.of()).isEmpty();
                 }
@@ -4173,20 +4191,83 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 targetWaterProbeEntity.setAI(false);
                 targetWaterProbeEntity.setGravity(false);
                 targetWaterProbeEntity.setInvulnerable(true);
+                targetFlyingProbeEntity = world.spawn(
+                        location.clone().add(68, 5, 0), org.bukkit.entity.Phantom.class);
+                targetFlyingProbeEntity.setAI(false);
+                targetFlyingProbeEntity.setGravity(false);
+                targetFlyingProbeEntity.setInvulnerable(true);
+                targetFlyingProbeEntity.setSilent(true);
+                targetVulnerableProbeEntity = world.spawn(
+                        location.clone().add(70, 2, 0), org.bukkit.entity.Zombie.class);
+                targetVulnerableProbeEntity.setAI(false);
+                targetVulnerableProbeEntity.setGravity(false);
+                targetVulnerableProbeEntity.setInvulnerable(false);
+                targetAnimalProbeEntity = world.spawn(
+                        location.clone().add(72, 2, 0), org.bukkit.entity.Sheep.class);
+                targetAnimalProbeEntity.setAI(false);
+                targetAnimalProbeEntity.setGravity(false);
+                targetAnimalProbeEntity.setInvulnerable(true);
+                targetAnimalProbeEntity.setSilent(true);
+                targetVillagerProbeEntity = world.spawn(
+                        location.clone().add(74, 2, 0), org.bukkit.entity.Villager.class);
+                targetVillagerProbeEntity.setAI(false);
+                targetVillagerProbeEntity.setGravity(false);
+                targetVillagerProbeEntity.setInvulnerable(true);
+                targetVillagerProbeEntity.setSilent(true);
                 var groundFilterTarget = targetGroundProbeEntity;
                 var waterFilterTarget = targetWaterProbeEntity;
+                var flyingFilterTarget = targetFlyingProbeEntity;
+                var vulnerableFilterTarget = targetVulnerableProbeEntity;
+                var animalFilterTarget = targetAnimalProbeEntity;
+                var villagerFilterTarget = targetVillagerProbeEntity;
                 boolean syntaxRejected = argumentsRejected;
                 boolean chainRejected = chainArgumentsRejected;
                 boolean controlAccepted = argumentsControl;
                 boolean playersAccepted = targetPlayersFilter;
                 boolean invalidFilterRejected = invalidEntityFilterRejected;
                 var originalFilterBlocks = java.util.List.copyOf(targetFilterBlockStates);
+                var gameModeFilterPlayer = getServer().getOnlinePlayers().stream().findFirst().orElse(null);
+                var originalFilterGameMode = gameModeFilterPlayer == null ? null : gameModeFilterPlayer.getGameMode();
                 getServer().getScheduler().runTaskLater(this, () -> {
+                    boolean targetPlayersSpecific = false;
+                    boolean targetPlayersDisabled = false;
+                    boolean targetCreativeFilter = false;
+                    boolean ignoreCreativeFilter = false;
+                    boolean targetCreativePriority = false;
+                    boolean targetCreativeDisabled = false;
+                    boolean targetSpectatorFilter = false;
+                    boolean ignoreSpectatorFilter = false;
+                    boolean targetSpectatorPriority = false;
+                    boolean targetSpectatorDisabled = false;
+                    boolean targetAnimalsDisabled = false;
+                    boolean targetAnimalsPriority = false;
+                    boolean targetCreaturesDisabled = false;
+                    boolean targetCreaturesPriority = false;
+                    boolean targetVillagersDisabled = false;
+                    boolean targetVillagersPriority = false;
+                    boolean targetAllPriority = false;
                     try {
                         var stateFilterCandidates = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
                         stateFilterCandidates.addAll(getServer().getOnlinePlayers());
                         stateFilterCandidates.add(groundFilterTarget);
                         stateFilterCandidates.add(waterFilterTarget);
+                        stateFilterCandidates.add(flyingFilterTarget);
+                        stateFilterCandidates.add(vulnerableFilterTarget);
+                        stateFilterCandidates.add(animalFilterTarget);
+                        stateFilterCandidates.add(villagerFilterTarget);
+                        var playerFlagExpected = stateFilterCandidates.stream()
+                                .filter(org.bukkit.entity.Player.class::isInstance).toList();
+                        var playerFlagSelected = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=players;targetplayers=true;ignore=players}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        targetPlayersSpecific = !playerFlagExpected.isEmpty()
+                                && playerFlagSelected.size() == playerFlagExpected.size()
+                                && playerFlagSelected.containsAll(playerFlagExpected);
+                        targetPlayersDisabled = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=players;targetplayers=false}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of()).isEmpty();
                         var groundFilterExpected = stateFilterCandidates.stream()
                                 .filter(entity -> entity.isOnGround() && !entity.isInWater()).toList();
                         var waterFilterExpected = stateFilterCandidates.stream()
@@ -4226,34 +4307,283 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         boolean ignoreWaterFilter = waterIgnored.size() == waterIgnoreExpected.size()
                                 && waterIgnored.containsAll(waterIgnoreExpected)
                                 && !waterIgnored.contains(waterFilterTarget);
-                        boolean unsupportedFlightFilterRejected = dev.helstera.api.behavior.Targeters.select(
+                        var flyingFilterExpected = stateFilterCandidates.stream()
+                                .filter(entity -> !entity.isOnGround() && !entity.isInWater()).toList();
+                        var flyingFilterSelected = dev.helstera.api.behavior.Targeters.select(
                                 "@living{target=flying}",
                                 (dev.helstera.api.instance.ModelInstance) null,
-                                stateFilterCandidates,
-                                java.util.List.of()).isEmpty();
+                                stateFilterCandidates, java.util.List.of());
+                        boolean targetFlyingFilter = !flyingFilterTarget.isOnGround()
+                                && !flyingFilterTarget.isInWater()
+                                && flyingFilterSelected.size() == flyingFilterExpected.size()
+                                && flyingFilterSelected.containsAll(flyingFilterExpected)
+                                && flyingFilterSelected.contains(flyingFilterTarget);
+                        var flyingIgnored = dev.helstera.api.behavior.Targeters.select(
+                                "@living{ignore=flying}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        var flyingIgnoreExpected = stateFilterCandidates.stream()
+                                .filter(entity -> entity.isOnGround() || entity.isInWater()).toList();
+                        boolean ignoreFlyingFilter = flyingIgnored.size() == flyingIgnoreExpected.size()
+                                && flyingIgnored.containsAll(flyingIgnoreExpected)
+                                && !flyingIgnored.contains(flyingFilterTarget);
+                        var targetInvulnerableExpected = stateFilterCandidates.stream()
+                                .filter(entity -> !entity.isInvulnerable()).toList();
+                        var targetInvulnerableDisabledSelection = dev.helstera.api.behavior.Targeters.select(
+                                "@living{targetinvulnerable=false}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        boolean targetInvulnerableDisabled = stateFilterCandidates.stream()
+                                .anyMatch(org.bukkit.entity.Entity::isInvulnerable)
+                                && targetInvulnerableExpected.contains(vulnerableFilterTarget)
+                                && targetInvulnerableDisabledSelection.size() == targetInvulnerableExpected.size()
+                                && targetInvulnerableDisabledSelection.containsAll(targetInvulnerableExpected);
+                        var targetInvulnerableOverrideExpected = stateFilterCandidates.stream()
+                                .filter(entity -> entity instanceof org.bukkit.entity.Player || entity.isInvulnerable())
+                                .toList();
+                        var targetInvulnerableOverrideSelection = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=players;targetinvulnerable=true}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        boolean targetInvulnerablePriority = targetInvulnerableOverrideExpected.size() >= 3
+                                && targetInvulnerableOverrideSelection.size() == targetInvulnerableOverrideExpected.size()
+                                && targetInvulnerableOverrideSelection.containsAll(targetInvulnerableOverrideExpected)
+                                && targetInvulnerableOverrideSelection.contains(groundFilterTarget)
+                                && targetInvulnerableOverrideSelection.contains(waterFilterTarget)
+                                && targetInvulnerableOverrideSelection.contains(flyingFilterTarget)
+                                && !targetInvulnerableOverrideSelection.contains(vulnerableFilterTarget);
+                        var targetArmorStandsExpected = stateFilterCandidates.stream()
+                                .filter(entity -> entity instanceof org.bukkit.entity.Player
+                                        || entity instanceof org.bukkit.entity.ArmorStand).toList();
+                        var targetArmorStandsSelection = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=players;targetarmorstands=true}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        var armorStandTargets = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=armorstand}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        var armorStandUnderscoreTargets = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=armor_stand}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        boolean targetArmorStandsPriority = targetArmorStandsExpected.contains(groundFilterTarget)
+                                && targetArmorStandsSelection.size() == targetArmorStandsExpected.size()
+                                && targetArmorStandsSelection.containsAll(targetArmorStandsExpected)
+                                && armorStandTargets.equals(java.util.List.of(groundFilterTarget))
+                                && armorStandUnderscoreTargets.equals(java.util.List.of(groundFilterTarget));
+                        var targetArmorStandsDisabledExpected = stateFilterCandidates.stream()
+                                .filter(entity -> !(entity instanceof org.bukkit.entity.ArmorStand)).toList();
+                        var targetArmorStandsDisabledSelection = dev.helstera.api.behavior.Targeters.select(
+                                "@living{targetarmorstands=false}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        boolean targetArmorStandsDisabled = targetArmorStandsDisabledSelection.size()
+                                == targetArmorStandsDisabledExpected.size()
+                                && targetArmorStandsDisabledSelection.containsAll(targetArmorStandsDisabledExpected)
+                                && !targetArmorStandsDisabledSelection.contains(groundFilterTarget);
+                        var targetAnimalsDisabledExpected = stateFilterCandidates.stream()
+                                .filter(entity -> !(entity instanceof org.bukkit.entity.Animals)).toList();
+                        var targetAnimalsDisabledSelection = dev.helstera.api.behavior.Targeters.select(
+                                "@living{targetanimals=false}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        targetAnimalsDisabled = targetAnimalsDisabledSelection.size()
+                                == targetAnimalsDisabledExpected.size()
+                                && targetAnimalsDisabledSelection.containsAll(targetAnimalsDisabledExpected)
+                                && !targetAnimalsDisabledSelection.contains(animalFilterTarget);
+                        var targetAnimalsExpected = stateFilterCandidates.stream()
+                                .filter(entity -> entity instanceof org.bukkit.entity.Player
+                                        || entity instanceof org.bukkit.entity.Animals).toList();
+                        var targetAnimalsSelection = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=players;targetanimals=true}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        targetAnimalsPriority = targetAnimalsExpected.contains(animalFilterTarget)
+                                && targetAnimalsSelection.size() == targetAnimalsExpected.size()
+                                && targetAnimalsSelection.containsAll(targetAnimalsExpected);
+                        var targetCreaturesDisabledExpected = stateFilterCandidates.stream()
+                                .filter(entity -> !(entity instanceof org.bukkit.entity.Animals)
+                                        && !(entity instanceof org.bukkit.entity.Monster)
+                                        && !(entity instanceof org.bukkit.entity.Villager)).toList();
+                        var targetCreaturesDisabledSelection = dev.helstera.api.behavior.Targeters.select(
+                                "@living{targetcreatures=false}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        targetCreaturesDisabled = targetCreaturesDisabledSelection.size()
+                                == targetCreaturesDisabledExpected.size()
+                                && targetCreaturesDisabledSelection.containsAll(targetCreaturesDisabledExpected)
+                                && !targetCreaturesDisabledSelection.contains(animalFilterTarget)
+                                && !targetCreaturesDisabledSelection.contains(villagerFilterTarget);
+                        var targetCreaturesExpected = stateFilterCandidates.stream()
+                                .filter(entity -> entity instanceof org.bukkit.entity.Player
+                                        || entity instanceof org.bukkit.entity.Animals
+                                        || entity instanceof org.bukkit.entity.Monster
+                                        || entity instanceof org.bukkit.entity.Villager).toList();
+                        var targetCreaturesSelection = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=players;targetcreatures=true}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        targetCreaturesPriority = targetCreaturesExpected.contains(animalFilterTarget)
+                                && targetCreaturesExpected.contains(villagerFilterTarget)
+                                && targetCreaturesSelection.size() == targetCreaturesExpected.size()
+                                && targetCreaturesSelection.containsAll(targetCreaturesExpected);
+                        var targetVillagersDisabledExpected = stateFilterCandidates.stream()
+                                .filter(entity -> !(entity instanceof org.bukkit.entity.Villager)).toList();
+                        var targetVillagersDisabledSelection = dev.helstera.api.behavior.Targeters.select(
+                                "@living{targetvillagers=false}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        targetVillagersDisabled = targetVillagersDisabledSelection.size()
+                                == targetVillagersDisabledExpected.size()
+                                && targetVillagersDisabledSelection.containsAll(targetVillagersDisabledExpected)
+                                && !targetVillagersDisabledSelection.contains(villagerFilterTarget);
+                        var targetVillagersExpected = stateFilterCandidates.stream()
+                                .filter(entity -> entity instanceof org.bukkit.entity.Player
+                                        || entity instanceof org.bukkit.entity.Villager).toList();
+                        var targetVillagersSelection = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=players;targetvillagers=true}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        targetVillagersPriority = targetVillagersExpected.contains(villagerFilterTarget)
+                                && targetVillagersSelection.size() == targetVillagersExpected.size()
+                                && targetVillagersSelection.containsAll(targetVillagersExpected);
+                        var targetAllSelection = dev.helstera.api.behavior.Targeters.select(
+                                "@living{target=players;ignore=animals;targetplayers=false;targetanimals=false;targetall=true}",
+                                (dev.helstera.api.instance.ModelInstance) null,
+                                stateFilterCandidates, java.util.List.of());
+                        targetAllPriority = targetAllSelection.size() == stateFilterCandidates.size()
+                                && targetAllSelection.containsAll(stateFilterCandidates);
+                        if (gameModeFilterPlayer != null && gameModeFilterPlayer.isOnline()) {
+                            gameModeFilterPlayer.setGameMode(org.bukkit.GameMode.CREATIVE);
+                            var creativeExpected = stateFilterCandidates.stream()
+                                    .filter(entity -> entity instanceof org.bukkit.entity.Player player
+                                            && player.getGameMode() == org.bukkit.GameMode.CREATIVE).toList();
+                            var creativeSelected = dev.helstera.api.behavior.Targeters.select(
+                                    "@living{target=creative}",
+                                    (dev.helstera.api.instance.ModelInstance) null,
+                                    stateFilterCandidates, java.util.List.of());
+                            targetCreativeFilter = creativeExpected.contains(gameModeFilterPlayer)
+                                    && creativeSelected.size() == creativeExpected.size()
+                                    && creativeSelected.containsAll(creativeExpected)
+                                    && creativeSelected.contains(gameModeFilterPlayer);
+                            var creativeIgnored = dev.helstera.api.behavior.Targeters.select(
+                                    "@living{ignore=creative}",
+                                    (dev.helstera.api.instance.ModelInstance) null,
+                                    stateFilterCandidates, java.util.List.of());
+                            var creativeIgnoreExpected = stateFilterCandidates.stream()
+                                    .filter(entity -> !(entity instanceof org.bukkit.entity.Player player)
+                                            || player.getGameMode() != org.bukkit.GameMode.CREATIVE).toList();
+                            ignoreCreativeFilter = creativeIgnored.size() == creativeIgnoreExpected.size()
+                                    && creativeIgnored.containsAll(creativeIgnoreExpected)
+                                    && !creativeIgnored.contains(gameModeFilterPlayer);
+                            var creativeSpecific = dev.helstera.api.behavior.Targeters.select(
+                                    "@living{target=creative;ignore=creative;targetcreative=true;targetplayers=false}",
+                                    (dev.helstera.api.instance.ModelInstance) null,
+                                    stateFilterCandidates, java.util.List.of());
+                            targetCreativePriority = !creativeExpected.isEmpty()
+                                    && creativeSpecific.size() == creativeExpected.size()
+                                    && creativeSpecific.containsAll(creativeExpected)
+                                    && creativeSpecific.contains(gameModeFilterPlayer);
+                            targetCreativeDisabled = dev.helstera.api.behavior.Targeters.select(
+                                    "@living{target=creative;targetcreative=false}",
+                                    (dev.helstera.api.instance.ModelInstance) null,
+                                    stateFilterCandidates, java.util.List.of()).isEmpty();
+
+                            gameModeFilterPlayer.setGameMode(org.bukkit.GameMode.SPECTATOR);
+                            var spectatorExpected = stateFilterCandidates.stream()
+                                    .filter(entity -> entity instanceof org.bukkit.entity.Player player
+                                            && player.getGameMode() == org.bukkit.GameMode.SPECTATOR).toList();
+                            var spectatorSelected = dev.helstera.api.behavior.Targeters.select(
+                                    "@living{target=spectator}",
+                                    (dev.helstera.api.instance.ModelInstance) null,
+                                    stateFilterCandidates, java.util.List.of());
+                            targetSpectatorFilter = spectatorExpected.contains(gameModeFilterPlayer)
+                                    && spectatorSelected.size() == spectatorExpected.size()
+                                    && spectatorSelected.containsAll(spectatorExpected)
+                                    && spectatorSelected.contains(gameModeFilterPlayer);
+                            var spectatorIgnored = dev.helstera.api.behavior.Targeters.select(
+                                    "@living{ignore=spectator}",
+                                    (dev.helstera.api.instance.ModelInstance) null,
+                                    stateFilterCandidates, java.util.List.of());
+                            var spectatorIgnoreExpected = stateFilterCandidates.stream()
+                                    .filter(entity -> !(entity instanceof org.bukkit.entity.Player player)
+                                            || player.getGameMode() != org.bukkit.GameMode.SPECTATOR).toList();
+                            ignoreSpectatorFilter = spectatorIgnored.size() == spectatorIgnoreExpected.size()
+                                    && spectatorIgnored.containsAll(spectatorIgnoreExpected)
+                                    && !spectatorIgnored.contains(gameModeFilterPlayer);
+                            var spectatorSpecific = dev.helstera.api.behavior.Targeters.select(
+                                    "@living{target=spectator;ignore=spectator;targetspectator=true;targetplayers=false}",
+                                    (dev.helstera.api.instance.ModelInstance) null,
+                                    stateFilterCandidates, java.util.List.of());
+                            targetSpectatorPriority = !spectatorExpected.isEmpty()
+                                    && spectatorSpecific.size() == spectatorExpected.size()
+                                    && spectatorSpecific.containsAll(spectatorExpected)
+                                    && spectatorSpecific.contains(gameModeFilterPlayer);
+                            targetSpectatorDisabled = dev.helstera.api.behavior.Targeters.select(
+                                    "@living{target=spectator;targetspectator=false}",
+                                    (dev.helstera.api.instance.ModelInstance) null,
+                                    stateFilterCandidates, java.util.List.of()).isEmpty();
+                        }
                         getLogger().info("targeter-argument-validation rejected=" + syntaxRejected
                                 + " chain=" + chainRejected + " control=" + controlAccepted
                                 + " target-players=" + playersAccepted + " ignore-players=" + ignorePlayersFilter
+                                + " target-players-specific=" + targetPlayersSpecific
+                                + " target-players-disabled=" + targetPlayersDisabled
                                 + " invalid-filter=" + invalidFilterRejected
                                 + " target-ground=" + targetGroundFilter + " ignore-ground=" + ignoreGroundFilter
                                 + " target-water=" + targetWaterFilter + " ignore-water=" + ignoreWaterFilter
-                                + " flying-rejected=" + unsupportedFlightFilterRejected
+                                + " target-flying=" + targetFlyingFilter + " ignore-flying=" + ignoreFlyingFilter
+                                + " target-invulnerable-disabled=" + targetInvulnerableDisabled
+                                + " target-invulnerable-priority=" + targetInvulnerablePriority
+                                + " target-armorstands-disabled=" + targetArmorStandsDisabled
+                                + " target-armorstands-priority=" + targetArmorStandsPriority
+                                + " target-animals-disabled=" + targetAnimalsDisabled
+                                + " target-animals-priority=" + targetAnimalsPriority
+                                + " target-creatures-disabled=" + targetCreaturesDisabled
+                                + " target-creatures-priority=" + targetCreaturesPriority
+                                + " target-villagers-disabled=" + targetVillagersDisabled
+                                + " target-villagers-priority=" + targetVillagersPriority
+                                + " target-all=" + targetAllPriority
+                                + " target-creative=" + targetCreativeFilter + " ignore-creative=" + ignoreCreativeFilter
+                                + " target-creative-priority=" + targetCreativePriority
+                                + " target-creative-disabled=" + targetCreativeDisabled
+                                + " target-spectator=" + targetSpectatorFilter + " ignore-spectator=" + ignoreSpectatorFilter
+                                + " target-spectator-priority=" + targetSpectatorPriority
+                                + " target-spectator-disabled=" + targetSpectatorDisabled
                                 + " ground-probe-on-ground=" + groundFilterTarget.isOnGround()
                                 + " ground-probe-at=" + formatProbeLocation(groundFilterTarget.getLocation())
                                 + " ground-probe-support=" + targetGroundFilterBlock.getType()
                                 + " ground-probe-below=" + world.getBlockAt(
                                 groundFilterTarget.getLocation().clone().subtract(0, 0.1, 0)).getType()
                                 + " water-probe-in-water=" + waterFilterTarget.isInWater()
-                                + " water-probe-on-ground=" + waterFilterTarget.isOnGround());
+                                + " water-probe-on-ground=" + waterFilterTarget.isOnGround()
+                                + " flying-probe-on-ground=" + flyingFilterTarget.isOnGround()
+                                + " flying-probe-in-water=" + flyingFilterTarget.isInWater());
                     } finally {
-                        groundFilterTarget.remove();
-                        waterFilterTarget.remove();
-                        for (var originalFilterBlock : originalFilterBlocks) originalFilterBlock.update(true, false);
+                        try {
+                            if (gameModeFilterPlayer != null && gameModeFilterPlayer.isOnline()
+                                    && originalFilterGameMode != null) {
+                                gameModeFilterPlayer.setGameMode(originalFilterGameMode);
+                            }
+                        } finally {
+                            groundFilterTarget.remove();
+                            waterFilterTarget.remove();
+                            flyingFilterTarget.remove();
+                            vulnerableFilterTarget.remove();
+                            animalFilterTarget.remove();
+                            villagerFilterTarget.remove();
+                            for (var originalFilterBlock : originalFilterBlocks) originalFilterBlock.update(true, false);
+                        }
                     }
                 }, 3L);
                 targetFilterBlockStates.clear();
                 targetGroundProbeEntity = null;
                 targetWaterProbeEntity = null;
+                targetFlyingProbeEntity = null;
+                targetVulnerableProbeEntity = null;
+                targetAnimalProbeEntity = null;
+                targetVillagerProbeEntity = null;
                 boolean targeterSorts = highestHealthTargets.equals(java.util.List.of(farTarget, nearTarget))
                         && oldestTargets.equals(java.util.List.of(nearTarget, farTarget))
                         && invalidSortTargets.isEmpty();
@@ -5270,6 +5600,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 if (zombie != null) zombie.remove();
                 if (targetGroundProbeEntity != null) targetGroundProbeEntity.remove();
                 if (targetWaterProbeEntity != null) targetWaterProbeEntity.remove();
+                if (targetFlyingProbeEntity != null) targetFlyingProbeEntity.remove();
+                if (targetVulnerableProbeEntity != null) targetVulnerableProbeEntity.remove();
+                if (targetAnimalProbeEntity != null) targetAnimalProbeEntity.remove();
+                if (targetVillagerProbeEntity != null) targetVillagerProbeEntity.remove();
                 if (conditionTarget != null) conditionTarget.remove();
                 if (locationProbeTarget != null) locationProbeTarget.remove();
                 if (meleeProbeTarget != null) meleeProbeTarget.remove();

@@ -285,9 +285,34 @@ class TargeterOrderingTest {
                 "@living{target=players;ignore=players}", source, candidates, List.of()));
         for (String spec : List.of("@living{target=players,unknown-filter}",
                 "@living{ignore=players,,animals}", "@living{target=players;target=animals}",
-                "@living{targetself=maybe}")) {
+                "@living{targetself=maybe}", "@living{targetplayers=maybe}",
+                "@living{targetcreative=1}", "@living{targetspectator=}",
+                "@living{targetplayers=true;targetplayers=false}",
+                "@living{targetinvulnerable=maybe}",
+                "@living{targetinvulnerable=true;targetinvulnerable=false}",
+                "@living{targetarmorstands=maybe}",
+                "@living{targetarmorstands=true;targetarmorstands=false}",
+                "@living{targetanimals=maybe}",
+                "@living{targetanimals=true;targetanimals=false}",
+                "@living{targetcreatures=maybe}",
+                "@living{targetcreatures=true;targetcreatures=false}",
+                "@living{targetvillagers=maybe}",
+                "@living{targetvillagers=true;targetvillagers=false}",
+                "@living{targetall=maybe}",
+                "@living{targetall=true;targetall=false}")) {
             assertEquals(List.of(), Targeters.select(spec, source, candidates, List.of()), spec);
         }
+        assertEquals(List.of(animal, monster), Targeters.select(
+                "@living{targetplayers=false}", source, candidates, List.of()));
+        assertEquals(candidates, Targeters.select(
+                "@living{targetplayers=true;ignore=players}", source, candidates, List.of()));
+        assertEquals(candidates, Targeters.select(
+                "@living{target=players;ignore=animals;targetplayers=false;targetanimals=false;targetall=true}",
+                source, candidates, List.of()));
+        assertEquals(List.of(player), Targeters.select(
+                "@living{target=players;targetall=false}", source, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{target=players,unknown-filter;targetall=true}", source, candidates, List.of()));
 
         var caster = conditionalLivingProxy(10.0);
         var other = conditionalLivingProxy(12.0);
@@ -305,7 +330,7 @@ class TargeterOrderingTest {
     }
 
     @Test
-    @DisplayName("ground and water filters use mutually exclusive Bukkit states and reject unknown flight state")
+    @DisplayName("ground, water, and flying filters use mutually exclusive Bukkit states")
     void mythicGroundAndWaterFilters() {
         var grounded = stateLivingProxy(true, false);
         var aquatic = stateLivingProxy(false, true);
@@ -326,9 +351,133 @@ class TargeterOrderingTest {
                 "@living{ignore=water}", source, candidates, List.of()));
         assertEquals(List.of(aquatic), Targeters.select(
                 "@living{target=water;ignore=ground}", source, candidates, List.of()));
+        assertEquals(List.of(airborne), Targeters.select(
+                "@living{target=flying}", source, candidates, List.of()));
+        assertEquals(List.of(grounded, aquatic, ambiguous), Targeters.select(
+                "@living{ignore=flying}", source, candidates, List.of()));
+        assertEquals(List.of(grounded, airborne), Targeters.select(
+                "@living{target=ground,flying}", source, candidates, List.of()));
+        assertEquals(List.of(grounded, aquatic, airborne), Targeters.select(
+                "@living{target=ground,water,flying}", source, candidates, List.of()));
         assertEquals(List.of(), Targeters.select(
-                "@living{target=flying}", source, candidates, List.of()),
-                "The documented flying filter has no verified Bukkit-equivalent classification yet");
+                "@living{target=flying,unknown-filter}", source, candidates, List.of()));
+    }
+
+    @Test
+    @DisplayName("creative and spectator filters match only players in the requested game mode")
+    void mythicGameModeFilters() {
+        var survival = gameModePlayer(org.bukkit.GameMode.SURVIVAL);
+        var creative = gameModePlayer(org.bukkit.GameMode.CREATIVE);
+        var adventure = gameModePlayer(org.bukkit.GameMode.ADVENTURE);
+        var spectator = gameModePlayer(org.bukkit.GameMode.SPECTATOR);
+        var mob = livingProxy(org.bukkit.entity.LivingEntity.class);
+        List<LivingEntity> candidates = List.of(survival, creative, adventure, spectator, mob);
+        var source = (dev.helstera.api.instance.ModelInstance) null;
+
+        assertEquals(List.of(creative), Targeters.select(
+                "@living{target=creative}", source, candidates, List.of()));
+        assertEquals(List.of(survival, adventure, spectator, mob), Targeters.select(
+                "@living{ignore=creative}", source, candidates, List.of()));
+        assertEquals(List.of(spectator), Targeters.select(
+                "@living{target=spectator}", source, candidates, List.of()));
+        assertEquals(List.of(survival, creative, adventure, mob), Targeters.select(
+                "@living{ignore=spectator}", source, candidates, List.of()));
+        assertEquals(List.of(creative, spectator), Targeters.select(
+                "@living{target=creative,spectator}", source, candidates, List.of()));
+
+        assertEquals(List.of(survival, adventure, spectator, mob), Targeters.select(
+                "@living{targetplayers=true;targetcreative=false}", source, candidates, List.of()));
+        assertEquals(List.of(creative, mob), Targeters.select(
+                "@living{targetplayers=false;targetcreative=true}", source, candidates, List.of()));
+        assertEquals(List.of(creative), Targeters.select(
+                "@living{target=creative;ignore=creative;targetcreative=true}", source, candidates, List.of()));
+        assertEquals(List.of(spectator), Targeters.select(
+                "@living{target=spectator;ignore=spectator;targetspectator=true}", source, candidates, List.of()));
+        assertEquals(List.of(survival, adventure, spectator), Targeters.select(
+                "@living{target=players;targetplayers=true;ignore=players;targetcreative=false}",
+                source, candidates, List.of()));
+        assertEquals(List.of(mob), Targeters.select(
+                "@living{target=mob;targetplayers=true}", source, candidates, List.of()));
+    }
+
+    @Test
+    @DisplayName("targetinvulnerable includes invulnerable entities and overrides generic type filters")
+    void mythicInvulnerabilityFilter() {
+        var invulnerable = invulnerableLivingProxy(true);
+        var vulnerable = invulnerableLivingProxy(false);
+        var player = gameModePlayer(org.bukkit.GameMode.SURVIVAL);
+        List<LivingEntity> candidates = List.of(invulnerable, vulnerable, player);
+        var source = (dev.helstera.api.instance.ModelInstance) null;
+
+        assertEquals(candidates, Targeters.select("@living", source, candidates, List.of()));
+        assertEquals(List.of(vulnerable, player), Targeters.select(
+                "@living{targetinvulnerable=false}", source, candidates, List.of()));
+        assertEquals(candidates, Targeters.select(
+                "@living{targetinvulnerable=true}", source, candidates, List.of()));
+        assertEquals(List.of(invulnerable, player), Targeters.select(
+                "@living{target=players;targetinvulnerable=true}", source, candidates, List.of()));
+        assertEquals(List.of(invulnerable), Targeters.select(
+                "@living{target=players;targetinvulnerable=true;targetplayers=false}",
+                source, candidates, List.of()));
+        assertEquals(List.of(player), Targeters.select(
+                "@living{target=players;targetinvulnerable=false}", source, candidates, List.of()));
+    }
+
+    @Test
+    @DisplayName("armor stand aliases and targetarmorstands follow specific filter precedence")
+    void mythicArmorStandFilters() {
+        var armorStand = armorStandProxy();
+        var mob = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var player = gameModePlayer(org.bukkit.GameMode.SURVIVAL);
+        List<LivingEntity> candidates = List.of(armorStand, mob, player);
+        var source = (dev.helstera.api.instance.ModelInstance) null;
+
+        assertEquals(List.of(armorStand), Targeters.select(
+                "@living{target=armorstand}", source, candidates, List.of()));
+        assertEquals(List.of(armorStand), Targeters.select(
+                "@living{target=armor_stand}", source, candidates, List.of()));
+        assertEquals(List.of(mob, player), Targeters.select(
+                "@living{ignore=armorstand}", source, candidates, List.of()));
+        assertEquals(List.of(mob, player), Targeters.select(
+                "@living{targetarmorstands=false}", source, candidates, List.of()));
+        assertEquals(List.of(armorStand, player), Targeters.select(
+                "@living{target=players;targetarmorstands=true}", source, candidates, List.of()));
+        assertEquals(candidates, Targeters.select(
+                "@living{ignore=armorstand;targetarmorstands=true}", source, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{target=armorstand;targetarmorstands=false}", source, candidates, List.of()));
+    }
+
+    @Test
+    @DisplayName("specific animal, creature, and villager filters override generic filters by category")
+    void mythicLivingCategoryFilters() {
+        var player = gameModePlayer(org.bukkit.GameMode.SURVIVAL);
+        var animal = livingProxy(org.bukkit.entity.Animals.class);
+        var monster = livingProxy(org.bukkit.entity.Monster.class);
+        var villager = livingProxy(org.bukkit.entity.Villager.class);
+        List<LivingEntity> candidates = List.of(player, animal, monster, villager);
+        var source = (dev.helstera.api.instance.ModelInstance) null;
+
+        assertEquals(List.of(player, monster, villager), Targeters.select(
+                "@living{targetanimals=false}", source, candidates, List.of()));
+        assertEquals(List.of(player, animal), Targeters.select(
+                "@living{target=players;targetanimals=true}", source, candidates, List.of()));
+        assertEquals(candidates, Targeters.select(
+                "@living{ignore=animals;targetanimals=true}", source, candidates, List.of()));
+        assertEquals(List.of(player), Targeters.select(
+                "@living{targetcreatures=false}", source, candidates, List.of()));
+        assertEquals(candidates, Targeters.select(
+                "@living{target=players;targetcreatures=true}", source, candidates, List.of()));
+        assertEquals(List.of(player, animal, monster), Targeters.select(
+                "@living{targetvillagers=false}", source, candidates, List.of()));
+        assertEquals(List.of(player, villager), Targeters.select(
+                "@living{target=players;targetvillagers=true}", source, candidates, List.of()));
+        assertEquals(List.of(player, animal, villager), Targeters.select(
+                "@living{targetcreatures=false;targetanimals=true;targetvillagers=true}",
+                source, candidates, List.of()));
+        assertEquals(List.of(player, monster), Targeters.select(
+                "@living{target=players;targetcreatures=true;targetanimals=false;targetvillagers=false}",
+                source, candidates, List.of()));
     }
 
     @Test
@@ -821,6 +970,45 @@ class TargeterOrderingTest {
                     if (method.getName().equals("getLocation")) return new org.bukkit.Location(null, 0, 0, 0);
                     return defaultValue(method.getReturnType());
                 }));
+    }
+
+    private static org.bukkit.entity.LivingEntity invulnerableLivingProxy(boolean invulnerable) {
+        return (org.bukkit.entity.LivingEntity) Proxy.newProxyInstance(
+                org.bukkit.entity.LivingEntity.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.LivingEntity.class}, (proxy, method, args) -> switch (method.getName()) {
+                    case "getType" -> org.bukkit.entity.EntityType.ZOMBIE;
+                    case "getLocation" -> new org.bukkit.Location(null, 0, 0, 0);
+                    case "isInvulnerable" -> invulnerable;
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    default -> defaultValue(method.getReturnType());
+                });
+    }
+
+    private static org.bukkit.entity.ArmorStand armorStandProxy() {
+        return (org.bukkit.entity.ArmorStand) Proxy.newProxyInstance(
+                org.bukkit.entity.ArmorStand.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.ArmorStand.class}, (proxy, method, args) -> switch (method.getName()) {
+                    case "getType" -> org.bukkit.entity.EntityType.ARMOR_STAND;
+                    case "getLocation" -> new org.bukkit.Location(null, 0, 0, 0);
+                    case "isInvulnerable" -> false;
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    default -> defaultValue(method.getReturnType());
+                });
+    }
+
+    private static org.bukkit.entity.Player gameModePlayer(org.bukkit.GameMode gameMode) {
+        return (org.bukkit.entity.Player) Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Player.class}, (proxy, method, args) -> switch (method.getName()) {
+                    case "getGameMode" -> gameMode;
+                    case "getType" -> org.bukkit.entity.EntityType.PLAYER;
+                    case "getLocation" -> new org.bukkit.Location(null, 0, 0, 0);
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    default -> defaultValue(method.getReturnType());
+                });
     }
 
     private static org.bukkit.entity.LivingEntity stateLivingProxy(boolean onGround, boolean inWater) {

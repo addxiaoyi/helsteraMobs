@@ -1,17 +1,33 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-target-state-filters-strict-20261104-r9` passed the complete
+Fixture `srv-paper-target-all-filter-strict-20261105-r1` passed the complete
 strict gate on Paper 1.21.1-133: 339 probes, 320 passed and 19 expected
-rejections. `targeterArgumentValidation` verifies real grounded and waterborne
-living entities are included and excluded by `target=ground`/`water` and
-`ignore=ground`/`water`, and that unsupported `flying` is rejected. Ground is
-on-ground and dry; water is in-water and not on-ground, so overlapping states
-match neither. API tests also cover category filters, quoted lists, malformed
-and duplicate values, and `targetself` inclusion/exclusion. Flying, game-mode,
-non-living, NPC and MythicMob filters remain outside this implementation.
-Report and compressed server/client logs are listed in `release-evidence.json`;
-plugin SHA-256:
-`e63c666e2ba3226eff88af4c48bf0966fe0caeced43e56288a04b6e6cbd16f58`.
+rejections, with zero incomplete. `targeterArgumentValidation` verifies
+`targetall=true` overrides conflicting `target`, `ignore`, and specific
+category filters within the existing candidate set. It retains real-entity
+coverage for animals, creatures, villagers, ArmorStands, invulnerability,
+player-mode switches, ground, water, flying, and a flying Phantom. API tests
+cover malformed and duplicate options, unknown filters, and `targetall=false`.
+The override does not widen a targeter's radius or world scope. Non-living
+display/interaction entities, NPC, Mythic identity, and premium filters remain
+outside this implementation. Report and compressed server/client logs are
+listed in `release-evidence.json`; plugin SHA-256:
+`1a30a22c1274f045782daff576ebeb1ed4089cd963879d5a831602ef04cf1bf4`.
+
+Previous fixture `srv-paper-creature-target-filter-strict-20261105-r1` verifies
+the same strict controls before `targetall` was added and remains archived.
+
+Previous fixture `srv-paper-target-armorstands-strict-20261105-r1` verifies
+ArmorStand inclusion/exclusion, aliases, and invulnerability and remains
+archived.
+
+Previous fixture `srv-paper-game-mode-target-filter-strict-20261104-r1` verifies
+the earlier generic game-mode filters and remains archived.
+
+Previous strict fixture `srv-paper-flight-target-filter-strict-20261104-r1`
+passed the same 339-probe gate and established real ground, water, and flying
+inclusion/exclusion, including a flying Phantom. Its report and logs remain in
+`release-evidence.json` as historical evidence.
 
 Fixture `srv-paper-self-eye-location-strict-20261104-r1` passed the complete
 strict gate on Paper 1.21.1-133: 339 probes, 320 passed and 19 expected

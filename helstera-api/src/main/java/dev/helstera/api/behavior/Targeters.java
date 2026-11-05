@@ -999,6 +999,9 @@ public final class Targeters {
         if (targets == null || ignored == null) return List.of();
 
         List<LivingEntity> scoped = new ArrayList<>(candidates == null ? List.of() : candidates);
+        if (Boolean.TRUE.equals(parsed.targetAll())) {
+            return scoped.stream().filter(java.util.Objects::nonNull).toList();
+        }
         org.bukkit.entity.Entity baseEntity = source == null || source.baseEntity() == null
                 ? null : source.baseEntity().orElse(null);
         LivingEntity sourceEntity = baseEntity instanceof LivingEntity living ? living : null;
@@ -1010,11 +1013,48 @@ public final class Targeters {
         return scoped.stream().filter(entity -> {
             if (entity == null) return false;
             if (Boolean.FALSE.equals(targetSelf) && entity == sourceEntity) return false;
-            if (!targets.isEmpty() && targets.stream().noneMatch(filter -> matchesEntityFilter(filter, entity, source))) {
+            if (!isAllowedBySpecificFilters(entity, parsed)) return false;
+            boolean invulnerableOverride = Boolean.TRUE.equals(parsed.targetInvulnerable())
+                    && entity.isInvulnerable();
+            boolean armorStandOverride = entity instanceof org.bukkit.entity.ArmorStand
+                    && Boolean.TRUE.equals(parsed.targetArmorStands());
+            boolean categoryOverride = Boolean.TRUE.equals(specificLivingCategoryTarget(entity, parsed));
+            boolean specificOverride = invulnerableOverride || armorStandOverride || categoryOverride;
+            if (!specificOverride && !targets.isEmpty() && targets.stream().noneMatch(filter ->
+                    matchesEntityFilter(filter, entity, source, parsed, false))) {
                 return false;
             }
-            return ignored.stream().noneMatch(filter -> matchesEntityFilter(filter, entity, source));
+            return specificOverride || ignored.stream().noneMatch(filter ->
+                    matchesEntityFilter(filter, entity, source, parsed, true));
         }).toList();
+    }
+
+    private static boolean isAllowedBySpecificFilters(LivingEntity entity, ParsedSpec parsed) {
+        if (Boolean.FALSE.equals(parsed.targetInvulnerable()) && entity.isInvulnerable()) return false;
+        if (entity instanceof org.bukkit.entity.ArmorStand
+                && Boolean.FALSE.equals(parsed.targetArmorStands())) return false;
+        if (Boolean.FALSE.equals(specificLivingCategoryTarget(entity, parsed))) return false;
+        if (!(entity instanceof Player player)) return true;
+        Boolean modeFilter = player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                ? parsed.targetCreative()
+                : player.getGameMode() == org.bukkit.GameMode.SPECTATOR
+                ? parsed.targetSpectator() : null;
+        if (modeFilter != null) return modeFilter;
+        return !Boolean.FALSE.equals(parsed.targetPlayers());
+    }
+
+    private static Boolean specificLivingCategoryTarget(LivingEntity entity, ParsedSpec parsed) {
+        if (entity instanceof org.bukkit.entity.Villager && parsed.targetVillagers() != null) {
+            return parsed.targetVillagers();
+        }
+        if (entity instanceof org.bukkit.entity.Animals && parsed.targetAnimals() != null) {
+            return parsed.targetAnimals();
+        }
+        if ((entity instanceof org.bukkit.entity.Animals || entity instanceof org.bukkit.entity.Monster
+                || entity instanceof org.bukkit.entity.Villager) && parsed.targetCreatures() != null) {
+            return parsed.targetCreatures();
+        }
+        return null;
     }
 
     private static List<String> parseEntityFilters(String raw) {
@@ -1032,7 +1072,8 @@ public final class Targeters {
     }
 
     private static boolean isSupportedEntityFilter(String filter) {
-        if (java.util.Set.of("ground", "water", "player", "players", "mob", "mobs", "nonplayer", "nonplayers",
+        if (java.util.Set.of("ground", "water", "flying", "creative", "spectator", "armorstand", "armor_stand",
+                "player", "players", "mob", "mobs", "nonplayer", "nonplayers",
                 "living", "entity", "entities", "animal", "animals", "monster", "monsters",
                 "creature", "creatures", "villager", "villagers", "tamed", "self", "caster")
                 .contains(filter)) return true;
@@ -1044,10 +1085,19 @@ public final class Targeters {
         }
     }
 
-    private static boolean matchesEntityFilter(String filter, LivingEntity entity, ModelInstance source) {
+    private static boolean matchesEntityFilter(String filter, LivingEntity entity, ModelInstance source,
+                                               ParsedSpec parsed, boolean ignoreFilter) {
+        Boolean specificPlayerFilter = specificPlayerFilter(filter, entity, parsed);
+        if (specificPlayerFilter != null) return ignoreFilter != specificPlayerFilter;
         return switch (filter) {
             case "ground" -> entity.isOnGround() && !entity.isInWater();
             case "water" -> entity.isInWater() && !entity.isOnGround();
+            case "flying" -> !entity.isOnGround() && !entity.isInWater();
+            case "creative" -> entity instanceof Player player
+                    && player.getGameMode() == org.bukkit.GameMode.CREATIVE;
+            case "spectator" -> entity instanceof Player player
+                    && player.getGameMode() == org.bukkit.GameMode.SPECTATOR;
+            case "armorstand", "armor_stand" -> entity instanceof org.bukkit.entity.ArmorStand;
             case "player", "players" -> entity instanceof Player;
             case "mob", "mobs", "nonplayer", "nonplayers" -> !(entity instanceof Player);
             case "living", "entity", "entities" -> true;
@@ -1060,6 +1110,21 @@ public final class Targeters {
             case "self", "caster" -> source != null && source.baseEntity() != null
                     && source.baseEntity().map(base -> base == entity).orElse(false);
             default -> entity.getType() != null && entity.getType().name().equalsIgnoreCase(filter);
+        };
+    }
+
+    private static Boolean specificPlayerFilter(String filter, LivingEntity entity, ParsedSpec parsed) {
+        if (!(entity instanceof Player player)) return null;
+        return switch (filter) {
+            case "player", "players" -> player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                    && parsed.targetCreative() != null ? parsed.targetCreative()
+                    : player.getGameMode() == org.bukkit.GameMode.SPECTATOR
+                    && parsed.targetSpectator() != null ? parsed.targetSpectator() : parsed.targetPlayers();
+            case "creative" -> player.getGameMode() == org.bukkit.GameMode.CREATIVE
+                    ? parsed.targetCreative() : null;
+            case "spectator" -> player.getGameMode() == org.bukkit.GameMode.SPECTATOR
+                    ? parsed.targetSpectator() : null;
+            default -> null;
         };
     }
 
@@ -1077,22 +1142,35 @@ public final class Targeters {
 
     private record ParsedSpec(String name, List<String> args, Integer limit, Integer skip, Double radius,
                               String filter, String targetFilter, String ignoreFilter, Boolean targetSelf,
-                              String sort, boolean valid) {
+                              Boolean targetPlayers, Boolean targetCreative, Boolean targetSpectator,
+                              Boolean targetInvulnerable, Boolean targetArmorStands,
+                              Boolean targetAnimals, Boolean targetCreatures, Boolean targetVillagers,
+                              Boolean targetAll, String sort, boolean valid) {
+        private ParsedSpec(String name, List<String> args, Integer limit, Integer skip, Double radius,
+                           String filter, String targetFilter, String ignoreFilter, Boolean targetSelf,
+                           Boolean targetPlayers, Boolean targetCreative, Boolean targetSpectator,
+                           Boolean targetInvulnerable, Boolean targetArmorStands,
+                           Boolean targetAnimals, Boolean targetCreatures, Boolean targetVillagers,
+                           String sort, boolean valid) {
+            this(name, args, limit, skip, radius, filter, targetFilter, ignoreFilter, targetSelf,
+                    targetPlayers, targetCreative, targetSpectator, targetInvulnerable, targetArmorStands,
+                    targetAnimals, targetCreatures, targetVillagers, null, sort, valid);
+        }
+
         static ParsedSpec parse(String raw) {
             String value = raw == null ? "" : raw.trim();
             if (value.startsWith("@")) value = value.substring(1);
             int open = value.indexOf('{');
             if (open < 0) return new ParsedSpec(canonicalName(value), List.of(), null, null, null,
-                    null, null, null, null, null, true);
+                    null, null, null, null, null, null, null, null, null, null,
+                    null, null, null, true);
             int close = value.lastIndexOf('}');
             if (close < open || !value.substring(close + 1).isBlank()) {
-                return new ParsedSpec(canonicalName(value.substring(0, open)), List.of(), null, null, null,
-                        null, null, null, null, null, false);
+                return invalid(canonicalName(value.substring(0, open)));
             }
             String argumentBody = value.substring(open + 1, close);
             if (!validArgumentSyntax(argumentBody)) {
-                return new ParsedSpec(canonicalName(value.substring(0, open)), List.of(), null,
-                        null, null, null, null, null, null, null, false);
+                return invalid(canonicalName(value.substring(0, open)));
             }
             List<String> args = new ArrayList<>();
             Integer limit = null;
@@ -1102,6 +1180,15 @@ public final class Targeters {
             String targetFilter = null;
             String ignoreFilter = null;
             Boolean targetSelf = null;
+            Boolean targetPlayers = null;
+            Boolean targetCreative = null;
+            Boolean targetSpectator = null;
+            Boolean targetInvulnerable = null;
+            Boolean targetArmorStands = null;
+            Boolean targetAnimals = null;
+            Boolean targetCreatures = null;
+            Boolean targetVillagers = null;
+            Boolean targetAll = null;
             String sort = null;
             boolean valid = true;
             java.util.Set<String> seenGeneric = new java.util.HashSet<>();
@@ -1120,6 +1207,15 @@ public final class Targeters {
                         case "target" -> "target";
                         case "ignore" -> "ignore";
                         case "targetself" -> "targetself";
+                        case "targetplayers" -> "targetplayers";
+                        case "targetcreative" -> "targetcreative";
+                        case "targetspectator" -> "targetspectator";
+                        case "targetinvulnerable" -> "targetinvulnerable";
+                        case "targetarmorstands" -> "targetarmorstands";
+                        case "targetanimals" -> "targetanimals";
+                        case "targetcreatures" -> "targetcreatures";
+                        case "targetvillagers" -> "targetvillagers";
+                        case "targetall" -> "targetall";
                         case "sort" -> "sort";
                         default -> null;
                     };
@@ -1144,6 +1240,42 @@ public final class Targeters {
                             if (rawValue.equalsIgnoreCase("true")) targetSelf = true;
                             else if (rawValue.equalsIgnoreCase("false")) targetSelf = false;
                             else valid = false;
+                        } else if (key.equalsIgnoreCase("targetplayers")) {
+                            if (rawValue.equalsIgnoreCase("true")) targetPlayers = true;
+                            else if (rawValue.equalsIgnoreCase("false")) targetPlayers = false;
+                            else valid = false;
+                        } else if (key.equalsIgnoreCase("targetcreative")) {
+                            if (rawValue.equalsIgnoreCase("true")) targetCreative = true;
+                            else if (rawValue.equalsIgnoreCase("false")) targetCreative = false;
+                            else valid = false;
+                        } else if (key.equalsIgnoreCase("targetspectator")) {
+                            if (rawValue.equalsIgnoreCase("true")) targetSpectator = true;
+                            else if (rawValue.equalsIgnoreCase("false")) targetSpectator = false;
+                            else valid = false;
+                        } else if (key.equalsIgnoreCase("targetinvulnerable")) {
+                            if (rawValue.equalsIgnoreCase("true")) targetInvulnerable = true;
+                            else if (rawValue.equalsIgnoreCase("false")) targetInvulnerable = false;
+                            else valid = false;
+                        } else if (key.equalsIgnoreCase("targetarmorstands")) {
+                            if (rawValue.equalsIgnoreCase("true")) targetArmorStands = true;
+                            else if (rawValue.equalsIgnoreCase("false")) targetArmorStands = false;
+                            else valid = false;
+                        } else if (key.equalsIgnoreCase("targetanimals")) {
+                            if (rawValue.equalsIgnoreCase("true")) targetAnimals = true;
+                            else if (rawValue.equalsIgnoreCase("false")) targetAnimals = false;
+                            else valid = false;
+                        } else if (key.equalsIgnoreCase("targetcreatures")) {
+                            if (rawValue.equalsIgnoreCase("true")) targetCreatures = true;
+                            else if (rawValue.equalsIgnoreCase("false")) targetCreatures = false;
+                            else valid = false;
+                        } else if (key.equalsIgnoreCase("targetvillagers")) {
+                            if (rawValue.equalsIgnoreCase("true")) targetVillagers = true;
+                            else if (rawValue.equalsIgnoreCase("false")) targetVillagers = false;
+                            else valid = false;
+                        } else if (key.equalsIgnoreCase("targetall")) {
+                            if (rawValue.equalsIgnoreCase("true")) targetAll = true;
+                            else if (rawValue.equalsIgnoreCase("false")) targetAll = false;
+                            else valid = false;
                         } else if (key.equalsIgnoreCase("sort")) {
                             sort = rawValue;
                         } else {
@@ -1159,12 +1291,31 @@ public final class Targeters {
                                 && !key.equalsIgnoreCase("r") && !key.equalsIgnoreCase("radius")
                                 && !key.equalsIgnoreCase("filter") && !key.equalsIgnoreCase("type")
                                 && !key.equalsIgnoreCase("target") && !key.equalsIgnoreCase("ignore")
-                                && !key.equalsIgnoreCase("targetself") && !key.equalsIgnoreCase("sort")) args.add(token);
+                                && !key.equalsIgnoreCase("targetself") && !key.equalsIgnoreCase("targetplayers")
+                                && !key.equalsIgnoreCase("targetcreative") && !key.equalsIgnoreCase("targetspectator")
+                                && !key.equalsIgnoreCase("targetinvulnerable")
+                                && !key.equalsIgnoreCase("targetarmorstands")
+                                && !key.equalsIgnoreCase("targetanimals")
+                                && !key.equalsIgnoreCase("targetcreatures")
+                                && !key.equalsIgnoreCase("targetvillagers")
+                                && !key.equalsIgnoreCase("targetall")
+                                && !key.equalsIgnoreCase("sort")) args.add(token);
                     }
                 } else args.add(token);
             }
             return new ParsedSpec(canonicalName(value.substring(0, open)), args,
-                    limit, skip, radius, filter, targetFilter, ignoreFilter, targetSelf, sort, valid);
+                    limit, skip, radius, filter, targetFilter, ignoreFilter, targetSelf,
+                    targetPlayers, targetCreative, targetSpectator, targetInvulnerable,
+                    targetArmorStands, targetAnimals, targetCreatures, targetVillagers, targetAll, sort, valid);
+        }
+
+        private static ParsedSpec invalid(String name) {
+            return new ParsedSpec(name, List.of(),
+                    null, null, null,
+                    null, null, null,
+                    null, null, null, null,
+                    null, null, null, null, null, null,
+                    false);
         }
 
         private static String canonicalName(String raw) {
