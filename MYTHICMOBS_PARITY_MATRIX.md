@@ -1096,14 +1096,20 @@ coverage are included. Exploratory Paper 1.21.4 fixture r8 and strict Paper
 1.21.1-133 fixture `srv-paper-integration-final-r8` record
 `potionEffectCondition=passed`.
 
-Parity correction: Mythic `HasAura`, `HasAuraStacks`, `HasAuraType`, and
-target Aura conditions are not Bukkit potion-effect conditions. Their importer
-mappings were removed; source conditions are now preserved verbatim with a
-migration warning until an Aura data provider and matching runtime contract
-exist. Existing Helstera `has-aura-stacks` and `target-has-auras` runtime names
-remain internal Bukkit PotionEffect checks and do not establish Mythic Aura
-parity. Historical `auraStacksCondition` and target-state Paper probes verify
-only those PotionEffect paths.
+Parity correction: Mythic `HasAura` (`hasBuff`, `hasDebuff`),
+`HasAuraStacks` (`hasBuffStacks`, `hasDebuffStacks`, `auraStacks`,
+`buffStacks`, `debuffStacks`), and `HasAuraType` (`hasBuffType`,
+`hasDebuffType`) plus target Aura conditions are not Bukkit potion-effect
+conditions, as described in the official [HasAura](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/hasaura),
+[HasAuraStacks](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/hasaurastacks),
+and [HasAuraType](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/hasauratype)
+references. Import preserves these source conditions verbatim with a migration
+warning until an Aura data provider and matching runtime contract exist; the
+SkillService rejects those Mythic names. Existing
+Helstera `has-aura-stacks` and `target-has-auras` runtime names remain internal
+Bukkit PotionEffect checks and do not establish Mythic Aura parity.
+Historical `auraStacksCondition` and target-state Paper probes verify only
+those PotionEffect paths.
 
 Incremental condition update: official `Level` now reads the managed instance
 level used by the existing mob scaling system, falls back to level 1 when no

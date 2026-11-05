@@ -886,10 +886,22 @@ class MmConditionsTest {
 
     @Test
     void officialAuraConditionsRemainUnmappedWithoutAuraDataProvider() {
-        assertFalse(translated("?hasAuraStacks{n=SPEED;s=>3}"));
-        assertFalse(translated("?hasAuraStacks"));
-        assertFalse(translated("?hasAuraType{aura=SPEED}"));
-        assertFalse(translated("?hasAura{aura=SPEED}"));
+        for (String raw : List.of(
+                "?hasAura{aura=SPEED}",
+                "?hasBuff{buff=FURY}",
+                "?hasDebuff{debuff=FURY}",
+                "?hasAuraStacks{n=SPEED;s=>3}",
+                "?hasAuraType{type=HARMFUL}",
+                "?hasBuffType{group=HELPFUL}",
+                "?hasDebuffType{auratype=HARMFUL}",
+                "?hasBuffStacks{n=FURY;s=>2}",
+                "?hasDebuffStacks{n=FURY;s=1}",
+                "?auraStacks{aura=FURY;stacks=2}",
+                "?buffStacks{aura=FURY;stacks=2}",
+                "?debuffStacks{aura=FURY;stacks=2}")) {
+            assertFalse(translated(raw), raw);
+            assertEquals(raw, t(raw), raw);
+        }
     }
 
     @Test

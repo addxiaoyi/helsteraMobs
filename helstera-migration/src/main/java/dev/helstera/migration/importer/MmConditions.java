@@ -910,16 +910,6 @@ public final class MmConditions {
             if (duration != null) mapped += " " + duration;
             return new Mapped(mapped, true);
         }
-        if ("hasbuffstacks".equals(name) || "hasdebuffstacks".equals(name)
-                || "buffstacks".equals(name) || "debuffstacks".equals(name)) {
-            String aura = firstArgument(body, "aura", "auraname", "type", "t", "name", "n");
-            if (aura == null) aura = normalizeScalar(body);
-            if (aura == null || aura.contains("=")) aura = "ANY";
-            String stacks = firstArgument(body, "stacks", "s", "amount", "a");
-            if (stacks == null) stacks = ">=1";
-            return !validNumberRange(stacks) ? new Mapped(s, false)
-                    : new Mapped("has-aura-stacks " + aura + " " + stacks, true);
-        }
         if ("variablecontains".equals(name) || "varcontains".equals(name)
                 || "varcontain".equals(name)) {
             String variable = firstArgument(body, "variable", "var", "name", "n", "key", "k");

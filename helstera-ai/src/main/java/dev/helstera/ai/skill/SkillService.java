@@ -2012,8 +2012,6 @@ public final class SkillService {
             case "hasenchantment", "has-enchantment", "hasenchant", "has-enchant" ->
                     "has-enchantment";
             case "haspotioneffect", "has-potion-effect" -> "has-potion-effect";
-            case "hasaurastacks", "has-aura-stacks", "hasbuffstacks", "hasdebuffstacks",
-                    "aurastacks", "buffstacks", "debuffstacks" -> "has-aura-stacks";
             case "hasdialogopen", "has-dialog-open", "dialogopen", "dialog-open" ->
                     "has-dialog-open";
             case "isincinematic", "is-in-cinematic", "incinematic" -> "is-in-cinematic";

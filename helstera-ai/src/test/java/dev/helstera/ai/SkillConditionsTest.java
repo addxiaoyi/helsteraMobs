@@ -907,8 +907,8 @@ class SkillConditionsTest {
     }
 
     @Test
-    @DisplayName("HasAuraStacks 将 Bukkit amplifier 转为 1-based stack 范围")
-    void officialHasAuraStacksConditionMatchesOneBasedAmplifier() {
+    @DisplayName("内部 PotionEffect 栈条件将 amplifier 转为 1-based 范围")
+    void internalPotionEffectStacksMatchOneBasedAmplifier() {
         LivingEntity entity = mock(LivingEntity.class);
         var effect = mock(org.bukkit.potion.PotionEffect.class);
         when(effect.getType()).thenReturn(null);

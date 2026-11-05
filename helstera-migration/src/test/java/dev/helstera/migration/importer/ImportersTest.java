@@ -2557,7 +2557,18 @@ class ImportersTest {
                 UnknownCondition:
                   TargetConditions:
                     - isLiving
+                    - '?hasAura{aura=FURY}'
+                    - '?hasBuff{buff=FURY}'
+                    - '?hasDebuff{debuff=FURY}'
                     - '?hasAuraStacks{n=SPEED;s=>2}'
+                    - '?hasAuraType{type=DEBUFF}'
+                    - '?hasBuffType{group=HELPFUL}'
+                    - '?hasDebuffType{auratype=HARMFUL}'
+                    - '?hasBuffStacks{n=FURY;s=>2}'
+                    - '?hasDebuffStacks{n=FURY;s=1}'
+                    - '?auraStacks{aura=FURY;stacks=2}'
+                    - '?buffStacks{aura=FURY;stacks=2}'
+                    - '?debuffStacks{aura=FURY;stacks=2}'
                   TriggerConditions:
                     - '?targetHasAuras{aura=FURY}'
                   Skills:
@@ -2568,7 +2579,20 @@ class ImportersTest {
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
 
-        assertEquals(List.of("is-living", "?hasAuraStacks{n=SPEED;s=>2}"),
+        assertEquals(List.of(
+                        "is-living",
+                        "?hasAura{aura=FURY}",
+                        "?hasBuff{buff=FURY}",
+                        "?hasDebuff{debuff=FURY}",
+                        "?hasAuraStacks{n=SPEED;s=>2}",
+                        "?hasAuraType{type=DEBUFF}",
+                        "?hasBuffType{group=HELPFUL}",
+                        "?hasDebuffType{auratype=HARMFUL}",
+                        "?hasBuffStacks{n=FURY;s=>2}",
+                        "?hasDebuffStacks{n=FURY;s=1}",
+                        "?auraStacks{aura=FURY;stacks=2}",
+                        "?buffStacks{aura=FURY;stacks=2}",
+                        "?debuffStacks{aura=FURY;stacks=2}"),
                 target.getStringList("skills.unknowncondition.target-conditions"));
         assertEquals(List.of("?targetHasAuras{aura=FURY}"),
                 target.getStringList("skills.unknowncondition.trigger-conditions"));

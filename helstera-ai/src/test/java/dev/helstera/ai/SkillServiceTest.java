@@ -2665,7 +2665,22 @@ class SkillServiceTest {
         assertNotNull(svc.bindCondition("playerKills{k=>=1}"));
         assertNotNull(svc.bindCondition("absorption{amount=>=1}"));
         assertNotNull(svc.bindCondition("hasPotionEffect{t=SPEED;l=0-2;d=1-200}"));
-        assertNotNull(svc.bindCondition("hasAuraStacks{n=SPEED;s=>=2}"));
+        assertNotNull(svc.bindCondition("has-aura-stacks SPEED >=2"));
+        for (String mythicAuraAlias : List.of(
+                "hasAura{aura=SPEED}",
+                "hasBuff{buff=SPEED}",
+                "hasDebuff{debuff=SPEED}",
+                "hasAuraStacks{n=SPEED;s=>=2}",
+                "hasAuraType{type=HARMFUL}",
+                "hasBuffType{group=HELPFUL}",
+                "hasDebuffType{auratype=HARMFUL}",
+                "hasBuffStacks{n=SPEED;s=>=2}",
+                "hasDebuffStacks{n=SPEED;s=>=2}",
+                "auraStacks{n=SPEED;s=>=2}",
+                "buffStacks{n=SPEED;s=>=2}",
+                "debuffStacks{n=SPEED;s=>=2}")) {
+            assertNull(svc.bindCondition(mythicAuraAlias), mythicAuraAlias);
+        }
         assertNotNull(svc.bindCondition("triggerBlockType{mat=STONE}"));
         assertNotNull(svc.bindCondition("distanceFromLocation{x=0;y=0;z=0;distance=<10}"));
         for (String diff : List.of("xDiff{d=1}", "yDiff{diff=-1to1}", "zDiff{difference=>0}")) {
