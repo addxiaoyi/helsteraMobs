@@ -1,20 +1,23 @@
 # helsteraMobs
 
-## MythicMobs Parity Development Status (2026-11-04)
+## MythicMobs Parity Development Status (2026-11-05)
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-target-state-filters-strict-20261104-r9`
-completes 339 probes (320 passed and 19 expected rejections). Its
-`targeterArgumentValidation` probe verifies real Paper `target=` and `ignore=`
-selection for grounded and waterborne living entities, plus fail-closed
-rejection of `flying`. Ground means on-ground and dry; water means in-water and
-not on-ground, so overlapping states match neither. API tests cover both
-directions, combined filters, ambiguous states, and invalid arguments. Report:
-`tools/paper-integration/reports/paper-1.21.1-target-state-filters-strict-20261104-r9.json`.
+Latest strict fixture `srv-paper-target-all-filter-strict-20261105-r1`
+completes 339 probes (320 passed, 19 expected rejections, zero incomplete).
+Its `targeterArgumentValidation` probe verifies that `targetall=true` overrides
+conflicting `target`, `ignore`, and specific category filters across the real
+Paper candidate set. Existing animal, creature, villager, ArmorStand,
+invulnerability, player-mode, ground, water, and flying checks also pass, with
+real Sheep, Zombie, Villager, player, and Phantom entities. Invalid and
+duplicate options still fail closed. Report:
+`tools/paper-integration/reports/paper-1.21.1-target-all-filter-strict-20261105-r1.json`.
 The exact plugin SHA-256 is
-`e63c666e2ba3226eff88af4c48bf0966fe0caeced43e56288a04b6e6cbd16f58`.
-Flying, game-mode, non-living, NPC and MythicMob filters remain open.
+`1a30a22c1274f045782daff576ebeb1ed4089cd963879d5a831602ef04cf1bf4`.
+`targetall` does not expand the candidate set selected by a targeter's radius
+or world scope. Non-living display/interaction targets, NPC, Mythic identity,
+and premium filters remain open.
 
 The same strict run verifies `locationTargeterDispatch` through production
 `set-block` for SelfLocation and all five `@SelfEyeLocation` aliases, alongside
@@ -327,13 +330,13 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 This is a partial parity release. The matrix currently has `41`
 `mapped-unverified` rows (counted from the status column in
-`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-04). The full remaining work is:
+`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-05). The full remaining work is:
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 435 cited IDs; 347 report files; 4 directories
-   without reports; 84 missing directories; 110 archived release reports. The
+   Current fixture inventory: 442 cited IDs; 354 report files; 4 directories
+   without reports; 84 missing directories; 118 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -550,7 +553,7 @@ Many rows remain `mapped-unverified`; the project is not complete:
 1. Complete official Conditions, Mechanics, placeholders, comparator edge cases, and grammar coverage.
 2. Drops: `TotalItems`, paired `MinItems`/`MaxItems`, or either Bonus option enable weighted entry selection; single bounds without bonuses retain ordered selection. Fractional Bonus multipliers add the integer part plus one line probabilistically at the fractional remainder. Strict natural-death evidence covers level/Luck combinations and dropper conditions; the earlier single-bound ordering assertion is invalid and is being replaced. Standalone `DropTables/` files project supported settings with an importer-to-runtime contract, and `exp`/`xp`/`experience` rows have natural-death coverage. Remaining work includes `BiasStat`, Mythic custom Luck enchantment/curses inputs, broader placeholders and the complete official catalog.
 3. Pin conditions resolve through the plugin's own `pins.yml`; location-valued `@Pin` resolves every configured point or one random point, `@BlocksInPinRegion` enumerates inclusive cuboids up to 16,384 blocks, and `MovePin` updates single-point pins in memory. Strict Paper fixture `srv-paper-pin-targeters-strict-20261102-r2` passes the required `pinTargeters` probe on Paper 1.21.1-133: multi-point/random dispatch, single-point movement, multi-point movement rejection, real cuboid `set-block`/`break-block` with block restoration, and fail-closed rejection of a 16,385-block region before action dispatch. Compatibility with Mythic pack pin-file formats remains unverified; in-memory movement resets when the plugin reloads its own `pins.yml`.
-4. Complete the official targeter/filter catalog: ground and water state filters now have API and strict Paper coverage; flying semantics, non-living targets, game-mode/NPC/MythicMob filters, premium selectors, and native Pathfinder Goal mutation remain open or outside the public Paper API boundary.
+4. Complete the official targeter/filter catalog: ground, water, flying, player, Creative, Spectator, invulnerability, ArmorStand, animal, creature, and villager filters now have API and strict Paper coverage; non-living targets, NPC/MythicMob filters, premium selectors, and native Pathfinder Goal mutation remain open or outside the public Paper API boundary.
 5. Expand the remaining legacy numeric ID/data families; `ItemModel` and `DamageType` are explicitly preserved because Paper 1.21.1 `ItemMeta` has no public component API for them.
 6. Strict Paper 1.21.1-133 now records the registered Creeper/Bee/Zombie and jockey mount-event probes; finish universal Mob Option ordering while natural AI jockey selection remains unverified.
 7. Add remaining Bukkit event, Audience version, and SkillTree lifecycle/restart evidence.

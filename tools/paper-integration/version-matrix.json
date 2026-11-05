@@ -13,8 +13,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-target-state-filters-strict-20261104-r9",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-target-state-filters-strict-20261104-r9.json"
+      "releaseFixtureId": "srv-paper-target-all-filter-strict-20261105-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-target-all-filter-strict-20261105-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

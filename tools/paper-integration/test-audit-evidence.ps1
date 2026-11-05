@@ -97,7 +97,7 @@ try {
         throw 'Synthetic release report must contain targeterArgumentValidation.'
     }
     $targeterArgumentValidation[0].observations = @(
-        'targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true flying-rejected=true')
+        'targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true target-players-specific=true target-players-disabled=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true target-flying=true ignore-flying=true target-invulnerable-disabled=true target-invulnerable-priority=true target-armorstands-disabled=true target-armorstands-priority=true target-animals-disabled=true target-animals-priority=true target-creatures-disabled=true target-creatures-priority=true target-villagers-disabled=true target-villagers-priority=true target-all=true target-creative=true ignore-creative=true target-creative-priority=true target-creative-disabled=true target-spectator=true ignore-spectator=true target-spectator-priority=true target-spectator-disabled=true')
     $locationTargeterProbe = @($fullReport.probes | Where-Object id -eq 'locationTargeterDispatch')
     if ($locationTargeterProbe.Count -ne 1) { throw 'Synthetic release report must contain locationTargeterDispatch.' }
     $locationTargeterProbe[0].observations = @('location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true')

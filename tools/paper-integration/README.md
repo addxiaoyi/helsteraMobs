@@ -26,20 +26,30 @@ $env:PAPER_RAW_POTION_SHORT = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-target-state-filters-strict-20261104-r9`
-passed 339 probes (320 passed, 19 expected rejections). Its
-`targeterArgumentValidation` probe verifies real Paper inclusion/exclusion for
-ground and water state filters, and rejects the unsupported `flying` filter.
-Ground means on-ground and dry; water means in-water and not on-ground, with
-overlap excluded from both. API tests cover state combinations, ambiguous
-states, animal/monster categories, quoted lists, duplicate values,
-`targetself`, and fail-closed invalid arguments. Non-living, game-mode, NPC and
-MythicMob filters remain unsupported. Report:
-`reports/paper-1.21.1-target-state-filters-strict-20261104-r9.json`; server log:
-`reports/paper-1.21.1-target-state-filters-strict-20261104-r9.log.gz`; client
-logs: `reports/paper-1.21.1-target-state-filters-strict-20261104-r9-client-logs.tar.gz`.
+Latest strict fixture `srv-paper-target-all-filter-strict-20261105-r1`
+passed 339 probes (320 passed, 19 expected rejections, zero incomplete). Its
+`targeterArgumentValidation` probe verifies `targetall=true` overrides
+conflicting `target`, `ignore`, and specific category filters within the real
+candidate set. It retains animal, creature, villager, ArmorStand,
+invulnerability, player-mode, ground, water, and flying coverage against real
+entities, including a flying Phantom. Invalid and duplicate options still fail
+closed in API tests. Report:
+`reports/paper-1.21.1-target-all-filter-strict-20261105-r1.json`; server log:
+`reports/paper-1.21.1-target-all-filter-strict-20261105-r1.log.gz`; client logs:
+`reports/paper-1.21.1-target-all-filter-strict-20261105-r1-client-logs.tar.gz`.
 The plugin SHA-256 is
-`e63c666e2ba3226eff88af4c48bf0966fe0caeced43e56288a04b6e6cbd16f58`.
+`1a30a22c1274f045782daff576ebeb1ed4089cd963879d5a831602ef04cf1bf4`.
+`targetall` preserves the targeter's radius and world scope. Non-living
+display/interaction entities, NPC, Mythic identity, and premium filters remain
+open.
+
+Previous strict fixture `srv-paper-target-armorstands-strict-20261105-r1`
+verified ArmorStand aliases, inclusion/exclusion, and invulnerability and
+remains archived in `release-evidence.json`.
+
+Previous strict fixture `srv-paper-game-mode-target-filter-strict-20261104-r1`
+verified generic Creative and Spectator `target=`/`ignore=` filters. Its report
+and logs remain archived in `release-evidence.json`.
 
 Earlier strict fixture `srv-paper-self-eye-location-strict-20261104-r1` passed
 339 probes (320 passed, 19 expected rejections). `locationTargeterDispatch`

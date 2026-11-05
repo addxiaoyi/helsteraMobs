@@ -769,7 +769,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'targeterArgumentValidation'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'targeterArgumentValidation'; status = 'passed'; observations = @('targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true flying-rejected=true')
+        id = 'targeterArgumentValidation'; status = 'passed'; observations = @('targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true target-players-specific=true target-players-disabled=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true target-flying=true ignore-flying=true target-invulnerable-disabled=true target-invulnerable-priority=true target-armorstands-disabled=true target-armorstands-priority=true target-animals-disabled=true target-animals-priority=true target-creatures-disabled=true target-creatures-priority=true target-villagers-disabled=true target-villagers-priority=true target-all=true target-creative=true ignore-creative=true target-creative-priority=true target-creative-disabled=true target-spectator=true ignore-spectator=true target-spectator-priority=true target-spectator-disabled=true')
     }
     $fullCatalogReport.expectedProbeIds += 'locationTargeterDispatch'
     $fullCatalogReport.probes += [pscustomobject]@{
