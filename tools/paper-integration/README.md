@@ -27,21 +27,27 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-snowing-strict-20261105-r2`
+Latest strict fixture `srv-paper-inside-outside-strict-20261105-r2`
+passed 346 probes (327 passed, 19 expected rejections, zero incomplete).
+`insideOutsideCondition` verifies positive and negative `inside`/`outside`
+results and restores the original block state. Report:
+`reports/paper-1.21.1-inside-outside-strict-20261105-r2.json`; server log:
+`reports/paper-1.21.1-inside-outside-strict-20261105-r2.log.gz`; client logs:
+`reports/paper-1.21.1-inside-outside-strict-20261105-r2-client-logs.tar.gz`.
+Plugin SHA-256:
+`d90dea6e153557afab20c9847e29f492c55fcc52d287ce282d40f31b87105df3`.
+The complete Conditions catalog remains open.
+
+Previous full strict fixture `srv-paper-snowing-strict-20261105-r2`
 passed 345 probes (326 passed, 19 expected rejections, zero incomplete).
 `snowingCondition` verifies target-location isolation, both aliases, warm and
 clear rejection, missing context, invalid arguments, and state restoration.
-`spawningDistanceClientWalk` records 11.14 blocks of server-observed player
-movement at 10.90 blocks from the mob, then confirms instance and entity
-removal. Report:
-`reports/paper-1.21.1-snowing-strict-20261105-r2.json`; server log:
-`reports/paper-1.21.1-snowing-strict-20261105-r2.log.gz`; client logs:
-`reports/paper-1.21.1-snowing-strict-20261105-r2-client-logs.tar.gz`.
+Report: `reports/paper-1.21.1-snowing-strict-20261105-r2.json`.
 Plugin SHA-256:
 `1b6fe0a823faadc268149f90df680f3550bab8a2059f41ac1477fa992fd31a44`.
 The complete Conditions catalog remains open.
 
-Previous strict fixture `srv-paper-in-combat-strict-20261105-r3`
+Earlier strict fixture `srv-paper-in-combat-strict-20261105-r3`
 passed 344 probes (325 passed, 19 expected rejections, zero incomplete).
 `inCombatCondition` independently verifies managed-caster and native-Mob
 positive, no-target rejection, and target restoration; `conditionUtilityAliases`

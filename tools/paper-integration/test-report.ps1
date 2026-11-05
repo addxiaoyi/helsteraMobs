@@ -770,6 +770,10 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'snowingCondition'; status = 'passed'; observations = @('snowing-condition result=true target-location-isolated=true target-positive=true alias-positive=true warm-rejected=true clear-rejected=true missing-context-rejected=true invalid-arguments-rejected=true restored=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'insideOutsideCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'insideOutsideCondition'; status = 'passed'; observations = @('inside-outside-condition-details inside-positive=true inside-negative=true outside-positive=true outside-negative=true restored=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'visibilityStateArguments'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'visibilityStateArguments'; status = 'passed'; observations = @('visibility-state-arguments valid=true rejected=true preserved=true warnings=true')
@@ -1366,6 +1370,28 @@ try {
     Assert-True $missingSnowingRejected 'full release gate rejects missing snowing evidence'
     $fullCatalogReport.expectedProbeIds += 'snowingCondition'
     $fullCatalogReport.probes += $snowingProbe
+    $insideOutsideProbe = $fullCatalogReport.probes | Where-Object id -eq 'insideOutsideCondition'
+    $insideOutsideObservations = $insideOutsideProbe.observations
+    $insideOutsideProbe.observations = @('inside-outside-condition-details inside-positive=true inside-negative=true outside-positive=true outside-negative=false restored=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badInsideOutsideRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badInsideOutsideRejected = $_.Exception.Message -match 'required observation for insideOutsideCondition' }
+    Assert-True $badInsideOutsideRejected 'full release gate rejects un-restored inside/outside evidence'
+    $insideOutsideProbe.observations = $insideOutsideObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'insideOutsideCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'insideOutsideCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingInsideOutsideRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingInsideOutsideRejected = $_.Exception.Message -match 'insideOutsideCondition' }
+    Assert-True $missingInsideOutsideRejected 'full release gate rejects missing inside/outside evidence'
+    $fullCatalogReport.expectedProbeIds += 'insideOutsideCondition'
+    $fullCatalogReport.probes += $insideOutsideProbe
     $visibilityProbe = $fullCatalogReport.probes | Where-Object id -eq 'visibilityStateArguments'
     $visibilityObservations = $visibilityProbe.observations
     $visibilityProbe.observations = @('visibility-state-arguments valid=true')
