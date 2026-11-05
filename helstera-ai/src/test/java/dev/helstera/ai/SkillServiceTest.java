@@ -184,7 +184,7 @@ class SkillServiceTest {
             assertNull(svc.bindCondition("projectile-has-ended unknown=true"));
             for (String name : List.of("has-target", "night", "raining", "thundering", "is-living",
                     "is-player", "is-mob", "is-monster", "is-animal", "is-villager", "is-tameable", "is-raider",
-                    "is-baby", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered",
+                    "is-baby", "is-child", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered",
                     "target-is-baby", "target-is-adult", "target-is-tamed", "target-is-sheared",
                     "target-is-saddled", "target-is-powered", "target-is-player", "target-is-living",
                     "target-is-mob", "target-is-monster", "target-is-animal", "target-is-villager",
@@ -3780,7 +3780,8 @@ class SkillServiceTest {
         when(baby.isAdult()).thenReturn(false);
         BehaviorContext babyContext = BehaviorContext.of(null, baby, 1.0, -1, 0, "IDLE");
         assertTrue(registry.testCondition(service.bindCondition("baby"), babyContext));
-        assertTrue(registry.testCondition(service.bindCondition("isChild"), babyContext));
+        assertFalse(registry.testCondition(service.bindCondition("isChild"), babyContext));
+        assertEquals(service.bindCondition("is-child"), service.bindCondition("child"));
         assertFalse(registry.testCondition(service.bindCondition("adult"), babyContext));
 
         when(baby.isAdult()).thenReturn(true);

@@ -2,9 +2,13 @@ package dev.helstera.ai.skill;
 
 import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.api.instance.ModelInstance;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Pig;
 import org.bukkit.entity.Wolf;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -14,11 +18,14 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -113,6 +120,37 @@ class EntityStateConditionTest {
         when(wolf.isLeashed()).thenReturn(false);
         assertFalse(condition("is-leashed").test(context(wolf)));
         assertFalse(condition("is-leashed").test(context(null)));
+    }
+
+    @Test
+    void mythicIsChildUsesParentRelationAndIsIndependentFromAge() {
+        ModelInstance instance = mock(ModelInstance.class);
+        Wolf caster = mock(Wolf.class);
+        Pig child = mock(Pig.class);
+        PersistentDataContainer data = mock(PersistentDataContainer.class);
+        UUID casterId = UUID.randomUUID();
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.isValid()).thenReturn(true);
+        when(caster.isDead()).thenReturn(false);
+        when(caster.getUniqueId()).thenReturn(casterId);
+        when(child.isValid()).thenReturn(true);
+        when(child.isDead()).thenReturn(false);
+        when(child.getUniqueId()).thenReturn(UUID.randomUUID());
+        when(child.getPersistentDataContainer()).thenReturn(data);
+        when(child.isAdult()).thenReturn(true);
+        when(data.get(any(NamespacedKey.class), eq(PersistentDataType.STRING)))
+                .thenReturn(casterId.toString());
+        BehaviorContext ctx = BehaviorContext.of(instance, (LivingEntity) child,
+                1.0, -1, 0, "IDLE");
+
+        assertTrue(condition("is-child").test(ctx));
+        assertFalse(condition("is-baby").test(ctx));
+
+        when(data.get(any(NamespacedKey.class), eq(PersistentDataType.STRING))).thenReturn(null);
+        when(child.isAdult()).thenReturn(false);
+        assertFalse(condition("is-child").test(ctx));
+        assertTrue(condition("is-baby").test(ctx));
     }
 
     @Test
