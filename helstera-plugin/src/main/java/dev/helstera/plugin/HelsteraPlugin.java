@@ -1738,11 +1738,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 return;
             }
             player.sendMessage("PAPER_SPAWNING_DISTANCE_WALK_READY");
+            int decisionPeriodTicks = Math.max(2, getConfig().getInt("ai.decision-ticks", 10));
             new org.bukkit.scheduler.BukkitRunnable() {
-                private int elapsedTicks;
+                private int observedTicks;
+                private int outsideObservedTick = -1;
+                private double outsideDistance = Double.NaN;
+                private double outsideDisplacement = Double.NaN;
 
                 @Override
                 public void run() {
+                    observedTicks++;
                     var onlinePlayer = getServer().getPlayer(playerId);
                     if (onlinePlayer == null || !onlinePlayer.isOnline()
                             || !onlinePlayer.getWorld().equals(entity.getWorld())) {
@@ -1751,25 +1756,37 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     }
                     double distance = onlinePlayer.getLocation().distance(entity.getLocation());
                     double displacement = onlinePlayer.getLocation().distance(playerStart);
-                    if (distance > 8.0 && displacement > 8.0) {
+                    if (outsideObservedTick < 0 && distance > 8.0 && displacement > 8.0) {
+                        outsideObservedTick = observedTicks;
+                        outsideDistance = distance;
+                        outsideDisplacement = displacement;
                         onlinePlayer.sendMessage("PAPER_SPAWNING_DISTANCE_WALK_OUTSIDE");
+                    }
+                    boolean instanceRemoved = instances().impl(instanceId) == null;
+                    boolean entityRemoved = !entity.isValid();
+                    if (outsideObservedTick >= 0 && instanceRemoved && entityRemoved) {
+                        int despawnElapsedTicks = observedTicks - outsideObservedTick;
+                        boolean passed = outsideDistance > 8.0 && outsideDisplacement > 8.0
+                                && despawnElapsedTicks <= decisionPeriodTicks;
                         cancel();
-                        getServer().getScheduler().runTaskLater(HelsteraPlugin.this, () -> {
-                            boolean removed = instances().impl(instanceId) == null && !entity.isValid();
-                            boolean passed = displacement > 8.0 && distance > 8.0 && removed;
-                            getLogger().info("[自检] spawning-distance-client-walk result=" + passed
-                                    + " player-displacement=" + displacement
-                                    + " player-entity-distance=" + distance
-                                    + " instance-removed=" + (instances().impl(instanceId) == null)
-                                    + " entity-removed=" + !entity.isValid());
-                            getLogger().info("[自检] spawning-distance-runtime result=" + passed
-                                    + " inside-retained=true outside-removed=" + removed);
-                            if (instances().impl(instanceId) != null) instances().despawn(instanceId);
-                        }, 40L);
+                        getLogger().info("[自检] spawning-distance-client-walk result=" + passed
+                                + " player-displacement=" + outsideDisplacement
+                                + " player-entity-distance=" + outsideDistance
+                                + " instance-removed=true entity-removed=true"
+                                + " despawn-elapsed-ticks=" + despawnElapsedTicks
+                                + " decision-period-ticks=" + decisionPeriodTicks);
+                        getLogger().info("[自检] spawning-distance-runtime result=" + passed
+                                + " inside-retained=true outside-removed=true");
                         return;
                     }
-                    elapsedTicks += 5;
-                    if (elapsedTicks >= 900) finish(false, "client-did-not-leave-radius", distance);
+                    if (outsideObservedTick >= 0
+                            && observedTicks - outsideObservedTick > decisionPeriodTicks) {
+                        finish(false, "despawn-exceeded-ai-period", distance);
+                        return;
+                    }
+                    if (outsideObservedTick < 0 && observedTicks >= 900) {
+                        finish(false, "client-did-not-leave-radius", distance);
+                    }
                 }
 
                 private void finish(boolean passed, String reason, double distance) {
@@ -1826,6 +1843,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (!itemEffectsWaitedForPlayer) {
                 itemEffectsWaitedForPlayer = true;
                 getServer().getScheduler().runTaskLater(this, this::runItemEffectsSelfTest, 20L);
+                return;
+            }
+            if (getServer().getOnlinePlayers().stream().noneMatch(Player::isOnGround)) {
+                getServer().getScheduler().runTaskLater(this, this::runItemEffectsSelfTest, 1L);
                 return;
             }
             Location location = world.getSpawnLocation().clone().add(0, 3, 0);
@@ -2528,7 +2549,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         modelInstance, aerialProbe, 1.0, 3.0, 0, "integration");
                 boolean aerialPositive = behaviors.testCondition(
                         skills.bindCondition("aerial"), aerialContext);
-                var groundPlayer = getServer().getOnlinePlayers().stream().findFirst().orElse(null);
+                var groundPlayer = getServer().getOnlinePlayers().stream()
+                        .filter(Player::isOnGround).findFirst().orElse(null);
                 var groundContext = groundPlayer == null
                         ? context
                         : dev.helstera.api.behavior.BehaviorContext.of(

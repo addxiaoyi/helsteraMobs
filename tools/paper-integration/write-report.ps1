@@ -90,7 +90,7 @@ $probeSpecs = [ordered]@{
     despawnOptions = 'despawn-options result=true mode=PERSISTENT distance=0(?:\.0+)? persistent=true'
     spawningDistanceOptions = 'spawning-distance-options result=true mode=NORMAL distance=8(?:\.0+)?'
     spawningDistanceRuntime = 'spawning-distance-runtime result=true inside-retained=true outside-removed=true'
-    spawningDistanceClientWalk = 'spawning-distance-client-walk result=true player-displacement=(?:8|9|[1-9][0-9]+)(?:\.[0-9]+)? player-entity-distance=[0-9]+(?:\.[0-9]+)? instance-removed=true entity-removed=true'
+    spawningDistanceClientWalk = 'spawning-distance-client-walk result=true player-displacement=(?:8|9|[1-9][0-9]+)(?:\.[0-9]+)? player-entity-distance=[0-9]+(?:\.[0-9]+)? instance-removed=true entity-removed=true despawn-elapsed-ticks=[0-9]+ decision-period-ticks=[0-9]+'
     visibilityOptions = 'visibility-options result=true visible-by-default=true invisible=true show-name=true'
     sheep = 'sheep-options result=true'
     armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false .*items=true'

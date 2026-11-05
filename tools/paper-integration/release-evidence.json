@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-spawning-timing-20261105-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-spawning-distance-timing-20261105-r3.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-spawning-distance-timing-20261105-r3.log.gz",
+    "logSha256": "4079a89849037355803d4bb20dc6c9227951df4d97f4c2966951c591ee54d479",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-spawning-distance-timing-20261105-r3-client-logs.tar.gz",
+    "clientLogSha256": "73f089e46323feb0bac70c6e46652cc2121399e975723708159ddee6e88427e1",
+    "pluginSha256": "842a3dfd96d10e23c844652ed0fe05736ed3c10d2996d258d81bbd6c870ca4c9",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-inside-outside-strict-20261105-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-inside-outside-strict-20261105-r2.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-inside-outside-strict-20261105-r2.log.gz",

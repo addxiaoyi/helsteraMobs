@@ -1,15 +1,16 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-inside-outside-strict-20261105-r2` passed the complete strict
-gate on Paper 1.21.1-133: 346 probes, 327 passed and 19 expected rejections,
-with zero incomplete. `insideOutsideCondition` verifies positive and negative
-`inside`/`outside` results on the Paper fixture and confirms the original block
-type and BlockData are restored. The broader Conditions catalog remains open.
-`spawningDistanceClientWalk` also records real-player movement beyond the
-configured eight-block radius and confirms removal of both the instance and
-Bukkit entity. Report and compressed server/client logs are listed in
+Fixture `srv-paper-spawning-timing-20261105-r3` passed the complete strict gate
+on Paper 1.21.1-133: 346 probes, 327 passed and 19 expected rejections, with
+zero incomplete. `spawningDistanceClientWalk` records 174.12 blocks of player
+displacement, 176.84 blocks between player and mob, and removal of both the
+managed instance and Bukkit entity 2 ticks after the first outside-range
+sample; the configured AI decision period is 10 ticks. `insideOutsideCondition`
+also verifies positive and negative `inside`/`outside` results and confirms the
+original block type and BlockData are restored. The broader Conditions catalog
+remains open. Report and compressed server/client logs are listed in
 `release-evidence.json`; plugin SHA-256:
-`d90dea6e153557afab20c9847e29f492c55fcc52d287ce282d40f31b87105df3`.
+`842a3dfd96d10e23c844652ed0fe05736ed3c10d2996d258d81bbd6c870ca4c9`.
 
 Previous full strict fixture `srv-paper-snowing-strict-20261105-r2` passed
 345 probes (326 passed, 19 expected rejections, zero incomplete).
