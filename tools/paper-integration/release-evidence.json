@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-inside-outside-strict-20261105-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-inside-outside-strict-20261105-r2.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-inside-outside-strict-20261105-r2.log.gz",
+    "logSha256": "7c3a7f12d7673adbdd3bfeee0f077f39cb5dd1e2709fa769ab86f3dbf016d6d1",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-inside-outside-strict-20261105-r2-client-logs.tar.gz",
+    "clientLogSha256": "aec27e5f131e02f35ece9b13bb064678bfb73e0bcec9c183cb5c212f24a172ef",
+    "pluginSha256": "d90dea6e153557afab20c9847e29f492c55fcc52d287ce282d40f31b87105df3",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-snowing-strict-20261105-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-snowing-strict-20261105-r2.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-snowing-strict-20261105-r2.log.gz",

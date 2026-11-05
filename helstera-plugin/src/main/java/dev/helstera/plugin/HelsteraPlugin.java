@@ -3427,19 +3427,34 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("block-type-in-radius DIRT >=1 1"), conditionContext);
                     var utilityHead = conditionTarget.getLocation().clone().add(0, 1, 0).getBlock();
                     var utilityHeadState = utilityHead.getState();
+                    boolean insidePositive = false;
+                    boolean insideNegative = false;
+                    boolean outsidePositive = false;
+                    boolean outsideNegative = false;
+                    boolean insideOutsideRestored = false;
                     try {
                         utilityHead.setType(org.bukkit.Material.STONE, false);
-                        boolean inside = behaviors.testCondition(
+                        insidePositive = behaviors.testCondition(
                                 skills.bindCondition("inside"), conditionContext);
-                        utilityHead.setType(org.bukkit.Material.AIR, false);
-                        boolean outside = behaviors.testCondition(
+                        outsideNegative = !behaviors.testCondition(
                                 skills.bindCondition("outside"), conditionContext);
-                        insideOutsideConditions = inside && outside;
-                        getLogger().info("inside-outside-condition-details inside=" + inside
-                                + " outside=" + outside);
+                        utilityHead.setType(org.bukkit.Material.AIR, false);
+                        insideNegative = !behaviors.testCondition(
+                                skills.bindCondition("inside"), conditionContext);
+                        outsidePositive = behaviors.testCondition(
+                                skills.bindCondition("outside"), conditionContext);
                     } finally {
                         utilityHeadState.update(true, false);
+                        insideOutsideRestored = utilityHead.getType() == utilityHeadState.getType()
+                                && utilityHead.getBlockData().equals(utilityHeadState.getBlockData());
                     }
+                    insideOutsideConditions = insidePositive && insideNegative
+                            && outsidePositive && outsideNegative && insideOutsideRestored;
+                    getLogger().info("inside-outside-condition-details inside-positive=" + insidePositive
+                            + " inside-negative=" + insideNegative
+                            + " outside-positive=" + outsidePositive
+                            + " outside-negative=" + outsideNegative
+                            + " restored=" + insideOutsideRestored);
                     boolean spatialBiomeType = behaviors.testCondition(
                             skills.bindCondition("biome-type-is " + actualBiome + " true"), conditionContext);
                     officialSpatialConditions = spatialHeight && spatialOrientation && spatialOnBlock

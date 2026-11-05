@@ -150,6 +150,11 @@
       "status": "passed"
     },
     {
+      "id": "insideOutsideCondition",
+      "status": "passed",
+      "requiredObservation": "inside-outside-condition-details inside-positive=true inside-negative=true outside-positive=true outside-negative=true restored=true"
+    },
+    {
       "id": "contextTargeterChain",
       "status": "passed"
     },
