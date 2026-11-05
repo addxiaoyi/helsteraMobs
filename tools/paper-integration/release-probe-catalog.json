@@ -332,6 +332,16 @@
       "requiredObservation": "imported-has-enchantment-condition primary-mapped=true alias-mapped=true positive=true any-positive=true level-rejected=true type-rejected=true restored=true"
     },
     {
+      "id": "importedTriggerItemTypeCondition",
+      "status": "passed",
+      "requiredObservation": "imported-trigger-item-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true constructed-context=true"
+    },
+    {
+      "id": "importedTriggerBlockTypeCondition",
+      "status": "passed",
+      "requiredObservation": "imported-trigger-block-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true state-rejected=true constructed-context=true"
+    },
+    {
       "id": "importedMaterialCooldownCondition",
       "status": "passed",
       "requiredObservation": "imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true"

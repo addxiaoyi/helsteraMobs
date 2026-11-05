@@ -128,6 +128,14 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedHasEnchantmentCondition'; status = 'passed'; observations = @('imported-has-enchantment-condition primary-mapped=true alias-mapped=true positive=true any-positive=true level-rejected=true type-rejected=true restored=true')
     }
+    $fullReport.expectedProbeIds += 'importedTriggerItemTypeCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedTriggerItemTypeCondition'; status = 'passed'; observations = @('imported-trigger-item-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true constructed-context=true')
+    }
+    $fullReport.expectedProbeIds += 'importedTriggerBlockTypeCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedTriggerBlockTypeCondition'; status = 'passed'; observations = @('imported-trigger-block-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true state-rejected=true constructed-context=true')
+    }
     $fullReport.expectedProbeIds += 'importedMaterialCooldownCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedMaterialCooldownCondition'; status = 'passed'; observations = @('imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true')

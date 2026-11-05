@@ -27,7 +27,28 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-has-enchantment-import-strict-20261105-r1`
+Latest strict fixture `srv-paper-trigger-types-import-strict-20261105-r2`
+passed 356 probes (337 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its imported TriggerItemType and TriggerBlockType probes
+verify primary/alias mapping, material positives and negatives, and the block
+wrong-state rejection against a real Bukkit Item and real block. The probes
+construct event-state `BehaviorContext` values; they do not assert natural
+Bukkit event delivery. Report:
+`reports/paper-1.21.1-trigger-types-import-strict-20261105-r2.json`; server log:
+`reports/paper-1.21.1-trigger-types-import-strict-20261105-r2.log.gz`; client
+logs: `reports/paper-1.21.1-trigger-types-import-strict-20261105-r2-client-logs.tar.gz`.
+Plugin SHA-256:
+`41cf9e79c81657f05acb68a95a78ad5fdda073de60b7502d17b79e428538ec4a`.
+
+Previous strict fixture `srv-paper-trigger-types-import-strict-20261105-r1`
+also passed 356 probes with the same TriggerItemType/TriggerBlockType controls;
+the r2 report supersedes it as the latest evidence for the current exact JAR.
+Report:
+`reports/paper-1.21.1-trigger-types-import-strict-20261105-r1.json`.
+Plugin SHA-256:
+`071ceebd2da8a904dfbc3aef8a2594fb5d22c04d83e23acf4e798f9943ebe65e`.
+
+Earlier strict fixture `srv-paper-has-enchantment-import-strict-20261105-r1`
 passed 354 probes (335 passed, 19 expected rejections, zero incomplete). It
 verifies imported `?hasEnchantment`/`?hasEnchant`, Sharpness and `ANY`
 positives, level/type negatives, and equipment restoration on a real managed
