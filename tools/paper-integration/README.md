@@ -27,7 +27,27 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-enderman-condition-strict-20261105-r1` passed
+Latest strict fixture `srv-paper-aerial-condition-strict-20261105-r2` passed
+349 probes (330 passed, 19 expected rejections, zero incomplete).
+`aerialCondition` verifies a floating ArmorStand through both `aerial` and
+`isAerial`, and rejects a grounded player with `ground-entity=player`. Report:
+`reports/paper-1.21.1-aerial-condition-strict-20261105-r2.json`; server log:
+`reports/paper-1.21.1-aerial-condition-strict-20261105-r2.log.gz`; client logs:
+`reports/paper-1.21.1-aerial-condition-strict-20261105-r2-client-logs.tar.gz`.
+Plugin SHA-256:
+`97f61a7392ad0051acc0ee55cdcc0272c0512d2675347c138be3ce3f918eaa6a`.
+
+Previous strict fixture `srv-paper-aerial-condition-strict-20261105-r1` passed
+349 probes (330 passed, 19 expected rejections, zero incomplete).
+`aerialCondition` verifies the floating ArmorStand and grounded-player states.
+Report:
+`reports/paper-1.21.1-aerial-condition-strict-20261105-r1.json`; server log:
+`reports/paper-1.21.1-aerial-condition-strict-20261105-r1.log.gz`; client logs:
+`reports/paper-1.21.1-aerial-condition-strict-20261105-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`0c35898c00b2b52ebebe8aa8b0ee53665682188c53e10a8149d2fce67df98159`.
+
+Previous strict fixture `srv-paper-enderman-condition-strict-20261105-r1` passed
 348 probes (329 passed, 19 expected rejections, zero incomplete).
 `endermanCondition` verifies a real Enderman positive and managed Zombie
 negative. Report:
@@ -942,9 +962,11 @@ records `water-mob-condition=true zombie-condition=true`; strict Paper 1.21.1
 release evidence remains separate.
 
 The condition catalog also checks official `Aerial`: a real floating ArmorStand
-passes while the already connected player's grounded state rejects the same
+passes both `aerial` and `isAerial`, while a grounded target rejects the
 condition. Exploratory Paper 1.21.11 r102 records `aerial-condition=true`;
-strict Paper 1.21.1 release evidence remains separate.
+strict Paper 1.21.1-133 fixture `srv-paper-aerial-condition-strict-20261105-r2`
+records the independent `aerialCondition` probe and confirms the grounded
+negative control was a player.
 
 The catalog also checks official `IsEnderman` on a real Enderman and rejects
 the same condition for the managed Zombie. Exploratory Paper 1.21.11 r103

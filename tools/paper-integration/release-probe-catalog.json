@@ -301,6 +301,11 @@
       "requiredObservation": "is-in-cinematic-condition player-open=true player-out-of-range-rejected=true non-player-rejected=true closed=true"
     },
     {
+      "id": "aerialCondition",
+      "status": "passed",
+      "requiredObservation": "aerial-condition-details positive=true alias-positive=true negative=true ground-entity=player ground=true"
+    },
+    {
       "id": "endermanCondition",
       "status": "passed",
       "requiredObservation": "enderman-condition-details positive=true negative=true"

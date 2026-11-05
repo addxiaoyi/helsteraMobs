@@ -1,5 +1,25 @@
 [
   {
+    "fixtureId": "srv-paper-aerial-condition-strict-20261105-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-aerial-condition-strict-20261105-r2.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-aerial-condition-strict-20261105-r2.log.gz",
+    "logSha256": "722cba135108e1bba15ce21e99b5748e3c76ab6040f8728c1be34290282da52b",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-aerial-condition-strict-20261105-r2-client-logs.tar.gz",
+    "clientLogSha256": "c2185f1976a278cf8c5a13dc2d70c940603982293761ac1585115bf66389ac49",
+    "pluginSha256": "97f61a7392ad0051acc0ee55cdcc0272c0512d2675347c138be3ce3f918eaa6a",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-aerial-condition-strict-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-aerial-condition-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-aerial-condition-strict-20261105-r1.log.gz",
+    "logSha256": "b5d318dc5918982771e404098d384ea2e5ec45c8fdaa81656889d92ef4ab03cc",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-aerial-condition-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "32743146bd10d156938fc080ef35050af8b8598bc22f1e838f97907e38d33469",
+    "pluginSha256": "0c35898c00b2b52ebebe8aa8b0ee53665682188c53e10a8149d2fce67df98159",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-enderman-condition-strict-20261105-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-enderman-condition-strict-20261105-r1.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-enderman-condition-strict-20261105-r1.log.gz",

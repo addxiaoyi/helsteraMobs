@@ -108,6 +108,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'endermanCondition'; status = 'passed'; observations = @('enderman-condition-details positive=true negative=true')
     }
+    $fullReport.expectedProbeIds += 'aerialCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'aerialCondition'; status = 'passed'; observations = @('aerial-condition-details positive=true alias-positive=true negative=true ground-entity=player ground=true')
+    }
     $fullReport.expectedProbeIds += 'snowingCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'snowingCondition'; status = 'passed'; observations = @('snowing-condition result=true target-location-isolated=true target-positive=true alias-positive=true warm-rejected=true clear-rejected=true missing-context-rejected=true invalid-arguments-rejected=true restored=true')
