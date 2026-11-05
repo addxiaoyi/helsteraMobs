@@ -1,5 +1,16 @@
 # Paper Startup Evidence
 
+Fixture `srv-paper-targeter-identity-strict-20261105-r1` passed the complete
+strict gate on Paper 1.21.1-133: 340 probes, 321 passed and 19 expected
+rejections, with zero incomplete. `targeterIdentityFilter` verifies generic
+`target=mythic|vanilla|nonmythic` and `ignore=` filters plus the
+`targetvanilla`/`targetnonmythic` boolean alias against real Paper entities.
+The managed identity marker applies to entities spawned from Helstera mob
+definitions. Entities managed by an external MythicMobs plugin are not
+identified. Report and compressed server/client logs are listed in
+`release-evidence.json`; plugin SHA-256:
+`35474b6d97d214b3e049a953f96b5080a29998d4d0c19aa8e8c04f8d22c3cc17`.
+
 Fixture `srv-paper-target-all-filter-strict-20261105-r1` passed the complete
 strict gate on Paper 1.21.1-133: 339 probes, 320 passed and 19 expected
 rejections, with zero incomplete. `targeterArgumentValidation` verifies

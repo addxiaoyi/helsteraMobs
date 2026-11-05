@@ -1044,6 +1044,9 @@ public final class Targeters {
     }
 
     private static Boolean specificLivingCategoryTarget(LivingEntity entity, ParsedSpec parsed) {
+        if (parsed.targetVanilla() != null && !ManagedMobIdentity.isManaged(entity)) {
+            return parsed.targetVanilla();
+        }
         if (entity instanceof org.bukkit.entity.Villager && parsed.targetVillagers() != null) {
             return parsed.targetVillagers();
         }
@@ -1075,7 +1078,8 @@ public final class Targeters {
         if (java.util.Set.of("ground", "water", "flying", "creative", "spectator", "armorstand", "armor_stand",
                 "player", "players", "mob", "mobs", "nonplayer", "nonplayers",
                 "living", "entity", "entities", "animal", "animals", "monster", "monsters",
-                "creature", "creatures", "villager", "villagers", "tamed", "self", "caster")
+                "creature", "creatures", "villager", "villagers", "tamed", "self", "caster",
+                "mythic", "vanilla", "nonmythic")
                 .contains(filter)) return true;
         try {
             org.bukkit.entity.EntityType.valueOf(filter.toUpperCase(Locale.ROOT));
@@ -1107,6 +1111,8 @@ public final class Targeters {
                     || entity instanceof org.bukkit.entity.Monster || entity instanceof org.bukkit.entity.Villager;
             case "villager", "villagers" -> entity instanceof org.bukkit.entity.Villager;
             case "tamed" -> entity instanceof org.bukkit.entity.Tameable tameable && tameable.isTamed();
+            case "mythic" -> ManagedMobIdentity.isManaged(entity);
+            case "vanilla", "nonmythic" -> !ManagedMobIdentity.isManaged(entity);
             case "self", "caster" -> source != null && source.baseEntity() != null
                     && source.baseEntity().map(base -> base == entity).orElse(false);
             default -> entity.getType() != null && entity.getType().name().equalsIgnoreCase(filter);
@@ -1145,7 +1151,7 @@ public final class Targeters {
                               Boolean targetPlayers, Boolean targetCreative, Boolean targetSpectator,
                               Boolean targetInvulnerable, Boolean targetArmorStands,
                               Boolean targetAnimals, Boolean targetCreatures, Boolean targetVillagers,
-                              Boolean targetAll, String sort, boolean valid) {
+                              Boolean targetVanilla, Boolean targetAll, String sort, boolean valid) {
         private ParsedSpec(String name, List<String> args, Integer limit, Integer skip, Double radius,
                            String filter, String targetFilter, String ignoreFilter, Boolean targetSelf,
                            Boolean targetPlayers, Boolean targetCreative, Boolean targetSpectator,
@@ -1154,7 +1160,7 @@ public final class Targeters {
                            String sort, boolean valid) {
             this(name, args, limit, skip, radius, filter, targetFilter, ignoreFilter, targetSelf,
                     targetPlayers, targetCreative, targetSpectator, targetInvulnerable, targetArmorStands,
-                    targetAnimals, targetCreatures, targetVillagers, null, sort, valid);
+                    targetAnimals, targetCreatures, targetVillagers, null, null, sort, valid);
         }
 
         static ParsedSpec parse(String raw) {
@@ -1188,6 +1194,7 @@ public final class Targeters {
             Boolean targetAnimals = null;
             Boolean targetCreatures = null;
             Boolean targetVillagers = null;
+            Boolean targetVanilla = null;
             Boolean targetAll = null;
             String sort = null;
             boolean valid = true;
@@ -1215,6 +1222,7 @@ public final class Targeters {
                         case "targetanimals" -> "targetanimals";
                         case "targetcreatures" -> "targetcreatures";
                         case "targetvillagers" -> "targetvillagers";
+                        case "targetvanilla", "targetnonmythic" -> "targetvanilla";
                         case "targetall" -> "targetall";
                         case "sort" -> "sort";
                         default -> null;
@@ -1272,6 +1280,11 @@ public final class Targeters {
                             if (rawValue.equalsIgnoreCase("true")) targetVillagers = true;
                             else if (rawValue.equalsIgnoreCase("false")) targetVillagers = false;
                             else valid = false;
+                        } else if (key.equalsIgnoreCase("targetvanilla")
+                                || key.equalsIgnoreCase("targetnonmythic")) {
+                            if (rawValue.equalsIgnoreCase("true")) targetVanilla = true;
+                            else if (rawValue.equalsIgnoreCase("false")) targetVanilla = false;
+                            else valid = false;
                         } else if (key.equalsIgnoreCase("targetall")) {
                             if (rawValue.equalsIgnoreCase("true")) targetAll = true;
                             else if (rawValue.equalsIgnoreCase("false")) targetAll = false;
@@ -1298,6 +1311,8 @@ public final class Targeters {
                                 && !key.equalsIgnoreCase("targetanimals")
                                 && !key.equalsIgnoreCase("targetcreatures")
                                 && !key.equalsIgnoreCase("targetvillagers")
+                                && !key.equalsIgnoreCase("targetvanilla")
+                                && !key.equalsIgnoreCase("targetnonmythic")
                                 && !key.equalsIgnoreCase("targetall")
                                 && !key.equalsIgnoreCase("sort")) args.add(token);
                     }
@@ -1306,7 +1321,8 @@ public final class Targeters {
             return new ParsedSpec(canonicalName(value.substring(0, open)), args,
                     limit, skip, radius, filter, targetFilter, ignoreFilter, targetSelf,
                     targetPlayers, targetCreative, targetSpectator, targetInvulnerable,
-                    targetArmorStands, targetAnimals, targetCreatures, targetVillagers, targetAll, sort, valid);
+                    targetArmorStands, targetAnimals, targetCreatures, targetVillagers,
+                    targetVanilla, targetAll, sort, valid);
         }
 
         private static ParsedSpec invalid(String name) {

@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-targeter-identity-strict-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-targeter-identity-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-targeter-identity-strict-20261105-r1.log.gz",
+    "logSha256": "8016da23a0b1f23979e6a82623c3a37cfa1c695c826fb73f33694bf197f2baf3",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-targeter-identity-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "be3da601bff0d0293e0200a0e5da6da57d77f6f46e9f558439be804f13428d2a",
+    "pluginSha256": "35474b6d97d214b3e049a953f96b5080a29998d4d0c19aa8e8c04f8d22c3cc17",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-target-all-filter-strict-20261105-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-target-all-filter-strict-20261105-r1.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-target-all-filter-strict-20261105-r1.log.gz",

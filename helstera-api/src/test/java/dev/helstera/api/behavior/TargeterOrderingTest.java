@@ -330,6 +330,45 @@ class TargeterOrderingTest {
     }
 
     @Test
+    @DisplayName("Mythic identity filters use managed mob PDC and targetvanilla aliases fail closed")
+    void mythicIdentityTargetFilters() {
+        var managed = managedLivingProxy("integration_boss");
+        var vanillaMob = livingProxy(org.bukkit.entity.Monster.class);
+        var player = gameModePlayer(org.bukkit.GameMode.SURVIVAL);
+        List<LivingEntity> candidates = List.of(managed, vanillaMob, player);
+        var source = (dev.helstera.api.instance.ModelInstance) null;
+
+        assertEquals("integration_boss", ManagedMobIdentity.mobId(managed));
+        assertEquals(List.of(managed), Targeters.select(
+                "@living{target=mythic}", source, candidates, List.of()));
+        assertEquals(List.of(vanillaMob, player), Targeters.select(
+                "@living{target=vanilla}", source, candidates, List.of()));
+        assertEquals(List.of(vanillaMob, player), Targeters.select(
+                "@living{target=nonmythic}", source, candidates, List.of()));
+        assertEquals(List.of(vanillaMob, player), Targeters.select(
+                "@living{ignore=mythic}", source, candidates, List.of()));
+        assertEquals(List.of(managed), Targeters.select(
+                "@living{ignore=vanilla}", source, candidates, List.of()));
+        assertEquals(List.of(managed), Targeters.select(
+                "@living{ignore=nonmythic}", source, candidates, List.of()));
+        assertEquals(List.of(vanillaMob, player), Targeters.select(
+                "@living{target=players;targetvanilla=true}", source, candidates, List.of()));
+        assertEquals(List.of(vanillaMob, player), Targeters.select(
+                "@living{target=players;targetnonmythic=true}", source, candidates, List.of()));
+        assertEquals(List.of(managed), Targeters.select(
+                "@living{targetnonmythic=false}", source, candidates, List.of()));
+        assertEquals(candidates, Targeters.select(
+                "@living{target=mythic;targetvanilla=false;targetall=true}", source,
+                candidates, List.of()));
+        for (String spec : List.of(
+                "@living{targetvanilla=true;targetnonmythic=false}",
+                "@living{targetvanilla=maybe}",
+                "@living{targetnonmythic=1}")) {
+            assertEquals(List.of(), Targeters.select(spec, source, candidates, List.of()), spec);
+        }
+    }
+
+    @Test
     @DisplayName("ground, water, and flying filters use mutually exclusive Bukkit states")
     void mythicGroundAndWaterFilters() {
         var grounded = stateLivingProxy(true, false);
@@ -970,6 +1009,32 @@ class TargeterOrderingTest {
                     if (method.getName().equals("getLocation")) return new org.bukkit.Location(null, 0, 0, 0);
                     return defaultValue(method.getReturnType());
                 }));
+    }
+
+    private static org.bukkit.entity.LivingEntity managedLivingProxy(String mobId) {
+        var stored = new java.util.HashMap<org.bukkit.NamespacedKey, String>();
+        var data = (org.bukkit.persistence.PersistentDataContainer) Proxy.newProxyInstance(
+                org.bukkit.persistence.PersistentDataContainer.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.persistence.PersistentDataContainer.class}, (proxy, method, args) -> {
+                    if (method.getName().equals("set")) {
+                        stored.put((org.bukkit.NamespacedKey) args[0], (String) args[2]);
+                        return null;
+                    }
+                    if (method.getName().equals("get")) return stored.get((org.bukkit.NamespacedKey) args[0]);
+                    if (method.getName().equals("has")) return stored.containsKey((org.bukkit.NamespacedKey) args[0]);
+                    return defaultValue(method.getReturnType());
+                });
+        var entity = (LivingEntity) Proxy.newProxyInstance(LivingEntity.class.getClassLoader(),
+                new Class<?>[]{LivingEntity.class}, (proxy, method, args) -> switch (method.getName()) {
+                    case "getType" -> org.bukkit.entity.EntityType.ZOMBIE;
+                    case "getLocation" -> new org.bukkit.Location(null, 0, 0, 0);
+                    case "getPersistentDataContainer" -> data;
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    default -> defaultValue(method.getReturnType());
+                });
+        ManagedMobIdentity.mark(entity, mobId);
+        return entity;
     }
 
     private static org.bukkit.entity.LivingEntity invulnerableLivingProxy(boolean invulnerable) {

@@ -15,7 +15,7 @@ try {
             'README.md' {
                 'The matrix currently has `1`' + [Environment]::NewLine +
                     '`mapped-unverified` rows.' + [Environment]::NewLine +
-                    'Latest strict report has 339 probes, zero incomplete' + [Environment]::NewLine +
+                    'Latest strict report has 340 probes, zero incomplete' + [Environment]::NewLine +
                     'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine
             }
             'MYTHICMOBS_PARITY_MATRIX.md' {
@@ -88,6 +88,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'dropNativeTierRange'; status = 'passed'; observations = @('drop-native-tier-range valid=true fallback=true warnings=true')
     }
+    $fullReport.expectedProbeIds += 'targeterIdentityFilter'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'targeterIdentityFilter'; status = 'passed'; observations = @('targeter-identity-filter managed=true target-mythic=true target-nonmythic=true ignore-mythic=true ignore-vanilla=true targetvanilla=true targetnonmythic=true targetnonmythic-false=true duplicate-rejected=true passed=true')
+    }
     $aiSelectorCore = @($fullReport.probes | Where-Object id -eq 'aiSelectorCore')
     if ($aiSelectorCore.Count -ne 1) { throw 'Synthetic release report must contain aiSelectorCore.' }
     $aiSelectorCore[0].observations = @($aiSelectorCore[0].observations) +
@@ -156,7 +160,7 @@ try {
     $readmePath = Join-Path $temporaryRoot 'README.md'
     $originalReadme = [System.IO.File]::ReadAllText($readmePath)
     [System.IO.File]::WriteAllText($readmePath, $originalReadme.Replace(
-        'Latest strict report has 339 probes', 'Latest strict report has 290 probes'))
+        'Latest strict report has 340 probes', 'Latest strict report has 290 probes'))
     $staleProbeOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0 -or $staleProbeOutput -notmatch 'README latest strict report probe count does not match') {
         throw "Stale latest report probe count was not rejected: $staleProbeOutput"
@@ -165,7 +169,7 @@ try {
     [System.IO.File]::WriteAllText($readmePath,
         'The matrix currently has `1`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
-            'Latest strict report has 339 probes, zero incomplete' + [Environment]::NewLine +
+            'Latest strict report has 340 probes, zero incomplete' + [Environment]::NewLine +
                     'Current fixture inventory: 4 cited IDs; 2 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
     $staleOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0 -or $staleOutput -notmatch 'README fixture inventory is stale') {
@@ -174,13 +178,13 @@ try {
     [System.IO.File]::WriteAllText($readmePath,
         'The matrix currently has `1`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
-            'Latest strict report has 339 probes, zero incomplete' + [Environment]::NewLine +
+            'Latest strict report has 340 probes, zero incomplete' + [Environment]::NewLine +
                     'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
 
     [System.IO.File]::WriteAllText($readmePath,
         'The matrix currently has `2`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
-            'Latest strict report has 339 probes, zero incomplete' + [Environment]::NewLine +
+            'Latest strict report has 340 probes, zero incomplete' + [Environment]::NewLine +
                     'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
     $staleStatusOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0 -or $staleStatusOutput -notmatch 'README mapped-unverified row count is stale') {
@@ -189,7 +193,7 @@ try {
     [System.IO.File]::WriteAllText($readmePath,
         'The matrix currently has `1`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
-            'Latest strict report has 339 probes, zero incomplete' + [Environment]::NewLine +
+            'Latest strict report has 340 probes, zero incomplete' + [Environment]::NewLine +
                     'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
 
     $requiredOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -RequirePresent 2>&1 | Out-String)
@@ -217,6 +221,17 @@ try {
     if ($LASTEXITCODE -eq 0 -or $missingTargeterOutput -notmatch 'lacks required observation for aiSelectorCore' -or
             $missingTargeterOutput -notmatch 'targeter-syntax=true') {
         throw "Release gate accepted aiSelectorCore without targeter syntax evidence: $missingTargeterOutput"
+    }
+    [System.IO.File]::WriteAllText($archivePath, ($fullReport | ConvertTo-Json -Depth 20))
+    $missingIdentityEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
+    $missingIdentityEvidenceProbe = @($missingIdentityEvidence.probes | Where-Object id -eq 'targeterIdentityFilter')
+    $missingIdentityEvidenceProbe[0].observations = @($missingIdentityEvidenceProbe[0].observations |
+        Where-Object { -not ([string]$_).Contains('targeter-identity-filter') })
+    [System.IO.File]::WriteAllText($archivePath, ($missingIdentityEvidence | ConvertTo-Json -Depth 20))
+    $missingIdentityOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $missingIdentityOutput -notmatch 'targeterIdentityFilter' -or
+            $missingIdentityOutput -notmatch 'targeter-identity-filter') {
+        throw "Release gate accepted missing targeter identity evidence: $missingIdentityOutput"
     }
     [System.IO.File]::WriteAllText($archivePath, ($fullReport | ConvertTo-Json -Depth 20))
     [System.IO.File]::WriteAllText($testLogPath, 'modified log')

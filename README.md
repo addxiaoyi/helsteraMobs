@@ -4,20 +4,27 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-target-all-filter-strict-20261105-r1`
+Latest strict fixture `srv-paper-targeter-identity-strict-20261105-r1`
+completes 340 probes (321 passed, 19 expected rejections, zero incomplete).
+`targeterIdentityFilter` verifies `target=mythic`, `target=vanilla`/
+`target=nonmythic`, their `ignore=` counterparts, and the
+`targetvanilla`/`targetnonmythic` boolean alias against real Paper entities.
+The identity marker is written only to entities spawned from a Helstera mob
+definition; this does not identify entities managed by an external MythicMobs
+plugin. Report:
+`tools/paper-integration/reports/paper-1.21.1-targeter-identity-strict-20261105-r1.json`.
+The exact plugin SHA-256 is
+`35474b6d97d214b3e049a953f96b5080a29998d4d0c19aa8e8c04f8d22c3cc17`.
+
+Previous strict fixture `srv-paper-target-all-filter-strict-20261105-r1`
 completes 339 probes (320 passed, 19 expected rejections, zero incomplete).
 Its `targeterArgumentValidation` probe verifies that `targetall=true` overrides
-conflicting `target`, `ignore`, and specific category filters across the real
-Paper candidate set. Existing animal, creature, villager, ArmorStand,
-invulnerability, player-mode, ground, water, and flying checks also pass, with
-real Sheep, Zombie, Villager, player, and Phantom entities. Invalid and
-duplicate options still fail closed. Report:
-`tools/paper-integration/reports/paper-1.21.1-target-all-filter-strict-20261105-r1.json`.
-The exact plugin SHA-256 is
-`1a30a22c1274f045782daff576ebeb1ed4089cd963879d5a831602ef04cf1bf4`.
-`targetall` does not expand the candidate set selected by a targeter's radius
-or world scope. Non-living display/interaction targets, NPC, Mythic identity,
-and premium filters remain open.
+conflicting `target`, `ignore`, and specific category filters within the real
+candidate set, retaining animal, creature, villager, ArmorStand,
+invulnerability, player-mode, ground, water, and flying checks. Invalid and
+duplicate options fail closed. `targetall` preserves the targeter's radius and
+world scope. Non-living display/interaction entities, NPC identity, external
+MythicMobs identity, and premium filters remain open.
 
 The same strict run verifies `locationTargeterDispatch` through production
 `set-block` for SelfLocation and all five `@SelfEyeLocation` aliases, alongside
@@ -319,7 +326,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 339 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 340 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -335,8 +342,8 @@ This is a partial parity release. The matrix currently has `41`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 442 cited IDs; 354 report files; 4 directories
-   without reports; 84 missing directories; 118 archived release reports. The
+   Current fixture inventory: 443 cited IDs; 355 report files; 4 directories
+   without reports; 84 missing directories; 119 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -553,7 +560,7 @@ Many rows remain `mapped-unverified`; the project is not complete:
 1. Complete official Conditions, Mechanics, placeholders, comparator edge cases, and grammar coverage.
 2. Drops: `TotalItems`, paired `MinItems`/`MaxItems`, or either Bonus option enable weighted entry selection; single bounds without bonuses retain ordered selection. Fractional Bonus multipliers add the integer part plus one line probabilistically at the fractional remainder. Strict natural-death evidence covers level/Luck combinations and dropper conditions; the earlier single-bound ordering assertion is invalid and is being replaced. Standalone `DropTables/` files project supported settings with an importer-to-runtime contract, and `exp`/`xp`/`experience` rows have natural-death coverage. Remaining work includes `BiasStat`, Mythic custom Luck enchantment/curses inputs, broader placeholders and the complete official catalog.
 3. Pin conditions resolve through the plugin's own `pins.yml`; location-valued `@Pin` resolves every configured point or one random point, `@BlocksInPinRegion` enumerates inclusive cuboids up to 16,384 blocks, and `MovePin` updates single-point pins in memory. Strict Paper fixture `srv-paper-pin-targeters-strict-20261102-r2` passes the required `pinTargeters` probe on Paper 1.21.1-133: multi-point/random dispatch, single-point movement, multi-point movement rejection, real cuboid `set-block`/`break-block` with block restoration, and fail-closed rejection of a 16,385-block region before action dispatch. Compatibility with Mythic pack pin-file formats remains unverified; in-memory movement resets when the plugin reloads its own `pins.yml`.
-4. Complete the official targeter/filter catalog: ground, water, flying, player, Creative, Spectator, invulnerability, ArmorStand, animal, creature, and villager filters now have API and strict Paper coverage; non-living targets, NPC/MythicMob filters, premium selectors, and native Pathfinder Goal mutation remain open or outside the public Paper API boundary.
+4. Complete the official targeter/filter catalog: ground, water, flying, player, Creative, Spectator, invulnerability, ArmorStand, animal, creature, villager, and Helstera-managed mob identity filters now have API and strict Paper coverage. External MythicMobs/Citizens identity, non-living targets, premium selectors, and native Pathfinder Goal mutation remain open or outside the public Paper API boundary.
 5. Expand the remaining legacy numeric ID/data families; `ItemModel` and `DamageType` are explicitly preserved because Paper 1.21.1 `ItemMeta` has no public component API for them.
 6. Strict Paper 1.21.1-133 now records the registered Creeper/Bee/Zombie and jockey mount-event probes; finish universal Mob Option ordering while natural AI jockey selection remains unverified.
 7. Add remaining Bukkit event, Audience version, and SkillTree lifecycle/restart evidence.
