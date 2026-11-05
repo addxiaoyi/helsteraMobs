@@ -1949,6 +1949,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean importedAerialCondition = false;
             boolean endermanCondition = false;
             boolean enchantmentCondition = false;
+            boolean importedHasEnchantmentCondition = false;
             boolean colorCondition = false;
             boolean importedColorCondition = false;
             boolean materialCooldownCondition = false;
@@ -2822,6 +2823,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     var originalMainHand = equipmentProbe.getItemInMainHand() == null
                             ? new org.bukkit.inventory.ItemStack(org.bukkit.Material.AIR)
                             : equipmentProbe.getItemInMainHand().clone();
+                    boolean importedSharpnessMapped = false;
+                    boolean importedAnyMapped = false;
+                    boolean importedLevelMapped = false;
+                    boolean importedTypeMapped = false;
+                    boolean importedPositive = false;
+                    boolean importedAnyPositive = false;
+                    boolean importedLevelNegative = false;
+                    boolean importedTypeNegative = false;
                     try {
                         var enchantedSword = new org.bukkit.inventory.ItemStack(
                                 org.bukkit.Material.DIAMOND_SWORD);
@@ -2837,12 +2846,54 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         boolean typeRejected = !behaviors.testCondition(
                                 skills.bindCondition("has-enchantment{e=LOOTING}"), context);
                         enchantmentCondition = positive && any && levelRejected && typeRejected;
+                        var importedSharpness = dev.helstera.migration.importer.MmConditions.translate(
+                                "?hasEnchantment{e=SHARPNESS;l=>2}");
+                        var importedAny = dev.helstera.migration.importer.MmConditions.translate(
+                                "?hasEnchant{e=ANY;l=3}");
+                        var importedLevelRejected = dev.helstera.migration.importer.MmConditions.translate(
+                                "?hasEnchantment{e=SHARPNESS;l=>3}");
+                        var importedTypeRejected = dev.helstera.migration.importer.MmConditions.translate(
+                                "?hasEnchantment{e=LOOTING}");
+                        importedSharpnessMapped = importedSharpness.translated()
+                                && "has-enchantment SHARPNESS >2".equals(importedSharpness.condition());
+                        importedAnyMapped = importedAny.translated()
+                                && "has-enchantment ANY 3".equals(importedAny.condition());
+                        importedLevelMapped = importedLevelRejected.translated()
+                                && "has-enchantment SHARPNESS >3".equals(importedLevelRejected.condition());
+                        importedTypeMapped = importedTypeRejected.translated()
+                                && "has-enchantment LOOTING >0".equals(importedTypeRejected.condition());
+                        String importedSharpnessKey = importedSharpnessMapped
+                                ? skills.bindCondition(importedSharpness.condition()) : null;
+                        String importedAnyKey = importedAnyMapped
+                                ? skills.bindCondition(importedAny.condition()) : null;
+                        String importedLevelKey = importedLevelMapped
+                                ? skills.bindCondition(importedLevelRejected.condition()) : null;
+                        String importedTypeKey = importedTypeMapped
+                                ? skills.bindCondition(importedTypeRejected.condition()) : null;
+                        importedPositive = importedSharpnessKey != null
+                                && behaviors.testCondition(importedSharpnessKey, context);
+                        importedAnyPositive = importedAnyKey != null
+                                && behaviors.testCondition(importedAnyKey, context);
+                        importedLevelNegative = importedLevelKey != null
+                                && !behaviors.testCondition(importedLevelKey, context);
+                        importedTypeNegative = importedTypeKey != null
+                                && !behaviors.testCondition(importedTypeKey, context);
                         getLogger().info("enchantment-condition-details positive=" + positive
                                 + " any=" + any + " level-rejected=" + levelRejected
                                 + " type-rejected=" + typeRejected);
                     } finally {
                         equipmentProbe.setItemInMainHand(originalMainHand);
                     }
+                    boolean enchantmentRestored = originalMainHand.equals(equipmentProbe.getItemInMainHand());
+                    importedHasEnchantmentCondition = importedSharpnessMapped && importedAnyMapped
+                            && importedLevelMapped && importedTypeMapped && importedPositive
+                            && importedAnyPositive && importedLevelNegative && importedTypeNegative
+                            && enchantmentRestored;
+                    getLogger().info("[自检] imported-has-enchantment-condition primary-mapped="
+                            + importedSharpnessMapped + " alias-mapped=" + importedAnyMapped
+                            + " positive=" + importedPositive + " any-positive=" + importedAnyPositive
+                            + " level-rejected=" + importedLevelNegative + " type-rejected="
+                            + importedTypeNegative + " restored=" + enchantmentRestored);
                 }
                 if (dialogueService != null) {
                     var dialogueProbeConfig = new org.bukkit.configuration.file.YamlConfiguration();
@@ -5936,6 +5987,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " imported-aerial-condition=" + importedAerialCondition
                         + " enderman-condition=" + endermanCondition
                         + " enchantment-condition=" + enchantmentCondition
+                        + " imported-has-enchantment-condition=" + importedHasEnchantmentCondition
                         + " color-condition=" + colorCondition
                         + " imported-color-condition=" + importedColorCondition
                         + " material-cooldown-condition=" + materialCooldownCondition

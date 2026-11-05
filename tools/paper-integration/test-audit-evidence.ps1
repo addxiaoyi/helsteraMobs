@@ -124,6 +124,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedColorCondition'; status = 'passed'; observations = @('imported-color-condition red-mapped=true blue-alias-mapped=true positive=true negative=true entity-color=RED')
     }
+    $fullReport.expectedProbeIds += 'importedHasEnchantmentCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedHasEnchantmentCondition'; status = 'passed'; observations = @('imported-has-enchantment-condition primary-mapped=true alias-mapped=true positive=true any-positive=true level-rejected=true type-rejected=true restored=true')
+    }
     $fullReport.expectedProbeIds += 'importedMaterialCooldownCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedMaterialCooldownCondition'; status = 'passed'; observations = @('imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true')

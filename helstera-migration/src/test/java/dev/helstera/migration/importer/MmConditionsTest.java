@@ -687,6 +687,7 @@ class MmConditionsTest {
         assertEquals("has-enchantment SHARPNESS >2",
                 t("?hasEnchantment{e=SHARPNESS;l=>2}"));
         assertEquals("has-enchantment ANY >0", t("?hasEnchant"));
+        assertEquals("has-enchantment ANY 3", t("?hasEnchant{e=ANY;l=3}"));
         assertEquals("has-enchantment ANY >=3", t("?hasEnchantment{level=>=3}"));
         assertTrue(translated("?hasEnchantment{type=SHARPNESS;l=1to3}"));
         assertFalse(translated("?hasEnchantment{e=SHARPNESS;l=invalid}"));

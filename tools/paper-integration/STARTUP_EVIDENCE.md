@@ -1,10 +1,20 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-condition-import-strict-20261105-r1` passed the full strict
-gate on Paper 1.21.1-133: 353 probes, 334 passed, 19 expected rejections, and
-zero incomplete. It verifies imported Aerial and Color aliases plus
-`MaterialIsOnCooldown` against a real player cooldown. Report and compressed
-server/client logs are listed in `release-evidence.json`; plugin SHA-256:
+Fixture `srv-paper-has-enchantment-import-strict-20261105-r1` passed the full
+strict gate on Paper 1.21.1-133: 354 probes, 335 passed, 19 expected
+rejections, and zero incomplete. `importedHasEnchantmentCondition` verifies
+Mythic `?hasEnchantment` and `?hasEnchant` on a real managed Zombie, including
+positive Sharpness/`ANY`, level/type negatives, and equipment restoration.
+Report and compressed server/client logs are listed in `release-evidence.json`;
+plugin SHA-256:
+`81492669538c1c4358a4ac7f8537e76791a31fb08d55c1246137ad6afe149fbe`.
+
+Previous fixture `srv-paper-condition-import-strict-20261105-r1` passed the
+full strict gate on Paper 1.21.1-133: 353 probes, 334 passed, 19 expected
+rejections, and zero incomplete. It verifies imported Aerial and Color aliases
+plus `MaterialIsOnCooldown` against a real player cooldown. Report and
+compressed server/client logs are listed in `release-evidence.json`; plugin
+SHA-256:
 `75b5bf2bde256454caa90aa1bea652ac67754b0f65b3e38633d3ddbf7933104a`.
 
 Fixture `srv-paper-color-import-strict-20261105-r1` passed the full strict
@@ -1391,8 +1401,14 @@ structured log records
 `enchantment-condition-details positive=true any=true level-rejected=true
 type-rejected=true`, and the `skill-actions` line records
 `enchantment-condition=true`. Both aggregate probes passed. This is
-exploratory Paper 1.21.11 evidence; the Paper 1.21.1 release target remains
-open.
+exploratory Paper 1.21.11 evidence.
+
+Strict Paper 1.21.1-133 fixture
+`srv-paper-has-enchantment-import-strict-20261105-r1` adds importer-to-runtime
+coverage. The required `importedHasEnchantmentCondition` probe runs
+`?hasEnchantment{e=SHARPNESS;l=>2}` and the `?hasEnchant{e=ANY;l=3}` alias on
+the real managed Zombie, rejects Sharpness above level 3 and missing Looting,
+and confirms the original main-hand item is restored.
 
 Fixture `srv-paper-integration-exploratory-1.21.11-r91` extends the motion
 condition probe with official `FallSpeed`. A real target with downward velocity

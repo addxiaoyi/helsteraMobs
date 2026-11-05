@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-has-enchantment-import-strict-20261105-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-has-enchantment-import-strict-20261105-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-has-enchantment-import-strict-20261105-r1.log.gz",
+    "logSha256": "27b31602ae92591e8c4afd7b656ea42de8ad1592da0495d9d1f1034418c8c93d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-has-enchantment-import-strict-20261105-r1-client-logs.tar.gz",
+    "clientLogSha256": "bc9824df5261de75678fe64fafe91fd6ab3cf5f1baa9e8335b4b4d1d967891d2",
+    "pluginSha256": "81492669538c1c4358a4ac7f8537e76791a31fb08d55c1246137ad6afe149fbe",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-condition-import-strict-20261105-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-condition-import-strict-20261105-r1.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-condition-import-strict-20261105-r1.log.gz",
