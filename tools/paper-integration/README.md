@@ -27,7 +27,18 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-item-recharging-import-strict-20261106-r1`
+Latest strict fixture `srv-paper-is-frozen-import-strict-20261106-r2` passed
+359 probes (340 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. `importedIsFrozenCondition` verifies Mythic
+`?isFrozen`/`?frozen` through the importer and `SkillService` against a real
+frozen Zombie, after thawing, and with an invalid argument. Report:
+`reports/paper-1.21.1-is-frozen-import-strict-20261106-r2.json`; server log:
+`reports/paper-1.21.1-is-frozen-import-strict-20261106-r2.log.gz`; client logs:
+`reports/paper-1.21.1-is-frozen-import-strict-20261106-r2-client-logs.tar.gz`.
+Plugin SHA-256:
+`4af92b5462a6d1bb533fdb14df654c7e9e9cea066eaef8da10c568bdd4976335`.
+
+Previous strict fixture `srv-paper-item-recharging-import-strict-20261106-r1`
 passed 358 probes (339 passed, 19 expected rejections, zero incomplete) on
 Paper 1.21.1-133. `importedItemRechargingCondition` verifies Mythic
 `?itemRecharging` and `?recharging` through the importer and `SkillService`,

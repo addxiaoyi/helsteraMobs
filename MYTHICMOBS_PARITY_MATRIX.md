@@ -279,9 +279,13 @@ then uses a Mineflayer player that moves 14.01 blocks; Paper observes 8.47
 blocks of displacement and confirms both the managed instance and Bukkit
 entity are removed. Its 264-probe report passes schema and release completeness
 gates with 253 passed, 11 expected negative controls, and zero incomplete.
-The current full strict release fixture `srv-paper-in-combat-strict-20261105-r3`
-also requires `spawningDistanceClientWalk`, with real player displacement and
-managed/Bukkit entity removal validated by the release catalog.
+The latest full strict release fixture
+`srv-paper-is-frozen-import-strict-20261106-r2` completes 359 probes (340
+passed, 19 expected rejections, zero incomplete) and requires
+`importedIsFrozenCondition`. It verifies both imported aliases against a real
+frozen Zombie, rejects both after thawing, and rejects an invalid argument.
+Earlier strict fixtures retain the real player movement and managed/Bukkit
+entity removal evidence for `spawningDistanceClientWalk`.
 
 Incremental condition-boundary update: `compare-values` now rejects `NaN`,
 `Infinity`, and `-Infinity` for DOUBLE/FLOAT/NUMBER comparisons instead of
@@ -2230,6 +2234,7 @@ managed Sheep; natural event timing remains unverified.
 | Area | Status | Evidence / remaining work |
 | --- | --- | --- |
 | Snowing condition | implemented-runtime | `snowing` and `isSnowing` use the target location, world storm state, and height-adjusted block temperature. Importer/runtime tests and strict Paper 1.21.1-133 fixture `srv-paper-snowing-strict-20261105-r2` verify target precedence, both aliases, invalid arguments, missing context, warm-biome and clear-weather rejection, and full state restoration. The Bukkit API does not expose local precipitation type, so cold custom biomes configured without precipitation remain a documented boundary. |
+| IsFrozen condition | implemented-runtime | Official `isFrozen` and `frozen` aliases import to the `is-frozen` SkillService evaluator, which reads Paper `Entity#isFrozen()`. Importer/runtime contract coverage and strict Paper fixture `srv-paper-is-frozen-import-strict-20261106-r2` verify both aliases on a real frozen Zombie, reject them after thawing, and reject invalid arguments in the full 359-probe release catalog. The complete Conditions catalog remains `mapped-unverified`. |
 | Angry and pollinated conditions | implemented-runtime | Mythic `angry`/`isAngry` evaluates Bee anger, Wolf anger, or Vex charging; `pollinated`/`isPollinated`/`hasNectar` evaluates Bee nectar. Import aliases, runtime consumers, missing-context and unsupported-entity fail-closed behavior have importer, SkillService, and migration-to-runtime contract tests. Strict Paper 1.21.1-133 fixture `srv-paper-angry-pollination-strict-20261105-r1` verifies real runtime consumers in the complete 341-probe release catalog. Supported entities and aliases match the [official MythicCraft changelog](https://wiki.mythiccraft.io/mythicmobs/changelogs/Changelogs?version_id=d7c47c878837c833a7602dcf02bca7b9b87056dd); the wider Conditions catalog remains open. |
 | Sheared entity conditions | implemented-runtime | `isSheared` and `targetIsSheared` map into self/target runtime checks for Sheep and Bogged via `isSheared()`, and Snow Golems via `isDerp()`. API and importer-to-runtime tests cover positive/negative states, unsupported entities, and missing context. Strict Paper 1.21.1-133 fixture `srv-paper-is-sheared-strict-20261105-r1` verifies all three real entity types in both states and passes `entityShearedStates` in the complete 342-probe release catalog. The remaining Conditions catalog stays open. |
 | Mythic `isChild` / `child` condition | implemented-runtime | Importer aliases map to the caster-to-target `is-child` parent relation, distinct from `isBaby` age state. Importer/runtime contract tests cover the translated condition. Strict Paper 1.21.1-133 fixture `srv-paper-is-child-import-strict-20261105-r1` executes `?isChild` through `MmConditions.translate` and `SkillService`: a related adult Pig passes, the unrelated baby Pig fails `isChild`, and age controls pass/fail independently in the complete 350-probe release catalog. The complete Conditions catalog remains `mapped-unverified`. |
