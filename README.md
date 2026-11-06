@@ -4,7 +4,17 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-item-recharging-import-strict-20261106-r1`
+Latest strict fixture `srv-paper-is-frozen-import-strict-20261106-r2`
+passes 359 probes (340 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its `importedIsFrozenCondition` probe routes Mythic
+`?isFrozen` and `?frozen` through the importer and `SkillService`, verifies
+both aliases against a real frozen Zombie and after thawing, and rejects an
+invalid argument. Report:
+`tools/paper-integration/reports/paper-1.21.1-is-frozen-import-strict-20261106-r2.json`.
+The plugin SHA-256 is
+`4af92b5462a6d1bb533fdb14df654c7e9e9cea066eaef8da10c568bdd4976335`.
+
+Previous strict fixture `srv-paper-item-recharging-import-strict-20261106-r1`
 passes 358 probes (339 passed, 19 expected rejections, zero incomplete) on
 Paper 1.21.1-133. Its `importedItemRechargingCondition` probe routes Mythic
 `?itemRecharging` and `?recharging` through the importer and `SkillService`,
@@ -468,7 +478,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 357 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 359 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -484,8 +494,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 462 cited IDs; 374 report files; 4 directories
-   without reports; 84 missing directories; 139 archived release reports. The
+   Current fixture inventory: 465 cited IDs; 377 report files; 4 directories
+   without reports; 84 missing directories; 142 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -537,6 +547,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
+- Official `IsFrozen` and `Frozen` aliases now have strict importer-to-runtime evidence: `?isFrozen` and `?frozen` both pass on a real frozen Zombie, fail after thawing, and reject malformed arguments through `SkillService`. Fixture `srv-paper-is-frozen-import-strict-20261106-r2` completes the full 359-probe release catalog on Paper 1.21.1-133; the broader Conditions catalog remains open.
 - `@PlayersInWorld` now selects valid online players in the caster's world without implicit faction filtering; `@PlayersOnServer` and its `@server`/`@everyone` aliases select online players across worlds. `targetself=true` includes the caster. Unit/importer coverage and strict Paper fixture `srv-paper-targeter-players-strict-20261102-r1` verify filtering, server population and alias equivalence in a complete 272-probe report; full targeter-catalog and cross-world client coverage remain open.
 - Generic targeter `skipTargetsUpToIndex` (`stuti`) now skips entries after sorting and before applying `limit`; negative or malformed values fail closed. Focused API, importer, Paper self-test, and report-contract coverage are included. Strict Paper fixture `srv-paper-targeter-skip-index-strict-20261102-r3` verifies the selector behavior on Paper 1.21.1-133; its archived 271-probe report has 259 passed, 12 expected negative controls, and zero incomplete. The complete official targeter catalog remains open.
 - Generic targeter sorting now implements `NONE`, `RANDOM`, `NEAREST`/`CLOSEST`, `FURTHEST`, health and threat orderings, plus `OLDEST`/`NEWEST`; unknown modes and unavailable or non-finite threat values fail closed. API tests cover health, age, threat-provider boundaries, unsupported modes, and conditional-target skip/limit ordering. Strict Paper fixture `srv-paper-targeter-sorting-strict-20261102-r1` verifies real health and age ordering; its archived 272-probe report has 260 passed, 12 expected negative controls, and zero incomplete. The full official targeter catalog remains open.

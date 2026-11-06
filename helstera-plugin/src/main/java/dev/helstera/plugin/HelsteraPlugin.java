@@ -1978,6 +1978,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean setAbsorptionMechanic = false;
             boolean levelCondition = false;
             boolean frozenCondition = false;
+            boolean importedFrozenCondition = false;
             boolean lunarPhaseCondition = false;
             boolean stringEqualsCondition = false;
             boolean stringEmptyCondition = false;
@@ -2379,10 +2380,42 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             "freeze " + zombie.getMaxFreezeTicks(), context);
                     boolean frozen = behaviors.testCondition(
                             skills.bindCondition("is-frozen"), context);
+                    var importedFrozen = dev.helstera.migration.importer.MmConditions.translate("?isFrozen");
+                    var importedFrozenAlias = dev.helstera.migration.importer.MmConditions.translate("?frozen");
+                    var importedFrozenInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                            "?frozen{unknown=true}");
+                    boolean importedFrozenMapped = importedFrozen.translated()
+                            && "is-frozen".equals(importedFrozen.condition());
+                    boolean importedFrozenAliasMapped = importedFrozenAlias.translated()
+                            && "is-frozen".equals(importedFrozenAlias.condition());
+                    String importedFrozenKey = importedFrozenMapped
+                            ? skills.bindCondition(importedFrozen.condition()) : null;
+                    String importedFrozenAliasKey = importedFrozenAliasMapped
+                            ? skills.bindCondition(importedFrozenAlias.condition()) : null;
+                    boolean importedFrozenPositive = importedFrozenKey != null
+                            && behaviors.testCondition(importedFrozenKey, context);
+                    boolean importedFrozenAliasPositive = importedFrozenAliasKey != null
+                            && behaviors.testCondition(importedFrozenAliasKey, context);
                     zombie.setFreezeTicks(0);
                     boolean thawed = !behaviors.testCondition(
                             skills.bindCondition("isFrozen"), context);
+                    boolean importedFrozenThawed = importedFrozenKey != null
+                            && !behaviors.testCondition(importedFrozenKey, context);
+                    boolean importedFrozenAliasThawed = importedFrozenAliasKey != null
+                            && !behaviors.testCondition(importedFrozenAliasKey, context);
+                    boolean importedFrozenInvalidRejected = !importedFrozenInvalid.translated();
                     frozenCondition = freezeMechanic && frozen && thawed;
+                    importedFrozenCondition = freezeMechanic && importedFrozenMapped
+                            && importedFrozenAliasMapped && importedFrozenPositive
+                            && importedFrozenAliasPositive && importedFrozenThawed
+                            && importedFrozenAliasThawed && importedFrozenInvalidRejected;
+                    getLogger().info("[自检] imported-frozen-condition primary-mapped="
+                            + importedFrozenMapped + " alias-mapped=" + importedFrozenAliasMapped
+                            + " positive=" + importedFrozenPositive
+                            + " alias-positive=" + importedFrozenAliasPositive
+                            + " thawed=" + importedFrozenThawed
+                            + " alias-thawed=" + importedFrozenAliasThawed
+                            + " invalid-rejected=" + importedFrozenInvalidRejected);
                 } finally {
                     zombie.setFreezeTicks(originalFreezeTicks);
                 }
@@ -4065,6 +4098,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && waterMobCondition
                         && zombieCondition
                         && aerialCondition
+                        && importedFrozenCondition
                         && endermanCondition
                         && enchantmentCondition
                         && colorCondition
@@ -6183,6 +6217,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " set-absorption-mechanic=" + setAbsorptionMechanic
                         + " level-condition=" + levelCondition
                         + " frozen-condition=" + frozenCondition
+                        + " imported-frozen-condition=" + importedFrozenCondition
                         + " lunar-phase-condition=" + lunarPhaseCondition
                         + " string-equals-condition=" + stringEqualsCondition
                         + " string-empty-condition=" + stringEmptyCondition

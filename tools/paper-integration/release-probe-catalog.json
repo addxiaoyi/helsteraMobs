@@ -678,6 +678,11 @@
       "status": "passed"
     },
     {
+      "id": "importedIsFrozenCondition",
+      "status": "passed",
+      "requiredObservation": "imported-frozen-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true thawed=true alias-thawed=true invalid-rejected=true"
+    },
+    {
       "id": "gameplayPlaceholders",
       "status": "passed"
     },

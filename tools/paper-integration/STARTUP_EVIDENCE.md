@@ -1,7 +1,15 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-item-recharging-import-strict-20261106-r1` passed the full
-strict gate on Paper 1.21.1-133: 358 probes, 339 passed, 19 expected
+Fixture `srv-paper-is-frozen-import-strict-20261106-r2` passed the full strict
+gate on Paper 1.21.1-133: 359 probes, 340 passed, 19 expected rejections, and
+zero incomplete. `importedIsFrozenCondition` verifies Mythic `?isFrozen` and
+`?frozen` through the importer and `SkillService` against a real frozen Zombie,
+after thawing, and with an invalid argument. Report and compressed
+server/client logs are listed in `release-evidence.json`; plugin SHA-256:
+`4af92b5462a6d1bb533fdb14df654c7e9e9cea066eaef8da10c568bdd4976335`.
+
+Previous fixture `srv-paper-item-recharging-import-strict-20261106-r1` passed
+the full strict gate on Paper 1.21.1-133: 358 probes, 339 passed, 19 expected
 rejections, and zero incomplete. `importedItemRechargingCondition` verifies
 Mythic `?itemRecharging` and `?recharging` through the importer and
 `SkillService`, checks both aliases after a real Bukkit attack lowers Player

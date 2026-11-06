@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-is-frozen-import-strict-20261106-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-is-frozen-import-strict-20261106-r2.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-is-frozen-import-strict-20261106-r2.log.gz",
+    "logSha256": "9374bf7ecb9bc07d25bb5e6e1a1e6023b0baabd5b25d01e11cec7e9c3fc77544",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-is-frozen-import-strict-20261106-r2-client-logs.tar.gz",
+    "clientLogSha256": "f95420e8280cb05700cebde042315be17a64b5603d27ad8973b6313d2a6a4864",
+    "pluginSha256": "4af92b5462a6d1bb533fdb14df654c7e9e9cea066eaef8da10c568bdd4976335",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-origin-location-import-strict-20261105-r4",
     "report": "tools/paper-integration/reports/paper-1.21.1-origin-location-import-strict-20261105-r4.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-origin-location-import-strict-20261105-r4.log.gz",
