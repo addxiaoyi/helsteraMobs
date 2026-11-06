@@ -591,6 +591,34 @@ class MmConditionsTest {
         assertEquals("block-type-in-radius DIRT >0 8", t("?blockTypeInRadius"));
         assertTrue(translated("?blockTypeInRadius{t=STONE;a=>1;r=2}"));
         assertTrue(translated("?blockTypeInRadius{type=#minecraft:logs}"));
+        assertEquals("block-type-in-radius STONE,DIRT >0 8",
+                t("?blockTypeInRadius{STONE,DIRT}"));
+        assertEquals("block-type-in-radius MINECRAFT:FURNACE[LIT=TRUE,FACING=NORTH] >0 8",
+                t("?blockTypeInRadius{types=minecraft:furnace[lit=true,facing=north]}"));
+    }
+
+    @Test
+    void blockMaterialConditionsRejectUnknownDuplicateAndMisplacedArguments() {
+        for (String condition : List.of(
+                "?blockType{unexpected=STONE}",
+                "?blockType{type=STONE;material=DIRT}",
+                "?blockType{types=}",
+                "?blockType{types==STONE}",
+                "?blockType{types=FURNACE[lit=true}",
+                "?blockType{types=STONE;radius=3}",
+                "?onBlock{unexpected=STONE}",
+                "?onBlock{material=STONE;types=DIRT}",
+                "?blockTypeInRadius{unexpected=STONE}",
+                "?blockTypeInRadius{type=STONE;radius=3;unknown=true}",
+                "?blockTypeInRadius{type=STONE;types=DIRT}",
+                "?blockTypeInRadius{radius=2;r=3}",
+                "?blockTypeInRadius{amount=1;a=2}",
+                "?blockTypeInRadius{type=STONE;radius=}",
+                "?blockTypeInRadius{type=STONE;;radius=3}")) {
+            assertFalse(translated(condition), condition);
+        }
+        assertTrue(translated("?blockType{type=minecraft:furnace[lit=true]}"));
+        assertTrue(translated("?blockTypeInRadius{STONE,DIRT;radius=3;amount=>1}"));
     }
 
     @Test
