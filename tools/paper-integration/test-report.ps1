@@ -85,6 +85,9 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-entity-type-traits mapped=true horse=true wrong-style-rejected=true panda=true villager=true zombie-villager=true rainbow-sheep=true rainbow-sheep-white-rejected=true shulker=true parrot=true llama=true tropical-fish=true iron-golem-crack=true inapplicable-trait-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] imported-free-inventory-slot primary-mapped=true alias-mapped=true positive=true negative=true invalid-preserved=true result=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-name-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true default-name-rejected=true fallback=true custom-name-rejected=true invalid-preserved=true result=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-server-conditions paper-primary=true paper-alias=true exact=true exact-negative=true after-inclusive=true after-exclusive-rejected=true after-higher-rejected=true before-inclusive=true before-exclusive-rejected=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true',
         '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true in-combat-condition=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
@@ -355,6 +358,9 @@ try {
             'importedEntityTypeVariantCondition',
             'importedEntityTypeTraitsCondition',
             'importedSpyglassCondition', 'importedSurvivalModeCondition', 'importedVariableConditions',
+            'importedFreeInventorySlotCondition',
+            'importedNameCondition',
+            'importedServerConditions',
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition')) {
@@ -373,6 +379,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'importedSpyglassCondition').status -eq 'passed') 'imported Spyglass aliases require strict Paper active/inactive, target-type, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedSurvivalModeCondition').status -eq 'passed') 'imported survival aliases require strict Paper Survival/Adventure, target-type, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedVariableConditions').status -eq 'passed') 'imported variable conditions require strict Paper scope, alias, range, missing-value, and quoted-argument evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedFreeInventorySlotCondition').status -eq 'passed') 'imported free-slot aliases require strict Paper empty/full inventory and invalid-argument evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedNameCondition').status -eq 'passed') 'imported Name aliases require custom-name priority, entity-name fallback, and malformed-input evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedServerConditions').status -eq 'passed') 'imported server conditions require Paper identity, version comparisons, boundary controls, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedColorCondition').status -eq 'passed') 'imported Color and clr require strict Paper positive and negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedHasEnchantmentCondition').status -eq 'passed') 'imported HasEnchantment requires strict Paper mapping, level and type evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedTriggerItemTypeCondition').status -eq 'passed') 'imported TriggerItemType requires strict Paper mapping and positive/negative evidence'
@@ -840,6 +849,18 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedVariableConditions'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedVariableConditions'; status = 'passed'; observations = @('imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedFreeInventorySlotCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedFreeInventorySlotCondition'; status = 'passed'; observations = @('imported-free-inventory-slot primary-mapped=true alias-mapped=true positive=true negative=true invalid-preserved=true result=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedNameCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedNameCondition'; status = 'passed'; observations = @('imported-name-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true default-name-rejected=true fallback=true custom-name-rejected=true invalid-preserved=true result=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedServerConditions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedServerConditions'; status = 'passed'; observations = @('imported-server-conditions paper-primary=true paper-alias=true exact=true exact-negative=true after-inclusive=true after-exclusive-rejected=true after-higher-rejected=true before-inclusive=true before-exclusive-rejected=true invalid-preserved=true result=true')
     }
     $fullCatalogReport.expectedProbeIds += 'spawningDistanceClientWalk'
     $fullCatalogReport.probes += [pscustomobject]@{

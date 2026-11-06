@@ -4,7 +4,34 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-variable-conditions-strict-20261106-r1`
+Latest strict fixture `srv-paper-server-conditions-strict-20261106-r1` passes
+the full 370-probe release catalog (351 passed, 19 expected rejections, zero
+incomplete) on Paper 1.21.1-133. Its imported `ServerIsPaper`/`IsPaper`,
+`ServerVersion`, `ServerAfter`, and `ServerBefore` probe verifies Paper identity,
+exact-version matching, inclusive/exclusive boundaries, and malformed-input
+preservation. Report:
+`tools/paper-integration/reports/paper-1.21.1-server-conditions-strict-20261106-r1.json`.
+Plugin SHA-256:
+`5e5913d2eab60e1ab8156f07995a18b2264f35325ce28dab67ec525321c66b82`.
+
+Previous strict fixture `srv-paper-name-import-strict-20261106-r2` passed the full
+369-probe release catalog (350 passed, 19 expected rejections, zero incomplete)
+on Paper 1.21.1-133. Its imported `Name`/`nameIs` probe checks a quoted custom
+name, default-name rejection, fallback after clearing the custom name, and
+preservation of invalid arguments. Report:
+`tools/paper-integration/reports/paper-1.21.1-name-import-strict-20261106-r2.json`.
+Plugin SHA-256:
+`42760067a8c4c7ea88d9691da8886d5dc5db7f9fd50a369489ba8b25c45e3657`.
+
+Previous strict fixture `srv-paper-free-inventory-slot-strict-20261106-r1`
+passed all 368 probes (349 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its imported inventory probe verifies both aliases against
+empty/full real-player inventories and preserves invalid arguments. Report:
+`tools/paper-integration/reports/paper-1.21.1-free-inventory-slot-strict-20261106-r1.json`.
+Plugin SHA-256:
+`58f05ddf9db722c3641a3684bf36da8140c7eb9266b384d7119c09fca3f523ee`.
+
+Previous strict fixture `srv-paper-variable-conditions-strict-20261106-r1`
 passes the full 367-probe release catalog (348 passed, 19 expected rejections,
 zero incomplete) on Paper 1.21.1-133. Its
 `importedVariableConditions` probe verifies `VariableEquals`, `VariableInRange`,
@@ -539,7 +566,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 367 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 370 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -555,8 +582,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 475 cited IDs; 385 report files; 4 directories
-   without reports; 86 missing directories; 152 archived release reports. The
+   Current fixture inventory: 478 cited IDs; 388 report files; 4 directories
+   without reports; 86 missing directories; 155 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -645,6 +672,8 @@ the entire MythicMobs feature catalog.
 - Exploratory Paper r52 verifies `OwnerIsOnline` for a real online PDC-backed owner.
 - Mythic `HasFreeInventorySlot`/`HasFreeSlot` now use Bukkit inventory empty-slot semantics, including full-inventory rejection.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies the positive and full-inventory-negative `HasFreeInventorySlot` paths and the positive/negative `HasItem` paths on a real online player, with inventory state restored.
+- Strict Paper 1.21.1-133 fixture `srv-paper-free-inventory-slot-strict-20261106-r1` verifies imported alias mapping, empty/full inventory evaluation, and invalid-argument preservation on a real player.
+- Mythic `ServerIsPaper`, `IsPaper`, `ServerVersion`, `ServerAfter`, and `ServerBefore` import into Paper identity and Minecraft-version conditions; strict Paper 1.21.1-133 fixture `srv-paper-server-conditions-strict-20261106-r1` verifies exact matching, inclusive/exclusive boundaries, and invalid-input preservation.
 - Exploratory Paper r59 verifies target water/lava conditions across real Paper ticks; the report uses the delayed probe because same-tick fluid-cache evaluation is false by design.
 - Official `LivingInRadius`, `MobsInChunk`, and `Dimension` conditions now map to Bukkit living-entity, chunk mob, and world-environment evaluators; strict Paper 1.21.1 fixture `srv-paper-mobs-in-chunk-boundary-strict-20261102-r1` requires and passes `mobsInChunkCondition`, verifying zero count, occupied-chunk count, adjacent-chunk exclusion, and high-threshold rejection.
 - Official `Height`, `HeightAbove`, `HeightBelow`, `Pitch`, `Yaw`, and `OnBlock` conditions now support Mythic numeric ranges, Bukkit entity orientation, and exact block-material lists; exploratory Paper r64 verifies the live paths.

@@ -27,7 +27,37 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-variable-conditions-strict-20261106-r1` passed
+Latest strict fixture `srv-paper-server-conditions-strict-20261106-r1` passed all
+370 probes (351 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. `importedServerConditions` verifies imported Paper identity aliases,
+exact Minecraft-version matching, inclusive/exclusive `ServerAfter` and
+`ServerBefore` boundaries, and malformed-input preservation. Report:
+`reports/paper-1.21.1-server-conditions-strict-20261106-r1.json`;
+server log: `reports/paper-1.21.1-server-conditions-strict-20261106-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-server-conditions-strict-20261106-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`5e5913d2eab60e1ab8156f07995a18b2264f35325ce28dab67ec525321c66b82`.
+
+Previous strict fixture `srv-paper-name-import-strict-20261106-r2` passed all
+369 probes (350 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. `importedNameCondition` verifies the `Name`/`nameIs` mappings,
+quoted custom-name matching, default-name rejection, entity-name fallback after
+clearing the custom name, and invalid-argument preservation. Report:
+`reports/paper-1.21.1-name-import-strict-20261106-r2.json`;
+server log: `reports/paper-1.21.1-name-import-strict-20261106-r2.log.gz`;
+client logs:
+`reports/paper-1.21.1-name-import-strict-20261106-r2-client-logs.tar.gz`.
+Plugin SHA-256:
+`42760067a8c4c7ea88d9691da8886d5dc5db7f9fd50a369489ba8b25c45e3657`.
+
+Previous strict fixture `srv-paper-free-inventory-slot-strict-20261106-r1`
+passed all 368 probes (349 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its imported `HasFreeInventorySlot`/`HasFreeSlot` probe
+checks empty/full inventory results on a real player and invalid-argument
+preservation. Report and compressed logs remain in `release-evidence.json`.
+
+Previous strict fixture `srv-paper-variable-conditions-strict-20261106-r1` passed
 all 367 probes (348 passed, 19 expected rejections, zero incomplete) on Paper
 1.21.1-133. `importedVariableConditions` verifies the imported
 `VariableEquals`, `VariableInRange`, and `VariableIsSet` paths, aliases, five

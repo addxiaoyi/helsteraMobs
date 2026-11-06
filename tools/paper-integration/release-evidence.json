@@ -1,5 +1,38 @@
 [
   {
+    "fixtureId": "srv-paper-server-conditions-strict-20261106-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-server-conditions-strict-20261106-r1.json",
+    "reportSha256": "51337550578c366abeeb721959daa1ab2762ce2f0631e22a500253c4163099d8",
+    "log": "tools/paper-integration/reports/paper-1.21.1-server-conditions-strict-20261106-r1.log.gz",
+    "logSha256": "34ebbfeeb15fdacc6b00b714fe8587a2353054fae7eaf01ba8544051f2764160",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-server-conditions-strict-20261106-r1-client-logs.tar.gz",
+    "clientLogSha256": "8e6927c57e8cdd48b125878ac4425e0ed8c7e02d9623f6b4e5a583bb14e45db4",
+    "pluginSha256": "5e5913d2eab60e1ab8156f07995a18b2264f35325ce28dab67ec525321c66b82",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-name-import-strict-20261106-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-name-import-strict-20261106-r2.json",
+    "reportSha256": "53bf9b3683bba8abec21886dcc7300d3b4fe169a0395f59a691b93e251cb4af9",
+    "log": "tools/paper-integration/reports/paper-1.21.1-name-import-strict-20261106-r2.log.gz",
+    "logSha256": "429ea8ae60881efd11ab25151657b514b32ea68c93b3a1f13c016d0a1e2e0553",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-name-import-strict-20261106-r2-client-logs.tar.gz",
+    "clientLogSha256": "524073a7389f8f3cb1805aedd231500ed8234065c2d192fde6d44b7c6c1905c9",
+    "pluginSha256": "42760067a8c4c7ea88d9691da8886d5dc5db7f9fd50a369489ba8b25c45e3657",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-free-inventory-slot-strict-20261106-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-free-inventory-slot-strict-20261106-r1.json",
+    "reportSha256": "23b83acf6677f9663761b84b294df5aeb020f65953b894781457c08267bb9055",
+    "log": "tools/paper-integration/reports/paper-1.21.1-free-inventory-slot-strict-20261106-r1.log.gz",
+    "logSha256": "389895b8a3cace77cdde4a6f1b2ce3d04856e1c4b83e207092a759c51f84a594",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-free-inventory-slot-strict-20261106-r1-client-logs.tar.gz",
+    "clientLogSha256": "1f8b6d4bc2f870dc8ac64ed024ba550042d44e4f5077705da196e8e4e39c99b7",
+    "pluginSha256": "58f05ddf9db722c3641a3684bf36da8140c7eb9266b384d7119c09fca3f523ee",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-variable-conditions-strict-20261106-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-variable-conditions-strict-20261106-r1.json",
     "reportSha256": "c5375c3202f5c42a88bcb91ec839f9fe4afd09572c8e3bb614883ce61bc4cae5",

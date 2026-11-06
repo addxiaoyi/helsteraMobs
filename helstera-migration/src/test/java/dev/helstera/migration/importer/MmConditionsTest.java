@@ -610,6 +610,9 @@ class MmConditionsTest {
         assertEquals("has-free-inventory-slot", t("?hasFreeInventorySlot"));
         assertEquals("has-free-inventory-slot", t("?hasFreeSlot"));
         assertTrue(translated("?hasFreeInventorySlot"));
+        assertTrue(translated("?HAS_FREE_SLOT"));
+        assertFalse(translated("?hasFreeInventorySlot{slot=0}"));
+        assertFalse(translated("?hasFreeSlot{unknown=true}"));
     }
 
     @Test
@@ -617,8 +620,15 @@ class MmConditionsTest {
         assertEquals("name-is Emberling", t("?name{n=Emberling}"));
         assertEquals("name-is Emberling", t("?name{value=Emberling}"));
         assertEquals("name-is Emberling", t("?name Emberling"));
+        assertEquals("name-is " + "\"" + "Name Probe" + "\"", t("?name{n=\"Name Probe\"}"));
+        assertEquals("name-is " + "\"" + "Name Probe" + "\"",
+                t("?nameIs{\"Name Probe\"}"));
         assertTrue(translated("?name{n=Emberling}"));
         assertFalse(translated("?name"));
+        for (String invalid : List.of("?name{unknown=Emberling}", "?name{n=;value=Emberling}",
+                "?name{n=Emberling;value=Other}", "?name{n=\"\"}", "?name{n=\"unterminated}")) {
+            assertUntranslatedPreserved(invalid);
+        }
     }
 
     @Test
@@ -1278,12 +1288,41 @@ class MmConditionsTest {
 
     @Test
     void officialServerVersionConditionsMap() {
+        assertEquals("server-is-paper", t("?serverIsPaper"));
+        assertEquals("server-is-paper", t("?isPaper"));
+        assertEquals("server-is-paper", t("?serverIsPaper{}"));
         assertEquals("server-version 1.21.1", t("?serverVersion{v=1.21.1}"));
+        assertEquals("server-version 1.21.1", t("?serverVersion{1.21.1}"));
+        assertEquals("server-version 1.21.1", t("?server{version=1.21.1}"));
+        assertEquals("server-version 1.21.1", t("?version{v=1.21.1}"));
         assertEquals("server-version-after-or-equal 1.21.1 true",
                 t("?serverAfter{version=1.21.1}"));
+        assertEquals("server-version-after-or-equal 1.21.1 true",
+                t("?serverVersionAfterOrEqual{v=1.21.1}"));
+        assertEquals("server-version-after-or-equal 1.21.1 true",
+                t("?serverAfterEq{v=1.21.1}"));
+        assertEquals("server-version-after-or-equal 1.21.1 true",
+                t("?versionAfterEq{v=1.21.1}"));
+        assertEquals("server-version-after-or-equal 1.21.1 false",
+                t("?serverAfter{sv=1.21.1;i=false}"));
         assertEquals("server-version-before 1.22 true",
                 t("?serverBefore{v=1.22}"));
+        assertEquals("server-version-before 1.22 true",
+                t("?versionBefore{v=1.22}"));
+        assertEquals("server-version-before 1.22 false",
+                t("?serverVersionBefore{1.22;inclusive=no}"));
         assertTrue(translated("?serverVersion{v=1.21.1}"));
+        for (String invalid : List.of(
+                "?serverIsPaper{unexpected=true}",
+                "?serverVersion{v=1.21.1;unknown=true}",
+                "?serverVersion{v=1.21.1;version=1.21.1}",
+                "?serverVersion{v=latest}",
+                "?serverAfter{v=1.21.1;inclusive=maybe}",
+                "?serverBefore{v=1.21.1;unknown=true}",
+                "?serverBefore{v=1.21.1;sv=1.21.1}")) {
+            assertFalse(translated(invalid), invalid);
+            assertEquals(invalid, t(invalid));
+        }
     }
 
     @Test

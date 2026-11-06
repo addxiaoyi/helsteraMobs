@@ -1,6 +1,46 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-variable-conditions-strict-20261106-r1` passed the
+Latest fixture `srv-paper-server-conditions-strict-20261106-r1` passed the full
+strict gate on Paper 1.21.1-133: 370 registered probes, 351 passed, 19 expected
+rejections, and zero incomplete. `importedServerConditions` runs
+`ServerIsPaper`/`IsPaper`, `ServerVersion`, `ServerAfter`, and `ServerBefore`
+through the Mythic importer and `SkillService`; it verifies Paper identity,
+exact version matching, inclusive/exclusive equality boundaries, and
+preservation of unknown, duplicate, and invalid arguments.
+
+Archived report: [paper-1.21.1-server-conditions-strict-20261106-r1.json](reports/paper-1.21.1-server-conditions-strict-20261106-r1.json), SHA-256:
+`51337550578c366abeeb721959daa1ab2762ce2f0631e22a500253c4163099d8`.
+Compressed server log: [paper-1.21.1-server-conditions-strict-20261106-r1.log.gz](reports/paper-1.21.1-server-conditions-strict-20261106-r1.log.gz), SHA-256:
+`34ebbfeeb15fdacc6b00b714fe8587a2353054fae7eaf01ba8544051f2764160`.
+Client logs: [paper-1.21.1-server-conditions-strict-20261106-r1-client-logs.tar.gz](reports/paper-1.21.1-server-conditions-strict-20261106-r1-client-logs.tar.gz), SHA-256:
+`8e6927c57e8cdd48b125878ac4425e0ed8c7e02d9623f6b4e5a583bb14e45db4`.
+Plugin SHA-256: `5e5913d2eab60e1ab8156f07995a18b2264f35325ce28dab67ec525321c66b82`.
+
+Previous fixture `srv-paper-name-import-strict-20261106-r2` passed the full
+strict gate on Paper 1.21.1-133: 369 registered probes, 350 passed, 19 expected
+rejections, and zero incomplete. `importedNameCondition` runs `Name` and
+`nameIs` through the Mythic importer and `SkillService`; a real managed Zombie
+matches a quoted custom name, rejects its default name while the custom name is
+set, then matches its Bukkit entity name after the custom name is cleared.
+Unknown, duplicate, and empty arguments remain preserved.
+
+Archived report: [paper-1.21.1-name-import-strict-20261106-r2.json](reports/paper-1.21.1-name-import-strict-20261106-r2.json), SHA-256:
+`53bf9b3683bba8abec21886dcc7300d3b4fe169a0395f59a691b93e251cb4af9`.
+Compressed server log: [paper-1.21.1-name-import-strict-20261106-r2.log.gz](reports/paper-1.21.1-name-import-strict-20261106-r2.log.gz), SHA-256:
+`429ea8ae60881efd11ab25151657b514b32ea68c93b3a1f13c016d0a1e2e0553`.
+Client logs: [paper-1.21.1-name-import-strict-20261106-r2-client-logs.tar.gz](reports/paper-1.21.1-name-import-strict-20261106-r2-client-logs.tar.gz), SHA-256:
+`524073a7389f8f3cb1805aedd231500ed8234065c2d192fde6d44b7c6c1905c9`.
+Plugin SHA-256: `42760067a8c4c7ea88d9691da8886d5dc5db7f9fd50a369489ba8b25c45e3657`.
+
+Previous fixture `srv-paper-free-inventory-slot-strict-20261106-r1` passed the
+full strict gate on Paper 1.21.1-133: 368 registered probes, 349 passed, 19
+expected rejections, and zero incomplete. `importedFreeInventorySlotCondition`
+runs `HasFreeInventorySlot` and `HasFreeSlot` through the Mythic importer and
+`SkillService`; it verifies empty/full inventory results on a real player and
+preserves invalid arguments. Its report and compressed logs remain listed in
+`release-evidence.json`.
+
+Previous fixture `srv-paper-variable-conditions-strict-20261106-r1` passed the
 full strict gate on Paper 1.21.1-133: 367 registered probes, 348 passed, 19
 expected rejections, and zero incomplete. `importedVariableConditions` runs
 `VariableEquals`, `VariableInRange`, and `VariableIsSet` through the Mythic
