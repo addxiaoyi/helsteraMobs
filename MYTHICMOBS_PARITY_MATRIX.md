@@ -1261,6 +1261,16 @@ execution context for non-numeric variables. Exploratory Paper 1.21.4 fixture
 r3 and strict Paper 1.21.1-133 fixture `srv-paper-integration-final-r8` record
 `variableContainsCondition=passed`.
 
+Incremental Mythic variable-condition update: `VariableEquals`,
+`VariableInRange`, and `VariableIsSet` now import their documented aliases into
+the scoped runtime variable store. Missing variables, non-numeric range values,
+invalid scopes, malformed ranges, and unknown arguments fail closed or remain
+preserved with a warning. Strict Paper 1.21.1-133 fixture
+`srv-paper-variable-conditions-strict-20261106-r1` passes the new
+`importedVariableConditions` probe across all five scopes, numeric boundaries,
+quoted semicolon values, and dynamic placeholders. This verifies these imported
+paths; the full Conditions catalog remains `mapped-unverified`.
+
 Incremental value-condition update: official `CompareValues` now supports
 integer, floating-point, string, and boolean comparisons with Mythic operator
 aliases (`EQUALS`, `GT`, `LTE`, etc.). Migration, runtime, unit, and
@@ -2539,7 +2549,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-aura-target-strict-20261106-r1` completes 366 probes (347 passed, 19 expected rejections, zero incomplete), including `mythicAuraRuntime` for imported target-only named Aura checks, Aura removal defaults/partial stacks/`ANY`, aliases, and invalid-input rejection on real Paper. Previous strict fixtures cover named Aura application/conditions, imported EntityType traits, EntityType variants and categories, Burning action suffixes and target fallback, Survival-mode, Spyglass, frozen, ItemRecharging, OriginLocation, TriggerItemType/TriggerBlockType, HasEnchantment/HasEnchant, Aerial, Color, and `MaterialIsOnCooldown`; related parent conditions; real entity state/options; cinematic state and cleanup; and player movement beyond `SpawningDistance`. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-variable-conditions-strict-20261106-r1` completes 367 probes (348 passed, 19 expected rejections, zero incomplete), including imported `VariableEquals`, `VariableInRange`, and `VariableIsSet` aliases, all five scopes, numeric boundaries, missing/wrong-type rejection, quoted values, and dynamic placeholders. Previous strict fixture `srv-paper-aura-target-strict-20261106-r1` covers imported target-only named Aura checks, Aura removal defaults/partial stacks/`ANY`, aliases, and invalid-input rejection on real Paper. Other strict fixtures cover named Aura application/conditions, imported EntityType traits, EntityType variants and categories, Burning action suffixes and target fallback, Survival-mode, Spyglass, frozen, ItemRecharging, OriginLocation, TriggerItemType/TriggerBlockType, HasEnchantment/HasEnchant, Aerial, Color, and `MaterialIsOnCooldown`; related parent conditions; real entity state/options; cinematic state and cleanup; and player movement beyond `SpawningDistance`. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.

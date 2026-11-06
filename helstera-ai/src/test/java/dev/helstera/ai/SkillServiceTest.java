@@ -2363,6 +2363,20 @@ class SkillServiceTest {
         assertTrue(registry.testCondition(svc.bindCondition("variable-is-set{var=global.answer}"), ctx));
         assertTrue(registry.testCondition(svc.bindCondition("variableequals{var=global.answer;value=42}"), ctx));
         assertTrue(registry.testCondition(svc.bindCondition("variable-in-range{var=global.answer;min=40;max=45}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-in-range{var=global.answer;value=40to45}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "variable-in-range{var=global.answer;range=>=42}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-in-range{var=global.answer;value=>42}"), ctx));
+        assertNull(svc.bindCondition("variable-in-range{var=global.answer}"));
+        assertNull(svc.bindCondition("variable-in-range{var=global.answer;value=45to40}"));
+        assertNull(svc.bindCondition("variable-in-range{var=global.answer;value=NaN}"));
+        assertTrue(registry.runAction(svc.bindAction(
+                "setvariable{var=global.text;type=STRING;value=ready}"), ctx));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "variable-in-range{var=global.text;value=0to100}"), ctx));
+        assertTrue(registry.runAction(svc.bindAction("variable-unset{var=global.text}"), ctx));
         assertFalse(registry.testCondition(svc.bindCondition("variableequals{var=global.answer;value=7}"), ctx));
         assertTrue(registry.runAction(svc.bindAction("variable-unset{var=global.answer}"), ctx));
     }

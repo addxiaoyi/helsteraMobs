@@ -222,6 +222,115 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("official variable condition aliases reach their scoped runtime consumers")
+    void importedVariableConditionsReachRuntime() {
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.Player.class);
+        var world = mock(org.bukkit.World.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(7301);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.getUniqueId()).thenReturn(UUID.randomUUID());
+        when(target.getUniqueId()).thenReturn(UUID.randomUUID());
+        when(world.getUID()).thenReturn(UUID.randomUUID());
+        var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                instance, target, 1.0, -1, 0, "IDLE", null, target, List.of(target),
+                new org.bukkit.Location(world, 0, 64, 0));
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        String suffix = UUID.randomUUID().toString().replace("-", "");
+
+        for (String scope : List.of("skill", "caster", "target", "world", "global")) {
+            String variable = "parity" + suffix;
+            String value = scope.equals("skill") ? "42" : "ready";
+            String set = service.bindAction("setvariable{var=" + scope + "." + variable
+                    + ";value=" + value + (scope.equals("skill") ? "}" : ";type=STRING}"));
+            assertNotNull(set, scope);
+            assertTrue(registry.runAction(set, context), scope);
+
+            String source = "?VariableEquals{var=" + scope + "." + variable + ";value=" + value + "}";
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            String condition = service.bindCondition(mapped.condition());
+            assertNotNull(condition, mapped.condition());
+            assertTrue(registry.testCondition(condition, context), scope);
+
+            var isSet = dev.helstera.migration.importer.MmConditions.translate(
+                    "?varIsSet{key=" + scope + "." + variable + "}");
+            assertTrue(isSet.translated(), scope);
+            assertTrue(registry.testCondition(service.bindCondition(isSet.condition()), context), scope);
+            if (scope.equals("global")) {
+                var wrongType = dev.helstera.migration.importer.MmConditions.translate(
+                        "?VariableInRange{var=global." + variable + ";value=0to100}");
+                assertTrue(wrongType.translated());
+                String wrongTypeKey = service.bindCondition(wrongType.condition());
+                assertNotNull(wrongTypeKey);
+                assertFalse(registry.testCondition(wrongTypeKey, context));
+            }
+
+            String unset = service.bindAction("variable-unset{var=" + scope + "." + variable + "}");
+            assertNotNull(unset, scope);
+            assertTrue(registry.runAction(unset, context), scope);
+        }
+
+        String numeric = "range" + suffix;
+        String setGlobal = service.bindAction("setvariable{var=global." + numeric + ";value=42}");
+        assertNotNull(setGlobal);
+        assertTrue(registry.runAction(setGlobal, context));
+        for (String source : List.of(
+                "?VariableInRange{var=global." + numeric + ";value=40to45}",
+                "?varInRange{scope=global;variable=" + numeric + ";range=>=42}",
+                "?varRange{s=global;n=" + numeric + ";r=<=42}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            String condition = service.bindCondition(mapped.condition());
+            assertNotNull(condition, mapped.condition());
+            assertTrue(registry.testCondition(condition, context), source);
+        }
+        var above = dev.helstera.migration.importer.MmConditions.translate(
+                "?VariableInRange{var=global." + numeric + ";value=>42}");
+        assertTrue(above.translated());
+        assertFalse(registry.testCondition(service.bindCondition(above.condition()), context));
+
+        var missing = dev.helstera.migration.importer.MmConditions.translate(
+                "?VariableEquals{var=global.missing" + suffix + ";value=ready}");
+        assertTrue(missing.translated());
+        assertFalse(registry.testCondition(service.bindCondition(missing.condition()), context));
+        for (String invalid : List.of(
+                "?VariableInRange{var=global." + numeric + "}",
+                "?VariableInRange{var=global." + numeric + ";value=45to40}")) {
+            var preserved = dev.helstera.migration.importer.MmConditions.translate(invalid);
+            assertFalse(preserved.translated(), invalid);
+            assertEquals(invalid, preserved.condition());
+        }
+        String unset = service.bindAction("variable-unset{var=global." + numeric + "}");
+        assertNotNull(unset);
+        assertTrue(registry.runAction(unset, context));
+
+        String expectedVariable = "expected" + suffix;
+        String actualVariable = "actual" + suffix;
+        for (String variable : List.of(expectedVariable, actualVariable)) {
+            String set = service.bindAction("setvariable{var=skill." + variable
+                    + ";value=ready;type=STRING}");
+            assertNotNull(set);
+            assertTrue(registry.runAction(set, context));
+        }
+        var placeholderEquals = dev.helstera.migration.importer.MmConditions.translate(
+                "?VariableEquals{var=skill." + actualVariable + ";value=<skill.var."
+                        + expectedVariable + ">}");
+        assertTrue(placeholderEquals.translated());
+        String placeholderKey = service.bindCondition(placeholderEquals.condition());
+        assertNotNull(placeholderKey);
+        assertTrue(registry.testCondition(placeholderKey, context));
+        for (String variable : List.of(expectedVariable, actualVariable)) {
+            String remove = service.bindAction("variable-unset{var=skill." + variable + "}");
+            assertNotNull(remove);
+            assertTrue(registry.runAction(remove, context));
+        }
+    }
+
+    @Test
     @DisplayName("imported Burning condition actions reach the runtime condition evaluator")
     void importedBurningConditionActionsReachRuntime(@TempDir Path root) throws Exception {
         Path source = Files.createDirectories(root.resolve("Skills")).resolve("burning.yml");

@@ -3468,7 +3468,7 @@ public final class SkillExtras {
                     String expected = keyedArg(a, "value", "val", "equals", "expected");
                     if (expected == null) expected = str(a, 1, "");
                     String wanted = expected;
-                    return ctx -> variableEquals(ctx, ref, wanted);
+                    return ctx -> variableEquals(ctx, ref, Placeholders.resolve(wanted, ctx));
                 }),
                 Map.entry("variable-not-equals", (SkillCatalog.ConditionFactory) a -> {
                     VariableRef ref = variableRef(a);
@@ -3479,12 +3479,9 @@ public final class SkillExtras {
                 }),
                 Map.entry("variable-in-range", (SkillCatalog.ConditionFactory) a -> {
                     VariableRef ref = variableRef(a);
-                    double minimum = variableNumber(a, 1, Double.NEGATIVE_INFINITY, "min", "minimum", "from");
-                    double maximum = variableNumber(a, 2, Double.POSITIVE_INFINITY, "max", "maximum", "to");
-                    return ctx -> {
-                        double current = varOf(ctx, ref);
-                        return current >= minimum && current <= maximum;
-                    };
+                    NumberRange range = variableConditionRange(a);
+                    return ctx -> rawVariable(ctx, ref) instanceof Number current
+                            && range.contains(current.doubleValue());
                 }),
                 Map.entry("variable-contains", (SkillCatalog.ConditionFactory) a -> {
                     VariableRef ref = variableRef(a);
@@ -6742,6 +6739,76 @@ public final class SkillExtras {
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("variable value is not numeric: " + keyed, e);
         }
+    }
+
+    private static NumberRange variableConditionRange(List<String> args) {
+        String expression = keyedArg(args, "value", "val", "range", "r");
+        String minimumText = keyedArg(args, "min", "minimum", "from");
+        String maximumText = keyedArg(args, "max", "maximum", "to");
+        List<String> positional = args == null ? List.of() : args.stream()
+                .filter(raw -> raw != null && raw.indexOf('=') < 0)
+                .map(String::trim).filter(raw -> !raw.isEmpty()).toList();
+        boolean keyedVariable = keyedArg(args, "var", "variable", "name") != null;
+        int rangeStart = 0;
+        if (!keyedVariable && !positional.isEmpty()) {
+            boolean positionalScope = VariableLocations.normalizeScope(positional.get(0)) != null
+                    && positional.size() > 1;
+            rangeStart = positionalScope ? 2 : 1;
+        }
+        List<String> positionalBounds = positional.size() <= rangeStart
+                ? List.of() : positional.subList(rangeStart, positional.size());
+
+        if (expression != null) {
+            if (minimumText != null || maximumText != null || !positionalBounds.isEmpty()) {
+                throw new IllegalArgumentException("variable range cannot mix value and min/max bounds");
+            }
+            NumberRange range = numberRange(List.of(expression), 0);
+            if (!validVariableConditionRange(range)) {
+                throw new IllegalArgumentException("variable range is invalid: " + expression);
+            }
+            return range;
+        }
+
+        if (minimumText == null && maximumText == null && positionalBounds.isEmpty()) {
+            throw new IllegalArgumentException("variable range is required");
+        }
+        if ((minimumText != null || maximumText != null) && !positionalBounds.isEmpty()) {
+            throw new IllegalArgumentException("variable range cannot mix named and positional bounds");
+        }
+        if (!positionalBounds.isEmpty()) {
+            if (positionalBounds.size() > 2) {
+                throw new IllegalArgumentException("variable range accepts at most two positional bounds");
+            }
+            minimumText = positionalBounds.get(0);
+            if (positionalBounds.size() == 2) maximumText = positionalBounds.get(1);
+        }
+
+        double minimum = minimumText == null ? Double.NEGATIVE_INFINITY
+                : finiteVariableBound(minimumText);
+        double maximum = maximumText == null ? Double.POSITIVE_INFINITY
+                : finiteVariableBound(maximumText);
+        NumberRange range = new NumberRange(minimum, maximum, true, true);
+        if (!validVariableConditionRange(range)) {
+            throw new IllegalArgumentException("variable range minimum exceeds maximum");
+        }
+        return range;
+    }
+
+    private static double finiteVariableBound(String raw) {
+        try {
+            double value = Double.parseDouble(raw.trim());
+            if (!Double.isFinite(value)) throw new IllegalArgumentException("variable range bound must be finite");
+            return value;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("variable range bound is not numeric: " + raw, e);
+        }
+    }
+
+    private static boolean validVariableConditionRange(NumberRange range) {
+        if (range == null || Double.isNaN(range.min()) || Double.isNaN(range.max())
+                || range.min() > range.max()) return false;
+        return (Double.isFinite(range.min()) || range.min() == Double.NEGATIVE_INFINITY)
+                && (Double.isFinite(range.max()) || range.max() == Double.POSITIVE_INFINITY);
     }
 
     private static Object parseVariableValue(List<String> args) {

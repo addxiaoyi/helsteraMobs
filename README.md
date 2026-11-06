@@ -4,11 +4,22 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-aura-target-strict-20261106-r1` passes all 366
-probes (347 passed, 19 expected rejections, zero incomplete) on Paper 1.21.1-133.
-Its `mythicAuraRuntime` probe verifies imported target-only named Aura checks,
-Aura application and conditions, partial/default/`ANY` removal, aliases, and
-invalid-input rejection. Report:
+Latest strict fixture `srv-paper-variable-conditions-strict-20261106-r1`
+passes the full 367-probe release catalog (348 passed, 19 expected rejections,
+zero incomplete) on Paper 1.21.1-133. Its
+`importedVariableConditions` probe verifies `VariableEquals`, `VariableInRange`,
+and `VariableIsSet` import aliases, all five variable scopes, numeric boundaries,
+missing and wrong-type rejection, quoted semicolon values, and dynamic
+placeholders. Report:
+`tools/paper-integration/reports/paper-1.21.1-variable-conditions-strict-20261106-r1.json`.
+The plugin SHA-256 is
+`b37f06a021b904fd3fa61b2710f88cc4c533943c533e28a813e7bc1dd0eae8b6`.
+
+Previous strict fixture `srv-paper-aura-target-strict-20261106-r1` passed all
+366 probes (347 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. Its `mythicAuraRuntime` probe verifies imported target-only named
+Aura checks, Aura application and conditions, partial/default/`ANY` removal,
+aliases, and invalid-input rejection. Report:
 `tools/paper-integration/reports/paper-1.21.1-aura-target-strict-20261106-r1.json`.
 The plugin SHA-256 is
 `914e5c5b4b1698fee82cb209a9f392f82e88457a49224b943dfb3669b007e066`.
@@ -528,7 +539,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 366 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 367 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -544,8 +555,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 474 cited IDs; 384 report files; 4 directories
-   without reports; 86 missing directories; 151 archived release reports. The
+   Current fixture inventory: 475 cited IDs; 385 report files; 4 directories
+   without reports; 86 missing directories; 152 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

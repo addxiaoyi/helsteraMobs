@@ -1,22 +1,28 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-aura-target-strict-20261106-r1` passed the full strict
-gate on Paper 1.21.1-133: 366 registered probes, 347 passed, 19 expected
+Latest fixture `srv-paper-variable-conditions-strict-20261106-r1` passed the
+full strict gate on Paper 1.21.1-133: 367 registered probes, 348 passed, 19
+expected rejections, and zero incomplete. `importedVariableConditions` runs
+`VariableEquals`, `VariableInRange`, and `VariableIsSet` through the Mythic
+importer and `SkillService`; it checks aliases across skill/caster/target/world/
+global scopes, numeric range boundaries, missing/wrong-type rejection, quoted
+semicolon values, dynamic variable placeholders, and invalid-range preservation.
+
+Archived report: [paper-1.21.1-variable-conditions-strict-20261106-r1.json](reports/paper-1.21.1-variable-conditions-strict-20261106-r1.json), SHA-256:
+`c5375c3202f5c42a88bcb91ec839f9fe4afd09572c8e3bb614883ce61bc4cae5`.
+Compressed server log: [paper-1.21.1-variable-conditions-strict-20261106-r1.log.gz](reports/paper-1.21.1-variable-conditions-strict-20261106-r1.log.gz), SHA-256:
+`7e490557bb8c9dc30550df6faafb399bf87cb4efe77bc2adae3d1cb4e7274aa0`.
+Client logs: [paper-1.21.1-variable-conditions-strict-20261106-r1-client-logs.tar.gz](reports/paper-1.21.1-variable-conditions-strict-20261106-r1-client-logs.tar.gz), SHA-256:
+`30a54ae26df932ba72229d77e80ebec94ba5615c4200954081536d64e715af4b`.
+Plugin SHA-256: `b37f06a021b904fd3fa61b2710f88cc4c533943c533e28a813e7bc1dd0eae8b6`.
+
+Previous fixture `srv-paper-aura-target-strict-20261106-r1` passed the full
+strict gate on Paper 1.21.1-133: 366 registered probes, 347 passed, 19 expected
 rejections, and zero incomplete. `mythicAuraRuntime` verifies imported
 target-only named Aura checks, Aura application, partial/default/`ANY` removal,
 runtime aliases, missing Aura rejection, and malformed AuraRemove rejection.
 The probe uses real Paper entities; importer tests also cover accepted and
 rejected target Aura arguments.
-
-Archived report: [paper-1.21.1-aura-target-strict-20261106-r1.json](reports/paper-1.21.1-aura-target-strict-20261106-r1.json), SHA-256:
-`eaac107f91c753180fc78234b7e64ef8f0f5c5df1124612a8d05984dbacb7c21`.
-Compressed server log: [paper-1.21.1-aura-target-strict-20261106-r1.log.gz](reports/paper-1.21.1-aura-target-strict-20261106-r1.log.gz), SHA-256:
-`cd2d406a3a0c668d8e66bed172c9144844d75fbb6f617378a50b8f4749488fbb`.
-Client logs: [paper-1.21.1-aura-target-strict-20261106-r1-client-logs.tar.gz](reports/paper-1.21.1-aura-target-strict-20261106-r1-client-logs.tar.gz), SHA-256:
-`6687afa10d96e42f92cb34d4f21e450b2e27e098a2e51aeb7a5f0854a1bd268f`.
-Plugin SHA-256: `914e5c5b4b1698fee82cb209a9f392f82e88457a49224b943dfb3669b007e066`.
-Aura visual components, lifecycle skills, attachments, charges, and event
-cancellation remain outside this probe.
 
 Previous fixture `srv-paper-aura-remove-strict-20261106-r1` also passed the
 full strict catalog; it verifies removal aliases and partial/default/`ANY`
