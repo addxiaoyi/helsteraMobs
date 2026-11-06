@@ -2582,6 +2582,38 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    void importedItemRechargingAliasesReachRuntimeAndFailClosed() {
+        var player = mock(org.bukkit.entity.Player.class);
+        when(player.getAttackCooldown()).thenReturn(0.75f);
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+        var playerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, player, 1, -1, 0, "IDLE");
+        var importedKeys = new java.util.ArrayList<String>();
+
+        for (String source : List.of("?itemRecharging", "?recharging")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertEquals("item-recharging", mapped.condition(), source);
+            String key = skills.bindCondition(mapped.condition());
+            assertNotNull(key, source);
+            importedKeys.add(key);
+            assertTrue(registry.testCondition(key, playerContext), source);
+        }
+
+        when(player.getAttackCooldown()).thenReturn(1.0f);
+        for (String key : importedKeys) assertFalse(registry.testCondition(key, playerContext));
+
+        var zombie = mock(org.bukkit.entity.Zombie.class);
+        var nonHumanContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, zombie, 1, -1, 0, "IDLE");
+        for (String key : importedKeys) assertFalse(registry.testCondition(key, nonHumanContext));
+        var missingContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, (org.bukkit.entity.LivingEntity) null, 1, -1, 0, "IDLE");
+        for (String key : importedKeys) assertFalse(registry.testCondition(key, missingContext));
+    }
+
+    @Test
     void importedTargetHealthPercentUsesMultiplierAndFailsClosedWithoutTarget() {
         var target = mock(org.bukkit.entity.LivingEntity.class);
         when(target.getHealth()).thenReturn(10.0);

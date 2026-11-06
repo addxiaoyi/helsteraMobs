@@ -5510,6 +5510,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean hasItemCondition = false;
                 boolean airLevelCondition = false;
                 boolean itemRechargingCondition = false;
+                boolean importedItemRechargingCondition = false;
                 boolean giveItemAction = false;
                 boolean takeItemAction = false;
                 boolean clearInventoryMechanic = false;
@@ -5571,6 +5572,36 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean attackApplied = rechargingTarget.getHealth() < rechargingHealthBefore;
                     itemRechargingCondition = rechargingConditionValue && attackCooldownAfter
                             && attackApplied;
+                    var importedRecharging = dev.helstera.migration.importer.MmConditions.translate(
+                            "?itemRecharging");
+                    var importedRechargingAlias = dev.helstera.migration.importer.MmConditions.translate(
+                            "?recharging");
+                    boolean importedRechargingMapped = importedRecharging.translated()
+                            && "item-recharging".equals(importedRecharging.condition());
+                    boolean importedRechargingAliasMapped = importedRechargingAlias.translated()
+                            && "item-recharging".equals(importedRechargingAlias.condition());
+                    String importedRechargingKey = importedRechargingMapped
+                            ? skills.bindCondition(importedRecharging.condition()) : null;
+                    String importedRechargingAliasKey = importedRechargingAliasMapped
+                            ? skills.bindCondition(importedRechargingAlias.condition()) : null;
+                    boolean importedRechargingPositive = importedRechargingKey != null
+                            && behaviors.testCondition(importedRechargingKey, stateContext);
+                    boolean importedRechargingAliasPositive = importedRechargingAliasKey != null
+                            && behaviors.testCondition(importedRechargingAliasKey, stateContext);
+                    var nonHumanRechargingContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            null, rechargingTarget, 1.0, -1, 0, "integration");
+                    boolean importedRechargingNonHumanRejected = importedRechargingKey != null
+                            && importedRechargingAliasKey != null
+                            && !behaviors.testCondition(importedRechargingKey, nonHumanRechargingContext)
+                            && !behaviors.testCondition(importedRechargingAliasKey, nonHumanRechargingContext);
+                    importedItemRechargingCondition = importedRechargingMapped
+                            && importedRechargingAliasMapped && importedRechargingPositive
+                            && importedRechargingAliasPositive && importedRechargingNonHumanRejected;
+                    getLogger().info("[自检] imported-item-recharging-condition primary-mapped="
+                            + importedRechargingMapped + " alias-mapped=" + importedRechargingAliasMapped
+                            + " positive=" + importedRechargingPositive + " alias-positive="
+                            + importedRechargingAliasPositive + " non-human-rejected="
+                            + importedRechargingNonHumanRejected);
                     getLogger().info("item-recharging-condition-details before=" + attackCooldownBefore
                             + " after=" + attackCooldownAfterValue
                             + " condition=" + rechargingConditionValue
@@ -6213,6 +6244,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " look-at=" + lookAtAction
                         + " air-level=" + airLevelCondition
                         + " item-recharging-condition=" + itemRechargingCondition
+                        + " imported-item-recharging-condition=" + importedItemRechargingCondition
                         + " player-potion-events=" + playerPotionEvents
                         + " player-potion-consume=" + playerPotionConsumeEvents
                         + " potion-effect-condition=" + potionEffectCondition

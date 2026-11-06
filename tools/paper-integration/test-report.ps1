@@ -76,6 +76,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-trigger-item-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true constructed-context=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-trigger-block-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true state-rejected=true constructed-context=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-origin-location-condition primary-mapped=true alias-mapped=true positive=true exact-positive=true negative=true invalid-rejected=true constructed-context=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-item-recharging-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true non-human-rejected=true',
         '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true in-combat-condition=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
         '[Server thread/INFO]: condition-utility-details .*spawn-distance-exact=true .*spawn-distance-over-rejected=true .*mobs-chunk=true .*mobs-chunk-high-rejected=true .*mobs-chunk-zero=true .*mobs-chunk-occupied=true .*mobs-chunk-adjacent-excluded=true .*mobs-chunk-boundaries=true .*mobs-in-chunk-condition=true .*chance-100=true .*chance-0-rejected=true .*chance-invalid-rejected=true',
@@ -343,7 +344,7 @@ try {
             'importedAerialCondition', 'endermanCondition', 'importedColorCondition',
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
-            'importedMaterialCooldownCondition')) {
+            'importedMaterialCooldownCondition', 'importedItemRechargingCondition')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -357,6 +358,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'importedTriggerBlockTypeCondition').status -eq 'passed') 'imported TriggerBlockType requires strict Paper mapping, material, and state evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedOriginLocationCondition').status -eq 'passed') 'imported OriginLocation requires strict Paper mapping, exact, negative, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedMaterialCooldownCondition').status -eq 'passed') 'imported MaterialIsOnCooldown aliases require strict Paper positive and negative evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedItemRechargingCondition').status -eq 'passed') 'imported ItemRecharging aliases require strict Paper positive and non-HumanEntity rejection evidence'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriority').status -eq 'passed') 'AI selector priority arbitration probe'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriorityTargets').status -eq 'passed') 'AI priority probe target setup'
     Assert-True (($report.probes | Where-Object id -eq 'aiSelectorCore').status -eq 'passed') 'AI selector core Paper probe'
@@ -775,6 +777,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedMaterialCooldownCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedMaterialCooldownCondition'; status = 'passed'; observations = @('imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedItemRechargingCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedItemRechargingCondition'; status = 'passed'; observations = @('imported-item-recharging-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true non-human-rejected=true')
     }
     $fullCatalogReport.expectedProbeIds += 'spawningDistanceClientWalk'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -2306,6 +2312,32 @@ try {
     }
     Assert-True $wrongRejectionRejected 'full release gate rejects the wrong negative-control failure reason'
     $negativeProbe.observations = $originalNegativeObservations
+    $importedRechargingProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedItemRechargingCondition'
+    $importedRechargingObservations = @($importedRechargingProbe.observations)
+    $failedImportedRechargingObservation = ([string]$importedRechargingObservations[0]) -replace 'non-human-rejected=true', 'non-human-rejected=false'
+    $importedRechargingProbe.observations = @($failedImportedRechargingObservation)
+    Assert-True ($importedRechargingProbe.observations -contains $failedImportedRechargingObservation -and
+        $failedImportedRechargingObservation -match 'non-human-rejected=false') 'imported ItemRecharging failure fixture changes only its non-human control'
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badImportedRechargingRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badImportedRechargingRejected = $_.Exception.Message -match 'required observation for importedItemRechargingCondition' }
+    Assert-True $badImportedRechargingRejected 'full release gate rejects a failed imported ItemRecharging non-human control'
+    $importedRechargingProbe.observations = $importedRechargingObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'importedItemRechargingCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'importedItemRechargingCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingImportedRechargingRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingImportedRechargingRejected = $_.Exception.Message -match 'importedItemRechargingCondition' }
+    Assert-True $missingImportedRechargingRejected 'full release gate rejects missing imported ItemRecharging evidence'
+    $fullCatalogReport.expectedProbeIds += 'importedItemRechargingCondition'
+    $fullCatalogReport.probes += $importedRechargingProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'skillTeleportCoordinates' })
     $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'skillTeleportCoordinates' })
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8

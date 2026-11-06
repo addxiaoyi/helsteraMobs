@@ -750,6 +750,11 @@
       "status": "passed"
     },
     {
+      "id": "importedItemRechargingCondition",
+      "status": "passed",
+      "requiredObservation": "imported-item-recharging-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true non-human-rejected=true"
+    },
+    {
       "id": "itemSimilarCondition",
       "status": "passed"
     },

@@ -1178,5 +1178,15 @@
   {
     "fixtureId": "srv-paper-targeter-sorting-strict-20261102-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-targeter-sorting-20261102.json"
+  },
+  {
+    "fixtureId": "srv-paper-item-recharging-import-strict-20261106-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-item-recharging-import-strict-20261106-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-item-recharging-import-strict-20261106-r1.log.gz",
+    "logSha256": "63601d9b1ab809b44bb82a7fabf1b94c4022bd6e35887110ae3e2fc158085555",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-item-recharging-import-strict-20261106-r1-client-logs.tar.gz",
+    "clientLogSha256": "fb69a65fb4b872f3b1031de451d4e83efc55034d55fda440af99a5cf230c21e7",
+    "pluginSha256": "7e4b194a8beb0645e457108ab19d349c9888c783b74724d2cdb78ed533fecc91",
+    "fullReleaseCatalog": true
   }
 ]
