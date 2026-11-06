@@ -1,17 +1,18 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-entity-category-import-strict-20261106-r2` passed the
-full strict gate on Paper 1.21.1-133: 363 probes, 344 passed, 19 expected
-rejections, and zero incomplete. `importedEntityCategoryCondition` verifies
-`?isWaterMob`/`?waterMob` and `?isZombie`/`?zombie` through the importer and
-runtime condition registry on a real Cod/Zombie pair, both cross-type
-rejections, and preservation of malformed arguments. Report SHA-256:
-`598d21c29654a4af2e92266b54518864aeabb18b9c30e283dc5670fa64ef9950`; compressed
+Latest fixture `srv-paper-entity-type-variant-import-strict-20261106-r1` passed
+the full strict gate on Paper 1.21.1-133: 364 probes, 345 passed, 19 expected
+rejections, and zero incomplete. `importedEntityTypeVariantCondition` verifies
+`entityType`, `entityTypeIs`, and `mobtype` through the importer and runtime
+condition registry on a real Cat. TABBY and BLACK alternatives pass; RED, a
+wrong entity type, invalid variants, unsupported nested traits, and malformed
+type constraints are rejected or preserved as expected. Report SHA-256:
+`9a887d003b8e4fd7ac2b31a9da067ade1d036316cca6ddf18dd6e943205c2c27`; compressed
 server log SHA-256:
-`ab4ed1d1b1c5426ff81d43d89206ae057721e542219739420a719b20ea0e51b7`; client log
+`581aeeba15500a92c974a2a05c8d829073742e58d7a548c80aabc70c25e29ad5`; client log
 archive SHA-256:
-`8b40e44ca717140495e5aa5a2ea54ee61b8c696ddde754f685ba8634ca03f3c7`; plugin
-SHA-256: `94b1bfb7f5700e0fe0f69f505ade71fabc533599279c2961522ddad5c28ec1c8`.
+`2e9f8e665fbd3eb38b9b22ee8b08d19d371f2a9a4864474d80b3300364de761f`; plugin
+SHA-256: `58f94be7da6216b62e09e7d3405bc6229b97c022e2a2fdd74e2450957721c369`.
 
 Previous fixture `srv-paper-is-survival-mode-import-strict-20261106-r1` passed the full
 strict gate on Paper 1.21.1-133: 361 probes, 342 passed, 19 expected rejections,
@@ -3828,7 +3829,7 @@ the compressed server and client logs and their SHA-256 values are listed in
 `tools/paper-integration/release-evidence.json`. The plugin SHA-256 is
 `eb83955509fb4741fd2ced98b57706a1881542442f0a0107dd25781cef1ad454`.
 
-Latest strict follow-up `srv-paper-entity-category-import-strict-20261106-r2`
+Previous strict follow-up `srv-paper-entity-category-import-strict-20261106-r2`
 passed all 363 required probes on Paper 1.21.1-133: 344 passed, 19 expected
 rejections, and zero incomplete. Its `importedEntityCategoryCondition` probe
 verified the primary and alias imports for `IsWaterMob` and `IsZombie` on a real

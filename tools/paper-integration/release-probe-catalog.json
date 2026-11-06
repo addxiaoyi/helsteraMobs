@@ -693,6 +693,11 @@
       "requiredObservation": "imported-entity-category-condition water-primary-mapped=true water-alias-mapped=true water-positive=true water-zombie-rejected=true zombie-primary-mapped=true zombie-alias-mapped=true zombie-positive=true zombie-cod-rejected=true invalid-preserved=true cod=COD zombie=ZOMBIE"
     },
     {
+      "id": "importedEntityTypeVariantCondition",
+      "status": "passed",
+      "requiredObservation": "imported-entity-type-variant-condition primary-mapped=true alias-mapped=true mobtype-mapped=true positive=true alias-positive=true mobtype-positive=true variant-alternative=true wrong-variant-rejected=true wrong-type-rejected=true invalid-preserved=true cat=CAT variant=TABBY"
+    },
+    {
       "id": "importedSpyglassCondition",
       "status": "passed",
       "requiredObservation": "imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true"

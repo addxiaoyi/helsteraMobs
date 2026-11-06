@@ -1,5 +1,6 @@
 package dev.helstera.ai.skill;
 
+import dev.helstera.api.util.EntityTypeSelector;
 import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.api.behavior.VariableLocations;
 import org.bukkit.GameMode;
@@ -1769,14 +1770,14 @@ public final class SkillExtras {
                             .orElse(false);
                 }),
                 Map.entry("entity-type-is", (SkillCatalog.ConditionFactory) a -> {
-                    String wanted = str(a, 0, "");
+                    EntityTypeSelector selector = EntityTypeSelector.parse(String.join(",", a))
+                            .orElseThrow(() -> new IllegalArgumentException("invalid entity type selector"));
                     return ctx -> {
                         Entity entity = ctx == null ? null : ctx.targetEntity().orElse(null);
                         if (entity == null && ctx != null && ctx.instanceValid()) {
                             entity = ctx.instance().baseEntity().orElse(null);
                         }
-                        return entity != null && !wanted.isBlank()
-                                && entity.getType().name().equalsIgnoreCase(wanted);
+                        return selector.matches(entity);
                     };
                 }),
                 Map.entry("height", (SkillCatalog.ConditionFactory) a -> {

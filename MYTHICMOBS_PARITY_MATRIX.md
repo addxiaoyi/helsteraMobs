@@ -306,11 +306,15 @@ blocks of displacement and confirms both the managed instance and Bukkit
 entity are removed. Its 264-probe report passes schema and release completeness
 gates with 253 passed, 11 expected negative controls, and zero incomplete.
 The latest full strict release fixture
-`srv-paper-entity-category-import-strict-20261106-r2` completes 363 probes
-(344 passed, 19 expected rejections, zero incomplete). Its required
-`importedEntityCategoryCondition` probe verifies all four Mythic names for
-`IsWaterMob` and `IsZombie` against real Cod/Zombie targets, both cross-type
-negatives, and malformed-argument preservation. The previous strict
+`srv-paper-entity-type-variant-import-strict-20261106-r1` completes 364 probes
+(345 passed, 19 expected rejections, zero incomplete). Its required
+`importedEntityTypeVariantCondition` probe verifies `entityType`,
+`entityTypeIs`, and `mobtype` against a real Cat, including variant alternatives,
+wrong-variant/type rejection, and malformed/unsupported selector preservation.
+The previous strict `srv-paper-entity-category-import-strict-20261106-r2`
+fixture verifies `IsWaterMob`/`IsZombie` primary and alias paths against real
+Cod/Zombie targets, both cross-type negatives, and malformed-argument
+preservation. The previous strict
 `srv-paper-condition-action-suffix-strict-20261106-r1` fixture verifies
 imported Burning actions, target priority, caster fallback, and invalid-suffix
 preservation. Earlier strict fixtures retain imported Survival-mode, Spyglass,
@@ -1802,8 +1806,16 @@ corresponding registered target-only evaluators, with importer regression
 coverage.
 
 Entity condition migration update: Mythic `entityType` and `entityTypeIs` now
-map to the registered `entity-type-is` evaluator, preserving named and
-positional type arguments.
+map to the shared `entity-type-is` evaluator; `mobtype` is also an alias.
+Nested `variant` constraints work for the variant getters exposed by Paper
+1.21.1 (Axolotl, Cat, Fox, Frog, Mooshroom, Rabbit, Villager, Wolf, and Zombie
+Villager). Importer, runtime, and migration-to-runtime tests cover alternatives,
+wrong types, invalid variants, and preservation of unsupported constraints.
+Strict fixture `srv-paper-entity-type-variant-import-strict-20261106-r1`
+verifies all three imported names on a real Cat, including TABBY/BLACK matching
+and RED rejection. Other official nested traits such as color, style,
+profession/biome, genes, iron-golem cracks, and tropical-fish patterns remain
+unimplemented.
 
 Official condition alias update: Mythic `Burning`, `Blocking`, `Charged`,
 `Crouching`, movement-state aliases, `Chance`, `Day`, `Dawn`, `Dusk`, and
@@ -2294,6 +2306,7 @@ managed Sheep; natural event timing remains unverified.
 | Area | Status | Evidence / remaining work |
 | --- | --- | --- |
 | Snowing condition | implemented-runtime | `snowing` and `isSnowing` use the target location, world storm state, and height-adjusted block temperature. Importer/runtime tests and strict Paper 1.21.1-133 fixture `srv-paper-snowing-strict-20261105-r2` verify target precedence, both aliases, invalid arguments, missing context, warm-biome and clear-weather rejection, and full state restoration. The Bukkit API does not expose local precipitation type, so cold custom biomes configured without precipitation remain a documented boundary. |
+| EntityType / EntityTypeIs / MobType conditions | implemented-runtime | The shared `entity-type-is` selector matches Bukkit entity types and nested `variant` lists for Axolotl, Cat, Fox, Frog, Mooshroom, Rabbit, Villager, Wolf, and Zombie Villager using Paper 1.21.1 getters. Importer, SkillService, and migration-to-runtime tests cover canonicalization, alternatives, wrong-type/variant rejection, and malformed input preservation; strict fixture `srv-paper-entity-type-variant-import-strict-20261106-r1` verifies all three names against a real Cat with TABBY/BLACK positives and RED/wrong-type negatives. Unsupported nested traits (`color`, `style`, profession/biome, Panda genes, iron-golem cracks, tropical-fish patterns) remain untranslated and preserved; the complete Conditions catalog remains `mapped-unverified`. |
 | IsUsingSpyglass / IsScoping conditions | implemented-runtime | Official `isUsingSpyglass` and `isScoping` aliases import to the `is-using-spyglass` SkillService evaluator, which requires an explicit target Player with an active item of `Material.SPYGLASS`; absent, inactive, non-player, and malformed inputs fail closed. Importer/runtime contract tests and strict Paper fixture `srv-paper-is-spyglass-import-strict-20261106-r1` verify both imported aliases against a real active Player and reject the inactive state, a Zombie target, and invalid arguments in the complete 360-probe release catalog. This implements Bukkit-observable active Spyglass use; client scope/zoom details beyond Paper's exposed active-item state are not claimed. The wider Conditions catalog remains `mapped-unverified`. |
 | IsInSurvivalMode / InSurvivalMode conditions | implemented-runtime | Both official aliases import to `is-in-survival-mode`, which reads only an explicit target Player's `GameMode.SURVIVAL`; non-player or absent targets fail closed. Importer tests reject unknown parameters for both aliases, migration-to-runtime contract tests verify the aliases and target-type boundary, and strict Paper fixture `srv-paper-is-survival-mode-import-strict-20261106-r1` verifies Survival/Adventure states, both imported aliases, a Zombie target, malformed arguments, and game-mode restoration in the complete 361-probe release catalog. The complete Conditions catalog remains `mapped-unverified`. |
 | IsFrozen condition | implemented-runtime | Official `isFrozen` and `frozen` aliases import to the `is-frozen` SkillService evaluator, which reads Paper `Entity#isFrozen()`. Importer/runtime contract coverage and strict Paper fixture `srv-paper-is-frozen-import-strict-20261106-r2` verify both aliases on a real frozen Zombie, reject them after thawing, and reject invalid arguments in the full 359-probe release catalog. The complete Conditions catalog remains `mapped-unverified`. |
@@ -2517,7 +2530,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-entity-category-import-strict-20261106-r2` completes 363 probes (344 passed, 19 expected rejections, zero incomplete), including imported IsWaterMob/IsZombie primary and alias paths on a real Cod/Zombie pair, both cross-type rejections, and malformed-argument preservation. Previous strict fixtures verify imported Burning action suffixes and target fallback, Survival-mode, Spyglass, frozen, ItemRecharging, OriginLocation, TriggerItemType/TriggerBlockType, HasEnchantment/HasEnchant, Aerial, Color, and `MaterialIsOnCooldown` paths; related parent conditions; real entity state/options; cinematic state and cleanup; and player movement beyond `SpawningDistance`. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-entity-type-variant-import-strict-20261106-r1` completes 364 probes (345 passed, 19 expected rejections, zero incomplete), including imported EntityType/EntityTypeIs/MobType variants on a real Cat. Previous strict fixture `srv-paper-entity-category-import-strict-20261106-r2` verifies imported IsWaterMob/IsZombie aliases on a real Cod/Zombie pair, cross-type rejection, and malformed-argument preservation. Other strict fixtures verify Burning action suffixes and target fallback, Survival-mode, Spyglass, frozen, ItemRecharging, OriginLocation, TriggerItemType/TriggerBlockType, HasEnchantment/HasEnchant, Aerial, Color, and `MaterialIsOnCooldown`; related parent conditions; real entity state/options; cinematic state and cleanup; and player movement beyond `SpawningDistance`. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.

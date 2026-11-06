@@ -160,6 +160,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedEntityCategoryCondition'; status = 'passed'; observations = @('imported-entity-category-condition water-primary-mapped=true water-alias-mapped=true water-positive=true water-zombie-rejected=true zombie-primary-mapped=true zombie-alias-mapped=true zombie-positive=true zombie-cod-rejected=true invalid-preserved=true cod=COD zombie=ZOMBIE')
     }
+    $fullReport.expectedProbeIds += 'importedEntityTypeVariantCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedEntityTypeVariantCondition'; status = 'passed'; observations = @('imported-entity-type-variant-condition primary-mapped=true alias-mapped=true mobtype-mapped=true positive=true alias-positive=true mobtype-positive=true variant-alternative=true wrong-variant-rejected=true wrong-type-rejected=true invalid-preserved=true cat=CAT variant=TABBY')
+    }
     $fullReport.expectedProbeIds += 'importedSpyglassCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedSpyglassCondition'; status = 'passed'; observations = @('imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true')

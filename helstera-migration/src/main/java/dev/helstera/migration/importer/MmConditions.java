@@ -1,5 +1,7 @@
 package dev.helstera.migration.importer;
 
+import dev.helstera.api.util.EntityTypeSelector;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -1087,11 +1089,12 @@ public final class MmConditions {
         if ("hasfreeinventoryslot".equals(name) || "hasfreeslot".equals(name)) {
             return new Mapped("has-free-inventory-slot", true);
         }
-        if ("entitytype".equals(name) || "entitytypeis".equals(name)) {
-            String type = firstArgument(body, "type", "entitytype", "entity", "value", "t");
-            if (type == null) type = normalizeScalar(body);
-            return type == null ? new Mapped(s, false)
-                    : new Mapped("entity-type-is " + type, true);
+        if ("entitytype".equals(name) || "entitytypeis".equals(name) || "mobtype".equals(name)) {
+            String type = entityTypeArgument(body);
+            if (type == null) return new Mapped(s, false);
+            return EntityTypeSelector.parse(type)
+                    .map(selector -> new Mapped("entity-type-is " + selector.canonical(), true))
+                    .orElseGet(() -> new Mapped(s, false));
         }
         if ("name".equals(name) || "nameis".equals(name)) {
             String value = firstArgument(body, "name", "n", "value", "v");
@@ -1890,6 +1893,72 @@ public final class MmConditions {
             }
         }
         return null;
+    }
+
+    private static String entityTypeArgument(String body) {
+        if (body == null || body.isBlank()) return null;
+        List<String> parts = splitBalanced(body, ';');
+        if (parts == null) return null;
+        String type = null;
+        boolean typeSeen = false;
+        for (String rawPart : parts) {
+            String part = rawPart.trim();
+            if (part.isEmpty()) return null;
+            int equals = topLevelIndexOf(part, '=');
+            if (equals < 0) {
+                if (typeSeen) return null;
+                type = part;
+                typeSeen = true;
+                continue;
+            }
+            if (equals == 0) return null;
+            String key = part.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            if (!Set.of("type", "types", "t", "entitytype", "entity", "value", "mobtype")
+                    .contains(key) || typeSeen) return null;
+            type = part.substring(equals + 1).trim();
+            if (type.isEmpty()) return null;
+            typeSeen = true;
+        }
+        return type;
+    }
+
+    private static int topLevelIndexOf(String source, char target) {
+        int braces = 0;
+        boolean quoted = false;
+        for (int index = 0; index < source.length(); index++) {
+            char value = source.charAt(index);
+            if (value == '"') quoted = !quoted;
+            if (quoted) continue;
+            if (value == '{') braces++;
+            else if (value == '}') braces--;
+            else if (braces == 0 && value == target) return index;
+        }
+        return -1;
+    }
+
+    private static List<String> splitBalanced(String source, char separator) {
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int braces = 0;
+        boolean quoted = false;
+        for (int index = 0; index < source.length(); index++) {
+            char value = source.charAt(index);
+            if (value == '"') quoted = !quoted;
+            if (!quoted && value == '{') braces++;
+            if (!quoted && value == '}') {
+                if (--braces < 0) return null;
+            }
+            if (!quoted && braces == 0 && value == separator) {
+                if (current.toString().isBlank()) return null;
+                parts.add(current.toString().trim());
+                current.setLength(0);
+            } else {
+                current.append(value);
+            }
+        }
+        if (quoted || braces != 0 || current.toString().isBlank()) return null;
+        parts.add(current.toString().trim());
+        return parts;
     }
 
     private static Map<String, String> strictValueArguments(String body,

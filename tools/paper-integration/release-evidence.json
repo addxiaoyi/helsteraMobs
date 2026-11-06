@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-entity-type-variant-import-strict-20261106-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-entity-type-variant-import-strict-20261106-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-entity-type-variant-import-strict-20261106-r1.log.gz",
+    "logSha256": "581aeeba15500a92c974a2a05c8d829073742e58d7a548c80aabc70c25e29ad5",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-entity-type-variant-import-strict-20261106-r1-client-logs.tar.gz",
+    "clientLogSha256": "2e9f8e665fbd3eb38b9b22ee8b08d19d371f2a9a4864474d80b3300364de761f",
+    "pluginSha256": "58f94be7da6216b62e09e7d3405bc6229b97c022e2a2fdd74e2450957721c369",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-entity-category-import-strict-20261106-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-entity-category-import-strict-20261106-r2.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-entity-category-import-strict-20261106-r2.log.gz",

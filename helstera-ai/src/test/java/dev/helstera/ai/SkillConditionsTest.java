@@ -36,6 +36,19 @@ import static org.mockito.Mockito.when;
  */
 class SkillConditionsTest {
 
+    private static <T extends org.bukkit.Keyed> T keyedVariant(Class<T> type, String name) {
+        var key = new org.bukkit.NamespacedKey("minecraft", name.toLowerCase(java.util.Locale.ROOT));
+        return type.cast(java.lang.reflect.Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
+                (proxy, method, arguments) -> switch (method.getName()) {
+                    case "getKey" -> key;
+                    case "name", "toString" -> name.toUpperCase(java.util.Locale.ROOT);
+                    case "ordinal", "compareTo" -> 0;
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "equals" -> proxy == arguments[0];
+                    default -> throw new UnsupportedOperationException(method.getName());
+                }));
+    }
+
     private static BehaviorContext ctx() {
         // 实例与目标均为 null：模拟实体尚未绑定 / 无仇恨目标的场合
         return BehaviorContext.of(null, null, 1.0, -1, 0, "IDLE");
@@ -517,6 +530,46 @@ class SkillConditionsTest {
         assertFalse(extraFactory("is-zombie").create(List.of()).test(waterContext));
         assertFalse(extraFactory("is-water-mob").create(List.of()).test(ctx()));
         assertFalse(extraFactory("is-zombie").create(List.of()).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("EntityType 的 variant 约束匹配 Bukkit 实体变体")
+    void entityTypeVariantConstraintMatchesPaperEntityVariant() {
+        var cat = mock(org.bukkit.entity.Cat.class);
+        when(cat.getType()).thenReturn(org.bukkit.entity.EntityType.CAT);
+        var tabbyType = keyedVariant(org.bukkit.entity.Cat.Type.class, "tabby");
+        var blackType = keyedVariant(org.bukkit.entity.Cat.Type.class, "black");
+        when(cat.getCatType()).thenReturn(tabbyType);
+        var catContext = BehaviorContext.of(null, cat, 1.0, -1, 0, "IDLE");
+        var tabby = extraFactory("entity-type-is").create(List.of("CAT[variant=TABBY,BLACK]"));
+
+        assertTrue(tabby.test(catContext));
+        when(cat.getCatType()).thenReturn(blackType);
+        assertTrue(tabby.test(catContext));
+        var redType = keyedVariant(org.bukkit.entity.Cat.Type.class, "red");
+        when(cat.getCatType()).thenReturn(redType);
+        assertFalse(tabby.test(catContext));
+
+        var wolf = mock(org.bukkit.entity.Wolf.class);
+        when(wolf.getType()).thenReturn(org.bukkit.entity.EntityType.WOLF);
+        when(wolf.getVariant()).thenReturn(keyedVariant(org.bukkit.entity.Wolf.Variant.class, "snowy"));
+        var combined = extraFactory("entity-type-is").create(
+                List.of("CAT[variant=TABBY]", "WOLF[variant=SNOWY]"));
+        assertTrue(combined.test(BehaviorContext.of(null, wolf, 1.0, -1, 0, "IDLE")));
+        assertFalse(combined.test(ctx()));
+        assertThrows(IllegalArgumentException.class, () ->
+                extraFactory("entity-type-is").create(List.of("ZOMBIE[variant=TABBY]")));
+    }
+
+    @Test
+    @DisplayName("EntityType 无 variant 时仍按 Bukkit 类型匹配")
+    void entityTypeWithoutVariantMatchesBukkitType() {
+        var cat = mock(org.bukkit.entity.Cat.class);
+        when(cat.getType()).thenReturn(org.bukkit.entity.EntityType.CAT);
+        assertTrue(extraFactory("entity-type-is").create(List.of("CAT"))
+                .test(BehaviorContext.of(null, cat, 1.0, -1, 0, "IDLE")));
+        assertFalse(extraFactory("entity-type-is").create(List.of("WOLF"))
+                .test(BehaviorContext.of(null, cat, 1.0, -1, 0, "IDLE")));
     }
 
     @Test
