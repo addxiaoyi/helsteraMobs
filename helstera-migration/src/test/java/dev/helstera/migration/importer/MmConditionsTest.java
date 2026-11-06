@@ -185,6 +185,39 @@ class MmConditionsTest {
     }
 
     @Test
+    @DisplayName("无参条件别名拒绝会被静默忽略的参数")
+    void parameterlessConditionAliasesRejectUnknownArguments() {
+        for (String name : List.of(
+                "inCombat", "offGCD", "offGlobalCooldown", "isWaterMob", "waterMob", "isZombie", "zombie",
+                "aerial", "isAerial", "isEnderman", "enderman", "isUndead", "isCreature", "child",
+                "isOp", "isOperator", "isCollidable", "onGround", "isInvulnerable", "isCancelled",
+                "isCanceled", "cancelled", "canceled", "mounted", "isMounted", "isRiding", "riding",
+                "moist", "isMoist", "enderDragonAlive", "isDragonAlive", "dragonAlive",
+                "isRaiderPatrolLeader", "isPatrolLeader", "serverIsPaper", "isPaper", "isMythicMob", "isMM",
+                "isCreeperPrimed", "hasDialogOpen", "dialogOpen", "isInCinematic", "inCinematic",
+                "itemRecharging", "recharging", "hasFreeInventorySlot", "hasFreeSlot", "vehicleIsDead",
+                "isVehicle", "vehicle", "moving", "isMoving", "hasPassenger", "hasPassengers", "isLeashed",
+                "leashed", "targetIsLeashed", "targetLeashed", "hasOwner", "ownerIsPlayer", "ownerIsOnline",
+                "owner", "isOwner", "targetHasOwner", "targetOwnerIsPlayer", "targetOwnerIsOnline", "hasParent",
+                "isParent", "parent", "isParentAlive", "parentAlive", "isSibling", "sibling", "targetIsOp",
+                "targetIsOperator", "sameFaction", "differentFaction", "lineOfSight", "hasLineOfSight",
+                "targetInLineOfSight", "targetNotInLineOfSight", "lineOfSightFromOrigin", "inLineOfSightFromOrigin",
+                "inside", "outside", "targetIsUndead", "targetIsCreature", "targetIsCollidable", "targetIsBlocked",
+                "targetIsVehicle", "targetHasPassenger", "targetHasPassengers", "targetIsDead", "targetIsAlive",
+                "targetIsInvulnerable", "targetIsOnGround", "targetIsAirborne")) {
+            String raw = "?" + name;
+            String invalid = raw + "{unknown=true}";
+            assertTrue(translated(raw), raw);
+            assertTrue(translated(raw + "{}"), raw);
+            assertFalse(translated(invalid), invalid);
+            assertEquals(invalid, t(invalid));
+            String negated = "?!" + name + "{unknown=true}";
+            assertFalse(translated(negated), negated);
+            assertEquals(negated, t(negated));
+        }
+    }
+
+    @Test
     @DisplayName("bee and anger state aliases map only without parameters")
     void angryAndPollinatedConditions() {
         assertEquals("angry", t("?angry"));

@@ -39,6 +39,13 @@ placeholder syntax. `MmConditionsTest` covers missing, extra, and unbalanced
 braces plus a nested placeholder value; the importer continues to preserve
 unknown condition source text with a migration warning.
 
+Importer mappings that take no arguments now reject non-empty argument blocks
+instead of silently discarding them. `MmConditionsTest` covers the parameterless
+aliases' normal form, accepted empty block, and unknown-argument rejection.
+This closes the parser boundary for currently mapped no-argument conditions;
+it does not verify the complete official condition catalog or parameter schemas
+for conditions that accept values.
+
 Incremental condition evidence: `distance-from-spawn` has unit coverage for an
 exact 3-4-5 distance, inclusive/exclusive comparator boundaries, invalid
 numeric input, and missing location context. Strict Paper 1.21.1-133 fixture
