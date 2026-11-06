@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-condition-action-suffix-strict-20261106-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-condition-action-suffix-strict-20261106-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-condition-action-suffix-strict-20261106-r1.log.gz",
+    "logSha256": "243eb1200fd595909a04bbc03ceb5c2c4081bf2cae611dcb19c7d517d018b13d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-condition-action-suffix-strict-20261106-r1-client-logs.tar.gz",
+    "clientLogSha256": "b6e7024adeb630486c7d5827ce66a304ef0daf8b100e47780cdbd1d6f0b96627",
+    "pluginSha256": "eb83955509fb4741fd2ced98b57706a1881542442f0a0107dd25781cef1ad454",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-is-survival-mode-import-strict-20261106-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1.log.gz",

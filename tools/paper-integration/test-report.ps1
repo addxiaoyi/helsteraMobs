@@ -78,6 +78,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-origin-location-condition primary-mapped=true alias-mapped=true positive=true exact-positive=true negative=true invalid-rejected=true constructed-context=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-item-recharging-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true non-human-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-frozen-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true thawed=true alias-thawed=true invalid-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-burning-condition actions=true target-priority=true target-positive=true target-negative=true composed-negation=true caster-fallback=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
@@ -345,7 +346,7 @@ try {
             'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates',
             'spawningDistanceClientWalk', 'isInCinematicCondition', 'aerialCondition',
             'importedAerialCondition', 'endermanCondition', 'importedColorCondition',
-            'importedIsFrozenCondition', 'importedSpyglassCondition', 'importedSurvivalModeCondition',
+            'importedIsFrozenCondition', 'importedBurningCondition', 'importedSpyglassCondition', 'importedSurvivalModeCondition',
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition')) {
@@ -357,6 +358,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'spawningDistanceClientWalk').status -eq 'passed') 'real client movement despawn probe'
     Assert-True (($report.probes | Where-Object id -eq 'importedAerialCondition').status -eq 'passed') 'imported Aerial aliases require strict Paper positive and negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedIsFrozenCondition').status -eq 'passed') 'imported IsFrozen aliases require strict Paper frozen/thawed and malformed-input evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedBurningCondition').status -eq 'passed') 'imported Burning requires target-priority, composed-negation, caster-fallback, and invalid-preservation evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedSpyglassCondition').status -eq 'passed') 'imported Spyglass aliases require strict Paper active/inactive, target-type, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedSurvivalModeCondition').status -eq 'passed') 'imported survival aliases require strict Paper Survival/Adventure, target-type, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedColorCondition').status -eq 'passed') 'imported Color and clr require strict Paper positive and negative evidence'
@@ -792,6 +794,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedIsFrozenCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedIsFrozenCondition'; status = 'passed'; observations = @('imported-frozen-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true thawed=true alias-thawed=true invalid-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedBurningCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedBurningCondition'; status = 'passed'; observations = @('imported-burning-condition actions=true target-priority=true target-positive=true target-negative=true composed-negation=true caster-fallback=true invalid-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'importedSpyglassCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -2428,6 +2434,30 @@ try {
     Assert-True $missingImportedSurvivalRejected 'full release gate rejects missing imported survival condition evidence'
     $fullCatalogReport.expectedProbeIds += 'importedSurvivalModeCondition'
     $fullCatalogReport.probes += $importedSurvivalProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $importedBurningProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedBurningCondition'
+    $importedBurningObservations = @($importedBurningProbe.observations)
+    $failedImportedBurningObservation = ([string]$importedBurningObservations[0]) -replace 'target-negative=true', 'target-negative=false'
+    $importedBurningProbe.observations = @($failedImportedBurningObservation)
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badImportedBurningRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badImportedBurningRejected = $_.Exception.Message -match 'required observation for importedBurningCondition' }
+    Assert-True $badImportedBurningRejected 'full release gate rejects a failed imported Burning target-state observation'
+    $importedBurningProbe.observations = $importedBurningObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'importedBurningCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'importedBurningCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingImportedBurningRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingImportedBurningRejected = $_.Exception.Message -match 'importedBurningCondition' }
+    Assert-True $missingImportedBurningRejected 'full release gate rejects missing imported Burning evidence'
+    $fullCatalogReport.expectedProbeIds += 'importedBurningCondition'
+    $fullCatalogReport.probes += $importedBurningProbe
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'skillTeleportCoordinates' })
     $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'skillTeleportCoordinates' })

@@ -148,6 +148,22 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedItemRechargingCondition'; status = 'passed'; observations = @('imported-item-recharging-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true non-human-rejected=true')
     }
+    $fullReport.expectedProbeIds += 'importedIsFrozenCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedIsFrozenCondition'; status = 'passed'; observations = @('imported-frozen-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true thawed=true alias-thawed=true invalid-rejected=true')
+    }
+    $fullReport.expectedProbeIds += 'importedBurningCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedBurningCondition'; status = 'passed'; observations = @('imported-burning-condition actions=true target-priority=true target-positive=true target-negative=true composed-negation=true caster-fallback=true invalid-preserved=true')
+    }
+    $fullReport.expectedProbeIds += 'importedSpyglassCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedSpyglassCondition'; status = 'passed'; observations = @('imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true')
+    }
+    $fullReport.expectedProbeIds += 'importedSurvivalModeCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedSurvivalModeCondition'; status = 'passed'; observations = @('imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true')
+    }
     $fullReport.expectedProbeIds += 'snowingCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'snowingCondition'; status = 'passed'; observations = @('snowing-condition result=true target-location-isolated=true target-positive=true alias-positive=true warm-rejected=true clear-rejected=true missing-context-rejected=true invalid-arguments-rejected=true restored=true')
