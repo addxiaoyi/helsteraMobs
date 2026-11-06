@@ -321,6 +321,11 @@ public final class MmConditions {
                     : name.startsWith("weather") ? "weather-is" : "time-is";
             return new Mapped(runtime + " " + value, true);
         }
+        if (Set.of("variableequals", "variableeq", "varequals", "vareq",
+                "variableinrange", "varinrange", "varrange",
+                "variableisset", "varisset", "varset").contains(name)) {
+            return variableCondition(name, body, s);
+        }
         if ("lightlevel".equals(name) && body != null) {
             Mapped result = compare(body, "light-level");
             return result.translated() ? result : new Mapped(s, false);
@@ -1477,14 +1482,24 @@ public final class MmConditions {
     private static boolean hasBalancedParameterBlock(String text, int firstOpen) {
         if (firstOpen <= 0 || !text.endsWith("}")) return false;
         int depth = 0;
+        boolean quoted = false;
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
+            if (quoted && c == '\\' && i + 1 < text.length()) {
+                i++;
+                continue;
+            }
+            if (c == '"') {
+                quoted = !quoted;
+                continue;
+            }
+            if (quoted) continue;
             if (c == '{') depth++;
             else if (c == '}') {
                 if (--depth < 0 || (depth == 0 && i != text.length() - 1)) return false;
             }
         }
-        return depth == 0;
+        return depth == 0 && !quoted;
     }
 
     /**
@@ -2033,6 +2048,190 @@ public final class MmConditions {
             }
         }
         return Map.copyOf(parsed);
+    }
+
+    private static Mapped variableCondition(String name, String body, String original) {
+        boolean equals = Set.of("variableequals", "variableeq", "varequals", "vareq").contains(name);
+        boolean inRange = Set.of("variableinrange", "varinrange", "varrange").contains(name);
+        String runtime = equals ? "variable-equals" : inRange ? "variable-in-range" : "variable-is-set";
+        Map<String, String> arguments = variableArguments(body, equals || inRange, inRange);
+        if (arguments == null) return new Mapped(original, false);
+
+        String variable = arguments.get("variable");
+        String scope = arguments.get("scope");
+        int dot = variable.indexOf('.');
+        if (dot >= 0) {
+            if (dot == 0 || dot == variable.length() - 1 || variable.indexOf('.', dot + 1) >= 0) {
+                return new Mapped(original, false);
+            }
+            String prefix = variable.substring(0, dot);
+            if (scope != null && !scope.equalsIgnoreCase(prefix)) return new Mapped(original, false);
+            scope = prefix;
+            variable = variable.substring(dot + 1);
+        }
+        if (!validVariableName(variable)) return new Mapped(original, false);
+        if (scope == null) scope = "skill";
+        scope = scope.toLowerCase(Locale.ROOT);
+        if (!Set.of("skill", "caster", "target", "world", "global").contains(scope)) {
+            return new Mapped(original, false);
+        }
+
+        String value = arguments.get("value");
+        if (equals && value == null || inRange && (value == null || !validVariableRange(value))) {
+            return new Mapped(original, false);
+        }
+        String condition = runtime + "{var=" + conditionValue(variable) + ";scope=" + scope;
+        if (value != null) condition += ";value=" + conditionValue(value);
+        return new Mapped(condition + "}", true);
+    }
+
+    private static Map<String, String> variableArguments(String body, boolean acceptsValue, boolean acceptsRange) {
+        if (body == null || body.isBlank()) return null;
+        List<String> parts = splitVariableArguments(body);
+        if (parts == null) return null;
+        Map<String, String> parsed = new LinkedHashMap<>();
+        for (String raw : parts) {
+            String part = raw.trim();
+            if (part.isEmpty()) return null;
+            int equals = topLevelVariableEquals(part);
+            String key = null;
+            String rawValue = part;
+            if (equals >= 0) {
+                if (equals == 0) return null;
+                key = part.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                rawValue = part.substring(equals + 1).trim();
+            }
+
+            String canonical;
+            if (key == null) {
+                if (!parsed.containsKey("variable")) canonical = "variable";
+                else if (acceptsValue && !parsed.containsKey("value")) canonical = "value";
+                else return null;
+            } else {
+                canonical = switch (key) {
+                    case "variable", "name", "n", "var", "key", "k" -> "variable";
+                    case "scope", "s" -> "scope";
+                    case "value", "val", "v" -> acceptsValue ? "value" : null;
+                    case "range", "r" -> acceptsRange ? "value" : null;
+                    default -> null;
+                };
+            }
+            if (canonical == null) return null;
+            String value = decodeVariableArgument(rawValue);
+            if (value == null || value.isEmpty() || parsed.putIfAbsent(canonical, value) != null) return null;
+        }
+        if (!parsed.containsKey("variable")) return null;
+        if (!acceptsValue && parsed.containsKey("value")) return null;
+        return parsed;
+    }
+
+    private static List<String> splitVariableArguments(String source) {
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean quoted = false;
+        int depth = 0;
+        for (int i = 0; i < source.length(); i++) {
+            char value = source.charAt(i);
+            if (quoted && value == '\\' && i + 1 < source.length()) {
+                current.append(value).append(source.charAt(++i));
+                continue;
+            }
+            if (value == '"') quoted = !quoted;
+            if (!quoted) {
+                if (value == '{' || value == '[' || value == '(') depth++;
+                else if (value == '}' || value == ']' || value == ')') {
+                    if (--depth < 0) return null;
+                }
+                if (depth == 0 && (value == ';' || value == ',' && variableKeyFollows(source, i + 1))) {
+                    if (current.toString().isBlank()) return null;
+                    parts.add(current.toString().trim());
+                    current.setLength(0);
+                    continue;
+                }
+            }
+            current.append(value);
+        }
+        if (quoted || depth != 0 || current.toString().isBlank()) return null;
+        parts.add(current.toString().trim());
+        return parts;
+    }
+
+    private static boolean variableKeyFollows(String source, int start) {
+        int index = start;
+        while (index < source.length() && Character.isWhitespace(source.charAt(index))) index++;
+        int keyStart = index;
+        while (index < source.length() && (Character.isLetterOrDigit(source.charAt(index))
+                || source.charAt(index) == '_' || source.charAt(index) == '-')) index++;
+        if (index == keyStart) return false;
+        while (index < source.length() && Character.isWhitespace(source.charAt(index))) index++;
+        return index < source.length() && source.charAt(index) == '=';
+    }
+
+    private static int topLevelVariableEquals(String source) {
+        boolean quoted = false;
+        int depth = 0;
+        for (int i = 0; i < source.length(); i++) {
+            char value = source.charAt(i);
+            if (quoted && value == '\\' && i + 1 < source.length()) {
+                i++;
+                continue;
+            }
+            if (value == '"') quoted = !quoted;
+            if (quoted) continue;
+            if (value == '{' || value == '[' || value == '(') depth++;
+            else if (value == '}' || value == ']' || value == ')') depth--;
+            else if (value == '=' && depth == 0) return i;
+        }
+        return -1;
+    }
+
+    private static String decodeVariableArgument(String raw) {
+        if (raw == null || raw.isEmpty()) return null;
+        boolean startsQuoted = raw.startsWith("\"");
+        boolean endsQuoted = raw.endsWith("\"");
+        if (startsQuoted != endsQuoted) return null;
+        if (!startsQuoted) return raw.indexOf('"') >= 0 ? null : raw;
+        StringBuilder decoded = new StringBuilder();
+        for (int i = 1; i < raw.length() - 1; i++) {
+            char value = raw.charAt(i);
+            if (value == '\\') {
+                if (i + 1 >= raw.length() - 1) return null;
+                char escaped = raw.charAt(++i);
+                if (escaped != '"' && escaped != '\\') return null;
+                decoded.append(escaped);
+            } else if (value == '"') {
+                return null;
+            } else {
+                decoded.append(value);
+            }
+        }
+        return decoded.toString();
+    }
+
+    private static boolean validVariableName(String value) {
+        return value != null && !value.isEmpty() && value.chars().noneMatch(character ->
+                Character.isWhitespace(character) || ".;={},\"\\[]()".indexOf(character) >= 0);
+    }
+
+    private static boolean validVariableRange(String raw) {
+        if (!validNumberRange(raw)) return false;
+        String value = raw.trim();
+        for (String operator : List.of(">=", "<=", ">", "<")) {
+            if (value.startsWith(operator)) return true;
+        }
+        int to = value.toLowerCase(Locale.ROOT).indexOf("to");
+        if (to > 0) {
+            Double minimum = finiteNumber(value.substring(0, to));
+            Double maximum = finiteNumber(value.substring(to + 2));
+            return minimum != null && maximum != null && minimum <= maximum;
+        }
+        int separator = value.indexOf('-', 1);
+        if (separator > 0) {
+            Double minimum = finiteNumber(value.substring(0, separator));
+            Double maximum = finiteNumber(value.substring(separator + 1));
+            return minimum != null && maximum != null && minimum <= maximum;
+        }
+        return finiteNumber(value) != null;
     }
 
     private static String unquoteAuraValue(String value) {

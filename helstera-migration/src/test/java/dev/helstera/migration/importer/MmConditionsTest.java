@@ -280,6 +280,50 @@ class MmConditionsTest {
     }
 
     @Test
+    @DisplayName("official variable conditions map names, scopes, aliases, and quoted values")
+    void variableConditionsMapOfficialArguments() {
+        assertEquals("variable-equals{var=stage;scope=skill;value=ready}",
+                t("?VariableEquals{variable=stage;value=ready}"));
+        assertEquals("variable-equals{var=phase;scope=global;value=armed}",
+                t("?varEquals{n=global.phase,v=armed}"));
+        assertEquals("variable-equals{var=phase;scope=target;value=armed}",
+                t("?varEq{key=target.phase;value=armed}"));
+        assertEquals("variable-equals{var=label;scope=skill;value=\"ready; now\"}",
+                t("?variableEquals{var=skill.label;value=\"ready; now\"}"));
+        assertEquals("variable-in-range{var=score;scope=world;value=>=5}",
+                t("?VariableInRange{var=world.score;range=>=5}"));
+        assertEquals("variable-in-range{var=score;scope=global;value=1to10}",
+                t("?varRange{s=global;k=score;r=1to10}"));
+        assertEquals("variable-is-set{var=state;scope=caster}",
+                t("?VariableIsSet{variable=caster.state}"));
+        assertEquals("variable-is-set{var=stage;scope=skill}",
+                t("?varSet{k=stage;s=skill}"));
+        assertEquals("variable-is-set{var=stage;scope=target}",
+                t("?varIsSet{name=target.stage;scope=target}"));
+    }
+
+    @Test
+    void variableConditionsRejectAmbiguousOrInvalidArguments() {
+        for (String raw : List.of(
+                "?VariableEquals", "?VariableEquals{var=stage}",
+                "?VariableInRange{var=score}", "?VariableIsSet",
+                "?VariableEquals{var=stage;value=ready;unknown=x}",
+                "?VariableIsSet{var=stage;value=ready}",
+                "?VariableEquals{var=stage;variable=other;value=ready}",
+                "?VariableEquals{var=stage;value=ready;val=other}",
+                "?VariableInRange{var=score;value=10to1}",
+                "?VariableInRange{var=score;value=NaN}",
+                "?VariableInRange{var=score;value=>Infinity}",
+                "?VariableEquals{var=global.phase;scope=skill;value=armed}",
+                "?VariableIsSet{var=missing.scope.name}",
+                "?VariableIsSet{var=stage;scope=server}",
+                "?VariableEquals{var=bad.name;value=ready}",
+                "?VariableEquals{var=stage;value=\"unterminated}")) {
+            assertUntranslatedPreserved(raw);
+        }
+    }
+
+    @Test
     @DisplayName("常见环境、移动和药水条件映射到运行时条件")
     void environmentalAliasesMap() {
         assertEquals("night", t("?night"));

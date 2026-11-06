@@ -27,17 +27,26 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-aura-target-strict-20261106-r1` passed all
+Latest strict fixture `srv-paper-variable-conditions-strict-20261106-r1` passed
+all 367 probes (348 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. `importedVariableConditions` verifies the imported
+`VariableEquals`, `VariableInRange`, and `VariableIsSet` paths, aliases, five
+scopes, inclusive/exclusive numeric boundaries, fail-closed missing and
+wrong-type values, quoted semicolon values, dynamic placeholders, and invalid
+range preservation. Report:
+`reports/paper-1.21.1-variable-conditions-strict-20261106-r1.json`;
+server log: `reports/paper-1.21.1-variable-conditions-strict-20261106-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-variable-conditions-strict-20261106-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`b37f06a021b904fd3fa61b2710f88cc4c533943c533e28a813e7bc1dd0eae8b6`.
+
+Previous strict fixture `srv-paper-aura-target-strict-20261106-r1` passed all
 366 probes (347 passed, 19 expected rejections, zero incomplete) on Paper
 1.21.1-133. `mythicAuraRuntime` verifies imported target-only named Aura checks,
 Aura application and conditions, partial/default/`ANY` removal, aliases, and
-invalid-input rejection. Report:
-`reports/paper-1.21.1-aura-target-strict-20261106-r1.json`;
-server log: `reports/paper-1.21.1-aura-target-strict-20261106-r1.log.gz`;
-client logs:
-`reports/paper-1.21.1-aura-target-strict-20261106-r1-client-logs.tar.gz`.
-Plugin SHA-256:
-`914e5c5b4b1698fee82cb209a9f392f82e88457a49224b943dfb3669b007e066`.
+invalid-input rejection. Its report, logs, and exact plugin hash remain in
+`release-evidence.json`.
 
 Previous strict fixture `srv-paper-aura-remove-strict-20261106-r1` also passed
 the full catalog and verifies partial/default/`ANY` Aura removal. Its exact

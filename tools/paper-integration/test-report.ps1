@@ -85,6 +85,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-entity-type-traits mapped=true horse=true wrong-style-rejected=true panda=true villager=true zombie-villager=true rainbow-sheep=true rainbow-sheep-white-rejected=true shulker=true parrot=true llama=true tropical-fish=true iron-golem-crack=true inapplicable-trait-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true',
         '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true in-combat-condition=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
         '[Server thread/INFO]: condition-utility-details .*spawn-distance-exact=true .*spawn-distance-over-rejected=true .*mobs-chunk=true .*mobs-chunk-high-rejected=true .*mobs-chunk-zero=true .*mobs-chunk-occupied=true .*mobs-chunk-adjacent-excluded=true .*mobs-chunk-boundaries=true .*mobs-in-chunk-condition=true .*chance-100=true .*chance-0-rejected=true .*chance-invalid-rejected=true',
@@ -353,7 +354,7 @@ try {
             'importedIsFrozenCondition', 'importedBurningCondition', 'importedEntityCategoryCondition',
             'importedEntityTypeVariantCondition',
             'importedEntityTypeTraitsCondition',
-            'importedSpyglassCondition', 'importedSurvivalModeCondition',
+            'importedSpyglassCondition', 'importedSurvivalModeCondition', 'importedVariableConditions',
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition')) {
@@ -371,6 +372,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'importedEntityTypeTraitsCondition').status -eq 'passed') 'imported EntityType traits require strict Paper getter coverage, negative controls, and all documented API-backed trait families'
     Assert-True (($report.probes | Where-Object id -eq 'importedSpyglassCondition').status -eq 'passed') 'imported Spyglass aliases require strict Paper active/inactive, target-type, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedSurvivalModeCondition').status -eq 'passed') 'imported survival aliases require strict Paper Survival/Adventure, target-type, and malformed-input evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedVariableConditions').status -eq 'passed') 'imported variable conditions require strict Paper scope, alias, range, missing-value, and quoted-argument evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedColorCondition').status -eq 'passed') 'imported Color and clr require strict Paper positive and negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedHasEnchantmentCondition').status -eq 'passed') 'imported HasEnchantment requires strict Paper mapping, level and type evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedTriggerItemTypeCondition').status -eq 'passed') 'imported TriggerItemType requires strict Paper mapping and positive/negative evidence'
@@ -834,6 +836,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedSurvivalModeCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedSurvivalModeCondition'; status = 'passed'; observations = @('imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedVariableConditions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedVariableConditions'; status = 'passed'; observations = @('imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'spawningDistanceClientWalk'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -2462,6 +2468,30 @@ try {
     Assert-True $missingImportedSurvivalRejected 'full release gate rejects missing imported survival condition evidence'
     $fullCatalogReport.expectedProbeIds += 'importedSurvivalModeCondition'
     $fullCatalogReport.probes += $importedSurvivalProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $importedVariableProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedVariableConditions'
+    $importedVariableObservations = @($importedVariableProbe.observations)
+    $failedImportedVariableObservation = ([string]$importedVariableObservations[0]) -replace 'scopes=true', 'scopes=false'
+    $importedVariableProbe.observations = @($failedImportedVariableObservation)
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badImportedVariableRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badImportedVariableRejected = $_.Exception.Message -match 'required observation for importedVariableConditions' }
+    Assert-True $badImportedVariableRejected 'full release gate rejects incomplete imported variable scope evidence'
+    $importedVariableProbe.observations = $importedVariableObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'importedVariableConditions' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'importedVariableConditions' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingImportedVariableRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingImportedVariableRejected = $_.Exception.Message -match 'importedVariableConditions' }
+    Assert-True $missingImportedVariableRejected 'full release gate rejects missing imported variable condition evidence'
+    $fullCatalogReport.expectedProbeIds += 'importedVariableConditions'
+    $fullCatalogReport.probes += $importedVariableProbe
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $importedBurningProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedBurningCondition'
     $importedBurningObservations = @($importedBurningProbe.observations)

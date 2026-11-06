@@ -180,6 +180,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedSurvivalModeCondition'; status = 'passed'; observations = @('imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true')
     }
+    $fullReport.expectedProbeIds += 'importedVariableConditions'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedVariableConditions'; status = 'passed'; observations = @('imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true')
+    }
     $fullReport.expectedProbeIds += 'snowingCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'snowingCondition'; status = 'passed'; observations = @('snowing-condition result=true target-location-isolated=true target-positive=true alias-positive=true warm-rejected=true clear-rejected=true missing-context-rejected=true invalid-arguments-rejected=true restored=true')

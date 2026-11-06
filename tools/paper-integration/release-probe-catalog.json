@@ -718,6 +718,11 @@
       "requiredObservation": "imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true"
     },
     {
+      "id": "importedVariableConditions",
+      "status": "passed",
+      "requiredObservation": "imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true"
+    },
+    {
       "id": "gameplayPlaceholders",
       "status": "passed"
     },

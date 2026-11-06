@@ -1985,6 +1985,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean structureCondition = false;
             boolean mythicMobTypeCondition = false;
             boolean variableContainsCondition = false;
+            boolean importedVariableConditions = false;
             boolean triggerBlockTypeCondition = false;
             boolean originLocationCondition = false;
             boolean importedOriginLocationCondition = false;
@@ -2344,6 +2345,143 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " suffix=" + variableTextSuffix
                         + " all=" + variableListAll
                         + " any=" + variableListAny);
+
+                var scopedVariableContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        modelInstance, zombie, 1.0, -1, 0, "integration", null,
+                        zombie, java.util.List.of(zombie), zombie.getLocation(),
+                        variableContext.skillTree().orElse(null));
+                String variableProbeSuffix = java.util.UUID.randomUUID().toString().replace("-", "");
+                boolean variablePrimaryMapped = true;
+                boolean variableAliasesMapped = true;
+                boolean variableScopesMatched = true;
+                boolean variableIsSetAliasesMatched = true;
+                boolean variableWrongTypeRejected = true;
+                for (String scope : java.util.List.of("skill", "caster", "target", "world", "global")) {
+                    String variable = "parity" + variableProbeSuffix;
+                    String set = "set-variable{var=" + scope + "." + variable
+                            + ";value=ready;type=STRING}";
+                    boolean setSucceeded = runIntegrationAction(skills, behaviors, set, scopedVariableContext);
+                    String equalsSource = switch (scope) {
+                        case "caster" -> "?varEquals{n=caster." + variable + ";v=ready}";
+                        case "target" -> "?varEq{key=target." + variable + ";value=ready}";
+                        case "world" -> "?variableEq{n=world." + variable + ";v=ready}";
+                        default -> "?VariableEquals{var=" + scope + "." + variable + ";value=ready}";
+                    };
+                    var equalsMapped = dev.helstera.migration.importer.MmConditions.translate(equalsSource);
+                    String equalsKey = equalsMapped.translated()
+                            ? skills.bindCondition(equalsMapped.condition()) : null;
+                    boolean equalsPassed = equalsKey != null
+                            && behaviors.testCondition(equalsKey, scopedVariableContext);
+                    String isSetSource = switch (scope) {
+                        case "skill" -> "?VariableIsSet{variable=skill." + variable + "}";
+                        case "target" -> "?varSet{k=target." + variable + "}";
+                        default -> "?varIsSet{key=" + scope + "." + variable + "}";
+                    };
+                    var isSetMapped = dev.helstera.migration.importer.MmConditions.translate(isSetSource);
+                    String isSetKey = isSetMapped.translated()
+                            ? skills.bindCondition(isSetMapped.condition()) : null;
+                    boolean isSetPassed = isSetKey != null
+                            && behaviors.testCondition(isSetKey, scopedVariableContext);
+                    if (scope.equals("global")) {
+                        var wrongType = dev.helstera.migration.importer.MmConditions.translate(
+                                "?VariableInRange{var=global." + variable + ";value=0to100}");
+                        String wrongTypeKey = wrongType.translated()
+                                ? skills.bindCondition(wrongType.condition()) : null;
+                        variableWrongTypeRejected = wrongTypeKey != null
+                                && !behaviors.testCondition(wrongTypeKey, scopedVariableContext);
+                    }
+                    boolean unsetSucceeded = runIntegrationAction(skills, behaviors,
+                            "variable-unset{var=" + scope + "." + variable + "}", scopedVariableContext);
+                    boolean unsetRejected = isSetKey != null
+                            && !behaviors.testCondition(isSetKey, scopedVariableContext);
+                    variablePrimaryMapped &= scope.equals("skill")
+                            ? equalsMapped.translated() && isSetMapped.translated()
+                            : true;
+                    variableAliasesMapped &= equalsMapped.translated() && isSetMapped.translated();
+                    variableScopesMatched &= setSucceeded && equalsPassed && isSetPassed
+                            && unsetSucceeded && unsetRejected;
+                    variableIsSetAliasesMatched &= isSetMapped.translated() && isSetPassed;
+                }
+
+                String numericVariable = "range" + variableProbeSuffix;
+                boolean numericSet = runIntegrationAction(skills, behaviors,
+                        "set-variable{var=global." + numericVariable + ";value=42}", scopedVariableContext);
+                boolean variableRangesMatched = numericSet;
+                for (String source : java.util.List.of(
+                        "?VariableInRange{var=global." + numericVariable + ";value=40to45}",
+                        "?varInRange{scope=global;variable=" + numericVariable + ";range=>=42}",
+                        "?varRange{s=global;n=" + numericVariable + ";r=<=42}")) {
+                    var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                    String key = mapped.translated() ? skills.bindCondition(mapped.condition()) : null;
+                    variableRangesMatched &= key != null
+                            && behaviors.testCondition(key, scopedVariableContext);
+                }
+                var exclusiveRange = dev.helstera.migration.importer.MmConditions.translate(
+                        "?VariableInRange{var=global." + numericVariable + ";value=>42}");
+                String exclusiveRangeKey = exclusiveRange.translated()
+                        ? skills.bindCondition(exclusiveRange.condition()) : null;
+                variableRangesMatched &= exclusiveRangeKey != null
+                        && !behaviors.testCondition(exclusiveRangeKey, scopedVariableContext);
+                var missingVariable = dev.helstera.migration.importer.MmConditions.translate(
+                        "?VariableEquals{var=global.missing" + variableProbeSuffix + ";value=ready}");
+                String missingVariableKey = missingVariable.translated()
+                        ? skills.bindCondition(missingVariable.condition()) : null;
+                boolean missingVariableRejected = missingVariableKey != null
+                        && !behaviors.testCondition(missingVariableKey, scopedVariableContext);
+                String quotedVariable = "quoted" + variableProbeSuffix;
+                boolean quotedValueSet = runIntegrationAction(skills, behaviors,
+                        "set-variable{var=global." + quotedVariable
+                                + ";value=\"ready; now\";type=STRING}", scopedVariableContext);
+                var quotedValue = dev.helstera.migration.importer.MmConditions.translate(
+                        "?VariableEquals{var=global." + quotedVariable + ";value=\"ready; now\"}");
+                String quotedValueKey = quotedValue.translated()
+                        ? skills.bindCondition(quotedValue.condition()) : null;
+                boolean quotedValueMatched = quotedValueSet && quotedValueKey != null
+                        && behaviors.testCondition(quotedValueKey, scopedVariableContext);
+                String expectedVariable = "expected" + variableProbeSuffix;
+                String actualVariable = "actual" + variableProbeSuffix;
+                boolean placeholderVariablesSet = runIntegrationAction(skills, behaviors,
+                        "set-variable{var=skill." + expectedVariable + ";value=ready;type=STRING}",
+                        scopedVariableContext)
+                        && runIntegrationAction(skills, behaviors,
+                        "set-variable{var=skill." + actualVariable + ";value=ready;type=STRING}",
+                        scopedVariableContext);
+                var placeholderEquals = dev.helstera.migration.importer.MmConditions.translate(
+                        "?VariableEquals{var=skill." + actualVariable + ";value=<skill.var."
+                                + expectedVariable + ">}");
+                String placeholderKey = placeholderEquals.translated()
+                        ? skills.bindCondition(placeholderEquals.condition()) : null;
+                boolean variablePlaceholderMatched = placeholderVariablesSet && placeholderKey != null
+                        && behaviors.testCondition(placeholderKey, scopedVariableContext);
+                String invalidRangeSource = "?VariableInRange{var=global." + numericVariable + "}";
+                var invalidRange = dev.helstera.migration.importer.MmConditions.translate(invalidRangeSource);
+                boolean invalidRangePreserved = !invalidRange.translated()
+                        && invalidRangeSource.equals(invalidRange.condition())
+                        && skills.bindCondition(invalidRange.condition()) == null;
+                importedVariableConditions = variablePrimaryMapped && variableAliasesMapped
+                        && variableScopesMatched && variableIsSetAliasesMatched
+                        && variableRangesMatched && missingVariableRejected
+                        && variableWrongTypeRejected && quotedValueMatched
+                        && variablePlaceholderMatched && invalidRangePreserved;
+                getLogger().info("imported-variable-conditions result=" + importedVariableConditions
+                        + " primary-mapped=" + variablePrimaryMapped
+                        + " aliases=" + (variableAliasesMapped && variableIsSetAliasesMatched)
+                        + " scopes=" + variableScopesMatched
+                        + " ranges=" + variableRangesMatched
+                        + " missing-rejected=" + missingVariableRejected
+                        + " wrong-type-rejected=" + variableWrongTypeRejected
+                        + " quoted-value=" + quotedValueMatched
+                        + " dynamic-placeholder=" + variablePlaceholderMatched
+                        + " invalid-preserved=" + invalidRangePreserved);
+                runIntegrationAction(skills, behaviors,
+                        "variable-unset{var=global." + numericVariable + "}", scopedVariableContext);
+                runIntegrationAction(skills, behaviors,
+                        "variable-unset{var=global." + quotedVariable + "}", scopedVariableContext);
+                runIntegrationAction(skills, behaviors,
+                        "variable-unset{var=skill." + expectedVariable + "}", scopedVariableContext);
+                runIntegrationAction(skills, behaviors,
+                        "variable-unset{var=skill." + actualVariable + "}", scopedVariableContext);
+
                 Location projectileOrigin = world.getHighestBlockAt(location).getLocation().add(0, 4, 0);
                 projectileProbe = world.spawnArrow(projectileOrigin,
                         new org.bukkit.util.Vector(0, -1, 0), 1.0f, 0.0f);

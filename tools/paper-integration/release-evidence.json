@@ -1,5 +1,16 @@
 [
   {
+    "fixtureId": "srv-paper-variable-conditions-strict-20261106-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-variable-conditions-strict-20261106-r1.json",
+    "reportSha256": "c5375c3202f5c42a88bcb91ec839f9fe4afd09572c8e3bb614883ce61bc4cae5",
+    "log": "tools/paper-integration/reports/paper-1.21.1-variable-conditions-strict-20261106-r1.log.gz",
+    "logSha256": "72341181511f48f949cf9e869cbd0b02ea57a429a33c2a334e7d221b780f68dc",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-variable-conditions-strict-20261106-r1-client-logs.tar.gz",
+    "clientLogSha256": "30a54ae26df932ba72229d77e80ebec94ba5615c4200954081536d64e715af4b",
+    "pluginSha256": "b37f06a021b904fd3fa61b2710f88cc4c533943c533e28a813e7bc1dd0eae8b6",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-aura-target-strict-20261106-r1",
     "reportFixtureDirectory": "srv-paper-integration",
     "report": "tools/paper-integration/reports/paper-1.21.1-aura-target-strict-20261106-r1.json",
