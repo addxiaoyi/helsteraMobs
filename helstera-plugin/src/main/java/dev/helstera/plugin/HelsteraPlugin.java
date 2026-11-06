@@ -1979,6 +1979,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean levelCondition = false;
             boolean frozenCondition = false;
             boolean importedFrozenCondition = false;
+            boolean importedBurningCondition = false;
             boolean lunarPhaseCondition = false;
             boolean stringEqualsCondition = false;
             boolean stringEmptyCondition = false;
@@ -2418,6 +2419,72 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " invalid-rejected=" + importedFrozenInvalidRejected);
                 } finally {
                     zombie.setFreezeTicks(originalFreezeTicks);
+                }
+                org.bukkit.entity.Zombie burningProbeTarget = world.spawn(
+                        location.clone().add(4, 0, 0), org.bukkit.entity.Zombie.class);
+                int originalCasterFireTicks = zombie.getFireTicks();
+                int originalTargetFireTicks = burningProbeTarget.getFireTicks();
+                try {
+                    var burningTranslated = new java.util.ArrayList<String>();
+                    var burningUnmapped = new java.util.ArrayList<String>();
+                    dev.helstera.migration.importer.MmConditions.translateAll(java.util.List.of(
+                            "burning true", "isburning false", "!burning false", "burning maybe"),
+                            burningTranslated, burningUnmapped);
+                    boolean actionsMapped = burningTranslated.size() == 4
+                            && "on-fire".equals(burningTranslated.get(0))
+                            && "!on-fire".equals(burningTranslated.get(1))
+                            && "on-fire".equals(burningTranslated.get(2))
+                            && "burning maybe".equals(burningTranslated.get(3));
+                    boolean invalidPreserved = burningUnmapped.equals(java.util.List.of("burning maybe"));
+                    String burningKey = actionsMapped ? skills.bindCondition(burningTranslated.get(0)) : null;
+                    String notBurningKey = actionsMapped ? skills.bindCondition(burningTranslated.get(1)) : null;
+                    String composedKey = actionsMapped ? skills.bindCondition(burningTranslated.get(2)) : null;
+                    boolean targetPriority;
+                    boolean targetPositive;
+                    boolean targetNegative;
+                    boolean composedNegation;
+                    boolean casterFallback;
+                    try {
+                        zombie.setFireTicks(Math.max(originalCasterFireTicks, 80));
+                        burningProbeTarget.setFireTicks(0);
+                        var targetNotBurning = dev.helstera.api.behavior.BehaviorContext.of(
+                                modelInstance, burningProbeTarget, 1.0, -1, 0, "IDLE");
+                        targetPriority = notBurningKey != null
+                                && behaviors.testCondition(notBurningKey, targetNotBurning);
+
+                        zombie.setFireTicks(0);
+                        burningProbeTarget.setFireTicks(Math.max(originalTargetFireTicks, 80));
+                        var targetBurning = dev.helstera.api.behavior.BehaviorContext.of(
+                                modelInstance, burningProbeTarget, 1.0, -1, 0, "IDLE");
+                        targetPositive = burningKey != null
+                                && behaviors.testCondition(burningKey, targetBurning);
+                        targetNegative = notBurningKey != null
+                                && !behaviors.testCondition(notBurningKey, targetBurning);
+                        composedNegation = composedKey != null
+                                && behaviors.testCondition(composedKey, targetBurning);
+
+                        zombie.setFireTicks(Math.max(originalCasterFireTicks, 80));
+                        var noTarget = dev.helstera.api.behavior.BehaviorContext.of(
+                                modelInstance, (org.bukkit.entity.LivingEntity) null,
+                                1.0, -1, 0, "IDLE");
+                        casterFallback = burningKey != null
+                                && behaviors.testCondition(burningKey, noTarget);
+                        importedBurningCondition = actionsMapped && invalidPreserved
+                                && targetPriority && targetPositive && targetNegative
+                                && composedNegation && casterFallback;
+                    } finally {
+                        zombie.setFireTicks(originalCasterFireTicks);
+                        burningProbeTarget.setFireTicks(originalTargetFireTicks);
+                    }
+                    getLogger().info("[自检] imported-burning-condition actions=" + actionsMapped
+                            + " target-priority=" + targetPriority
+                            + " target-positive=" + targetPositive
+                            + " target-negative=" + targetNegative
+                            + " composed-negation=" + composedNegation
+                            + " caster-fallback=" + casterFallback
+                            + " invalid-preserved=" + invalidPreserved);
+                } finally {
+                    burningProbeTarget.remove();
                 }
                 int lunarPhase = (int) Math.floorMod(
                         Math.floorDiv(world.getFullTime(), 24_000L), 8L);
@@ -4143,6 +4210,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && zombieCondition
                         && aerialCondition
                         && importedFrozenCondition
+                        && importedBurningCondition
                         && endermanCondition
                         && enchantmentCondition
                         && colorCondition
@@ -6303,6 +6371,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " level-condition=" + levelCondition
                         + " frozen-condition=" + frozenCondition
                         + " imported-frozen-condition=" + importedFrozenCondition
+                        + " imported-burning-condition=" + importedBurningCondition
                         + " lunar-phase-condition=" + lunarPhaseCondition
                         + " string-equals-condition=" + stringEqualsCondition
                         + " string-empty-condition=" + stringEmptyCondition

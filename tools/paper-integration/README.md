@@ -1577,3 +1577,12 @@ player displacement, then confirms the SpawningDistance managed instance and
 Bukkit entity are both removed. The report schema and release completeness
 gate pass; the report is retained at
 `srv-paper-spawning-distance-client-walk-strict-20261102-r3/integration-report.json`.
+
+Strict follow-up `srv-paper-condition-action-suffix-strict-20261106-r1` passes
+all 362 required probes on Paper 1.21.1-133: 343 passed, 19 expected negative
+controls, and zero incomplete. Its `importedBurningCondition` probe verifies
+the imported `true`/`false` suffix actions, composition with `!`, active-target
+priority over the caster, no-target caster fallback, and preservation of an
+invalid suffix. The report and compressed server/client logs are archived under
+`tools/paper-integration/reports/` and listed in `release-evidence.json`. The
+full Conditions catalog remains incomplete.

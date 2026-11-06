@@ -53,9 +53,11 @@ preserved and warned. The `on-fire` runtime condition now checks the active
 target first, then falls back to the caster, so imported `TargetConditions`
 evaluate the entity Mythic specifies. `MmConditionsTest` covers action parsing
 and inversion; `MigrationRuntimeConditionContractTest` imports `isburning false`
-and `burning true` and verifies both states through `SkillService`. This is
-automated importer/runtime evidence only; no new Paper fixture was run, and the
-complete Conditions catalog remains `mapped-unverified`.
+and `burning true` and verifies both states through `SkillService`. Strict
+Paper 1.21.1-133 fixture `srv-paper-condition-action-suffix-strict-20261106-r1`
+also verifies the imported action suffixes, target priority, caster fallback,
+and invalid-suffix preservation. The complete Conditions catalog remains
+`mapped-unverified`.
 
 `distanceFromLocation` and `originLocation` now validate named argument schemas:
 unknown keys, duplicate aliases, empty fields, and mixed `loc` plus `x/y/z`
@@ -2460,6 +2462,7 @@ restores the player's prior glowing state.
 | Shared skill-tree variables and locations | implemented-runtime | `SkillTreeContext`, nested skill tests, immutable snapshot/restore, and YAML snapshot-store round-trip coverage for primitive variables and locations |
 | Audience parsing and delivery | mapped-unverified | isolated dual-client Paper workflow proves message/title/actionbar/particle delivery, radius include/exclude, permission include/exclude, explicit faction include/exclude, and combined filter parsing; `!permission`/`-faction` exclusion syntax now has parser/unit coverage, while broader combinations remain unverified |
 | `DamageTag` / `DamageHasTag` and scoped damage tags | implemented-runtime | Mythic aliases map to fail-closed `damage-tag` (`value=true` by default); `damage-target` scopes normalized `tags`, case-preserving `rawtags`, and normalized `damagetype` to the synchronous victim damage event, and SkillTree snapshots preserve the tag set. `MmConditionsTest`, `SkillConditionsTest`, `SkillCatalogDamageTagsTest`, and `SkillTreeContextTest` cover mapping, malformed values, event scope, and snapshot restore; strict Paper 1.21.1-133 fixture `srv-paper-damage-tag-strict-20261102-r3` verifies untagged rejection, tagged action, cause/final-damage conditions, event cancellation, and unchanged victim health. Raw tags remain case-sensitive, and asynchronous damage or non-Bukkit damage pipelines are outside this implementation |
+| Mythic condition-list suffix actions and `Burning` | implemented-runtime | `true` keeps the condition, `false` negates it, and suffix negation composes with `!`; unknown actions remain preserved with a warning. The `on-fire` evaluator prioritizes the active target and falls back to the caster when no target exists. Unit and importer-to-runtime contract tests cover parsing and both states; strict Paper 1.21.1-133 fixture `srv-paper-condition-action-suffix-strict-20261106-r1` verifies target priority, positive/negative states, composed negation, caster fallback, and invalid-suffix preservation. Other Conditions and their full grammar remain open |
 | Full Mythic condition/filter grammar | mapped-unverified | nested `all`/`any`/`not`, unary `!`, grouped parentheses, and top-level `&&`/`||` composition with `||` precedence now have runtime tests; caster/target permission conditions and entity-state placeholders now cover common Bukkit flags including age, AI, gravity, silent, validity, powered, movement and player state, with Paper `caster-permission=true` evidence from an online trigger context; strict Paper fixture `srv-paper-chance-condition-strict-20261101-r1` verifies `Chance` at 0% and 100% and rejects 101%; unsupported condition names, remaining placeholders, and operators remain |
 
 Health migration correction: official [`health`](https://wiki.mythiccraft.io/mythicmobs/Skills/Conditions/health) compares absolute health, while [`healthpercent`](https://wiki.mythiccraft.io/mythicmobs/Skills/Conditions/healthpercent) accepts percentages and multipliers. Scalar comparisons map to `health` and `health-percent`, preserving strict operators and absorption; `MmConditionsTest` and `MigrationRuntimeConditionContractTest` cover migration and runtime boundaries. Paper fixture `srv-paper-health-import-strict-20261104-r1` verifies translated comparisons and invalid-input preservation against a real Zombie; `healthImportedCondition` is required by the strict catalog. Percent syntax on `health` remains unmapped.

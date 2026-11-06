@@ -3801,3 +3801,17 @@ The corresponding client outputs are archived in
 and checked by the same manifest audit. They do not constitute a complete
 startup configuration snapshot; the server generated a token during startup.
 
+Strict follow-up `srv-paper-condition-action-suffix-strict-20261106-r1` passed
+all 362 required probes on Paper 1.21.1-133: 343 passed, 19 expected
+rejections, and zero incomplete. The dedicated `importedBurningCondition`
+probe used real managed and target Zombies. It verified translation of
+`burning true`, `isburning false`, and `!burning false`; the target-negative
+condition passed while only the caster was burning, positive and negative
+target states behaved correctly, composed negation passed for a burning
+target, and the caster was used when no target existed. An invalid
+`burning maybe` suffix remained untranslated and warned. The report is
+`tools/paper-integration/reports/paper-1.21.1-condition-action-suffix-strict-20261106-r1.json`;
+the compressed server and client logs and their SHA-256 values are listed in
+`tools/paper-integration/release-evidence.json`. The plugin SHA-256 is
+`eb83955509fb4741fd2ced98b57706a1881542442f0a0107dd25781cef1ad454`.
+
