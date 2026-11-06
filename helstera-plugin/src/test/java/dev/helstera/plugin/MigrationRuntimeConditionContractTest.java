@@ -30,6 +30,36 @@ import static org.mockito.Mockito.*;
 class MigrationRuntimeConditionContractTest {
 
     @Test
+    @DisplayName("imported spyglass aliases bind to the active-item runtime condition")
+    void importedSpyglassAliasesReachRuntime() {
+        var player = mock(org.bukkit.entity.Player.class);
+        var activeItem = mock(org.bukkit.inventory.ItemStack.class);
+        when(player.hasActiveItem()).thenReturn(true);
+        when(player.getActiveItem()).thenReturn(activeItem);
+        when(activeItem.getType()).thenReturn(org.bukkit.Material.SPYGLASS);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, player, 1.0, -1, 0, "IDLE");
+        var nonPlayerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, mock(org.bukkit.entity.Zombie.class), 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+
+        for (String source : List.of("?isUsingSpyglass", "?isScoping")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertEquals("is-using-spyglass", mapped.condition());
+            String key = service.bindCondition(mapped.condition());
+            assertNotNull(key);
+            assertTrue(registry.testCondition(key, context), source);
+            assertFalse(registry.testCondition(key, nonPlayerContext), source);
+        }
+
+        var invalid = dev.helstera.migration.importer.MmConditions.translate(
+                "?isUsingSpyglass{unknown=true}");
+        assertFalse(invalid.translated());
+    }
+
+    @Test
     void importedMessageWithCommaReachesTargetIntact(@TempDir Path root) throws Exception {
         Path source = Files.createDirectories(root.resolve("Skills")).resolve("message.yml");
         Files.writeString(source, """

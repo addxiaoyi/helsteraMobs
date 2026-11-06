@@ -1,10 +1,20 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-is-frozen-import-strict-20261106-r2` passed the full strict
-gate on Paper 1.21.1-133: 359 probes, 340 passed, 19 expected rejections, and
-zero incomplete. `importedIsFrozenCondition` verifies Mythic `?isFrozen` and
-`?frozen` through the importer and `SkillService` against a real frozen Zombie,
-after thawing, and with an invalid argument. Report and compressed
+Fixture `srv-paper-is-spyglass-import-strict-20261106-r1` passed the full strict
+gate on Paper 1.21.1-133: 360 probes, 341 passed, 19 expected rejections, and
+zero incomplete. `importedSpyglassCondition` verifies Mythic
+`?isUsingSpyglass` and `?isScoping` through the importer and `SkillService` for
+a real online Player actively using a Spyglass, and rejects the inactive state,
+a Zombie target, and malformed arguments. Report and compressed server/client
+logs are listed in `release-evidence.json`; report SHA-256:
+`31524b55da5be947af54b973066d52b8f71b7d96feb647d5ba6fa88d6ae7c6d7`; plugin
+SHA-256: `38e0e9769a086950b3e4f5a6923d8f58f44a16fdf3bfaebf512f6d49462a7a20`.
+
+Previous fixture `srv-paper-is-frozen-import-strict-20261106-r2` passed the full
+strict gate on Paper 1.21.1-133: 359 probes, 340 passed, 19 expected rejections,
+and zero incomplete. `importedIsFrozenCondition` verifies Mythic `?isFrozen`
+and `?frozen` through the importer and `SkillService` against a real frozen
+Zombie, after thawing, and with an invalid argument. Report and compressed
 server/client logs are listed in `release-evidence.json`; plugin SHA-256:
 `4af92b5462a6d1bb533fdb14df654c7e9e9cea066eaef8da10c568bdd4976335`.
 
@@ -2053,12 +2063,13 @@ patrol leader through Bukkit and the structured `targetCategories` probe
 remained passed. This is exploratory Paper 1.21.11 evidence; the Paper 1.21.1
 release target remains open.
 
-Fixture `srv-paper-integration-exploratory-1.21.11-r76` records
-`spyglassCondition=passed`. A real online Paper player starts using a temporary
-SPYGLASS, the target-only `IsUsingSpyglass` condition passes, clearing the
-active item makes it reject, and the previous hand item is restored. This is
-exploratory Paper 1.21.11 evidence; the Paper 1.21.1 release target remains
-open.
+Fixture `srv-paper-integration-exploratory-1.21.11-r76` records an earlier
+exploratory `spyglassCondition=passed`. The current strict Paper 1.21.1-133
+fixture `srv-paper-is-spyglass-import-strict-20261106-r1` verifies imported
+`IsUsingSpyglass` and `IsScoping` against a real online Player actively using a
+temporary SPYGLASS, then rejects the inactive state, a Zombie target, and
+malformed arguments. The strict report and its logs are listed in
+`release-evidence.json`.
 
 Fixture `srv-paper-integration-exploratory-1.21.11-r79` extends the passing
 `conditionUtilityAliases` probe with `Altitude`, evaluating the real target's
