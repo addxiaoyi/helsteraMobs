@@ -4,7 +4,17 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-is-frozen-import-strict-20261106-r2`
+Latest strict fixture `srv-paper-is-spyglass-import-strict-20261106-r1`
+passes 360 probes (341 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its `importedSpyglassCondition` probe routes Mythic
+`?isUsingSpyglass` and `?isScoping` through the importer and `SkillService`,
+checks a real online Player while actively using a Spyglass, and rejects the
+inactive state, a Zombie target, and malformed arguments. Report:
+`tools/paper-integration/reports/paper-1.21.1-is-spyglass-import-strict-20261106-r1.json`.
+The plugin SHA-256 is
+`38e0e9769a086950b3e4f5a6923d8f58f44a16fdf3bfaebf512f6d49462a7a20`.
+
+Previous strict fixture `srv-paper-is-frozen-import-strict-20261106-r2`
 passes 359 probes (340 passed, 19 expected rejections, zero incomplete) on
 Paper 1.21.1-133. Its `importedIsFrozenCondition` probe routes Mythic
 `?isFrozen` and `?frozen` through the importer and `SkillService`, verifies
@@ -478,7 +488,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 359 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 360 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -494,8 +504,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 465 cited IDs; 377 report files; 4 directories
-   without reports; 84 missing directories; 142 archived release reports. The
+   Current fixture inventory: 466 cited IDs; 378 report files; 4 directories
+   without reports; 84 missing directories; 143 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -547,6 +557,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
+- Official `IsUsingSpyglass` and `IsScoping` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player actively using a Spyglass, then reject the inactive state, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-spyglass-import-strict-20261106-r1` completes the 360-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.
 - Official `IsFrozen` and `Frozen` aliases now have strict importer-to-runtime evidence: `?isFrozen` and `?frozen` both pass on a real frozen Zombie, fail after thawing, and reject malformed arguments through `SkillService`. Fixture `srv-paper-is-frozen-import-strict-20261106-r2` completes the full 359-probe release catalog on Paper 1.21.1-133; the broader Conditions catalog remains open.
 - `@PlayersInWorld` now selects valid online players in the caster's world without implicit faction filtering; `@PlayersOnServer` and its `@server`/`@everyone` aliases select online players across worlds. `targetself=true` includes the caster. Unit/importer coverage and strict Paper fixture `srv-paper-targeter-players-strict-20261102-r1` verify filtering, server population and alias equivalence in a complete 272-probe report; full targeter-catalog and cross-world client coverage remain open.
 - Generic targeter `skipTargetsUpToIndex` (`stuti`) now skips entries after sorting and before applying `limit`; negative or malformed values fail closed. Focused API, importer, Paper self-test, and report-contract coverage are included. Strict Paper fixture `srv-paper-targeter-skip-index-strict-20261102-r3` verifies the selector behavior on Paper 1.21.1-133; its archived 271-probe report has 259 passed, 12 expected negative controls, and zero incomplete. The complete official targeter catalog remains open.
@@ -595,7 +606,7 @@ the entire MythicMobs feature catalog.
 - Official `DistanceFromSpawn` now compares the active target/origin location to its Bukkit world spawn using Mythic range syntax; exploratory Paper r71 keeps the utility probe passed.
 - Official `BoundingBoxesOverlap` now uses Bukkit AABB overlap with optional caster forward offset; exploratory Paper r73 keeps the utility probe passed.
 - Official `IsCreeperPrimed` now maps to Bukkit `Creeper#isIgnited()`; strict Paper fixture `srv-paper-creeper-primed-condition-strict-20261101-r1` verifies both boolean states on a real Creeper, restores its state, and requires a dedicated report probe. Official `IsFrozen` reads Paper's `Entity#isFrozen()` boolean; strict fixture `srv-paper-runtime-alias-20261031-r2` records `frozenCondition=passed`.
-- Official `IsUsingSpyglass` now reads a target Player's active Bukkit item and matches SPYGLASS; exploratory Paper r76 verifies active-item positive/negative paths.
+- Official `IsUsingSpyglass` reads only a target Player's active Bukkit item and matches SPYGLASS. Strict Paper fixture `srv-paper-is-spyglass-import-strict-20261106-r1` verifies imported `?isUsingSpyglass`/`?isScoping`, active/inactive transitions, Zombie rejection, and malformed-argument preservation.
 - Official `EnderDragonAlive` checks for a valid EnderDragon in the target world's entity set. Strict Paper 1.21.1-133 fixture `srv-paper-ender-dragon-alive-strict-20261102-r1` passes the dedicated `enderDragonAliveCondition`: a real dragon is accepted, then removed and rejected; the complete report has 263 probes and zero incomplete.
 - Official `PlayerKills` uses a lifetime counter owned by each managed mob instance and increments only when that instance is resolved as the killer of a Player death; aliases, range syntax, teardown cleanup, and migration coverage are implemented. Strict fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` verifies the online-player death event with controlled `lastDamageCause` attribution, passes `player-kills >=1`, and rejects `player-kills >1`; this does not establish natural PvP damage attribution.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies `Absorption`, `HasPotionEffect`, the internal PotionEffect-backed `has-aura-stacks` evaluator, managed `Level`, health-with-absorption comparisons, `LunarPhase`, `LastSignal`, `LineOfSightFromOrigin`, `BowTension`, string and comparator conditions, `GlobalScore`, `Score`, `LookingAt`, `Structure`, Item type/similarity, `Targets`, `ItemRecharging`, and player experience/absorption/passenger condition paths. Fixture `srv-paper-item-recharging-import-strict-20261106-r1` additionally verifies imported `?itemRecharging`/`?recharging` aliases after a real Bukkit attack and rejects non-HumanEntity targets. Lunar phase parsing now rejects the whole condition when any phase token is invalid or empty, including a trailing comma. This does not verify Mythic Aura parity.

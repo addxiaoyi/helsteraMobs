@@ -27,7 +27,19 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-is-frozen-import-strict-20261106-r2` passed
+Latest strict fixture `srv-paper-is-spyglass-import-strict-20261106-r1` passed
+360 probes (341 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. `importedSpyglassCondition` verifies Mythic
+`?isUsingSpyglass`/`?isScoping` through the importer and `SkillService` while a
+real online Player actively uses a Spyglass; it also rejects the inactive
+state, a Zombie target, and malformed arguments. Report:
+`reports/paper-1.21.1-is-spyglass-import-strict-20261106-r1.json`; server log:
+`reports/paper-1.21.1-is-spyglass-import-strict-20261106-r1.log.gz`; client
+logs: `reports/paper-1.21.1-is-spyglass-import-strict-20261106-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`38e0e9769a086950b3e4f5a6923d8f58f44a16fdf3bfaebf512f6d49462a7a20`.
+
+Previous strict fixture `srv-paper-is-frozen-import-strict-20261106-r2` passed
 359 probes (340 passed, 19 expected rejections, zero incomplete) on Paper
 1.21.1-133. `importedIsFrozenCondition` verifies Mythic
 `?isFrozen`/`?frozen` through the importer and `SkillService` against a real

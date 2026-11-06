@@ -145,7 +145,8 @@ class MmConditionsTest {
         assertTrue(translated("?hasTarget"));
         for (String condition : List.of("?isFrozen{unknown=true}", "?frozen{unknown=true}",
                 "?projectileHasEnded{unknown=true}", "?snowing{unknown=true}",
-                "?isSnowing{unknown=true}")) {
+                "?isSnowing{unknown=true}", "?isUsingSpyglass{unknown=true}",
+                "?isScoping{unknown=true}")) {
             assertFalse(translated(condition), condition);
             assertEquals(condition, t(condition));
         }
@@ -157,6 +158,7 @@ class MmConditionsTest {
                 "clear", "sun", "sunny", "rain", "storm", "thunder", "thunderstorm",
                 "charged", "climbing", "isClimbing", "invisible", "isInvisible", "glowing", "isGlowing",
                 "falling", "isFalling", "targetIsClimbing", "targetIsInvisible", "targetIsGlowing",
+                "isUsingSpyglass", "isScoping",
                 "targetIsFrozen", "targetFrozen",
                 "isPlayer", "isMob", "isMonster", "isAnimal", "isVillager", "isTameable", "isRaider",
                 "isBaby", "isChild", "isAdult", "isTamed", "isSheared", "isSaddled", "isPowered", "isCharged",

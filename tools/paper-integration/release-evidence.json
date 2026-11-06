@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-is-spyglass-import-strict-20261106-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-is-spyglass-import-strict-20261106-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-is-spyglass-import-strict-20261106-r1.log.gz",
+    "logSha256": "0b0671b05cf98c16c899329e5f9e1b9ace00e74cf664c5ffe14a10a32a5376fa",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-is-spyglass-import-strict-20261106-r1-client-logs.tar.gz",
+    "clientLogSha256": "79078b876d7c25cf5fe6d73da90446ed3519230842374ff44fb205eea8b5cc1e",
+    "pluginSha256": "38e0e9769a086950b3e4f5a6923d8f58f44a16fdf3bfaebf512f6d49462a7a20",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-is-frozen-import-strict-20261106-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-is-frozen-import-strict-20261106-r2.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-is-frozen-import-strict-20261106-r2.log.gz",

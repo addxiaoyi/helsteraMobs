@@ -5530,6 +5530,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean stateGliding = false;
                 boolean stateBlocking = false;
                 boolean spyglassCondition = false;
+                boolean importedSpyglassCondition = false;
                 boolean enchantingConditions = false;
                 boolean collidableCondition = false;
                 boolean offhandCondition = false;
@@ -5993,12 +5994,52 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     permissionProbe.getInventory().setItemInMainHand(
                             new org.bukkit.inventory.ItemStack(org.bukkit.Material.SPYGLASS));
                     permissionProbe.startUsingItem(org.bukkit.inventory.EquipmentSlot.HAND);
+                    var importedSpyglass = dev.helstera.migration.importer.MmConditions.translate(
+                            "?isUsingSpyglass");
+                    var importedSpyglassAlias = dev.helstera.migration.importer.MmConditions.translate(
+                            "?isScoping");
+                    var importedSpyglassInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                            "?isUsingSpyglass{unknown=true}");
+                    boolean importedSpyglassMapped = importedSpyglass.translated()
+                            && "is-using-spyglass".equals(importedSpyglass.condition());
+                    boolean importedSpyglassAliasMapped = importedSpyglassAlias.translated()
+                            && "is-using-spyglass".equals(importedSpyglassAlias.condition());
+                    String importedSpyglassKey = importedSpyglassMapped
+                            ? skills.bindCondition(importedSpyglass.condition()) : null;
+                    String importedSpyglassAliasKey = importedSpyglassAliasMapped
+                            ? skills.bindCondition(importedSpyglassAlias.condition()) : null;
                     boolean spyglassPositive = behaviors.testCondition(
                             skills.bindCondition("is-using-spyglass"), stateContext);
+                    boolean importedSpyglassPositive = importedSpyglassKey != null
+                            && behaviors.testCondition(importedSpyglassKey, stateContext);
+                    boolean importedSpyglassAliasPositive = importedSpyglassAliasKey != null
+                            && behaviors.testCondition(importedSpyglassAliasKey, stateContext);
                     permissionProbe.clearActiveItem();
                     boolean spyglassNegative = !behaviors.testCondition(
                             skills.bindCondition("is-using-spyglass"), stateContext);
                     spyglassCondition = spyglassPositive && spyglassNegative;
+                    boolean importedSpyglassInactiveRejected = importedSpyglassKey != null
+                            && importedSpyglassAliasKey != null
+                            && !behaviors.testCondition(importedSpyglassKey, stateContext)
+                            && !behaviors.testCondition(importedSpyglassAliasKey, stateContext);
+                    var nonPlayerSpyglassContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            null, rechargingTarget, 1.0, -1, 0, "integration");
+                    boolean importedSpyglassNonPlayerRejected = importedSpyglassKey != null
+                            && importedSpyglassAliasKey != null
+                            && !behaviors.testCondition(importedSpyglassKey, nonPlayerSpyglassContext)
+                            && !behaviors.testCondition(importedSpyglassAliasKey, nonPlayerSpyglassContext);
+                    boolean importedSpyglassInvalidRejected = !importedSpyglassInvalid.translated();
+                    importedSpyglassCondition = importedSpyglassMapped
+                            && importedSpyglassAliasMapped && importedSpyglassPositive
+                            && importedSpyglassAliasPositive && importedSpyglassInactiveRejected
+                            && importedSpyglassNonPlayerRejected && importedSpyglassInvalidRejected;
+                    getLogger().info("[自检] imported-spyglass-condition primary-mapped="
+                            + importedSpyglassMapped + " alias-mapped=" + importedSpyglassAliasMapped
+                            + " positive=" + importedSpyglassPositive + " alias-positive="
+                            + importedSpyglassAliasPositive + " inactive-rejected="
+                            + importedSpyglassInactiveRejected + " non-player-rejected="
+                            + importedSpyglassNonPlayerRejected + " invalid-rejected="
+                            + importedSpyglassInvalidRejected);
                     permissionProbe.getInventory().setItemInMainHand(spyglassPreviousHand);
                     permissionProbe.setGameMode(oldGameMode);
                     stateConditions = stateFlying && stateSneaking && stateGliding;
@@ -6290,6 +6331,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " state-gliding=" + stateGliding
                         + " state-blocking=" + stateBlocking
                         + " spyglass-condition=" + spyglassCondition
+                        + " imported-spyglass-condition=" + importedSpyglassCondition
                         + " entity-state-conditions=" + entityStateConditions
                         + " target-state-conditions=" + targetStateConditions
                         + " invulnerable-condition=" + invulnerableCondition
