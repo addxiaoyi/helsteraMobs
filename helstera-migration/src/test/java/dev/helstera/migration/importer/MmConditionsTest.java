@@ -27,6 +27,12 @@ class MmConditionsTest {
         return MmConditions.translate(raw).translated();
     }
 
+    private static void assertUntranslatedPreserved(String raw) {
+        var result = MmConditions.translate(raw);
+        assertFalse(result.translated(), raw);
+        assertEquals(raw, result.condition(), raw);
+    }
+
     @Test
     @DisplayName("血量百分比换成 0..1 比值，不换算会让条件恒假")
     void healthPercentIsConverted() {
@@ -828,6 +834,52 @@ class MmConditionsTest {
                 t("?mythicMobType{t=CoolZombie}"));
         assertEquals("mythic-mob-type Zombie exactmatch=false",
                 t("?mmType{types=Zombie;em=false}"));
+        assertEquals("mythic-mob-type Zombie exactmatch=true",
+                t("?mythicMobType{type=Zombie;exactmatch=yes}"));
+    }
+
+    @Test
+    void structuredValueConditionsRejectUnknownDuplicateEmptyAndInvalidArguments() {
+        for (String raw : List.of(
+                "?lunarPhase{phases=1;unknown=2}",
+                "?lunarPhase{phase=1;phases=2}",
+                "?lunarPhase{phase=}",
+                "?enderDragonPhase{phase=CIRCLING;unknown=FLY_TO_PORTAL}",
+                "?enderDragonPhase{phase=CIRCLING;p=HOVER}",
+                "?enderDragonPhase{phase=}",
+                "?mythicMobType{type=Zombie;unknown=true}",
+                "?mythicMobType{type=Zombie;t=Husk}",
+                "?mythicMobType{types=Zombie,}",
+                "?mythicMobType{type=Zombie;exactmatch=maybe}",
+                "?triggerItemType{types=STONE;unknown=true}",
+                "?triggerItemType{type=STONE;mat=DIRT}",
+                "?triggerItemType{types=}",
+                "?itemType{types=STONE;unknown=true}",
+                "?itemType{types=STONE;strict=maybe}",
+                "?itemType{types=STONE;strict=true}",
+                "?itemType{types=STONE;vanillaonly=true}",
+                "?itemType{types=STONE;strict=false;exact=true}",
+                "?entityItemType{material=STONE;unknown=true}",
+                "?entityItemType{type=STONE;m=DIRT}",
+                "?entityItemType{material=}",
+                "?entityItemType",
+                "?entityMaterialType",
+                "?triggerBlockType{block=STONE;unknown=true}",
+                "?triggerBlockType{type=STONE;b=DIRT}",
+                "?triggerBlockType{types=STONE,}",
+                "?structure{structure=minecraft:village;unknown=true}",
+                "?structure{structure=village;s=stronghold}",
+                "?structure{structure=}")) {
+            assertUntranslatedPreserved(raw);
+        }
+
+        assertEquals("trigger-item-type STONE,DIRT",
+                t("?itemType{types=STONE,DIRT;strict=false;vanilla=false}"));
+        assertEquals("mythic-mob-type Zombie,Husk exactmatch=false",
+                t("?mythicMobType{t=Zombie,Husk;em=false}"));
+        assertEquals("lunar-phase 1,2", t("?lunarPhase{phase=1,2}"));
+        assertEquals("ender-dragon-phase CIRCLING,HOVER",
+                t("?enderDragonPhase{phase=CIRCLING,HOVER}"));
     }
 
     @Test
@@ -870,6 +922,7 @@ class MmConditionsTest {
     void officialStructureConditionMapsDefaultAndNamespacedValues() {
         assertEquals("structure minecraft:desert_pyramid",
                 t("?structure{structure=minecraft:desert_pyramid}"));
+        assertEquals("structure minecraft:village", t("?structure{minecraft:village}"));
         assertEquals("structure village", t("?structure"));
     }
 
@@ -940,7 +993,7 @@ class MmConditionsTest {
         assertEquals("entity-item-type STONE", t("?entityItemType{m=STONE}"));
         assertEquals("entity-material-type STONE,DIRT",
                 t("?entityMaterialType{mat=STONE,DIRT}"));
-        assertEquals("entity-item-type DIRT", t("?entityItemType"));
+        assertUntranslatedPreserved("?entityItemType");
     }
 
     @Test

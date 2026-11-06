@@ -1332,6 +1332,27 @@ runtime, and condition-catalog self-test coverage are included. Exploratory
 Paper 1.21.4 fixture r2 records `entityItemTypeCondition=passed`; strict Paper
 1.21.1 evidence remains pending.
 
+Incremental condition-schema update: importer parsing for `LunarPhase`,
+`EnderDragonPhase`, `MythicMobType`, `ItemType`, `TriggerItemType`,
+`EntityItemType`, `EntityMaterialType`, `TriggerBlockType`, and `Structure` now
+consumes the complete semicolon-delimited argument list. Unknown keys, repeated
+aliases, empty values/lists, and malformed booleans are preserved as unmapped
+conditions with migration warnings. `ItemType` accepts its documented
+`strict`/`exact` and `vanillaonly`/`vanilla` flags only when false; true values
+remain preserved because the current Bukkit material evaluator cannot verify
+custom-item identity. `EntityItemType` and `EntityMaterialType` require an
+explicit material because their official schemas do not define a default.
+Accepted forms, aliases, defaults, and rejected forms have migration-test
+coverage; this update adds no Paper runtime evidence, and existing runtime
+reports do not exercise these importer failure paths. Source schemas:
+[MythicMobType](https://wiki.mythiccraft.io/mythicmobs/Skills/Conditions/mythicmobtype),
+[ItemType](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/ItemType),
+[TriggerItemType](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/TriggerItemType),
+[EntityItemType](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/EntityItemType),
+[EntityMaterialType](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/EntityMaterialType),
+[TriggerBlockType](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/TriggerBlockType),
+and [EnderDragonPhase](https://wiki.mythiccraft.io/mythicmobs/Skills/conditions/EnderDragonPhase).
+
 Incremental inventory-mechanic update: official `ConsumeSlot` now removes a
 requested amount from a target player's exact numeric or equipment inventory
 slot, distinct from the existing item-matching `take-item` mechanic. Importer
