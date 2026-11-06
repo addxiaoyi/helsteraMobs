@@ -156,6 +156,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedBurningCondition'; status = 'passed'; observations = @('imported-burning-condition actions=true target-priority=true target-positive=true target-negative=true composed-negation=true caster-fallback=true invalid-preserved=true')
     }
+    $fullReport.expectedProbeIds += 'importedEntityCategoryCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedEntityCategoryCondition'; status = 'passed'; observations = @('imported-entity-category-condition water-primary-mapped=true water-alias-mapped=true water-positive=true water-zombie-rejected=true zombie-primary-mapped=true zombie-alias-mapped=true zombie-positive=true zombie-cod-rejected=true invalid-preserved=true cod=COD zombie=ZOMBIE')
+    }
     $fullReport.expectedProbeIds += 'importedSpyglassCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedSpyglassCondition'; status = 'passed'; observations = @('imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true')
