@@ -286,8 +286,11 @@ multipliers inside modifier sections and multiple rules of the same damage type
 lack dedicated Paper probes. Real damage events also verify that false, null,
 and unknown-field native immunity entries and null scalar modifiers are rejected.
 Imported `isLiving`, `isBaby`, and `isFrozen` have real-entity positive controls
-and reject unknown arguments. Other recently added argument checks have importer
-and runtime tests; other parameterless conditions still need an argument audit.
+and reject unknown arguments. All aliases currently mapped as parameterless by
+the importer now reject non-empty argument blocks; `MmConditionsTest` checks
+their normal and empty-block forms alongside unknown-argument rejection. The
+full Mythic condition catalog and parameter schemas for value-bearing
+conditions still need auditing.
 Age, taming, shearing, saddling and charged-state checks, including their target
 variants, also reject unexpected arguments and have importer/runtime tests.
 Movement and environmental state conditions, including target variants, now
