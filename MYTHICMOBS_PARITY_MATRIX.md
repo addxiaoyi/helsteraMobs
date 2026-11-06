@@ -46,6 +46,12 @@ This closes the parser boundary for currently mapped no-argument conditions;
 it does not verify the complete official condition catalog or parameter schemas
 for conditions that accept values.
 
+`distanceFromLocation` and `originLocation` now validate named argument schemas:
+unknown keys, duplicate aliases, empty fields, and mixed `loc` plus `x/y/z`
+forms remain untranslated. `MmConditionsTest` covers these importer failures.
+The existing OriginLocation Paper fixture proves runtime matching and prior
+malformed-value cases; it does not contain these newly added parser probes.
+
 Incremental condition evidence: `distance-from-spawn` has unit coverage for an
 exact 3-4-5 distance, inclusive/exclusive comparator boundaries, invalid
 numeric input, and missing location context. Strict Paper 1.21.1-133 fixture

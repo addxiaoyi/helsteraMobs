@@ -662,6 +662,15 @@ class MmConditionsTest {
                 t("?distanceFromLocation{x=1;y=2;z=3;w=arena;d=0to5}"));
         assertTrue(translated("?distanceFromLocation{x=0;y=0;z=0;d=>0}"));
         assertFalse(translated("?distanceFromLocation{d=invalid}"));
+        for (String invalid : List.of(
+                "?distanceFromLocation{x=0;y=0;z=0;d=5;ignored=true}",
+                "?distanceFromLocation{x=0;x=1;d=5}",
+                "?distanceFromLocation{distance=5;d=6}",
+                "?distanceFromLocation{world=arena;w=other;d=5}",
+                "?distanceFromLocation{x=0;y=0;z=0;d=5;}")) {
+            assertFalse(translated(invalid), invalid);
+            assertEquals(invalid, t(invalid));
+        }
     }
 
     @Test
@@ -691,6 +700,16 @@ class MmConditionsTest {
         assertFalse(translated("?originLocation{loc=0,Infinity,0}"));
         assertFalse(translated("?originLocation{x=0;y=-Infinity;z=0}"));
         assertFalse(translated("?originLocation{loc=0,0,0;exact=maybe}"));
+        for (String invalid : List.of(
+                "?originLocation{loc=0,0,0;ignored=true}",
+                "?originLocation{loc=0,0,0;location=1,2,3}",
+                "?originLocation{loc=0,0,0;x=1}",
+                "?originLocation{x=1;x=2;y=3}",
+                "?originLocation{exact=true;e=false}",
+                "?originLocation{unexpected}")) {
+            assertFalse(translated(invalid), invalid);
+            assertEquals(invalid, t(invalid));
+        }
     }
 
     @Test

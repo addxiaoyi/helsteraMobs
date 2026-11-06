@@ -1,8 +1,10 @@
 package dev.helstera.migration.importer;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -29,6 +31,12 @@ public final class MmConditions {
             "BREATH_ATTACK", "CHARGE_PLAYER", "CIRCLING", "DYING", "FLY_TO_PORTAL",
             "HOVER", "LAND_ON_PORTAL", "LEAVE_PORTAL", "ROAR_BEFORE_ATTACK",
             "SEARCH_FOR_BREATH_ATTACK_TARGET", "STRAFING");
+    private static final Map<String, String> DISTANCE_FROM_LOCATION_ARGUMENTS = Map.of(
+            "x", "x", "y", "y", "z", "z", "world", "world", "w", "world",
+            "distance", "distance", "d", "distance");
+    private static final Map<String, String> ORIGIN_LOCATION_ARGUMENTS = Map.of(
+            "loc", "location", "location", "location", "l", "location", "c", "location",
+            "exact", "exact", "e", "exact", "x", "x", "y", "y", "z", "z");
     private static final Set<String> NO_ARGUMENT_CONDITIONS = Set.of(
             "hastarget", "incombat", "offgcd", "offglobalcooldown",
             "night", "nighttime", "raining", "israining", "thundering", "isthundering",
@@ -462,9 +470,12 @@ public final class MmConditions {
             return rangeCondition(body, "distance-from-spawn", s, "distance", "d");
         }
         if ("distancefromlocation".equals(name)) {
-            String x = firstArgument(body, "x");
-            String y = firstArgument(body, "y");
-            String z = firstArgument(body, "z");
+            if (!hasOnlyUniqueNamedArguments(body, DISTANCE_FROM_LOCATION_ARGUMENTS)) {
+                return new Mapped(s, false);
+            }
+            String x = keyedArgument(body, "x");
+            String y = keyedArgument(body, "y");
+            String z = keyedArgument(body, "z");
             String world = firstArgument(body, "world", "w");
             String distance = firstArgument(body, "distance", "d");
             if (x == null) x = "0";
@@ -487,10 +498,17 @@ public final class MmConditions {
                     : new Mapped(name.substring(0, 1) + "-diff " + value, true);
         }
         if ("originlocation".equals(name)) {
+            if (!hasOnlyUniqueNamedArguments(body, ORIGIN_LOCATION_ARGUMENTS)) {
+                return new Mapped(s, false);
+            }
             String location = keyedValue(body, "location", "loc", "l", "c");
             String exactArgument = keyedArgument(body, "exact", "e");
             String exact = exactArgument == null ? "false" : normalizedBoolean(exactArgument);
             if (exact == null) return new Mapped(s, false);
+            String x = keyedArgument(body, "x");
+            String y = keyedArgument(body, "y");
+            String z = keyedArgument(body, "z");
+            if (location != null && (x != null || y != null || z != null)) return new Mapped(s, false);
             if (location != null) {
                 String[] parts = location.split(",");
                 if (parts.length != 3) return new Mapped(s, false);
@@ -500,9 +518,6 @@ public final class MmConditions {
                 return new Mapped("origin-location loc=" + location
                         + " exact=" + exact, true);
             }
-            String x = firstArgument(body, "x");
-            String y = firstArgument(body, "y");
-            String z = firstArgument(body, "z");
             if (x == null) x = "0";
             if (y == null) y = "0";
             if (z == null) z = "0";
@@ -1953,6 +1968,20 @@ public final class MmConditions {
             }
         }
         return null;
+    }
+
+    private static boolean hasOnlyUniqueNamedArguments(String body, Map<String, String> canonicalKeys) {
+        if (body == null || body.isBlank()) return true;
+        Set<String> seen = new HashSet<>();
+        for (String part : body.split(";", -1)) {
+            String argument = part.trim();
+            int equals = argument.indexOf('=');
+            if (equals <= 0 || equals == argument.length() - 1) return false;
+            String key = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String canonical = canonicalKeys.get(key);
+            if (canonical == null || !seen.add(canonical)) return false;
+        }
+        return true;
     }
 
     /**
