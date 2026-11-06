@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-is-survival-mode-import-strict-20261106-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1.log.gz",
+    "logSha256": "92deff1660bbd4d130bd9f61aac60b2a1c5bc860979bae320748951da2ce6c9d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1-client-logs.tar.gz",
+    "clientLogSha256": "7d5c224e4cd0ca50ea5403e562b39ddc45e0577039caae928f46b8b07450e5b3",
+    "pluginSha256": "47dbd266c9437da0ed5cee53fb9c88618d682bb0af43c1eccc07ce42e1cf50bf",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-is-spyglass-import-strict-20261106-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-is-spyglass-import-strict-20261106-r1.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-is-spyglass-import-strict-20261106-r1.log.gz",

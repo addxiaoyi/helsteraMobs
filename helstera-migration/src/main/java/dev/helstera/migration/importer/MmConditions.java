@@ -38,6 +38,7 @@ public final class MmConditions {
             "isliving", "isplayer", "ismob", "ismonster", "isanimal", "isvillager", "istameable", "israider",
             "isbaby", "ischild", "isadult", "istamed", "issheared", "issaddled", "ispowered", "ischarged",
             "charged", "climbing", "isclimbing", "invisible", "isinvisible", "glowing", "isglowing",
+            "isinsurvivalmode", "insurvivalmode",
             "isusingspyglass", "isscoping",
             "falling", "isfalling", "targetisclimbing", "targetisinvisible", "targetisglowing",
             "targetisfrozen", "targetfrozen",

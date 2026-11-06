@@ -280,12 +280,13 @@ blocks of displacement and confirms both the managed instance and Bukkit
 entity are removed. Its 264-probe report passes schema and release completeness
 gates with 253 passed, 11 expected negative controls, and zero incomplete.
 The latest full strict release fixture
-`srv-paper-is-spyglass-import-strict-20261106-r1` completes 360 probes (341
-passed, 19 expected rejections, zero incomplete) and requires
-`importedSpyglassCondition`. It verifies both imported aliases against a real
-online Player actively using a Spyglass, rejects the inactive state and a
-Zombie target, and rejects malformed arguments. Previous strict fixtures retain
-the real frozen-Zombie evidence for `importedIsFrozenCondition`.
+`srv-paper-is-survival-mode-import-strict-20261106-r1` completes 361 probes
+(342 passed, 19 expected rejections, zero incomplete) and requires
+`importedSurvivalModeCondition`. It verifies `?isInSurvivalMode` and
+`?inSurvivalMode` through the importer and `SkillService` for a real online
+Player in Survival and Adventure, rejects a Zombie target and malformed
+arguments, and restores the original mode. Previous strict fixtures retain
+imported Spyglass and frozen-Zombie evidence.
 Earlier strict fixtures retain the real player movement and managed/Bukkit
 entity removal evidence for `spawningDistanceClientWalk`.
 
@@ -2237,6 +2238,7 @@ managed Sheep; natural event timing remains unverified.
 | --- | --- | --- |
 | Snowing condition | implemented-runtime | `snowing` and `isSnowing` use the target location, world storm state, and height-adjusted block temperature. Importer/runtime tests and strict Paper 1.21.1-133 fixture `srv-paper-snowing-strict-20261105-r2` verify target precedence, both aliases, invalid arguments, missing context, warm-biome and clear-weather rejection, and full state restoration. The Bukkit API does not expose local precipitation type, so cold custom biomes configured without precipitation remain a documented boundary. |
 | IsUsingSpyglass / IsScoping conditions | implemented-runtime | Official `isUsingSpyglass` and `isScoping` aliases import to the `is-using-spyglass` SkillService evaluator, which requires an explicit target Player with an active item of `Material.SPYGLASS`; absent, inactive, non-player, and malformed inputs fail closed. Importer/runtime contract tests and strict Paper fixture `srv-paper-is-spyglass-import-strict-20261106-r1` verify both imported aliases against a real active Player and reject the inactive state, a Zombie target, and invalid arguments in the complete 360-probe release catalog. This implements Bukkit-observable active Spyglass use; client scope/zoom details beyond Paper's exposed active-item state are not claimed. The wider Conditions catalog remains `mapped-unverified`. |
+| IsInSurvivalMode / InSurvivalMode conditions | implemented-runtime | Both official aliases import to `is-in-survival-mode`, which reads only an explicit target Player's `GameMode.SURVIVAL`; non-player or absent targets fail closed. Importer tests reject unknown parameters for both aliases, migration-to-runtime contract tests verify the aliases and target-type boundary, and strict Paper fixture `srv-paper-is-survival-mode-import-strict-20261106-r1` verifies Survival/Adventure states, both imported aliases, a Zombie target, malformed arguments, and game-mode restoration in the complete 361-probe release catalog. The complete Conditions catalog remains `mapped-unverified`. |
 | IsFrozen condition | implemented-runtime | Official `isFrozen` and `frozen` aliases import to the `is-frozen` SkillService evaluator, which reads Paper `Entity#isFrozen()`. Importer/runtime contract coverage and strict Paper fixture `srv-paper-is-frozen-import-strict-20261106-r2` verify both aliases on a real frozen Zombie, reject them after thawing, and reject invalid arguments in the full 359-probe release catalog. The complete Conditions catalog remains `mapped-unverified`. |
 | Angry and pollinated conditions | implemented-runtime | Mythic `angry`/`isAngry` evaluates Bee anger, Wolf anger, or Vex charging; `pollinated`/`isPollinated`/`hasNectar` evaluates Bee nectar. Import aliases, runtime consumers, missing-context and unsupported-entity fail-closed behavior have importer, SkillService, and migration-to-runtime contract tests. Strict Paper 1.21.1-133 fixture `srv-paper-angry-pollination-strict-20261105-r1` verifies real runtime consumers in the complete 341-probe release catalog. Supported entities and aliases match the [official MythicCraft changelog](https://wiki.mythiccraft.io/mythicmobs/changelogs/Changelogs?version_id=d7c47c878837c833a7602dcf02bca7b9b87056dd); the wider Conditions catalog remains open. |
 | Sheared entity conditions | implemented-runtime | `isSheared` and `targetIsSheared` map into self/target runtime checks for Sheep and Bogged via `isSheared()`, and Snow Golems via `isDerp()`. API and importer-to-runtime tests cover positive/negative states, unsupported entities, and missing context. Strict Paper 1.21.1-133 fixture `srv-paper-is-sheared-strict-20261105-r1` verifies all three real entity types in both states and passes `entityShearedStates` in the complete 342-probe release catalog. The remaining Conditions catalog stays open. |
@@ -2457,7 +2459,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-is-spyglass-import-strict-20261106-r1` completes 360 probes (341 passed, 19 expected rejections, zero incomplete), including imported Mythic `?isUsingSpyglass`/`?isScoping` aliases through `SkillService`, real online Player active-item use, and inactive-state, Zombie-target, and malformed-argument rejection. Previous strict fixtures verify imported ItemRecharging aliases after a real Bukkit attack and reject a Zombie target; imported OriginLocation aliases, exact coordinates, mismatch and malformed-input rejection; TriggerItemType/TriggerBlockType against real Bukkit objects in constructed contexts; HasEnchantment/HasEnchant with real Paper positive and negative evidence; Aerial, Color, and `MaterialIsOnCooldown` aliases; imported `?isChild` parent relation against related adult/unrelated baby entities; real Sheep Age/Adult/Baby/AgeLock and Zombie Baby behavior; a real Enderman positive and managed-Zombie negative; in-audience cinematic state and rejection/cleanup; and `inside`/`outside`, block restoration, and real-player `Options.SpawningDistance` removal 2 ticks after leaving range. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, Survival-mode conditions, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-is-survival-mode-import-strict-20261106-r1` completes 361 probes (342 passed, 19 expected rejections, zero incomplete), including imported Mythic `?isInSurvivalMode`/`?inSurvivalMode` aliases through `SkillService`, real-player Survival/Adventure checks and mode restoration, and Zombie-target and malformed-argument rejection. Previous strict fixtures verify imported Spyglass aliases during active-item use; ItemRecharging aliases after a real Bukkit attack; OriginLocation aliases, exact coordinates, mismatch and malformed-input rejection; TriggerItemType/TriggerBlockType against real Bukkit objects in constructed contexts; HasEnchantment/HasEnchant with real Paper positive and negative evidence; Aerial, Color, and `MaterialIsOnCooldown` aliases; imported `?isChild` parent relation against related adult/unrelated baby entities; real Sheep Age/Adult/Baby/AgeLock and Zombie Baby behavior; a real Enderman positive and managed-Zombie negative; in-audience cinematic state and rejection/cleanup; and `inside`/`outside`, block restoration, and real-player `Options.SpawningDistance` removal 2 ticks after leaving range. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, Survival-mode conditions, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
@@ -3054,9 +3056,12 @@ checks both actions; direct catalog factories still use the global hook.
 Server/player state condition update: official `ServerIsPaper` now recognizes
 Paper-family server identity from Bukkit name/version metadata, while
 `IsInSurvivalMode` checks only an explicit target Player in survival mode.
-Exploratory Paper `srv-paper-integration-exploratory-1.21.11-r67` keeps the
-aggregate `conditionUtilityAliases` probe passed; strict release evidence
-remains open.
+Strict Paper fixture `srv-paper-is-survival-mode-import-strict-20261106-r1`
+verifies both `?isInSurvivalMode` and `?inSurvivalMode` through the importer and
+`SkillService` against a real online Player in Survival and Adventure, rejects
+a Zombie target and malformed arguments, and restores the original mode. The
+earlier exploratory Paper `srv-paper-integration-exploratory-1.21.11-r67`
+remains historical evidence for `conditionUtilityAliases`.
 
 Managed-entity condition update: official `IsMythicMob` now uses an injected
 plugin entity lookup rather than treating every living Bukkit entity as a

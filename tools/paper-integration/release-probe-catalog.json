@@ -688,6 +688,11 @@
       "requiredObservation": "imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true"
     },
     {
+      "id": "importedSurvivalModeCondition",
+      "status": "passed",
+      "requiredObservation": "imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true"
+    },
+    {
       "id": "gameplayPlaceholders",
       "status": "passed"
     },

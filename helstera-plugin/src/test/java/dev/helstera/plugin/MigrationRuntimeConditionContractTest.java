@@ -30,6 +30,33 @@ import static org.mockito.Mockito.*;
 class MigrationRuntimeConditionContractTest {
 
     @Test
+    @DisplayName("imported survival aliases bind to the target-player survival condition")
+    void importedSurvivalAliasesReachRuntime() {
+        var player = mock(org.bukkit.entity.Player.class);
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, player, 1.0, -1, 0, "IDLE");
+        var nonPlayerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, mock(org.bukkit.entity.Zombie.class), 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+
+        for (String source : List.of("?isInSurvivalMode", "?inSurvivalMode")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertEquals("is-in-survival-mode", mapped.condition());
+            String key = service.bindCondition(mapped.condition());
+            assertNotNull(key);
+            assertTrue(registry.testCondition(key, context), source);
+            assertFalse(registry.testCondition(key, nonPlayerContext), source);
+        }
+
+        for (String source : List.of("?isInSurvivalMode{unknown=true}", "?inSurvivalMode{unknown=true}")) {
+            assertFalse(dev.helstera.migration.importer.MmConditions.translate(source).translated(), source);
+        }
+    }
+
+    @Test
     @DisplayName("imported spyglass aliases bind to the active-item runtime condition")
     void importedSpyglassAliasesReachRuntime() {
         var player = mock(org.bukkit.entity.Player.class);
