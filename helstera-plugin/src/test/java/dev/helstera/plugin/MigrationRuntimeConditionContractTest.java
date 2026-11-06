@@ -87,6 +87,49 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported Burning condition actions reach the runtime condition evaluator")
+    void importedBurningConditionActionsReachRuntime(@TempDir Path root) throws Exception {
+        Path source = Files.createDirectories(root.resolve("Skills")).resolve("burning.yml");
+        Files.writeString(source, """
+                skills:
+                  only_when_not_burning:
+                    Skills:
+                      - 'message{m=not burning}'
+                    TargetConditions:
+                      - isburning false
+                  only_when_burning:
+                    Skills:
+                      - 'message{m=burning}'
+                    TargetConditions:
+                      - burning true
+                """);
+        var entry = new dev.helstera.migration.importer.MythicMobsImporter().convert(source).stream()
+                .filter(item -> "skills.yml".equals(item.get("target-file"))).findFirst().orElseThrow();
+        var yaml = YamlConfiguration.loadConfiguration(new java.io.StringReader(String.valueOf(entry.get("content"))));
+        assertEquals(List.of("!on-fire"), yaml.getStringList("skills.only_when_not_burning.target-conditions"));
+        assertEquals(List.of("on-fire"), yaml.getStringList("skills.only_when_burning.target-conditions"));
+
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, target, 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        String notBurning = service.bindCondition(yaml.getStringList(
+                "skills.only_when_not_burning.target-conditions").get(0));
+        String burning = service.bindCondition(yaml.getStringList(
+                "skills.only_when_burning.target-conditions").get(0));
+        assertNotNull(notBurning);
+        assertNotNull(burning);
+
+        when(target.getFireTicks()).thenReturn(0);
+        assertTrue(registry.testCondition(notBurning, context));
+        assertFalse(registry.testCondition(burning, context));
+        when(target.getFireTicks()).thenReturn(20);
+        assertFalse(registry.testCondition(notBurning, context));
+        assertTrue(registry.testCondition(burning, context));
+    }
+
+    @Test
     void importedMessageWithCommaReachesTargetIntact(@TempDir Path root) throws Exception {
         Path source = Files.createDirectories(root.resolve("Skills")).resolve("message.yml");
         Files.writeString(source, """

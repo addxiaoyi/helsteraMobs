@@ -494,9 +494,13 @@ public final class SkillCatalog {
                 // 后者在部分实现下对「自定义燃烧 tick 的实体」返回 false。
                 java.util.Map.entry("on-fire", (ConditionFactory) a -> {
                     return ctx -> {
-                        var base = ctx.instance().baseEntity().orElse(null);
-                        if (base == null) return false;
-                        try { return base.getFireTicks() > 0; }
+                        if (ctx == null) return false;
+                        org.bukkit.entity.Entity entity = ctx.targetEntity().orElse(null);
+                        if (entity == null && ctx.instanceValid()) {
+                            entity = ctx.instance().baseEntity().orElse(null);
+                        }
+                        if (entity == null) return false;
+                        try { return entity.getFireTicks() > 0; }
                         catch (Throwable ignored) { return false; }
                     };
                 }),
