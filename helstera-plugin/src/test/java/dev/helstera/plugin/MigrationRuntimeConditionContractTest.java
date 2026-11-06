@@ -331,6 +331,144 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported free-slot aliases evaluate the target player's inventory")
+    void importedFreeInventorySlotAliasesReachRuntime() {
+        var player = mock(org.bukkit.entity.Player.class);
+        var inventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        when(player.getInventory()).thenReturn(inventory);
+        when(inventory.firstEmpty()).thenReturn(0);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, player, 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+
+        for (String source : List.of("?hasFreeInventorySlot", "?hasFreeSlot")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertEquals("has-free-inventory-slot", mapped.condition());
+            String key = service.bindCondition(mapped.condition());
+            assertNotNull(key);
+            assertTrue(registry.testCondition(key, context), source);
+            when(inventory.firstEmpty()).thenReturn(-1);
+            assertFalse(registry.testCondition(key, context), source);
+            when(inventory.firstEmpty()).thenReturn(0);
+        }
+
+        var nonPlayer = dev.helstera.api.behavior.BehaviorContext.of(
+                null, mock(org.bukkit.entity.Zombie.class), 1.0, -1, 0, "IDLE");
+        String key = service.bindCondition("has-free-inventory-slot");
+        assertFalse(registry.testCondition(key, nonPlayer));
+        for (String source : List.of("?hasFreeInventorySlot{slot=0}", "?hasFreeSlot{unknown=true}")) {
+            assertFalse(dev.helstera.migration.importer.MmConditions.translate(source).translated(), source);
+        }
+    }
+
+    @Test
+    @DisplayName("imported Name aliases evaluate custom and fallback entity names")
+    void importedNameAliasesReachRuntime() {
+        var zombie = mock(org.bukkit.entity.Zombie.class);
+        when(zombie.getCustomName()).thenReturn("Name Probe");
+        when(zombie.getName()).thenReturn("Zombie");
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, zombie, 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+
+        for (String source : List.of("?name{n=\"Name Probe\"}", "?nameIs{\"Name Probe\"}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertEquals("name-is \"Name Probe\"", mapped.condition());
+            String key = service.bindCondition(mapped.condition());
+            assertNotNull(key);
+            assertTrue(registry.testCondition(key, context), source);
+        }
+
+        var defaultName = dev.helstera.migration.importer.MmConditions.translate("?name{value=Zombie}");
+        assertTrue(defaultName.translated());
+        String defaultNameKey = service.bindCondition(defaultName.condition());
+        assertNotNull(defaultNameKey);
+        assertFalse(registry.testCondition(defaultNameKey, context));
+
+        when(zombie.getCustomName()).thenReturn(null);
+        assertTrue(registry.testCondition(defaultNameKey, context));
+        String customNameKey = service.bindCondition("name-is \"Name Probe\"");
+        assertNotNull(customNameKey);
+        assertFalse(registry.testCondition(customNameKey, context));
+
+        for (String source : List.of("?name{unknown=Zombie}", "?name{n=Zombie;value=Other}",
+                "?name{n=}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertFalse(mapped.translated(), source);
+            assertEquals(source, mapped.condition());
+        }
+    }
+
+    @Test
+    @DisplayName("imported server conditions evaluate exact and inclusive version boundaries")
+    void importedServerConditionsReachRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, null, 1.0, -1, 0, "IDLE");
+
+        try (var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getName).thenReturn("Paper");
+            bukkit.when(org.bukkit.Bukkit::getVersion).thenReturn("1.21.1-133");
+            bukkit.when(org.bukkit.Bukkit::getMinecraftVersion).thenReturn("1.21.1");
+
+            var paper = dev.helstera.migration.importer.MmConditions.translate("?serverIsPaper");
+            var paperAlias = dev.helstera.migration.importer.MmConditions.translate("?isPaper");
+            assertTrue(paper.translated());
+            assertTrue(paperAlias.translated());
+            assertEquals("server-is-paper", paper.condition());
+            assertEquals("server-is-paper", paperAlias.condition());
+            String paperKey = service.bindCondition(paper.condition());
+            String paperAliasKey = service.bindCondition(paperAlias.condition());
+            assertNotNull(paperKey);
+            assertNotNull(paperAliasKey);
+            assertTrue(registry.testCondition(paperKey, context));
+            assertTrue(registry.testCondition(paperAliasKey, context));
+            bukkit.when(org.bukkit.Bukkit::getName).thenReturn("CraftBukkit");
+            bukkit.when(org.bukkit.Bukkit::getVersion).thenReturn("1.21.1");
+            assertFalse(registry.testCondition(paperKey, context));
+            assertFalse(registry.testCondition(paperAliasKey, context));
+            bukkit.when(org.bukkit.Bukkit::getName).thenReturn("Paper");
+            bukkit.when(org.bukkit.Bukkit::getVersion).thenReturn("1.21.1-133");
+
+            for (String source : List.of("?serverIsPaper", "?isPaper")) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                assertTrue(mapped.translated(), source);
+                String key = service.bindCondition(mapped.condition());
+                assertNotNull(key, source);
+                assertTrue(registry.testCondition(key, context), source);
+            }
+
+            for (String source : List.of(
+                    "?serverVersion{v=1.21.1}",
+                    "?serverAfter{version=1.21.1}",
+                    "?serverBefore{version=1.22}")) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                assertTrue(mapped.translated(), source);
+                String key = service.bindCondition(mapped.condition());
+                assertNotNull(key, source);
+                assertTrue(registry.testCondition(key, context), source);
+            }
+
+            for (String source : List.of(
+                    "?serverVersion{v=1.21.4}",
+                    "?serverAfter{version=1.21.1;inclusive=false}",
+                    "?serverAfter{version=1.21.4}",
+                    "?serverBefore{version=1.21.1;inclusive=false}")) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                assertTrue(mapped.translated(), source);
+                String key = service.bindCondition(mapped.condition());
+                assertNotNull(key, source);
+                assertFalse(registry.testCondition(key, context), source);
+            }
+        }
+    }
+
+    @Test
     @DisplayName("imported Burning condition actions reach the runtime condition evaluator")
     void importedBurningConditionActionsReachRuntime(@TempDir Path root) throws Exception {
         Path source = Files.createDirectories(root.resolve("Skills")).resolve("burning.yml");

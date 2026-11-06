@@ -2006,6 +2006,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean isSkillCondition = false;
             boolean dialogueCondition = false;
             boolean nameCondition = false;
+            boolean importedNameCondition = false;
+            boolean importedServerCondition = false;
             boolean moistureConditions = false;
             boolean mobSizeCondition = false;
             boolean ownerCondition = false;
@@ -4036,6 +4038,145 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills.bindCondition("name-is NameProbe"), conditionContext)
                         && !behaviors.testCondition(
                         skills.bindCondition("name-is Zombie"), conditionContext);
+                var importedNamePrimary = dev.helstera.migration.importer.MmConditions.translate(
+                        "?name{n=\"Name Probe\"}");
+                var importedNameAlias = dev.helstera.migration.importer.MmConditions.translate(
+                        "?nameIs{\"Name Probe\"}");
+                var importedNameDefault = dev.helstera.migration.importer.MmConditions.translate(
+                        "?name{value=Zombie}");
+                var invalidImportedNames = java.util.List.of(
+                        "?name{unknown=Zombie}", "?name{n=Zombie;value=Other}", "?name{n=}");
+                boolean importedNamePrimaryMapped = importedNamePrimary.translated()
+                        && "name-is \"Name Probe\"".equals(importedNamePrimary.condition());
+                boolean importedNameAliasMapped = importedNameAlias.translated()
+                        && "name-is \"Name Probe\"".equals(importedNameAlias.condition());
+                String importedNamePrimaryKey = importedNamePrimaryMapped
+                        ? skills.bindCondition(importedNamePrimary.condition()) : null;
+                String importedNameAliasKey = importedNameAliasMapped
+                        ? skills.bindCondition(importedNameAlias.condition()) : null;
+                String importedNameDefaultKey = importedNameDefault.translated()
+                        ? skills.bindCondition(importedNameDefault.condition()) : null;
+                conditionTarget.setCustomName("Name Probe");
+                boolean importedNamePositive = importedNamePrimaryKey != null
+                        && behaviors.testCondition(importedNamePrimaryKey, conditionContext);
+                boolean importedNameAliasPositive = importedNameAliasKey != null
+                        && behaviors.testCondition(importedNameAliasKey, conditionContext);
+                boolean importedNameDefaultRejected = importedNameDefaultKey != null
+                        && !behaviors.testCondition(importedNameDefaultKey, conditionContext);
+                boolean importedNameFallback;
+                boolean customNameRejectedAfterClear;
+                try {
+                    conditionTarget.setCustomName(null);
+                    importedNameFallback = importedNameDefaultKey != null
+                            && behaviors.testCondition(importedNameDefaultKey, conditionContext);
+                    customNameRejectedAfterClear = importedNamePrimaryKey != null
+                            && !behaviors.testCondition(importedNamePrimaryKey, conditionContext);
+                } finally {
+                    conditionTarget.setCustomName("NameProbe");
+                }
+                boolean importedNameInvalidPreserved = true;
+                for (String source : invalidImportedNames) {
+                    var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                    importedNameInvalidPreserved &= !mapped.translated() && source.equals(mapped.condition());
+                }
+                importedNameCondition = importedNamePrimaryMapped && importedNameAliasMapped
+                        && importedNamePositive && importedNameAliasPositive && importedNameDefaultRejected
+                        && importedNameFallback && customNameRejectedAfterClear && importedNameInvalidPreserved;
+                getLogger().info("[自检] imported-name-condition primary-mapped=" + importedNamePrimaryMapped
+                        + " alias-mapped=" + importedNameAliasMapped + " positive=" + importedNamePositive
+                        + " alias-positive=" + importedNameAliasPositive
+                        + " default-name-rejected=" + importedNameDefaultRejected
+                        + " fallback=" + importedNameFallback
+                        + " custom-name-rejected=" + customNameRejectedAfterClear
+                        + " invalid-preserved=" + importedNameInvalidPreserved
+                        + " result=" + importedNameCondition);
+                var importedServerPaper = dev.helstera.migration.importer.MmConditions.translate(
+                        "?serverIsPaper");
+                var importedServerPaperAlias = dev.helstera.migration.importer.MmConditions.translate(
+                        "?isPaper");
+                boolean importedServerPaperPrimaryMapped = importedServerPaper.translated()
+                        && "server-is-paper".equals(importedServerPaper.condition());
+                boolean importedServerPaperAliasMapped = importedServerPaperAlias.translated()
+                        && "server-is-paper".equals(importedServerPaperAlias.condition());
+                String importedServerPaperKey = importedServerPaperPrimaryMapped
+                        ? skills.bindCondition(importedServerPaper.condition()) : null;
+                String importedServerPaperAliasKey = importedServerPaperAliasMapped
+                        ? skills.bindCondition(importedServerPaperAlias.condition()) : null;
+                boolean importedServerPaperPrimary = importedServerPaperKey != null
+                        && behaviors.testCondition(importedServerPaperKey, conditionContext);
+                boolean importedServerPaperAliasPassed = importedServerPaperAliasKey != null
+                        && behaviors.testCondition(importedServerPaperAliasKey, conditionContext);
+
+                var importedServerExact = dev.helstera.migration.importer.MmConditions.translate(
+                        "?serverVersion{v=" + org.bukkit.Bukkit.getMinecraftVersion() + "}");
+                var importedServerExactNegative = dev.helstera.migration.importer.MmConditions.translate(
+                        "?serverVersion{v=1.21.4}");
+                var importedServerAfterInclusive = dev.helstera.migration.importer.MmConditions.translate(
+                        "?serverAfter{v=" + org.bukkit.Bukkit.getMinecraftVersion() + ";inclusive=true}");
+                var importedServerAfterExclusive = dev.helstera.migration.importer.MmConditions.translate(
+                        "?serverAfter{v=" + org.bukkit.Bukkit.getMinecraftVersion() + ";inclusive=false}");
+                var importedServerAfterHigher = dev.helstera.migration.importer.MmConditions.translate(
+                        "?serverAfter{v=1.21.4}");
+                var importedServerBeforeInclusive = dev.helstera.migration.importer.MmConditions.translate(
+                        "?serverBefore{v=1.22;inclusive=true}");
+                var importedServerBeforeExclusive = dev.helstera.migration.importer.MmConditions.translate(
+                        "?serverBefore{v=" + org.bukkit.Bukkit.getMinecraftVersion() + ";inclusive=false}");
+                String importedServerExactKey = importedServerExact.translated()
+                        ? skills.bindCondition(importedServerExact.condition()) : null;
+                String importedServerExactNegativeKey = importedServerExactNegative.translated()
+                        ? skills.bindCondition(importedServerExactNegative.condition()) : null;
+                String importedServerAfterInclusiveKey = importedServerAfterInclusive.translated()
+                        ? skills.bindCondition(importedServerAfterInclusive.condition()) : null;
+                String importedServerAfterExclusiveKey = importedServerAfterExclusive.translated()
+                        ? skills.bindCondition(importedServerAfterExclusive.condition()) : null;
+                String importedServerAfterHigherKey = importedServerAfterHigher.translated()
+                        ? skills.bindCondition(importedServerAfterHigher.condition()) : null;
+                String importedServerBeforeInclusiveKey = importedServerBeforeInclusive.translated()
+                        ? skills.bindCondition(importedServerBeforeInclusive.condition()) : null;
+                String importedServerBeforeExclusiveKey = importedServerBeforeExclusive.translated()
+                        ? skills.bindCondition(importedServerBeforeExclusive.condition()) : null;
+                boolean importedServerExactResult = importedServerExactKey != null
+                        && behaviors.testCondition(importedServerExactKey, conditionContext);
+                boolean importedServerExactNegativeResult = importedServerExactNegativeKey != null
+                        && !behaviors.testCondition(importedServerExactNegativeKey, conditionContext);
+                boolean importedServerAfterInclusiveResult = importedServerAfterInclusiveKey != null
+                        && behaviors.testCondition(importedServerAfterInclusiveKey, conditionContext);
+                boolean importedServerAfterExclusiveRejected = importedServerAfterExclusiveKey != null
+                        && !behaviors.testCondition(importedServerAfterExclusiveKey, conditionContext);
+                boolean importedServerAfterHigherRejected = importedServerAfterHigherKey != null
+                        && !behaviors.testCondition(importedServerAfterHigherKey, conditionContext);
+                boolean importedServerBeforeInclusiveResult = importedServerBeforeInclusiveKey != null
+                        && behaviors.testCondition(importedServerBeforeInclusiveKey, conditionContext);
+                boolean importedServerBeforeExclusiveRejected = importedServerBeforeExclusiveKey != null
+                        && !behaviors.testCondition(importedServerBeforeExclusiveKey, conditionContext);
+                boolean importedServerInvalidPreserved = true;
+                for (String source : java.util.List.of(
+                        "?serverIsPaper{unexpected=true}",
+                        "?serverVersion{v=1.21.1;unknown=true}",
+                        "?serverVersion{v=latest}",
+                        "?serverAfter{v=1.21.1;inclusive=maybe}",
+                        "?serverBefore{v=1.21.1;v=1.22}")) {
+                    var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                    importedServerInvalidPreserved &= !mapped.translated() && source.equals(mapped.condition());
+                }
+                importedServerCondition = importedServerPaperPrimaryMapped && importedServerPaperAliasMapped
+                        && importedServerPaperPrimary && importedServerPaperAliasPassed
+                        && importedServerExactResult && importedServerExactNegativeResult
+                        && importedServerAfterInclusiveResult && importedServerAfterExclusiveRejected
+                        && importedServerAfterHigherRejected && importedServerBeforeInclusiveResult
+                        && importedServerBeforeExclusiveRejected && importedServerInvalidPreserved;
+                getLogger().info("[自检] imported-server-conditions paper-primary="
+                        + (importedServerPaperPrimaryMapped && importedServerPaperPrimary)
+                        + " paper-alias=" + (importedServerPaperAliasMapped && importedServerPaperAliasPassed)
+                        + " exact=" + importedServerExactResult
+                        + " exact-negative=" + importedServerExactNegativeResult
+                        + " after-inclusive=" + importedServerAfterInclusiveResult
+                        + " after-exclusive-rejected=" + importedServerAfterExclusiveRejected
+                        + " after-higher-rejected=" + importedServerAfterHigherRejected
+                        + " before-inclusive=" + importedServerBeforeInclusiveResult
+                        + " before-exclusive-rejected=" + importedServerBeforeExclusiveRejected
+                        + " invalid-preserved=" + importedServerInvalidPreserved
+                        + " result=" + importedServerCondition);
                 coordinateDifferenceCondition = behaviors.testCondition(
                         skills.bindCondition("xDiff{d=2to4}"), conditionContext)
                         && behaviors.testCondition(
@@ -6486,17 +6627,47 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("targets{a=>1;targeter=@targets}"), stateContext);
                     permissionProbe.getInventory().setStorageContents(new org.bukkit.inventory.ItemStack[
                             permissionProbe.getInventory().getStorageContents().length]);
-                    boolean freeSlotPositive = behaviors.testCondition(
-                            skills.bindCondition("has-free-inventory-slot"), stateContext);
+                    var importedFreeSlot = dev.helstera.migration.importer.MmConditions.translate(
+                            "?hasFreeInventorySlot");
+                    var importedFreeSlotAlias = dev.helstera.migration.importer.MmConditions.translate(
+                            "?hasFreeSlot");
+                    var importedFreeSlotInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                            "?hasFreeSlot{unknown=true}");
+                    String importedFreeSlotKey = importedFreeSlot.translated()
+                            ? skills.bindCondition(importedFreeSlot.condition()) : null;
+                    String importedFreeSlotAliasKey = importedFreeSlotAlias.translated()
+                            ? skills.bindCondition(importedFreeSlotAlias.condition()) : null;
+                    boolean freeSlotPositive = importedFreeSlotKey != null
+                            && importedFreeSlotAliasKey != null
+                            && behaviors.testCondition(importedFreeSlotKey, stateContext)
+                            && behaviors.testCondition(importedFreeSlotAliasKey, stateContext);
                     var filledStorage = new org.bukkit.inventory.ItemStack[
                             permissionProbe.getInventory().getStorageContents().length];
                     for (int slot = 0; slot < filledStorage.length; slot++) {
                         filledStorage[slot] = new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIRT, 64);
                     }
                     permissionProbe.getInventory().setStorageContents(filledStorage);
-                    boolean freeSlotNegative = !behaviors.testCondition(
-                            skills.bindCondition("has-free-inventory-slot"), stateContext);
+                    boolean freeSlotNegative = importedFreeSlotKey != null
+                            && importedFreeSlotAliasKey != null
+                            && !behaviors.testCondition(importedFreeSlotKey, stateContext)
+                            && !behaviors.testCondition(importedFreeSlotAliasKey, stateContext);
                     freeInventorySlotCondition = freeSlotPositive && freeSlotNegative;
+                    boolean importedFreeInventorySlotCondition = freeInventorySlotCondition
+                            && importedFreeSlot.translated() && importedFreeSlotAlias.translated()
+                            && "has-free-inventory-slot".equals(importedFreeSlot.condition())
+                            && "has-free-inventory-slot".equals(importedFreeSlotAlias.condition())
+                            && !importedFreeSlotInvalid.translated()
+                            && skills.bindCondition(importedFreeSlotInvalid.condition()) == null;
+                    getLogger().info("imported-free-inventory-slot primary-mapped="
+                            + (importedFreeSlot.translated()
+                            && "has-free-inventory-slot".equals(importedFreeSlot.condition()))
+                            + " alias-mapped=" + (importedFreeSlotAlias.translated()
+                            && "has-free-inventory-slot".equals(importedFreeSlotAlias.condition()))
+                            + " positive=" + freeSlotPositive
+                            + " negative=" + freeSlotNegative
+                            + " invalid-preserved=" + (!importedFreeSlotInvalid.translated()
+                            && skills.bindCondition(importedFreeSlotInvalid.condition()) == null)
+                            + " result=" + importedFreeInventorySlotCondition);
                     permissionProbe.getInventory().setStorageContents(oldStorageContents);
                     boolean oldCollidable = permissionProbe.isCollidable();
                     org.bukkit.inventory.ItemStack oldOffHand = permissionProbe.getInventory()
@@ -6938,6 +7109,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " dialogue-condition=" + dialogueCondition
                         + " fall-speed-condition=" + motionConditions
                         + " name-condition=" + nameCondition
+                        + " imported-name-condition=" + importedNameCondition
+                        + " imported-server-condition=" + importedServerCondition
                         + " moisture-conditions=" + moistureConditions
                         + " mob-size-condition=" + mobSizeCondition
                         + " block-type-radius-condition=" + blockTypeRadiusCondition

@@ -62,6 +62,13 @@ public final class MmConditions {
             "mat", "types", "m", "types", "block", "types", "b", "types");
     private static final Map<String, String> STRUCTURE_ARGUMENTS = Map.of(
             "structure", "structure", "structures", "structure", "s", "structure");
+    private static final Map<String, String> NAME_ARGUMENTS = Map.of(
+            "name", "name", "n", "name", "value", "name", "v", "name");
+    private static final Map<String, String> SERVER_VERSION_ARGUMENTS = Map.of(
+            "version", "version", "sv", "version", "v", "version");
+    private static final Map<String, String> SERVER_VERSION_BOUND_ARGUMENTS = Map.of(
+            "version", "version", "sv", "version", "v", "version",
+            "inclusive", "inclusive", "i", "inclusive");
     private static final Map<String, String> AURA_NAME_ARGUMENTS = Map.ofEntries(
             Map.entry("aura", "aura"), Map.entry("auraname", "aura"),
             Map.entry("b", "aura"), Map.entry("buff", "aura"),
@@ -912,28 +919,34 @@ public final class MmConditions {
             return new Mapped("plugin " + value, true);
         }
         if ("serverversion".equals(name) || "server".equals(name) || "version".equals(name)) {
-            String value = firstArgument(body, "version", "sv", "v");
-            if (value == null) value = normalizeScalar(body);
-            return value == null ? new Mapped(s, false)
+            Map<String, String> arguments = strictValueArguments(body, SERVER_VERSION_ARGUMENTS, "version");
+            String value = arguments == null ? null : arguments.get("version");
+            return !validServerVersion(value) ? new Mapped(s, false)
                     : new Mapped("server-version " + value, true);
         }
         if ("serverversionafterorequal".equals(name) || "serveraftereq".equals(name)
                 || "serverafter".equals(name) || "versionaftereq".equals(name)) {
-            String value = firstArgument(body, "version", "sv", "v");
-            String inclusive = keyedArgument(body, "inclusive", "i");
-            if (value == null) value = normalizeScalar(body);
-            return value == null ? new Mapped(s, false)
-                    : new Mapped("server-version-after-or-equal " + value + " "
-                    + (inclusive == null ? "true" : inclusive), true);
+            Map<String, String> arguments = strictValueArguments(
+                    body, SERVER_VERSION_BOUND_ARGUMENTS, "version");
+            if (arguments == null || !validServerVersion(arguments.get("version"))) {
+                return new Mapped(s, false);
+            }
+            String inclusive = normalizedBoolean(arguments.getOrDefault("inclusive", "true"));
+            return inclusive == null ? new Mapped(s, false)
+                    : new Mapped("server-version-after-or-equal " + arguments.get("version")
+                    + " " + inclusive, true);
         }
         if ("serverversionbefore".equals(name) || "serverbefore".equals(name)
                 || "versionbefore".equals(name)) {
-            String value = firstArgument(body, "version", "sv", "v");
-            String inclusive = keyedArgument(body, "inclusive", "i");
-            if (value == null) value = normalizeScalar(body);
-            return value == null ? new Mapped(s, false)
-                    : new Mapped("server-version-before " + value + " "
-                    + (inclusive == null ? "true" : inclusive), true);
+            Map<String, String> arguments = strictValueArguments(
+                    body, SERVER_VERSION_BOUND_ARGUMENTS, "version");
+            if (arguments == null || !validServerVersion(arguments.get("version"))) {
+                return new Mapped(s, false);
+            }
+            String inclusive = normalizedBoolean(arguments.getOrDefault("inclusive", "true"));
+            return inclusive == null ? new Mapped(s, false)
+                    : new Mapped("server-version-before " + arguments.get("version")
+                    + " " + inclusive, true);
         }
         if ("ismythicmob".equals(name) || "ismm".equals(name)) {
             return new Mapped("is-mythic-mob", true);
@@ -1142,7 +1155,8 @@ public final class MmConditions {
             return new Mapped("trigger-block-type " + types.toUpperCase(Locale.ROOT), true);
         }
         if ("hasfreeinventoryslot".equals(name) || "hasfreeslot".equals(name)) {
-            return new Mapped("has-free-inventory-slot", true);
+            return body == null || body.isBlank()
+                    ? new Mapped("has-free-inventory-slot", true) : new Mapped(s, false);
         }
         if ("entitytype".equals(name) || "entitytypeis".equals(name) || "mobtype".equals(name)) {
             String type = entityTypeArgument(body);
@@ -1152,10 +1166,11 @@ public final class MmConditions {
                     .orElseGet(() -> new Mapped(s, false));
         }
         if ("name".equals(name) || "nameis".equals(name)) {
-            String value = firstArgument(body, "name", "n", "value", "v");
-            if (value == null) value = normalizeScalar(body);
-            return value == null ? new Mapped(s, false)
-                    : new Mapped("name-is " + value, true);
+            Map<String, String> arguments = strictValueArguments(body, NAME_ARGUMENTS, "name");
+            if (arguments == null) return new Mapped(s, false);
+            String value = decodeVariableArgument(arguments.get("name"));
+            return value == null || value.isBlank() ? new Mapped(s, false)
+                    : new Mapped("name-is " + conditionValue(value), true);
         }
         if ("color".equals(name) || "clr".equals(name)) {
             String value = firstArgument(body, "color", "clr", "c");
@@ -2353,6 +2368,10 @@ public final class MmConditions {
         } catch (NumberFormatException ignored) {
             return false;
         }
+    }
+
+    private static boolean validServerVersion(String raw) {
+        return raw != null && raw.trim().matches("(?i)v?\\d+(?:\\.\\d+)*(?:[-+][A-Za-z0-9][A-Za-z0-9._-]*)?");
     }
 
     private static String normalizedBoolean(String raw) {

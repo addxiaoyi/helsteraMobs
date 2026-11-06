@@ -1954,24 +1954,35 @@ enabled `helsteraMobs` plugin and a missing-plugin negative path.
 Inventory condition parity update: official `HasFreeInventorySlot` and
 `HasFreeSlot` now map to `has-free-inventory-slot`, using Bukkit
 `PlayerInventory#firstEmpty` with fail-closed non-player semantics; migration,
-unit, and Paper self-test coverage include positive and full-inventory negative
-states.
-
-Exploratory Paper 1.21.11 r53 records `freeInventorySlotCondition=passed` for
-the same live player: an empty storage slot passes, filling the storage slots
-rejects the condition, and restoring the inventory returns the positive state.
-This is compatibility evidence only; the Paper 1.21.1 strict release target
-remains open.
+unit and Paper coverage include positive and full-inventory negative states.
+Strict Paper 1.21.1-133 fixture
+`srv-paper-free-inventory-slot-strict-20261106-r1` runs both imported aliases
+through `SkillService` against a real player, rejects non-player and
+invalid-argument cases, and restores inventory state. The exploratory Paper
+1.21.11 r53 report remains compatibility evidence for that server version.
 
 Name condition parity update: official `Name`/`name{n=...}` now maps to
 `name-is`. Runtime matching is exact and prefers `Entity#getCustomName()`;
 when no custom name exists it falls back to Bukkit `Entity#getName()`, while
 missing names and empty arguments fail closed.
 
-Exploratory Paper 1.21.11 r54 records `nameCondition=passed` after a real
-managed Zombie matches `NameProbe` and rejects its default `Zombie` name while
-the custom name is active. This remains compatibility evidence only; the Paper
-1.21.1 strict release target remains open.
+Strict Paper 1.21.1-133 fixture
+`srv-paper-name-import-strict-20261106-r2` runs both imported aliases through
+`SkillService` on a real managed Zombie. It verifies quoted custom-name matching,
+default-name rejection while a custom name exists, Bukkit entity-name fallback
+after clearing it, and preservation of unknown, duplicate, and empty arguments.
+The full 369-probe report and compressed server/client logs are recorded in
+`tools/paper-integration/release-evidence.json`. Exploratory Paper 1.21.11 r54
+also records the existing runtime `nameCondition` probe.
+
+Server condition parity update: `ServerIsPaper`/`IsPaper`, `ServerVersion`,
+`ServerAfter`, and `ServerBefore` now map through the importer to registered
+Paper identity and Minecraft-version conditions. Strict Paper 1.21.1-133
+fixture `srv-paper-server-conditions-strict-20261106-r1` passes the exact
+version, higher/lower controls, inclusive/exclusive equality boundaries, and
+unknown/duplicate/invalid argument preservation checks. Its 370-probe report,
+compressed server/client logs, and tested plugin hash are in
+`tools/paper-integration/release-evidence.json`.
 
 Target AI relation parity update: official `TargetWithin` now evaluates the
 active entity's vanilla `Mob#getTarget()` distance, with compatibility fallback
@@ -2549,7 +2560,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-variable-conditions-strict-20261106-r1` completes 367 probes (348 passed, 19 expected rejections, zero incomplete), including imported `VariableEquals`, `VariableInRange`, and `VariableIsSet` aliases, all five scopes, numeric boundaries, missing/wrong-type rejection, quoted values, and dynamic placeholders. Previous strict fixture `srv-paper-aura-target-strict-20261106-r1` covers imported target-only named Aura checks, Aura removal defaults/partial stacks/`ANY`, aliases, and invalid-input rejection on real Paper. Other strict fixtures cover named Aura application/conditions, imported EntityType traits, EntityType variants and categories, Burning action suffixes and target fallback, Survival-mode, Spyglass, frozen, ItemRecharging, OriginLocation, TriggerItemType/TriggerBlockType, HasEnchantment/HasEnchant, Aerial, Color, and `MaterialIsOnCooldown`; related parent conditions; real entity state/options; cinematic state and cleanup; and player movement beyond `SpawningDistance`. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-server-conditions-strict-20261106-r1` completes 370 probes (351 passed, 19 expected rejections, zero incomplete), including imported `ServerIsPaper`/`IsPaper`, exact Minecraft-version matching, and inclusive/exclusive `ServerAfter`/`ServerBefore` boundaries with malformed-input preservation. Previous fixtures verify imported `Name`/`nameIs` custom-name matching and fallback, and `HasFreeInventorySlot`/`HasFreeSlot` against empty/full player inventories. Other strict fixtures cover imported `VariableEquals`, `VariableInRange`, and `VariableIsSet` aliases and scopes; Aura states/removal; EntityType traits/variants/categories; Burning action suffixes and target fallback; Survival-mode, Spyglass, frozen, ItemRecharging, OriginLocation, TriggerItemType/TriggerBlockType, HasEnchantment/HasEnchant, Aerial, Color, and `MaterialIsOnCooldown`; related parent conditions; real entity state/options; cinematic state and cleanup; and player movement beyond `SpawningDistance`. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
