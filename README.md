@@ -1,17 +1,26 @@
 # helsteraMobs
 
-## MythicMobs Parity Development Status (2026-11-05)
+## MythicMobs Parity Development Status (2026-11-06)
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-trigger-types-import-strict-20261105-r2`
-completes 356 probes (337 passed, 19 expected rejections, zero incomplete).
-Its `importedTriggerItemTypeCondition` and `importedTriggerBlockTypeCondition`
-probes translate Mythic primary names and aliases, then evaluate them against a
-real Bukkit dropped Item and a real STONE block. The probes construct
-`BehaviorContext` values for `on-item-pickup` and `on-block-break`; they verify
-condition mapping/evaluation, not natural Bukkit event delivery. Block
-verification also rejects a mismatched trigger state. Report:
+Latest strict fixture `srv-paper-origin-location-import-strict-20261105-r4`
+passes 357 probes (338 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its `importedOriginLocationCondition` probe sends Mythic
+`?originLocation` primary and alias forms through the importer and
+`SkillService`, verifies block and exact `BehaviorContext.origin()` coordinates,
+rejects a coordinate mismatch, and rejects non-finite coordinates and invalid
+boolean input. Report:
+`tools/paper-integration/reports/paper-1.21.1-origin-location-import-strict-20261105-r4.json`.
+The plugin SHA-256 is
+`42abd200b6cde48ca19471c180dbf2821e45d02eb2b12d993b8bd27b221c4bf0`.
+
+Previous strict fixture `srv-paper-trigger-types-import-strict-20261105-r2`
+passed 356 probes (337 passed, 19 expected rejections, zero incomplete).
+Its imported TriggerItemType/TriggerBlockType probes verify primary and alias
+mapping against a real Bukkit dropped Item and a real STONE block in
+constructed `BehaviorContext` values; natural Bukkit event delivery remains
+unverified. Report:
 `tools/paper-integration/reports/paper-1.21.1-trigger-types-import-strict-20261105-r2.json`.
 The plugin SHA-256 is
 `41cf9e79c81657f05acb68a95a78ad5fdda073de60b7502d17b79e428538ec4a`.
@@ -451,7 +460,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 356 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 357 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -597,7 +606,7 @@ the entire MythicMobs feature catalog.
 - Official `TriggerItemType` now matches the Bukkit Item entity carried by the trigger context with `types/type/material/m` aliases; strict Paper 1.21.1 fixture `srv-paper-trigger-types-import-strict-20261105-r2` verifies imported primary/alias mapping and STONE/DIAMOND positive/negative paths on a real dropped Item. Its `BehaviorContext` is constructed by the probe, so natural Bukkit pickup-event delivery remains unverified.
 - Official `TriggerBlockType` now matches the origin block for `on-block-break`/`on-block-place` trigger states with block-material aliases; the same strict fixture verifies imported primary/alias mapping, STONE/DIAMOND paths, and wrong-state rejection against a real block in a constructed context. Natural block-event dispatch remains unverified.
 - Official `XDiff`/`YDiff`/`ZDiff` now compare target-minus-caster Bukkit coordinates with Mythic numeric ranges; exploratory Paper 1.21.11 r114 verifies positive ranges and an out-of-range rejection.
-- Official `OriginLocation` now matches `BehaviorContext.origin()` by block coordinates or exact coordinates with `loc/l/c`, `x/y/z`, and `exact/e`; exploratory Paper 1.21.11 r116 verifies block, exact, and mismatch paths.
+- Official `OriginLocation` matches `BehaviorContext.origin()` by block coordinates or exact coordinates with `loc/l/c`, `x/y/z`, and `exact/e`; strict Paper 1.21.1-133 fixture `srv-paper-origin-location-import-strict-20261105-r4` verifies imported primary/alias paths, exact coordinates, mismatch rejection, and malformed number/boolean rejection. The complete Conditions catalog remains open.
 - Official `HasDialogOpen` bridges the active DialogueService state by model instance, with lifecycle-safe hook injection; strict fixture `srv-paper-cinematic-condition-20261105-r1` records the start/open/stop/closed transitions.
 - Official `IsInCinematic` checks explicit player targets against the active DialogueService cinematic and same-world 16-block audience; strict fixture `srv-paper-cinematic-condition-20261105-r1` verifies in-range, out-of-range, non-player, and stopped states.
 - Mythic `Name` now matches the active entity's exact custom name, falling back to its Bukkit entity name when no custom name is present.

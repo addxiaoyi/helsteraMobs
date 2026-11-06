@@ -1,5 +1,15 @@
 [
   {
+    "fixtureId": "srv-paper-origin-location-import-strict-20261105-r4",
+    "report": "tools/paper-integration/reports/paper-1.21.1-origin-location-import-strict-20261105-r4.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-origin-location-import-strict-20261105-r4.log.gz",
+    "logSha256": "cfcedb6621a470ca4bd2432a30afefcfb42dda56f163d56804508434d54875ff",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-origin-location-import-strict-20261105-r4-client-logs.tar.gz",
+    "clientLogSha256": "13f6f57ef02179b6846fe8e0d173a5320bf7a08cf765c54a69cd14eab82ae991",
+    "pluginSha256": "42abd200b6cde48ca19471c180dbf2821e45d02eb2b12d993b8bd27b221c4bf0",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-trigger-types-import-strict-20261105-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-trigger-types-import-strict-20261105-r2.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-trigger-types-import-strict-20261105-r2.log.gz",

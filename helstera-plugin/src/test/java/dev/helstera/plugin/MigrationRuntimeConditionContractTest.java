@@ -2547,6 +2547,41 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    void importedOriginLocationAliasesReachRuntimeAndRejectInvalidValues() {
+        var world = mock(org.bukkit.World.class);
+        var origin = new org.bukkit.Location(world, 10.25, 20.5, 30.75);
+        var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                null, null, 1, -1, 0, "IDLE", null, null, List.of(), origin);
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+
+        for (String source : List.of(
+                "?originLocation{location=10,20,30}",
+                "?originLocation{c=10.25,20.5,30.75;e=yes}",
+                "?originLocation{x=10.25;y=20.5;z=30.75;e=1}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            String key = skills.bindCondition(mapped.condition());
+            assertNotNull(key, source);
+            assertTrue(registry.testCondition(key, context), source);
+        }
+
+        var mismatch = dev.helstera.migration.importer.MmConditions.translate(
+                "?originLocation{l=999,999,999}");
+        assertTrue(mismatch.translated());
+        assertFalse(registry.testCondition(skills.bindCondition(mismatch.condition()), context));
+
+        for (String source : List.of("?originLocation{loc=NaN,0,0}",
+                "?originLocation{x=0;y=Infinity;z=0}",
+                "?originLocation{loc=0,0,0;exact=maybe}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertFalse(mapped.translated(), source);
+            assertEquals(source, mapped.condition());
+            assertNull(skills.bindCondition(mapped.condition()), source);
+        }
+    }
+
+    @Test
     void importedTargetHealthPercentUsesMultiplierAndFailsClosedWithoutTarget() {
         var target = mock(org.bukkit.entity.LivingEntity.class);
         when(target.getHealth()).thenReturn(10.0);

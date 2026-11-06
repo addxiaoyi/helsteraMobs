@@ -1,15 +1,20 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-trigger-types-import-strict-20261105-r2` passed the full
-strict gate on Paper 1.21.1-133: 356 probes, 337 passed, 19 expected
-rejections, and zero incomplete. `importedTriggerItemTypeCondition` verifies
-the `?triggerItemType`/`?triggeringItemType` importer paths against a real
-Bukkit dropped Item; `importedTriggerBlockTypeCondition` verifies
-`?triggerBlockType`/`?triggeringBlockType`, material rejection, and wrong-state
-rejection against a real block. Both use explicitly constructed
-`BehaviorContext` values, so this evidence does not claim natural Bukkit event
-delivery. Report and compressed server/client logs are listed in
-`release-evidence.json`; plugin SHA-256:
+Fixture `srv-paper-origin-location-import-strict-20261105-r4` passed the full
+strict gate on Paper 1.21.1-133: 357 probes, 338 passed, 19 expected
+rejections, and zero incomplete. `importedOriginLocationCondition` verifies
+Mythic primary and alias forms through the importer and `SkillService`, block
+and exact `BehaviorContext.origin()` coordinates, mismatch rejection, and
+malformed number/boolean rejection. Report and compressed server/client logs
+are listed in `release-evidence.json`; plugin SHA-256:
+`42abd200b6cde48ca19471c180dbf2821e45d02eb2b12d993b8bd27b221c4bf0`.
+
+Previous fixture `srv-paper-trigger-types-import-strict-20261105-r2` passed the
+full strict gate on Paper 1.21.1-133: 356 probes, 337 passed, 19 expected
+rejections, and zero incomplete. Its TriggerItemType and TriggerBlockType
+checks use explicitly constructed `BehaviorContext` values and do not claim
+natural Bukkit event delivery. Report and compressed server/client logs are
+listed in `release-evidence.json`; plugin SHA-256:
 `41cf9e79c81657f05acb68a95a78ad5fdda073de60b7502d17b79e428538ec4a`.
 
 Previous fixture `srv-paper-trigger-types-import-strict-20261105-r1` also passed

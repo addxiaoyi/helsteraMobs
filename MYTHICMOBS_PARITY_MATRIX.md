@@ -2447,7 +2447,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-trigger-types-import-strict-20261105-r2` completes 356 probes (337 passed, 19 expected rejections, zero incomplete), including imported TriggerItemType/TriggerBlockType aliases and material/state controls against real Bukkit objects in constructed contexts. Previous strict fixtures verify imported HasEnchantment/HasEnchant with real Paper positive and negative evidence; Aerial, Color, and `MaterialIsOnCooldown` aliases; imported `?isChild` parent relation against related adult/unrelated baby entities; real Sheep Age/Adult/Baby/AgeLock and Zombie Baby behavior; a real Enderman positive and managed-Zombie negative; in-audience cinematic state and rejection/cleanup; and `inside`/`outside`, block restoration, and real-player `Options.SpawningDistance` removal 2 ticks after leaving range. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, Survival-mode conditions, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-origin-location-import-strict-20261105-r4` completes 357 probes (338 passed, 19 expected rejections, zero incomplete), including imported OriginLocation primary/alias mapping, block/exact coordinates, mismatch rejection, and malformed-input rejection through `SkillService`. Previous strict fixtures verify imported TriggerItemType/TriggerBlockType against real Bukkit objects in constructed contexts; HasEnchantment/HasEnchant with real Paper positive and negative evidence; Aerial, Color, and `MaterialIsOnCooldown` aliases; imported `?isChild` parent relation against related adult/unrelated baby entities; real Sheep Age/Adult/Baby/AgeLock and Zombie Baby behavior; a real Enderman positive and managed-Zombie negative; in-audience cinematic state and rejection/cleanup; and `inside`/`outside`, block restoration, and real-player `Options.SpawningDistance` removal 2 ticks after leaving range. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, Survival-mode conditions, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
@@ -3273,13 +3273,13 @@ and an out-of-range X rejection through
 `coordinate-difference-condition=true`. Strict Paper 1.21.1 evidence remains
 open.
 
-Origin-location update: official `OriginLocation` now matches
+Origin-location update: official `OriginLocation` matches
 `BehaviorContext.origin()` by block or exact coordinates with `loc/l/c`,
-`x/y/z`, and `exact/e` aliases. Exploratory Paper
-`srv-paper-integration-exploratory-1.21.11-r116` verifies block, exact, and
-mismatch paths through `origin-location-condition=true`. Strict Paper 1.21.1
-evidence remains open; the `loc=` migration path also passed after preserving
-comma-separated coordinates.
+`x/y/z`, and `exact/e` aliases. Strict Paper 1.21.1-133 fixture
+`srv-paper-origin-location-import-strict-20261105-r4` verifies imported primary
+and alias forms through `SkillService`, exact coordinates, mismatch rejection,
+and malformed number/boolean rejection in `importedOriginLocationCondition`.
+The complete Conditions catalog remains mapped-unverified.
 
 Dialogue condition update: official `HasDialogOpen` now reads the active
 DialogueService runner for the model instance, with `hasDialogOpen`/

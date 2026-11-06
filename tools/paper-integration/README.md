@@ -27,16 +27,26 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-trigger-types-import-strict-20261105-r2`
-passed 356 probes (337 passed, 19 expected rejections, zero incomplete) on
-Paper 1.21.1-133. Its imported TriggerItemType and TriggerBlockType probes
-verify primary/alias mapping, material positives and negatives, and the block
-wrong-state rejection against a real Bukkit Item and real block. The probes
-construct event-state `BehaviorContext` values; they do not assert natural
-Bukkit event delivery. Report:
-`reports/paper-1.21.1-trigger-types-import-strict-20261105-r2.json`; server log:
-`reports/paper-1.21.1-trigger-types-import-strict-20261105-r2.log.gz`; client
-logs: `reports/paper-1.21.1-trigger-types-import-strict-20261105-r2-client-logs.tar.gz`.
+Latest strict fixture `srv-paper-origin-location-import-strict-20261105-r4`
+passed 357 probes (338 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. `importedOriginLocationCondition` verifies Mythic primary and
+alias forms through the importer and `SkillService`, block and exact origin
+coordinates, mismatch rejection, and malformed number/boolean rejection.
+Report: `reports/paper-1.21.1-origin-location-import-strict-20261105-r4.json`;
+server log:
+`reports/paper-1.21.1-origin-location-import-strict-20261105-r4.log.gz`; client
+logs:
+`reports/paper-1.21.1-origin-location-import-strict-20261105-r4-client-logs.tar.gz`.
+Plugin SHA-256:
+`42abd200b6cde48ca19471c180dbf2821e45d02eb2b12d993b8bd27b221c4bf0`.
+
+Previous strict fixture `srv-paper-trigger-types-import-strict-20261105-r2`
+passed 356 probes (337 passed, 19 expected rejections, zero incomplete). Its
+imported TriggerItemType and TriggerBlockType probes verify primary/alias
+mapping, material positives and negatives, and wrong-state rejection against a
+real Bukkit Item and block in constructed `BehaviorContext` values; natural
+Bukkit event delivery remains unverified. Report:
+`reports/paper-1.21.1-trigger-types-import-strict-20261105-r2.json`.
 Plugin SHA-256:
 `41cf9e79c81657f05acb68a95a78ad5fdda073de60b7502d17b79e428538ec4a`.
 

@@ -75,6 +75,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-has-enchantment-condition primary-mapped=true alias-mapped=true positive=true any-positive=true level-rejected=true type-rejected=true restored=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-trigger-item-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true constructed-context=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-trigger-block-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true state-rejected=true constructed-context=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-origin-location-condition primary-mapped=true alias-mapped=true positive=true exact-positive=true negative=true invalid-rejected=true constructed-context=true',
         '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true in-combat-condition=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
         '[Server thread/INFO]: condition-utility-details .*spawn-distance-exact=true .*spawn-distance-over-rejected=true .*mobs-chunk=true .*mobs-chunk-high-rejected=true .*mobs-chunk-zero=true .*mobs-chunk-occupied=true .*mobs-chunk-adjacent-excluded=true .*mobs-chunk-boundaries=true .*mobs-in-chunk-condition=true .*chance-100=true .*chance-0-rejected=true .*chance-invalid-rejected=true',
@@ -341,7 +342,8 @@ try {
             'spawningDistanceClientWalk', 'isInCinematicCondition', 'aerialCondition',
             'importedAerialCondition', 'endermanCondition', 'importedColorCondition',
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
-            'importedTriggerBlockTypeCondition', 'importedMaterialCooldownCondition')) {
+            'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
+            'importedMaterialCooldownCondition')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -353,6 +355,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'importedHasEnchantmentCondition').status -eq 'passed') 'imported HasEnchantment requires strict Paper mapping, level and type evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedTriggerItemTypeCondition').status -eq 'passed') 'imported TriggerItemType requires strict Paper mapping and positive/negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedTriggerBlockTypeCondition').status -eq 'passed') 'imported TriggerBlockType requires strict Paper mapping, material, and state evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedOriginLocationCondition').status -eq 'passed') 'imported OriginLocation requires strict Paper mapping, exact, negative, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedMaterialCooldownCondition').status -eq 'passed') 'imported MaterialIsOnCooldown aliases require strict Paper positive and negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriority').status -eq 'passed') 'AI selector priority arbitration probe'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriorityTargets').status -eq 'passed') 'AI priority probe target setup'
@@ -764,6 +767,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedTriggerBlockTypeCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedTriggerBlockTypeCondition'; status = 'passed'; observations = @('imported-trigger-block-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true state-rejected=true constructed-context=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedOriginLocationCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedOriginLocationCondition'; status = 'passed'; observations = @('imported-origin-location-condition primary-mapped=true alias-mapped=true positive=true exact-positive=true negative=true invalid-rejected=true constructed-context=true')
     }
     $fullCatalogReport.expectedProbeIds += 'importedMaterialCooldownCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -1192,6 +1199,29 @@ try {
         $fullCatalogReport.probes += $importedTriggerProbe
         $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     }
+    $importedOriginProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedOriginLocationCondition'
+    $importedOriginObservations = $importedOriginProbe.observations
+    $importedOriginProbe.observations = @(([string]$importedOriginObservations[0]) -replace 'exact-positive=true', 'exact-positive=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badImportedOriginRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badImportedOriginRejected = $_.Exception.Message -match 'required observation for importedOriginLocationCondition' }
+    Assert-True $badImportedOriginRejected 'full release gate rejects a failed imported OriginLocation exact-coordinate control'
+    $importedOriginProbe.observations = $importedOriginObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'importedOriginLocationCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'importedOriginLocationCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingImportedOriginRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingImportedOriginRejected = $_.Exception.Message -match 'importedOriginLocationCondition' }
+    Assert-True $missingImportedOriginRejected 'full release gate rejects missing imported OriginLocation evidence'
+    $fullCatalogReport.expectedProbeIds += 'importedOriginLocationCondition'
+    $fullCatalogReport.probes += $importedOriginProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $missingReviveRejected = $false
     try {
         & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
