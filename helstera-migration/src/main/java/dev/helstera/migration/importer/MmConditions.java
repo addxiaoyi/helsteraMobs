@@ -2098,19 +2098,76 @@ public final class MmConditions {
     public static void translateAll(List<String> in, List<String> translatedOut,
                                     List<String> unmappedOut) {
         for (String raw : in == null ? List.<String>of() : in) {
-            Mapped m = translate(raw);
+            ConditionAction action = splitConditionAction(raw);
+            Mapped m = translate(action.condition());
             if (m.condition() == null) {
                 translatedOut.add("");
                 unmappedOut.add(raw == null ? "<null>" : raw);
                 continue;
             }
             if (m.translated()) {
-                translatedOut.add(m.condition());
+                translatedOut.add(Boolean.FALSE.equals(action.expected())
+                        ? invert(m.condition()) : m.condition());
             } else {
-                translatedOut.add(m.condition());
-                unmappedOut.add(m.condition());
+                String preserved = raw.trim();
+                translatedOut.add(preserved);
+                unmappedOut.add(preserved);
             }
         }
+    }
+
+    private record ConditionAction(String condition, Boolean expected) {
+    }
+
+    private static ConditionAction splitConditionAction(String raw) {
+        if (raw == null || raw.isBlank()) return new ConditionAction(raw, null);
+        String value = raw.trim();
+        int separator = lastTopLevelWhitespace(value);
+        if (separator < 0) return new ConditionAction(value, null);
+        String action = value.substring(separator).trim();
+        if (action.equalsIgnoreCase("true")) {
+            return new ConditionAction(value.substring(0, separator).trim(), true);
+        }
+        if (action.equalsIgnoreCase("false")) {
+            return new ConditionAction(value.substring(0, separator).trim(), false);
+        }
+        return new ConditionAction(value, null);
+    }
+
+    private static int lastTopLevelWhitespace(String value) {
+        char quote = 0;
+        boolean escaped = false;
+        int braces = 0;
+        int brackets = 0;
+        int parentheses = 0;
+        int separator = -1;
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (quote != 0) {
+                if (escaped) escaped = false;
+                else if (c == '\\') escaped = true;
+                else if (c == quote) quote = 0;
+                continue;
+            }
+            if (c == '\'' || c == '"') {
+                quote = c;
+                continue;
+            }
+            if (c == '{') braces++;
+            else if (c == '}' && braces > 0) braces--;
+            else if (c == '[') brackets++;
+            else if (c == ']' && brackets > 0) brackets--;
+            else if (c == '(') parentheses++;
+            else if (c == ')' && parentheses > 0) parentheses--;
+            else if (Character.isWhitespace(c) && braces == 0 && brackets == 0 && parentheses == 0) {
+                separator = i;
+            }
+        }
+        return separator;
+    }
+
+    private static String invert(String condition) {
+        return condition.startsWith("!") ? condition.substring(1).trim() : "!" + condition;
     }
 
     /** 便捷入口：只取翻译结果。 */

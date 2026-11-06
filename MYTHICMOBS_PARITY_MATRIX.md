@@ -46,6 +46,17 @@ This closes the parser boundary for currently mapped no-argument conditions;
 it does not verify the complete official condition catalog or parameter schemas
 for conditions that accept values.
 
+Mythic condition-list `true`/`false` actions are now consumed only by
+`translateAll`: a final top-level `true` keeps the condition, while `false`
+inverts it and composes with an existing `!`. Unknown action text remains
+preserved and warned. The `on-fire` runtime condition now checks the active
+target first, then falls back to the caster, so imported `TargetConditions`
+evaluate the entity Mythic specifies. `MmConditionsTest` covers action parsing
+and inversion; `MigrationRuntimeConditionContractTest` imports `isburning false`
+and `burning true` and verifies both states through `SkillService`. This is
+automated importer/runtime evidence only; no new Paper fixture was run, and the
+complete Conditions catalog remains `mapped-unverified`.
+
 `distanceFromLocation` and `originLocation` now validate named argument schemas:
 unknown keys, duplicate aliases, empty fields, and mixed `loc` plus `x/y/z`
 forms remain untranslated. `MmConditionsTest` covers these importer failures.

@@ -224,6 +224,19 @@ class MmConditionsTest {
     }
 
     @Test
+    @DisplayName("condition list true/false actions map to positive and inverted conditions")
+    void conditionActionsTranslateAndInvert() {
+        List<String> translated = new ArrayList<>();
+        List<String> unmapped = new ArrayList<>();
+        MmConditions.translateAll(List.of(
+                "isBurning true", "burning false", "!burning false", "level{l=10} false",
+                "isBurning maybe"), translated, unmapped);
+
+        assertEquals(List.of("on-fire", "!on-fire", "on-fire", "!level 10", "isBurning maybe"), translated);
+        assertEquals(List.of("isBurning maybe"), unmapped);
+    }
+
+    @Test
     @DisplayName("bee and anger state aliases map only without parameters")
     void angryAndPollinatedConditions() {
         assertEquals("angry", t("?angry"));
