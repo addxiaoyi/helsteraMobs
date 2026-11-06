@@ -339,6 +339,14 @@ unknown tags. Strict fixture `srv-paper-block-selector-strict-20261101-r2`
 passes the production spatial condition probe with isolated real Paper tag and
 wildcard checks (`on-block-tag=true block-wildcard=true block-tag=true`).
 
+Incremental block-condition importer validation: `BlockType`, `OnBlock`, and
+`BlockTypeInRadius` now validate their documented material/radius/amount
+arguments, reject unknown keys, duplicate aliases, empty values, and options
+used by the wrong condition, while retaining positional material lists and
+block-state selectors. `MmConditionsTest` covers these accepted and rejected
+forms. This adds importer-only evidence; the existing Paper block-selector and
+radius fixtures do not exercise the new schema-rejection probes.
+
 Incremental spawner-gate update: player-scoped ownership now applies the same
 online, alive, non-spectator, non-creative filter as the player-count gate and
 fails closed when a player location is unavailable. Focused regressions and the

@@ -37,6 +37,11 @@ public final class MmConditions {
     private static final Map<String, String> ORIGIN_LOCATION_ARGUMENTS = Map.of(
             "loc", "location", "location", "location", "l", "location", "c", "location",
             "exact", "exact", "e", "exact", "x", "x", "y", "y", "z", "z");
+    private static final Set<String> BLOCK_TYPE_ARGUMENTS = Set.of(
+            "types", "type", "t", "material", "mat", "m", "block", "b");
+    private static final Set<String> BLOCK_TYPE_IN_RADIUS_ARGUMENTS = Set.of(
+            "types", "type", "t", "material", "mat", "m", "block", "b", "radius", "r",
+            "amount", "a");
     private static final Set<String> NO_ARGUMENT_CONDITIONS = Set.of(
             "hastarget", "incombat", "offgcd", "offglobalcooldown",
             "night", "nighttime", "raining", "israining", "thundering", "isthundering",
@@ -636,8 +641,9 @@ public final class MmConditions {
             return new Mapped("yaw " + value + " " + (clamp == null ? "true" : clamp), true);
         }
         if ("onblock".equals(name)) {
-            String value = rawValue(body, "material", "types", "type", "t", "mat", "m", "block", "b");
-            if (value == null) value = "STONE";
+            BlockTypeArguments arguments = parseBlockTypeArguments(body, false);
+            if (arguments == null) return new Mapped(s, false);
+            String value = arguments.types() == null ? "STONE" : arguments.types();
             return new Mapped("on-block " + value.toUpperCase(Locale.ROOT), true);
         }
         if ("moist".equals(name) || "ismoist".equals(name)) {
@@ -651,17 +657,17 @@ public final class MmConditions {
                     : new Mapped("moisture-level " + value, true);
         }
         if ("blocktype".equals(name)) {
-            String value = rawValue(body, "types", "type", "t", "material", "mat", "m", "block", "b");
-            if (value == null) value = "DIRT";
+            BlockTypeArguments arguments = parseBlockTypeArguments(body, false);
+            if (arguments == null) return new Mapped(s, false);
+            String value = arguments.types() == null ? "DIRT" : arguments.types();
             return new Mapped("block-type-is " + value.toUpperCase(Locale.ROOT), true);
         }
         if ("blocktypeinradius".equals(name)) {
-            String types = rawValue(body, "types", "type", "t", "material", "mat", "m", "block", "b");
-            String radius = keyedArgument(body, "radius", "r");
-            String amount = keyedArgument(body, "amount", "a");
-            if (types == null) types = "DIRT";
-            if (radius == null) radius = "8";
-            if (amount == null) amount = ">0";
+            BlockTypeArguments arguments = parseBlockTypeArguments(body, true);
+            if (arguments == null) return new Mapped(s, false);
+            String types = arguments.types() == null ? "DIRT" : arguments.types();
+            String radius = arguments.radius() == null ? "8" : arguments.radius();
+            String amount = arguments.amount() == null ? ">0" : arguments.amount();
             if (!validNumberRange(amount)) return new Mapped(s, false);
             try {
                 double parsedRadius = Double.parseDouble(radius);
@@ -1868,6 +1874,57 @@ public final class MmConditions {
         int semicolon = value.indexOf(';');
         if (semicolon >= 0) value = value.substring(0, semicolon).trim();
         return value.isBlank() ? null : value;
+    }
+
+    private record BlockTypeArguments(String types, String radius, String amount) {}
+
+    private static BlockTypeArguments parseBlockTypeArguments(String body, boolean withRadius) {
+        if (body == null || body.isBlank()) return new BlockTypeArguments(null, null, null);
+
+        String types = null;
+        String radius = null;
+        String amount = null;
+        Set<String> seen = new HashSet<>();
+        Set<String> allowed = withRadius ? BLOCK_TYPE_IN_RADIUS_ARGUMENTS : BLOCK_TYPE_ARGUMENTS;
+
+        for (String part : body.split(";", -1)) {
+            String argument = part.trim();
+            if (argument.isEmpty()) return null;
+
+            int equals = argument.indexOf('=');
+            String key = equals > 0 ? argument.substring(0, equals).trim().toLowerCase(Locale.ROOT) : "";
+            if (allowed.contains(key)) {
+                String value = argument.substring(equals + 1).trim();
+                String canonical = switch (key) {
+                    case "types", "type", "t", "material", "mat", "m", "block", "b" -> "types";
+                    case "radius", "r" -> "radius";
+                    case "amount", "a" -> "amount";
+                    default -> throw new IllegalStateException("Unexpected block condition argument " + key);
+                };
+                if (value.isEmpty() || (value.contains("=") && !isBlockStateSelector(value))
+                        || !seen.add(canonical)) return null;
+                switch (canonical) {
+                    case "types" -> types = value;
+                    case "radius" -> radius = value;
+                    case "amount" -> amount = value;
+                    default -> throw new IllegalStateException("Unexpected block condition argument " + canonical);
+                }
+            } else {
+                if (equals > 0 && !isBlockStateSelector(argument)) return null;
+                if (types != null) return null;
+                types = argument;
+                if (!seen.add("types")) return null;
+            }
+        }
+        return new BlockTypeArguments(types, radius, amount);
+    }
+
+    private static boolean isBlockStateSelector(String argument) {
+        int openBracket = argument.indexOf('[');
+        int closeBracket = argument.lastIndexOf(']');
+        int equals = argument.indexOf('=');
+        return openBracket > 0 && equals > openBracket && closeBracket > equals
+                && closeBracket == argument.length() - 1;
     }
 
     private static String keyedArgument(String body, String... keys) {
