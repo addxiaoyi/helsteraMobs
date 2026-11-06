@@ -29,6 +29,19 @@ import static org.mockito.Mockito.*;
 /** Cross-module contract for translated conditions and mechanics used by migration tests. */
 class MigrationRuntimeConditionContractTest {
 
+    private static <T extends org.bukkit.Keyed> T keyedVariant(Class<T> type, String name) {
+        var key = new org.bukkit.NamespacedKey("minecraft", name.toLowerCase(java.util.Locale.ROOT));
+        return type.cast(java.lang.reflect.Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
+                (proxy, method, arguments) -> switch (method.getName()) {
+                    case "getKey" -> key;
+                    case "name", "toString" -> name.toUpperCase(java.util.Locale.ROOT);
+                    case "ordinal", "compareTo" -> 0;
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "equals" -> proxy == arguments[0];
+                    default -> throw new UnsupportedOperationException(method.getName());
+                }));
+    }
+
     @Test
     @DisplayName("imported survival aliases bind to the target-player survival condition")
     void importedSurvivalAliasesReachRuntime() {
@@ -84,6 +97,51 @@ class MigrationRuntimeConditionContractTest {
         var invalid = dev.helstera.migration.importer.MmConditions.translate(
                 "?isUsingSpyglass{unknown=true}");
         assertFalse(invalid.translated());
+    }
+
+    @Test
+    @DisplayName("imported EntityType variants bind and match the Bukkit target")
+    void importedEntityTypeVariantsReachRuntime() {
+        var cat = mock(org.bukkit.entity.Cat.class);
+        when(cat.getType()).thenReturn(org.bukkit.entity.EntityType.CAT);
+        var tabbyType = keyedVariant(org.bukkit.entity.Cat.Type.class, "tabby");
+        var blackType = keyedVariant(org.bukkit.entity.Cat.Type.class, "black");
+        when(cat.getCatType()).thenReturn(tabbyType);
+        var catContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, cat, 1.0, -1, 0, "IDLE");
+        var wolf = mock(org.bukkit.entity.Wolf.class);
+        when(wolf.getType()).thenReturn(org.bukkit.entity.EntityType.WOLF);
+        when(wolf.getVariant()).thenReturn(keyedVariant(org.bukkit.entity.Wolf.Variant.class, "snowy"));
+        var wolfContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, wolf, 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+
+        var tabby = dev.helstera.migration.importer.MmConditions.translate(
+                "?entityType{type=CAT{variant=TABBY}}");
+        assertTrue(tabby.translated());
+        assertEquals("entity-type-is CAT[variant=TABBY]", tabby.condition());
+        String tabbyKey = service.bindCondition(tabby.condition());
+        assertNotNull(tabbyKey);
+        assertTrue(registry.testCondition(tabbyKey, catContext));
+        when(cat.getCatType()).thenReturn(blackType);
+        assertFalse(registry.testCondition(tabbyKey, catContext));
+
+        var alias = dev.helstera.migration.importer.MmConditions.translate(
+                "?mobType{type=CAT{variant=TABBY},WOLF{variant=SNOWY}}");
+        assertTrue(alias.translated());
+        String aliasKey = service.bindCondition(alias.condition());
+        assertNotNull(aliasKey);
+        assertTrue(registry.testCondition(aliasKey, wolfContext));
+        assertFalse(registry.testCondition(aliasKey, dev.helstera.api.behavior.BehaviorContext.of(
+                null, mock(org.bukkit.entity.Zombie.class), 1.0, -1, 0, "IDLE")));
+
+        for (String source : List.of("?entityType{type=CAT{variant=UNKNOWN}}",
+                "?entityType{CAT;type=WOLF}")) {
+            var preserved = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertFalse(preserved.translated(), source);
+            assertEquals(source, preserved.condition());
+        }
     }
 
     @Test

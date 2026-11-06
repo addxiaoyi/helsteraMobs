@@ -1946,6 +1946,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean waterMobCondition = false;
             boolean zombieCondition = false;
             boolean importedEntityCategoryCondition = false;
+            boolean importedEntityTypeVariantCondition = false;
             boolean aerialCondition = false;
             boolean importedAerialCondition = false;
             boolean endermanCondition = false;
@@ -2718,6 +2719,84 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " invalid-preserved=" + importedEntityCategoryInvalidPreserved
                         + " cod=" + waterMobProbe.getType()
                         + " zombie=" + zombie.getType());
+                var catVariantProbe = world.spawn(location.clone().add(8, 0, 0),
+                        org.bukkit.entity.Cat.class);
+                conditionCategoryEntities.add(catVariantProbe);
+                catVariantProbe.setAI(false);
+                catVariantProbe.setInvulnerable(true);
+                catVariantProbe.setCatType(org.bukkit.entity.Cat.Type.TABBY);
+                var catVariantContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        modelInstance, catVariantProbe, 1.0, 8.0, 0, "integration");
+                var importedEntityType = dev.helstera.migration.importer.MmConditions.translate(
+                        "?entityType{type=CAT{variant=TABBY}}");
+                var importedEntityTypeAlias = dev.helstera.migration.importer.MmConditions.translate(
+                        "?entityTypeIs{CAT{variant=TABBY}}");
+                var importedMobType = dev.helstera.migration.importer.MmConditions.translate(
+                        "?mobType{type=CAT{variant=TABBY}}");
+                boolean entityTypeMapped = importedEntityType.translated()
+                        && "entity-type-is CAT[variant=TABBY]".equals(importedEntityType.condition());
+                boolean entityTypeAliasMapped = importedEntityTypeAlias.translated()
+                        && "entity-type-is CAT[variant=TABBY]".equals(importedEntityTypeAlias.condition());
+                boolean mobTypeMapped = importedMobType.translated()
+                        && "entity-type-is CAT[variant=TABBY]".equals(importedMobType.condition());
+                String entityTypeKey = entityTypeMapped
+                        ? skills.bindCondition(importedEntityType.condition()) : null;
+                String entityTypeAliasKey = entityTypeAliasMapped
+                        ? skills.bindCondition(importedEntityTypeAlias.condition()) : null;
+                String mobTypeKey = mobTypeMapped ? skills.bindCondition(importedMobType.condition()) : null;
+                boolean entityTypePositive = entityTypeKey != null
+                        && behaviors.testCondition(entityTypeKey, catVariantContext);
+                boolean entityTypeAliasPositive = entityTypeAliasKey != null
+                        && behaviors.testCondition(entityTypeAliasKey, catVariantContext);
+                boolean mobTypePositive = mobTypeKey != null
+                        && behaviors.testCondition(mobTypeKey, catVariantContext);
+                var importedVariantAlternatives = dev.helstera.migration.importer.MmConditions.translate(
+                        "?entityType{type=CAT{variant=TABBY,BLACK}}");
+                String alternativesKey = importedVariantAlternatives.translated()
+                        ? skills.bindCondition(importedVariantAlternatives.condition()) : null;
+                boolean tabbyAlternative = alternativesKey != null
+                        && behaviors.testCondition(alternativesKey, catVariantContext);
+                catVariantProbe.setCatType(org.bukkit.entity.Cat.Type.BLACK);
+                boolean blackAlternative = alternativesKey != null
+                        && behaviors.testCondition(alternativesKey, catVariantContext);
+                boolean wrongVariantRejected = entityTypeKey != null
+                        && !behaviors.testCondition(entityTypeKey, catVariantContext);
+                catVariantProbe.setCatType(org.bukkit.entity.Cat.Type.RED);
+                boolean unknownAlternativeRejected = alternativesKey != null
+                        && !behaviors.testCondition(alternativesKey, catVariantContext);
+                catVariantProbe.setCatType(org.bukkit.entity.Cat.Type.TABBY);
+                boolean wrongTypeRejected = entityTypeKey != null
+                        && !behaviors.testCondition(entityTypeKey, context);
+                List<String> invalidEntityTypeSources = List.of(
+                        "?entityType{type=CAT{variant=UNKNOWN}}",
+                        "?entityType{type=ZOMBIE{variant=TABBY}}",
+                        "?entityType{type=CAT{color=BLACK}}",
+                        "?entityType{CAT;type=WOLF}");
+                boolean entityTypeInvalidPreserved = invalidEntityTypeSources.stream().allMatch(source -> {
+                    var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                    return !mapped.translated() && source.equals(mapped.condition());
+                });
+                boolean entityTypeVariantAlternativesPassed = tabbyAlternative && blackAlternative
+                        && wrongVariantRejected && unknownAlternativeRejected;
+                importedEntityTypeVariantCondition = entityTypeMapped && entityTypeAliasMapped && mobTypeMapped
+                        && entityTypePositive && entityTypeAliasPositive && mobTypePositive
+                        && entityTypeVariantAlternativesPassed && wrongTypeRejected
+                        && entityTypeInvalidPreserved
+                        && catVariantProbe.getType() == org.bukkit.entity.EntityType.CAT
+                        && "TABBY".equals(catVariantProbe.getCatType().name());
+                getLogger().info("[自检] imported-entity-type-variant-condition"
+                        + " primary-mapped=" + entityTypeMapped
+                        + " alias-mapped=" + entityTypeAliasMapped
+                        + " mobtype-mapped=" + mobTypeMapped
+                        + " positive=" + entityTypePositive
+                        + " alias-positive=" + entityTypeAliasPositive
+                        + " mobtype-positive=" + mobTypePositive
+                        + " variant-alternative=" + entityTypeVariantAlternativesPassed
+                        + " wrong-variant-rejected=" + wrongVariantRejected
+                        + " wrong-type-rejected=" + wrongTypeRejected
+                        + " invalid-preserved=" + entityTypeInvalidPreserved
+                        + " cat=" + catVariantProbe.getType()
+                        + " variant=" + catVariantProbe.getCatType().name());
                 var aerialProbe = world.spawn(location.clone().add(0, 3, 0),
                         org.bukkit.entity.ArmorStand.class);
                 conditionCategoryEntities.add(aerialProbe);
@@ -4271,6 +4350,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && waterMobCondition
                         && zombieCondition
                         && importedEntityCategoryCondition
+                        && importedEntityTypeVariantCondition
                         && aerialCondition
                         && importedFrozenCondition
                         && importedBurningCondition
@@ -6421,6 +6501,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " item-type-condition=" + itemTypeCondition
                         + " structure-condition=" + structureCondition
                         + " mythic-mob-type-condition=" + mythicMobTypeCondition
+                        + " entity-type-condition=" + importedEntityTypeVariantCondition
                         + " variable-contains-condition=" + variableContainsCondition
                         + " trigger-block-type-condition=" + triggerBlockTypeCondition
                         + " origin-location-condition=" + originLocationCondition

@@ -27,7 +27,21 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-entity-category-import-strict-20261106-r2`
+Latest strict fixture `srv-paper-entity-type-variant-import-strict-20261106-r1`
+passed all 364 probes (345 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. `importedEntityTypeVariantCondition` verifies the
+`entityType`, `entityTypeIs`, and `mobtype` imports against a real Cat, including
+TABBY/BLACK variant alternatives, RED and wrong-type rejection, and invalid
+selector preservation. Report:
+`reports/paper-1.21.1-entity-type-variant-import-strict-20261106-r1.json`;
+server log:
+`reports/paper-1.21.1-entity-type-variant-import-strict-20261106-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-entity-type-variant-import-strict-20261106-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`58f94be7da6216b62e09e7d3405bc6229b97c022e2a2fdd74e2450957721c369`.
+
+Previous strict fixture `srv-paper-entity-category-import-strict-20261106-r2`
 passed all 363 probes (344 passed, 19 expected rejections, zero incomplete) on
 Paper 1.21.1-133. Its `importedEntityCategoryCondition` probe verifies the
 `?isWaterMob`/`?waterMob` and `?isZombie`/`?zombie` imports against real Cod and

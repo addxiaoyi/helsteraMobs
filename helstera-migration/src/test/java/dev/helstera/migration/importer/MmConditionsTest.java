@@ -492,6 +492,29 @@ class MmConditionsTest {
     }
 
     @Test
+    void entityTypeMapsNestedVariantConstraintsAndAliases() {
+        assertEquals("entity-type-is CAT[variant=TABBY]",
+                t("?entityType{type=CAT{variant=TABBY}}"));
+        assertEquals("entity-type-is RABBIT[variant=BLACK_AND_WHITE]",
+                t("?entityTypeIs{RABBIT{v=black and white}}"));
+        assertEquals("entity-type-is CAT[variant=TABBY],WOLF[variant=SNOWY]",
+                t("?mobType{type=CAT{variant=TABBY},WOLF{variant=SNOWY}}"));
+        assertEquals("entity-type-is ZOMBIE",
+                t("?entityType{t=minecraft:zombie}"));
+
+        for (String invalid : List.of(
+                "?entityType{type=CAT{variant=UNKNOWN}}",
+                "?entityType{type=ZOMBIE{variant=TABBY}}",
+                "?entityType{type=CAT{variant=TABBY};variant=BLACK}",
+                "?entityType{CAT;type=WOLF}",
+                "?entityType{type=CAT;types=WOLF}",
+                "?entityType{type=CAT{color=BLACK}}",
+                "?entityType{type=CAT{variant=TABBY}")) {
+            assertUntranslatedPreserved(invalid);
+        }
+    }
+
+    @Test
     void damageCauseConditionMapsEventCause() {
         assertEquals("damage-cause ENTITY_ATTACK", t("?damageCause{ENTITY_ATTACK}"));
         assertTrue(translated("?damageCause{ENTITY_ATTACK}"));
