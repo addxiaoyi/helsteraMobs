@@ -4,15 +4,15 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-entity-type-variant-import-strict-20261106-r1`
-passes all 364 probes (345 passed, 19 expected rejections, zero incomplete) on
-Paper 1.21.1-133. Its `importedEntityTypeVariantCondition` probe verifies
-`entityType`, `entityTypeIs`, and `mobtype` imports against a real Cat, including
-variant alternatives, wrong-variant/type rejection, and preservation of invalid
-selectors. Report:
-`tools/paper-integration/reports/paper-1.21.1-entity-type-variant-import-strict-20261106-r1.json`.
+Latest strict fixture `srv-paper-entity-type-traits-strict-20261106-r1`
+passes all 365 probes (346 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its `importedEntityTypeTraitsCondition` probe verifies imported
+runtime selectors against real Horse, Panda, Villager, Zombie Villager, Sheep,
+Shulker, Parrot, Llama, Tropical Fish, and Iron Golem entities, including
+inapplicable-trait rejection. Report:
+`tools/paper-integration/reports/paper-1.21.1-entity-type-traits-strict-20261106-r1.json`.
 The plugin SHA-256 is
-`58f94be7da6216b62e09e7d3405bc6229b97c022e2a2fdd74e2450957721c369`.
+`327c83088c400d0e39f6045d1e58d8a226e999e8d67d9feaa20116a5faacd59d`.
 
 Previous strict fixture `srv-paper-condition-action-suffix-strict-20261106-r1`
 passes 362 probes (343 passed, 19 expected rejections, zero incomplete) on
@@ -510,7 +510,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 364 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 365 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -526,8 +526,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 470 cited IDs; 381 report files; 4 directories
-   without reports; 85 missing directories; 147 archived release reports. The
+   Current fixture inventory: 471 cited IDs; 382 report files; 4 directories
+   without reports; 85 missing directories; 148 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -652,7 +652,7 @@ the entire MythicMobs feature catalog.
 - Official `Plugin` / `PluginExists` / `HasPlugin` now check Bukkit PluginManager enabled state; exploratory Paper r93 verifies `helsteraMobs` positive and missing-plugin negative paths.
 - Official `SpawnReason` now matches the target entity's Bukkit `Entity#getEntitySpawnReason()` with case-insensitive enum parsing and fail-closed missing/invalid values; exploratory Paper 1.21.11 r98 records `spawn-reason-condition=true` with actual `CUSTOM` and a different-enum negative control.
 - Official `IsWaterMob` and `IsZombie` use Bukkit's `WaterMob` marker and `Zombie` type checks. Strict Paper 1.21.1-133 fixture `srv-paper-entity-category-import-strict-20261106-r2` verifies all four imported primary/alias names against a real Cod/Zombie pair, both cross-type negatives, and fail-closed preservation of malformed arguments; exploratory Paper 1.21.11 r99 also records the native runtime paths.
-- Official `EntityType`, `EntityTypeIs`, and `MobType` conditions use one shared Bukkit selector and verify nested `variant` alternatives for Axolotl, Cat, Fox, Frog, Mooshroom, Rabbit, Villager, Wolf, and Zombie Villager where Paper 1.21.1 exposes variant getters. Strict Paper fixture `srv-paper-entity-type-variant-import-strict-20261106-r1` checks all three imported names on a real Cat, TABBY/BLACK alternatives, RED and wrong-entity rejection, and preservation of invalid selectors. Other EntityType traits such as color, style, profession/biome, genes, cracks, and tropical-fish patterns remain unimplemented; the complete Conditions catalog remains open.
+- Official `EntityType`, `EntityTypeIs`, and `MobType` conditions share a Paper-backed selector for nested variants, colors, Horse style, Panda genes, Villager biome/profession, Iron Golem crack state, and Tropical Fish traits. Strict Paper fixture `srv-paper-entity-type-traits-strict-20261106-r1` exercises the importer and runtime on real entities, including wrong-value rejection, `jeb_` rainbow Sheep, every Iron Golem crack tier, and traits applied to the wrong entity type. Cow/Chicken/Pig variants remain preserved with a warning on Paper 1.21.1 because its Bukkit API exposes no getter; newer Zombie Nautilus and Copper Golem variants are outside this release. The wider Conditions catalog remains open.
 - Official `Aerial` evaluates the active target's Bukkit `isOnGround()` state with `aerial`/`isAerial` aliases; exploratory Paper 1.21.11 r102 and strict Paper 1.21.1-133 fixture `srv-paper-aerial-condition-strict-20261105-r2` verify floating-ArmorStand positives through both aliases and a grounded-player negative through the dedicated `aerialCondition` probe.
 - Official `IsEnderman` now uses Bukkit's `Enderman` type check; exploratory Paper 1.21.11 r103 and strict Paper fixture `srv-paper-enderman-condition-strict-20261105-r1` verify a real Enderman positive path and managed Zombie negative control through the dedicated `endermanCondition` probe.
 - Official `HasEnchantment` checks Bukkit equipment slots with `enchantment/type/e` and `level/l` range arguments; exploratory Paper 1.21.11 r104 and strict Paper 1.21.1-133 fixture `srv-paper-has-enchantment-import-strict-20261105-r1` verify imported `?hasEnchantment`/`?hasEnchant`, Sharpness and `ANY` positives, level/type negatives, and equipment restoration. The complete Conditions catalog remains open.

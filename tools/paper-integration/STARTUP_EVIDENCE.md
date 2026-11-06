@@ -1,12 +1,25 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-entity-type-variant-import-strict-20261106-r1` passed
-the full strict gate on Paper 1.21.1-133: 364 probes, 345 passed, 19 expected
-rejections, and zero incomplete. `importedEntityTypeVariantCondition` verifies
-`entityType`, `entityTypeIs`, and `mobtype` through the importer and runtime
-condition registry on a real Cat. TABBY and BLACK alternatives pass; RED, a
-wrong entity type, invalid variants, unsupported nested traits, and malformed
-type constraints are rejected or preserved as expected. Report SHA-256:
+Latest fixture `srv-paper-entity-type-traits-strict-20261106-r1` passed the full
+strict gate on Paper 1.21.1-133: 365 probes, 346 passed, 19 expected rejections,
+and zero incomplete. `importedEntityTypeTraitsCondition` verifies imported
+runtime selectors on real Horse, Panda, Villager, Zombie Villager, Sheep,
+Shulker, Parrot, Llama, Tropical Fish, and Iron Golem entities, including
+inapplicable-trait rejection. Report SHA-256:
+`59ef6eeffea0c5cf6c24cbfe1d7c956a8a8215f3f8586a59f36cbcdb0d264c23`; compressed
+server log SHA-256:
+`db7d2518f777c2651848149f734b36409722525ee37c79b72a3836782f902cb3`; client log
+archive SHA-256:
+`0c3a91d398ccf4e0d4ef85c812760dec02d9ae408e184ff75888271e75fe457a`; plugin
+SHA-256: `327c83088c400d0e39f6045d1e58d8a226e999e8d67d9feaa20116a5faacd59d`.
+
+Previous fixture `srv-paper-entity-type-variant-import-strict-20261106-r1`
+passed the full strict gate on Paper 1.21.1-133: 364 probes, 345 passed, 19
+expected rejections, and zero incomplete. `importedEntityTypeVariantCondition`
+verifies `entityType`, `entityTypeIs`, and `mobtype` through the importer and
+runtime condition registry on a real Cat. TABBY and BLACK alternatives pass;
+RED, a wrong entity type, invalid variants, unsupported nested traits, and
+malformed type constraints are rejected or preserved as expected. Report SHA-256:
 `9a887d003b8e4fd7ac2b31a9da067ade1d036316cca6ddf18dd6e943205c2c27`; compressed
 server log SHA-256:
 `581aeeba15500a92c974a2a05c8d829073742e58d7a548c80aabc70c25e29ad5`; client log

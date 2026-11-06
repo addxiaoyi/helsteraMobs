@@ -27,7 +27,21 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-entity-type-variant-import-strict-20261106-r1`
+Latest strict fixture `srv-paper-entity-type-traits-strict-20261106-r1`
+passed all 365 probes (346 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. `importedEntityTypeTraitsCondition` verifies imported runtime
+selectors against real Horse, Panda, Villager, Zombie Villager, Sheep, Shulker,
+Parrot, Llama, Tropical Fish, and Iron Golem entities, and rejects traits used
+with inapplicable entity types. Report:
+`reports/paper-1.21.1-entity-type-traits-strict-20261106-r1.json`;
+server log:
+`reports/paper-1.21.1-entity-type-traits-strict-20261106-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-entity-type-traits-strict-20261106-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`327c83088c400d0e39f6045d1e58d8a226e999e8d67d9feaa20116a5faacd59d`.
+
+Previous strict fixture `srv-paper-entity-type-variant-import-strict-20261106-r1`
 passed all 364 probes (345 passed, 19 expected rejections, zero incomplete) on
 Paper 1.21.1-133. `importedEntityTypeVariantCondition` verifies the
 `entityType`, `entityTypeIs`, and `mobtype` imports against a real Cat, including
