@@ -27,7 +27,29 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-entity-type-traits-strict-20261106-r1`
+Latest strict fixture `srv-paper-aura-target-strict-20261106-r1` passed all
+366 probes (347 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. `mythicAuraRuntime` verifies imported target-only named Aura checks,
+Aura application and conditions, partial/default/`ANY` removal, aliases, and
+invalid-input rejection. Report:
+`reports/paper-1.21.1-aura-target-strict-20261106-r1.json`;
+server log: `reports/paper-1.21.1-aura-target-strict-20261106-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-aura-target-strict-20261106-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`914e5c5b4b1698fee82cb209a9f392f82e88457a49224b943dfb3669b007e066`.
+
+Previous strict fixture `srv-paper-aura-remove-strict-20261106-r1` also passed
+the full catalog and verifies partial/default/`ANY` Aura removal. Its exact
+report, logs, and plugin hash remain in `release-evidence.json`.
+
+Previous strict fixture `srv-paper-aura-strict-20261106-r1` passed all 366
+probes (347 passed, 19 expected rejections, zero incomplete) on Paper 1.21.1-133.
+It verifies Aura action dispatch, named state and stack merging, imported Aura
+conditions, and malformed-condition rejection. Its report and logs are in
+`reports/` and its exact tested JAR hash is in `release-evidence.json`.
+
+Previous strict fixture `srv-paper-entity-type-traits-strict-20261106-r1`
 passed all 365 probes (346 passed, 19 expected rejections, zero incomplete) on
 Paper 1.21.1-133. `importedEntityTypeTraitsCondition` verifies imported runtime
 selectors against real Horse, Panda, Villager, Zombie Villager, Sheep, Shulker,
@@ -920,9 +942,11 @@ and startup evidence document and reports documented `srv-paper-*` fixture
 directories that are absent from the workspace, including each source document
 and line. Versioned Paper names are treated as single references. Maven
 `verify` reads `release-evidence.json` and requires every listed report to be
-archived under `tools/paper-integration/reports/`, match its release fixture,
-target Paper 1.21.1, and contain every expected probe without incomplete
-results. At least one manifest entry must set the boolean `fullReleaseCatalog`
+archived under `tools/paper-integration/reports/`, match its release fixture
+or an explicit `reportFixtureDirectory` source mapping, target Paper 1.21.1,
+and contain every expected probe without incomplete results. A declared
+`reportSha256` is checked against the archived report. At least one manifest
+entry must set the boolean `fullReleaseCatalog`
 to `true`; that report must satisfy the current release probe catalog. Other
 absent references stay visible as historical inventory and do
 not count as release evidence. Add a fixture to the manifest only after its

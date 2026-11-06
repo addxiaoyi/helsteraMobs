@@ -40,6 +40,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedIsChildCondition'; status = 'passed'; observations = @('skill-actions is-child-import-condition=true adult-parent-positive=true adult-not-baby=true unrelated-baby-not-child=true baby-positive=true')
     }
+    $fullReport.expectedProbeIds += 'mythicAuraRuntime'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mythicAuraRuntime'; status = 'passed'; observations = @('skill-actions mythic-aura-action=true mythic-has-aura-condition=true mythic-target-has-aura-condition=true mythic-has-aura-stacks-condition=true mythic-has-aura-type-condition=true mythic-aura-remove=true mythic-aura-invalid-rejected=true')
+    }
     $fullReport.expectedProbeIds += 'dropItemListImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'dropItemListImported'; status = 'passed'; observations = @('drop-item-list-import valid=true invalid-preserved=true')
@@ -210,12 +214,13 @@ try {
     if ($locationTargeterProbe.Count -ne 1) { throw 'Synthetic release report must contain locationTargeterDispatch.' }
     $locationTargeterProbe[0].observations = @('location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true')
     $latestProbeCount = $fullReport.probes.Count
-    $fullReport.fixtureDirectory = 'srv-paper-current-release'
+    $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'
     [System.IO.File]::WriteAllText($testJarPath, 'test release artifact')
     $testPluginHash = (Get-FileHash -LiteralPath $testJarPath -Algorithm SHA256).Hash.ToLowerInvariant()
     $fullReport.pluginSha256 = $testPluginHash
     [System.IO.File]::WriteAllText($archivePath, ($fullReport | ConvertTo-Json -Depth 20))
+    $testReportHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
     $historicalReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-orb-detail-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
     $historicalReport.fixtureDirectory = 'srv-paper-historical-release'
     $historicalReport.pluginSha256 = $testPluginHash
@@ -227,7 +232,9 @@ try {
     $testLogHash = (Get-FileHash -LiteralPath $testLogPath -Algorithm SHA256).Hash.ToLowerInvariant()
     [System.IO.File]::WriteAllText($manifestPath, (@(@{
         fixtureId = 'srv-paper-current-release'
+        reportFixtureDirectory = 'srv-paper-integration'
         report = 'tools/paper-integration/reports/test-release.json'
+        reportSha256 = $testReportHash
         fullReleaseCatalog = $true
         pluginSha256 = $testPluginHash
         log = 'tools/paper-integration/reports/test.log.gz'
@@ -263,6 +270,18 @@ try {
     if ($output -notmatch 'srv-paper-old \(tools/paper-integration/STARTUP_EVIDENCE.md:4\)') {
         throw "Missing fixture source location was not reported: $output"
     }
+    $invalidReportHashManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $invalidReportHashManifest[0].reportSha256 = 'b' * 64
+    [System.IO.File]::WriteAllText($manifestPath, ($invalidReportHashManifest | ConvertTo-Json -Depth 4))
+    $invalidReportHashOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $invalidReportHashOutput -notmatch 'Release report SHA-256 mismatch') {
+        throw "Modified release report hash was not rejected: $invalidReportHashOutput"
+    }
+    $invalidReportHashManifest[0].PSObject.Properties.Remove('reportSha256')
+    $invalidReportHashManifest[0].PSObject.Properties.Remove('reportFixtureDirectory')
+    [System.IO.File]::WriteAllText($manifestPath, ($invalidReportHashManifest | ConvertTo-Json -Depth 4))
+    $fullReport.fixtureDirectory = 'srv-paper-current-release'
+    [System.IO.File]::WriteAllText($archivePath, ($fullReport | ConvertTo-Json -Depth 20))
     if ($output -match 'srv-1(?:\s|$)') {
         throw "Paper jar directory was treated as an evidence fixture: $output"
     }

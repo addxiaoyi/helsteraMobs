@@ -102,6 +102,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private Object behaviorRegistry;             // BehaviorRegistryImpl
     private Object skillService;                 // dev.helstera.ai.skill.SkillService
     private dev.helstera.ai.skill.PinRegistry pinRegistry;
+    private dev.helstera.ai.skill.AuraRegistry auraRegistry;
+    private org.bukkit.scheduler.BukkitTask auraCleanupTask;
     private Object skillTriggers;                // dev.helstera.ai.skill.SkillTriggers
     /** 拉杆服务；未装载时为 null。 */
     private dev.helstera.ai.lever.LeverService leverService;
@@ -257,6 +259,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 // SkillExtras 里的 dot / despawn 等动作需要调度器与实例管理器，
                 // 同样走注入钩子而非直接依赖，保证目录类可被单元测试加载。
                 dev.helstera.ai.skill.SkillExtras.host(this);
+                this.auraRegistry = new dev.helstera.ai.skill.AuraRegistry();
+                dev.helstera.ai.skill.SkillExtras.auraRegistry(auraRegistry);
+                this.auraCleanupTask = getServer().getScheduler().runTaskTimer(
+                        this, auraRegistry::cleanupExpired, 20L, 20L);
                 this.pinRegistry = new dev.helstera.ai.skill.PinRegistry();
                 dev.helstera.ai.skill.SkillExtras.pinRegistry(pinRegistry);
                 reloadPins("启动");
@@ -701,6 +707,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     public void onDisable() {
         dev.helstera.ai.skill.SkillExtras.itemResolver(null);
         dev.helstera.ai.skill.SkillExtras.claimedItemPredicate(null);
+        if (auraCleanupTask != null) {
+            auraCleanupTask.cancel();
+            auraCleanupTask = null;
+        }
+        if (auraRegistry != null) {
+            auraRegistry.clear();
+            auraRegistry = null;
+        }
+        dev.helstera.ai.skill.SkillExtras.auraRegistry(null);
         if (skillService instanceof dev.helstera.ai.skill.SkillService skills) {
             int saved = skills.savePersistedSkillTrees(new java.io.File(getDataFolder(), "skill-trees"));
             if (saved > 0) getLogger().info("Saved " + saved + " SkillTree snapshots.");
@@ -5974,6 +5989,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean playerPotionConsumeEvents = false;
                 boolean potionEffectCondition = false;
                 boolean auraStacksCondition = false;
+                boolean mythicAuraAction = false;
+                boolean mythicAuraCondition = false;
+                boolean mythicTargetAuraCondition = false;
+                boolean mythicAuraStacksCondition = false;
+                boolean mythicAuraTypeCondition = false;
+                boolean mythicAuraInvalidRejected = false;
+                boolean mythicAuraRemove = false;
                 boolean foodLevelCondition = false;
             boolean foodSaturationCondition = false;
             boolean freeInventorySlotCondition = false;
@@ -6528,6 +6550,79 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("has-potion-effect SPEED 0 1-20"), permissionContext);
                     auraStacksCondition = behaviors.testCondition(
                             skills.bindCondition("has-aura-stacks SPEED >=1"), permissionContext);
+                    String auraName = "helstera-paper-aura-strict-probe";
+                    String auraAction = "Aura{auraName=" + auraName
+                            + ";auratype=HELPFUL;duration=200;maxStacks=2;mergeSameCaster=true}";
+                    boolean auraAppliedOnce = runIntegrationAction(skills, behaviors,
+                            auraAction, permissionContext);
+                    boolean auraAppliedTwice = runIntegrationAction(skills, behaviors,
+                            auraAction, permissionContext);
+                    var importedHasAura = dev.helstera.migration.importer.MmConditions.translate(
+                            "?hasBuff{buff=" + auraName + "}");
+                    var importedTargetAura = dev.helstera.migration.importer.MmConditions.translate(
+                            "?targetHasAuras{aura=" + auraName + "}");
+                    var importedAuraStacks = dev.helstera.migration.importer.MmConditions.translate(
+                            "?hasDebuffStacks{n=" + auraName + ";s=>=2}");
+                    var importedAuraType = dev.helstera.migration.importer.MmConditions.translate(
+                            "?hasBuffType{group=HELPFUL}");
+                    String hasAuraKey = importedHasAura.translated()
+                            ? skills.bindCondition(importedHasAura.condition()) : null;
+                    String targetAuraKey = importedTargetAura.translated()
+                            ? skills.bindCondition(importedTargetAura.condition()) : null;
+                    String auraStacksKey = importedAuraStacks.translated()
+                            ? skills.bindCondition(importedAuraStacks.condition()) : null;
+                    String auraTypeKey = importedAuraType.translated()
+                            ? skills.bindCondition(importedAuraType.condition()) : null;
+                    mythicAuraCondition = auraAppliedOnce && auraAppliedTwice && hasAuraKey != null
+                            && behaviors.testCondition(hasAuraKey, permissionContext);
+                    mythicTargetAuraCondition = importedTargetAura.translated() && targetAuraKey != null
+                            && behaviors.testCondition(targetAuraKey, permissionContext)
+                            && !behaviors.testCondition(skills.bindCondition(
+                            "mythic-target-has-aura aura=missing"), permissionContext);
+                    mythicAuraStacksCondition = importedAuraStacks.translated() && auraStacksKey != null
+                            && behaviors.testCondition(auraStacksKey, permissionContext)
+                            && !behaviors.testCondition(skills.bindCondition(
+                            "mythic-has-aura-stacks aura=" + auraName + " stacks=<2"), permissionContext);
+                    mythicAuraTypeCondition = importedAuraType.translated() && auraTypeKey != null
+                            && behaviors.testCondition(auraTypeKey, permissionContext)
+                            && !behaviors.testCondition(skills.bindCondition(
+                            "mythic-has-aura-type type=HARMFUL"), permissionContext);
+                    mythicAuraInvalidRejected = !dev.helstera.migration.importer.MmConditions.translate(
+                            "?hasAura{aura=" + auraName + ";unknown=true}").translated()
+                            && skills.bindCondition("mythic-has-aura aura=" + auraName
+                            + " unknown=true") == null
+                            && skills.bindAction("AuraRemove{aura=" + auraName + ";unknown=true}") == null;
+                    boolean removeOneStack = runIntegrationAction(skills, behaviors,
+                            "removeaura{aura=" + auraName + ";stacks=1}", permissionContext)
+                            && behaviors.testCondition(skills.bindCondition(
+                            "mythic-has-aura-stacks aura=" + auraName + " stacks=1"), permissionContext);
+                    boolean removeRemaining = runIntegrationAction(skills, behaviors,
+                            "RemoveBuff{buff=" + auraName + "}", permissionContext)
+                            && !behaviors.testCondition(hasAuraKey, permissionContext);
+                    boolean defaultAuraApplied = runIntegrationAction(skills, behaviors,
+                            "Aura{duration=40}", permissionContext)
+                            && behaviors.testCondition(skills.bindCondition(
+                            "mythic-has-aura aura=default"), permissionContext);
+                    boolean defaultAuraRemoved = runIntegrationAction(skills, behaviors,
+                            "AuraRemove", permissionContext)
+                            && !behaviors.testCondition(skills.bindCondition(
+                            "mythic-has-aura aura=default"), permissionContext);
+                    boolean wildcardAurasApplied = runIntegrationAction(skills, behaviors,
+                            "Aura{aura=helstera-paper-aura-wildcard-a;duration=40}", permissionContext)
+                            && runIntegrationAction(skills, behaviors,
+                            "Aura{aura=helstera-paper-aura-wildcard-b;duration=40}", permissionContext);
+                    boolean wildcardAurasRemoved = runIntegrationAction(skills, behaviors,
+                            "RemoveDebuff{aura=ANY}", permissionContext)
+                            && !behaviors.testCondition(skills.bindCondition(
+                            "mythic-has-aura aura=helstera-paper-aura-wildcard-a"), permissionContext)
+                            && !behaviors.testCondition(skills.bindCondition(
+                            "mythic-has-aura aura=helstera-paper-aura-wildcard-b"), permissionContext);
+                    mythicAuraRemove = removeOneStack && removeRemaining && defaultAuraApplied
+                            && defaultAuraRemoved && wildcardAurasApplied && wildcardAurasRemoved;
+                    mythicAuraAction = auraAppliedOnce && auraAppliedTwice && mythicAuraCondition
+                            && mythicTargetAuraCondition && mythicAuraStacksCondition && mythicAuraTypeCondition
+                            && mythicAuraInvalidRejected && mythicAuraRemove;
+                    auraRegistry.removeTarget(permissionProbe.getUniqueId());
                     if (previousSpeed == null) {
                         permissionProbe.removePotionEffect(org.bukkit.potion.PotionEffectType.SPEED);
                     } else {
@@ -6763,6 +6858,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " player-potion-consume=" + playerPotionConsumeEvents
                         + " potion-effect-condition=" + potionEffectCondition
                         + " aura-stacks-condition=" + auraStacksCondition
+                        + " mythic-aura-action=" + mythicAuraAction
+                        + " mythic-has-aura-condition=" + mythicAuraCondition
+                        + " mythic-target-has-aura-condition=" + mythicTargetAuraCondition
+                        + " mythic-has-aura-stacks-condition=" + mythicAuraStacksCondition
+                        + " mythic-has-aura-type-condition=" + mythicAuraTypeCondition
+                        + " mythic-aura-remove=" + mythicAuraRemove
+                        + " mythic-aura-invalid-rejected=" + mythicAuraInvalidRejected
                         + " state-conditions=" + stateConditions
                         + " state-flying=" + stateFlying
                         + " state-sneaking=" + stateSneaking

@@ -4,7 +4,25 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-entity-type-traits-strict-20261106-r1`
+Latest strict fixture `srv-paper-aura-target-strict-20261106-r1` passes all 366
+probes (347 passed, 19 expected rejections, zero incomplete) on Paper 1.21.1-133.
+Its `mythicAuraRuntime` probe verifies imported target-only named Aura checks,
+Aura application and conditions, partial/default/`ANY` removal, aliases, and
+invalid-input rejection. Report:
+`tools/paper-integration/reports/paper-1.21.1-aura-target-strict-20261106-r1.json`.
+The plugin SHA-256 is
+`914e5c5b4b1698fee82cb209a9f392f82e88457a49224b943dfb3669b007e066`.
+
+Previous strict fixture `srv-paper-aura-remove-strict-20261106-r1` also passed
+all 366 probes and verifies partial/default/`ANY` Aura removal. Its report and
+exact tested JAR hash remain in `tools/paper-integration/release-evidence.json`.
+
+Previous strict fixture `srv-paper-aura-strict-20261106-r1` passes all 366
+probes (347 passed, 19 expected rejections, zero incomplete) and verifies Aura
+application and imported named-state conditions. Its report and exact plugin
+hash remain in `tools/paper-integration/release-evidence.json`.
+
+Previous strict fixture `srv-paper-entity-type-traits-strict-20261106-r1`
 passes all 365 probes (346 passed, 19 expected rejections, zero incomplete) on
 Paper 1.21.1-133. Its `importedEntityTypeTraitsCondition` probe verifies imported
 runtime selectors against real Horse, Panda, Villager, Zombie Villager, Sheep,
@@ -510,7 +528,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 365 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 366 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -526,8 +544,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 471 cited IDs; 382 report files; 4 directories
-   without reports; 85 missing directories; 148 archived release reports. The
+   Current fixture inventory: 474 cited IDs; 384 report files; 4 directories
+   without reports; 86 missing directories; 151 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -593,7 +611,7 @@ the entire MythicMobs feature catalog.
 - Mechanics: `remove`, `suicide`, target-aware `kill`, bounded `dot` damage-over-time, radial `damage-melee` with caster exclusion, `setnameplate`, `equip`, `set-name`, `set-item`/`set-offhand`/`set-armor`, `set-health`, `set-max-health`, `modify-max-health`, `feed`, `swing` (main/off-hand), `disarm`/`remove-held-item`, `clear-inventory`, `set-material-cooldown`, `set-game-mode`, `jump`, target-aware `force-pull`, `addtag`/`removetag` scoreboard tags (including targeters), `setscore`/`addscore` instance scores, Mythic `setvariable`/`variableunset`/`variableadd`/`variablemath`, `setvariablelocation`/`locationunset`, `signal`/`~onSignal`, Mythic `shoot`/`shootprojectile`, `setintent`, `command`/`commandself`/`commandtarget`, `set-stance`, `randomskill`, `leap`, `set-tick-speed`, `pull`, actionbar, full `title`/`subtitle`/timing delivery, target-aware `damage`/`damage-percent`/`message`/`explode` multi-target dispatch, caster movement `dash`/`blink` with direction modes and placeholder distances, target-aware entity state actions including `set-ai`/`set-gravity`/`set-silent`/`set-collidable`/`set-sneaking`/`set-gliding`/`set-swimming`/`set-fire`/`clear-fire`/`invisible`/`glowing`/`set-invulnerable`, player `set-sprinting`/`set-flying`/`set-walk-speed`, no-damage-tick controls, `look-at`, `set-rotation`, `give-item`, `take-item`, `set-block`, `break-block`, `drop-item`, potion effects, teleport, mount/dismount, `cancel-event`, and custom item resolver integration.
 - Scoreboard tag evidence: exploratory Paper 1.21.11 r22 passes real caster/targeter `addtag`/`removetag` mutations; the current strict Paper 1.21.1-133 aggregate also completes the registered tag probes.
 - DoT evidence: exploratory Paper self-test verifies bounded `dot` damage across multiple intervals and confirms no damage after `duration`; the current strict Paper 1.21.1-133 aggregate completes the registered DoT probe.
-- Conditions: world/biome/time/weather, `night`/`raining`/`thundering`, health/distance/permission/stance/entity state (including caster and target `on-ground`, `has-ai`, `has-gravity`, `is-silent`, `is-dead`, `is-alive`, `target-is-alive`, `is-valid`, `is-collidable`, and `has-offhand` from Bukkit entity state), `ownerIsPlayer`, exact faction conditions (`faction`, `targetfaction`, `samefaction`, `differentfaction`), Mythic `isChild`/`child` parent-relation semantics distinct from `isBaby` age checks (strict Paper fixture `srv-paper-is-child-import-strict-20261105-r1` verifies the importer-to-SkillService path), explicit `target-has-tag`/`targetHasScoreboardTag`, strict target-only permission/game-mode/food/air/item/potion/holding/wearing conditions, vehicle/passenger aliases (`hasPassenger`, `isVehicle`, `targetHasPassenger`, `targetIsVehicle`), `branch-unlocked`/`branch-locked` SkillTree gates, `falling`, `drowning`, `target-within`, equality/inequality comparators for health/target-health/distance/light-level, variables, composition, `food-level`, `has-item`, `air-level`, `damage-cause`, `damage-amount`, and `is-cancelled`. Mythic Aura conditions remain unmapped and are preserved with a migration warning until an Aura data provider is implemented.
+- Conditions and Aura actions: world/biome/time/weather, `night`/`raining`/`thundering`, health/distance/permission/stance/entity state (including caster and target `on-ground`, `has-ai`, `has-gravity`, `is-silent`, `is-dead`, `is-alive`, `target-is-alive`, `is-valid`, `is-collidable`, and `has-offhand` from Bukkit entity state), `ownerIsPlayer`, exact faction conditions (`faction`, `targetfaction`, `samefaction`, `differentfaction`), Mythic `isChild`/`child` parent-relation semantics distinct from `isBaby` age checks (strict Paper fixture `srv-paper-is-child-import-strict-20261105-r1` verifies the importer-to-SkillService path), explicit `target-has-tag`/`targetHasScoreboardTag`, strict target-only permission/game-mode/food/air/item/potion/holding/wearing conditions, vehicle/passenger aliases (`hasPassenger`, `isVehicle`, `targetHasPassenger`, `targetIsVehicle`), `branch-unlocked`/`branch-locked` SkillTree gates, `falling`, `drowning`, `target-within`, equality/inequality comparators for health/target-health/distance/light-level, variables, composition, `food-level`, `has-item`, `air-level`, `damage-cause`, `damage-amount`, and `is-cancelled`. Mythic `HasAura`/`HasBuff`/`HasDebuff`, `targetHasAuras`, stack, and type conditions read named runtime Aura state; target Aura checks require an explicit target. `AuraRemove`, `RemoveAura`, `RemoveBuff`, and `RemoveDebuff` remove partial or all stacks by name; omitted names use `default`, and `ANY` clears all target auras. Strict Paper fixture `srv-paper-aura-target-strict-20261106-r1` verifies imported target Aura checks and removal paths. Aura visual/lifecycle features remain unsupported and are preserved with warnings.
 - Mythic `isInAudience` (`inaudience`, `audiencecontains`) is preserved with an `unsupported` migration warning: it depends on a per-skill execution-audience set that Helstera does not currently model. The warning distinguishes that missing context from Helstera's per-action audience recipient filters; no runtime equivalence is claimed.
 - Condition migration aliases now also cover Mythic `inCombat`, `playersInRadius`, `entitiesInRadius`, `mobsInRadius`, `randomChance`, `targetCount`, and `hungerBelow`; `mobsInRadius` uses a mob-only runtime evaluator.
 - Official condition aliases `Burning`, `Blocking`, `Charged`, `Crouching`, movement states, `Chance`, `Day`, `Dawn`, `Dusk`, and `Sunny` now map to runtime evaluators; strict fixture `srv-paper-chance-condition-strict-20261101-r1` verifies 0%, 100%, and fail-closed rejection of 101% on Paper 1.21.1-133.
@@ -633,7 +651,7 @@ the entire MythicMobs feature catalog.
 - Official `IsUsingSpyglass` reads only a target Player's active Bukkit item and matches SPYGLASS. Strict Paper fixture `srv-paper-is-spyglass-import-strict-20261106-r1` verifies imported `?isUsingSpyglass`/`?isScoping`, active/inactive transitions, Zombie rejection, and malformed-argument preservation.
 - Official `EnderDragonAlive` checks for a valid EnderDragon in the target world's entity set. Strict Paper 1.21.1-133 fixture `srv-paper-ender-dragon-alive-strict-20261102-r1` passes the dedicated `enderDragonAliveCondition`: a real dragon is accepted, then removed and rejected; the complete report has 263 probes and zero incomplete.
 - Official `PlayerKills` uses a lifetime counter owned by each managed mob instance and increments only when that instance is resolved as the killer of a Player death; aliases, range syntax, teardown cleanup, and migration coverage are implemented. Strict fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` verifies the online-player death event with controlled `lastDamageCause` attribution, passes `player-kills >=1`, and rejects `player-kills >1`; this does not establish natural PvP damage attribution.
-- Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies `Absorption`, `HasPotionEffect`, the internal PotionEffect-backed `has-aura-stacks` evaluator, managed `Level`, health-with-absorption comparisons, `LunarPhase`, `LastSignal`, `LineOfSightFromOrigin`, `BowTension`, string and comparator conditions, `GlobalScore`, `Score`, `LookingAt`, `Structure`, Item type/similarity, `Targets`, `ItemRecharging`, and player experience/absorption/passenger condition paths. Fixture `srv-paper-item-recharging-import-strict-20261106-r1` additionally verifies imported `?itemRecharging`/`?recharging` aliases after a real Bukkit attack and rejects non-HumanEntity targets. Lunar phase parsing now rejects the whole condition when any phase token is invalid or empty, including a trailing comma. This does not verify Mythic Aura parity.
+- Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies `Absorption`, `HasPotionEffect`, the internal PotionEffect-backed `has-aura-stacks` evaluator, managed `Level`, health-with-absorption comparisons, `LunarPhase`, `LastSignal`, `LineOfSightFromOrigin`, `BowTension`, string and comparator conditions, `GlobalScore`, `Score`, `LookingAt`, `Structure`, Item type/similarity, `Targets`, `ItemRecharging`, and player experience/absorption/passenger condition paths. Fixture `srv-paper-item-recharging-import-strict-20261106-r1` additionally verifies imported `?itemRecharging`/`?recharging` aliases after a real Bukkit attack and rejects non-HumanEntity targets. Lunar phase parsing now rejects the whole condition when any phase token is invalid or empty, including a trailing comma. Strict fixture `srv-paper-aura-target-strict-20261106-r1` verifies imported target Aura checks plus AuraRemove partial/default/ANY removal and aliases in the real Paper runtime; Aura components and lifecycle effects remain unsupported.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies Oxygen, ConsumeSlot, RemoveHeldItem, material cooldown, game mode, Jump, ForcePull, SetOffhand, SetArmor, SetFaction, SetLevel, SetWeather, SetTime, Lightning, Score, and target-aware dispatch.
 - Mythic skill migration now preserves positional arguments alongside keyed arguments across common item, inventory, experience, oxygen, block, entity-state, movement, potion, animation, and audience mechanics; importer regression coverage protects both forms.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` also verifies Freeze, CompareValues, IsSkill, Cuboid/InBounds, MythicMobType, VariableContains, and ProjectileHasEnded. `Score` preserves explicit objective/entry/value semantics and supports shorthand; `Targets` supports inherited skill-tree target counts and optional context targeters.
@@ -1292,7 +1310,8 @@ spawners:
 | `?daylight` | `daylight [0..1]` | 太阳高度是否达到阈值 |
 | `?targetHasPermission` / `?targetHasItem` | `target-has-permission` / `target-has-item` | 严格读取显式目标，不回退到 caster |
 | `?targetGameMode` / `?targetFoodLevel` / `?targetAirLevel` | `target-game-mode-is` / `target-food-level` / `target-air-level` | 严格读取目标玩家或目标实体状态 |
-| `?targetPotionEffectActive` / `?targetHasPotionEffect` | `target-potion-effect-active` | 严格读取显式目标的 Bukkit 药水效果；`?targetHasAuras` 保留原文并告警，等待 Aura provider |
+| `?targetPotionEffectActive` / `?targetHasPotionEffect` | `target-potion-effect-active` | 严格读取显式目标的 Bukkit 药水效果 |
+| `?targetHasAuras{aura=...}` | `mythic-target-has-aura` | 严格读取显式目标上的命名 Mythic Aura；没有目标或 Aura 名无效时返回 false |
 | `?targetHolding` / `?targetWearing` | `target-holding` / `target-wearing` | 严格读取显式目标装备 |
 | `?targetHealth` / `?targetHealthPercent` | `target-health` / `target-health-percent` | 目标原始血量或百分比比较 |
 | `?owner` / `?isOwner` | `is-owner` | 检查显式目标是否为 caster 的 Bukkit/PDC owner |

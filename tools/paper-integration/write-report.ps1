@@ -149,6 +149,7 @@ $probeSpecs = [ordered]@{
     environmentImportedCondition = 'environment-imported result=true valid=true invalid-rejected=true'
     potionEffectCondition = 'skill-actions .*potion-effect-condition=true'
     auraStacksCondition = 'skill-actions .*aura-stacks-condition=true'
+    mythicAuraRuntime = 'skill-actions .*mythic-aura-action=true .*mythic-has-aura-condition=true .*mythic-target-has-aura-condition=true .*mythic-has-aura-stacks-condition=true .*mythic-has-aura-type-condition=true .*mythic-aura-remove=true .*mythic-aura-invalid-rejected=true'
     levelCondition = 'skill-actions .*level-condition=true'
     lunarPhaseCondition = 'skill-actions .*lunar-phase-condition=true'
     stringEqualsCondition = 'skill-actions .*string-equals-condition=true'

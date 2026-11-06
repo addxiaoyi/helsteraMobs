@@ -1,5 +1,37 @@
 [
   {
+    "fixtureId": "srv-paper-aura-target-strict-20261106-r1",
+    "reportFixtureDirectory": "srv-paper-integration",
+    "report": "tools/paper-integration/reports/paper-1.21.1-aura-target-strict-20261106-r1.json",
+    "reportSha256": "eaac107f91c753180fc78234b7e64ef8f0f5c5df1124612a8d05984dbacb7c21",
+    "log": "tools/paper-integration/reports/paper-1.21.1-aura-target-strict-20261106-r1.log.gz",
+    "logSha256": "c7a47eb73bb0dbf9bb55b70fd8f49cef464cf0124567d177044b1fe21cdd0284",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-aura-target-strict-20261106-r1-client-logs.tar.gz",
+    "clientLogSha256": "6687afa10d96e42f92cb34d4f21e450b2e27e098a2e51aeb7a5f0854a1bd268f",
+    "pluginSha256": "914e5c5b4b1698fee82cb209a9f392f82e88457a49224b943dfb3669b007e066",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-aura-remove-strict-20261106-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-aura-remove-strict-20261106-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-aura-remove-strict-20261106-r1.log.gz",
+    "logSha256": "eb18c26232f7ee8634e3301ecc500b75a47193bd19f6b5ded04d9ecba3d03bc2",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-aura-remove-strict-20261106-r1-client-logs.tar.gz",
+    "clientLogSha256": "295a2e593cc42e40edb9e5bb06e8b919fdbb900d58d2c1c4f66db78cf1829e46",
+    "pluginSha256": "ba1425b0699c64cd45566ffca530f812872362b386c789f0d8661ce5c38e99de",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-aura-strict-20261106-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-aura-strict-20261106-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-aura-strict-20261106-r1.log.gz",
+    "logSha256": "35eb76ce5a81c18e7e486b633e855a11294608359b8113ebf67c1b88d92872dd",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-aura-strict-20261106-r1-client-logs.tar.gz",
+    "clientLogSha256": "e8c012113986849bc782a523554a8d20afcbb264b0927c3e5d87b0d8f7a86114",
+    "pluginSha256": "fec8329f43089c82013c8a3a19e173d6bd7a4957edb76a0326838236ecb3a33d",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-entity-type-traits-strict-20261106-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-entity-type-traits-strict-20261106-r1.json",
     "log": "tools/paper-integration/reports/paper-1.21.1-entity-type-traits-strict-20261106-r1.log.gz",

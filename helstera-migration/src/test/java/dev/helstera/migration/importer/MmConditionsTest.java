@@ -1089,20 +1089,28 @@ class MmConditionsTest {
     }
 
     @Test
-    void officialAuraConditionsRemainUnmappedWithoutAuraDataProvider() {
+    void officialAuraConditionsMapNamesStacksAndTypesAndRejectUnknownArguments() {
+        assertEquals("mythic-has-aura aura=SPEED", t("?hasAura{aura=SPEED}"));
+        assertEquals("mythic-has-aura aura=FURY", t("?hasBuff{buff=FURY}"));
+        assertEquals("mythic-has-aura aura=FURY", t("?hasDebuff{debuff=FURY}"));
+        assertEquals("mythic-has-aura aura=\"Burning Fury\"",
+                t("?hasAura{aura=\"Burning Fury\"}"));
+        assertEquals("mythic-has-aura-stacks aura=SPEED stacks=>3",
+                t("?hasAuraStacks{n=SPEED;s=>3}"));
+        assertEquals("mythic-has-aura-stacks aura=FURY stacks=1",
+                t("?hasDebuffStacks{n=FURY;s=1}"));
+        assertEquals("mythic-has-aura-stacks aura=FURY stacks=2",
+                t("?auraStacks{aura=FURY;stacks=2}"));
+        assertEquals("mythic-has-aura-type type=HARMFUL", t("?hasAuraType{type=HARMFUL}"));
+        assertEquals("mythic-has-aura-type type=HELPFUL", t("?hasBuffType{group=HELPFUL}"));
+        assertEquals("mythic-has-aura-type type=\"custom type\"",
+                t("?hasAuraType{type=\"custom type\"}"));
+
         for (String raw : List.of(
-                "?hasAura{aura=SPEED}",
-                "?hasBuff{buff=FURY}",
-                "?hasDebuff{debuff=FURY}",
-                "?hasAuraStacks{n=SPEED;s=>3}",
-                "?hasAuraType{type=HARMFUL}",
-                "?hasBuffType{group=HELPFUL}",
-                "?hasDebuffType{auratype=HARMFUL}",
-                "?hasBuffStacks{n=FURY;s=>2}",
-                "?hasDebuffStacks{n=FURY;s=1}",
-                "?auraStacks{aura=FURY;stacks=2}",
-                "?buffStacks{aura=FURY;stacks=2}",
-                "?debuffStacks{aura=FURY;stacks=2}")) {
+                "?hasAura{unknown=SPEED}",
+                "?hasAura{aura=}",
+                "?hasAuraStacks{n=FURY;s=invalid}",
+                "?hasAuraType{type=HARMFUL;unknown=true}")) {
             assertFalse(translated(raw), raw);
             assertEquals(raw, t(raw), raw);
         }
@@ -1402,6 +1410,9 @@ class MmConditionsTest {
         assertEquals("target-potion-effect-active SPEED", t("?targetHasPotionEffect{effect=SPEED}"));
         assertFalse(translated("?targetHasAuras{effect=SPEED}"));
         assertFalse(translated("?targetHasAuras"));
+        assertEquals("mythic-target-has-aura aura=FURY", t("?targetHasAuras{aura=FURY}"));
+        assertEquals("mythic-target-has-aura aura=FURY", t("?targetHasAuras{name=FURY}"));
+        assertFalse(translated("?targetHasAuras{aura=FURY;name=FURY}"));
         assertEquals("holding DIAMOND", t("?holding{item=DIAMOND}"));
         assertEquals("wearing IRON_HELMET", t("?wearing{item=IRON_HELMET}"));
         assertEquals("target-holding DIAMOND", t("?targetHolding{item=DIAMOND}"));

@@ -116,6 +116,15 @@ foreach ($item in $releaseEvidence) {
             ($item.pluginSha256 -isnot [string] -or $item.pluginSha256 -cnotmatch '^[0-9a-f]{64}$')) {
         throw "Release evidence pluginSha256 must be a lowercase SHA-256 digest: $fixtureId"
     }
+    if ($null -ne $item.reportFixtureDirectory -and
+            ($item.reportFixtureDirectory -isnot [string] -or
+                $item.reportFixtureDirectory -cnotmatch '^srv-paper-[A-Za-z0-9][A-Za-z0-9_.-]*$')) {
+        throw "Release evidence reportFixtureDirectory is invalid: $fixtureId"
+    }
+    if ($null -ne $item.reportSha256 -and
+            ($item.reportSha256 -isnot [string] -or $item.reportSha256 -cnotmatch '^[0-9a-f]{64}$')) {
+        throw "Release evidence reportSha256 must be a lowercase SHA-256 digest: $fixtureId"
+    }
     if ($fixtureId -notmatch '^srv-paper-[A-Za-z0-9][A-Za-z0-9_.-]*$' -or
             [string]::IsNullOrWhiteSpace($reportRelativePath)) {
         throw 'Release evidence manifest contains an invalid fixtureId or report path.'
@@ -149,6 +158,10 @@ foreach ($item in $releaseEvidence) {
         $missingReleaseReports.Add("$fixtureId ($reportRelativePath)")
         continue
     }
+    if ($item.reportSha256 -and
+            (Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $item.reportSha256) {
+        throw "Release report SHA-256 mismatch: $fixtureId"
+    }
     if ($RequirePresent -and $item.fullReleaseCatalog -eq $true -and -not $latestFullReportChecked) {
         foreach ($requiredLog in @('log', 'clientLog')) {
             if ($null -eq $item.$requiredLog -or $null -eq $item.($requiredLog + 'Sha256')) {
@@ -157,7 +170,11 @@ foreach ($item in $releaseEvidence) {
         }
     }
     $report = Get-Content -LiteralPath $reportPath -Raw -Encoding utf8 | ConvertFrom-Json
-    if ($report.schemaVersion -ne 1 -or [string]$report.fixtureDirectory -ne $fixtureId -or
+    $reportFixtureDirectory = $fixtureId
+    if ($item.reportFixtureDirectory) {
+        $reportFixtureDirectory = [string]$item.reportFixtureDirectory
+    }
+    if ($report.schemaVersion -ne 1 -or [string]$report.fixtureDirectory -ne $reportFixtureDirectory -or
             [string]$report.evidenceMode -ne 'release' -or -not $report.pluginEnabled -or
             [string]$report.paperVersion -notmatch '^1\.21\.1(?:-|$)' -or
             [string]$report.paperApiVersion -notmatch '^1\.21\.1(?:-|$)') {

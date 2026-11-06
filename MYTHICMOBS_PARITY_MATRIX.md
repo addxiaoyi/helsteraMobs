@@ -11,7 +11,7 @@ Status values:
 - `missing`: no meaningful implementation exists.
 - `blocked-by-external-plugin`: behavior requires a Mythic add-on or another external plugin.
 
-Evidence baseline: 2026-10-21, Paper API 1.21.1-R0.1-SNAPSHOT.
+Evidence baseline: 2026-11-06, Paper API 1.21.1-R0.1-SNAPSHOT.
 
 Snowing condition update: `snowing` and `isSnowing` map to a target-location
 runtime check using world storm state and Paper's height-adjusted block
@@ -1155,20 +1155,27 @@ coverage are included. Exploratory Paper 1.21.4 fixture r8 and strict Paper
 1.21.1-133 fixture `srv-paper-integration-final-r8` record
 `potionEffectCondition=passed`.
 
-Parity correction: Mythic `HasAura` (`hasBuff`, `hasDebuff`),
-`HasAuraStacks` (`hasBuffStacks`, `hasDebuffStacks`, `auraStacks`,
+Incremental Mythic Aura update: Mythic `Aura`/`Buff`/`Debuff` now tracks named
+per-entity Aura state with tick expiry, stack caps, duration refresh, same-caster
+or global merging, overwrite modes, and type metadata. `HasAura` (`hasBuff`,
+`hasDebuff`), `HasAuraStacks` (`hasBuffStacks`, `hasDebuffStacks`, `auraStacks`,
 `buffStacks`, `debuffStacks`), and `HasAuraType` (`hasBuffType`,
-`hasDebuffType`) plus target Aura conditions are not Bukkit potion-effect
-conditions, as described in the official [HasAura](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/hasaura),
+`hasDebuffType`) map to that registry, including target-condition contexts.
+Migration and runtime binding reject unknown arguments and keep unsupported
+source mechanics under `unsupported` with warnings. A required
+`mythicAuraRuntime` probe passes in strict Paper 1.21.1-133 fixture
+`srv-paper-aura-strict-20261106-r1`: it covers action dispatch, named presence,
+same-caster stack merging, imported condition aliases, stack/type checks, and
+malformed-condition rejection. The archived report records 366 complete probes
+(347 passed, 19 expected rejections, zero incomplete). The historical
+`auraStacksCondition` and target-state probes still verify Bukkit PotionEffect
+paths; strict fixture `srv-paper-aura-target-strict-20261106-r1` additionally
+verifies imported `targetHasAuras` against a named Aura and rejects missing
+Aura names. Aura components, lifecycle skills, attachments, charges, and event
+cancellation remain unsupported and preserved with warnings. Official
+references: [HasAura](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/hasaura),
 [HasAuraStacks](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/hasaurastacks),
-and [HasAuraType](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/hasauratype)
-references. Import preserves these source conditions verbatim with a migration
-warning until an Aura data provider and matching runtime contract exist; the
-SkillService rejects those Mythic names. Existing
-Helstera `has-aura-stacks` and `target-has-auras` runtime names remain internal
-Bukkit PotionEffect checks and do not establish Mythic Aura parity.
-Historical `auraStacksCondition` and target-state Paper probes verify only
-those PotionEffect paths.
+[HasAuraType](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/hasauratype).
 
 Incremental condition update: official `Level` now reads the managed instance
 level used by the existing mob scaling system, falls back to level 1 when no
@@ -1700,8 +1707,9 @@ the distinction from the corresponding caster conditions.
 The same target-only family includes `targetHasPotionEffect`, `targetHolding`,
 and `targetWearing`, with dedicated canonical names, importer regression
 coverage, and exploratory Paper 1.21.11 r30 evidence through the aggregate
-target-state probe. `targetHasAuras` remains unmapped: the historical runtime
-probe covered Bukkit potion effects only, not Mythic Aura data.
+target-state probe. Mythic `targetHasAuras{aura=...}` maps to the named Aura
+registry and checks only the explicit target; this is distinct from the
+historical internal PotionEffect-backed `target-has-auras` condition.
 
 Faction condition update: Mythic `faction`, `targetfaction`, `samefaction`, and
 `differentfaction` now map to caster/target exact faction evaluators. Exact
@@ -2477,6 +2485,7 @@ restores the player's prior glowing state.
 | Shared skill-tree variables and locations | implemented-runtime | `SkillTreeContext`, nested skill tests, immutable snapshot/restore, and YAML snapshot-store round-trip coverage for primitive variables and locations |
 | Audience parsing and delivery | mapped-unverified | isolated dual-client Paper workflow proves message/title/actionbar/particle delivery, radius include/exclude, permission include/exclude, explicit faction include/exclude, and combined filter parsing; `!permission`/`-faction` exclusion syntax now has parser/unit coverage, while broader combinations remain unverified |
 | `DamageTag` / `DamageHasTag` and scoped damage tags | implemented-runtime | Mythic aliases map to fail-closed `damage-tag` (`value=true` by default); `damage-target` scopes normalized `tags`, case-preserving `rawtags`, and normalized `damagetype` to the synchronous victim damage event, and SkillTree snapshots preserve the tag set. `MmConditionsTest`, `SkillConditionsTest`, `SkillCatalogDamageTagsTest`, and `SkillTreeContextTest` cover mapping, malformed values, event scope, and snapshot restore; strict Paper 1.21.1-133 fixture `srv-paper-damage-tag-strict-20261102-r3` verifies untagged rejection, tagged action, cause/final-damage conditions, event cancellation, and unchanged victim health. Raw tags remain case-sensitive, and asynchronous damage or non-Bukkit damage pipelines are outside this implementation |
+| Named Mythic Aura state, removal, and conditions | implemented-runtime | `Aura`/`Buff`/`Debuff`, `AuraRemove`/`RemoveAura`/`RemoveBuff`/`RemoveDebuff`, and `HasAura`/stack/type aliases use a tick-expiring per-entity registry; `targetHasAuras{aura=...}` reads named Aura state from the explicit target and fails closed without one. Removal supports the default name `default`, positive partial stack counts across casters, full removal when `stacks` is omitted, and `ANY` removal. Unit/importer-to-runtime tests cover target-only semantics, duration, stack caps, merge/overwrite modes, removal, type checks, invalid-argument preservation, and warnings. Strict Paper 1.21.1-133 fixture `srv-paper-aura-target-strict-20261106-r1` passes `mythicAuraRuntime` in the complete 366-probe catalog; archived report and server/client logs are in `tools/paper-integration/reports/`. Aura visual components, lifecycle skills, attachments, charges, and event cancellation remain unsupported and preserved with warnings |
 | Mythic condition-list suffix actions and `Burning` | implemented-runtime | `true` keeps the condition, `false` negates it, and suffix negation composes with `!`; unknown actions remain preserved with a warning. The `on-fire` evaluator prioritizes the active target and falls back to the caster when no target exists. Unit and importer-to-runtime contract tests cover parsing and both states; strict Paper 1.21.1-133 fixture `srv-paper-condition-action-suffix-strict-20261106-r1` verifies target priority, positive/negative states, composed negation, caster fallback, and invalid-suffix preservation. Other Conditions and their full grammar remain open |
 | Full Mythic condition/filter grammar | mapped-unverified | nested `all`/`any`/`not`, unary `!`, grouped parentheses, and top-level `&&`/`||` composition with `||` precedence now have runtime tests; caster/target permission conditions and entity-state placeholders now cover common Bukkit flags including age, AI, gravity, silent, validity, powered, movement and player state, with Paper `caster-permission=true` evidence from an online trigger context; strict Paper fixture `srv-paper-chance-condition-strict-20261101-r1` verifies `Chance` at 0% and 100% and rejects 101%; unsupported condition names, remaining placeholders, and operators remain |
 
@@ -2530,7 +2539,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | core fields and random pools mapped; full Mythic spawner semantics incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-entity-type-traits-strict-20261106-r1` completes 365 probes (346 passed, 19 expected rejections, zero incomplete), including imported EntityType traits on real Paper entities. Previous strict fixture `srv-paper-entity-type-variant-import-strict-20261106-r1` verifies all three EntityType/EntityTypeIs/MobType names and Cat variant alternatives; `srv-paper-entity-category-import-strict-20261106-r2` verifies imported IsWaterMob/IsZombie aliases on a real Cod/Zombie pair, cross-type rejection, and malformed-argument preservation. Other strict fixtures verify Burning action suffixes and target fallback, Survival-mode, Spyglass, frozen, ItemRecharging, OriginLocation, TriggerItemType/TriggerBlockType, HasEnchantment/HasEnchant, Aerial, Color, and `MaterialIsOnCooldown`; related parent conditions; real entity state/options; cinematic state and cleanup; and player movement beyond `SpawningDistance`. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-aura-target-strict-20261106-r1` completes 366 probes (347 passed, 19 expected rejections, zero incomplete), including `mythicAuraRuntime` for imported target-only named Aura checks, Aura removal defaults/partial stacks/`ANY`, aliases, and invalid-input rejection on real Paper. Previous strict fixtures cover named Aura application/conditions, imported EntityType traits, EntityType variants and categories, Burning action suffixes and target fallback, Survival-mode, Spyglass, frozen, ItemRecharging, OriginLocation, TriggerItemType/TriggerBlockType, HasEnchantment/HasEnchant, Aerial, Color, and `MaterialIsOnCooldown`; related parent conditions; real entity state/options; cinematic state and cleanup; and player movement beyond `SpawningDistance`. Exact reports, compressed server/client logs, and plugin hashes are in `tools/paper-integration/release-evidence.json`. Other strict fixtures cover production location-targeter dispatch, imported DropTables/natural death, autonomous Lava damage, natural Potion expiry, dual-client menu/Audience workflows, Pin targeters, sorting, and in-combat behavior. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.

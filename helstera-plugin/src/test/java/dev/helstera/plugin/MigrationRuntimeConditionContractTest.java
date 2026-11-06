@@ -2,6 +2,8 @@ package dev.helstera.plugin;
 
 import dev.helstera.ai.BehaviorRegistryImpl;
 import dev.helstera.ai.loot.DropTable;
+import dev.helstera.ai.skill.AuraRegistry;
+import dev.helstera.ai.skill.SkillExtras;
 import dev.helstera.ai.skill.SkillService;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -17,6 +19,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -40,6 +43,54 @@ class MigrationRuntimeConditionContractTest {
                     case "equals" -> proxy == arguments[0];
                     default -> throw new UnsupportedOperationException(method.getName());
                 }));
+    }
+
+    @Test
+    @DisplayName("imported targetHasAuras checks only the explicit target's named Aura")
+    void importedTargetHasAurasReachRuntime() {
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        UUID casterId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.getUniqueId()).thenReturn(casterId);
+        when(target.getUniqueId()).thenReturn(targetId);
+        when(target.isValid()).thenReturn(true);
+        when(target.isDead()).thenReturn(false);
+
+        var auraRegistry = new AuraRegistry(() -> 10L, ignored -> true);
+        auraRegistry.apply(casterId, null, "Burning Fury", "HELPFUL", 100, 1,
+                true, false, false, false, false);
+        auraRegistry.apply(targetId, null, "Burning Fury", "HELPFUL", 100, 1,
+                true, false, false, false, false);
+        SkillExtras.auraRegistry(auraRegistry);
+        try {
+            var imported = dev.helstera.migration.importer.MmConditions.translate(
+                    "?targetHasAuras{aura=\"Burning Fury\"}");
+            assertTrue(imported.translated());
+            assertEquals("mythic-target-has-aura aura=\"Burning Fury\"", imported.condition());
+
+            var conditions = new BehaviorRegistryImpl();
+            var service = new SkillService(conditions, null);
+            String key = service.bindCondition(imported.condition());
+            assertNotNull(key);
+            var targetContext = dev.helstera.api.behavior.BehaviorContext.of(
+                    instance, target, 1.0, -1, 0, "IDLE");
+            assertTrue(conditions.testCondition(key, targetContext));
+
+            auraRegistry.remove(targetId, "Burning Fury", Integer.MAX_VALUE);
+            assertFalse(conditions.testCondition(key, targetContext),
+                    "a caster Aura must not satisfy a target-only check");
+            var noTargetContext = dev.helstera.api.behavior.BehaviorContext.of(
+                    instance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE");
+            assertFalse(conditions.testCondition(key, noTargetContext));
+            assertFalse(dev.helstera.migration.importer.MmConditions.translate(
+                    "?targetHasAuras{aura=Burning Fury;unknown=true}").translated());
+        } finally {
+            SkillExtras.auraRegistry(null);
+        }
     }
 
     @Test

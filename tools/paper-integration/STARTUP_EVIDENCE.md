@@ -1,6 +1,35 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-entity-type-traits-strict-20261106-r1` passed the full
+Latest fixture `srv-paper-aura-target-strict-20261106-r1` passed the full strict
+gate on Paper 1.21.1-133: 366 registered probes, 347 passed, 19 expected
+rejections, and zero incomplete. `mythicAuraRuntime` verifies imported
+target-only named Aura checks, Aura application, partial/default/`ANY` removal,
+runtime aliases, missing Aura rejection, and malformed AuraRemove rejection.
+The probe uses real Paper entities; importer tests also cover accepted and
+rejected target Aura arguments.
+
+Archived report: [paper-1.21.1-aura-target-strict-20261106-r1.json](reports/paper-1.21.1-aura-target-strict-20261106-r1.json), SHA-256:
+`eaac107f91c753180fc78234b7e64ef8f0f5c5df1124612a8d05984dbacb7c21`.
+Compressed server log: [paper-1.21.1-aura-target-strict-20261106-r1.log.gz](reports/paper-1.21.1-aura-target-strict-20261106-r1.log.gz), SHA-256:
+`c7a47eb73bb0dbf9bb55b70fd8f49cef464cf0124567d177044b1fe21cdd0284`.
+Client logs: [paper-1.21.1-aura-target-strict-20261106-r1-client-logs.tar.gz](reports/paper-1.21.1-aura-target-strict-20261106-r1-client-logs.tar.gz), SHA-256:
+`6687afa10d96e42f92cb34d4f21e450b2e27e098a2e51aeb7a5f0854a1bd268f`.
+Plugin SHA-256: `914e5c5b4b1698fee82cb209a9f392f82e88457a49224b943dfb3669b007e066`.
+Aura visual components, lifecycle skills, attachments, charges, and event
+cancellation remain outside this probe.
+
+Previous fixture `srv-paper-aura-remove-strict-20261106-r1` also passed the
+full strict catalog; it verifies removal aliases and partial/default/`ANY`
+removal without the imported target Aura check.
+
+Previous fixture `srv-paper-aura-strict-20261106-r1` passed the full strict
+gate on Paper 1.21.1-133: 366 registered probes, 347 passed, 19 expected
+rejections, and zero incomplete. It verifies Aura application, named presence,
+stack merging and conditions, imported Aura type checks, and malformed
+condition rejection. Its report, logs, and tested plugin hash remain in
+`release-evidence.json`.
+
+Previous fixture `srv-paper-entity-type-traits-strict-20261106-r1` passed the full
 strict gate on Paper 1.21.1-133: 365 probes, 346 passed, 19 expected rejections,
 and zero incomplete. `importedEntityTypeTraitsCondition` verifies imported
 runtime selectors on real Horse, Panda, Villager, Zombie Villager, Sheep,

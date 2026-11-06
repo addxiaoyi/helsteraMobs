@@ -1541,9 +1541,12 @@ public final class MythicMobsImporter implements MigrationImporter {
             String mechanicName = actionName(normalized);
             boolean externalDisguise = mechanicName.equals("disguise")
                     || mechanicName.equals("removedisguise") || mechanicName.equals("remove-disguise");
+            boolean auraMechanic = Set.of("aura", "buff", "debuff", "mythicaura").contains(mechanic);
             note(entries, srcFile, mobKey + ".Skills[]", "mob.unsupported.Skills", raw,
                     "unsupported", externalDisguise
                             ? "Mythic entity disguise semantics require MythicDisguise/LibsDisguises; Helstera model-appearance disguise is not equivalent."
+                            : auraMechanic
+                            ? "Aura components, lifecycle skills, attachments, charges and event cancellation options are not implemented; the original mechanic was preserved."
                             : "The Mythic mechanic has no verified Helstera action mapping.",
                     "WARN");
             return;
@@ -1771,7 +1774,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "set-no-damage-ticks", "set-maximum-no-damage-ticks", "set-walk-speed",
                     "set-fire", "clear-fire", "freeze", "look-at", "set-rotation", "set-stance",
                     "set-owner", "remove-owner", "set-parent", "remove-parent", "eject-passenger",
-                    "add-tag", "remove-tag", "score-set", "score-add" -> true;
+                    "add-tag", "remove-tag", "score-set", "score-add", "mythic-aura",
+                    "mythic-aura-remove" -> true;
             default -> false;
         };
     }
@@ -1799,6 +1803,9 @@ public final class MythicMobsImporter implements MigrationImporter {
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
         if (amount == null) amount = positionalArg(trimmed, 0);
         String mapped = switch (head) {
+            case "aura", "buff", "debuff", "mythicaura" -> auraMechanic(trimmed);
+            case "auraremove", "aura-remove", "mythicauraremove", "removeaura", "remove-aura",
+                    "removebuff", "remove-buff", "removedebuff", "remove-debuff" -> auraRemoveMechanic(trimmed);
             case "damage" -> "damage-target " + (amount == null ? "0" : amount);
             case "heal" -> "heal-targets " + (amount == null ? "0" : amount);
             case "message", "msg" -> {
@@ -2164,6 +2171,123 @@ public final class MythicMobsImporter implements MigrationImporter {
             default -> null;
         };
         return mapped == null ? null : withExecutionOptions(mapped + executionSuffix(trimmed), trimmed);
+    }
+
+    private static String auraMechanic(String raw) {
+        int brace = MythicSpec.mechanicOpen(raw);
+        List<String> arguments = MythicSpec.keyedArguments(raw);
+        if (brace < 0) {
+            int space = raw.indexOf(' ');
+            if (space >= 0) {
+                String tail = raw.substring(space + 1).trim();
+                if (!tail.isEmpty() && java.util.Arrays.stream(tail.split("\\s+"))
+                        .anyMatch(token -> !(token.startsWith("@") || token.startsWith("?")
+                                || token.startsWith("~") || token.endsWith("%") || token.equals(">")))) {
+                    return null;
+                }
+            }
+        }
+
+        Map<String, String> canonical = new LinkedHashMap<>();
+        for (String argument : arguments) {
+            int equals = argument.indexOf('=');
+            if (equals <= 0 || equals == argument.length() - 1) return null;
+            String key = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String value = argument.substring(equals + 1).trim();
+            String attribute = switch (key) {
+                case "auraname", "aura", "b", "buff", "buffname", "debuff", "debuffname", "n", "name" -> "auraName";
+                case "auratype", "auragroup", "group", "type", "g" -> "auraType";
+                case "duration", "ticks", "d", "time", "t" -> "duration";
+                case "maxstacks", "ms" -> "maxStacks";
+                case "refreshduration", "rd" -> "refreshDuration";
+                case "mergesamecaster", "msc", "mc" -> "mergeSameCaster";
+                case "mergeall", "ma" -> "mergeAll";
+                case "overwritesamecaster", "osc", "oc" -> "overwriteSameCaster";
+                case "overwriteall", "overwrite", "ow" -> "overwriteAll";
+                case "delay", "repeat", "repeatinterval", "repeat-interval" -> null;
+                default -> "unsupported";
+            };
+            if (attribute == null) continue;
+            if (attribute.equals("unsupported") || value.isBlank()
+                    || canonical.putIfAbsent(attribute, value) != null) return null;
+            if (attribute.equals("duration") && !validAuraDuration(value)) return null;
+            if (attribute.equals("maxStacks") && !positiveInteger(value)) return null;
+            if (Set.of("refreshDuration", "mergeSameCaster", "mergeAll",
+                    "overwriteSameCaster", "overwriteAll").contains(attribute)
+                    && !value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return null;
+        }
+
+        boolean mergeAll = Boolean.parseBoolean(canonical.getOrDefault("mergeAll", "false"));
+        boolean overwriteSameCaster = Boolean.parseBoolean(
+                canonical.getOrDefault("overwriteSameCaster", "false"));
+        boolean overwriteAll = Boolean.parseBoolean(canonical.getOrDefault("overwriteAll", "false"));
+        boolean mergeSameCaster = Boolean.parseBoolean(canonical.getOrDefault("mergeSameCaster",
+                String.valueOf(!mergeAll && !overwriteSameCaster && !overwriteAll)));
+        if (overwriteSameCaster && overwriteAll
+                || (overwriteSameCaster || overwriteAll) && (mergeSameCaster || mergeAll)) return null;
+
+        if (canonical.isEmpty()) return "mythic-aura";
+        List<String> encoded = new ArrayList<>();
+        canonical.forEach((key, value) -> encoded.add(key + "=\"" + escape(value) + "\""));
+        return "mythic-aura{" + String.join(";", encoded) + "}";
+    }
+
+    private static String auraRemoveMechanic(String raw) {
+        int brace = MythicSpec.mechanicOpen(raw);
+        List<String> arguments = MythicSpec.keyedArguments(raw);
+        if (brace < 0) {
+            int space = raw.indexOf(' ');
+            if (space >= 0) {
+                String tail = raw.substring(space + 1).trim();
+                if (!tail.isEmpty() && java.util.Arrays.stream(tail.split("\\s+"))
+                        .anyMatch(token -> !(token.startsWith("@") || token.startsWith("?")
+                                || token.startsWith("~") || token.endsWith("%") || token.equals(">")))) {
+                    return null;
+                }
+            }
+        }
+
+        Map<String, String> canonical = new LinkedHashMap<>();
+        for (String argument : arguments) {
+            int equals = argument.indexOf('=');
+            if (equals <= 0 || equals == argument.length() - 1) return null;
+            String key = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String value = argument.substring(equals + 1).trim();
+            String attribute = switch (key) {
+                case "aura", "auraname", "b", "buff", "buffname", "debuff", "debuffname", "n", "name" -> "auraName";
+                case "stacks", "s" -> "stacks";
+                case "delay", "repeat", "repeatinterval", "repeat-interval" -> null;
+                default -> "unsupported";
+            };
+            if (attribute == null) continue;
+            if (attribute.equals("unsupported") || value.isBlank()
+                    || canonical.putIfAbsent(attribute, value) != null) return null;
+            if (attribute.equals("auraName") && value.isBlank()) return null;
+            if (attribute.equals("stacks") && !value.contains("<") && !positiveInteger(value)) return null;
+        }
+
+        if (canonical.isEmpty()) return "mythic-aura-remove";
+        List<String> encoded = new ArrayList<>();
+        canonical.forEach((key, value) -> encoded.add(key + "=\"" + escape(value) + "\""));
+        return "mythic-aura-remove{" + String.join(";", encoded) + "}";
+    }
+
+    private static boolean validAuraDuration(String raw) {
+        if (raw.startsWith("<") && raw.endsWith(">")) return true;
+        try {
+            double duration = Double.parseDouble(raw);
+            return Double.isFinite(duration) && duration >= 1 && duration < Long.MAX_VALUE;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean positiveInteger(String raw) {
+        try {
+            return Integer.parseInt(raw) > 0;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
     }
 
     private static String commandAction(String action, String raw) {

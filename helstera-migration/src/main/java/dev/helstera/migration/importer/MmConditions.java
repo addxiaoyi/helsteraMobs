@@ -62,6 +62,22 @@ public final class MmConditions {
             "mat", "types", "m", "types", "block", "types", "b", "types");
     private static final Map<String, String> STRUCTURE_ARGUMENTS = Map.of(
             "structure", "structure", "structures", "structure", "s", "structure");
+    private static final Map<String, String> AURA_NAME_ARGUMENTS = Map.ofEntries(
+            Map.entry("aura", "aura"), Map.entry("auraname", "aura"),
+            Map.entry("b", "aura"), Map.entry("buff", "aura"),
+            Map.entry("buffname", "aura"), Map.entry("debuff", "aura"),
+            Map.entry("debuffname", "aura"), Map.entry("n", "aura"),
+            Map.entry("name", "aura"));
+    private static final Map<String, String> AURA_STACKS_ARGUMENTS = Map.ofEntries(
+            Map.entry("aura", "aura"), Map.entry("auraname", "aura"),
+            Map.entry("b", "aura"), Map.entry("buff", "aura"),
+            Map.entry("buffname", "aura"), Map.entry("debuff", "aura"),
+            Map.entry("debuffname", "aura"), Map.entry("n", "aura"),
+            Map.entry("name", "aura"), Map.entry("stacks", "stacks"),
+            Map.entry("s", "stacks"));
+    private static final Map<String, String> AURA_TYPE_ARGUMENTS = Map.of(
+            "auragroup", "type", "auratype", "type", "group", "type",
+            "type", "type", "t", "type", "g", "type");
     private static final Set<String> BLOCK_TYPE_ARGUMENTS = Set.of(
             "types", "type", "t", "material", "mat", "m", "block", "b");
     private static final Set<String> BLOCK_TYPE_IN_RADIUS_ARGUMENTS = Set.of(
@@ -973,6 +989,40 @@ public final class MmConditions {
             if (level != null) mapped += " " + level;
             if (duration != null) mapped += " " + duration;
             return new Mapped(mapped, true);
+        }
+        if ("targethasauras".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(body, AURA_NAME_ARGUMENTS, "aura");
+            if (arguments == null) return new Mapped(s, false);
+            String aura = unquoteAuraValue(arguments.get("aura"));
+            return aura == null || aura.isBlank() ? new Mapped(s, false)
+                    : new Mapped("mythic-target-has-aura aura=" + conditionValue(aura), true);
+        }
+        if ("hasaura".equals(name) || "hasbuff".equals(name) || "hasdebuff".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(body, AURA_NAME_ARGUMENTS, "aura");
+            if (arguments == null) return new Mapped(s, false);
+            String aura = unquoteAuraValue(arguments.get("aura"));
+            return aura == null || aura.isBlank() ? new Mapped(s, false)
+                    : new Mapped("mythic-has-aura aura=" + conditionValue(aura), true);
+        }
+        if ("hasaurastacks".equals(name) || "hasbuffstacks".equals(name)
+                || "hasdebuffstacks".equals(name) || "aurastacks".equals(name)
+                || "buffstacks".equals(name) || "debuffstacks".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(body, AURA_STACKS_ARGUMENTS, "aura");
+            if (arguments == null) return new Mapped(s, false);
+            String aura = unquoteAuraValue(arguments.get("aura"));
+            String stacks = arguments.getOrDefault("stacks", "1");
+            return aura == null || aura.isBlank() || !validNumberRange(stacks)
+                    ? new Mapped(s, false)
+                    : new Mapped("mythic-has-aura-stacks aura=" + conditionValue(aura)
+                    + " stacks=" + stacks, true);
+        }
+        if ("hasauratype".equals(name) || "hasbufftype".equals(name)
+                || "hasdebufftype".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(body, AURA_TYPE_ARGUMENTS, "type");
+            if (arguments == null) return new Mapped(s, false);
+            String type = unquoteAuraValue(arguments.get("type"));
+            return type == null || type.isBlank() ? new Mapped(s, false)
+                    : new Mapped("mythic-has-aura-type type=" + conditionValue(type), true);
         }
         if ("variablecontains".equals(name) || "varcontains".equals(name)
                 || "varcontain".equals(name)) {
@@ -1983,6 +2033,24 @@ public final class MmConditions {
             }
         }
         return Map.copyOf(parsed);
+    }
+
+    private static String unquoteAuraValue(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        if (trimmed.length() >= 2 && trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
+            return trimmed.substring(1, trimmed.length() - 1)
+                    .replace("\\\"", "\"").replace("\\\\", "\\");
+        }
+        return trimmed;
+    }
+
+    private static String conditionValue(String value) {
+        if (value.chars().anyMatch(Character::isWhitespace) || value.indexOf(';') >= 0
+                || value.indexOf(',') >= 0 || value.indexOf('"') >= 0 || value.indexOf('\\') >= 0) {
+            return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+        }
+        return value;
     }
 
     private static boolean validCommaList(String value) {

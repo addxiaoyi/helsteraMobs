@@ -75,6 +75,11 @@
       "status": "passed"
     },
     {
+      "id": "mythicAuraRuntime",
+      "status": "passed",
+      "requiredObservationPattern": "mythic-aura-action=true.*mythic-has-aura-condition=true.*mythic-target-has-aura-condition=true.*mythic-has-aura-stacks-condition=true.*mythic-has-aura-type-condition=true.*mythic-aura-remove=true.*mythic-aura-invalid-rejected=true"
+    },
+    {
       "id": "bedLifecycle",
       "status": "passed"
     },
