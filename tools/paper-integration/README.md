@@ -27,18 +27,30 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-is-survival-mode-import-strict-20261106-r1`
-passed 361 probes (342 passed, 19 expected rejections, zero incomplete) on
-Paper 1.21.1-133. `importedSurvivalModeCondition` verifies Mythic
-`?isInSurvivalMode`/`?inSurvivalMode` through the importer and `SkillService`
-for a real online Player in Survival, rejects Adventure, a Zombie target, and
-malformed arguments, and restores the original game mode. Report:
-`reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1.json`; server
-log: `reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1.log.gz`;
+Latest strict fixture `srv-paper-entity-category-import-strict-20261106-r2`
+passed all 363 probes (344 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its `importedEntityCategoryCondition` probe verifies the
+`?isWaterMob`/`?waterMob` and `?isZombie`/`?zombie` imports against real Cod and
+Zombie targets, cross-type rejection, and preservation of invalid arguments.
+Report: `reports/paper-1.21.1-entity-category-import-strict-20261106-r2.json`;
+server log:
+`reports/paper-1.21.1-entity-category-import-strict-20261106-r2.log.gz`;
 client logs:
-`reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1-client-logs.tar.gz`.
+`reports/paper-1.21.1-entity-category-import-strict-20261106-r2-client-logs.tar.gz`.
 Plugin SHA-256:
-`47dbd266c9437da0ed5cee53fb9c88618d682bb0af43c1eccc07ce42e1cf50bf`.
+`94b1bfb7f5700e0fe0f69f505ade71fabc533599279c2961522ddad5c28ec1c8`.
+
+Previous strict fixture `srv-paper-condition-action-suffix-strict-20261106-r1`
+passed 362 probes (343 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its `importedBurningCondition` probe verifies imported
+`burning true`, `isburning false`, `!burning false`, target priority, caster
+fallback, and invalid-suffix preservation. Report:
+`reports/paper-1.21.1-condition-action-suffix-strict-20261106-r1.json`; server
+log: `reports/paper-1.21.1-condition-action-suffix-strict-20261106-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-condition-action-suffix-strict-20261106-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`eb83955509fb4741fd2ced98b57706a1881542442f0a0107dd25781cef1ad454`.
 
 Previous strict fixture `srv-paper-is-spyglass-import-strict-20261106-r1`
 passed 360 probes (341 passed, 19 expected rejections, zero incomplete) on
@@ -1088,10 +1100,12 @@ different enum value. Exploratory Paper 1.21.11 r98 records
 `spawn-reason-condition=true`; this does not qualify as Paper 1.21.1 strict
 release evidence.
 
-The same catalog probe checks `IsWaterMob` on a real Cod and `IsZombie` on a
-real Zombie, with cross-type rejection for each. Exploratory Paper 1.21.11 r99
-records `water-mob-condition=true zombie-condition=true`; strict Paper 1.21.1
-release evidence remains separate.
+The native catalog check evaluates `IsWaterMob` on a real Cod and `IsZombie` on
+a real Zombie, with cross-type rejection for each. Strict Paper 1.21.1-133
+fixture `srv-paper-entity-category-import-strict-20261106-r2` additionally
+routes both primary names and aliases through the Mythic importer and runtime,
+and verifies malformed-argument preservation. Exploratory Paper 1.21.11 r99
+records the earlier native-only paths.
 
 The condition catalog also checks official `Aerial`: a real floating ArmorStand
 passes both `aerial` and `isAerial`, while a grounded target rejects the

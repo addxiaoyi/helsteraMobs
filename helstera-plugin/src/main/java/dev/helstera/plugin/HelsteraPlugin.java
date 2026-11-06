@@ -1945,6 +1945,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean spawnReasonCondition = false;
             boolean waterMobCondition = false;
             boolean zombieCondition = false;
+            boolean importedEntityCategoryCondition = false;
             boolean aerialCondition = false;
             boolean importedAerialCondition = false;
             boolean endermanCondition = false;
@@ -2656,6 +2657,67 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills.bindCondition("is-water-mob"), context);
                 getLogger().info("entity-type-condition-details water-mob=" + waterMobCondition
                         + " zombie=" + zombieCondition);
+                var importedWaterMob = dev.helstera.migration.importer.MmConditions.translate("?isWaterMob");
+                var importedWaterMobAlias = dev.helstera.migration.importer.MmConditions.translate("?waterMob");
+                var importedZombie = dev.helstera.migration.importer.MmConditions.translate("?isZombie");
+                var importedZombieAlias = dev.helstera.migration.importer.MmConditions.translate("?zombie");
+                boolean importedWaterMobMapped = importedWaterMob.translated()
+                        && "is-water-mob".equals(importedWaterMob.condition());
+                boolean importedWaterMobAliasMapped = importedWaterMobAlias.translated()
+                        && "is-water-mob".equals(importedWaterMobAlias.condition());
+                boolean importedZombieMapped = importedZombie.translated()
+                        && "is-zombie".equals(importedZombie.condition());
+                boolean importedZombieAliasMapped = importedZombieAlias.translated()
+                        && "is-zombie".equals(importedZombieAlias.condition());
+                boolean importedWaterMobPositive = importedWaterMobMapped && importedWaterMobAliasMapped
+                        && behaviors.testCondition(skills.bindCondition(importedWaterMob.condition()), waterMobContext)
+                        && behaviors.testCondition(
+                        skills.bindCondition(importedWaterMobAlias.condition()), waterMobContext);
+                boolean importedWaterMobRejectsZombie = importedWaterMobMapped && importedWaterMobAliasMapped
+                        && !behaviors.testCondition(skills.bindCondition(importedWaterMob.condition()), context)
+                        && !behaviors.testCondition(
+                        skills.bindCondition(importedWaterMobAlias.condition()), context);
+                boolean importedZombiePositive = importedZombieMapped && importedZombieAliasMapped
+                        && behaviors.testCondition(skills.bindCondition(importedZombie.condition()), context)
+                        && behaviors.testCondition(skills.bindCondition(importedZombieAlias.condition()), context);
+                boolean importedZombieRejectsCod = importedZombieMapped && importedZombieAliasMapped
+                        && !behaviors.testCondition(
+                        skills.bindCondition(importedZombie.condition()), waterMobContext)
+                        && !behaviors.testCondition(
+                        skills.bindCondition(importedZombieAlias.condition()), waterMobContext);
+                var invalidImportedWaterMob = dev.helstera.migration.importer.MmConditions.translate(
+                        "?isWaterMob{unexpected=true}");
+                var invalidImportedWaterMobAlias = dev.helstera.migration.importer.MmConditions.translate(
+                        "?waterMob{unexpected=true}");
+                var invalidImportedZombie = dev.helstera.migration.importer.MmConditions.translate(
+                        "?isZombie{unexpected=true}");
+                var invalidImportedZombieAlias = dev.helstera.migration.importer.MmConditions.translate(
+                        "?zombie{unexpected=true}");
+                boolean importedEntityCategoryInvalidPreserved = !invalidImportedWaterMob.translated()
+                        && "?isWaterMob{unexpected=true}".equals(invalidImportedWaterMob.condition())
+                        && !invalidImportedWaterMobAlias.translated()
+                        && "?waterMob{unexpected=true}".equals(invalidImportedWaterMobAlias.condition())
+                        && !invalidImportedZombie.translated()
+                        && "?isZombie{unexpected=true}".equals(invalidImportedZombie.condition())
+                        && !invalidImportedZombieAlias.translated()
+                        && "?zombie{unexpected=true}".equals(invalidImportedZombieAlias.condition());
+                importedEntityCategoryCondition = importedWaterMobPositive && importedWaterMobRejectsZombie
+                        && importedZombiePositive && importedZombieRejectsCod
+                        && importedEntityCategoryInvalidPreserved
+                        && waterMobProbe.getType() == org.bukkit.entity.EntityType.COD
+                        && zombie.getType() == org.bukkit.entity.EntityType.ZOMBIE;
+                getLogger().info("[自检] imported-entity-category-condition"
+                        + " water-primary-mapped=" + importedWaterMobMapped
+                        + " water-alias-mapped=" + importedWaterMobAliasMapped
+                        + " water-positive=" + importedWaterMobPositive
+                        + " water-zombie-rejected=" + importedWaterMobRejectsZombie
+                        + " zombie-primary-mapped=" + importedZombieMapped
+                        + " zombie-alias-mapped=" + importedZombieAliasMapped
+                        + " zombie-positive=" + importedZombiePositive
+                        + " zombie-cod-rejected=" + importedZombieRejectsCod
+                        + " invalid-preserved=" + importedEntityCategoryInvalidPreserved
+                        + " cod=" + waterMobProbe.getType()
+                        + " zombie=" + zombie.getType());
                 var aerialProbe = world.spawn(location.clone().add(0, 3, 0),
                         org.bukkit.entity.ArmorStand.class);
                 conditionCategoryEntities.add(aerialProbe);
@@ -4208,6 +4270,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && spawnReasonCondition
                         && waterMobCondition
                         && zombieCondition
+                        && importedEntityCategoryCondition
                         && aerialCondition
                         && importedFrozenCondition
                         && importedBurningCondition

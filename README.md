@@ -4,15 +4,24 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-is-survival-mode-import-strict-20261106-r1`
-passes 361 probes (342 passed, 19 expected rejections, zero incomplete) on
-Paper 1.21.1-133. Its `importedSurvivalModeCondition` probe routes Mythic
-`?isInSurvivalMode` and `?inSurvivalMode` through the importer and
-`SkillService`, accepts Survival, rejects Adventure, a Zombie target, and
-malformed arguments. Report:
-`tools/paper-integration/reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1.json`.
+Latest strict fixture `srv-paper-entity-category-import-strict-20261106-r2`
+passes all 363 probes (344 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its `importedEntityCategoryCondition` probe verifies the
+`?isWaterMob`/`?waterMob` and `?isZombie`/`?zombie` imports against real Cod and
+Zombie targets, cross-type rejection, and preservation of invalid arguments.
+Report:
+`tools/paper-integration/reports/paper-1.21.1-entity-category-import-strict-20261106-r2.json`.
 The plugin SHA-256 is
-`47dbd266c9437da0ed5cee53fb9c88618d682bb0af43c1eccc07ce42e1cf50bf`.
+`94b1bfb7f5700e0fe0f69f505ade71fabc533599279c2961522ddad5c28ec1c8`.
+
+Previous strict fixture `srv-paper-condition-action-suffix-strict-20261106-r1`
+passes 362 probes (343 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its `importedBurningCondition` probe verifies imported
+`burning true`, `isburning false`, `!burning false`, target priority, caster
+fallback, and invalid-suffix preservation. Report:
+`tools/paper-integration/reports/paper-1.21.1-condition-action-suffix-strict-20261106-r1.json`.
+The plugin SHA-256 is
+`eb83955509fb4741fd2ced98b57706a1881542442f0a0107dd25781cef1ad454`.
 
 Previous strict fixture `srv-paper-is-spyglass-import-strict-20261106-r1`
 passes 360 probes (341 passed, 19 expected rejections, zero incomplete) on
@@ -501,7 +510,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 362 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 363 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -517,8 +526,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 468 cited IDs; 379 report files; 4 directories
-   without reports; 85 missing directories; 145 archived release reports. The
+   Current fixture inventory: 469 cited IDs; 380 report files; 4 directories
+   without reports; 85 missing directories; 146 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -642,7 +651,7 @@ the entire MythicMobs feature catalog.
 - Official `EnchantingLevel` / `EnchantingExperience` now read explicit target-player level and 0..1 experience progress; exploratory Paper r92 verifies level and progress comparators with restoration.
 - Official `Plugin` / `PluginExists` / `HasPlugin` now check Bukkit PluginManager enabled state; exploratory Paper r93 verifies `helsteraMobs` positive and missing-plugin negative paths.
 - Official `SpawnReason` now matches the target entity's Bukkit `Entity#getEntitySpawnReason()` with case-insensitive enum parsing and fail-closed missing/invalid values; exploratory Paper 1.21.11 r98 records `spawn-reason-condition=true` with actual `CUSTOM` and a different-enum negative control.
-- Official `IsWaterMob` and `IsZombie` now use Bukkit's `WaterMob` marker and `Zombie` type checks; exploratory Paper 1.21.11 r99 records real Cod/Zombie positive paths and cross-type negative controls.
+- Official `IsWaterMob` and `IsZombie` use Bukkit's `WaterMob` marker and `Zombie` type checks. Strict Paper 1.21.1-133 fixture `srv-paper-entity-category-import-strict-20261106-r2` verifies all four imported primary/alias names against a real Cod/Zombie pair, both cross-type negatives, and fail-closed preservation of malformed arguments; exploratory Paper 1.21.11 r99 also records the native runtime paths.
 - Official `Aerial` evaluates the active target's Bukkit `isOnGround()` state with `aerial`/`isAerial` aliases; exploratory Paper 1.21.11 r102 and strict Paper 1.21.1-133 fixture `srv-paper-aerial-condition-strict-20261105-r2` verify floating-ArmorStand positives through both aliases and a grounded-player negative through the dedicated `aerialCondition` probe.
 - Official `IsEnderman` now uses Bukkit's `Enderman` type check; exploratory Paper 1.21.11 r103 and strict Paper fixture `srv-paper-enderman-condition-strict-20261105-r1` verify a real Enderman positive path and managed Zombie negative control through the dedicated `endermanCondition` probe.
 - Official `HasEnchantment` checks Bukkit equipment slots with `enchantment/type/e` and `level/l` range arguments; exploratory Paper 1.21.11 r104 and strict Paper 1.21.1-133 fixture `srv-paper-has-enchantment-import-strict-20261105-r1` verify imported `?hasEnchantment`/`?hasEnchant`, Sharpness and `ANY` positives, level/type negatives, and equipment restoration. The complete Conditions catalog remains open.

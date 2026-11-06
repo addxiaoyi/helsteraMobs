@@ -21,6 +21,9 @@ $baselineValid = $entry.serverFamily -eq 'Paper' -and $entry.serverVersion -eq '
 if (-not $baselineValid) {
     throw 'The release baseline must be Paper 1.21.1-133 / Minecraft 1.21.1 with strict evidence.'
 }
+if (@($evidence | Select-Object -First 1).fixtureId -ne $entry.releaseFixtureId) {
+    throw 'Version matrix release baseline must match the newest release evidence manifest entry.'
+}
 
 $manifestEntry = @($evidence | Where-Object { $_.fixtureId -eq $entry.releaseFixtureId })
 if ($manifestEntry.Count -ne 1) { throw "Release fixture is missing from release-evidence.json: $($entry.releaseFixtureId)" }
@@ -38,7 +41,7 @@ $paperReadme = Get-Content -Raw (Join-Path $PSScriptRoot 'README.md')
 $fixture = [regex]::Escape([string]$entry.releaseFixtureId)
 if ($readme -notmatch "Latest strict fixture ``$fixture``" -or
         $paperReadme -notmatch "Latest strict fixture ``$fixture``" -or
-        $startup -notmatch "(?s)^# Paper Startup Evidence\s+Fixture ``$fixture``" -or
+        $startup -notmatch "(?s)^# Paper Startup Evidence\s+Latest fixture ``$fixture``" -or
         $parity -notmatch "(?m)^\| Paper integration suite \| mapped-unverified \| Current release fixture ``$fixture``") {
     throw 'Release fixture references in README, parity matrix, or Paper evidence do not match the version matrix.'
 }
