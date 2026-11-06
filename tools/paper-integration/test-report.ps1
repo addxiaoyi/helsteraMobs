@@ -79,6 +79,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-item-recharging-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true non-human-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-frozen-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true thawed=true alias-thawed=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true in-combat-condition=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
         '[Server thread/INFO]: condition-utility-details .*spawn-distance-exact=true .*spawn-distance-over-rejected=true .*mobs-chunk=true .*mobs-chunk-high-rejected=true .*mobs-chunk-zero=true .*mobs-chunk-occupied=true .*mobs-chunk-adjacent-excluded=true .*mobs-chunk-boundaries=true .*mobs-in-chunk-condition=true .*chance-100=true .*chance-0-rejected=true .*chance-invalid-rejected=true',
@@ -344,7 +345,7 @@ try {
             'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates',
             'spawningDistanceClientWalk', 'isInCinematicCondition', 'aerialCondition',
             'importedAerialCondition', 'endermanCondition', 'importedColorCondition',
-            'importedIsFrozenCondition', 'importedSpyglassCondition',
+            'importedIsFrozenCondition', 'importedSpyglassCondition', 'importedSurvivalModeCondition',
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition')) {
@@ -357,6 +358,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'importedAerialCondition').status -eq 'passed') 'imported Aerial aliases require strict Paper positive and negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedIsFrozenCondition').status -eq 'passed') 'imported IsFrozen aliases require strict Paper frozen/thawed and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedSpyglassCondition').status -eq 'passed') 'imported Spyglass aliases require strict Paper active/inactive, target-type, and malformed-input evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedSurvivalModeCondition').status -eq 'passed') 'imported survival aliases require strict Paper Survival/Adventure, target-type, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedColorCondition').status -eq 'passed') 'imported Color and clr require strict Paper positive and negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedHasEnchantmentCondition').status -eq 'passed') 'imported HasEnchantment requires strict Paper mapping, level and type evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedTriggerItemTypeCondition').status -eq 'passed') 'imported TriggerItemType requires strict Paper mapping and positive/negative evidence'
@@ -794,6 +796,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedSpyglassCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedSpyglassCondition'; status = 'passed'; observations = @('imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedSurvivalModeCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedSurvivalModeCondition'; status = 'passed'; observations = @('imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true')
     }
     $fullCatalogReport.expectedProbeIds += 'spawningDistanceClientWalk'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -2398,6 +2404,30 @@ try {
     Assert-True $missingImportedSpyglassRejected 'full release gate rejects missing imported Spyglass evidence'
     $fullCatalogReport.expectedProbeIds += 'importedSpyglassCondition'
     $fullCatalogReport.probes += $importedSpyglassProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $importedSurvivalProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedSurvivalModeCondition'
+    $importedSurvivalObservations = @($importedSurvivalProbe.observations)
+    $failedImportedSurvivalObservation = ([string]$importedSurvivalObservations[0]) -replace 'invalid-rejected=true', 'invalid-rejected=false'
+    $importedSurvivalProbe.observations = @($failedImportedSurvivalObservation)
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badImportedSurvivalRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badImportedSurvivalRejected = $_.Exception.Message -match 'required observation for importedSurvivalModeCondition' }
+    Assert-True $badImportedSurvivalRejected 'full release gate rejects malformed-argument acceptance for imported survival conditions'
+    $importedSurvivalProbe.observations = $importedSurvivalObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'importedSurvivalModeCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'importedSurvivalModeCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingImportedSurvivalRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingImportedSurvivalRejected = $_.Exception.Message -match 'importedSurvivalModeCondition' }
+    Assert-True $missingImportedSurvivalRejected 'full release gate rejects missing imported survival condition evidence'
+    $fullCatalogReport.expectedProbeIds += 'importedSurvivalModeCondition'
+    $fullCatalogReport.probes += $importedSurvivalProbe
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'skillTeleportCoordinates' })
     $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'skillTeleportCoordinates' })

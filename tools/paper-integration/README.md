@@ -27,9 +27,22 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-is-spyglass-import-strict-20261106-r1` passed
-360 probes (341 passed, 19 expected rejections, zero incomplete) on Paper
-1.21.1-133. `importedSpyglassCondition` verifies Mythic
+Latest strict fixture `srv-paper-is-survival-mode-import-strict-20261106-r1`
+passed 361 probes (342 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. `importedSurvivalModeCondition` verifies Mythic
+`?isInSurvivalMode`/`?inSurvivalMode` through the importer and `SkillService`
+for a real online Player in Survival, rejects Adventure, a Zombie target, and
+malformed arguments, and restores the original game mode. Report:
+`reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1.json`; server
+log: `reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`47dbd266c9437da0ed5cee53fb9c88618d682bb0af43c1eccc07ce42e1cf50bf`.
+
+Previous strict fixture `srv-paper-is-spyglass-import-strict-20261106-r1`
+passed 360 probes (341 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. `importedSpyglassCondition` verifies Mythic
 `?isUsingSpyglass`/`?isScoping` through the importer and `SkillService` while a
 real online Player actively uses a Spyglass; it also rejects the inactive
 state, a Zombie target, and malformed arguments. Report:

@@ -145,6 +145,7 @@ class MmConditionsTest {
         assertTrue(translated("?hasTarget"));
         for (String condition : List.of("?isFrozen{unknown=true}", "?frozen{unknown=true}",
                 "?projectileHasEnded{unknown=true}", "?snowing{unknown=true}",
+                "?isInSurvivalMode{unknown=true}", "?inSurvivalMode{unknown=true}",
                 "?isSnowing{unknown=true}", "?isUsingSpyglass{unknown=true}",
                 "?isScoping{unknown=true}")) {
             assertFalse(translated(condition), condition);

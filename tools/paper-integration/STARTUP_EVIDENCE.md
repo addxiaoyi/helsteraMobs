@@ -1,8 +1,18 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-is-spyglass-import-strict-20261106-r1` passed the full strict
-gate on Paper 1.21.1-133: 360 probes, 341 passed, 19 expected rejections, and
-zero incomplete. `importedSpyglassCondition` verifies Mythic
+Fixture `srv-paper-is-survival-mode-import-strict-20261106-r1` passed the full
+strict gate on Paper 1.21.1-133: 361 probes, 342 passed, 19 expected rejections,
+and zero incomplete. `importedSurvivalModeCondition` verifies Mythic
+`?isInSurvivalMode` and `?inSurvivalMode` through the importer and `SkillService`
+for a real online Player in Survival, rejects Adventure, a Zombie target, and
+malformed arguments, and restores the original game mode. Report and compressed
+server/client logs are listed in `release-evidence.json`; report SHA-256:
+`4793cc5ed1604e1affb24244896c2c678b8c2eb8fead64aec03398023fb3e331`; plugin
+SHA-256: `47dbd266c9437da0ed5cee53fb9c88618d682bb0af43c1eccc07ce42e1cf50bf`.
+
+Previous fixture `srv-paper-is-spyglass-import-strict-20261106-r1` passed the
+full strict gate on Paper 1.21.1-133: 360 probes, 341 passed, 19 expected
+rejections, and zero incomplete. `importedSpyglassCondition` verifies Mythic
 `?isUsingSpyglass` and `?isScoping` through the importer and `SkillService` for
 a real online Player actively using a Spyglass, and rejects the inactive state,
 a Zombie target, and malformed arguments. Report and compressed server/client

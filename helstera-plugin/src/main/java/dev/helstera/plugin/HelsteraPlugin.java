@@ -4058,17 +4058,61 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean survivalRejected = false;
                 boolean survivalAccepted = false;
                 boolean survivalModeRestored = false;
+                boolean importedSurvivalModeCondition = false;
                 if (survivalProbePlayer != null) {
                     var originalGameMode = survivalProbePlayer.getGameMode();
                     try {
                         var survivalContext = dev.helstera.api.behavior.BehaviorContext.of(
                                 modelInstance, survivalProbePlayer, 1.0, -1, 0, "integration");
+                        var importedSurvival = dev.helstera.migration.importer.MmConditions.translate(
+                                "?isInSurvivalMode");
+                        var importedSurvivalAlias = dev.helstera.migration.importer.MmConditions.translate(
+                                "?inSurvivalMode");
+                        var importedSurvivalInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                                "?isInSurvivalMode{unknown=true}");
+                        boolean importedSurvivalMapped = importedSurvival.translated()
+                                && "is-in-survival-mode".equals(importedSurvival.condition());
+                        boolean importedSurvivalAliasMapped = importedSurvivalAlias.translated()
+                                && "is-in-survival-mode".equals(importedSurvivalAlias.condition());
+                        String importedSurvivalKey = importedSurvivalMapped
+                                ? skills.bindCondition(importedSurvival.condition()) : null;
+                        String importedSurvivalAliasKey = importedSurvivalAliasMapped
+                                ? skills.bindCondition(importedSurvivalAlias.condition()) : null;
                         survivalProbePlayer.setGameMode(org.bukkit.GameMode.ADVENTURE);
                         survivalRejected = !behaviors.testCondition(
                                 skills.bindCondition("isInSurvivalMode"), survivalContext);
+                        boolean importedSurvivalNegative = importedSurvivalKey != null
+                                && !behaviors.testCondition(importedSurvivalKey, survivalContext);
+                        boolean importedSurvivalAliasNegative = importedSurvivalAliasKey != null
+                                && !behaviors.testCondition(importedSurvivalAliasKey, survivalContext);
                         survivalProbePlayer.setGameMode(org.bukkit.GameMode.SURVIVAL);
                         survivalAccepted = behaviors.testCondition(
                                 skills.bindCondition("is-in-survival-mode"), survivalContext);
+                        boolean importedSurvivalPositive = importedSurvivalKey != null
+                                && behaviors.testCondition(importedSurvivalKey, survivalContext);
+                        boolean importedSurvivalAliasPositive = importedSurvivalAliasKey != null
+                                && behaviors.testCondition(importedSurvivalAliasKey, survivalContext);
+                        var nonPlayerSurvivalContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                modelInstance, conditionTarget, 1.0, -1, 0, "integration");
+                        boolean importedSurvivalNonPlayerRejected = importedSurvivalKey != null
+                                && importedSurvivalAliasKey != null
+                                && !behaviors.testCondition(importedSurvivalKey, nonPlayerSurvivalContext)
+                                && !behaviors.testCondition(importedSurvivalAliasKey, nonPlayerSurvivalContext);
+                        boolean importedSurvivalInvalidRejected = !importedSurvivalInvalid.translated()
+                                && !dev.helstera.migration.importer.MmConditions.translate(
+                                "?inSurvivalMode{unknown=true}").translated();
+                        importedSurvivalModeCondition = importedSurvivalMapped
+                                && importedSurvivalAliasMapped && importedSurvivalPositive
+                                && importedSurvivalAliasPositive && importedSurvivalNegative
+                                && importedSurvivalAliasNegative && importedSurvivalNonPlayerRejected
+                                && importedSurvivalInvalidRejected;
+                        getLogger().info("[自检] imported-survival-mode-condition primary-mapped="
+                                + importedSurvivalMapped + " alias-mapped=" + importedSurvivalAliasMapped
+                                + " positive=" + importedSurvivalPositive + " alias-positive="
+                                + importedSurvivalAliasPositive + " negative=" + importedSurvivalNegative
+                                + " alias-negative=" + importedSurvivalAliasNegative + " non-player-rejected="
+                                + importedSurvivalNonPlayerRejected + " invalid-rejected="
+                                + importedSurvivalInvalidRejected);
                     } finally {
                         survivalProbePlayer.setGameMode(originalGameMode);
                         survivalModeRestored = survivalProbePlayer.getGameMode() == originalGameMode;

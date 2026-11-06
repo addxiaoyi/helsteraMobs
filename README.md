@@ -4,14 +4,24 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-is-spyglass-import-strict-20261106-r1`
-passes 360 probes (341 passed, 19 expected rejections, zero incomplete) on
-Paper 1.21.1-133. Its `importedSpyglassCondition` probe routes Mythic
-`?isUsingSpyglass` and `?isScoping` through the importer and `SkillService`,
-checks a real online Player while actively using a Spyglass, and rejects the
-inactive state, a Zombie target, and malformed arguments. Report:
-`tools/paper-integration/reports/paper-1.21.1-is-spyglass-import-strict-20261106-r1.json`.
+Latest strict fixture `srv-paper-is-survival-mode-import-strict-20261106-r1`
+passes 361 probes (342 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its `importedSurvivalModeCondition` probe routes Mythic
+`?isInSurvivalMode` and `?inSurvivalMode` through the importer and
+`SkillService`, accepts Survival, rejects Adventure, a Zombie target, and
+malformed arguments. Report:
+`tools/paper-integration/reports/paper-1.21.1-is-survival-mode-import-strict-20261106-r1.json`.
 The plugin SHA-256 is
+`47dbd266c9437da0ed5cee53fb9c88618d682bb0af43c1eccc07ce42e1cf50bf`.
+
+Previous strict fixture `srv-paper-is-spyglass-import-strict-20261106-r1`
+passes 360 probes (341 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its `importedSpyglassCondition` verifies Mythic
+`?isUsingSpyglass` and `?isScoping` through the importer and `SkillService`
+while a real online Player actively uses a Spyglass, then rejects the inactive
+state, a Zombie target, and malformed arguments. Report:
+`tools/paper-integration/reports/paper-1.21.1-is-spyglass-import-strict-20261106-r1.json`.
+Plugin SHA-256:
 `38e0e9769a086950b3e4f5a6923d8f58f44a16fdf3bfaebf512f6d49462a7a20`.
 
 Previous strict fixture `srv-paper-is-frozen-import-strict-20261106-r2`
@@ -488,7 +498,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 360 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 361 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -504,8 +514,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 466 cited IDs; 378 report files; 4 directories
-   without reports; 84 missing directories; 143 archived release reports. The
+   Current fixture inventory: 467 cited IDs; 379 report files; 4 directories
+   without reports; 84 missing directories; 144 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -557,6 +567,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
+- Official `IsInSurvivalMode` and `InSurvivalMode` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player in Survival, reject Adventure, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-survival-mode-import-strict-20261106-r1` completes the 361-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.
 - Official `IsUsingSpyglass` and `IsScoping` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player actively using a Spyglass, then reject the inactive state, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-spyglass-import-strict-20261106-r1` completes the 360-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.
 - Official `IsFrozen` and `Frozen` aliases now have strict importer-to-runtime evidence: `?isFrozen` and `?frozen` both pass on a real frozen Zombie, fail after thawing, and reject malformed arguments through `SkillService`. Fixture `srv-paper-is-frozen-import-strict-20261106-r2` completes the full 359-probe release catalog on Paper 1.21.1-133; the broader Conditions catalog remains open.
 - `@PlayersInWorld` now selects valid online players in the caster's world without implicit faction filtering; `@PlayersOnServer` and its `@server`/`@everyone` aliases select online players across worlds. `targetself=true` includes the caster. Unit/importer coverage and strict Paper fixture `srv-paper-targeter-players-strict-20261102-r1` verify filtering, server population and alias equivalence in a complete 272-probe report; full targeter-catalog and cross-world client coverage remain open.
@@ -565,7 +576,7 @@ the entire MythicMobs feature catalog.
 - Official position targeters now resolve `@SelfLocation` and `@SelfEyeLocation` aliases, `@TargetLocation`/`@TL`, `@TargetPredictedLocation`, `@TriggerLocation`, `@SpawnLocation`, `@CasterSpawnLocation`, `@Forward`, and `@ProjectileForward`. API and importer tests cover aliases and fail-closed validation; strict Paper 1.21.1-133 fixture `srv-paper-self-eye-location-strict-20261104-r1` exercises real block-action dispatch for all five SelfEye aliases. Mythic's threat/combat/last-damage location fallbacks, remaining location targeters, and full mechanic-by-mechanic parity are still open.
 - `HasCurrency` maps to a fail-closed runtime condition backed by the optional Vault Economy service; reflective discovery keeps Vault a soft dependency. Unit contract tests cover modern `OfflinePlayer` and legacy `String` balance signatures, but installed Vault service discovery, provider versions, and Paper evidence remain unverified.
 - MMOItems, MythicCrucible, and ModelEngine are registered as explicit blocked external boundaries. Their diagnostics distinguish missing plugins from detected-but-unadapted plugins, while runtime capabilities remain empty and preserved external identifiers are never resolved as fake vanilla content.
-- Mythic survival-mode aliases now have real Paper 1.21.1 evidence: the condition accepts Survival, rejects Adventure, restores the player's original mode, and passes the required `survivalModeCondition` probe. The same full strict report passes `enderDragonAliveCondition` with a real Dragon positive/removed-negative lifecycle.
+- Mythic survival-mode aliases now have strict Paper 1.21.1 importer-to-runtime evidence: both aliases accept Survival, reject Adventure and non-player targets, malformed parameters fail import, and the original game mode is restored. The required `survivalModeCondition` probe remains independent; the same full strict report passes `enderDragonAliveCondition` with a real Dragon positive/removed-negative lifecycle.
 - Skills: separate `TargetConditions` and `TriggerConditions`, nested `cast-skill`, delay/repeat/cast duration, scoped variables, `variable-unset`, location variables, `@VariableLocation`, conditional targeters such as `@nearestConditionalTarget`, target-aware `damage`/`heal` mechanics, and execution-time numeric placeholders such as `<target.hp.raw>`.
 - Mechanics: `remove`, `suicide`, target-aware `kill`, bounded `dot` damage-over-time, radial `damage-melee` with caster exclusion, `setnameplate`, `equip`, `set-name`, `set-item`/`set-offhand`/`set-armor`, `set-health`, `set-max-health`, `modify-max-health`, `feed`, `swing` (main/off-hand), `disarm`/`remove-held-item`, `clear-inventory`, `set-material-cooldown`, `set-game-mode`, `jump`, target-aware `force-pull`, `addtag`/`removetag` scoreboard tags (including targeters), `setscore`/`addscore` instance scores, Mythic `setvariable`/`variableunset`/`variableadd`/`variablemath`, `setvariablelocation`/`locationunset`, `signal`/`~onSignal`, Mythic `shoot`/`shootprojectile`, `setintent`, `command`/`commandself`/`commandtarget`, `set-stance`, `randomskill`, `leap`, `set-tick-speed`, `pull`, actionbar, full `title`/`subtitle`/timing delivery, target-aware `damage`/`damage-percent`/`message`/`explode` multi-target dispatch, caster movement `dash`/`blink` with direction modes and placeholder distances, target-aware entity state actions including `set-ai`/`set-gravity`/`set-silent`/`set-collidable`/`set-sneaking`/`set-gliding`/`set-swimming`/`set-fire`/`clear-fire`/`invisible`/`glowing`/`set-invulnerable`, player `set-sprinting`/`set-flying`/`set-walk-speed`, no-damage-tick controls, `look-at`, `set-rotation`, `give-item`, `take-item`, `set-block`, `break-block`, `drop-item`, potion effects, teleport, mount/dismount, `cancel-event`, and custom item resolver integration.
 - Scoreboard tag evidence: exploratory Paper 1.21.11 r22 passes real caster/targeter `addtag`/`removetag` mutations; the current strict Paper 1.21.1-133 aggregate also completes the registered tag probes.
