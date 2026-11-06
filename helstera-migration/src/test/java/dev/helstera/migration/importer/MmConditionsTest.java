@@ -641,10 +641,20 @@ class MmConditionsTest {
     void officialOriginLocationConditionMapsLocationForms() {
         assertEquals("origin-location loc=10,20,30 exact=false",
                 t("?originLocation{loc=10,20,30}"));
+        assertEquals("origin-location loc=10,20,30 exact=true",
+                t("?originLocation{location=10,20,30;e=YES}"));
+        assertEquals("origin-location loc=10,20,30 exact=false",
+                t("?originLocation{c=10,20,30;exact=off}"));
         assertEquals("origin-location x=1 y=2 z=3 exact=true",
                 t("?originLocation{x=1;y=2;z=3;e=true}"));
+        assertEquals("origin-location x=1 y=2 z=3 exact=true",
+                t("?originLocation{x=1;y=2;z=3;e=1}"));
         assertTrue(translated("?originLocation{loc=0,0,0}"));
         assertFalse(translated("?originLocation{loc=0,0}"));
+        assertFalse(translated("?originLocation{loc=NaN,0,0}"));
+        assertFalse(translated("?originLocation{loc=0,Infinity,0}"));
+        assertFalse(translated("?originLocation{x=0;y=-Infinity;z=0}"));
+        assertFalse(translated("?originLocation{loc=0,0,0;exact=maybe}"));
     }
 
     @Test

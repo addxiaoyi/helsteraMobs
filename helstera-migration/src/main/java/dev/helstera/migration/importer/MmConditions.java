@@ -468,17 +468,17 @@ public final class MmConditions {
         }
         if ("originlocation".equals(name)) {
             String location = keyedValue(body, "location", "loc", "l", "c");
-            String exact = keyedArgument(body, "exact", "e");
+            String exactArgument = keyedArgument(body, "exact", "e");
+            String exact = exactArgument == null ? "false" : normalizedBoolean(exactArgument);
+            if (exact == null) return new Mapped(s, false);
             if (location != null) {
                 String[] parts = location.split(",");
                 if (parts.length != 3) return new Mapped(s, false);
-                try {
-                    for (String part : parts) Double.parseDouble(part.trim());
-                } catch (NumberFormatException ignored) {
-                    return new Mapped(s, false);
+                for (String part : parts) {
+                    if (!validFiniteNumber(part)) return new Mapped(s, false);
                 }
                 return new Mapped("origin-location loc=" + location
-                        + " exact=" + (exact == null ? "false" : exact), true);
+                        + " exact=" + exact, true);
             }
             String x = firstArgument(body, "x");
             String y = firstArgument(body, "y");
@@ -486,15 +486,11 @@ public final class MmConditions {
             if (x == null) x = "0";
             if (y == null) y = "0";
             if (z == null) z = "0";
-            try {
-                Double.parseDouble(x);
-                Double.parseDouble(y);
-                Double.parseDouble(z);
-            } catch (NumberFormatException ignored) {
+            if (!validFiniteNumber(x) || !validFiniteNumber(y) || !validFiniteNumber(z)) {
                 return new Mapped(s, false);
             }
             return new Mapped("origin-location x=" + x + " y=" + y + " z=" + z
-                    + " exact=" + (exact == null ? "false" : exact), true);
+                    + " exact=" + exact, true);
         }
         if ("playersonline".equals(name) || "onlineplayercount".equals(name)
                 || "onlineplayers".equals(name)) {
@@ -1881,6 +1877,15 @@ public final class MmConditions {
         } catch (NumberFormatException ignored) {
             return false;
         }
+    }
+
+    private static String normalizedBoolean(String raw) {
+        if (raw == null) return null;
+        return switch (raw.trim().toLowerCase(Locale.ROOT)) {
+            case "true", "yes", "on", "1" -> "true";
+            case "false", "no", "off", "0" -> "false";
+            default -> null;
+        };
     }
 
     private static boolean validBoundsLocation(String raw) {

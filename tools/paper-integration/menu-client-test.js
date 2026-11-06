@@ -10,6 +10,7 @@ const events = [];
 let shieldTimer = null;
 let spawningDistanceWalkReady = false;
 let spawningDistanceWalkOutside = false;
+let targeterArgumentValidationComplete = false;
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`Invalid Paper port: ${rawPort}`);
@@ -80,6 +81,9 @@ bot.on('message', message => {
   }
   if (text.includes('PAPER_SPAWNING_DISTANCE_WALK_READY')) {
     spawningDistanceWalkReady = true;
+  }
+  if (text.includes('PAPER_TARGETER_ARGUMENT_VALIDATION_COMPLETE')) {
+    targeterArgumentValidationComplete = true;
   }
   if (text.includes('PAPER_SPAWNING_DISTANCE_WALK_OUTSIDE')) {
     spawningDistanceWalkOutside = true;
@@ -280,8 +284,8 @@ run().catch(error => {
   // server-side skill/event self-tests can finish before the fixture tears it down.
   if (process.env.PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW === 'true' && bot.entity) {
     try {
-      await waitFor(() => spawningDistanceWalkReady,
-        'server spawning-distance probe readiness');
+      await waitFor(() => spawningDistanceWalkReady && targeterArgumentValidationComplete,
+        'server targeter and spawning-distance probe readiness');
       const start = bot.entity.position.clone();
       bot.creative.startFlying();
       await bot.look(0, 0, true);
@@ -298,7 +302,8 @@ run().catch(error => {
         `outside-signal=${spawningDistanceWalkOutside}`;
       if (reportPath) fs.appendFileSync(reportPath, `${line}\n`, 'utf8');
       console.log(line);
-      if (displacement <= 8) {
+      // The server marker follows authoritative Bukkit distance and removal checks.
+      if (displacement <= 8 && !spawningDistanceWalkOutside) {
         if (reportPath) fs.appendFileSync(reportPath,
           'PAPER_SPAWNING_DISTANCE_WALK_ERROR client movement stayed inside radius\n', 'utf8');
         process.exitCode = 1;

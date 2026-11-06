@@ -136,6 +136,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedTriggerBlockTypeCondition'; status = 'passed'; observations = @('imported-trigger-block-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true state-rejected=true constructed-context=true')
     }
+    $fullReport.expectedProbeIds += 'importedOriginLocationCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedOriginLocationCondition'; status = 'passed'; observations = @('imported-origin-location-condition primary-mapped=true alias-mapped=true positive=true exact-positive=true negative=true invalid-rejected=true constructed-context=true')
+    }
     $fullReport.expectedProbeIds += 'importedMaterialCooldownCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedMaterialCooldownCondition'; status = 'passed'; observations = @('imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true')

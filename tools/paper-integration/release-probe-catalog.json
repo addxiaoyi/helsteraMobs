@@ -342,6 +342,11 @@
       "requiredObservation": "imported-trigger-block-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true state-rejected=true constructed-context=true"
     },
     {
+      "id": "importedOriginLocationCondition",
+      "status": "passed",
+      "requiredObservation": "imported-origin-location-condition primary-mapped=true alias-mapped=true positive=true exact-positive=true negative=true invalid-rejected=true constructed-context=true"
+    },
+    {
       "id": "importedMaterialCooldownCondition",
       "status": "passed",
       "requiredObservation": "imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true"

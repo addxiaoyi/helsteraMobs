@@ -1969,6 +1969,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean variableContainsCondition = false;
             boolean triggerBlockTypeCondition = false;
             boolean originLocationCondition = false;
+            boolean importedOriginLocationCondition = false;
             boolean lineOfSightFromOriginCondition = false;
             boolean boundsCondition = false;
             boolean playerKillsCondition = false;
@@ -3489,6 +3490,56 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && !behaviors.testCondition(
                         skills.bindCondition("origin-location loc=999,999,999"), originProbeContext);
                 getLogger().info("origin-location-condition-details condition=" + originLocationCondition);
+                String originBlockCoordinates = originProbeLocation.getBlockX() + ","
+                        + originProbeLocation.getBlockY() + "," + originProbeLocation.getBlockZ();
+                String originExactCoordinates = originProbeLocation.getX() + ","
+                        + originProbeLocation.getY() + "," + originProbeLocation.getZ();
+                var importedOriginPrimary = dev.helstera.migration.importer.MmConditions.translate(
+                        "?originLocation{location=" + originBlockCoordinates + "}");
+                var importedOriginAlias = dev.helstera.migration.importer.MmConditions.translate(
+                        "?originLocation{c=" + originExactCoordinates + ";e=yes}");
+                var importedOriginNegative = dev.helstera.migration.importer.MmConditions.translate(
+                        "?originLocation{l=999,999,999}");
+                var importedOriginInvalidNumber = dev.helstera.migration.importer.MmConditions.translate(
+                        "?originLocation{loc=NaN,0,0}");
+                var importedOriginInvalidBoolean = dev.helstera.migration.importer.MmConditions.translate(
+                        "?originLocation{loc=0,0,0;exact=maybe}");
+                boolean importedOriginPrimaryMapped = importedOriginPrimary.translated()
+                        && ("origin-location loc=" + originBlockCoordinates + " exact=false")
+                        .equals(importedOriginPrimary.condition());
+                boolean importedOriginAliasMapped = importedOriginAlias.translated()
+                        && ("origin-location loc=" + originExactCoordinates + " exact=true")
+                        .equals(importedOriginAlias.condition());
+                boolean importedOriginNegativeMapped = importedOriginNegative.translated()
+                        && ("origin-location loc=999,999,999 exact=false")
+                        .equals(importedOriginNegative.condition());
+                String importedOriginPrimaryKey = importedOriginPrimaryMapped
+                        ? skills.bindCondition(importedOriginPrimary.condition()) : null;
+                String importedOriginAliasKey = importedOriginAliasMapped
+                        ? skills.bindCondition(importedOriginAlias.condition()) : null;
+                String importedOriginNegativeKey = importedOriginNegativeMapped
+                        ? skills.bindCondition(importedOriginNegative.condition()) : null;
+                boolean importedOriginContextConstructed = originProbeContext.origin()
+                        .map(originProbeLocation::equals).orElse(false);
+                boolean importedOriginPositive = importedOriginPrimaryKey != null
+                        && behaviors.testCondition(importedOriginPrimaryKey, originProbeContext);
+                boolean importedOriginExactPositive = importedOriginAliasKey != null
+                        && behaviors.testCondition(importedOriginAliasKey, originProbeContext);
+                boolean importedOriginRejected = importedOriginNegativeKey != null
+                        && !behaviors.testCondition(importedOriginNegativeKey, originProbeContext);
+                boolean importedOriginInvalidRejected = !importedOriginInvalidNumber.translated()
+                        && !importedOriginInvalidBoolean.translated();
+                importedOriginLocationCondition = importedOriginPrimaryMapped
+                        && importedOriginAliasMapped && importedOriginNegativeMapped
+                        && importedOriginContextConstructed && importedOriginPositive
+                        && importedOriginExactPositive && importedOriginRejected
+                        && importedOriginInvalidRejected;
+                getLogger().info("[自检] imported-origin-location-condition primary-mapped="
+                        + importedOriginPrimaryMapped + " alias-mapped=" + importedOriginAliasMapped
+                        + " positive=" + importedOriginPositive + " exact-positive="
+                        + importedOriginExactPositive + " negative=" + importedOriginRejected
+                        + " invalid-rejected=" + importedOriginInvalidRejected
+                        + " constructed-context=" + importedOriginContextConstructed);
                 Location boundsTarget = conditionTarget.getLocation();
                 String boundsFirst = (boundsTarget.getX() - 1) + "," + (boundsTarget.getY() - 1)
                         + "," + (boundsTarget.getZ() - 1);
@@ -4022,6 +4073,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && triggerBlockTypeCondition
                         && importedTriggerBlockTypeCondition
                         && originLocationCondition
+                        && importedOriginLocationCondition
                         && playerKillsCondition
                         && absorptionCondition
                         && dialogueCondition
@@ -5019,6 +5071,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             animalFilterTarget.remove();
                             villagerFilterTarget.remove();
                             for (var originalFilterBlock : originalFilterBlocks) originalFilterBlock.update(true, false);
+                        }
+                        if (gameModeFilterPlayer != null && gameModeFilterPlayer.isOnline()) {
+                            gameModeFilterPlayer.sendMessage("PAPER_TARGETER_ARGUMENT_VALIDATION_COMPLETE");
                         }
                     }
                 }, 3L);
@@ -6070,6 +6125,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " imported-has-enchantment-condition=" + importedHasEnchantmentCondition
                         + " imported-trigger-item-type-condition=" + importedTriggerItemTypeCondition
                         + " imported-trigger-block-type-condition=" + importedTriggerBlockTypeCondition
+                        + " imported-origin-location-condition=" + importedOriginLocationCondition
                         + " color-condition=" + colorCondition
                         + " imported-color-condition=" + importedColorCondition
                         + " material-cooldown-condition=" + materialCooldownCondition
