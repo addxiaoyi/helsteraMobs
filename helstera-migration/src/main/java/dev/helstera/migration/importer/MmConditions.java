@@ -2,6 +2,7 @@ package dev.helstera.migration.importer;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -37,6 +38,28 @@ public final class MmConditions {
     private static final Map<String, String> ORIGIN_LOCATION_ARGUMENTS = Map.of(
             "loc", "location", "location", "location", "l", "location", "c", "location",
             "exact", "exact", "e", "exact", "x", "x", "y", "y", "z", "z");
+    private static final Map<String, String> PHASE_ARGUMENTS = Map.of(
+            "phase", "phases", "phases", "phases", "p", "phases");
+    private static final Map<String, String> MYTHIC_MOB_TYPE_ARGUMENTS = Map.of(
+            "type", "types", "types", "types", "t", "types",
+            "exactmatch", "exactmatch", "em", "exactmatch");
+    private static final Map<String, String> TRIGGER_ITEM_TYPE_ARGUMENTS = Map.of(
+            "types", "types", "type", "types", "t", "types", "material", "types",
+            "mat", "types", "m", "types", "items", "types", "item", "types", "i", "types");
+    private static final Map<String, String> ITEM_TYPE_ARGUMENTS = Map.ofEntries(
+            Map.entry("types", "types"), Map.entry("type", "types"), Map.entry("t", "types"),
+            Map.entry("material", "types"), Map.entry("mat", "types"), Map.entry("m", "types"),
+            Map.entry("item", "types"), Map.entry("i", "types"),
+            Map.entry("strict", "strict"), Map.entry("exact", "strict"), Map.entry("e", "strict"),
+            Map.entry("vanillaonly", "vanillaonly"), Map.entry("vanilla", "vanillaonly"));
+    private static final Map<String, String> ENTITY_ITEM_TYPE_ARGUMENTS = Map.of(
+            "material", "types", "mat", "types", "m", "types", "type", "types",
+            "types", "types", "t", "types");
+    private static final Map<String, String> TRIGGER_BLOCK_TYPE_ARGUMENTS = Map.of(
+            "types", "types", "type", "types", "t", "types", "material", "types",
+            "mat", "types", "m", "types", "block", "types", "b", "types");
+    private static final Map<String, String> STRUCTURE_ARGUMENTS = Map.of(
+            "structure", "structure", "structures", "structure", "s", "structure");
     private static final Set<String> BLOCK_TYPE_ARGUMENTS = Set.of(
             "types", "type", "t", "material", "mat", "m", "block", "b");
     private static final Set<String> BLOCK_TYPE_IN_RADIUS_ARGUMENTS = Set.of(
@@ -171,10 +194,9 @@ public final class MmConditions {
             return body == null || body.isBlank() ? new Mapped("is-frozen", true) : new Mapped(s, false);
         }
         if ("lunarphase".equals(name) || "moonphase".equals(name)) {
-            String keyedPhases = keyedArgument(body, "phases", "p", "phase");
-            if (keyedPhases != null && keyedPhases.isBlank()) return new Mapped(s, false);
-            String phases = rawValue(body, "phases", "p", "phase");
-            if (phases == null) phases = normalizeScalar(body);
+            Map<String, String> arguments = strictValueArguments(body, PHASE_ARGUMENTS, "phases");
+            if (arguments == null) return new Mapped(s, false);
+            String phases = arguments.get("phases");
             if (phases == null) phases = "0";
             for (String token : phases.split(",", -1)) {
                 if (token.isBlank()) return new Mapped(s, false);
@@ -460,8 +482,9 @@ public final class MmConditions {
             return new Mapped("ender-dragon-alive", true);
         }
         if ("enderdragonphase".equals(name) || "edragonphase".equals(name)) {
-            String phase = rawValue(body, "phase", "phases", "p");
-            if (phase == null) phase = normalizeScalar(body);
+            Map<String, String> arguments = strictValueArguments(body, PHASE_ARGUMENTS, "phases");
+            if (arguments == null) return new Mapped(s, false);
+            String phase = arguments.get("phases");
             if (phase == null || phase.isBlank()) return new Mapped(s, false);
             List<String> phases = new ArrayList<>();
             for (String token : phase.split(",", -1)) {
@@ -893,12 +916,12 @@ public final class MmConditions {
             return new Mapped("is-mythic-mob", true);
         }
         if ("mythicmobtype".equals(name) || "mmtype".equals(name)) {
-            String types = rawValue(body, "type", "types", "t");
-            if (types == null) types = normalizeScalar(body);
-            String exact = keyedArgument(body, "exactmatch", "em");
-            if (types == null || types.isBlank()) return new Mapped(s, false);
-            return new Mapped("mythic-mob-type " + types + " exactmatch="
-                    + (exact == null ? "true" : exact), true);
+            Map<String, String> arguments = strictValueArguments(body, MYTHIC_MOB_TYPE_ARGUMENTS, "types");
+            if (arguments == null) return new Mapped(s, false);
+            String types = arguments.get("types");
+            String exact = normalizedBoolean(arguments.getOrDefault("exactmatch", "true"));
+            if (!validCommaList(types) || exact == null) return new Mapped(s, false);
+            return new Mapped("mythic-mob-type " + types + " exactmatch=" + exact, true);
         }
         if ("iscreeperprimed".equals(name)) {
             return new Mapped("is-creeper-primed", true);
@@ -1002,21 +1025,31 @@ public final class MmConditions {
             return new Mapped("material-on-cooldown " + material.toUpperCase(Locale.ROOT), true);
         }
         if ("triggeritemtype".equals(name) || "triggeringitemtype".equals(name)) {
-            String types = rawValue(body, "types", "type", "t", "material", "mat", "m",
-                    "items", "item", "i");
+            Map<String, String> arguments = strictValueArguments(body, TRIGGER_ITEM_TYPE_ARGUMENTS, "types");
+            if (arguments == null) return new Mapped(s, false);
+            String types = arguments.get("types");
             if (types == null) types = "DIRT";
+            if (!validCommaList(types)) return new Mapped(s, false);
             return new Mapped("trigger-item-type " + types.toUpperCase(Locale.ROOT), true);
         }
         if ("itemtype".equals(name)) {
-            String types = rawValue(body, "types", "type", "t", "material", "mat", "m",
-                    "items", "item", "i");
+            Map<String, String> arguments = strictValueArguments(body, ITEM_TYPE_ARGUMENTS, "types");
+            if (arguments == null) return new Mapped(s, false);
+            String types = arguments.get("types");
             if (types == null) types = "DIRT";
+            String strict = normalizedBoolean(arguments.getOrDefault("strict", "false"));
+            String vanillaOnly = normalizedBoolean(arguments.getOrDefault("vanillaonly", "false"));
+            if (!validCommaList(types) || strict == null || vanillaOnly == null
+                    || strict.equals("true") || vanillaOnly.equals("true")) {
+                return new Mapped(s, false);
+            }
             return new Mapped("trigger-item-type " + types.toUpperCase(Locale.ROOT), true);
         }
         if ("entityitemtype".equals(name) || "entitymaterialtype".equals(name)) {
-            String types = rawValue(body, "types", "type", "t", "material", "mat", "m",
-                    "items", "item", "i");
-            if (types == null) types = "DIRT";
+            Map<String, String> arguments = strictValueArguments(body, ENTITY_ITEM_TYPE_ARGUMENTS, "types");
+            if (arguments == null) return new Mapped(s, false);
+            String types = arguments.get("types");
+            if (!validCommaList(types)) return new Mapped(s, false);
             return new Mapped(("entitymaterialtype".equals(name)
                     ? "entity-material-type " : "entity-item-type ")
                     + types.toUpperCase(Locale.ROOT), true);
@@ -1044,9 +1077,11 @@ public final class MmConditions {
             return new Mapped("item-recharging", true);
         }
         if ("triggerblocktype".equals(name) || "triggeringblocktype".equals(name)) {
-            String types = rawValue(body, "types", "type", "t", "material", "mat", "m",
-                    "block", "b");
+            Map<String, String> arguments = strictValueArguments(body, TRIGGER_BLOCK_TYPE_ARGUMENTS, "types");
+            if (arguments == null) return new Mapped(s, false);
+            String types = arguments.get("types");
             if (types == null) types = "DIRT";
+            if (!validCommaList(types)) return new Mapped(s, false);
             return new Mapped("trigger-block-type " + types.toUpperCase(Locale.ROOT), true);
         }
         if ("hasfreeinventoryslot".equals(name) || "hasfreeslot".equals(name)) {
@@ -1250,9 +1285,11 @@ public final class MmConditions {
             return new Mapped("line-of-sight-from-origin", true);
         }
         if ("structure".equals(name) || "structures".equals(name)) {
-            String structure = rawValue(body, "structure", "structures", "s");
-            if (structure == null) structure = normalizeScalar(body);
+            Map<String, String> arguments = strictValueArguments(body, STRUCTURE_ARGUMENTS, "structure");
+            if (arguments == null) return new Mapped(s, false);
+            String structure = arguments.get("structure");
             if (structure == null) structure = "village";
+            if (structure.isBlank()) return new Mapped(s, false);
             return new Mapped("structure " + structure, true);
         }
         if ("stringequals".equals(name) || "stringeq".equals(name)) {
@@ -1855,25 +1892,36 @@ public final class MmConditions {
         return null;
     }
 
-    private static String rawValue(String body, String... keys) {
-        if (body == null || body.isBlank()) return null;
-        String value = body.trim();
-        int equals = value.indexOf('=');
-        if (equals > 0) {
-            String key = value.substring(0, equals).trim();
-            boolean matches = false;
-            for (String expected : keys) {
-                if (expected.equalsIgnoreCase(key)) {
-                    matches = true;
-                    break;
+    private static Map<String, String> strictValueArguments(String body,
+                                                             Map<String, String> canonicalKeys,
+                                                             String positionalKey) {
+        if (body == null || body.isBlank()) return Map.of();
+        Map<String, String> parsed = new LinkedHashMap<>();
+        for (String part : body.split(";", -1)) {
+            String argument = part.trim();
+            if (argument.isEmpty()) return null;
+            int equals = argument.indexOf('=');
+            if (equals >= 0) {
+                if (equals == 0) return null;
+                String key = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                String canonical = canonicalKeys.get(key);
+                String value = argument.substring(equals + 1).trim();
+                if (canonical == null || value.isEmpty() || parsed.putIfAbsent(canonical, value) != null) {
+                    return null;
                 }
+            } else {
+                if (positionalKey == null || parsed.putIfAbsent(positionalKey, argument) != null) return null;
             }
-            if (matches) value = value.substring(equals + 1).trim();
-            else value = normalizeScalar(body);
         }
-        int semicolon = value.indexOf(';');
-        if (semicolon >= 0) value = value.substring(0, semicolon).trim();
-        return value.isBlank() ? null : value;
+        return Map.copyOf(parsed);
+    }
+
+    private static boolean validCommaList(String value) {
+        if (value == null || value.isBlank()) return false;
+        for (String entry : value.split(",", -1)) {
+            if (entry.isBlank()) return false;
+        }
+        return true;
     }
 
     private record BlockTypeArguments(String types, String radius, String amount) {}
