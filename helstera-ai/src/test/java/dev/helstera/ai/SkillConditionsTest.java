@@ -557,8 +557,10 @@ class SkillConditionsTest {
                 List.of("CAT[variant=TABBY]", "WOLF[variant=SNOWY]"));
         assertTrue(combined.test(BehaviorContext.of(null, wolf, 1.0, -1, 0, "IDLE")));
         assertFalse(combined.test(ctx()));
-        assertThrows(IllegalArgumentException.class, () ->
-                extraFactory("entity-type-is").create(List.of("ZOMBIE[variant=TABBY]")));
+        var zombie = mock(org.bukkit.entity.Zombie.class);
+        when(zombie.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
+        var inapplicableVariant = extraFactory("entity-type-is").create(List.of("ZOMBIE[variant=TABBY]"));
+        assertFalse(inapplicableVariant.test(BehaviorContext.of(null, zombie, 1.0, -1, 0, "IDLE")));
     }
 
     @Test

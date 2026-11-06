@@ -81,6 +81,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-burning-condition actions=true target-priority=true target-positive=true target-negative=true composed-negation=true caster-fallback=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-entity-category-condition water-primary-mapped=true water-alias-mapped=true water-positive=true water-zombie-rejected=true zombie-primary-mapped=true zombie-alias-mapped=true zombie-positive=true zombie-cod-rejected=true invalid-preserved=true cod=COD zombie=ZOMBIE',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-entity-type-variant-condition primary-mapped=true alias-mapped=true mobtype-mapped=true positive=true alias-positive=true mobtype-positive=true variant-alternative=true wrong-variant-rejected=true wrong-type-rejected=true invalid-preserved=true cat=CAT variant=TABBY',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-entity-type-traits mapped=true horse=true wrong-style-rejected=true panda=true villager=true zombie-villager=true rainbow-sheep=true rainbow-sheep-white-rejected=true shulker=true parrot=true llama=true tropical-fish=true iron-golem-crack=true inapplicable-trait-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
@@ -350,6 +351,7 @@ try {
             'importedAerialCondition', 'endermanCondition', 'importedColorCondition',
             'importedIsFrozenCondition', 'importedBurningCondition', 'importedEntityCategoryCondition',
             'importedEntityTypeVariantCondition',
+            'importedEntityTypeTraitsCondition',
             'importedSpyglassCondition', 'importedSurvivalModeCondition',
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
@@ -365,6 +367,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'importedBurningCondition').status -eq 'passed') 'imported Burning requires target-priority, composed-negation, caster-fallback, and invalid-preservation evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedEntityCategoryCondition').status -eq 'passed') 'imported IsWaterMob/IsZombie aliases require strict Paper type and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedEntityTypeVariantCondition').status -eq 'passed') 'imported EntityType variants require strict Paper positive, alternative, wrong-variant, wrong-type, and malformed-input evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedEntityTypeTraitsCondition').status -eq 'passed') 'imported EntityType traits require strict Paper getter coverage, negative controls, and all documented API-backed trait families'
     Assert-True (($report.probes | Where-Object id -eq 'importedSpyglassCondition').status -eq 'passed') 'imported Spyglass aliases require strict Paper active/inactive, target-type, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedSurvivalModeCondition').status -eq 'passed') 'imported survival aliases require strict Paper Survival/Adventure, target-type, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedColorCondition').status -eq 'passed') 'imported Color and clr require strict Paper positive and negative evidence'
@@ -812,6 +815,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedEntityTypeVariantCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedEntityTypeVariantCondition'; status = 'passed'; observations = @('imported-entity-type-variant-condition primary-mapped=true alias-mapped=true mobtype-mapped=true positive=true alias-positive=true mobtype-positive=true variant-alternative=true wrong-variant-rejected=true wrong-type-rejected=true invalid-preserved=true cat=CAT variant=TABBY')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedEntityTypeTraitsCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedEntityTypeTraitsCondition'; status = 'passed'; observations = @('imported-entity-type-traits mapped=true horse=true wrong-style-rejected=true panda=true villager=true zombie-villager=true rainbow-sheep=true rainbow-sheep-white-rejected=true shulker=true parrot=true llama=true tropical-fish=true iron-golem-crack=true inapplicable-trait-rejected=true')
     }
     $fullCatalogReport.expectedProbeIds += 'importedSpyglassCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

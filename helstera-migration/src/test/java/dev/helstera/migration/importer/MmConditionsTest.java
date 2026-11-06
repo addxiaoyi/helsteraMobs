@@ -492,7 +492,7 @@ class MmConditionsTest {
     }
 
     @Test
-    void entityTypeMapsNestedVariantConstraintsAndAliases() {
+    void entityTypeMapsNestedTraitConstraintsAndAliases() {
         assertEquals("entity-type-is CAT[variant=TABBY]",
                 t("?entityType{type=CAT{variant=TABBY}}"));
         assertEquals("entity-type-is RABBIT[variant=BLACK_AND_WHITE]",
@@ -501,14 +501,31 @@ class MmConditionsTest {
                 t("?mobType{type=CAT{variant=TABBY},WOLF{variant=SNOWY}}"));
         assertEquals("entity-type-is ZOMBIE",
                 t("?entityType{t=minecraft:zombie}"));
+        assertEquals("entity-type-is HORSE[color=WHITE;style=WHITE_DOTS]",
+                t("?entityType{type=HORSE{c=white;s=white dots}}"));
+        assertEquals("entity-type-is PANDA[mainGene=NORMAL;hiddenGene=PLAYFUL]",
+                t("?entityType{type=PANDA{mg=normal;hg=playful}}"));
+        assertEquals("entity-type-is VILLAGER[biome=TAIGA;profession=LIBRARIAN]",
+                t("?entityType{type=VILLAGER{b=taiga;proffesion=librarian}}"));
+        assertEquals("entity-type-is ZOMBIE_VILLAGER[biome=DESERT;profession=CLERIC]",
+                t("?entityType{type=ZOMBIE_VILLAGER{biome=desert;prof=cleric}}"));
+        assertEquals("entity-type-is IRON_GOLEM[crack=MEDIUM]",
+                t("?entityType{type=IRON_GOLEM{crackedness=medium}}"));
+        assertEquals("entity-type-is TROPICAL_FISH[bodyColor=WHITE;patternColor=RED;pattern=FLOPPER]",
+                t("?mobType{type=TROPICAL_FISH{body=white;pc=red;p=flopper}}"));
+        assertEquals("entity-type-is CAT[color=BLACK]",
+                t("?entityType{type=CAT{color=black}}"));
+        assertEquals("entity-type-is ZOMBIE[variant=TABBY]",
+                t("?entityType{type=ZOMBIE{variant=tabby}}"));
 
         for (String invalid : List.of(
                 "?entityType{type=CAT{variant=UNKNOWN}}",
-                "?entityType{type=ZOMBIE{variant=TABBY}}",
+                "?entityType{type=CAT{variant=WARM}}",
+                "?entityType{type=COW{variant=WARM}}",
                 "?entityType{type=CAT{variant=TABBY};variant=BLACK}",
                 "?entityType{CAT;type=WOLF}",
                 "?entityType{type=CAT;types=WOLF}",
-                "?entityType{type=CAT{color=BLACK}}",
+                "?entityType{type=CAT{color=NOT_A_COLOR}}",
                 "?entityType{type=CAT{variant=TABBY}")) {
             assertUntranslatedPreserved(invalid);
         }

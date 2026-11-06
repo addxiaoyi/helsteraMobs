@@ -164,6 +164,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedEntityTypeVariantCondition'; status = 'passed'; observations = @('imported-entity-type-variant-condition primary-mapped=true alias-mapped=true mobtype-mapped=true positive=true alias-positive=true mobtype-positive=true variant-alternative=true wrong-variant-rejected=true wrong-type-rejected=true invalid-preserved=true cat=CAT variant=TABBY')
     }
+    $fullReport.expectedProbeIds += 'importedEntityTypeTraitsCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedEntityTypeTraitsCondition'; status = 'passed'; observations = @('imported-entity-type-traits mapped=true horse=true wrong-style-rejected=true panda=true villager=true zombie-villager=true rainbow-sheep=true rainbow-sheep-white-rejected=true shulker=true parrot=true llama=true tropical-fish=true iron-golem-crack=true inapplicable-trait-rejected=true')
+    }
     $fullReport.expectedProbeIds += 'importedSpyglassCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedSpyglassCondition'; status = 'passed'; observations = @('imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true')

@@ -1947,6 +1947,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean zombieCondition = false;
             boolean importedEntityCategoryCondition = false;
             boolean importedEntityTypeVariantCondition = false;
+            boolean importedEntityTypeTraitsCondition = false;
             boolean aerialCondition = false;
             boolean importedAerialCondition = false;
             boolean endermanCondition = false;
@@ -2769,8 +2770,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && !behaviors.testCondition(entityTypeKey, context);
                 List<String> invalidEntityTypeSources = List.of(
                         "?entityType{type=CAT{variant=UNKNOWN}}",
-                        "?entityType{type=ZOMBIE{variant=TABBY}}",
-                        "?entityType{type=CAT{color=BLACK}}",
+                        "?entityType{type=COW{variant=WARM}}",
                         "?entityType{CAT;type=WOLF}");
                 boolean entityTypeInvalidPreserved = invalidEntityTypeSources.stream().allMatch(source -> {
                     var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
@@ -2797,6 +2797,185 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " invalid-preserved=" + entityTypeInvalidPreserved
                         + " cat=" + catVariantProbe.getType()
                         + " variant=" + catVariantProbe.getCatType().name());
+                List<String> entityTypeTraitSources = List.of(
+                        "?entityType{type=HORSE{c=white;s=white dots}}",
+                        "?entityType{type=PANDA{mg=normal;hg=playful}}",
+                        "?entityType{type=VILLAGER{variant=taiga;biome=taiga;profession=librarian}}",
+                        "?entityType{type=ZOMBIE_VILLAGER{biome=desert;profession=cleric}}",
+                        "?entityType{type=SHEEP{color=rainbow}}",
+                        "?entityType{type=SHULKER{color=black}}",
+                        "?entityType{type=PARROT{color=red}}",
+                        "?entityType{type=LLAMA{color=creamy}}",
+                        "?entityType{type=TROPICAL_FISH{bodyColor=white;patternColor=red;pattern=flopper}}",
+                        "?entityType{type=IRON_GOLEM{crack=none}}",
+                        "?entityType{type=CAT{color=black}}",
+                        "?entityType{type=ZOMBIE{variant=tabby}}");
+                boolean entityTypeTraitsMapped = entityTypeTraitSources.stream().allMatch(source -> {
+                    var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                    return mapped.translated() && mapped.condition().startsWith("entity-type-is ");
+                });
+                var traitModelInstance = modelInstance;
+                java.util.function.BiPredicate<org.bukkit.entity.LivingEntity, String> matchesEntityTypeTrait =
+                        (target, source) -> {
+                            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                            if (!mapped.translated()) return false;
+                            String key = skills.bindCondition(mapped.condition());
+                            var targetContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                    traitModelInstance, target, 1.0, 12.0, 0, "integration");
+                            return key != null && behaviors.testCondition(key, targetContext);
+                        };
+
+                var horseTraitProbe = world.spawn(location.clone().add(9, 0, 0),
+                        org.bukkit.entity.Horse.class);
+                conditionCategoryEntities.add(horseTraitProbe);
+                horseTraitProbe.setAI(false);
+                horseTraitProbe.setInvulnerable(true);
+                horseTraitProbe.setColor(org.bukkit.entity.Horse.Color.WHITE);
+                horseTraitProbe.setStyle(org.bukkit.entity.Horse.Style.WHITE_DOTS);
+                boolean horseTraitsPositive = matchesEntityTypeTrait.test(horseTraitProbe,
+                        "?entityType{type=HORSE{c=white;s=white dots}}");
+                horseTraitProbe.setStyle(org.bukkit.entity.Horse.Style.BLACK_DOTS);
+                boolean horseWrongStyleRejected = !matchesEntityTypeTrait.test(horseTraitProbe,
+                        "?entityType{type=HORSE{color=white;style=white dots}}");
+
+                var pandaTraitProbe = world.spawn(location.clone().add(10, 0, 0),
+                        org.bukkit.entity.Panda.class);
+                conditionCategoryEntities.add(pandaTraitProbe);
+                pandaTraitProbe.setAI(false);
+                pandaTraitProbe.setInvulnerable(true);
+                pandaTraitProbe.setMainGene(org.bukkit.entity.Panda.Gene.NORMAL);
+                pandaTraitProbe.setHiddenGene(org.bukkit.entity.Panda.Gene.PLAYFUL);
+                boolean pandaGenesPositive = matchesEntityTypeTrait.test(pandaTraitProbe,
+                        "?entityType{type=PANDA{mainGene=normal;hiddenGene=playful}}");
+
+                var villagerTraitProbe = world.spawn(location.clone().add(11, 0, 0),
+                        org.bukkit.entity.Villager.class);
+                conditionCategoryEntities.add(villagerTraitProbe);
+                villagerTraitProbe.setAI(false);
+                villagerTraitProbe.setInvulnerable(true);
+                villagerTraitProbe.setVillagerType(org.bukkit.entity.Villager.Type.TAIGA);
+                villagerTraitProbe.setProfession(org.bukkit.entity.Villager.Profession.LIBRARIAN);
+                boolean villagerTraitsPositive = matchesEntityTypeTrait.test(villagerTraitProbe,
+                        "?entityType{type=VILLAGER{variant=taiga;biome=taiga;profession=librarian}}");
+
+                var zombieVillagerTraitProbe = world.spawn(location.clone().add(12, 0, 0),
+                        org.bukkit.entity.ZombieVillager.class);
+                conditionCategoryEntities.add(zombieVillagerTraitProbe);
+                zombieVillagerTraitProbe.setAI(false);
+                zombieVillagerTraitProbe.setInvulnerable(true);
+                zombieVillagerTraitProbe.setVillagerType(org.bukkit.entity.Villager.Type.DESERT);
+                zombieVillagerTraitProbe.setVillagerProfession(org.bukkit.entity.Villager.Profession.CLERIC);
+                boolean zombieVillagerTraitsPositive = matchesEntityTypeTrait.test(zombieVillagerTraitProbe,
+                        "?entityType{type=ZOMBIE_VILLAGER{biome=desert;profession=cleric}}");
+
+                var sheepTraitProbe = world.spawn(location.clone().add(13, 0, 0),
+                        org.bukkit.entity.Sheep.class);
+                conditionCategoryEntities.add(sheepTraitProbe);
+                sheepTraitProbe.setAI(false);
+                sheepTraitProbe.setInvulnerable(true);
+                sheepTraitProbe.setCustomName("jeb_");
+                boolean rainbowSheepPositive = matchesEntityTypeTrait.test(sheepTraitProbe,
+                        "?entityType{type=SHEEP{color=rainbow}}");
+                boolean rainbowSheepWhiteRejected = !matchesEntityTypeTrait.test(sheepTraitProbe,
+                        "?entityType{type=SHEEP{color=white}}");
+
+                var shulkerTraitProbe = world.spawn(location.clone().add(14, 0, 0),
+                        org.bukkit.entity.Shulker.class);
+                conditionCategoryEntities.add(shulkerTraitProbe);
+                shulkerTraitProbe.setInvulnerable(true);
+                shulkerTraitProbe.setColor(org.bukkit.DyeColor.BLACK);
+                boolean shulkerColorPositive = matchesEntityTypeTrait.test(shulkerTraitProbe,
+                        "?entityType{type=SHULKER{color=black}}");
+
+                var parrotTraitProbe = world.spawn(location.clone().add(15, 0, 0),
+                        org.bukkit.entity.Parrot.class);
+                conditionCategoryEntities.add(parrotTraitProbe);
+                parrotTraitProbe.setAI(false);
+                parrotTraitProbe.setInvulnerable(true);
+                parrotTraitProbe.setVariant(org.bukkit.entity.Parrot.Variant.RED);
+                boolean parrotColorPositive = matchesEntityTypeTrait.test(parrotTraitProbe,
+                        "?entityType{type=PARROT{color=red}}");
+
+                var llamaTraitProbe = world.spawn(location.clone().add(16, 0, 0),
+                        org.bukkit.entity.Llama.class);
+                conditionCategoryEntities.add(llamaTraitProbe);
+                llamaTraitProbe.setAI(false);
+                llamaTraitProbe.setInvulnerable(true);
+                llamaTraitProbe.setColor(org.bukkit.entity.Llama.Color.CREAMY);
+                boolean llamaColorPositive = matchesEntityTypeTrait.test(llamaTraitProbe,
+                        "?entityType{type=LLAMA{color=creamy}}");
+
+                var tropicalFishTraitProbe = world.spawn(location.clone().add(17, 0, 0),
+                        org.bukkit.entity.TropicalFish.class);
+                conditionCategoryEntities.add(tropicalFishTraitProbe);
+                tropicalFishTraitProbe.setInvulnerable(true);
+                tropicalFishTraitProbe.setBodyColor(org.bukkit.DyeColor.WHITE);
+                tropicalFishTraitProbe.setPatternColor(org.bukkit.DyeColor.RED);
+                tropicalFishTraitProbe.setPattern(org.bukkit.entity.TropicalFish.Pattern.FLOPPER);
+                boolean tropicalFishTraitsPositive = matchesEntityTypeTrait.test(tropicalFishTraitProbe,
+                        "?entityType{type=TROPICAL_FISH{bodyColor=white;patternColor=red;pattern=flopper}}");
+
+                var ironGolemTraitProbe = world.spawn(location.clone().add(18, 0, 0),
+                        org.bukkit.entity.IronGolem.class);
+                conditionCategoryEntities.add(ironGolemTraitProbe);
+                ironGolemTraitProbe.setAI(false);
+                ironGolemTraitProbe.setInvulnerable(true);
+                var golemMaxHealth = ironGolemTraitProbe.getAttribute(
+                        org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH).getValue();
+                ironGolemTraitProbe.setHealth(golemMaxHealth);
+                boolean crackNone = matchesEntityTypeTrait.test(ironGolemTraitProbe,
+                        "?entityType{type=IRON_GOLEM{crack=none}}");
+                ironGolemTraitProbe.setHealth(golemMaxHealth * 0.75);
+                boolean crackNoneBoundary = matchesEntityTypeTrait.test(ironGolemTraitProbe,
+                        "?entityType{type=IRON_GOLEM{crack=none}}");
+                ironGolemTraitProbe.setHealth(golemMaxHealth * 0.749);
+                boolean crackLow = matchesEntityTypeTrait.test(ironGolemTraitProbe,
+                        "?entityType{type=IRON_GOLEM{crack=low}}");
+                ironGolemTraitProbe.setHealth(golemMaxHealth * 0.50);
+                boolean crackLowBoundary = matchesEntityTypeTrait.test(ironGolemTraitProbe,
+                        "?entityType{type=IRON_GOLEM{crack=low}}");
+                ironGolemTraitProbe.setHealth(golemMaxHealth * 0.499);
+                boolean crackMedium = matchesEntityTypeTrait.test(ironGolemTraitProbe,
+                        "?entityType{type=IRON_GOLEM{crack=medium}}");
+                ironGolemTraitProbe.setHealth(golemMaxHealth * 0.25);
+                boolean crackMediumBoundary = matchesEntityTypeTrait.test(ironGolemTraitProbe,
+                        "?entityType{type=IRON_GOLEM{crack=medium}}");
+                ironGolemTraitProbe.setHealth(golemMaxHealth * 0.249);
+                boolean crackHigh = matchesEntityTypeTrait.test(ironGolemTraitProbe,
+                        "?entityType{type=IRON_GOLEM{crack=high}}");
+                boolean ironGolemCracksPositive = crackNone && crackNoneBoundary && crackLow && crackLowBoundary
+                        && crackMedium && crackMediumBoundary && crackHigh;
+
+                boolean inapplicableTraitRejected = !matchesEntityTypeTrait.test(catVariantProbe,
+                        "?entityType{type=CAT{color=black}}");
+                var zombieVariantMismatchProbe = world.spawn(location.clone().add(19, 0, 0),
+                        org.bukkit.entity.Zombie.class);
+                conditionCategoryEntities.add(zombieVariantMismatchProbe);
+                zombieVariantMismatchProbe.setAI(false);
+                zombieVariantMismatchProbe.setInvulnerable(true);
+                inapplicableTraitRejected = inapplicableTraitRejected
+                        && !matchesEntityTypeTrait.test(zombieVariantMismatchProbe,
+                                "?entityType{type=ZOMBIE{variant=tabby}}");
+                importedEntityTypeTraitsCondition = entityTypeTraitsMapped && horseTraitsPositive
+                        && horseWrongStyleRejected && pandaGenesPositive && villagerTraitsPositive
+                        && zombieVillagerTraitsPositive && rainbowSheepPositive && rainbowSheepWhiteRejected
+                        && shulkerColorPositive && parrotColorPositive && llamaColorPositive
+                        && tropicalFishTraitsPositive && ironGolemCracksPositive && inapplicableTraitRejected;
+                getLogger().info("[自检] imported-entity-type-traits"
+                        + " mapped=" + entityTypeTraitsMapped
+                        + " horse=" + horseTraitsPositive
+                        + " wrong-style-rejected=" + horseWrongStyleRejected
+                        + " panda=" + pandaGenesPositive
+                        + " villager=" + villagerTraitsPositive
+                        + " zombie-villager=" + zombieVillagerTraitsPositive
+                        + " rainbow-sheep=" + rainbowSheepPositive
+                        + " rainbow-sheep-white-rejected=" + rainbowSheepWhiteRejected
+                        + " shulker=" + shulkerColorPositive
+                        + " parrot=" + parrotColorPositive
+                        + " llama=" + llamaColorPositive
+                        + " tropical-fish=" + tropicalFishTraitsPositive
+                        + " iron-golem-crack=" + ironGolemCracksPositive
+                        + " inapplicable-trait-rejected=" + inapplicableTraitRejected);
                 var aerialProbe = world.spawn(location.clone().add(0, 3, 0),
                         org.bukkit.entity.ArmorStand.class);
                 conditionCategoryEntities.add(aerialProbe);
@@ -4351,6 +4530,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && zombieCondition
                         && importedEntityCategoryCondition
                         && importedEntityTypeVariantCondition
+                        && importedEntityTypeTraitsCondition
                         && aerialCondition
                         && importedFrozenCondition
                         && importedBurningCondition
@@ -6502,6 +6682,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " structure-condition=" + structureCondition
                         + " mythic-mob-type-condition=" + mythicMobTypeCondition
                         + " entity-type-condition=" + importedEntityTypeVariantCondition
+                        + " entity-type-traits-condition=" + importedEntityTypeTraitsCondition
                         + " variable-contains-condition=" + variableContainsCondition
                         + " trigger-block-type-condition=" + triggerBlockTypeCondition
                         + " origin-location-condition=" + originLocationCondition

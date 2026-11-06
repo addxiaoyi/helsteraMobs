@@ -136,7 +136,33 @@ class MigrationRuntimeConditionContractTest {
         assertFalse(registry.testCondition(aliasKey, dev.helstera.api.behavior.BehaviorContext.of(
                 null, mock(org.bukkit.entity.Zombie.class), 1.0, -1, 0, "IDLE")));
 
+        var horse = mock(org.bukkit.entity.Horse.class);
+        when(horse.getType()).thenReturn(org.bukkit.entity.EntityType.HORSE);
+        when(horse.getColor()).thenReturn(org.bukkit.entity.Horse.Color.WHITE);
+        when(horse.getStyle()).thenReturn(org.bukkit.entity.Horse.Style.WHITE_DOTS);
+        var horseContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, horse, 1.0, -1, 0, "IDLE");
+        var horseTraits = dev.helstera.migration.importer.MmConditions.translate(
+                "?entityType{type=HORSE{c=white;s=white dots}}");
+        assertTrue(horseTraits.translated());
+        assertEquals("entity-type-is HORSE[color=WHITE;style=WHITE_DOTS]", horseTraits.condition());
+        String horseTraitsKey = service.bindCondition(horseTraits.condition());
+        assertNotNull(horseTraitsKey);
+        assertTrue(registry.testCondition(horseTraitsKey, horseContext));
+        when(horse.getStyle()).thenReturn(org.bukkit.entity.Horse.Style.BLACK_DOTS);
+        assertFalse(registry.testCondition(horseTraitsKey, horseContext));
+
+        var mismatchedTrait = dev.helstera.migration.importer.MmConditions.translate(
+                "?entityType{type=ZOMBIE{variant=TABBY}}");
+        assertTrue(mismatchedTrait.translated());
+        String mismatchedTraitKey = service.bindCondition(mismatchedTrait.condition());
+        var zombie = mock(org.bukkit.entity.Zombie.class);
+        when(zombie.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
+        assertFalse(registry.testCondition(mismatchedTraitKey,
+                dev.helstera.api.behavior.BehaviorContext.of(null, zombie, 1.0, -1, 0, "IDLE")));
+
         for (String source : List.of("?entityType{type=CAT{variant=UNKNOWN}}",
+                "?entityType{type=COW{variant=WARM}}",
                 "?entityType{CAT;type=WOLF}")) {
             var preserved = dev.helstera.migration.importer.MmConditions.translate(source);
             assertFalse(preserved.translated(), source);
