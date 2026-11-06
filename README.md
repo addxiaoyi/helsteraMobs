@@ -4,15 +4,23 @@
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-origin-location-import-strict-20261105-r4`
-passes 357 probes (338 passed, 19 expected rejections, zero incomplete) on
-Paper 1.21.1-133. Its `importedOriginLocationCondition` probe sends Mythic
-`?originLocation` primary and alias forms through the importer and
-`SkillService`, verifies block and exact `BehaviorContext.origin()` coordinates,
-rejects a coordinate mismatch, and rejects non-finite coordinates and invalid
-boolean input. Report:
-`tools/paper-integration/reports/paper-1.21.1-origin-location-import-strict-20261105-r4.json`.
+Latest strict fixture `srv-paper-item-recharging-import-strict-20261106-r1`
+passes 358 probes (339 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its `importedItemRechargingCondition` probe routes Mythic
+`?itemRecharging` and `?recharging` through the importer and `SkillService`,
+checks both aliases after a real Bukkit attack lowers the Player's attack
+cooldown, and rejects a Zombie target. Report:
+`tools/paper-integration/reports/paper-1.21.1-item-recharging-import-strict-20261106-r1.json`.
 The plugin SHA-256 is
+`7e4b194a8beb0645e457108ab19d349c9888c783b74724d2cdb78ed533fecc91`.
+
+Previous strict fixture `srv-paper-origin-location-import-strict-20261105-r4`
+passes 357 probes (338 passed, 19 expected rejections, zero incomplete). Its
+`importedOriginLocationCondition` probe verifies Mythic primary and alias
+forms, exact origin coordinates, mismatch rejection, and malformed-input
+rejection through `SkillService`. Report:
+`tools/paper-integration/reports/paper-1.21.1-origin-location-import-strict-20261105-r4.json`.
+Its plugin SHA-256 is
 `42abd200b6cde48ca19471c180dbf2821e45d02eb2b12d993b8bd27b221c4bf0`.
 
 Previous strict fixture `srv-paper-trigger-types-import-strict-20261105-r2`
@@ -579,7 +587,7 @@ the entire MythicMobs feature catalog.
 - Official `IsUsingSpyglass` now reads a target Player's active Bukkit item and matches SPYGLASS; exploratory Paper r76 verifies active-item positive/negative paths.
 - Official `EnderDragonAlive` checks for a valid EnderDragon in the target world's entity set. Strict Paper 1.21.1-133 fixture `srv-paper-ender-dragon-alive-strict-20261102-r1` passes the dedicated `enderDragonAliveCondition`: a real dragon is accepted, then removed and rejected; the complete report has 263 probes and zero incomplete.
 - Official `PlayerKills` uses a lifetime counter owned by each managed mob instance and increments only when that instance is resolved as the killer of a Player death; aliases, range syntax, teardown cleanup, and migration coverage are implemented. Strict fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` verifies the online-player death event with controlled `lastDamageCause` attribution, passes `player-kills >=1`, and rejects `player-kills >1`; this does not establish natural PvP damage attribution.
-- Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies `Absorption`, `HasPotionEffect`, the internal PotionEffect-backed `has-aura-stacks` evaluator, managed `Level`, health-with-absorption comparisons, `LunarPhase`, `LastSignal`, `LineOfSightFromOrigin`, `BowTension`, string and comparator conditions, `GlobalScore`, `Score`, `LookingAt`, `Structure`, Item type/similarity, `Targets`, `ItemRecharging`, and player experience/absorption/passenger condition paths. Lunar phase parsing now rejects the whole condition when any phase token is invalid or empty, including a trailing comma. This does not verify Mythic Aura parity.
+- Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies `Absorption`, `HasPotionEffect`, the internal PotionEffect-backed `has-aura-stacks` evaluator, managed `Level`, health-with-absorption comparisons, `LunarPhase`, `LastSignal`, `LineOfSightFromOrigin`, `BowTension`, string and comparator conditions, `GlobalScore`, `Score`, `LookingAt`, `Structure`, Item type/similarity, `Targets`, `ItemRecharging`, and player experience/absorption/passenger condition paths. Fixture `srv-paper-item-recharging-import-strict-20261106-r1` additionally verifies imported `?itemRecharging`/`?recharging` aliases after a real Bukkit attack and rejects non-HumanEntity targets. Lunar phase parsing now rejects the whole condition when any phase token is invalid or empty, including a trailing comma. This does not verify Mythic Aura parity.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies Oxygen, ConsumeSlot, RemoveHeldItem, material cooldown, game mode, Jump, ForcePull, SetOffhand, SetArmor, SetFaction, SetLevel, SetWeather, SetTime, Lightning, Score, and target-aware dispatch.
 - Mythic skill migration now preserves positional arguments alongside keyed arguments across common item, inventory, experience, oxygen, block, entity-state, movement, potion, animation, and audience mechanics; importer regression coverage protects both forms.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` also verifies Freeze, CompareValues, IsSkill, Cuboid/InBounds, MythicMobType, VariableContains, and ProjectileHasEnded. `Score` preserves explicit objective/entry/value semantics and supports shorthand; `Targets` supports inherited skill-tree target counts and optional context targeters.

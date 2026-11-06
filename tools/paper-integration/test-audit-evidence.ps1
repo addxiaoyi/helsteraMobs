@@ -144,6 +144,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedMaterialCooldownCondition'; status = 'passed'; observations = @('imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true')
     }
+    $fullReport.expectedProbeIds += 'importedItemRechargingCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedItemRechargingCondition'; status = 'passed'; observations = @('imported-item-recharging-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true non-human-rejected=true')
+    }
     $fullReport.expectedProbeIds += 'snowingCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'snowingCondition'; status = 'passed'; observations = @('snowing-condition result=true target-location-isolated=true target-positive=true alias-positive=true warm-rejected=true clear-rejected=true missing-context-rejected=true invalid-arguments-rejected=true restored=true')

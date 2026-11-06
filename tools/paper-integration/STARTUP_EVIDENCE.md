@@ -1,7 +1,16 @@
 # Paper Startup Evidence
 
-Fixture `srv-paper-origin-location-import-strict-20261105-r4` passed the full
-strict gate on Paper 1.21.1-133: 357 probes, 338 passed, 19 expected
+Fixture `srv-paper-item-recharging-import-strict-20261106-r1` passed the full
+strict gate on Paper 1.21.1-133: 358 probes, 339 passed, 19 expected
+rejections, and zero incomplete. `importedItemRechargingCondition` verifies
+Mythic `?itemRecharging` and `?recharging` through the importer and
+`SkillService`, checks both aliases after a real Bukkit attack lowers Player
+attack cooldown, and rejects a Zombie target. Report and compressed
+server/client logs are listed in `release-evidence.json`; plugin SHA-256:
+`7e4b194a8beb0645e457108ab19d349c9888c783b74724d2cdb78ed533fecc91`.
+
+Previous fixture `srv-paper-origin-location-import-strict-20261105-r4` passed
+the full strict gate on Paper 1.21.1-133: 357 probes, 338 passed, 19 expected
 rejections, and zero incomplete. `importedOriginLocationCondition` verifies
 Mythic primary and alias forms through the importer and `SkillService`, block
 and exact `BehaviorContext.origin()` coordinates, mismatch rejection, and
@@ -2151,8 +2160,9 @@ pending.
 The same online-player self-test uses Bukkit `LivingEntity#attack` against an
 temporary Zombie, verifies `HumanEntity#getAttackCooldown()` falls below `1.0`,
 and checks the `ItemRecharging` condition. Exploratory fixture r3 records
-`itemRechargingCondition=passed` after a real Bukkit attack; strict Paper 1.21.1
-evidence remains pending.
+`itemRechargingCondition=passed` after a real Bukkit attack. Strict fixture
+`srv-paper-item-recharging-import-strict-20261106-r1` separately records the
+imported primary and alias forms as passed, plus the non-HumanEntity rejection.
 
 The trigger self-test now constructs an `EntityShootBowEvent` with force 0.75
 and evaluates `bow-tension >0.5` through the event-aware context. Exploratory

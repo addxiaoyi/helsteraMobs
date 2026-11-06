@@ -27,16 +27,26 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-origin-location-import-strict-20261105-r4`
-passed 357 probes (338 passed, 19 expected rejections, zero incomplete) on
-Paper 1.21.1-133. `importedOriginLocationCondition` verifies Mythic primary and
-alias forms through the importer and `SkillService`, block and exact origin
-coordinates, mismatch rejection, and malformed number/boolean rejection.
-Report: `reports/paper-1.21.1-origin-location-import-strict-20261105-r4.json`;
-server log:
-`reports/paper-1.21.1-origin-location-import-strict-20261105-r4.log.gz`; client
-logs:
-`reports/paper-1.21.1-origin-location-import-strict-20261105-r4-client-logs.tar.gz`.
+Latest strict fixture `srv-paper-item-recharging-import-strict-20261106-r1`
+passed 358 probes (339 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. `importedItemRechargingCondition` verifies Mythic
+`?itemRecharging` and `?recharging` through the importer and `SkillService`,
+checks both after a real Bukkit attack lowers Player attack cooldown, and
+rejects a Zombie target. Report:
+`reports/paper-1.21.1-item-recharging-import-strict-20261106-r1.json`; server
+log:
+`reports/paper-1.21.1-item-recharging-import-strict-20261106-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-item-recharging-import-strict-20261106-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`7e4b194a8beb0645e457108ab19d349c9888c783b74724d2cdb78ed533fecc91`.
+
+Previous strict fixture `srv-paper-origin-location-import-strict-20261105-r4`
+passed 357 probes (338 passed, 19 expected rejections, zero incomplete).
+`importedOriginLocationCondition` verifies Mythic primary and alias forms,
+exact origin coordinates, mismatch rejection, and malformed input through the
+importer and `SkillService`. Report:
+`reports/paper-1.21.1-origin-location-import-strict-20261105-r4.json`.
 Plugin SHA-256:
 `42abd200b6cde48ca19471c180dbf2821e45d02eb2b12d993b8bd27b221c4bf0`.
 
@@ -1339,8 +1349,9 @@ pending.
 The same online-player self-test uses Bukkit `LivingEntity#attack` against an
 temporary Zombie, verifies `HumanEntity#getAttackCooldown()` falls below `1.0`,
 and checks the `ItemRecharging` condition. Exploratory fixture r3 records
-`itemRechargingCondition=passed` after a real Bukkit attack; strict Paper 1.21.1
-evidence remains pending.
+`itemRechargingCondition=passed` after a real Bukkit attack. Strict fixture
+`srv-paper-item-recharging-import-strict-20261106-r1` separately records the
+imported primary and alias forms as passed, plus the non-HumanEntity rejection.
 
 The same managed Zombie context independently checks `PlayerKills` and
 `MythicMobType`; exploratory fixture r2 records `playerKillsCondition=passed`
