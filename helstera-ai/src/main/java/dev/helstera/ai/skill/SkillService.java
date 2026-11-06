@@ -572,7 +572,7 @@ public final class SkillService {
                 return null;
             }
             List<String> mechanicArgs = new ArrayList<>(parsed.positional());
-            if (isVariableMechanic(name)) {
+            if (isVariableMechanic(name) || "mythic-aura".equals(name)) {
                 parsed.arguments().forEach((key, value) -> {
                     if (!isExecutionAttribute(key)) mechanicArgs.add(key + "=" + value);
                 });
@@ -1779,7 +1779,9 @@ public final class SkillService {
                     "variable-map-value-gte", "variable-map-value-lte", "variable-map-value-in-range",
                     "variable-map-value-not-in-range",
                     "variable-gte", "variable-lte", "directional-velocity", "distance-from-location",
-                    "has-aura-stacks", "health", "health-percent", "compare-values", "score", "targets",
+                    "has-aura-stacks", "mythic-has-aura", "mythic-has-aura-stacks",
+                    "mythic-has-aura-type", "mythic-target-has-aura", "health", "health-percent",
+                    "compare-values", "score", "targets",
                     "cuboid", "in-bounds", "global-score" -> true;
             default -> false;
         };
@@ -1886,7 +1888,8 @@ public final class SkillService {
                     "target-has-item";
             case "targetpotioneffectactive", "target-potion-effect-active", "targetpotionactive" ->
                     "target-potion-effect-active";
-            case "targethasauras", "target-has-auras" -> "target-has-auras";
+            case "targethasauras" -> "mythic-target-has-aura";
+            case "mythic-target-has-aura", "target-has-mythic-aura" -> "mythic-target-has-aura";
             case "kill", "kill-targets" -> "kill-targets";
             case "playerkills", "player-kills", "player-kill-count" -> "player-kills";
             case "targethaspotion", "target-has-potion", "targethaspotioneffect",
@@ -2059,6 +2062,14 @@ public final class SkillService {
             case "falling", "isfalling" -> "falling";
             case "drowning", "isdrowning" -> "drowning";
             case "hasauras", "has-auras", "haspotion", "has-potion" -> "has-auras";
+            case "hasaura", "has-aura", "hasbuff", "has-buff", "hasdebuff", "has-debuff" ->
+                    "mythic-has-aura";
+            case "hasaurastacks", "hasaura-stacks", "hasbuffstacks", "has-buff-stacks",
+                    "hasdebuffstacks", "has-debuff-stacks", "aurastacks", "aura-stacks",
+                    "buffstacks", "buff-stacks", "debuffstacks", "debuff-stacks" ->
+                    "mythic-has-aura-stacks";
+            case "hasauratype", "has-aura-type", "hasbufftype", "has-buff-type",
+                    "hasdebufftype", "has-debuff-type" -> "mythic-has-aura-type";
             case "isriding", "riding", "is-mounted" -> "mounted";
             case "vehicleisdead", "vehicle-is-dead" -> "vehicle-is-dead";
             case "targetwithin", "target-within" -> "target-within";
@@ -2104,7 +2115,8 @@ public final class SkillService {
         return switch (name) {
             case "variable-unset", "var-unset", "variable-location-set", "location-unset",
                     "var-set", "set-variable", "var-add", "var-math",
-                    "score-set", "score-add", "signal", "dot" -> true;
+                    "score-set", "score-add", "signal", "dot", "mythic-aura",
+                    "mythic-aura-remove" -> true;
             default -> false;
         };
     }
@@ -2117,6 +2129,9 @@ public final class SkillService {
             case "variablemath", "varmath" -> "var-math";
             case "setvariablelocation", "variablelocationset", "setvarloc" -> "variable-location-set";
             case "locationunset" -> "location-unset";
+            case "aura", "buff", "debuff", "mythicaura" -> "mythic-aura";
+            case "auraremove", "aura-remove", "mythicauraremove", "removeaura", "remove-aura",
+                    "removebuff", "remove-buff", "removedebuff", "remove-debuff" -> "mythic-aura-remove";
             case "explosion" -> "explode";
             case "aoedamage" -> "aoe-damage";
             case "damage" -> "damage-target";

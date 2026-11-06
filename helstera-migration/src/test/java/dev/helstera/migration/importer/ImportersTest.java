@@ -1556,6 +1556,91 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Aura basic state options map while components and invalid values stay visible")
+    void mythicMapsBasicAuraStateAndPreservesUnsupportedFeatures(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/aura.yml", """
+                skills:
+                  fury:
+                    Skills:
+                      - aura{auraName=FURY;maxStacks=3}
+                  overwrite:
+                    Skills:
+                      - buff{b=\"Burning Fury\";d=40;overwriteAll=true}
+                  options:
+                    Skills:
+                      - aura{type=HARMFUL;refreshDuration=false}
+                  components:
+                    Skills:
+                      - aura{auraName=WARD;duration=100;components=[onattack]}
+                  invalid_duration:
+                    Skills:
+                      - aura{auraName=SHORT;duration=0}
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+
+        assertEquals(List.of("mythic-aura{auraName=\"FURY\";maxStacks=\"3\"}"),
+                target.getStringList("skills.fury.on-decision"));
+        assertEquals(List.of("mythic-aura{auraName=\"Burning Fury\";duration=\"40\";overwriteAll=\"true\"}"),
+                target.getStringList("skills.overwrite.on-decision"));
+        assertEquals(List.of("mythic-aura{auraType=\"HARMFUL\";refreshDuration=\"false\"}"),
+                target.getStringList("skills.options.on-decision"));
+        assertTrue(target.getStringList("skills.components.unsupported")
+                .contains("aura{auraName=WARD;duration=100;components=[onattack]}"));
+        assertTrue(target.getStringList("skills.invalid_duration.unsupported")
+                .contains("aura{auraName=SHORT;duration=0}"));
+        assertTrue(entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Aura components")));
+        assertTrue(entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("source-key")).contains("invalid_duration")));
+    }
+
+    @Test
+    @DisplayName("Mythic AuraRemove aliases map while invalid arguments stay visible")
+    void mythicMapsAuraRemoveAliasesAndPreservesInvalidArguments(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/aura-remove.yml", """
+                skills:
+                  defaults:
+                    Skills:
+                      - AuraRemove
+                  partial:
+                    Skills:
+                      - removeaura{aura=FURY;stacks=2}
+                  named:
+                    Skills:
+                      - removebuff{buff=WARD}
+                  wildcard:
+                    Skills:
+                      - removedebuff{aura=ANY}
+                  invalid_count:
+                    Skills:
+                      - removeaura{aura=FURY;stacks=0}
+                  invalid_argument:
+                    Skills:
+                      - removeaura{aura=FURY;unknown=true}
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+
+        assertEquals(List.of("mythic-aura-remove"),
+                target.getStringList("skills.defaults.on-decision"));
+        assertEquals(List.of("mythic-aura-remove{auraName=\"FURY\";stacks=\"2\"}"),
+                target.getStringList("skills.partial.on-decision"));
+        assertEquals(List.of("mythic-aura-remove{auraName=\"WARD\"}"),
+                target.getStringList("skills.named.on-decision"));
+        assertEquals(List.of("mythic-aura-remove{auraName=\"ANY\"}"),
+                target.getStringList("skills.wildcard.on-decision"));
+        assertEquals(List.of("removeaura{aura=FURY;stacks=0}"),
+                target.getStringList("skills.invalid_count.unsupported"));
+        assertEquals(List.of("removeaura{aura=FURY;unknown=true}"),
+                target.getStringList("skills.invalid_argument.unsupported"));
+        assertEquals(2, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("source-key")).contains("invalid_")).count());
+    }
+
+    @Test
     @DisplayName("Mythic mount mechanic maps to the native mount action")
     void mythicMapsMountMechanic(@TempDir Path root) throws Exception {
         Path file = write(root, "Skills/mount.yml", """
@@ -2581,24 +2666,24 @@ class ImportersTest {
 
         assertEquals(List.of(
                         "is-living",
-                        "?hasAura{aura=FURY}",
-                        "?hasBuff{buff=FURY}",
-                        "?hasDebuff{debuff=FURY}",
-                        "?hasAuraStacks{n=SPEED;s=>2}",
-                        "?hasAuraType{type=DEBUFF}",
-                        "?hasBuffType{group=HELPFUL}",
-                        "?hasDebuffType{auratype=HARMFUL}",
-                        "?hasBuffStacks{n=FURY;s=>2}",
-                        "?hasDebuffStacks{n=FURY;s=1}",
-                        "?auraStacks{aura=FURY;stacks=2}",
-                        "?buffStacks{aura=FURY;stacks=2}",
-                        "?debuffStacks{aura=FURY;stacks=2}"),
+                        "mythic-has-aura aura=FURY",
+                        "mythic-has-aura aura=FURY",
+                        "mythic-has-aura aura=FURY",
+                        "mythic-has-aura-stacks aura=SPEED stacks=>2",
+                        "mythic-has-aura-type type=DEBUFF",
+                        "mythic-has-aura-type type=HELPFUL",
+                        "mythic-has-aura-type type=HARMFUL",
+                        "mythic-has-aura-stacks aura=FURY stacks=>2",
+                        "mythic-has-aura-stacks aura=FURY stacks=1",
+                        "mythic-has-aura-stacks aura=FURY stacks=2",
+                        "mythic-has-aura-stacks aura=FURY stacks=2",
+                        "mythic-has-aura-stacks aura=FURY stacks=2"),
                 target.getStringList("skills.unknowncondition.target-conditions"));
-        assertEquals(List.of("?targetHasAuras{aura=FURY}"),
+        assertEquals(List.of("mythic-target-has-aura aura=FURY"),
                 target.getStringList("skills.unknowncondition.trigger-conditions"));
-        assertTrue(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))
+        assertFalse(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))
                 && String.valueOf(e.get("source-key")).contains("TargetConditions.unmapped")));
-        assertTrue(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))
+        assertFalse(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))
                 && String.valueOf(e.get("source-key")).contains("TriggerConditions.unmapped")));
     }
 

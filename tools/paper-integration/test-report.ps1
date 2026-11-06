@@ -68,6 +68,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true bounds-condition=true bounding-box-overlap-condition=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-mobility=true drowning-condition=true leashed-condition=true has-owner-condition=true has-tag-condition=true target-has-tag-condition=true scoreboard-tag-mechanics=true score-mechanics=true global-score-condition=true score-condition=true custom-owner-relation=true owner-condition=true children-condition=true inside-outside-conditions=true distance-from-location-condition=true coordinate-difference-condition=true origin-location-condition=true line-of-sight-from-origin-condition=true bounds-condition=true enchanting-conditions=true plugin-condition=true field-of-view-condition=true spawn-reason-condition=true water-mob-condition=true zombie-condition=true entity-type-condition=true aerial-condition=true enderman-condition=true enchantment-condition=true color-condition=true material-cooldown-condition=true material-cooldown-mechanic=true set-game-mode-mechanic=true jump-mechanic=true force-pull-mechanic=true set-offhand-mechanic=true set-armor-mechanic=true clear-inventory-mechanic=true remove-held-item-mechanic=true raw-experience-mechanic=true set-absorption-mechanic=true trigger-item-type-condition=true entity-item-type-condition=true entity-item-similar-condition=true item-similar-condition=true targets-condition=true item-type-condition=true structure-condition=true mythic-mob-type-condition=true trigger-block-type-condition=true frozen-condition=true dialogue-condition=true player-kills-condition=true absorption-condition=true health-absorption-condition=true potion-effect-condition=true aura-stacks-condition=true level-condition=true lunar-phase-condition=true string-equals-condition=true string-empty-condition=true compare-values-condition=true is-skill-condition=true owner-online-condition=true parent-relation=true is-child-condition=true is-child-import-condition=true adult-parent-positive=true adult-not-baby=true unrelated-baby-not-child=true baby-positive=true parent-derived-conditions=true player-experience-mechanics=true oxygen-mechanic=true consume-slot-mechanic=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true',
+        '[Server thread/INFO]: skill-actions mythic-aura-action=true mythic-has-aura-condition=true mythic-target-has-aura-condition=true mythic-has-aura-stacks-condition=true mythic-has-aura-type-condition=true mythic-aura-remove=true mythic-aura-invalid-rejected=true',
         '[Server thread/INFO]: raider-patrol-leader-condition positive=true negative=true entity=PILLAGER restored=true',
         '[Server thread/INFO]: creeper-primed-condition positive=true negative=true restored=true',
         '[Server thread/INFO]: ender-dragon-alive-condition positive=true negative=true removed=true',
@@ -497,6 +498,8 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'healthAbsorptionCondition').status -eq 'passed') 'health absorption condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'potionEffectCondition').status -eq 'passed') 'potion effect condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'auraStacksCondition').status -eq 'passed') 'aura stacks condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mythicAuraRuntime').status -eq 'passed') 'Mythic Aura runtime probe'
+    Assert-True ($report.expectedProbeIds -contains 'mythicAuraRuntime') 'Mythic Aura runtime is required in the strict catalog'
     Assert-True (($report.probes | Where-Object id -eq 'levelCondition').status -eq 'passed') 'level condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'lunarPhaseCondition').status -eq 'passed') 'lunar phase condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'stringEqualsCondition').status -eq 'passed') 'string equals condition probe'
@@ -743,6 +746,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedIsChildCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedIsChildCondition'; status = 'passed'; observations = @('skill-actions is-child-import-condition=true adult-parent-positive=true adult-not-baby=true unrelated-baby-not-child=true baby-positive=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'mythicAuraRuntime'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mythicAuraRuntime'; status = 'passed'; observations = @('skill-actions mythic-aura-action=true mythic-has-aura-condition=true mythic-target-has-aura-condition=true mythic-has-aura-stacks-condition=true mythic-has-aura-type-condition=true mythic-aura-remove=true mythic-aura-invalid-rejected=true')
     }
     $fullCatalogAiSelector = @($fullCatalogReport.probes | Where-Object id -eq 'aiSelectorCore')
     if ($fullCatalogAiSelector.Count -ne 1) { throw 'Synthetic full catalog report must contain aiSelectorCore.' }

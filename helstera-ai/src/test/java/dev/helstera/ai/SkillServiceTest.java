@@ -2679,7 +2679,7 @@ class SkillServiceTest {
                 "auraStacks{n=SPEED;s=>=2}",
                 "buffStacks{n=SPEED;s=>=2}",
                 "debuffStacks{n=SPEED;s=>=2}")) {
-            assertNull(svc.bindCondition(mythicAuraAlias), mythicAuraAlias);
+            assertNotNull(svc.bindCondition(mythicAuraAlias), mythicAuraAlias);
         }
         assertNotNull(svc.bindCondition("triggerBlockType{mat=STONE}"));
         assertNotNull(svc.bindCondition("distanceFromLocation{x=0;y=0;z=0;distance=<10}"));

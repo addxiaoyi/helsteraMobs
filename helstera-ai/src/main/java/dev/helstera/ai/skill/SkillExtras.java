@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -122,6 +123,49 @@ public final class SkillExtras {
     }
 
     private static volatile ManagedEntityLookup managedEntityLookup;
+    private static volatile AuraRegistry auraRegistry;
+    private static final Map<String, String> AURA_NAME_ARGUMENTS = Map.ofEntries(
+            Map.entry("aura", "aura"), Map.entry("auraname", "aura"),
+            Map.entry("b", "aura"), Map.entry("buff", "aura"),
+            Map.entry("buffname", "aura"), Map.entry("debuff", "aura"),
+            Map.entry("debuffname", "aura"), Map.entry("n", "aura"),
+            Map.entry("name", "aura"));
+    private static final Map<String, String> AURA_STACKS_ARGUMENTS = Map.ofEntries(
+            Map.entry("aura", "aura"), Map.entry("auraname", "aura"),
+            Map.entry("b", "aura"), Map.entry("buff", "aura"),
+            Map.entry("buffname", "aura"), Map.entry("debuff", "aura"),
+            Map.entry("debuffname", "aura"), Map.entry("n", "aura"),
+            Map.entry("name", "aura"), Map.entry("stacks", "stacks"),
+            Map.entry("s", "stacks"));
+    private static final Map<String, String> AURA_TYPE_ARGUMENTS = Map.of(
+            "auragroup", "type", "auratype", "type", "group", "type",
+            "type", "type", "g", "type", "t", "type");
+    private static final Map<String, String> AURA_ACTION_ARGUMENTS = Map.ofEntries(
+            Map.entry("auraname", "name"), Map.entry("aura", "name"),
+            Map.entry("b", "name"), Map.entry("buff", "name"),
+            Map.entry("buffname", "name"), Map.entry("debuff", "name"),
+            Map.entry("debuffname", "name"), Map.entry("n", "name"),
+            Map.entry("name", "name"), Map.entry("auratype", "type"),
+            Map.entry("auragroup", "type"), Map.entry("group", "type"),
+            Map.entry("type", "type"), Map.entry("g", "type"),
+            Map.entry("duration", "duration"), Map.entry("ticks", "duration"),
+            Map.entry("d", "duration"), Map.entry("time", "duration"),
+            Map.entry("t", "duration"), Map.entry("maxstacks", "maxstacks"),
+            Map.entry("ms", "maxstacks"), Map.entry("refreshduration", "refreshduration"),
+            Map.entry("rd", "refreshduration"), Map.entry("mergesamecaster", "mergesamecaster"),
+            Map.entry("msc", "mergesamecaster"), Map.entry("mc", "mergesamecaster"),
+            Map.entry("mergeall", "mergeall"), Map.entry("ma", "mergeall"),
+            Map.entry("overwritesamecaster", "overwritesamecaster"),
+            Map.entry("osc", "overwritesamecaster"), Map.entry("oc", "overwritesamecaster"),
+            Map.entry("overwriteall", "overwriteall"), Map.entry("overwrite", "overwriteall"),
+            Map.entry("ow", "overwriteall"));
+    private static final Map<String, String> AURA_REMOVE_ARGUMENTS = Map.ofEntries(
+            Map.entry("aura", "name"), Map.entry("auraname", "name"),
+            Map.entry("b", "name"), Map.entry("buff", "name"),
+            Map.entry("buffname", "name"), Map.entry("debuff", "name"),
+            Map.entry("debuffname", "name"), Map.entry("n", "name"),
+            Map.entry("name", "name"), Map.entry("stacks", "stacks"),
+            Map.entry("s", "stacks"));
     private static volatile java.util.function.Consumer<String> audienceDiagnostic;
     @FunctionalInterface
     public interface SkillCooldownSetter {
@@ -212,6 +256,10 @@ public final class SkillExtras {
 
     public static void managedEntityLookup(ManagedEntityLookup lookup) {
         managedEntityLookup = lookup;
+    }
+
+    public static void auraRegistry(AuraRegistry registry) {
+        auraRegistry = registry;
     }
 
     public static void threatLookup(ThreatLookup l) {
@@ -306,6 +354,7 @@ public final class SkillExtras {
         dialogueLookup = null;
         cinematicLookup = null;
         managedEntityLookup = null;
+        auraRegistry = null;
         audienceDiagnostic = null;
         skillCooldownSetter = null;
         potionEffectEndDispatcher = null;
@@ -2852,6 +2901,74 @@ public final class SkillExtras {
                         });
                     };
                 }),
+                Map.entry("mythic-has-aura", (SkillCatalog.ConditionFactory) a -> {
+                    validateAuraArguments(a, AURA_NAME_ARGUMENTS, "aura");
+                    String wanted = keyedArg(a, "aura", "auraname", "b", "buff", "buffname",
+                            "debuff", "debuffname", "n", "name");
+                    if (wanted == null) wanted = str(a, 0, "");
+                    if (wanted.isBlank()) throw new IllegalArgumentException("aura name is required");
+                    String expected = wanted;
+                    return ctx -> {
+                        AuraRegistry store = auraRegistry;
+                        LivingEntity entity = conditionEntity(ctx);
+                        String name = Placeholders.resolve(expected, ctx).trim();
+                        return store != null && entity != null && entity.isValid() && !entity.isDead()
+                                && !(expected.contains("<") && name.equals(expected))
+                                && store.hasAura(entity.getUniqueId(), name);
+                    };
+                }),
+                Map.entry("mythic-has-aura-stacks", (SkillCatalog.ConditionFactory) a -> {
+                    validateAuraArguments(a, AURA_STACKS_ARGUMENTS, "aura", "stacks");
+                    String wanted = keyedArg(a, "aura", "auraname", "b", "buff", "buffname",
+                            "debuff", "debuffname", "n", "name");
+                    if (wanted == null) wanted = str(a, 0, "");
+                    String stacksRaw = keyedArg(a, "stacks", "s");
+                    if (stacksRaw == null) stacksRaw = str(a, 1, "1");
+                    if (wanted.isBlank()) throw new IllegalArgumentException("aura name is required");
+                    NumberRange stackRange = numberRange(List.of(stacksRaw), 0);
+                    if (stackRange == null) throw new IllegalArgumentException("invalid aura stack range");
+                    String expected = wanted;
+                    return ctx -> {
+                        AuraRegistry store = auraRegistry;
+                        LivingEntity entity = conditionEntity(ctx);
+                        String name = Placeholders.resolve(expected, ctx).trim();
+                        return store != null && entity != null && entity.isValid() && !entity.isDead()
+                                && !(expected.contains("<") && name.equals(expected))
+                                && store.hasAuraStacks(entity.getUniqueId(), name,
+                                stacks -> stackRange.contains(stacks));
+                    };
+                }),
+                Map.entry("mythic-has-aura-type", (SkillCatalog.ConditionFactory) a -> {
+                    validateAuraArguments(a, AURA_TYPE_ARGUMENTS, "type");
+                    String wanted = keyedArg(a, "auratype", "auragroup", "group", "type", "g", "t");
+                    if (wanted == null) wanted = str(a, 0, "");
+                    if (wanted.isBlank()) throw new IllegalArgumentException("aura type is required");
+                    String expected = wanted;
+                    return ctx -> {
+                        AuraRegistry store = auraRegistry;
+                        LivingEntity entity = conditionEntity(ctx);
+                        String type = Placeholders.resolve(expected, ctx).trim();
+                        return store != null && entity != null && entity.isValid() && !entity.isDead()
+                                && !(expected.contains("<") && type.equals(expected))
+                                && store.hasAuraType(entity.getUniqueId(), type);
+                    };
+                }),
+                Map.entry("mythic-target-has-aura", (SkillCatalog.ConditionFactory) a -> {
+                    validateAuraArguments(a, AURA_NAME_ARGUMENTS, "aura");
+                    String wanted = keyedArg(a, "aura", "auraname", "b", "buff", "buffname",
+                            "debuff", "debuffname", "n", "name");
+                    if (wanted == null) wanted = str(a, 0, "");
+                    if (wanted.isBlank()) throw new IllegalArgumentException("aura name is required");
+                    String expected = wanted;
+                    return ctx -> {
+                        AuraRegistry store = auraRegistry;
+                        LivingEntity target = targetOnlyEntity(ctx);
+                        String name = Placeholders.resolve(expected, ctx).trim();
+                        return store != null && target != null && target.isValid() && !target.isDead()
+                                && !(expected.contains("<") && name.equals(expected))
+                                && store.hasAura(target.getUniqueId(), name);
+                    };
+                }),
                 Map.entry("target-potion-effect-active", (SkillCatalog.ConditionFactory) a -> {
                     String name = str(a, 0, "");
                     return ctx -> {
@@ -3796,8 +3913,186 @@ public final class SkillExtras {
         };
     }
 
+    private static java.util.function.Consumer<BehaviorContext> mythicAuraAction(List<String> args) {
+        validateAuraArguments(args, AURA_ACTION_ARGUMENTS);
+        String configuredName = keyedArg(args, "auraname", "aura", "b", "buff", "buffname",
+                "debuff", "debuffname", "n", "name");
+        String configuredType = keyedArg(args, "auratype", "auragroup", "group", "type", "g");
+        String durationRaw = keyedArg(args, "duration", "ticks", "d", "time", "t");
+        String maxStacksRaw = keyedArg(args, "maxstacks", "ms");
+        if (durationRaw != null && !durationRaw.contains("<")) parseAuraTicks(durationRaw, 200);
+        int maxStacks = parseAuraCount(maxStacksRaw, 1);
+        boolean mergeAll = auraBoolean(args, false, "mergeall", "ma");
+        boolean overwriteSameCaster = auraBoolean(args, false, "overwritesamecaster", "osc", "oc");
+        boolean overwriteAll = auraBoolean(args, false, "overwriteall", "overwrite", "ow");
+        boolean defaultMergeSameCaster = !mergeAll && !overwriteSameCaster && !overwriteAll;
+        boolean mergeSameCaster = auraBoolean(args, defaultMergeSameCaster, "mergesamecaster", "msc", "mc");
+        boolean refreshDuration = auraBoolean(args, true, "refreshduration", "rd");
+        if (overwriteSameCaster && overwriteAll
+                || (overwriteSameCaster || overwriteAll) && (mergeSameCaster || mergeAll)) {
+            throw new IllegalArgumentException("aura overwrite options cannot be combined with merge options");
+        }
+
+        return ctx -> {
+            AuraRegistry store = auraRegistry;
+            if (store == null || ctx == null) return;
+            long duration = parseAuraTicks(durationRaw, 200, ctx);
+            if (duration <= 0) return;
+            String name = resolveAuraValue(configuredName, ctx);
+            if (configuredName != null && name == null) return;
+            if (name == null || name.isBlank()) name = "default";
+            String type = resolveAuraValue(configuredType, ctx);
+            if (configuredType != null && type == null) return;
+            Entity caster = ctx.instanceValid() ? ctx.instance().baseEntity().orElse(null) : null;
+            UUID casterId = caster == null ? null : caster.getUniqueId();
+            for (LivingEntity target : targetEntities(ctx)) {
+                if (target == null || !target.isValid() || target.isDead()) continue;
+                try {
+                    store.apply(target.getUniqueId(), casterId, name, type, duration, maxStacks,
+                            refreshDuration, mergeSameCaster, mergeAll, overwriteSameCaster, overwriteAll);
+                } catch (RuntimeException ignored) {
+                    SkillFaults.swallow("SkillExtras#mythicAura");
+                }
+            }
+        };
+    }
+
+    private static java.util.function.Consumer<BehaviorContext> mythicAuraRemoveAction(List<String> args) {
+        validateAuraArguments(args, AURA_REMOVE_ARGUMENTS, "name", "stacks");
+        String configuredName = keyedArg(args, "aura", "auraname", "b", "buff", "buffname",
+                "debuff", "debuffname", "n", "name");
+        List<String> positional = args == null ? List.of() : args.stream()
+                .filter(arg -> arg != null && arg.indexOf('=') < 0).toList();
+        if (configuredName == null) configuredName = positional.isEmpty() ? "default" : positional.get(0);
+        String configuredStacks = keyedArg(args, "stacks", "s");
+        if (configuredStacks == null && positional.size() > 1) configuredStacks = positional.get(1);
+        if (configuredName.isBlank()) throw new IllegalArgumentException("aura name is required");
+        if (configuredStacks != null && !configuredStacks.contains("<")) {
+            parseAuraRemovalStacks(configuredStacks);
+        }
+
+        String nameSpec = configuredName;
+        String stacksSpec = configuredStacks;
+        return ctx -> {
+            AuraRegistry store = auraRegistry;
+            if (store == null || ctx == null) return;
+            String name = resolveAuraValue(nameSpec, ctx);
+            if (name == null || name.isBlank()) return;
+            int stacks = Integer.MAX_VALUE;
+            if (stacksSpec != null) {
+                String resolved = Placeholders.resolve(stacksSpec, ctx);
+                if (resolved == null || resolved.isBlank()
+                        || stacksSpec.contains("<") && resolved.equals(stacksSpec)) return;
+                try {
+                    stacks = parseAuraRemovalStacks(resolved);
+                } catch (IllegalArgumentException ignored) {
+                    return;
+                }
+            }
+            for (LivingEntity target : targetEntities(ctx)) {
+                if (target == null || !target.isValid() || target.isDead()) continue;
+                try {
+                    store.remove(target.getUniqueId(), name, stacks);
+                } catch (RuntimeException ignored) {
+                    SkillFaults.swallow("SkillExtras#mythicAuraRemove");
+                }
+            }
+        };
+    }
+
+    private static void validateAuraArguments(List<String> args,
+                                              Map<String, String> aliases,
+                                              String... positionalGroups) {
+        Set<String> seen = new java.util.HashSet<>();
+        int positionalIndex = 0;
+        if (args == null) return;
+        for (String raw : args) {
+            if (raw == null || raw.isBlank()) {
+                throw new IllegalArgumentException("empty aura argument");
+            }
+            int equals = raw.indexOf('=');
+            String canonical;
+            if (equals < 0) {
+                if (positionalIndex >= positionalGroups.length) {
+                    throw new IllegalArgumentException("unsupported positional aura argument: " + raw);
+                }
+                canonical = positionalGroups[positionalIndex++];
+            } else {
+                if (equals == 0 || equals == raw.length() - 1) {
+                    throw new IllegalArgumentException("invalid aura argument: " + raw);
+                }
+                String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                canonical = aliases.get(key);
+                if (canonical == null) throw new IllegalArgumentException("unsupported aura argument: " + key);
+            }
+            if (!seen.add(canonical)) throw new IllegalArgumentException("duplicate aura argument: " + canonical);
+        }
+    }
+
+    private static boolean auraBoolean(List<String> args, boolean fallback, String... keys) {
+        String raw = keyedArg(args, keys);
+        if (raw == null) return fallback;
+        if (raw.equalsIgnoreCase("true")) return true;
+        if (raw.equalsIgnoreCase("false")) return false;
+        throw new IllegalArgumentException("invalid aura boolean: " + raw);
+    }
+
+    private static int parseAuraCount(String raw, int fallback) {
+        if (raw == null) return fallback;
+        try {
+            int value = Integer.parseInt(raw.trim());
+            if (value < 1) throw new IllegalArgumentException("aura maxStacks must be positive");
+            return value;
+        } catch (NumberFormatException error) {
+            throw new IllegalArgumentException("invalid aura maxStacks: " + raw, error);
+        }
+    }
+
+    private static int parseAuraRemovalStacks(String raw) {
+        try {
+            int value = Integer.parseInt(raw.trim());
+            if (value < 1) throw new IllegalArgumentException("aura removal stacks must be positive");
+            return value;
+        } catch (NumberFormatException error) {
+            throw new IllegalArgumentException("invalid aura removal stacks: " + raw, error);
+        }
+    }
+
+    private static long parseAuraTicks(String raw, long fallback) {
+        if (raw == null) return fallback;
+        try {
+            double value = Double.parseDouble(raw.trim());
+            if (!Double.isFinite(value) || value < 1 || value >= Long.MAX_VALUE) {
+                throw new IllegalArgumentException("aura duration must be a positive tick count");
+            }
+            return (long) Math.ceil(value);
+        } catch (NumberFormatException error) {
+            throw new IllegalArgumentException("invalid aura duration: " + raw, error);
+        }
+    }
+
+    private static long parseAuraTicks(String raw, long fallback, BehaviorContext context) {
+        if (raw == null) return fallback;
+        String resolved = Placeholders.resolve(raw, context);
+        if (resolved == null || resolved.isBlank() || raw.contains("<") && resolved.equals(raw)) return -1;
+        try {
+            return parseAuraTicks(resolved, fallback);
+        } catch (IllegalArgumentException ignored) {
+            return -1;
+        }
+    }
+
+    private static String resolveAuraValue(String raw, BehaviorContext context) {
+        if (raw == null) return null;
+        String resolved = Placeholders.resolve(raw, context);
+        if (resolved == null || raw.contains("<") && resolved.equals(raw)) return null;
+        return resolved.trim();
+    }
+
     public static Map<String, SkillCatalog.ActionFactory> actions() {
         return Map.ofEntries(
+                Map.entry("mythic-aura", (SkillCatalog.ActionFactory) SkillExtras::mythicAuraAction),
+                Map.entry("mythic-aura-remove", (SkillCatalog.ActionFactory) SkillExtras::mythicAuraRemoveAction),
                 Map.entry("move-pin", (SkillCatalog.ActionFactory) a -> {
                     String pin = keyedArg(a, "pin", "p");
                     if (pin == null) pin = str(a, 0, "");
