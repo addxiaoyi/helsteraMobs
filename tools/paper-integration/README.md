@@ -1781,9 +1781,10 @@ Persistent SkillTree restart verification is opt-in:
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/test-skilltree-restart.ps1
 ```
 
-It uses a dedicated `ARMOR_STAND` persistent mob, runs two Paper boots against
-the same isolated world, and verifies the stable PDC mob ID and SkillTree marker
-after the second boot. For a non-release Paper fixture, pass
+It uses two `PIG` persistent mobs with the same mob ID, runs two Paper
+boots against the same isolated world, and verifies their UUID-keyed SkillTree
+markers and branches restore independently. The second boot kills one mob and
+checks that shutdown removes only its snapshot. For a non-release Paper fixture, pass
 `-Exploratory -PaperJarPath <path-to-paper.jar>` and set
 `PAPER_LIBRARIES_PATH` to the matching Paper runtime libraries directory; the
 run is evidence only and does not satisfy the strict Paper 1.21.1 gate.

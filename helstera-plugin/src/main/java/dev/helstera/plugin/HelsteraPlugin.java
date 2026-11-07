@@ -15292,7 +15292,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onConfirmedEntityDeath(org.bukkit.event.entity.EntityDeathEvent e) {
-        if (!e.isCancelled()) releasePersistentMobChunk(e.getEntity());
+        if (!e.isCancelled()) {
+            removePersistentMobSkillTreeSnapshot(e.getEntity());
+            releasePersistentMobChunk(e.getEntity());
+        }
     }
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST, ignoreCancelled = true)
@@ -15835,14 +15838,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         MobSpawn result = spawnMobCore(mobId, null, living.getLocation(), false, null, living);
         if (result != null && result.instanceId() > 0
                 && skillService instanceof dev.helstera.ai.skill.SkillService skills) {
-            java.io.File snapshot = persistentMobSkillTreeFile(mobId);
-            if (snapshot.isFile()) {
-                try {
-                    skills.restoreSkillTreeSnapshot(result.instanceId(),
-                            dev.helstera.api.behavior.SkillTreeSnapshotStore.load(snapshot));
-                } catch (java.io.IOException ex) {
-                    getLogger().warning("[Persistent] SkillTree snapshot load failed for " + mobId + ": " + ex.getMessage());
-                }
+            try {
+                persistentMobSkillTreeStore().load(entity.getUniqueId(), mobId).ifPresent(snapshot ->
+                        skills.restoreSkillTreeSnapshot(result.instanceId(), snapshot));
+            } catch (java.io.IOException ex) {
+                getLogger().warning("[Persistent] SkillTree snapshot load failed for "
+                        + entity.getUniqueId() + ": " + ex.getMessage());
             }
         }
         return result != null && result.instanceId() > 0;
@@ -15856,37 +15857,38 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             return;
         }
         if ("write".equalsIgnoreCase(stage)) {
-            Location at = getServer().getWorlds().get(0).getSpawnLocation().clone().add(0, 3, 0);
-            int instanceId = spawnMobAt("skilltree_probe", at, null);
-            var instance = instances().impl(instanceId);
-            var entity = instance == null ? null : instance.baseEntity().orElse(null);
-            if (instanceId <= 0 || !(entity instanceof org.bukkit.entity.LivingEntity living)) {
-                getLogger().warning("[SelfTest] skilltree-restart stage=write result=failed reason=spawn-failed");
-                return;
-            }
-            String mobId = living.getPersistentDataContainer().get(
-                    persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING);
-            var tree = new dev.helstera.api.behavior.SkillTreeContext(living, java.util.List.of(living), at);
-            tree.setVariable("restart-marker", "saved-on-first-boot");
-            tree.defineBranch("restart-foundation", java.util.Set.of());
-            tree.defineBranch("restart-advanced", java.util.Set.of("restart-foundation"));
-            boolean foundationUnlocked = tree.unlockBranch("restart-foundation");
-            var snapshot = tree.snapshot();
-            skills.restoreSkillTreeSnapshot(instanceId, snapshot);
-            if (mobId != null) {
-                try {
-                    dev.helstera.api.behavior.SkillTreeSnapshotStore.save(
-                            persistentMobSkillTreeFile(mobId), snapshot);
-                } catch (java.io.IOException ex) {
-                    getLogger().warning("[SelfTest] SkillTree stable snapshot write failed: " + ex.getMessage());
+            Location spawn = getServer().getWorlds().get(0).getSpawnLocation().clone().add(0, 3, 0);
+            var entities = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
+            boolean foundationUnlocked = true;
+            for (int index = 0; index < 2; index++) {
+                Location at = spawn.clone().add(index * 2, 0, 0);
+                int instanceId = spawnMobAt("skilltree_probe", at, null);
+                var instance = instanceId > 0 ? instances().impl(instanceId) : null;
+                var entity = instance == null ? null : instance.baseEntity().orElse(null);
+                if (!(entity instanceof org.bukkit.entity.LivingEntity living)) {
+                    getLogger().warning("[SelfTest] skilltree-restart stage=write result=failed reason=spawn-failed");
+                    return;
                 }
+                living.setGravity(false);
+                living.setInvulnerable(true);
+                entities.add(living);
+                var tree = new dev.helstera.api.behavior.SkillTreeContext(living, java.util.List.of(living), at);
+                tree.setVariable("restart-marker", "saved-on-first-boot:" + living.getUniqueId());
+                tree.defineBranch("restart-foundation", java.util.Set.of());
+                tree.defineBranch("restart-advanced", java.util.Set.of("restart-foundation"));
+                foundationUnlocked &= tree.unlockBranch("restart-foundation");
+                skills.restoreSkillTreeSnapshot(instanceId, tree.snapshot());
             }
+            String uuids = entities.stream().map(entity -> entity.getUniqueId().toString())
+                    .sorted().collect(java.util.stream.Collectors.joining(","));
+            boolean passed = foundationUnlocked && entities.size() == 2
+                    && entities.stream().allMatch(entity -> "skilltree_probe".equals(
+                    entity.getPersistentDataContainer().get(
+                            persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING)));
             getLogger().info("[SelfTest] skilltree-restart stage=write result="
-                    + (mobId == null || !foundationUnlocked ? "failed" : "passed") + " mob-id=" + mobId
-                    + " instance=" + instanceId + " marker=saved-on-first-boot"
-                    + " foundation-unlocked=" + foundationUnlocked
-                    + " advanced-requires-foundation=" + snapshot.branchRequirements()
-                    .getOrDefault("restart-advanced", java.util.Set.of()));
+                    + (passed ? "passed" : "failed") + " mob-id=skilltree_probe entities=" + entities.size()
+                    + " entity-uuids=" + uuids + " marker=saved-on-first-boot"
+                    + " foundation-unlocked=" + foundationUnlocked);
             return;
         }
         String expectedMobId = "skilltree_probe";
@@ -15894,34 +15896,56 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 .filter(instance -> instance.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity living
                         && expectedMobId.equals(living.getPersistentDataContainer().get(
                         persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING)))
-                .findFirst().orElse(null);
-        if (restored == null) {
-            getLogger().warning("[SelfTest] skilltree-restart stage=verify result=failed reason=mob-not-restored");
+                .sorted(java.util.Comparator.comparing(instance -> instance.baseEntity().orElseThrow()
+                        .getUniqueId().toString()))
+                .toList();
+        if (restored.size() != 2) {
+            getLogger().warning("[SelfTest] skilltree-restart stage=verify result=failed mob-id="
+                    + expectedMobId + " restored-entities=" + restored.size());
             return;
         }
-        var restoredSnapshot = skills.snapshotOf(restored.instanceId()).orElse(null);
-        String marker = restoredSnapshot == null ? "missing"
-                : String.valueOf(restoredSnapshot.variables().getOrDefault("restart-marker", "missing"));
-        boolean foundationRestored = restoredSnapshot != null
-                && restoredSnapshot.unlockedBranches().contains("restart-foundation");
-        boolean prerequisiteRestored = restoredSnapshot != null
-                && restoredSnapshot.branchRequirements().getOrDefault("restart-advanced", java.util.Set.of())
-                .contains("restart-foundation");
-        boolean advancedUnlocked = false;
-        if (restoredSnapshot != null) {
-            var restoredTree = dev.helstera.api.behavior.SkillTreeContext.restore(
-                    restoredSnapshot, restored.baseEntity().orElse(null), java.util.List.of(),
-                    getServer()::getWorld);
-            advancedUnlocked = restoredTree.unlockBranch("restart-advanced")
-                    && restoredTree.branchUnlocked("restart-advanced");
-        }
-        boolean passed = marker.equals("saved-on-first-boot") && foundationRestored
-                && prerequisiteRestored && advancedUnlocked;
+        boolean uniqueMarkers = restored.stream().allMatch(instance -> {
+            var entity = instance.baseEntity().orElseThrow();
+            var snapshot = skills.snapshotOf(instance.instanceId()).orElse(null);
+            return snapshot != null && ("saved-on-first-boot:" + entity.getUniqueId()).equals(
+                    snapshot.variables().get("restart-marker"));
+        });
+        boolean foundationRestored = restored.stream().allMatch(instance -> skills.snapshotOf(instance.instanceId())
+                .map(snapshot -> snapshot.unlockedBranches().contains("restart-foundation")).orElse(false));
+        boolean prerequisiteRestored = restored.stream().allMatch(instance -> skills.snapshotOf(instance.instanceId())
+                .map(snapshot -> snapshot.branchRequirements().getOrDefault(
+                        "restart-advanced", java.util.Set.of()).contains("restart-foundation")).orElse(false));
+        boolean advancedUnlocked = restored.stream().allMatch(instance -> {
+            var snapshot = skills.snapshotOf(instance.instanceId()).orElse(null);
+            if (snapshot == null) return false;
+            var tree = dev.helstera.api.behavior.SkillTreeContext.restore(
+                    snapshot, instance.baseEntity().orElse(null), java.util.List.of(), getServer()::getWorld);
+            return tree.unlockBranch("restart-advanced") && tree.branchUnlocked("restart-advanced");
+        });
+        boolean passed = uniqueMarkers && foundationRestored && prerequisiteRestored && advancedUnlocked;
         getLogger().info("[SelfTest] skilltree-restart stage=verify result=" + (passed ? "passed" : "failed")
-                + " mob-id=" + expectedMobId + " instance=" + restored.instanceId() + " marker=" + marker
-                + " foundation-restored=" + foundationRestored
-                + " prerequisite-restored=" + prerequisiteRestored
-                + " advanced-unlocked=" + advancedUnlocked);
+                + " mob-id=" + expectedMobId + " entities=" + restored.size()
+                + " uuid-markers=" + uniqueMarkers + " foundation-restored=" + foundationRestored
+                + " prerequisite-restored=" + prerequisiteRestored + " advanced-unlocked=" + advancedUnlocked);
+        if (!passed) return;
+
+        var victim = (org.bukkit.entity.LivingEntity) restored.get(0).baseEntity().orElseThrow();
+        var survivor = (org.bukkit.entity.LivingEntity) restored.get(1).baseEntity().orElseThrow();
+        var store = persistentMobSkillTreeStore();
+        victim.setInvulnerable(true);
+        survivor.setInvulnerable(true);
+        victim.setInvulnerable(false);
+        victim.damage(Math.max(100.0, victim.getHealth() + 1.0));
+        getServer().getScheduler().runTaskLater(this, () -> {
+            boolean dead = victim.isDead() || !victim.isValid();
+            boolean deleted = !store.entityFile(victim.getUniqueId()).exists();
+            boolean survivorKept = store.entityFile(survivor.getUniqueId()).isFile();
+            boolean deathPassed = dead && deleted && survivorKept;
+            getLogger().info("[SelfTest] skilltree-restart stage=death result="
+                    + (deathPassed ? "passed" : "failed") + " mob-id=" + expectedMobId
+                    + " removed-entity=" + victim.getUniqueId() + " entity-dead=" + dead
+                    + " removed-snapshot=" + deleted + " survivor-snapshot=" + survivorKept);
+        }, 1L);
     }
 
     private void runPersistentExecutionAudienceSelfTest() {
@@ -15980,25 +16004,43 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " persistent=" + persistent);
     }
 
-    private java.io.File persistentMobSkillTreeFile(String mobId) {
-        String safe = mobId == null ? "" : mobId.replaceAll("[^A-Za-z0-9_.-]", "_");
-        return new java.io.File(new java.io.File(getDataFolder(), "skill-trees"), "mob-" + safe + ".yml");
+    private PersistentMobSkillTreeStore persistentMobSkillTreeStore() {
+        return new PersistentMobSkillTreeStore(new java.io.File(getDataFolder(), "skill-trees"));
+    }
+
+    private void removePersistentMobSkillTreeSnapshot(org.bukkit.entity.Entity entity) {
+        var instance = findInstance(entity);
+        if (instance == null || !"PERSISTENT".equalsIgnoreCase(instance.options().despawnMode())) return;
+        if (skillService instanceof dev.helstera.ai.skill.SkillService skills) {
+            skills.clearSkillTree(instance.instanceId());
+        }
+        try {
+            var store = persistentMobSkillTreeStore();
+            store.delete(entity.getUniqueId());
+            store.deleteInstance(instance.instanceId());
+        } catch (java.io.IOException ex) {
+            getLogger().warning("[Persistent] SkillTree snapshot delete failed for "
+                    + entity.getUniqueId() + ": " + ex.getMessage());
+        }
     }
 
     private void savePersistentMobSkillTrees(dev.helstera.ai.skill.SkillService skills) {
         if (instances == null) return;
+        var store = persistentMobSkillTreeStore();
         for (var instance : instances().allImpl()) {
             var entity = instance.baseEntity().orElse(null);
-            if (!(entity instanceof org.bukkit.entity.LivingEntity living)) continue;
+            if (!(entity instanceof org.bukkit.entity.LivingEntity living)
+                    || !living.isValid() || living.isDead()
+                    || !"PERSISTENT".equalsIgnoreCase(instance.options().despawnMode())) continue;
             String mobId = living.getPersistentDataContainer().get(
                     persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING);
             if (mobId == null || mobId.isBlank()) continue;
             skills.snapshotOf(instance.instanceId()).ifPresent(snapshot -> {
                 try {
-                    dev.helstera.api.behavior.SkillTreeSnapshotStore.save(
-                            persistentMobSkillTreeFile(mobId), snapshot);
+                    store.save(living.getUniqueId(), snapshot);
                 } catch (java.io.IOException ex) {
-                    getLogger().warning("[Persistent] SkillTree snapshot save failed for " + mobId + ": " + ex.getMessage());
+                    getLogger().warning("[Persistent] SkillTree snapshot save failed for "
+                            + living.getUniqueId() + ": " + ex.getMessage());
                 }
             });
         }

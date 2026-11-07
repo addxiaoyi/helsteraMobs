@@ -13,6 +13,7 @@ $fixture = if ([string]::IsNullOrWhiteSpace($FixtureName)) {
 $previousFixture = $env:PAPER_INTEGRATION_DIR
 $previousReuse = $env:PAPER_SKILLTREE_REUSE
 $previousStage = $env:PAPER_SKILLTREE_STAGE
+$previousSkillTreeOnly = $env:PAPER_SKILLTREE_ONLY
 $previousMenu = $env:PAPER_MENU_WORKFLOW
 $previousPaperJar = $env:PAPER_JAR_PATH
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -29,6 +30,7 @@ try {
     }
     $env:PAPER_SKILLTREE_REUSE = 'false'
     $env:PAPER_SKILLTREE_STAGE = 'write'
+    $env:PAPER_SKILLTREE_ONLY = 'true'
     $env:PAPER_MENU_WORKFLOW = 'false'
     New-Item -ItemType Directory -Path $fixturePath -Force | Out-Null
     $serverProperties = Join-Path $fixturePath 'server.properties'
@@ -44,12 +46,16 @@ try {
     & (Join-Path $PSScriptRoot 'run-server.ps1') @runParams
 
     $writeLog = Join-Path $fixturePath 'logs/latest.log'
-    if (-not (Select-String -LiteralPath $writeLog -Pattern 'skilltree-restart stage=write result=passed mob-id=skilltree_probe .*foundation-unlocked=true' -Quiet)) {
+    if (-not (Select-String -LiteralPath $writeLog -Pattern 'skilltree-restart stage=write result=passed mob-id=skilltree_probe entities=2 .*foundation-unlocked=true' -Quiet)) {
         throw 'First boot did not persist the SkillTree probe state'
     }
-    $snapshot = Join-Path $fixturePath 'plugins/helsteraMobs/skill-trees/mob-skilltree_probe.yml'
-    if (-not (Test-Path -LiteralPath $snapshot -PathType Leaf)) {
-        throw 'Stable mob SkillTree snapshot file is missing after first shutdown'
+    $snapshotDirectory = Join-Path $fixturePath 'plugins/helsteraMobs/skill-trees'
+    $snapshots = @(Get-ChildItem -LiteralPath $snapshotDirectory -Filter 'entity-*.yml' -File)
+    if ($snapshots.Count -ne 2) {
+        throw "Expected two UUID SkillTree snapshots after first shutdown; found $($snapshots.Count)"
+    }
+    if (Test-Path -LiteralPath (Join-Path $snapshotDirectory 'mob-skilltree_probe.yml')) {
+        throw 'New SkillTree snapshots must use entity UUIDs, not the legacy mob ID filename'
     }
 
     $env:PAPER_SKILLTREE_REUSE = 'true'
@@ -57,14 +63,28 @@ try {
     & (Join-Path $PSScriptRoot 'run-server.ps1') @runParams
 
     $verifyLog = Join-Path $fixturePath 'logs/latest.log'
-    if (-not (Select-String -LiteralPath $verifyLog -Pattern 'skilltree-restart stage=verify result=passed mob-id=skilltree_probe .*marker=saved-on-first-boot .*foundation-restored=true .*prerequisite-restored=true .*advanced-unlocked=true' -Quiet)) {
-        throw 'Second boot did not restore the persisted SkillTree marker'
+    if (-not (Select-String -LiteralPath $verifyLog -Pattern 'skilltree-restart stage=verify result=passed mob-id=skilltree_probe entities=2 uuid-markers=true foundation-restored=true prerequisite-restored=true advanced-unlocked=true' -Quiet)) {
+        throw 'Second boot did not independently restore both UUID SkillTree snapshots'
+    }
+    if (-not (Select-String -LiteralPath $verifyLog -Pattern 'skilltree-restart stage=death result=passed mob-id=skilltree_probe .*entity-dead=true removed-snapshot=true survivor-snapshot=true' -Quiet)) {
+        throw 'Confirmed death did not delete only the dead entity SkillTree snapshot'
+    }
+    $deathLine = Select-String -LiteralPath $verifyLog -Pattern 'skilltree-restart stage=death result=passed mob-id=skilltree_probe .*removed-entity=([0-9a-f-]{36})' | Select-Object -First 1
+    $removedEntity = [regex]::Match($deathLine.Line, 'removed-entity=([0-9a-f-]{36})').Groups[1].Value
+    $removedSnapshot = Join-Path $snapshotDirectory "entity-$removedEntity.yml"
+    if (Test-Path -LiteralPath $removedSnapshot) {
+        throw 'Dead entity SkillTree snapshot was recreated during shutdown'
+    }
+    $remainingSnapshots = @(Get-ChildItem -LiteralPath $snapshotDirectory -Filter 'entity-*.yml' -File)
+    if ($remainingSnapshots.Count -ne 1) {
+        throw "Expected only the surviving entity SkillTree snapshot after second shutdown; found $($remainingSnapshots.Count)"
     }
     Write-Host "SkillTree restart integration passed: $fixturePath"
 } finally {
     $env:PAPER_INTEGRATION_DIR = $previousFixture
     $env:PAPER_SKILLTREE_REUSE = $previousReuse
     $env:PAPER_SKILLTREE_STAGE = $previousStage
+    $env:PAPER_SKILLTREE_ONLY = $previousSkillTreeOnly
     $env:PAPER_MENU_WORKFLOW = $previousMenu
     $env:PAPER_JAR_PATH = $previousPaperJar
 }

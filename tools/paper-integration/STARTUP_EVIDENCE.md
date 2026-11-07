@@ -1066,6 +1066,18 @@ passed marker. Persistent mobs now force-load their PDC-bearing chunk so restart
 restoration does not depend on a player visiting the area; the plugin releases
 that force-loaded chunk after the last managed persistent mob in it dies.
 
+Focused Paper 1.21.1-133 fixture `srv-paper-skilltree-uuid-restart-20261107-r4`
+passes two boots with two persistent PIGs sharing `skilltree_probe`. Boot one
+writes separate `entity-<uuid>.yml` snapshots. Boot two restores both entity-
+specific markers, the `restart-foundation` unlock and the `restart-advanced`
+prerequisite, then unlocks the dependent branch independently for each entity.
+The probe kills one restored PIG through Bukkit damage and confirms its UUID
+snapshot is deleted while the other remains. Shutdown saves only the survivor;
+the fixture verifies the dead entity's snapshot stays absent and exactly one
+entity snapshot remains. The [captured server log](reports/paper-1.21.1-skilltree-uuid-restart-20261107-r4.log.gz)
+has SHA-256 `634bad1a1d844c98f890631df39dcd2875ff5af76bee9f95a4a3cb49b3c98970`.
+This is focused lifecycle evidence, not a complete SkillTree parity result.
+
 The isolated fixture `srv-paper-integration-conditions-65d39e2d2a224dba854fb15c2ce19582`
 passed the `conditionCatalog` probe on Paper 1.21.1. A real target Zombie was
 set to 10/20 health at a 3-block context distance; `health{h=<15}`,
