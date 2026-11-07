@@ -214,7 +214,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'beeStingerLossImported'
     $fullReport.probes += [pscustomobject]@{
-        id = 'beeStingerLossImported'; status = 'passed'; observations = @('bee-stinger-loss-imported result=true imported=true protected-option=true control-option=false protected-event=true control-event=true protected-restored=true control-retained=true event=synthetic')
+        id = 'beeStingerLossImported'; status = 'passed'; observations = @('bee-stinger-loss-imported result=true imported=true target-entity=ZOMBIE target-ai=false target-invulnerable=false target-resistance-amplifier=3 protected-option=true control-option=false protected-attacks=1 control-attacks=1 protected-events=1 control-events=1 protected-cancelled=0 control-cancelled=0 protected-restored=true control-retained=true protected-near=true control-near=true trigger=entity-target-api event=native-ai')
     }
     $fullReport.expectedProbeIds += 'mythicSpawnerChanceImported'
     $fullReport.probes += [pscustomobject]@{

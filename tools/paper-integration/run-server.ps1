@@ -9,6 +9,9 @@ $ErrorActionPreference = 'Stop'
 if ($Strict -and $Exploratory) {
     throw 'Exploratory mode cannot be combined with Strict mode.'
 }
+if ($Strict -and $env:PAPER_BEE_STINGER_ONLY -eq 'true') {
+    throw 'PAPER_BEE_STINGER_ONLY is an isolated diagnostic and cannot be used with Strict mode.'
+}
 if ($Strict -and ($env:PAPER_MENU_WORKFLOW -ne 'true' -or $env:PAPER_WEB_RELOAD_PROBE -ne 'true' -or
         $env:PAPER_RAW_POTION_WORKFLOW -ne 'true' -or $env:PAPER_RAW_POTION_SHORT -ne 'true' -or
         $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW -ne 'true' -or
@@ -135,6 +138,16 @@ if ($env:PAPER_SKILLTREE_REUSE -ne 'true' -or
         -not (Test-Path -LiteralPath (Join-Path $pluginData 'config.yml'))) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'config.yml') -Destination (Join-Path $pluginData 'config.yml') -Force
 }
+if ($env:PAPER_BEE_STINGER_ONLY -eq 'true') {
+    $pluginConfig = Join-Path $pluginData 'config.yml'
+    $yaml = Get-Content -LiteralPath $pluginConfig -Raw
+    $yaml = [regex]::Replace($yaml,
+        '(?m)^  (self-test(?:-[A-Za-z0-9-]+)?):\s*(?:true|false)\s*$', '  $1: false')
+    $yaml = [regex]::Replace($yaml, '(?m)^  self-test-entity-options:.*$',
+        '  self-test-entity-options: true')
+    $yaml = [regex]::Replace($yaml, '(?m)^  trace-triggers:.*$', '  trace-triggers: false')
+    Set-Content -LiteralPath $pluginConfig -Value $yaml -Encoding utf8
+}
 if ($env:PAPER_SKILLTREE_STAGE) {
     $pluginConfig = Join-Path $pluginData 'config.yml'
     $yaml = Get-Content -LiteralPath $pluginConfig -Raw
@@ -196,7 +209,8 @@ if ($env:PAPER_WEB_RELOAD_PROBE -eq 'true') {
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'loot.yml') -Destination (Join-Path $pluginData 'loot.yml') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'items.yml') -Destination (Join-Path $pluginData 'items.yml') -Force
-if ($env:PAPER_EXECUTION_AUDIENCE_STAGE -or $env:PAPER_SKILLTREE_ONLY -eq 'true') {
+if ($env:PAPER_EXECUTION_AUDIENCE_STAGE -or $env:PAPER_SKILLTREE_ONLY -eq 'true' -or
+        $env:PAPER_BEE_STINGER_ONLY -eq 'true') {
     [System.IO.File]::WriteAllText((Join-Path $pluginData 'spawners.yml'), "spawners: {}`n")
 } else {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'spawners.yml') -Destination (Join-Path $pluginData 'spawners.yml') -Force
@@ -408,8 +422,10 @@ try {
     # Give the loopback listener a short settling window before Mineflayer starts.
     Start-Sleep -Seconds 2
 
+    $beeStingerOnly = $env:PAPER_BEE_STINGER_ONLY -eq 'true'
     $playerWorkflow = $env:PAPER_MENU_WORKFLOW -eq 'true' -or
-        $env:PAPER_PLAYER_WORKFLOW -eq 'true' -or $env:PAPER_TWO_PLAYER_WORKFLOW -eq 'true'
+        $env:PAPER_PLAYER_WORKFLOW -eq 'true' -or $env:PAPER_TWO_PLAYER_WORKFLOW -eq 'true' -or
+        $beeStingerOnly
     if ($playerWorkflow -and
             (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'package.json'))) {
         $nodeModules = Join-Path $PSScriptRoot 'node_modules/mineflayer'
@@ -426,7 +442,9 @@ try {
             $playerOnly = $env:PAPER_MENU_WORKFLOW -ne 'true'
             $twoPlayers = $env:PAPER_TWO_PLAYER_WORKFLOW -eq 'true'
             $rawPotion = $env:PAPER_RAW_POTION_WORKFLOW -eq 'true'
-            $clientScript = if ($playerOnly) {
+            $clientScript = if ($beeStingerOnly) {
+                Join-Path $PSScriptRoot 'bee-activation-client.js'
+            } elseif ($playerOnly) {
                 if ($rawPotion) { Join-Path $PSScriptRoot 'raw-potion-client.js' }
                 elseif ($twoPlayers) { Join-Path $PSScriptRoot 'two-player-client.js' }
                 else { Join-Path $PSScriptRoot 'player-client.js' }
@@ -434,7 +452,9 @@ try {
                 Join-Path $PSScriptRoot 'menu-client-test.js'
             }
             $client = $null
-            $clientArguments = if ($playerOnly -and $rawPotion) {
+            $clientArguments = if ($beeStingerOnly) {
+                @($clientScript, '127.0.0.1', '25731', $clientOut)
+            } elseif ($playerOnly -and $rawPotion) {
                 @($clientScript, '127.0.0.1', '25731', $clientOut, 'HelsteraTester')
             } else {
                 @($clientScript, '127.0.0.1', '25731', $clientOut, $audienceOut)
@@ -447,7 +467,8 @@ try {
                         -RedirectStandardOutput $clientProcessOut -RedirectStandardError $clientErr
                 }
                 if (Select-String -LiteralPath $logPath -Pattern 'HelsteraTester joined the game' -Quiet) {
-                    if ($playerOnly -and $env:PAPER_SKIP_PLAYER_POTION -ne 'true') {
+                    if ($playerOnly -and -not $beeStingerOnly -and
+                            $env:PAPER_SKIP_PLAYER_POTION -ne 'true') {
                         if ($rawPotion) {
                             $process.StandardInput.WriteLine('gamemode survival HelsteraTester')
                         }

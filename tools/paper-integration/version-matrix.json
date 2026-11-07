@@ -13,8 +13,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-bee-stinger-loss-strict-20261107-r1",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.json"
+      "releaseFixtureId": "srv-paper-bee-stinger-loss-strict-20261107-r6",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r6.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",
