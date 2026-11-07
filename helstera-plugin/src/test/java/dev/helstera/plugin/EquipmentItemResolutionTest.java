@@ -2,6 +2,7 @@ package dev.helstera.plugin;
 
 import dev.helstera.api.integration.Capability;
 import dev.helstera.api.integration.IntegrationAdapter;
+import dev.helstera.api.integration.IntegrationContract;
 import dev.helstera.api.integration.IntegrationRegistry;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -35,6 +36,10 @@ class EquipmentItemResolutionTest {
         public ItemStack resolve(String id) { return "stone:2".equals(id) ? item : null; }
         public String pluginName() { return "test"; }
         public String supportedVersions() { return "test"; }
+        public IntegrationContract contract() {
+            return new IntegrationContract("test", "test",
+                    Set.of(Capability.CUSTOM_ITEM_RESOLVE), Set.of("test adapter"), true, true);
+        }
         public Set<Capability> capabilities() { return Set.of(Capability.CUSTOM_ITEM_RESOLVE); }
         public boolean isConnected() { return true; }
         public String statusReport() { return ""; }

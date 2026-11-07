@@ -2,6 +2,7 @@ package dev.helstera.integrations.region;
 
 import dev.helstera.api.integration.Capability;
 import dev.helstera.api.integration.IntegrationAdapter;
+import dev.helstera.api.integration.IntegrationContract;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.plugin.Plugin;
@@ -27,6 +28,12 @@ public final class WorldGuardAdapter implements IntegrationAdapter {
 
     @Override public String supportedVersions() {
         return "7.x API shape probed by reflection; installed-plugin runtime compatibility is not CI-verified";
+    }
+    @Override public IntegrationContract contract() {
+        return new IntegrationContract(pluginName(), supportedVersions(),
+                Set.of(Capability.REGION_QUERY),
+                Set.of("WorldGuard 7.x", "WorldEdit BukkitAdapter", "RegionManager API"),
+                true, true);
     }
     @Override public Set<Capability> capabilities() {
         return connected ? Set.of(Capability.REGION_QUERY) : Set.of();

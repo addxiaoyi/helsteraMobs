@@ -2,6 +2,7 @@ package dev.helstera.integrations.economy;
 
 import dev.helstera.api.integration.Capability;
 import dev.helstera.api.integration.IntegrationAdapter;
+import dev.helstera.api.integration.IntegrationContract;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -23,6 +24,12 @@ public final class VaultEconomyAdapter implements IntegrationAdapter {
     @Override public String pluginName() { return "Vault"; }
     @Override public String supportedVersions() {
         return "Vault Economy service contract; installed Vault/provider versions not CI-verified";
+    }
+    @Override public IntegrationContract contract() {
+        return new IntegrationContract(pluginName(), supportedVersions(),
+                Set.of(Capability.ECONOMY_BALANCE),
+                Set.of("Vault plugin", "registered Economy service", "getBalance provider method"),
+                true, true);
     }
     @Override public Set<Capability> capabilities() {
         return isConnected() ? Set.of(Capability.ECONOMY_BALANCE) : Set.of();

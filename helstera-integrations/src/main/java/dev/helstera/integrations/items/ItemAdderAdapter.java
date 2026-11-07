@@ -2,6 +2,7 @@ package dev.helstera.integrations.items;
 
 import dev.helstera.api.integration.Capability;
 import dev.helstera.api.integration.IntegrationAdapter;
+import dev.helstera.api.integration.IntegrationContract;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
@@ -18,6 +19,13 @@ public final class ItemAdderAdapter implements IntegrationAdapter {
     @Override public String pluginName() { return "ItemAdder"; }
 
     @Override public String supportedVersions() { return "none verified; API bridge not implemented"; }
+
+    @Override public IntegrationContract contract() {
+        return new IntegrationContract(pluginName(), supportedVersions(),
+                Set.of(Capability.CUSTOM_ITEM_RESOLVE),
+                Set.of("ItemAdder public item-resolution API", "version-specific integration fixture"),
+                true, true);
+    }
 
     @Override
     public Set<Capability> capabilities() {
