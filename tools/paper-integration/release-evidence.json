@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-full-strict-20261107-r4",
+    "reportFixtureDirectory": "srv-paper-full-strict-20261107-r4",
+    "report": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261107-r4.json",
+    "reportSha256": "8567db2f97d44eb87141a2792e9faaa1b97e1c2abe689888ad6034d26b74d785",
+    "log": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261107-r4.log.gz",
+    "logSha256": "227fc40ca768bb8ae5aaa3dd3ad7db6e6e2e5c295ab0816751f28430c660a4ac",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261107-r4-client-logs.tar.gz",
+    "clientLogSha256": "a2462ce0a600ec565a582cf80640f3784479ab394ac3d3b4a8a8ba92937cb0f1",
+    "pluginSha256": "ae36884bdde4163dc213d4fc2a9fd3850f8eb365b7c4af3b4326570765bb02cc",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-full-strict-20261107-r2",
     "reportFixtureDirectory": "srv-paper-full-strict-20261107-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261107-r2.json",

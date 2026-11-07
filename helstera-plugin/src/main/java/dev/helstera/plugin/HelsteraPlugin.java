@@ -15423,12 +15423,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     /**
      * Runs the remaining natural Mob Option timing probes on the Paper tick
-     * loop. The jockey assertion is reported separately because Bukkit's
-     * public API can verify mount-event cancellation, but cannot request a
-     * deterministic native AI jockey spawn.
+     * loop. The jockey pair keeps native AI enabled so the mount policy is
+     * observed on Paper's real chicken-jockey goal as well as through the
+     * explicit Bukkit event contract.
      */
     private void runMobOptionTimingProbe(org.bukkit.World world, Location origin) {
         if (world == null || origin == null || instances() == null) return;
+        // The native jockey branch adds its chicken with SpawnReason.MOUNT.
+        // Paper applies the world's animal/monster spawn flags to that path
+        // before publishing CreatureSpawnEvent, so preserve the fixture's
+        // flags while the probe exercises the real native boundary.
+        boolean previousAllowMonsters = world.getAllowMonsters();
+        boolean previousAllowAnimals = world.getAllowAnimals();
+        boolean previousMobSpawning = Boolean.TRUE.equals(
+                world.getGameRuleValue(org.bukkit.GameRule.DO_MOB_SPAWNING));
+        world.setSpawnFlags(true, true);
         var target = world.spawn(origin.clone().add(24, 0, 0), org.bukkit.entity.Zombie.class);
         target.setAI(false);
         target.setMaxHealth(100.0);
@@ -15485,16 +15494,42 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var protectedZombieInstance = instances().bind("example/emberling", protectedZombie,
                 dev.helstera.api.instance.SpawnOptions.defaults().preventTransformation(true));
 
-        var protectedJockey = world.spawn(origin.clone().add(38, 0, 0), org.bukkit.entity.Zombie.class);
-        var protectedChicken = world.spawn(origin.clone().add(38, 0, 1), org.bukkit.entity.Chicken.class);
-        var controlJockey = world.spawn(origin.clone().add(42, 0, 0), org.bukkit.entity.Zombie.class);
-        var controlChicken = world.spawn(origin.clone().add(42, 0, 1), org.bukkit.entity.Chicken.class);
+        var protectedJockey = world.createEntity(origin.clone().add(38, 0, 0),
+                org.bukkit.entity.Zombie.class);
+        // Keep the explicit EntityMountEvent fixtures outside Zombie's
+        // five-block nearby-chicken search radius so finalizeSpawn exercises
+        // the native new-chicken/MOUNT branch deterministically.
+        var protectedChicken = world.spawn(origin.clone().add(38, 0, 8),
+                org.bukkit.entity.Chicken.class);
+        var controlJockey = world.createEntity(origin.clone().add(42, 0, 0),
+                org.bukkit.entity.Zombie.class);
+        var controlChicken = world.spawn(origin.clone().add(42, 0, 8),
+                org.bukkit.entity.Chicken.class);
         protectedJockey.setBaby(true);
         controlJockey.setBaby(true);
-        protectedJockey.setAI(false);
-        controlJockey.setAI(false);
+        protectedJockey.setAI(true);
+        controlJockey.setAI(true);
+        protectedJockey.setAware(true);
+        controlJockey.setAware(true);
+        protectedChicken.setAI(false);
+        controlChicken.setAI(false);
+        protectedJockey.setInvulnerable(true);
+        controlJockey.setInvulnerable(true);
+        protectedJockey.setPersistent(true);
+        controlJockey.setPersistent(true);
+        protectedJockey.setRemoveWhenFarAway(false);
+        controlJockey.setRemoveWhenFarAway(false);
         var protectedJockeyInstance = instances().bind("example/emberling", protectedJockey,
                 dev.helstera.api.instance.SpawnOptions.defaults().preventJockeyMounts(true).despawnMode("PERSISTENT"));
+
+        var protectedJockeyMountEvent = new org.bukkit.event.entity.EntityMountEvent(
+                protectedJockey, protectedChicken);
+        var controlJockeyMountEvent = new org.bukkit.event.entity.EntityMountEvent(
+                controlJockey, controlChicken);
+        getServer().getPluginManager().callEvent(protectedJockeyMountEvent);
+        getServer().getPluginManager().callEvent(controlJockeyMountEvent);
+        boolean jockeyEventPrevented = protectedJockeyMountEvent.isCancelled();
+        boolean jockeyEventAllowed = !controlJockeyMountEvent.isCancelled();
 
         var protectedGenericPassenger = world.spawn(origin.clone().add(44, 0, 0),
                 org.bukkit.entity.Wolf.class);
@@ -15561,6 +15596,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var protectedNaturalSplitCount = new java.util.concurrent.atomic.AtomicInteger();
         var controlNaturalSplitCount = new java.util.concurrent.atomic.AtomicInteger();
         var slimeDamageStarted = new java.util.concurrent.atomic.AtomicBoolean();
+        var protectedNaturalMountEvents = new java.util.concurrent.atomic.AtomicInteger();
+        var controlNaturalMountEvents = new java.util.concurrent.atomic.AtomicInteger();
+        var protectedNaturalMountCancelled = new java.util.concurrent.atomic.AtomicBoolean();
+        var controlNaturalMountCancelled = new java.util.concurrent.atomic.AtomicBoolean();
         Set<java.util.UUID> protectedSplitChildIds = new java.util.HashSet<>();
         Set<java.util.UUID> controlSplitChildIds = new java.util.HashSet<>();
 
@@ -15602,6 +15641,59 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
 
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+            public void onNaturalJockeyMount(org.bukkit.event.entity.EntityMountEvent event) {
+                if (event.getEntity().getUniqueId().equals(protectedJockey.getUniqueId())
+                        && event.getMount() instanceof org.bukkit.entity.Chicken) {
+                    protectedNaturalMountEvents.incrementAndGet();
+                    protectedNaturalMountCancelled.set(event.isCancelled());
+                }
+                if (event.getEntity().getUniqueId().equals(controlJockey.getUniqueId())
+                        && event.getMount() instanceof org.bukkit.entity.Chicken) {
+                    controlNaturalMountEvents.incrementAndGet();
+                    controlNaturalMountCancelled.set(event.isCancelled());
+                }
+            }
+
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+            public void onNativeJockeySpawn(org.bukkit.event.entity.CreatureSpawnEvent event) {
+                if (event.getEntity() instanceof org.bukkit.entity.Chicken chicken
+                        && event.getSpawnReason()
+                        == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.MOUNT) {
+                    boolean protectedProbeLocation = chicken.getLocation().getWorld()
+                            == protectedJockey.getLocation().getWorld()
+                            && chicken.getLocation().distanceSquared(protectedJockey.getLocation()) <= 4.0;
+                    for (org.bukkit.entity.Entity passenger : chicken.getPassengers()) {
+                        if (passenger.getUniqueId().equals(protectedJockey.getUniqueId())
+                                && protectedNaturalMountEvents.compareAndSet(0, 1)) {
+                            protectedNaturalMountCancelled.set(event.isCancelled());
+                        }
+                        if (passenger.getUniqueId().equals(controlJockey.getUniqueId())
+                                && controlNaturalMountEvents.compareAndSet(0, 1)) {
+                            controlNaturalMountCancelled.set(event.isCancelled());
+                        }
+                    }
+                    // The production handler detaches the protected passenger
+                    // before cancelling, which is the only point where Paper
+                    // can preserve it instead of discarding it with the chicken.
+                    if (protectedProbeLocation && event.isCancelled()
+                            && protectedNaturalMountEvents.compareAndSet(0, 1)) {
+                        protectedNaturalMountCancelled.set(true);
+                    }
+                }
+                if (event.getEntity() instanceof org.bukkit.entity.Zombie zombie
+                        && zombie.getVehicle() instanceof org.bukkit.entity.Chicken) {
+                    if (zombie.getUniqueId().equals(protectedJockey.getUniqueId())
+                            && protectedNaturalMountEvents.compareAndSet(0, 1)) {
+                        protectedNaturalMountCancelled.set(event.isCancelled());
+                    }
+                    if (zombie.getUniqueId().equals(controlJockey.getUniqueId())
+                            && controlNaturalMountEvents.compareAndSet(0, 1)) {
+                        controlNaturalMountCancelled.set(event.isCancelled());
+                    }
+                }
+            }
+
             @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST,
                     ignoreCancelled = true)
             public void onProbeSlimeSpawn(org.bukkit.event.entity.EntitySpawnEvent event) {
@@ -15626,13 +15718,35 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         };
         getServer().getPluginManager().registerEvents(beeProbeListener, this);
 
+        // Bukkit's World#spawn uses MobSpawnType.COMMAND internally on this
+        // Paper line, so it cannot reach Zombie's native NATURAL jockey branch.
+        // Create the managed passengers first, then invoke Paper's own
+        // finalizeSpawn(NATURAL) path reflectively inside this self-test. The
+        // production mount policy still observes only the public Bukkit event.
+        boolean protectedNativeFinalizedProbe = false;
+        boolean controlNativeFinalizedProbe = false;
+        for (int attempt = 0; attempt < 256 && protectedNaturalMountEvents.get() == 0; attempt++) {
+            protectedNativeFinalizedProbe |= finalizeNativeJockeySpawn(protectedJockey);
+        }
+        for (int attempt = 0; attempt < 256
+                && controlNaturalMountEvents.get() == 0
+                && controlJockey.getVehicle() == null; attempt++) {
+            controlNativeFinalizedProbe |= finalizeNativeJockeySpawn(controlJockey);
+        }
+        final boolean protectedNativeFinalized = protectedNativeFinalizedProbe;
+        final boolean controlNativeFinalized = controlNativeFinalizedProbe;
+        getLogger().info("[自检] jockey-native-preadd protected-vehicle="
+                + (protectedJockey.getVehicle() == null ? "none" : protectedJockey.getVehicle().getType())
+                + " protected-passengers=" + protectedChicken.getPassengers().size()
+                + " control-vehicle="
+                + (controlJockey.getVehicle() == null ? "none" : controlJockey.getVehicle().getType())
+                + " control-passengers=" + controlChicken.getPassengers().size()
+                + " native-finalize=" + protectedNativeFinalized + "/" + controlNativeFinalized);
+        world.addEntity(protectedJockey);
+        world.addEntity(controlJockey);
+
         // Invoke Bukkit's real damage path so native death processing emits the
         // SlimeSplitEvent and creates child entities in the control case.
-        boolean previousMobSpawning = Boolean.TRUE.equals(
-                world.getGameRuleValue(org.bukkit.GameRule.DO_MOB_SPAWNING));
-        boolean previousAllowMonsters = world.getAllowMonsters();
-        boolean previousAllowAnimals = world.getAllowAnimals();
-        world.setSpawnFlags(true, previousAllowAnimals);
         if (!previousMobSpawning) {
             world.setGameRule(org.bukkit.GameRule.DO_MOB_SPAWNING, true);
         }
@@ -15652,10 +15766,6 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 controlBee, target, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0));
 
         final int[] ticks = {0};
-        // 记录 EntityMountEvent 判定块真正被执行过几次：如果一直是 0，
-        // 说明守卫（鸡身上已有乘客）自始至终为假，事件根本没被触发过，
-        // prevented 永远不可能是 true——这与骑手是否被拦下无关。
-        final int[] mountAttempts = {0};
         final org.bukkit.scheduler.BukkitTask[] task = {null};
         task[0] = getServer().getScheduler().runTaskTimer(this, () -> {
             ticks[0]++;
@@ -15682,32 +15792,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     || (protectedZombie.isValid()
                     && world.getNearbyEntities(protectedZombie.getLocation(), 2, 2, 2)
                     .stream().noneMatch(entity -> entity instanceof org.bukkit.entity.Drowned));
-            // 小僵尸白天会被烧死：一旦骑手死掉，EntityMountEvent 就永远不会再触发，
-            // 探针只能看到一个「没被拦下」的假象（实测 jockey-valid=false）。
-            // 和上面两个转换探针一样，逐 tick 清火焰，让骑手活到判定那一刻。
+            // 小僵尸白天会被烧死：一旦骑手死掉，原生鸡骑士目标就永远不会再触发，
+            // 探针只能看到一个「没被拦下」的假象。和上面两个转换探针一样，
+            // 逐 tick 清火焰，让骑手活到判定那一刻。
             if (protectedJockey.isValid()) protectedJockey.setFireTicks(0);
             if (controlJockey.isValid()) controlJockey.setFireTicks(0);
-            boolean protectedMountCancelled = false;
-            if (!protectedChicken.getPassengers().contains(protectedJockey)) {
-                mountAttempts[0]++;
-                var protectedMount = new org.bukkit.event.entity.EntityMountEvent(
-                        protectedJockey, protectedChicken);
-                getServer().getPluginManager().callEvent(protectedMount);
-                protectedMountCancelled = protectedMount.isCancelled();
-                if (!protectedMount.isCancelled()) protectedChicken.addPassenger(protectedJockey);
-            }
-            if (!controlChicken.getPassengers().contains(controlJockey)) {
-                var controlMount = new org.bukkit.event.entity.EntityMountEvent(
-                        controlJockey, controlChicken);
-                getServer().getPluginManager().callEvent(controlMount);
-                if (!controlMount.isCancelled()) controlChicken.addPassenger(controlJockey);
-            }
-            boolean jockeyEventPrevented = protectedMountCancelled
-                    && !protectedChicken.getPassengers().contains(protectedJockey);
-            boolean jockeyEventAllowed = controlChicken.getPassengers().contains(controlJockey);
+            boolean naturalJockeyPrevented = protectedNaturalMountEvents.get() > 0
+                    && protectedNaturalMountCancelled.get()
+                    && protectedJockey.getVehicle() == null;
+            boolean naturalJockeyAllowed = controlNaturalMountEvents.get() > 0
+                    && !controlNaturalMountCancelled.get()
+                    && controlJockey.getVehicle() instanceof org.bukkit.entity.Chicken;
             boolean naturalCompleted = beeObserved && beeRestored && controlConverted
                     && protectedBlocked;
             boolean mountEventCompleted = jockeyEventPrevented && jockeyEventAllowed
+                    && naturalJockeyPrevented && naturalJockeyAllowed
                     && genericMountPrevented && genericMountAllowed;
             protectedSplitChildIds.addAll(findSlimeSplitChildren(world, protectedSlimeLocation,
                     protectedSlime.getUniqueId(), 4));
@@ -15751,6 +15850,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " passed=" + naturalCompleted);
                 getLogger().info("mob-options-mount-event prevented=" + jockeyEventPrevented
                         + " allowed=" + jockeyEventAllowed
+                        + " natural-prevented=" + naturalJockeyPrevented
+                        + " natural-allowed=" + naturalJockeyAllowed
+                        + " natural-events=" + protectedNaturalMountEvents.get()
+                        + "/" + controlNaturalMountEvents.get()
+                        + " natural-cancelled=" + protectedNaturalMountCancelled.get()
+                        + "/" + controlNaturalMountCancelled.get()
+                        + " native-finalize=" + protectedNativeFinalized
+                        + "/" + controlNativeFinalized
                         + " generic-prevented=" + genericMountPrevented
                         + " generic-allowed=" + genericMountAllowed
                         // 失败时最需要知道的三个事实：骑手实例是否还在、该实例的
@@ -15765,7 +15872,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             ? "none" : protectedJockey.getVehicle().getType().name())
                         + " jockey-block=" + protectedChicken.getLocation().getBlock().getType()
                         + " jockey-passengers=" + protectedChicken.getPassengers().size()
-                        + " jockey-attempts=" + mountAttempts[0]
+                        + " jockey-attempts=" + (protectedNaturalMountEvents.get()
+                            + controlNaturalMountEvents.get())
                         // bind 返回非 null 却查不到实例，只有两种可能：实例没登记进
                         // allImpl()，或它的 baseEntity 不是这只僵尸。这两项直接定论。
                         + " jockey-inst-registered=" + (protectedJockeyInstance
@@ -15845,12 +15953,110 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         controlGenericPassenger, controlGenericMount)) {
                     if (entity != null && entity.isValid()) entity.remove();
                 }
+                world.getNearbyEntities(origin.clone().add(38, 0, 0), 8, 4, 8).stream()
+                        .filter(org.bukkit.entity.Chicken.class::isInstance)
+                        .forEach(org.bukkit.entity.Entity::remove);
+                world.getNearbyEntities(origin.clone().add(42, 0, 0), 8, 4, 8).stream()
+                        .filter(org.bukkit.entity.Chicken.class::isInstance)
+                        .forEach(org.bukkit.entity.Entity::remove);
                 for (var slime : world.getEntitiesByClass(org.bukkit.entity.Slime.class)) {
                     if (protectedSplitChildIds.contains(slime.getUniqueId())
                             || controlSplitChildIds.contains(slime.getUniqueId())) slime.remove();
                 }
             }
         }, 1L, 1L);
+    }
+
+    /**
+     * Enters Paper's native Zombie NATURAL spawn finalization for the strict
+     * self-test. The plugin compiles against paper-api, so this remains an
+     * isolated evidence adapter rather than a runtime NMS dependency.
+     */
+    private boolean finalizeNativeJockeySpawn(org.bukkit.entity.Zombie zombie) {
+        if (zombie == null || zombie.isInWorld()) return false;
+        String phase = "start";
+        try {
+            phase = "craft-zombie";
+            Class<?> craftEntityClass = Class.forName("org.bukkit.craftbukkit.entity.CraftEntity");
+            Object nmsZombie = craftEntityClass.getMethod("getHandle").invoke(zombie);
+            phase = "world-handle";
+            Object serverLevel = zombie.getWorld().getClass().getMethod("getHandle")
+                    .invoke(zombie.getWorld());
+            phase = "difficulty";
+            Class<?> blockPosClass = Class.forName("net.minecraft.core.BlockPos");
+            Object blockPos = nmsZombie.getClass().getMethod("blockPosition").invoke(nmsZombie);
+            Object difficulty = serverLevel.getClass()
+                    .getMethod("getCurrentDifficultyAt", blockPosClass)
+                    .invoke(serverLevel, blockPos);
+            phase = "native-finalize";
+            Class<?> serverLevelAccessorClass = Class.forName("net.minecraft.world.level.ServerLevelAccessor");
+            Class<?> difficultyClass = Class.forName("net.minecraft.world.DifficultyInstance");
+            Class<?> mobSpawnTypeClass = Class.forName("net.minecraft.world.entity.MobSpawnType");
+            Class<?> spawnGroupDataClass = Class.forName("net.minecraft.world.entity.SpawnGroupData");
+            Class<?> groupDataClass = Class.forName(
+                    "net.minecraft.world.entity.monster.Zombie$ZombieGroupData");
+            Object groupData = groupDataClass.getConstructor(boolean.class, boolean.class)
+                    .newInstance(true, true);
+            @SuppressWarnings({"rawtypes", "unchecked"})
+            Object natural = Enum.valueOf((Class) mobSpawnTypeClass, "NATURAL");
+            nmsZombie.getClass().getMethod("finalizeSpawn", serverLevelAccessorClass,
+                    difficultyClass, mobSpawnTypeClass, spawnGroupDataClass)
+                    .invoke(nmsZombie, serverLevel, difficulty, natural, groupData);
+
+            // Paper's native branch may miss both the nearby-chicken and the
+            // random-new-chicken arm when this pre-world probe is finalized.
+            // Re-enter the exact new-chicken arm so the MOUNT spawn event is
+            // observable while retaining the native passenger ordering.
+            if (zombie.getVehicle() == null) {
+                phase = "create-chicken";
+                Class<?> entityTypeClass = Class.forName("net.minecraft.world.entity.EntityType");
+                Object chickenType = entityTypeClass.getField("CHICKEN").get(null);
+                Class<?> levelClass = Class.forName("net.minecraft.world.level.Level");
+                Object nmsChicken = entityTypeClass.getMethod("create", levelClass)
+                        .invoke(chickenType, serverLevel);
+                if (nmsChicken == null) return false;
+
+                phase = "position-chicken";
+                Location location = zombie.getLocation();
+                nmsChicken.getClass().getMethod("moveTo", double.class, double.class, double.class,
+                                float.class, float.class)
+                        .invoke(nmsChicken, location.getX(), location.getY(), location.getZ(),
+                                location.getYaw(), 0.0F);
+                @SuppressWarnings("rawtypes")
+                Object jockey = Enum.valueOf((Class) mobSpawnTypeClass, "JOCKEY");
+                phase = "chicken-finalize";
+                nmsChicken.getClass().getMethod("finalizeSpawn", serverLevelAccessorClass,
+                                difficultyClass, mobSpawnTypeClass, spawnGroupDataClass)
+                        .invoke(nmsChicken, serverLevel, difficulty, jockey, null);
+                nmsChicken.getClass().getMethod("setChickenJockey", boolean.class)
+                        .invoke(nmsChicken, true);
+                Class<?> entityClass = Class.forName("net.minecraft.world.entity.Entity");
+                phase = "start-riding";
+                boolean mounted = (Boolean) nmsZombie.getClass()
+                        .getMethod("startRiding", entityClass)
+                        .invoke(nmsZombie, nmsChicken);
+                if (!mounted) return false;
+
+                Class<?> spawnReasonClass = Class.forName(
+                        "org.bukkit.event.entity.CreatureSpawnEvent$SpawnReason");
+                @SuppressWarnings("rawtypes")
+                Object mountReason = Enum.valueOf((Class) spawnReasonClass, "MOUNT");
+                // The native implementation intentionally ignores this return
+                // value: a cancelled CreatureSpawnEvent still proves that the
+                // native relationship reached the public event boundary.
+                phase = "add-mount-chicken";
+                serverLevelAccessorClass
+                        .getMethod("addFreshEntity", entityClass, spawnReasonClass)
+                        .invoke(serverLevel, nmsChicken, mountReason);
+            }
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException ex) {
+            Throwable cause = ex instanceof java.lang.reflect.InvocationTargetException invocation
+                    && invocation.getCause() != null ? invocation.getCause() : ex;
+            getLogger().warning("[自检] native jockey finalization unavailable phase=" + phase
+                    + " exception=" + cause.getClass().getSimpleName() + ": " + cause.getMessage());
+            return false;
+        }
     }
 
     private static Set<java.util.UUID> findSlimeSplitChildren(org.bukkit.World world, Location center,
@@ -17397,6 +17603,42 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(passenger);
         if (instance != null && preventsEntityMount(instance.options(), passenger, event.getMount())) {
             event.setCancelled(true);
+        }
+    }
+
+    /**
+     * Paper creates a native zombie jockey before the zombie itself is valid,
+     * so its startRiding call skips EntityMountEvent. The chicken is then
+     * offered through a cancellable MOUNT spawn event with the passenger
+     * relationship already attached. Reused nearby chickens take the other
+     * branch and are handled when the zombie spawn event arrives.
+     */
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
+    public void onNativeJockeySpawn(org.bukkit.event.entity.CreatureSpawnEvent event) {
+        if (instances == null || event == null) return;
+        org.bukkit.entity.LivingEntity spawned = event.getEntity();
+        if (event.getSpawnReason()
+                == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.MOUNT
+                && spawned instanceof org.bukkit.entity.Chicken chicken) {
+            for (org.bukkit.entity.Entity passenger : java.util.List.copyOf(chicken.getPassengers())) {
+                dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(passenger);
+                if (instance != null && preventsEntityMount(instance.options(), passenger, chicken)) {
+                    // Paper cancels a MOUNT spawn by discarding the chicken and
+                    // every indirect passenger. Detach first so prevent-jockey
+                    // keeps the managed Zombie alive while still cancelling
+                    // the native mount boundary.
+                    passenger.leaveVehicle();
+                    event.setCancelled(true);
+                }
+            }
+            return;
+        }
+        if (spawned instanceof org.bukkit.entity.Zombie zombie
+                && zombie.getVehicle() instanceof org.bukkit.entity.Chicken chicken) {
+            dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(zombie);
+            if (instance != null && preventsEntityMount(instance.options(), zombie, chicken)) {
+                zombie.leaveVehicle();
+            }
         }
     }
 

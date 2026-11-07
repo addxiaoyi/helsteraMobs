@@ -2,20 +2,21 @@
 
 ## MythicMobs Parity Development Status (2026-11-07)
 
-Latest strict fixture `srv-paper-full-strict-20261107-r2` passes all
+Latest strict fixture `srv-paper-full-strict-20261107-r4` passes all
 391 release probes (372 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. It includes the imported `CanJoinRaid`
-effective-state control and the native-AI Bee `PreventStingerLoss` workflow,
+effective-state control, native-AI Bee `PreventStingerLoss`, and native
+Zombie jockey mount cancellation/allowance for protected/control entities,
 alongside the complete registered Mythic teleport, spawner, drops, skills,
 conditions, targeter, menu, and persistence probes. Report:
-`tools/paper-integration/reports/paper-1.21.1-full-strict-20261107-r2.json`
-(SHA-256 `9bc375fa779a72a2741f626fae0b063bccb4e879f3099fd8439caa3da732f4fa`).
+`tools/paper-integration/reports/paper-1.21.1-full-strict-20261107-r4.json`
+(SHA-256 `8567db2f97d44eb87141a2792e9faaa1b97e1c2abe689888ad6034d26b74d785`).
 Compressed server log SHA-256:
-`57ace26f15c30e4404718c528d47163dce2d76596d219a153a6799690e9096f9`.
+`227fc40ca768bb8ae5aaa3dd3ad7db6e6e2e5c295ab0816751f28430c660a4ac`.
 Client log archive SHA-256:
-`75da16e9087dee632d353b912f65ff35179308dd9df079ce297b77e834a36a05`.
+`a2462ce0a600ec565a582cf80640f3784479ab394ac3d3b4a8a8ba92937cb0f1`.
 Plugin SHA-256:
-`98dc5822132601682024cb58f648169f7ee8f2c7a2c80b720a9752d81e757fd7`.
+`ae36884bdde4163dc213d4fc2a9fd3850f8eb365b7c4af3b4326570765bb02cc`.
 Latest strict report has 391 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-slime-natural-strict-20261107-r10` passes all
@@ -748,7 +749,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-full-strict-20261107-r2` has 391 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-full-strict-20261107-r4` has 391 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -817,7 +818,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
-- The full strict Paper 1.21.1-133 fixture `srv-paper-full-strict-20261107-r2` now records 391 probes with zero incomplete results. Its imported entity-flag probe reads `CanJoinRaid=false` on the protected Pillager and `true` on the inverse control, while the native-AI Bee probe verifies imported `PreventStingerLoss` restores the protected Bee stinger and leaves the control stung.
+- The full strict Paper 1.21.1-133 fixture `srv-paper-full-strict-20261107-r4` records 391 probes with zero incomplete results. Its imported entity-flag probe reads `CanJoinRaid=false` on the protected Pillager and `true` on the inverse control, the native-AI Bee probe verifies imported `PreventStingerLoss`, and the native Zombie `NATURAL` spawn path observes protected jockey cancellation with control allowance.
 - Mythic `teleport`/`tp` now imports into a dedicated runtime action with entity and location target support, safe landing checks, `unsafe` bypass, bounded `spreadh`/`spreadv`, preserved/target/numeric yaw and pitch, placeholder resolution, and fail-closed invalid-argument warnings. Strict Paper fixture `srv-paper-mythic-teleport-strict-20261107-r1` verifies the complete importer/runtime contract in 391 release probes.
 - Mythic Sheep `Options.SheepColor` and `Options.Sheared` now have strict importer-to-runtime evidence. Paper fixture `srv-paper-sheep-options-strict-20261107-r1` imports red/sheared and white/unshorn controls through production mob spawning, then completes the 384-probe release catalog with zero incomplete probes.
 - Official `IsInSurvivalMode` and `InSurvivalMode` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player in Survival, reject Adventure, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-survival-mode-import-strict-20261106-r1` completes the 361-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.
@@ -937,7 +938,7 @@ the entire MythicMobs feature catalog.
 - Mythic `Options.Size` migrates positive integer ranges such as `2-5`/`2to5` to spawn-time randomized Slime/MagmaCube/Phantom sizes; fixed sizes remain unchanged and invalid ranges stay visible with migration warnings. Official Paper 1.21.1-133 strict evidence sampled the production Slime option path 64 times within inclusive bounds `2..5`.
 - Migration runtime contract audit now binds the canonical conditions and mechanics asserted by the importer tests through the real `SkillService`; missing runtime registrations fail `MigrationRuntimeConditionContractTest` instead of remaining a report-only mapping.
 - Mob Options, Spawners, Random Spawn, Audience, Custom Menu, SkillTree, and AI have focused Paper or unit evidence recorded in the parity matrix.
-- Exploratory Paper r55 records Creeper fuse, synthetic Bee attack-event stinger restoration, Zombie conversion prevention, and jockey mount-event probes as passed. Strict Paper r6 verifies imported `PreventStingerLoss` against inverse controls through native Bee AI attacks on a stationary Zombie. The separate `mobOptionsNatural` Bee event remains explicitly synthetic; natural AI jockey selection remains unverified.
+- Exploratory Paper r55 records Creeper fuse, synthetic Bee attack-event stinger restoration, and Zombie conversion prevention. Strict Paper r6 verifies imported `PreventStingerLoss` against inverse controls through native Bee AI attacks on a stationary Zombie. Strict full fixture r4 additionally invokes Paper's native Zombie `NATURAL` spawn finalization and observes protected/control jockey mount events, with cancellation and allowance preserved respectively. The separate `mobOptionsNatural` Bee event remains explicitly synthetic; broader Mob Option ordering and conversion coverage remain open.
 - AI selector core is represented by a typed priority/`clear` plan with core goal/target aliases, relation/faction target resolution, conditional selectors, native `Mob#setTarget` synchronization, and an exploratory Paper `ai-selector-core` probe. Paper 1.21.1 release evidence is still required.
 - Exploratory Paper 1.21.11 r126 records `aiPriority=passed` and `aiPriorityTargets=passed` after the self-test revives and protects the online player before arbitration; `stateConditions=passed` covers real flying/sneaking/gliding state. The historical client Shield-use gap is closed by strict Paper r27, which records `stateBlocking=passed` from a real Mineflayer Shield-use window.
 - Exploratory Paper 1.21.11 r127 records independent `itemPickup=passed` and `environmentalDamage=passed` probes after isolating the managed player from earlier natural damage and binding a dedicated no-attacker damage profile.
@@ -1001,7 +1002,7 @@ Many rows remain `mapped-unverified`; the project is not complete:
 3. Pin conditions resolve through the plugin's own `pins.yml`; location-valued `@Pin` resolves every configured point or one random point, `@BlocksInPinRegion` enumerates inclusive cuboids up to 16,384 blocks, and `MovePin` updates single-point pins in memory. Strict Paper fixture `srv-paper-pin-targeters-strict-20261102-r2` passes the required `pinTargeters` probe on Paper 1.21.1-133: multi-point/random dispatch, single-point movement, multi-point movement rejection, real cuboid `set-block`/`break-block` with block restoration, and fail-closed rejection of a 16,385-block region before action dispatch. Compatibility with Mythic pack pin-file formats remains unverified; in-memory movement resets when the plugin reloads its own `pins.yml`.
 4. Complete the official targeter/filter catalog: ground, water, flying, player, Creative, Spectator, invulnerability, ArmorStand, animal, creature, villager, and Helstera-managed mob identity filters now have API and strict Paper coverage. External MythicMobs/Citizens identity, non-living targets, premium selectors, and native Pathfinder Goal mutation remain open or outside the public Paper API boundary.
 5. Expand the remaining legacy numeric ID/data families; `ItemModel` and `DamageType` are explicitly preserved because Paper 1.21.1 `ItemMeta` has no public component API for them.
-6. Strict Paper 1.21.1-133 now records the registered Creeper/Bee/Zombie and jockey mount-event probes; finish universal Mob Option ordering while natural AI jockey selection remains unverified.
+6. Strict Paper 1.21.1-133 now records the registered Creeper/Bee/Zombie and native jockey mount-event probes; finish universal Mob Option ordering and the remaining conversion/mount combinations.
 7. Add remaining Bukkit event, Audience version, and SkillTree lifecycle/restart evidence.
 8. Keep the Maven quality gate and strict Paper 1.21.1-133 release gate passing; the latest archived targeter follow-up `srv-paper-targeter-sorting-strict-20261102-r1` has 272 probes, while parity breadth and cross-version evidence remain open.
 

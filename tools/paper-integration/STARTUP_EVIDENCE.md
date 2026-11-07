@@ -1,19 +1,20 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-full-strict-20261107-r2` passed the full
+Latest fixture `srv-paper-full-strict-20261107-r4` passed the full
 strict gate on Paper 1.21.1-133: 391 registered probes, 372 passed, 19
 expected rejections, and zero failed or incomplete. It verifies the imported
 `CanJoinRaid` effective-state control and native-AI Bee
-`PreventStingerLoss` alongside the registered Mythic teleport, spawner, drops,
-skills, conditions, targeter, menu, and persistence probes. Report:
-[paper-1.21.1-full-strict-20261107-r2.json](reports/paper-1.21.1-full-strict-20261107-r2.json), SHA-256:
-`9bc375fa779a72a2741f626fae0b063bccb4e879f3099fd8439caa3da732f4fa`.
+`PreventStingerLoss` and native Zombie `NATURAL` jockey mount cancellation/
+allowance alongside the registered Mythic teleport, spawner, drops, skills,
+conditions, targeter, menu, and persistence probes. Report:
+[paper-1.21.1-full-strict-20261107-r4.json](reports/paper-1.21.1-full-strict-20261107-r4.json), SHA-256:
+`8567db2f97d44eb87141a2792e9faaa1b97e1c2abe689888ad6034d26b74d785`.
 Compressed server log SHA-256:
-`57ace26f15c30e4404718c528d47163dce2d76596d219a153a6799690e9096f9`.
+`227fc40ca768bb8ae5aaa3dd3ad7db6e6e2e5c295ab0816751f28430c660a4ac`.
 Client log archive SHA-256:
-`75da16e9087dee632d353b912f65ff35179308dd9df079ce297b77e834a36a05`.
+`a2462ce0a600ec565a582cf80640f3784479ab394ac3d3b4a8a8ba92937cb0f1`.
 Plugin SHA-256:
-`98dc5822132601682024cb58f648169f7ee8f2c7a2c80b720a9752d81e757fd7`.
+`ae36884bdde4163dc213d4fc2a9fd3850f8eb365b7c4af3b4326570765bb02cc`.
 
 Previous fixture `srv-paper-mythic-teleport-strict-20261107-r1` passed the full
 strict gate on Paper 1.21.1-133: 391 registered probes, 372 passed, 19
@@ -2371,8 +2372,8 @@ Bee AI attack behavior. The protected/control mount-event
 pair recorded cancellation versus allowance. The probe keeps native Zombie AI
 enabled so the conversion path is actually ticked, and pins the entities in
 place without suppressing that behavior. This remains exploratory Paper
-1.21.11 evidence; natural AI jockey selection and the Paper 1.21.1 release
-target remain open.
+1.21.11 evidence; the later strict Paper 1.21.1-133 r4 fixture supplies the
+native AI jockey evidence for that release target.
 
 Fixture `srv-paper-integration-exploratory-1.21.11-r56` records
 `hasItemCondition=passed`. The online player's restored inventory is given a
