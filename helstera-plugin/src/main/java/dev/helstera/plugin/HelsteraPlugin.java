@@ -1840,6 +1840,214 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private record EntitySizeRangeSamples(int minimum, int maximum, boolean withinRange) {
     }
 
+    private void runImportedEntityFlagOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-entity-flags-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("entity-flags.yml");
+            String wolfId = "EntityFlagsWolf_" + suffix;
+            String wolfControlId = "EntityFlagsWolfControl_" + suffix;
+            String pigZombieId = "EntityFlagsPigZombie_" + suffix;
+            String pigZombieControlId = "EntityFlagsPigZombieControl_" + suffix;
+            String raiderId = "EntityFlagsRaider_" + suffix;
+            String raiderControlId = "EntityFlagsRaiderControl_" + suffix;
+            String wrongTypeId = "EntityFlagsWrongType_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: WOLF
+                        Options:
+                          Tamed: true
+                          Angry: true
+                          NoAI: true
+                      %2$s:
+                        Type: WOLF
+                        Options:
+                          Tamed: false
+                          Angry: false
+                          NoAI: true
+                      %3$s:
+                        Type: ZOMBIFIED_PIGLIN
+                        Options:
+                          Angry: true
+                          NoAI: true
+                      %4$s:
+                        Type: ZOMBIFIED_PIGLIN
+                        Options:
+                          Angry: false
+                          NoAI: true
+                      %5$s:
+                        Type: PILLAGER
+                        Options:
+                          CanJoinRaid: false
+                          PatrolLeader: true
+                          PatrolSpawnPoint: true
+                          NoAI: true
+                      %6$s:
+                        Type: PILLAGER
+                        Options:
+                          CanJoinRaid: true
+                          PatrolLeader: false
+                          PatrolSpawnPoint: false
+                          NoAI: true
+                      %7$s:
+                        Type: HUSK
+                        Options:
+                          CanJoinRaid: false
+                          PatrolLeader: true
+                          PatrolSpawnPoint: true
+                          Tamed: true
+                          Angry: true
+                          NoAI: true
+                    """.formatted(wolfId, wolfControlId, pigZombieId, pigZombieControlId,
+                    raiderId, raiderControlId, wrongTypeId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe entity flag mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite entity flag mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                importedConfig.set("entity.silent", true);
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            var sourceIds = java.util.List.of(wolfId, wolfControlId, pigZombieId,
+                    pigZombieControlId, raiderId, raiderControlId, wrongTypeId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic entity flag fixtures were not all imported");
+            }
+            var locations = java.util.List.of(origin, origin.clone().add(2, 0, 0),
+                    origin.clone().add(4, 0, 0), origin.clone().add(6, 0, 0),
+                    origin.clone().add(8, 0, 0), origin.clone().add(10, 0, 0),
+                    origin.clone().add(12, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var wolfInstance = instances().impl(spawnedIds.get(wolfId));
+            var wolfControlInstance = instances().impl(spawnedIds.get(wolfControlId));
+            var pigZombieInstance = instances().impl(spawnedIds.get(pigZombieId));
+            var pigZombieControlInstance = instances().impl(spawnedIds.get(pigZombieControlId));
+            var raiderInstance = instances().impl(spawnedIds.get(raiderId));
+            var raiderControlInstance = instances().impl(spawnedIds.get(raiderControlId));
+            var wrongTypeInstance = instances().impl(spawnedIds.get(wrongTypeId));
+            var wolf = wolfInstance == null ? null : wolfInstance.baseEntity()
+                    .filter(org.bukkit.entity.Wolf.class::isInstance)
+                    .map(org.bukkit.entity.Wolf.class::cast).orElse(null);
+            var wolfControl = wolfControlInstance == null ? null : wolfControlInstance.baseEntity()
+                    .filter(org.bukkit.entity.Wolf.class::isInstance)
+                    .map(org.bukkit.entity.Wolf.class::cast).orElse(null);
+            var pigZombie = pigZombieInstance == null ? null : pigZombieInstance.baseEntity()
+                    .filter(org.bukkit.entity.PigZombie.class::isInstance)
+                    .map(org.bukkit.entity.PigZombie.class::cast).orElse(null);
+            var pigZombieControl = pigZombieControlInstance == null ? null : pigZombieControlInstance.baseEntity()
+                    .filter(org.bukkit.entity.PigZombie.class::isInstance)
+                    .map(org.bukkit.entity.PigZombie.class::cast).orElse(null);
+            var raider = raiderInstance == null ? null : raiderInstance.baseEntity()
+                    .filter(org.bukkit.entity.Raider.class::isInstance)
+                    .map(org.bukkit.entity.Raider.class::cast).orElse(null);
+            var raiderControl = raiderControlInstance == null ? null : raiderControlInstance.baseEntity()
+                    .filter(org.bukkit.entity.Raider.class::isInstance)
+                    .map(org.bukkit.entity.Raider.class::cast).orElse(null);
+            var wrongTypeEntity = wrongTypeInstance == null ? null
+                    : wrongTypeInstance.baseEntity().orElse(null);
+
+            var wolfOptions = mobConfig(targetIds.get(wolfId));
+            var wolfControlOptions = mobConfig(targetIds.get(wolfControlId));
+            var pigZombieOptions = mobConfig(targetIds.get(pigZombieId));
+            var pigZombieControlOptions = mobConfig(targetIds.get(pigZombieControlId));
+            var raiderOptions = mobConfig(targetIds.get(raiderId));
+            var raiderControlOptions = mobConfig(targetIds.get(raiderControlId));
+            var wrongTypeOptions = mobConfig(targetIds.get(wrongTypeId));
+            var wolfEntityOptions = wolfOptions == null ? null : wolfOptions.getConfigurationSection("entity");
+            var wolfControlEntityOptions = wolfControlOptions == null ? null
+                    : wolfControlOptions.getConfigurationSection("entity");
+            var pigZombieEntityOptions = pigZombieOptions == null ? null
+                    : pigZombieOptions.getConfigurationSection("entity");
+            var pigZombieControlEntityOptions = pigZombieControlOptions == null ? null
+                    : pigZombieControlOptions.getConfigurationSection("entity");
+            var raiderEntityOptions = raiderOptions == null ? null
+                    : raiderOptions.getConfigurationSection("entity");
+            var raiderControlEntityOptions = raiderControlOptions == null ? null
+                    : raiderControlOptions.getConfigurationSection("entity");
+            var wrongEntityOptions = wrongTypeOptions == null ? null
+                    : wrongTypeOptions.getConfigurationSection("entity");
+            var wrongUnsupported = wrongEntityOptions == null ? null
+                    : wrongEntityOptions.getConfigurationSection("unsupported.Options");
+
+            boolean imported = wolfEntityOptions != null && wolfEntityOptions.getBoolean("tamed")
+                    && wolfEntityOptions.getBoolean("angry")
+                    && wolfControlEntityOptions != null && !wolfControlEntityOptions.getBoolean("tamed", true)
+                    && !wolfControlEntityOptions.getBoolean("angry", true)
+                    && pigZombieEntityOptions != null && pigZombieEntityOptions.getBoolean("angry")
+                    && pigZombieControlEntityOptions != null
+                    && !pigZombieControlEntityOptions.getBoolean("angry", true)
+                    && raiderEntityOptions != null && !raiderEntityOptions.getBoolean("can-join-raid", true)
+                    && raiderEntityOptions.getBoolean("patrol-leader")
+                    && raiderEntityOptions.getBoolean("patrol-spawn-point")
+                    && raiderControlEntityOptions != null
+                    && raiderControlEntityOptions.getBoolean("can-join-raid", false)
+                    && !raiderControlEntityOptions.getBoolean("patrol-leader", true)
+                    && !raiderControlEntityOptions.getBoolean("patrol-spawn-point", true)
+                    && wrongUnsupported != null && wrongUnsupported.contains("CanJoinRaid")
+                    && !wrongUnsupported.getBoolean("CanJoinRaid", true)
+                    && wrongUnsupported.getBoolean("PatrolLeader")
+                    && wrongUnsupported.getBoolean("PatrolSpawnPoint")
+                    && wrongUnsupported.getBoolean("Tamed") && wrongUnsupported.getBoolean("Angry")
+                    && wrongEntityOptions != null && !wrongEntityOptions.contains("can-join-raid")
+                    && !wrongEntityOptions.contains("patrol-leader")
+                    && !wrongEntityOptions.contains("patrol-spawn-point")
+                    && !wrongEntityOptions.contains("tamed") && !wrongEntityOptions.contains("angry");
+            boolean wolfState = wolf != null && wolf.isTamed() && wolf.isAngry()
+                    && wolfControl != null && !wolfControl.isTamed() && !wolfControl.isAngry();
+            boolean pigZombieState = pigZombie != null && pigZombie.isAngry()
+                    && pigZombieControl != null && !pigZombieControl.isAngry();
+            boolean patrolLeader = raider != null && raider.isPatrolLeader()
+                    && raiderControl != null && !raiderControl.isPatrolLeader();
+            org.bukkit.block.Block patrolTarget = raider == null ? null : raider.getPatrolTarget();
+            boolean patrolSpawnPoint = patrolTarget != null && patrolTarget.equals(locations.get(4).getBlock())
+                    && raiderControl != null && raiderControl.getPatrolTarget() == null;
+            boolean canJoinRaidSetter = spawnedIds.get(raiderId) > 0 && spawnedIds.get(raiderControlId) > 0;
+            boolean wrongType = wrongTypeEntity instanceof org.bukkit.entity.Husk;
+            boolean passed = imported && wolfState && pigZombieState && patrolLeader
+                    && patrolSpawnPoint && canJoinRaidSetter && wrongType;
+            getLogger().info("[自检] entity-flag-options result=" + passed
+                    + " imported=" + imported + " wolf-tamed=" + (wolf != null && wolf.isTamed())
+                    + " wolf-angry=" + (wolf != null && wolf.isAngry())
+                    + " pig-zombie-angry=" + (pigZombie != null && pigZombie.isAngry())
+                    + " can-join-raid-setter=" + canJoinRaidSetter
+                    + " patrol-leader=" + patrolLeader + " patrol-spawn-point=" + patrolSpawnPoint
+                    + " wrong-type-preserved=" + (wrongType && wrongUnsupported != null));
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] entity-flag-options result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
     private void runImportedSheepOptionsSelfTest(Location origin) {
         Path sourceRoot = null;
         Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
@@ -6593,6 +6801,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " can-join-raid-setter=" + canJoinRaidSetter
                         + " patrol-leader=" + raiderView.isPatrolLeader()
                         + " patrol-spawn-point=" + patrolSpawnPoint);
+                runImportedEntityFlagOptionsSelfTest(location.clone().add(25, 0, 0));
                 var wolfContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, wolf, 1.0, 5.0, 0, "integration");
                 var sheepContext = dev.helstera.api.behavior.BehaviorContext.of(

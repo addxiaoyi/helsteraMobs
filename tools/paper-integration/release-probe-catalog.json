@@ -566,7 +566,8 @@
     },
     {
       "id": "entityFlagOptions",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "^entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true$"
     },
     {
       "id": "entityAngryPollination",

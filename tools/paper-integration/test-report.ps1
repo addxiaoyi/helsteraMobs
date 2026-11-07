@@ -189,6 +189,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
         '[Server thread/INFO]: attribute-options result=true modifiers=1',
         '[Server thread/INFO]: [helsteraMobs] [自检] mob-pickup-option result=true disabled=true explicit-overrides-default=true',
@@ -493,7 +494,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'reinforcementsChanceOptions').status -eq 'passed') 'imported Zombie reinforcement chance and invalid-input evidence'
     Assert-True ($report.expectedProbeIds -contains 'reinforcementsChanceOptions') 'reinforcement chance probe is part of every report catalog'
     Assert-True (($report.probes | Where-Object id -eq 'ageOptions').status -eq 'passed') 'age options probe'
-    Assert-True (($report.probes | Where-Object id -eq 'entityFlagOptions').status -eq 'passed') 'entity flag options probe'
+    Assert-True (($report.probes | Where-Object id -eq 'entityFlagOptions').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'entityFlagOptions').observations[0] -match
+        '^entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true$') 'imported entity flag options require production Paper evidence'
     Assert-True (($report.probes | Where-Object id -eq 'expOptions').status -eq 'passed') 'experience option probe'
     Assert-True (($report.probes | Where-Object id -eq 'expNaturalDeath').status -eq 'passed') 'natural experience death probe'
     Assert-True (($report.probes | Where-Object id -eq 'expTierDeath').status -eq 'passed') 'natural tiered experience death probe'
@@ -940,6 +943,10 @@ try {
     if ($fullCatalogAgeOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain ageOptions.' }
     $fullCatalogAgeOptions[0].observations = @(
         'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true')
+    $fullCatalogEntityFlags = @($fullCatalogReport.probes | Where-Object id -eq 'entityFlagOptions')
+    if ($fullCatalogEntityFlags.Count -ne 1) { throw 'Synthetic full catalog report must contain entityFlagOptions.' }
+    $fullCatalogEntityFlags[0].observations = @(
+        'entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true')
     $fullCatalogCatOptions = @($fullCatalogReport.probes | Where-Object id -eq 'cat')
     if ($fullCatalogCatOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain cat.' }
     $fullCatalogCatOptions[0].observations = @(

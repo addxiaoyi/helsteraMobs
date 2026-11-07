@@ -1124,11 +1124,17 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "Saddled", "entity.saddled");
             mapOption(options, srcFile, entries, target, "HorseArmor", "entity.horse-armor");
             mapOption(options, srcFile, entries, target, "CarryingChest", "entity.carrying-chest");
-            mapOption(options, srcFile, entries, target, "CanJoinRaid", "entity.can-join-raid");
-            mapOption(options, srcFile, entries, target, "PatrolLeader", "entity.patrol-leader");
-            mapOption(options, srcFile, entries, target, "PatrolSpawnPoint", "entity.patrol-spawn-point");
-            mapOption(options, srcFile, entries, target, "Tamed", "entity.tamed");
-            mapOption(options, srcFile, entries, target, "Angry", "entity.angry");
+            mapEntityScopedOption(options, srcFile, entries, target, "CanJoinRaid",
+                    "entity.can-join-raid", normalizedType, org.bukkit.entity.Raider.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "PatrolLeader",
+                    "entity.patrol-leader", normalizedType, org.bukkit.entity.Raider.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "PatrolSpawnPoint",
+                    "entity.patrol-spawn-point", normalizedType, org.bukkit.entity.Raider.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Tamed",
+                    "entity.tamed", normalizedType, org.bukkit.entity.Tameable.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Angry",
+                    "entity.angry", normalizedType, org.bukkit.entity.Wolf.class,
+                    org.bukkit.entity.PigZombie.class);
             mapOption(options, srcFile, entries, target, "HeldBlock", "entity.held-block");
             mapEntitySize(options, srcFile, entries, target);
             mapOption(options, srcFile, entries, target, "ExplosionRadius", "entity.creeper-explosion-radius");
@@ -3930,6 +3936,37 @@ public final class MythicMobsImporter implements MigrationImporter {
         target.set(path, v instanceof ConfigurationSection ? resolved : v);
         note(entries, srcFile, "Options." + optionName, path, resolved, "mapped",
                 v instanceof ConfigurationSection ? "该 Options 项是嵌套节，helstera 侧结构不同，需人工确认" : null);
+    }
+
+    private void mapEntityScopedOption(ConfigurationSection options, String srcFile,
+                                       List<Map<String, Object>> entries, YamlConfiguration target,
+                                       String optionName, String path, String normalizedType,
+                                       Class<?>... supportedEntityTypes) {
+        Object raw = ciGet(options, optionName);
+        if (raw == null) return;
+
+        String entityTypeName = normalizedType == null ? "ZOMBIE" : normalizedType;
+        Class<? extends org.bukkit.entity.Entity> entityClass;
+        try {
+            entityClass = org.bukkit.entity.EntityType.valueOf(entityTypeName).getEntityClass();
+        } catch (IllegalArgumentException ignored) {
+            // Invalid explicit types are rejected earlier in conversion.
+            entityClass = null;
+        }
+        final Class<? extends org.bukkit.entity.Entity> resolvedEntityClass = entityClass;
+        boolean supported = resolvedEntityClass != null && java.util.Arrays.stream(supportedEntityTypes)
+                .anyMatch(requiredType -> requiredType.isAssignableFrom(resolvedEntityClass));
+        if (!supported) {
+            String requiredTypes = java.util.Arrays.stream(supportedEntityTypes)
+                    .map(Class::getSimpleName).collect(java.util.stream.Collectors.joining(" or "));
+            String unsupportedPath = "entity.unsupported.Options." + optionName;
+            target.set(unsupportedPath, raw);
+            note(entries, srcFile, "Options." + optionName, unsupportedPath, raw, "unsupported",
+                    "Entity type " + entityTypeName + " does not implement " + requiredTypes
+                            + "; the value is preserved and will not be applied.", "WARN");
+            return;
+        }
+        mapOption(options, srcFile, entries, target, optionName, path);
     }
 
     private boolean mapZombieReinforcementsChance(ConfigurationSection options, String srcFile,
