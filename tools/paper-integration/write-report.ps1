@@ -570,8 +570,9 @@ if (Test-Path -LiteralPath $audienceClientLog -PathType Leaf) {
             $required = @('radiusIncludedTester', 'radiusIncludedGuest',
                 'radiusExcludedTester', 'radiusExcludedGuest',
                 'permissionIncludedTester', 'permissionIncludedGuest',
+                'permissionNegativeTesterOmitted', 'permissionNegativeGuestIncluded',
                 'factionIncludedTester', 'factionIncludedGuest',
-                'factionExcludedTester', 'factionExcludedGuest')
+                'factionNegativeTesterIncluded', 'factionNegativeGuestExcluded')
             $allPassed = $filter.status -eq 'passed'
             foreach ($field in $required) { $allPassed = $allPassed -and $filter.observations.$field -eq $true }
             if ($allPassed) { $filterStatus = 'passed' }

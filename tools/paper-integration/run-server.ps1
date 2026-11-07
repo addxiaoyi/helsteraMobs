@@ -587,11 +587,16 @@ try {
                 Select-Object -Last 1) -replace '^PAPER_AUDIENCE_REPORT ', '' | ConvertFrom-Json
             $filterPayload = ($audienceReports | Where-Object { $_ -match '^PAPER_AUDIENCE_FILTER_REPORT ' } |
                 Select-Object -Last 1) -replace '^PAPER_AUDIENCE_FILTER_REPORT ', '' | ConvertFrom-Json
+            $negativeFilterPassed = $filterPayload.status -eq 'passed'
+            foreach ($field in @('permissionNegativeTesterOmitted', 'permissionNegativeGuestIncluded',
+                    'factionNegativeTesterIncluded', 'factionNegativeGuestExcluded')) {
+                $negativeFilterPassed = $negativeFilterPassed -and $filterPayload.observations.$field -eq $true
+            }
             if ($menuPayload.status -ne 'passed' -or $menuPayload.observations.paginationClick -ne $true -or
                     $menuPayload.observations.allowedActionMessage -ne $true -or
                     $menuPayload.observations.actionClosedInventory -ne $true -or
                     $audiencePayload.status -ne 'passed' -or
-                    $filterPayload.status -ne 'passed') {
+                    -not $negativeFilterPassed) {
                 throw 'Paper menu, audience delivery, or audience filter assertions failed'
             }
             }

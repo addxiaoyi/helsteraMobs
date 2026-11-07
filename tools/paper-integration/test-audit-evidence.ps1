@@ -36,6 +36,9 @@ try {
     $archivePath = Join-Path $temporaryRoot 'tools/paper-integration/reports/test-release.json'
     [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($archivePath))
     $fullReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-drop-inline-20261104-r2.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $audienceFilterProbe = @($fullReport.probes | Where-Object id -eq 'audience-filter-delivery')
+    if ($audienceFilterProbe.Count -ne 1) { throw 'Synthetic release report must contain audience-filter-delivery.' }
+    $audienceFilterProbe[0].observations = @('{"permissionNegativeTesterOmitted":true,"permissionNegativeGuestIncluded":true,"factionNegativeTesterIncluded":true,"factionNegativeGuestExcluded":true}')
     $naturalMobOptions = @($fullReport.probes | Where-Object id -eq 'mobOptionsNatural')
     if ($naturalMobOptions.Count -ne 1) { throw 'Synthetic release report must contain mobOptionsNatural.' }
     $naturalMobOptions[0].observations = @($naturalMobOptions[0].observations | ForEach-Object {

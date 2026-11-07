@@ -311,10 +311,12 @@ async function run() {
         radiusExcludedGuest: !hasEvent(guestEvents, 'AUDIENCE_RADIUS_EXCLUDED'),
         permissionIncludedTester: hasEvent(events, 'AUDIENCE_PERMISSION_INCLUDED'),
         permissionIncludedGuest: !hasEvent(guestEvents, 'AUDIENCE_PERMISSION_INCLUDED'),
+        permissionNegativeTesterOmitted: !hasEvent(events, 'AUDIENCE_PERMISSION_NEGATIVE'),
+        permissionNegativeGuestIncluded: hasEvent(guestEvents, 'AUDIENCE_PERMISSION_NEGATIVE'),
         factionIncludedTester: hasEvent(events, 'AUDIENCE_FACTION_INCLUDED'),
         factionIncludedGuest: hasEvent(guestEvents, 'AUDIENCE_FACTION_INCLUDED'),
-        factionExcludedTester: !hasEvent(events, 'AUDIENCE_FACTION_EXCLUDED'),
-        factionExcludedGuest: !hasEvent(guestEvents, 'AUDIENCE_FACTION_EXCLUDED')
+        factionNegativeTesterIncluded: hasEvent(events, 'AUDIENCE_FACTION_NEGATIVE'),
+        factionNegativeGuestExcluded: !hasEvent(guestEvents, 'AUDIENCE_FACTION_NEGATIVE')
       },
       testerEvents: events,
       guestEvents
