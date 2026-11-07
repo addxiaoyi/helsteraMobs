@@ -3316,6 +3316,8 @@ class SkillServiceTest {
         assertTrue(registry.hasAction(svc.bindAction("teleport @VariableLocation{var=skill.mark}")));
         assertTrue(registry.hasAction(svc.bindAction("teleport-caster @origin")));
         assertTrue(registry.hasAction(svc.bindAction("teleport-self 1 2 3")));
+        assertTrue(registry.hasAction(svc.bindAction(
+                "teleport-mythic{spreadh=2;spreadv=1;unsafe=false;yaw=preserve;pitch=preserve} @target")));
     }
     @Test
     void invalidExecutionOptionsAreRejectedAtBinding() {

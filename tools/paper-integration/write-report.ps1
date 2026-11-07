@@ -120,6 +120,7 @@ $probeSpecs = [ordered]@{
     skillPotion = 'skill-actions .*potion=true'
     skillDropItem = 'skill-actions .*drop-item=true'
     skillTeleport = 'skill-actions .*teleport=true'
+    mythicTeleport = 'mythic-teleport imported=true entity-target=true location-target=true safe-blocked=true unsafe-bypass=true spread-bounded=true yaw-preserved=true orientation-override=true invalid-preserved=true warnings=true restored=true passed=true'
     skillScheduling = 'skill-scheduler result=true delay=2 repeat=3 interval=2 executions=4 pre-delay-count=0'
     skillTreeBranches = 'skill-tree-branches result=true condition-denied=true condition-unlock=true prerequisite-blocked=true prerequisite-unlock=true'
     skillTreeCastPersistence = 'skill-tree-cast-persistence result=true blocked-before-unlock=true prerequisite-unlock-blocked=true snapshot-saved=true advanced-unlocked=true casts=1'

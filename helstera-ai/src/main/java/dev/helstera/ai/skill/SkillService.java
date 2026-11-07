@@ -1003,6 +1003,7 @@ public final class SkillService {
             case "knockback" -> "knockback-targets";
             case "effect" -> "effect-targets";
             case "teleport" -> "teleport-targets";
+            case "teleport-mythic" -> "teleport-mythic";
             case "velocity" -> "velocity-targets";
             case "set-name" -> "set-name-targets";
             case "invisible" -> "invisible-targets";
@@ -2269,7 +2270,7 @@ public final class SkillService {
                     "var-set", "set-variable", "var-add", "var-math",
                     "score-set", "score-add", "signal", "dot", "mythic-aura",
                     "mythic-aura-remove", "add-to-audience", "remove-from-audience",
-                    "unset-audience" -> true;
+                    "unset-audience", "teleport-mythic" -> true;
             default -> false;
         };
     }

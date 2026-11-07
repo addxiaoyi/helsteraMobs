@@ -1211,6 +1211,11 @@
       "status": "passed"
     },
     {
+      "id": "mythicTeleport",
+      "status": "passed",
+      "requiredObservation": "mythic-teleport imported=true entity-target=true location-target=true safe-blocked=true unsafe-bypass=true spread-bounded=true yaw-preserved=true orientation-override=true invalid-preserved=true warnings=true restored=true passed=true"
+    },
+    {
       "id": "skillTeleportCoordinates",
       "status": "passed"
     },

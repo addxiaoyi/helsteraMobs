@@ -5110,6 +5110,14 @@ public final class SkillExtras {
                         catch (Throwable ignored) { SkillFaults.swallow("SkillExtras#531"); }
                     };
                 }),
+                Map.entry("teleport-mythic", (SkillCatalog.ActionFactory) a -> {
+                    var spreadH = teleportSpread(a, 0, 0, "spreadh", "spread-horizontal", "horizontalspread");
+                    var spreadV = teleportSpread(a, 1, 0, "spreadv", "spread-vertical", "verticalspread");
+                    boolean unsafe = teleportBoolean(a, 2, false, "unsafe");
+                    String yaw = teleportOrientation(a, 3, "preserve", "yaw");
+                    String pitch = teleportOrientation(a, 4, "preserve", "pitch");
+                    return ctx -> executeMythicTeleport(ctx, spreadH, spreadV, unsafe, yaw, pitch);
+                }),
                 Map.entry("look-at", (SkillCatalog.ActionFactory) a -> ctx -> {
                     if (ctx == null || !ctx.instanceValid()) return;
                     Entity self = ctx.instance().baseEntity().orElse(null);
@@ -6887,6 +6895,173 @@ public final class SkillExtras {
         Location l = ctx.origin().orElse(null);
         if (l == null && ctx.instanceValid()) l = ctx.instance().location();
         return l == null || l.getWorld() == null ? null : l;
+    }
+
+    private static java.util.function.ToDoubleFunction<BehaviorContext> teleportSpread(
+            List<String> args, int index, double fallback, String... names) {
+        String raw = teleportArgument(args, index, names);
+        if (raw == null || raw.isBlank()) return ctx -> fallback;
+        if (raw.contains("<")) {
+            return ctx -> {
+                double value = Placeholders.resolveNumber(raw, ctx, Double.NaN);
+                return Double.isFinite(value) && value >= 0 ? value : Double.NaN;
+            };
+        }
+        double value = SpecArgs.num(List.of(raw), 0, fallback, "teleport spread");
+        if (value < 0) throw new IllegalArgumentException("teleport spread must be non-negative: " + raw);
+        return ctx -> value;
+    }
+
+    private static boolean teleportBoolean(List<String> args, int index, boolean fallback, String... names) {
+        String raw = teleportArgument(args, index, names);
+        return raw == null ? fallback : SpecArgs.bool(List.of(raw), 0, fallback, "teleport unsafe");
+    }
+
+    private static String teleportOrientation(List<String> args, int index, String fallback, String... names) {
+        String raw = teleportArgument(args, index, names);
+        if (raw == null || raw.isBlank()) return fallback;
+        String value = raw.trim();
+        if (value.equalsIgnoreCase("preserve") || value.equalsIgnoreCase("caster")
+                || value.equalsIgnoreCase("target") || value.contains("<")) return value;
+        try {
+            if (!Double.isFinite(Double.parseDouble(value))) throw new NumberFormatException();
+            return value;
+        } catch (NumberFormatException error) {
+            throw new IllegalArgumentException("teleport orientation must be preserve, target or finite degrees: " + raw);
+        }
+    }
+
+    private static String teleportArgument(List<String> args, int index, String... names) {
+        String keyed = keyedArg(args, names);
+        if (keyed != null && !keyed.isBlank()) return keyed.trim();
+        if (args == null) return null;
+        int positional = 0;
+        for (String raw : args) {
+            if (raw == null || raw.isBlank() || raw.contains("=")) continue;
+            if (positional++ == index) return raw.trim();
+        }
+        return null;
+    }
+
+    private static void executeMythicTeleport(BehaviorContext ctx,
+                                               java.util.function.ToDoubleFunction<BehaviorContext> spreadH,
+                                               java.util.function.ToDoubleFunction<BehaviorContext> spreadV,
+                                               boolean unsafe, String yaw, String pitch) {
+        if (ctx == null || !ctx.instanceValid()) return;
+        Entity caster = ctx.instance().baseEntity().orElse(null);
+        if (caster == null) return;
+        Location destination = ctx.targetLocation().orElseGet(() ->
+                ctx.targetEntity().map(entity -> entity.getLocation().clone()).orElse(null));
+        Location casterLocation;
+        try {
+            casterLocation = caster.getLocation();
+        } catch (Throwable ignored) {
+            return;
+        }
+        if (destination == null || destination.getWorld() == null
+                || casterLocation == null || casterLocation.getWorld() == null) return;
+
+        Location landing = destination.clone();
+        if (!unsafe) {
+            double horizontal = spreadH.applyAsDouble(ctx);
+            double vertical = spreadV.applyAsDouble(ctx);
+            if (!Double.isFinite(horizontal) || !Double.isFinite(vertical)
+                    || horizontal < 0 || vertical < 0) return;
+            if (horizontal > 0) {
+                landing.add(java.util.concurrent.ThreadLocalRandom.current().nextDouble(-horizontal, horizontal), 0,
+                        java.util.concurrent.ThreadLocalRandom.current().nextDouble(-horizontal, horizontal));
+            }
+            if (vertical > 0) {
+                landing.add(0, java.util.concurrent.ThreadLocalRandom.current().nextDouble(-vertical, vertical), 0);
+            }
+            landing = findSafeLanding(caster, landing);
+            if (landing == null) return;
+        }
+        Float resolvedYaw = teleportOrientationValue(yaw, ctx, casterLocation, landing, true);
+        Float resolvedPitch = teleportOrientationValue(pitch, ctx, casterLocation, landing, false);
+        if (resolvedYaw == null || resolvedPitch == null) return;
+        landing.setYaw(resolvedYaw);
+        landing.setPitch(resolvedPitch);
+        try {
+            caster.teleport(landing);
+        } catch (Throwable ignored) {
+            SkillFaults.swallow("SkillExtras#mythicTeleport");
+        }
+    }
+
+    private static Float teleportOrientationValue(String raw, BehaviorContext ctx,
+                                                   Location caster, Location destination,
+                                                   boolean yaw) {
+        if (raw == null || raw.isBlank() || raw.equalsIgnoreCase("preserve")
+                || raw.equalsIgnoreCase("caster")) return yaw ? caster.getYaw() : caster.getPitch();
+        if (raw.equalsIgnoreCase("target")) return yaw ? destination.getYaw() : destination.getPitch();
+        double value = raw.contains("<")
+                ? Placeholders.resolveNumber(raw, ctx, Double.NaN) : parseFinite(raw);
+        if (!Double.isFinite(value)) return null;
+        if (!yaw) value = Math.max(-90, Math.min(90, value));
+        return (float) value;
+    }
+
+    private static double parseFinite(String raw) {
+        try {
+            double value = Double.parseDouble(raw.trim());
+            return Double.isFinite(value) ? value : Double.NaN;
+        } catch (NumberFormatException ignored) {
+            return Double.NaN;
+        }
+    }
+
+    /** Finds a nearby standing position while retaining the requested x/z location. */
+    private static Location findSafeLanding(Entity caster, Location requested) {
+        if (caster == null || requested == null || requested.getWorld() == null) return null;
+        int baseY = requested.getBlockY();
+        for (int distance = 0; distance <= 16; distance++) {
+            int[] candidates = distance == 0 ? new int[]{baseY}
+                    : new int[]{baseY + distance, baseY - distance};
+            for (int y : candidates) {
+                Location candidate = requested.clone();
+                candidate.setY(y);
+                if (safeLandingAt(caster, candidate)) return candidate;
+            }
+        }
+        return null;
+    }
+
+    private static boolean safeLandingAt(Entity caster, Location candidate) {
+        org.bukkit.World world = candidate.getWorld();
+        if (world == null) return false;
+        Location source = caster.getLocation();
+        org.bukkit.util.BoundingBox box = caster.getBoundingBox();
+        double minXOffset = box == null ? -0.3 : box.getMinX() - source.getX();
+        double maxXOffset = box == null ? 0.3 : box.getMaxX() - source.getX();
+        double minZOffset = box == null ? -0.3 : box.getMinZ() - source.getZ();
+        double maxZOffset = box == null ? 0.3 : box.getMaxZ() - source.getZ();
+        double minYOffset = box == null ? 0 : box.getMinY() - source.getY();
+        double maxYOffset = box == null ? 1.8 : box.getMaxY() - source.getY();
+        int minX = (int) Math.floor(candidate.getX() + minXOffset + 1.0e-7);
+        int maxX = (int) Math.floor(candidate.getX() + maxXOffset - 1.0e-7);
+        int minZ = (int) Math.floor(candidate.getZ() + minZOffset + 1.0e-7);
+        int maxZ = (int) Math.floor(candidate.getZ() + maxZOffset - 1.0e-7);
+        int minY = (int) Math.floor(candidate.getY() + minYOffset + 1.0e-7);
+        int maxY = (int) Math.floor(candidate.getY() + maxYOffset - 1.0e-7);
+        if (minX > maxX || minZ > maxZ || minY > maxY) return false;
+        try {
+            for (int x = minX; x <= maxX; x++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    org.bukkit.block.Block ground = world.getBlockAt(x, minY - 1, z);
+                    // Block#isPassable reads the live block collision shape and avoids
+                    // touching Material's server registry during offline execution.
+                    if (ground == null || ground.isLiquid() || ground.isPassable()) return false;
+                    for (int y = minY; y <= maxY; y++) {
+                        org.bukkit.block.Block body = world.getBlockAt(x, y, z);
+                        if (body == null || body.isLiquid() || !body.isPassable()) return false;
+                    }
+                }
+            }
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private static void rotateToward(Entity self, Location target) {

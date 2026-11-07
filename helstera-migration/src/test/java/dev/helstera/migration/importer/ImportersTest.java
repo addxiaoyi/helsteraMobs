@@ -735,15 +735,14 @@ class ImportersTest {
         List<Map<String, Object>> entries = new MythicMobsImporter().convert(f);
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
-        assertEquals(3, target.getStringList("mob.triggers.on-spawn.do").size());
+        assertEquals(4, target.getStringList("mob.triggers.on-spawn.do").size());
         assertEquals(List.of("skill{s=Child;delay=2} @Target"), target.getStringList("mob.triggers.on-death.do"));
         assertEquals(List.of("damage-target 3 @trigger", "damage-target 2 @trigger"),
                 target.getStringList("mob.triggers.on-damage.do"));
         assertTrue(target.getStringList("mob.on-decision").isEmpty());
         assertEquals(List.of("damage{amount=<skill.var.damage-amount>} @Trigger ~onDamaged",
                         "damage{amount=1} ~onTimer:20", "damage{amount=1} ~unknown",
-                        "damage{amount=2} ~onSpawn ~onDeath",
-                        "teleport @Target ~onSpawn"),
+                        "damage{amount=2} ~onSpawn ~onDeath"),
                 target.getStringList("mob.unsupported.Skills"));
         assertTrue(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))));
     }
@@ -2021,23 +2020,28 @@ class ImportersTest {
     }
 
     @Test
-    void mythicTeleportIsPreservedUntilCasterAndSafeLandingSemanticsAreSupported(@TempDir Path root) throws Exception {
+    void mythicTeleportMapsStrictOptionsAndPreservesInvalidLines(@TempDir Path root) throws Exception {
         Path file = write(root, "Skills/teleport-unsupported.yml", """
                 skills:
                   move:
                     Skills:
                       - teleport @target
-                      - tp{spreadh=5} @target
-                      - teleport @target ~onSpawn
+                      - tp{spreadh=5;spreadv=2;unsafe=true;yaw=90;pitch=-15} @target
+                      - tp{spreadh=-1} @target
+                      - tp{unsafe=maybe} @target
+                      - tp{unknown=1} @target
                 """);
         List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
-        assertTrue(target.getStringList("skills.move.on-decision").isEmpty());
-        assertEquals(List.of("teleport @target", "tp{spreadh=5} @target", "teleport @target ~onSpawn"),
+        assertEquals(List.of("teleport-mythic 0 0 false preserve preserve @target",
+                        "teleport-mythic 5 2 true 90 -15 @target"),
+                target.getStringList("skills.move.on-decision"));
+        assertEquals(List.of("tp{spreadh=-1} @target", "tp{unsafe=maybe} @target",
+                        "tp{unknown=1} @target"),
                 target.getStringList("skills.move.unsupported"));
-        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
-                && String.valueOf(entry.get("note")).contains("safe landing")));
+        assertEquals(3, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid teleport arguments")).count());
     }
 
     @Test
