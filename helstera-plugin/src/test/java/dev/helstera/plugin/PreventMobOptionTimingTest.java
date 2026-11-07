@@ -53,6 +53,20 @@ class PreventMobOptionTimingTest {
     }
 
     @Test
+    void jockeyGuardOnlyBlocksZombieChickenPair() {
+        var protectedOptions = SpawnOptions.defaults().preventJockeyMounts(true);
+        var zombie = proxy(org.bukkit.entity.Zombie.class);
+        var chicken = proxy(org.bukkit.entity.Chicken.class);
+        var pig = proxy(org.bukkit.entity.Pig.class);
+
+        assertTrue(HelsteraPlugin.preventsEntityMount(protectedOptions, zombie, chicken));
+        assertFalse(HelsteraPlugin.preventsEntityMount(protectedOptions, zombie, pig));
+        assertFalse(HelsteraPlugin.preventsEntityMount(protectedOptions, chicken, pig));
+        assertTrue(HelsteraPlugin.preventsEntityMount(
+                SpawnOptions.defaults().preventMount(true), chicken, pig));
+    }
+
+    @Test
     void preventMountBlocksEveryPassengerType() {
         assertTrue(HelsteraPlugin.preventsEntityMount(
                 SpawnOptions.defaults().preventMount(true), EntityType.ZOMBIE));
