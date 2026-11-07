@@ -2,7 +2,26 @@
 
 ## MythicMobs Parity Development Status (2026-11-07)
 
-Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` passes all
+Latest strict fixture `srv-paper-prevent-sunburn-strict-20261107-r4` passes all
+388 release probes (369 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies imported `Options.PreventSunburn`
+against an inverse control through production spawning. In clear weather at
+midday, two native sunlight events for the protected Zombie were cancelled;
+the control's event remained uncancelled with 132 fire ticks. Both entities
+ticked 40 times at distances 4 and 14 blocks from the online player, and the
+probe restored the world state and removed its temporary entities/config.
+Paper reports the protected no-fire state as `-1`. Report:
+`tools/paper-integration/reports/paper-1.21.1-prevent-sunburn-strict-20261107-r4.json`
+(SHA-256 `7dcdb9a10f0a5a62388f9578db3fd9d88d4417cea8e7ffb44dcce675203e3bbc`).
+Compressed server log SHA-256:
+`3ec6c62d4362ed2d95a6300b605e17990286b9bfa8249bea6e950cbe80f3c0db`.
+Client log archive SHA-256:
+`4c4baf391ffee276d4f635163402b5719b5cf5fc663825f55d9327ba05ca0e79`.
+Plugin SHA-256:
+`362e44995f813fbab99f4a8c09ca65b685183602922cf9d794b4927f7ddda69b`.
+Latest strict report has 388 probes, zero incomplete.
+
+Previous strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` passes all
 387 release probes (368 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. It verifies imported Bee nectar/stung fields
 and `PreventStingerLoss` against inverse controls through production spawning.
@@ -17,7 +36,7 @@ Client log archive SHA-256:
 `be17f8a8a1c9263ed98866d3f5eb64d06bd1c655a5972c8380190ec2b509a270`.
 Plugin SHA-256:
 `d1f34a62d8be828a525af0a9a98ff65d0c3478b47883c921b1fa7002bd20b7c5`.
-Latest strict report has 387 probes, zero incomplete.
+That strict report has 387 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-horse-options-strict-20261107-r1` passes
 all 385 release probes (366 passed, 19 expected rejections, zero incomplete)
@@ -46,7 +65,7 @@ Client log archive SHA-256:
 `279d6430528ce8315c8a094f97071a9b2ef57a597b62e8e1a78ee3faa053e1d2`.
 Plugin SHA-256:
 `b8174ab89cf0a585b063da12db46e9e8859da544698f51b61a9b596f7a8c7a77`.
-Latest strict report has 387 probes, zero incomplete.
+That strict report has 387 probes, zero incomplete.
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
@@ -71,7 +90,7 @@ and variant-specific natural DropTables. Report:
 `tools/paper-integration/reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json`.
 Plugin SHA-256:
 `fd72793b1e8a9aa8b62bc8d7a354dfaf1e36208f874e81fc37f10da1dadca9f5`.
-Latest strict report has 387 probes, zero incomplete.
+That strict report has 387 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-mythic-random-pool-strict-20261106-r1`
 passed 380 release probes (361 passed, 19 expected rejections, zero
@@ -679,7 +698,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` has 387 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-prevent-sunburn-strict-20261107-r4` has 388 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -695,8 +714,8 @@ This is a partial parity release. The matrix currently has `37`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 506 cited IDs; 415 report files; 4 directories
-   without reports; 87 missing directories; 182 archived release reports. The
+   Current fixture inventory: 507 cited IDs; 416 report files; 4 directories
+   without reports; 87 missing directories; 183 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

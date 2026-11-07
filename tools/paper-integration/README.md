@@ -38,7 +38,24 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` passed all
+Latest strict fixture `srv-paper-prevent-sunburn-strict-20261107-r4` passed all
+388 probes (369 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. It imports `Options.PreventSunburn` against an inverse
+control through production spawning. At clear-weather midday, two native
+sunlight events on the protected Zombie were cancelled; the control event was
+uncancelled and retained 132 fire ticks. Both entities ticked 40 times within
+14 blocks of an online player, and the probe restored world state and removed
+temporary entities/config. Report:
+`reports/paper-1.21.1-prevent-sunburn-strict-20261107-r4.json`;
+server log: `reports/paper-1.21.1-prevent-sunburn-strict-20261107-r4.log.gz`;
+client logs:
+`reports/paper-1.21.1-prevent-sunburn-strict-20261107-r4-client-logs.tar.gz`.
+Report SHA-256: `7dcdb9a10f0a5a62388f9578db3fd9d88d4417cea8e7ffb44dcce675203e3bbc`;
+server log SHA-256: `3ec6c62d4362ed2d95a6300b605e17990286b9bfa8249bea6e950cbe80f3c0db`;
+client log SHA-256: `4c4baf391ffee276d4f635163402b5719b5cf5fc663825f55d9327ba05ca0e79`;
+plugin SHA-256: `362e44995f813fbab99f4a8c09ca65b685183602922cf9d794b4927f7ddda69b`.
+
+Previous strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` passed all
 387 probes (368 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. It imports Bee nectar/stung fields and `PreventStingerLoss`
 through production spawning against inverse controls. Native Bee AI attacks a

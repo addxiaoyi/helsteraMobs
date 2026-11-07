@@ -1069,6 +1069,11 @@
       "status": "passed"
     },
     {
+      "id": "preventSunburnNatural",
+      "status": "passed",
+      "requiredObservationPattern": "^prevent-sunburn-natural imported=true mapped=true protected-option=true control-option=false daylight=true weather-clear=true observer-present=true protected-player-distance=[0-9]+ control-player-distance=[0-9]+ sky-exposed=true protected-ai=true control-ai=true protected-age-ticks=[1-9][0-9]* control-age-ticks=[1-9][0-9]* protected-events=[1-9][0-9]* protected-cancelled=[1-9][0-9]* protected-fire-ticks=(-1|0) control-events=[1-9][0-9]* control-cancelled=0 control-fire-ticks=[1-9][0-9]* elapsed-ticks=[1-9][0-9]* restored=true passed=true$"
+    },
+    {
       "id": "potionEffectCondition",
       "status": "passed"
     },

@@ -1,12 +1,30 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` passed the full
-strict gate on Paper 1.21.1-133: 387 registered probes, 368 passed, 19
-expected rejections, and zero failed or incomplete. Imported Bee nectar/stung
-fields and `PreventStingerLoss` are verified against inverse controls through
-production spawning. The stinger probe observes one uncancelled native AI
-attack from each Bee against a stationary Zombie; the protected Bee restores
-its stinger and the control remains stung. Report:
+Latest fixture `srv-paper-prevent-sunburn-strict-20261107-r4` passed the full
+strict gate on Paper 1.21.1-133: 388 registered probes, 369 passed, 19
+expected rejections, and zero failed or incomplete. Imported
+`Options.PreventSunburn` is verified against an inverse control through
+production spawning. At clear-weather midday, two native sunlight events on
+the protected Zombie were cancelled; the control event was uncancelled and
+retained 132 fire ticks. Both entities ticked 40 times near an online player,
+and the probe restored world state and removed temporary entities/config.
+Report:
+[paper-1.21.1-prevent-sunburn-strict-20261107-r4.json](reports/paper-1.21.1-prevent-sunburn-strict-20261107-r4.json), SHA-256:
+`7dcdb9a10f0a5a62388f9578db3fd9d88d4417cea8e7ffb44dcce675203e3bbc`.
+Compressed server log SHA-256:
+`3ec6c62d4362ed2d95a6300b605e17990286b9bfa8249bea6e950cbe80f3c0db`.
+Client log archive SHA-256:
+`4c4baf391ffee276d4f635163402b5719b5cf5fc663825f55d9327ba05ca0e79`.
+Plugin SHA-256:
+`362e44995f813fbab99f4a8c09ca65b685183602922cf9d794b4927f7ddda69b`.
+
+Previous full strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r6`
+passed 387 probes (368 passed, 19 expected rejections, zero failed or
+incomplete). Imported Bee nectar/stung fields and `PreventStingerLoss` are
+verified against inverse controls through production spawning. The stinger
+probe observes one uncancelled native AI attack from each Bee against a
+stationary Zombie; the protected Bee restores its stinger and the control
+remains stung. Report:
 [paper-1.21.1-bee-stinger-loss-strict-20261107-r6.json](reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r6.json), SHA-256:
 `a19476296ade4ac370e358a4b83d5f994d190f8cd871686f2bb9b68ab9fa1571`.
 Compressed server log SHA-256:
@@ -3072,6 +3090,16 @@ Its managed entity `PreventSunburn` check confirms the base sunlight
 `EntityCombustEvent` is cancelled while `EntityCombustByBlockEvent` and
 `EntityCombustByEntityEvent` remain uncancelled, preserving non-sunlight fire
 semantics.
+
+Strict Paper 1.21.1-133 fixture `srv-paper-prevent-sunburn-strict-20261107-r4`
+passed all 388 release probes (369 passed, 19 expected rejections, zero failed
+or incomplete). The imported protected Zombie received two native sunlight
+combustion events, both cancelled with no fire (`getFireTicks() == -1`); its
+inverse-control Zombie received one uncancelled event and retained 132 fire
+ticks. Both entities advanced 40 ticks within 14 blocks of an online player.
+The probe restored world time/weather and removed its temporary Mob files and
+entities. Report and matching artifact hashes are recorded in
+`tools/paper-integration/release-evidence.json`.
 
 Historical fixture `srv-paper-integration-final-r36` passed with 222 observed
 probes: 214 `passed`, 8 expected `observed-rejected`, and zero incomplete.

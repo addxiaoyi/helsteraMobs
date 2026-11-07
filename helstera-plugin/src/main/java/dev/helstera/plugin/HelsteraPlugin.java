@@ -12585,6 +12585,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             Location location = world.getSpawnLocation().clone().add(0, 3, 0);
             runNaturalCreeperFuseProbe(world, location);
             runMobOptionTimingProbe(world, location);
+            getServer().getScheduler().runTaskLater(this,
+                    () -> runPreventSunburnNaturalProbe(world, location), 200L);
             runNaturalKillTriggerProbe(world, location);
             runNaturalPlayerKillTriggerProbe(world, location);
             if ("true".equalsIgnoreCase(System.getenv("PAPER_RAW_POTION_WORKFLOW"))) {
@@ -14550,6 +14552,340 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " passed=" + (exploded && configuredFuse == 20));
             if (creeper.isValid()) creeper.remove();
         }, 30L);
+    }
+
+    /** Verifies imported PreventSunburn against native daylight combustion on Paper. */
+    private void runPreventSunburnNaturalProbe(org.bukkit.World world, Location origin) {
+        if (world == null || origin == null || instances() == null) return;
+
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new ArrayList<Path>();
+        Path[] sourceRoot = {null};
+        int[] instanceIds = {-1, -1};
+        boolean[] listenerRegistered = {false};
+        boolean[] cleaned = {false};
+        boolean[] restored = {false};
+        boolean[] observerPresent = {false};
+        int[] protectedPlayerDistance = {-1};
+        int[] controlPlayerDistance = {-1};
+        long originalTime = world.getTime();
+        Boolean originalDaylightCycle = world.getGameRuleValue(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE);
+        boolean originalStorm = world.hasStorm();
+        boolean originalThundering = world.isThundering();
+        int originalWeatherDuration = world.getWeatherDuration();
+        int originalThunderDuration = world.getThunderDuration();
+        java.util.UUID[] probeIds = {null, null};
+        int[] protectedEvents = {0};
+        int[] protectedCancelled = {0};
+        int[] controlEvents = {0};
+        int[] controlCancelled = {0};
+        org.bukkit.scheduler.BukkitTask[] task = {null};
+
+        var sunlightProbe = new org.bukkit.event.Listener() {
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST, ignoreCancelled = true)
+            public void isolateOtherSunlightCombustion(org.bukkit.event.entity.EntityCombustEvent event) {
+                if (!isSunlightCombustEvent(event)) return;
+                var entityId = event.getEntity().getUniqueId();
+                if (!entityId.equals(probeIds[0]) && !entityId.equals(probeIds[1])) event.setCancelled(true);
+            }
+
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+            public void observeNativeSunlightCombustion(org.bukkit.event.entity.EntityCombustEvent event) {
+                if (!isSunlightCombustEvent(event)) return;
+                var entityId = event.getEntity().getUniqueId();
+                if (entityId.equals(probeIds[0])) {
+                    protectedEvents[0]++;
+                    if (event.isCancelled()) protectedCancelled[0]++;
+                } else if (entityId.equals(probeIds[1])) {
+                    controlEvents[0]++;
+                    if (event.isCancelled()) controlCancelled[0]++;
+                }
+            }
+        };
+
+        Runnable cleanup = () -> {
+            if (cleaned[0]) return;
+            if (task[0] != null) task[0].cancel();
+            if (listenerRegistered[0]) {
+                org.bukkit.event.HandlerList.unregisterAll(sunlightProbe);
+                listenerRegistered[0] = false;
+            }
+            boolean clean = true;
+            try {
+                var manager = instances();
+                for (int instanceId : instanceIds) {
+                    if (instanceId <= 0) continue;
+                    if (manager == null) {
+                        clean = false;
+                        continue;
+                    }
+                    if (manager.impl(instanceId) != null) manager.despawn(instanceId);
+                    clean &= manager.impl(instanceId) == null;
+                }
+            } catch (Throwable failure) {
+                clean = false;
+                getLogger().warning("PreventSunburn probe entity cleanup failed: " + failure.getMessage());
+            }
+            try {
+                world.setTime(originalTime);
+                if (originalDaylightCycle != null) {
+                    world.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, originalDaylightCycle);
+                }
+                world.setStorm(originalStorm);
+                world.setThundering(originalThundering);
+                world.setWeatherDuration(originalWeatherDuration);
+                world.setThunderDuration(originalThunderDuration);
+                clean &= world.getTime() == originalTime
+                        && java.util.Objects.equals(world.getGameRuleValue(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE),
+                            originalDaylightCycle)
+                        && world.hasStorm() == originalStorm
+                        && world.isThundering() == originalThundering
+                        && world.getWeatherDuration() == originalWeatherDuration
+                        && world.getThunderDuration() == originalThunderDuration;
+            } catch (Throwable failure) {
+                clean = false;
+                getLogger().warning("PreventSunburn probe environment restore failed: " + failure.getMessage());
+            }
+            for (Path mobFile : mobFiles) {
+                try {
+                    Files.deleteIfExists(mobFile);
+                } catch (IOException failure) {
+                    clean = false;
+                    getLogger().warning("PreventSunburn probe config cleanup failed: " + failure.getMessage());
+                }
+            }
+            if (!outputDirectoryExisted) {
+                try {
+                    Files.deleteIfExists(outputDirectory);
+                } catch (IOException failure) {
+                    clean = false;
+                }
+            }
+            if (sourceRoot[0] != null) {
+                try (var paths = Files.walk(sourceRoot[0])) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException failure) {
+                    clean = false;
+                    getLogger().warning("PreventSunburn source fixture cleanup failed: " + failure.getMessage());
+                }
+            }
+            restored[0] = clean;
+            cleaned[0] = true;
+        };
+
+        try {
+            if (world.getEnvironment() != org.bukkit.World.Environment.NORMAL) {
+                throw new IllegalStateException("Sunlight probe requires the Overworld");
+            }
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String protectedSourceId = "SunburnProtected_" + suffix;
+            String controlSourceId = "SunburnControl_" + suffix;
+            sourceRoot[0] = Files.createTempDirectory("helstera-prevent-sunburn-");
+            Path sourceFile = Files.createDirectories(sourceRoot[0].resolve("Mobs"))
+                    .resolve("sunburn.yml");
+            Files.writeString(sourceFile, """
+                    %s:
+                      Type: ZOMBIE
+                      Options:
+                        PreventSunburn: true
+                    %s:
+                      Type: ZOMBIE
+                      Options:
+                        PreventSunburn: false
+                    """.formatted(protectedSourceId, controlSourceId));
+
+            var importer = new MythicMobsImporter();
+            var imported = new java.util.LinkedHashMap<String, String>();
+            boolean mapped = true;
+            for (var plan : importer.convert(sourceFile, sourceRoot[0])) {
+                String sourceId = String.valueOf(plan.get("source-mob-id"));
+                if (!(plan.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")) continue;
+                if (!"mapped".equals(plan.get("status"))) {
+                    mapped = false;
+                    continue;
+                }
+                String targetId = String.valueOf(plan.get("target-mob-id"));
+                Path mobFile = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!mobFile.startsWith(outputDirectory) || Files.exists(mobFile)) {
+                    throw new IOException("Unsafe or existing imported Sunburn Mob file: " + targetFile);
+                }
+                var mobConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(plan.get("content"))));
+                mobConfig.set("model", "example/emberling");
+                mobConfig.set("entity.silent", true);
+                boolean expectedProtected = protectedSourceId.equals(sourceId);
+                boolean optionMatches = mobConfig.getBoolean("entity.prevent-sunburn", false) == expectedProtected
+                        && "ZOMBIE".equalsIgnoreCase(mobConfig.getString("mob.entity-type"));
+                mapped &= optionMatches;
+                mobFiles.add(mobFile);
+                Files.createDirectories(mobFile.getParent());
+                Files.writeString(mobFile, mobConfig.saveToString());
+                imported.put(sourceId, targetId);
+            }
+            String protectedMobId = imported.get(protectedSourceId);
+            String controlMobId = imported.get(controlSourceId);
+            mapped &= imported.size() == 2 && protectedMobId != null && controlMobId != null;
+            if (!mapped) throw new IllegalStateException("PreventSunburn importer fixture was not fully mapped");
+
+            var observer = world.getPlayers().stream()
+                    .min(java.util.Comparator.comparingDouble(player ->
+                            player.getLocation().distanceSquared(origin)))
+                    .orElse(null);
+            if (observer == null) throw new IllegalStateException("Sunlight probe requires an online Paper player");
+            observerPresent[0] = true;
+            Location observerAt = observer.getLocation().clone();
+
+            world.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, false);
+            world.setTime(6000L);
+            world.setStorm(false);
+            world.setThundering(false);
+            world.setWeatherDuration(12000);
+            world.setThunderDuration(0);
+
+            Location protectedAt = findOpenSkyProbeLocation(world, observerAt, 4);
+            Location controlAt = findOpenSkyProbeLocation(world, observerAt, 12);
+            if (protectedAt == null || controlAt == null
+                    || protectedAt.distanceSquared(controlAt) < 16.0
+                    || protectedAt.distanceSquared(observerAt) > 400.0
+                    || controlAt.distanceSquared(observerAt) > 400.0) {
+                throw new IllegalStateException("Could not find separated open-sky spawn locations");
+            }
+            protectedPlayerDistance[0] = (int) Math.round(Math.sqrt(protectedAt.distanceSquared(observerAt)));
+            controlPlayerDistance[0] = (int) Math.round(Math.sqrt(controlAt.distanceSquared(observerAt)));
+            boolean skyExposed = isOpenSkyProbeLocation(world, protectedAt)
+                    && isOpenSkyProbeLocation(world, controlAt);
+            if (!skyExposed) throw new IllegalStateException("Sunburn locations are not exposed to the sky");
+
+            getServer().getPluginManager().registerEvents(sunlightProbe, this);
+            listenerRegistered[0] = true;
+            instanceIds[0] = spawnMobAt(protectedMobId, protectedAt, null);
+            instanceIds[1] = spawnMobAt(controlMobId, controlAt, null);
+            var protectedInstance = instanceIds[0] > 0 ? instances().impl(instanceIds[0]) : null;
+            var controlInstance = instanceIds[1] > 0 ? instances().impl(instanceIds[1]) : null;
+            var protectedZombie = protectedInstance == null ? null
+                    : protectedInstance.baseEntity().filter(org.bukkit.entity.Zombie.class::isInstance)
+                    .map(org.bukkit.entity.Zombie.class::cast).orElse(null);
+            var controlZombie = controlInstance == null ? null
+                    : controlInstance.baseEntity().filter(org.bukkit.entity.Zombie.class::isInstance)
+                    .map(org.bukkit.entity.Zombie.class::cast).orElse(null);
+            if (protectedZombie == null || controlZombie == null) {
+                throw new IllegalStateException("Imported Sunburn probe entities did not spawn");
+            }
+            probeIds[0] = protectedZombie.getUniqueId();
+            probeIds[1] = controlZombie.getUniqueId();
+            protectedZombie.setAI(true);
+            controlZombie.setAI(true);
+            protectedZombie.setShouldBurnInDay(true);
+            controlZombie.setShouldBurnInDay(true);
+            protectedZombie.setInvulnerable(true);
+            controlZombie.setInvulnerable(true);
+            protectedZombie.setFireTicks(0);
+            controlZombie.setFireTicks(0);
+
+            boolean protectedOption = protectedInstance.options().preventSunburn();
+            boolean controlOption = controlInstance.options().preventSunburn();
+            boolean daylight = world.getTime() < 12000L;
+            boolean weatherClear = !world.hasStorm() && !world.isThundering();
+            final int[] elapsedTicks = {0};
+            task[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+                elapsedTicks[0]++;
+                if (protectedZombie.isValid() && !protectedZombie.isDead()) {
+                    protectedZombie.setTarget(null);
+                    protectedZombie.getPathfinder().stopPathfinding();
+                    protectedZombie.setVelocity(new org.bukkit.util.Vector());
+                }
+                if (controlZombie.isValid() && !controlZombie.isDead()) {
+                    controlZombie.setTarget(null);
+                    controlZombie.getPathfinder().stopPathfinding();
+                    controlZombie.setVelocity(new org.bukkit.util.Vector());
+                }
+                boolean protectedFireClear = protectedZombie.getFireTicks() <= 0;
+                int protectedFireTicks = protectedZombie.getFireTicks();
+                int controlFireTicks = controlZombie.getFireTicks();
+                int protectedAgeTicks = protectedZombie.getTicksLived();
+                int controlAgeTicks = controlZombie.getTicksLived();
+                boolean complete = elapsedTicks[0] >= 40
+                        && protectedEvents[0] > 0 && controlEvents[0] > 0;
+                boolean timedOut = elapsedTicks[0] >= 1200;
+                if (!complete && !timedOut) return;
+
+                boolean protectedBlocked = protectedEvents[0] > 0
+                        && protectedCancelled[0] == protectedEvents[0] && protectedFireClear;
+                boolean controlBurned = controlEvents[0] > 0 && controlCancelled[0] == 0
+                        && controlFireTicks > 0;
+                boolean protectedAi = protectedZombie.hasAI();
+                boolean controlAi = controlZombie.hasAI();
+                cleanup.run();
+                boolean passed = protectedOption && !controlOption && daylight && weatherClear && skyExposed
+                        && observerPresent[0] && protectedPlayerDistance[0] <= 20 && controlPlayerDistance[0] <= 20
+                        && protectedAi && controlAi
+                        && protectedAgeTicks >= 40 && controlAgeTicks >= 40
+                        && protectedBlocked && controlBurned && restored[0];
+                getLogger().info("prevent-sunburn-natural imported=true mapped=true"
+                        + " protected-option=" + protectedOption + " control-option=" + controlOption
+                        + " daylight=" + daylight + " weather-clear=" + weatherClear
+                        + " observer-present=" + observerPresent[0]
+                        + " protected-player-distance=" + protectedPlayerDistance[0]
+                        + " control-player-distance=" + controlPlayerDistance[0]
+                        + " sky-exposed=" + skyExposed + " protected-ai=" + protectedAi
+                        + " control-ai=" + controlAi
+                        + " protected-age-ticks=" + protectedAgeTicks
+                        + " control-age-ticks=" + controlAgeTicks
+                        + " protected-events=" + protectedEvents[0]
+                        + " protected-cancelled=" + protectedCancelled[0]
+                        + " protected-fire-ticks=" + protectedFireTicks
+                        + " control-events=" + controlEvents[0]
+                        + " control-cancelled=" + controlCancelled[0]
+                        + " control-fire-ticks=" + controlFireTicks
+                        + " elapsed-ticks=" + elapsedTicks[0]
+                        + " restored=" + restored[0] + " passed=" + passed);
+            }, 1L, 1L);
+        } catch (Throwable failure) {
+            cleanup.run();
+            getLogger().warning("PreventSunburn natural probe failed: " + failure.getMessage());
+            getLogger().info("prevent-sunburn-natural imported=false mapped=false protected-option=false"
+                    + " control-option=false daylight=false weather-clear=false sky-exposed=false"
+                    + " observer-present=" + observerPresent[0]
+                    + " protected-player-distance=" + protectedPlayerDistance[0]
+                    + " control-player-distance=" + controlPlayerDistance[0]
+                    + " protected-ai=false control-ai=false"
+                    + " protected-age-ticks=0 control-age-ticks=0"
+                    + " protected-events=" + protectedEvents[0]
+                    + " protected-cancelled=" + protectedCancelled[0]
+                    + " protected-fire-ticks=0 control-events=" + controlEvents[0]
+                    + " control-cancelled=" + controlCancelled[0]
+                    + " control-fire-ticks=0 elapsed-ticks=0 restored=" + restored[0] + " passed=false");
+        }
+    }
+
+    private Location findOpenSkyProbeLocation(org.bukkit.World world, Location origin, int xOffset) {
+        for (int attempt = 0; attempt < 16; attempt++) {
+            int x = origin.getBlockX() + xOffset + attempt;
+            int z = origin.getBlockZ();
+            world.getChunkAt(x >> 4, z >> 4).load();
+            int y = world.getHighestBlockYAt(x, z) + 1;
+            if (y <= world.getMinHeight() || y + 1 >= world.getMaxHeight()) continue;
+            var ground = world.getBlockAt(x, y - 1, z);
+            var feet = world.getBlockAt(x, y, z);
+            var head = world.getBlockAt(x, y + 1, z);
+            if (!ground.getType().isSolid() || ground.isLiquid()
+                    || !feet.isPassable() || !head.isPassable()) continue;
+            return new Location(world, x + 0.5, y, z + 0.5);
+        }
+        return null;
+    }
+
+    private boolean isOpenSkyProbeLocation(org.bukkit.World world, Location location) {
+        int x = location.getBlockX();
+        int y = location.getBlockY();
+        int z = location.getBlockZ();
+        return world.getHighestBlockYAt(x, z) == y - 1
+                && world.getBlockAt(x, y, z).getLightFromSky() == 15
+                && world.getBlockAt(x, y + 1, z).getLightFromSky() == 15;
     }
 
     /**
