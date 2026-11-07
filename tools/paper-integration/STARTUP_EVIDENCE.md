@@ -1,6 +1,21 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-mythic-teleport-strict-20261107-r1` passed the full
+Latest fixture `srv-paper-full-strict-20261107-r2` passed the full
+strict gate on Paper 1.21.1-133: 391 registered probes, 372 passed, 19
+expected rejections, and zero failed or incomplete. It verifies the imported
+`CanJoinRaid` effective-state control and native-AI Bee
+`PreventStingerLoss` alongside the registered Mythic teleport, spawner, drops,
+skills, conditions, targeter, menu, and persistence probes. Report:
+[paper-1.21.1-full-strict-20261107-r2.json](reports/paper-1.21.1-full-strict-20261107-r2.json), SHA-256:
+`9bc375fa779a72a2741f626fae0b063bccb4e879f3099fd8439caa3da732f4fa`.
+Compressed server log SHA-256:
+`57ace26f15c30e4404718c528d47163dce2d76596d219a153a6799690e9096f9`.
+Client log archive SHA-256:
+`75da16e9087dee632d353b912f65ff35179308dd9df079ce297b77e834a36a05`.
+Plugin SHA-256:
+`98dc5822132601682024cb58f648169f7ee8f2c7a2c80b720a9752d81e757fd7`.
+
+Previous fixture `srv-paper-mythic-teleport-strict-20261107-r1` passed the full
 strict gate on Paper 1.21.1-133: 391 registered probes, 372 passed, 19
 expected rejections, and zero failed or incomplete. It verifies imported
 Mythic `teleport`/`tp` for entity and location targets, safe landing,

@@ -187,6 +187,7 @@ class MythicAgeOptionsTest {
     @Test
     void appliesRaidAndTameOptionsOnlyThroughMatchingBukkitInterfaces() {
         Map<String, Object> calls = new LinkedHashMap<>();
+        boolean[] canJoinRaid = {true};
         var patrolBlock = Proxy.newProxyInstance(org.bukkit.block.Block.class.getClassLoader(),
                 new Class<?>[]{org.bukkit.block.Block.class}, (proxy, method, args) -> {
                     Class<?> type = method.getReturnType();
@@ -203,6 +204,10 @@ class MythicAgeOptionsTest {
                     if (method.getName().startsWith("set")) {
                         calls.put(method.getName(), args == null || args.length == 0 ? true : args[0]);
                     }
+                    if (method.getName().equals("setCanJoinRaid")) {
+                        canJoinRaid[0] = (Boolean) args[0];
+                    }
+                    if (method.getName().equals("isCanJoinRaid")) return canJoinRaid[0];
                     if (method.getName().equals("getLocation")) return patrolLocation;
                     Class<?> type = method.getReturnType();
                     if (type == boolean.class) return false;
@@ -230,6 +235,7 @@ class MythicAgeOptionsTest {
         HelsteraPlugin.applyEntitySpecificOptions(tameable, options);
 
         assertEquals(false, calls.get("setCanJoinRaid"));
+        assertFalse(canJoinRaid[0]);
         assertEquals(true, calls.get("setPatrolLeader"));
         assertTrue(calls.get("setPatrolTarget") == patrolBlock);
         assertEquals(true, calls.get("setTamed"));
