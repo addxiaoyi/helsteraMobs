@@ -38,18 +38,20 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-bee-anger-strict-20261107-r1` passed all
+Latest strict fixture `srv-paper-entity-flags-strict-20261107-r3` passed all
 389 probes (370 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. It imports Bee `Options.Anger: 1200` through the production
-mob path and reads back 1200 anger ticks; the inverse control remains at 0.
-Report: `reports/paper-1.21.1-bee-anger-strict-20261107-r1.json`;
-server log: `reports/paper-1.21.1-bee-anger-strict-20261107-r1.log.gz`;
+Paper 1.21.1-133. It imports Wolf `Tamed`/`Angry`, Zombified Piglin `Angry`,
+and Pillager `PatrolLeader`/`PatrolSpawnPoint` through production spawning and
+checks each against inverse controls. Paper accepts the `CanJoinRaid` setter,
+but has no getter for its effective value. Report:
+`reports/paper-1.21.1-entity-flags-strict-20261107-r3.json`;
+server log: `reports/paper-1.21.1-entity-flags-strict-20261107-r3.log.gz`;
 client logs:
-`reports/paper-1.21.1-bee-anger-strict-20261107-r1-client-logs.tar.gz`.
-Report SHA-256: `077d1891e145fc3d21c33c625277462aaadb6bc301534f271f46513ca97cd719`;
-server log SHA-256: `7b05c0f5cb30b0045d8dc246fec4814a0b26e6cc088a85e04e814830c385e7f2`;
-client log SHA-256: `2de1363123fc0e8d19b571f41d8815d9b9ddd937b9bb6e942cb302411859fd38`;
-plugin SHA-256: `99b51d080e359cbe8524dd22de76e94696673a32e8c5b6750085862fbd92f2e9`.
+`reports/paper-1.21.1-entity-flags-strict-20261107-r3-client-logs.tar.gz`.
+Report SHA-256: `4add60fd513d716fd8bfbb26cb6e141691ff5db580e8ef9c54b98a80d3424dc5`;
+server log SHA-256: `04a523b80a82e52be7e39d7a128ac0daf90300aabf56aa3ddda20bce7a808eb2`;
+client log SHA-256: `9c0e10957d681ca11040c8f614e493967c4a1da21b1a51ed6d1453352f70b073`;
+plugin SHA-256: `dfa06ca836ad0d177962b3ee553197ad41c0989942c0637aafb4fe044015da28`.
 
 Previous strict fixture `srv-paper-prevent-sunburn-strict-20261107-r4` passed
 388 probes (369 passed, 19 expected rejections, zero failed or incomplete).

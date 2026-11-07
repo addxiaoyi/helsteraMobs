@@ -1,5 +1,16 @@
 [
   {
+    "fixtureId": "srv-paper-entity-flags-strict-20261107-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-entity-flags-strict-20261107-r3.json",
+    "reportSha256": "4add60fd513d716fd8bfbb26cb6e141691ff5db580e8ef9c54b98a80d3424dc5",
+    "log": "tools/paper-integration/reports/paper-1.21.1-entity-flags-strict-20261107-r3.log.gz",
+    "logSha256": "04a523b80a82e52be7e39d7a128ac0daf90300aabf56aa3ddda20bce7a808eb2",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-entity-flags-strict-20261107-r3-client-logs.tar.gz",
+    "clientLogSha256": "9c0e10957d681ca11040c8f614e493967c4a1da21b1a51ed6d1453352f70b073",
+    "pluginSha256": "dfa06ca836ad0d177962b3ee553197ad41c0989942c0637aafb4fe044015da28",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-bee-anger-strict-20261107-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-bee-anger-strict-20261107-r1.json",
     "reportSha256": "077d1891e145fc3d21c33c625277462aaadb6bc301534f271f46513ca97cd719",

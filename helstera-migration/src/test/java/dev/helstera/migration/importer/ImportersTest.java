@@ -3829,10 +3829,14 @@ class ImportersTest {
         assertFalse(target.contains("mob.unsupported.Options.HorseArmor"));
         assertTrue(target.getBoolean("entity.carrying-chest"));
         assertFalse(target.contains("mob.unsupported.Options.CarryingChest"));
-        assertFalse(target.getBoolean("entity.can-join-raid", true));
-        assertTrue(target.getBoolean("entity.patrol-leader"));
-        assertTrue(target.getBoolean("entity.patrol-spawn-point"));
-        assertTrue(target.getBoolean("entity.tamed"));
+        assertFalse(target.contains("entity.can-join-raid"));
+        assertFalse(target.contains("entity.patrol-leader"));
+        assertFalse(target.contains("entity.patrol-spawn-point"));
+        assertFalse(target.contains("entity.tamed"));
+        assertFalse(target.getBoolean("entity.unsupported.Options.CanJoinRaid", true));
+        assertTrue(target.getBoolean("entity.unsupported.Options.PatrolLeader"));
+        assertTrue(target.getBoolean("entity.unsupported.Options.PatrolSpawnPoint"));
+        assertTrue(target.getBoolean("entity.unsupported.Options.Tamed"));
         assertTrue(target.getBoolean("mob.prevent-teleport"));
         assertTrue(target.getBoolean("mob.prevent-pickup"));
         assertTrue(target.getBoolean("mob.prevent-item-use"));
@@ -3851,6 +3855,10 @@ class ImportersTest {
                 && "WARN".equals(entry.get("severity"))
                 && "Options.Age".equals(entry.get("source-key"))
                 && String.valueOf(entry.get("note")).contains("exact Age ticks")));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.PatrolLeader".equals(entry.get("source-key"))
+                && String.valueOf(entry.get("note")).contains("does not implement Raider")));
     }
 
     @Test
@@ -4110,6 +4118,10 @@ class ImportersTest {
                     Type: ZOMBIFIED_PIGLIN
                     Options:
                       Angry: false
+                  zombie:
+                    Type: ZOMBIE
+                    Options:
+                      Angry: true
                 """);
         var plans = new MythicMobsImporter().convert(file).stream()
                 .filter(entry -> entry.containsKey("target-file")).toList();
@@ -4119,11 +4131,66 @@ class ImportersTest {
         var piglin = plans.stream().map(entry -> YamlConfiguration.loadConfiguration(
                         new java.io.StringReader(String.valueOf(entry.get("content")))))
                 .filter(config -> "mythic_piglin".equals(config.getString("id"))).findFirst().orElseThrow();
+        var zombie = plans.stream().map(entry -> YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content")))))
+                .filter(config -> "mythic_zombie".equals(config.getString("id"))).findFirst().orElseThrow();
 
         assertTrue(wolf.getBoolean("entity.angry"));
         assertFalse(piglin.getBoolean("entity.angry"));
+        assertTrue(zombie.getBoolean("entity.unsupported.Options.Angry"));
+        assertFalse(zombie.contains("entity.angry"));
         assertFalse(wolf.contains("mob.unsupported.Options"));
         assertFalse(piglin.contains("mob.unsupported.Options"));
+    }
+
+    @Test
+    @DisplayName("entity-scoped flags map only to compatible Mythic entity types")
+    void mythicMapsEntityScopedFlags(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/entity-flags.yml", """
+                mobs:
+                  wolf:
+                    Type: WOLF
+                    Options:
+                      Tamed: true
+                  raider:
+                    Type: PILLAGER
+                    Options:
+                      CanJoinRaid: false
+                      PatrolLeader: true
+                      PatrolSpawnPoint: true
+                  husk:
+                    Type: HUSK
+                    Options:
+                      CanJoinRaid: false
+                      PatrolLeader: false
+                      PatrolSpawnPoint: true
+                      Tamed: true
+                """);
+        var configs = new MythicMobsImporter().convert(file).stream()
+                .filter(entry -> entry.containsKey("target-file"))
+                .map(entry -> YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content")))))
+                .collect(java.util.stream.Collectors.toMap(config -> config.getString("id"),
+                        java.util.function.Function.identity()));
+
+        var wolf = configs.get("mythic_wolf");
+        var raider = configs.get("mythic_raider");
+        var husk = configs.get("mythic_husk");
+        assertTrue(wolf.getBoolean("entity.tamed"));
+        assertFalse(wolf.contains("entity.unsupported.Options.Tamed"));
+        assertFalse(raider.getBoolean("entity.can-join-raid", true));
+        assertTrue(raider.getBoolean("entity.patrol-leader"));
+        assertTrue(raider.getBoolean("entity.patrol-spawn-point"));
+        assertFalse(raider.contains("entity.unsupported.Options"));
+        assertFalse(husk.contains("entity.can-join-raid"));
+        assertFalse(husk.contains("entity.patrol-leader"));
+        assertFalse(husk.contains("entity.patrol-spawn-point"));
+        assertFalse(husk.contains("entity.tamed"));
+        assertTrue(husk.contains("entity.unsupported.Options.CanJoinRaid"));
+        assertFalse(husk.getBoolean("entity.unsupported.Options.CanJoinRaid", true));
+        assertFalse(husk.getBoolean("entity.unsupported.Options.PatrolLeader", true));
+        assertTrue(husk.getBoolean("entity.unsupported.Options.PatrolSpawnPoint"));
+        assertTrue(husk.getBoolean("entity.unsupported.Options.Tamed"));
     }
 
     @Test

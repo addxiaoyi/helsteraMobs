@@ -1,18 +1,20 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-bee-anger-strict-20261107-r1` passed the full
+Latest fixture `srv-paper-entity-flags-strict-20261107-r3` passed the full
 strict gate on Paper 1.21.1-133: 389 registered probes, 370 passed, 19
-expected rejections, and zero failed or incomplete. Imported Bee
-`Options.Anger: 1200` is applied through production spawning and reads back
-as 1200 ticks against the inverse zero-anger control. Report:
-[paper-1.21.1-bee-anger-strict-20261107-r1.json](reports/paper-1.21.1-bee-anger-strict-20261107-r1.json), SHA-256:
-`077d1891e145fc3d21c33c625277462aaadb6bc301534f271f46513ca97cd719`.
+expected rejections, and zero failed or incomplete. Production import and
+spawning verified `Tamed`/`Angry` on Wolf, `Angry` on Zombified Piglin, and
+`PatrolLeader`/`PatrolSpawnPoint` on Pillager against inverse controls.
+Paper accepted the imported `CanJoinRaid` setter call, but exposes no getter
+for effective-state verification. Report:
+[paper-1.21.1-entity-flags-strict-20261107-r3.json](reports/paper-1.21.1-entity-flags-strict-20261107-r3.json), SHA-256:
+`4add60fd513d716fd8bfbb26cb6e141691ff5db580e8ef9c54b98a80d3424dc5`.
 Compressed server log SHA-256:
-`7b05c0f5cb30b0045d8dc246fec4814a0b26e6cc088a85e04e814830c385e7f2`.
+`04a523b80a82e52be7e39d7a128ac0daf90300aabf56aa3ddda20bce7a808eb2`.
 Client log archive SHA-256:
-`2de1363123fc0e8d19b571f41d8815d9b9ddd937b9bb6e942cb302411859fd38`.
+`9c0e10957d681ca11040c8f614e493967c4a1da21b1a51ed6d1453352f70b073`.
 Plugin SHA-256:
-`99b51d080e359cbe8524dd22de76e94696673a32e8c5b6750085862fbd92f2e9`.
+`dfa06ca836ad0d177962b3ee553197ad41c0989942c0637aafb4fe044015da28`.
 
 Previous fixture `srv-paper-prevent-sunburn-strict-20261107-r4` passed the
 full strict gate with 388 probes (369 passed, 19 expected rejections, zero
