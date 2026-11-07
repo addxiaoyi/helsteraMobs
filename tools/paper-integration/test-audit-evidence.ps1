@@ -203,6 +203,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'horseOptionsImported'; status = 'passed'; observations = @('horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4')
     }
+    $fullReport.expectedProbeIds += 'beeOptionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'beeOptionsImported'; status = 'passed'; observations = @('bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true')
+    }
     $fullReport.expectedProbeIds += 'mythicSpawnerChanceImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'mythicSpawnerChanceImported'; status = 'passed'; observations = @('mythic-spawner-chance imported=true valid-mapped=true invalid-mapped=true valid-natural=true invalid-rejected=true warning=true valid-spawned=1 invalid-spawned=0 passed=true')

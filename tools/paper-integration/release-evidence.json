@@ -1,5 +1,16 @@
 [
   {
+    "fixtureId": "srv-paper-bee-options-strict-20261107-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-bee-options-strict-20261107-r1.json",
+    "reportSha256": "4bed065ab26dbdabca9e511b4548399be2dec636424962d24a96fda5f10a6528",
+    "log": "tools/paper-integration/reports/paper-1.21.1-bee-options-strict-20261107-r1.log.gz",
+    "logSha256": "036ecf01a635ef856567f895918592e29597245bfa7c4fe67d0fe262b5c80a8c",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-bee-options-strict-20261107-r1-client-logs.tar.gz",
+    "clientLogSha256": "3bb848f8e671f62b0c5b5c70fc3995fc52f4cdec82870eddaa58c09d61080644",
+    "pluginSha256": "45efee36b1040d838f630961b7df21fc08301130044aeb83e91402bb9d3b21d4",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-horse-options-strict-20261107-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-horse-options-strict-20261107-r1.json",
     "reportSha256": "6c4c3a516d999fa409817075491db62d5d479db5b33a139672f75e4673faae6a",

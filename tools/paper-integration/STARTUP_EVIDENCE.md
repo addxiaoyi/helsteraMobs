@@ -1,6 +1,20 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-horse-options-strict-20261107-r1` passed the full
+Latest fixture `srv-paper-bee-options-strict-20261107-r1` passed the full
+strict gate on Paper 1.21.1-133: 386 registered probes, 367 passed, 19
+expected rejections, and zero incomplete. Imported Bee `HasNectar: true` and
+`HasStung: false` are read back against an inverse control through production
+spawning. Report:
+[paper-1.21.1-bee-options-strict-20261107-r1.json](reports/paper-1.21.1-bee-options-strict-20261107-r1.json), SHA-256:
+`4bed065ab26dbdabca9e511b4548399be2dec636424962d24a96fda5f10a6528`.
+Compressed server log SHA-256:
+`036ecf01a635ef856567f895918592e29597245bfa7c4fe67d0fe262b5c80a8c`.
+Client log archive SHA-256:
+`3bb848f8e671f62b0c5b5c70fc3995fc52f4cdec82870eddaa58c09d61080644`.
+Plugin SHA-256:
+`45efee36b1040d838f630961b7df21fc08301130044aeb83e91402bb9d3b21d4`.
+
+Previous fixture `srv-paper-horse-options-strict-20261107-r1` passed the full
 strict gate on Paper 1.21.1-133: 385 registered probes, 366 passed, 19
 expected rejections, and zero incomplete. Imported Horse color, style,
 domestication, maximum domestication, and jump strength are read back against

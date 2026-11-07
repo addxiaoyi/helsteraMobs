@@ -2,7 +2,21 @@
 
 ## MythicMobs Parity Development Status (2026-11-07)
 
-Latest strict fixture `srv-paper-horse-options-strict-20261107-r1` passes
+Latest strict fixture `srv-paper-bee-options-strict-20261107-r1` passes all
+386 release probes (367 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. It imports Bee `HasNectar: true` and `HasStung: false`
+through production spawning and reads them against an inverse control. Report:
+`tools/paper-integration/reports/paper-1.21.1-bee-options-strict-20261107-r1.json`
+(SHA-256 `4bed065ab26dbdabca9e511b4548399be2dec636424962d24a96fda5f10a6528`).
+Compressed server log SHA-256:
+`036ecf01a635ef856567f895918592e29597245bfa7c4fe67d0fe262b5c80a8c`.
+Client log archive SHA-256:
+`3bb848f8e671f62b0c5b5c70fc3995fc52f4cdec82870eddaa58c09d61080644`.
+Plugin SHA-256:
+`45efee36b1040d838f630961b7df21fc08301130044aeb83e91402bb9d3b21d4`.
+Latest strict report has 386 probes, zero incomplete.
+
+Previous strict fixture `srv-paper-horse-options-strict-20261107-r1` passes
 all 385 release probes (366 passed, 19 expected rejections, zero incomplete)
 on Paper 1.21.1-133. It imports Horse color, style, domestication, maximum
 domestication, and jump strength through production spawning and reads them
@@ -15,7 +29,6 @@ Client log archive SHA-256:
 `655667e0946236116aed9f46ec0090a2aca37b51ebd430afa389893ff0b5397d`.
 Plugin SHA-256:
 `740b24fb9990aaa7038665355e0ab153430ac26a46b37b492aa4c45523ff4016`.
-Latest strict report has 385 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-sheep-options-strict-20261107-r1` passes
 all 384 release probes (365 passed, 19 expected rejections, zero incomplete)
@@ -30,7 +43,7 @@ Client log archive SHA-256:
 `279d6430528ce8315c8a094f97071a9b2ef57a597b62e8e1a78ee3faa053e1d2`.
 Plugin SHA-256:
 `b8174ab89cf0a585b063da12db46e9e8859da544698f51b61a9b596f7a8c7a77`.
-Latest strict report has 385 probes, zero incomplete.
+Latest strict report has 386 probes, zero incomplete.
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
@@ -55,7 +68,7 @@ and variant-specific natural DropTables. Report:
 `tools/paper-integration/reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json`.
 Plugin SHA-256:
 `fd72793b1e8a9aa8b62bc8d7a354dfaf1e36208f874e81fc37f10da1dadca9f5`.
-Latest strict report has 385 probes, zero incomplete.
+Latest strict report has 386 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-mythic-random-pool-strict-20261106-r1`
 passed 380 release probes (361 passed, 19 expected rejections, zero
@@ -663,7 +676,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-horse-options-strict-20261107-r1` has 385 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-bee-options-strict-20261107-r1` has 386 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -679,8 +692,8 @@ This is a partial parity release. The matrix currently has `38`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 503 cited IDs; 413 report files; 4 directories
-   without reports; 86 missing directories; 178 archived release reports. The
+   Current fixture inventory: 504 cited IDs; 414 report files; 4 directories
+   without reports; 86 missing directories; 179 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

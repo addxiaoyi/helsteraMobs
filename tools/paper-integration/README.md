@@ -28,7 +28,20 @@ $env:PAPER_INTERACTABLE_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-horse-options-strict-20261107-r1` passed all
+Latest strict fixture `srv-paper-bee-options-strict-20261107-r1` passed all
+386 probes (367 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. It imports Bee `HasNectar: true` and `HasStung: false` through
+production spawning and reads them against an inverse control. Report:
+`reports/paper-1.21.1-bee-options-strict-20261107-r1.json`;
+server log: `reports/paper-1.21.1-bee-options-strict-20261107-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-bee-options-strict-20261107-r1-client-logs.tar.gz`.
+Report SHA-256: `4bed065ab26dbdabca9e511b4548399be2dec636424962d24a96fda5f10a6528`;
+server log SHA-256: `036ecf01a635ef856567f895918592e29597245bfa7c4fe67d0fe262b5c80a8c`;
+client log SHA-256: `3bb848f8e671f62b0c5b5c70fc3995fc52f4cdec82870eddaa58c09d61080644`;
+plugin SHA-256: `45efee36b1040d838f630961b7df21fc08301130044aeb83e91402bb9d3b21d4`.
+
+Previous strict fixture `srv-paper-horse-options-strict-20261107-r1` passed all
 385 probes (366 passed, 19 expected rejections, zero incomplete) on Paper
 1.21.1-133. Imported Horse color, style, domestication, maximum domestication,
 and jump strength are read back against a contrasting control. Report:

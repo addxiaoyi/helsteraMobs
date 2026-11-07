@@ -1616,6 +1616,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 entities.add(bee);
                 getLogger().info("[自检] bee-options result="
                         + (bee.hasNectar() && !bee.hasStung()));
+                runImportedBeeOptionsSelfTest(origin.clone().add(40, 0, 0));
 
                 var enderman = world.spawn(origin.clone().add(14, 0, 0),
                         org.bukkit.entity.Enderman.class);
@@ -1951,6 +1952,128 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 try { Files.deleteIfExists(mobFile); }
                 catch (IOException cleanupFailure) {
                     getLogger().warning("sheep-options target cleanup failed=" + cleanupFailure);
+                }
+            }
+            if (!outputDirectoryExisted) {
+                try { Files.deleteIfExists(outputDirectory); }
+                catch (IOException ignored) { }
+            }
+        }
+    }
+
+    private void runImportedBeeOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-bee-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("bee-options.yml");
+            String configuredMobId = "ImportedBeeConfigured_" + suffix;
+            String controlMobId = "ImportedBeeControl_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: BEE
+                        Options:
+                          HasNectar: true
+                          HasStung: false
+                          NoAI: true
+                      %2$s:
+                        Type: BEE
+                        Options:
+                          HasNectar: false
+                          HasStung: true
+                          NoAI: true
+                    """.formatted(configuredMobId, controlMobId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Bee mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Bee mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            String configuredTargetId = targetIds.get(configuredMobId);
+            String controlTargetId = targetIds.get(controlMobId);
+            if (configuredTargetId == null || controlTargetId == null) {
+                throw new IllegalStateException("Mythic Bee options were not imported for both probe mobs");
+            }
+            MobSpawn configuredSpawn = spawnMobCore(configuredTargetId, "example/emberling", origin,
+                    false, null);
+            MobSpawn controlSpawn = spawnMobCore(controlTargetId, "example/emberling",
+                    origin.clone().add(3, 0, 0), false, null);
+            if (configuredSpawn != null && configuredSpawn.instanceId() > 0) {
+                instanceIds.add(configuredSpawn.instanceId());
+            }
+            if (controlSpawn != null && controlSpawn.instanceId() > 0) {
+                instanceIds.add(controlSpawn.instanceId());
+            }
+            var configuredInstance = configuredSpawn == null || configuredSpawn.instanceId() <= 0
+                    ? null : instances().impl(configuredSpawn.instanceId());
+            var controlInstance = controlSpawn == null || controlSpawn.instanceId() <= 0
+                    ? null : instances().impl(controlSpawn.instanceId());
+            var configuredBee = configuredInstance == null ? null
+                    : configuredInstance.baseEntity().filter(org.bukkit.entity.Bee.class::isInstance)
+                    .map(org.bukkit.entity.Bee.class::cast).orElse(null);
+            var controlBee = controlInstance == null ? null
+                    : controlInstance.baseEntity().filter(org.bukkit.entity.Bee.class::isInstance)
+                    .map(org.bukkit.entity.Bee.class::cast).orElse(null);
+            var configuredOptions = configuredInstance == null ? null : mobConfig(configuredTargetId)
+                    .getConfigurationSection("entity");
+            var controlOptions = controlInstance == null ? null : mobConfig(controlTargetId)
+                    .getConfigurationSection("entity");
+
+            boolean imported = configuredBee != null && controlBee != null
+                    && configuredOptions != null && controlOptions != null
+                    && configuredOptions.getBoolean("has-nectar", false)
+                    && !configuredOptions.getBoolean("has-stung", true)
+                    && !controlOptions.getBoolean("has-nectar", true)
+                    && controlOptions.getBoolean("has-stung", false);
+            boolean applied = imported
+                    && configuredBee.hasNectar() && !configuredBee.hasStung()
+                    && !controlBee.hasNectar() && controlBee.hasStung();
+            getLogger().info("[自检] bee-options-imported result=" + (imported && applied)
+                    + " imported=" + imported
+                    + " nectar=" + (configuredBee != null && configuredBee.hasNectar())
+                    + " stung=" + (configuredBee != null && configuredBee.hasStung())
+                    + " control-nectar=" + (controlBee != null && controlBee.hasNectar())
+                    + " control-stung=" + (controlBee != null && controlBee.hasStung()));
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] bee-options-imported result=false error=" + failure);
+        } finally {
+            for (int instanceId : instanceIds) {
+                try { instances().despawn(instanceId); } catch (RuntimeException ignored) { }
+            }
+            if (sourceRoot != null) {
+                try (var paths = Files.walk(sourceRoot)) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("bee-options source cleanup failed=" + cleanupFailure);
+                }
+            }
+            for (Path mobFile : mobFiles) {
+                try { Files.deleteIfExists(mobFile); }
+                catch (IOException cleanupFailure) {
+                    getLogger().warning("bee-options target cleanup failed=" + cleanupFailure);
                 }
             }
             if (!outputDirectoryExisted) {

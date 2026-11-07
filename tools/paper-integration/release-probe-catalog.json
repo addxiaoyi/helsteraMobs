@@ -108,6 +108,11 @@
       "status": "passed"
     },
     {
+      "id": "beeOptionsImported",
+      "status": "passed",
+      "requiredObservationPattern": "^bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true$"
+    },
+    {
       "id": "biomeCondition",
       "status": "passed"
     },

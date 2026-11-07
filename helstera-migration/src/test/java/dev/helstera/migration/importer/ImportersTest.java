@@ -4226,6 +4226,10 @@ class ImportersTest {
         assertFalse(target.contains("mob.unsupported.Options"));
         assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
                 && "entity.has-nectar".equals(entry.get("target-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "entity.has-stung".equals(entry.get("target-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "mob.prevent-stinger-loss".equals(entry.get("target-key"))));
     }
 
     @Test
