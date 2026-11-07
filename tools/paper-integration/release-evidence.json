@@ -1,5 +1,27 @@
 [
   {
+    "fixtureId": "srv-paper-bee-stinger-loss-strict-20261107-r6",
+    "report": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r6.json",
+    "reportSha256": "a19476296ade4ac370e358a4b83d5f994d190f8cd871686f2bb9b68ab9fa1571",
+    "log": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r6.log.gz",
+    "logSha256": "af282d10b5a26eba921689358a9f095937989ff1716b33ef13055ebabc6049d3",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r6-client-logs.tar.gz",
+    "clientLogSha256": "be17f8a8a1c9263ed98866d3f5eb64d06bd1c655a5972c8380190ec2b509a270",
+    "pluginSha256": "d1f34a62d8be828a525af0a9a98ff65d0c3478b47883c921b1fa7002bd20b7c5",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-bee-stinger-loss-strict-20261107-r4",
+    "report": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r4.json",
+    "reportSha256": "a3c63710498fbf7c2c6b4db6823ca77cd3fc6b8663c5dcd74d19f04642514e67",
+    "log": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r4.log.gz",
+    "logSha256": "ec4516bc012518dfc1074497943c5fa4271dbc790b9322db1402979ec371a743",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r4-client-logs.tar.gz",
+    "clientLogSha256": "c0f8160c294ffa0c21ef44e1cf5a75c267c6a7697edcce54714824eee837516f",
+    "pluginSha256": "413c28c0a63c72597c6365fc327f0d1a3a696cacda18eeaeb3cf41c0ed773ad1",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-bee-stinger-loss-strict-20261107-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.json",
     "reportSha256": "48a548ef6b654715ba1233a89840de0f72c136256523fc393ddd32908a99e597",

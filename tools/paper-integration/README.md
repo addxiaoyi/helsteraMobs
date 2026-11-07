@@ -25,23 +25,33 @@ $env:PAPER_RAW_POTION_WORKFLOW = 'true'
 $env:PAPER_RAW_POTION_SHORT = 'true'
 $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 $env:PAPER_INTERACTABLE_WORKFLOW = 'true'
+$env:PAPER_BEE_STINGER_ONLY = 'false'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r1` passed all
-387 probes (368 passed, 19 expected rejections, zero incomplete) on Paper
-1.21.1-133. It imports Bee nectar/stung fields and `PreventStingerLoss`
-through production spawning against inverse controls. The stinger probe
-dispatches a synthetic Bukkit attack event and verifies protected restoration
-versus control retention; it does not establish natural Bee AI attack behavior.
-Report: `reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.json`;
-server log: `reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.log.gz`;
+For an isolated imported Bee stinger probe, the runner starts one idle client to
+activate nearby entity AI without changing player state:
+
+```powershell
+$env:PAPER_BEE_STINGER_ONLY = 'true'
+$env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
+powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
+```
+
+Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` passed all
+387 probes (368 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. It imports Bee nectar/stung fields and `PreventStingerLoss`
+through production spawning against inverse controls. Native Bee AI attacks a
+stationary Zombie; the protected Bee restores its stinger while the control
+remains stung, and both Bukkit damage events are uncancelled. Report:
+`reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r6.json`;
+server log: `reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r6.log.gz`;
 client logs:
-`reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1-client-logs.tar.gz`.
-Report SHA-256: `48a548ef6b654715ba1233a89840de0f72c136256523fc393ddd32908a99e597`;
-server log SHA-256: `c1f63894797c25621927ddb4ccab0add07ea1f962254daf59eaa0c0128eb7c27`;
-client log SHA-256: `e7beffcfec3282265d50e237e1b787433f68192a8bafb31711eb7cbee4ecfdef`;
-plugin SHA-256: `a160f678fbeb42a2df3bb877b972ff99b3abb792dde9d6785b416ab539ac8e4b`.
+`reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r6-client-logs.tar.gz`.
+Report SHA-256: `a19476296ade4ac370e358a4b83d5f994d190f8cd871686f2bb9b68ab9fa1571`;
+server log SHA-256: `af282d10b5a26eba921689358a9f095937989ff1716b33ef13055ebabc6049d3`;
+client log SHA-256: `be17f8a8a1c9263ed98866d3f5eb64d06bd1c655a5972c8380190ec2b509a270`;
+plugin SHA-256: `d1f34a62d8be828a525af0a9a98ff65d0c3478b47883c921b1fa7002bd20b7c5`.
 
 Previous strict fixture `srv-paper-horse-options-strict-20261107-r1` passed all
 385 probes (366 passed, 19 expected rejections, zero incomplete) on Paper

@@ -1,20 +1,20 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-bee-stinger-loss-strict-20261107-r1` passed the full
+Latest fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` passed the full
 strict gate on Paper 1.21.1-133: 387 registered probes, 368 passed, 19
-expected rejections, and zero incomplete. Imported Bee nectar/stung fields
-and `PreventStingerLoss` are verified against inverse controls through
-production spawning. The stinger probe dispatches a synthetic Bukkit attack
-event, verifying the production listener but not natural Bee AI attack
-behavior. Report:
-[paper-1.21.1-bee-stinger-loss-strict-20261107-r1.json](reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.json), SHA-256:
-`48a548ef6b654715ba1233a89840de0f72c136256523fc393ddd32908a99e597`.
+expected rejections, and zero failed or incomplete. Imported Bee nectar/stung
+fields and `PreventStingerLoss` are verified against inverse controls through
+production spawning. The stinger probe observes one uncancelled native AI
+attack from each Bee against a stationary Zombie; the protected Bee restores
+its stinger and the control remains stung. Report:
+[paper-1.21.1-bee-stinger-loss-strict-20261107-r6.json](reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r6.json), SHA-256:
+`a19476296ade4ac370e358a4b83d5f994d190f8cd871686f2bb9b68ab9fa1571`.
 Compressed server log SHA-256:
-`c1f63894797c25621927ddb4ccab0add07ea1f962254daf59eaa0c0128eb7c27`.
+`af282d10b5a26eba921689358a9f095937989ff1716b33ef13055ebabc6049d3`.
 Client log archive SHA-256:
-`e7beffcfec3282265d50e237e1b787433f68192a8bafb31711eb7cbee4ecfdef`.
+`be17f8a8a1c9263ed98866d3f5eb64d06bd1c655a5972c8380190ec2b509a270`.
 Plugin SHA-256:
-`a160f678fbeb42a2df3bb877b972ff99b3abb792dde9d6785b416ab539ac8e4b`.
+`d1f34a62d8be828a525af0a9a98ff65d0c3478b47883c921b1fa7002bd20b7c5`.
 
 Previous fixture `srv-paper-horse-options-strict-20261107-r1` passed the full
 strict gate on Paper 1.21.1-133: 385 registered probes, 366 passed, 19

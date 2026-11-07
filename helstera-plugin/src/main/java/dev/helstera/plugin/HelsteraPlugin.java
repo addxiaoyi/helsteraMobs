@@ -2069,6 +2069,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
         var mobFiles = new java.util.ArrayList<Path>();
         var instanceIds = new java.util.ArrayList<Integer>();
+        org.bukkit.entity.Zombie[] probeTarget = {null};
+        int[] probeTicks = {0};
+        org.bukkit.event.Listener attackListener = null;
         boolean[] cleanupDeferred = {false};
         try {
             String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
@@ -2084,13 +2087,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         Options:
                           HasStung: false
                           PreventStingerLoss: true
-                          NoAI: true
                       %2$s:
                         Type: BEE
                         Options:
                           HasStung: false
                           PreventStingerLoss: false
-                          NoAI: true
                     """.formatted(protectedMobId, controlMobId));
 
             var converted = new MythicMobsImporter().convert(source, sourceRoot);
@@ -2155,51 +2156,183 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 return;
             }
 
-            var target = origin.getWorld().spawn(origin.clone().add(6, 0, 0),
+            var probeAnchor = getServer().getOnlinePlayers().stream()
+                    .filter(player -> player.getWorld().equals(origin.getWorld()))
+                    .findFirst()
+                    .map(org.bukkit.entity.Player::getLocation)
+                    .orElse(origin.getWorld().getSpawnLocation())
+                    .clone();
+            var target = origin.getWorld().spawn(probeAnchor.clone().add(6, 0, 0),
                     org.bukkit.entity.Zombie.class);
+            probeTarget[0] = target;
             target.setAI(false);
-            target.setInvulnerable(true);
-            protectedBee.setHasStung(true);
-            controlBee.setHasStung(true);
-            var protectedEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(
-                    protectedBee, target, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0);
-            var controlEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(
-                    controlBee, target, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0);
-            getServer().getPluginManager().callEvent(protectedEvent);
-            getServer().getPluginManager().callEvent(controlEvent);
-            boolean protectedEventDispatched = !protectedEvent.isCancelled();
-            boolean controlEventDispatched = !controlEvent.isCancelled();
+            target.setSilent(true);
+            target.setMaxHealth(40.0);
+            target.setHealth(target.getMaxHealth());
+            target.setInvulnerable(false);
+            target.getEquipment().setHelmet(new org.bukkit.inventory.ItemStack(
+                    org.bukkit.Material.CARVED_PUMPKIN));
+            target.getEquipment().setHelmetDropChance(0.0f);
+            target.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                    org.bukkit.potion.PotionEffectType.RESISTANCE, 600, 3, false, false, false));
+            protectedBee.teleport(target.getLocation().clone().add(-3, 1, 0));
+            controlBee.teleport(target.getLocation().clone().add(3, 1, 0));
+
+            var protectedAttacks = new java.util.concurrent.atomic.AtomicInteger();
+            var controlAttacks = new java.util.concurrent.atomic.AtomicInteger();
+            var protectedEvents = new java.util.concurrent.atomic.AtomicInteger();
+            var controlEvents = new java.util.concurrent.atomic.AtomicInteger();
+            var protectedCancelled = new java.util.concurrent.atomic.AtomicInteger();
+            var controlCancelled = new java.util.concurrent.atomic.AtomicInteger();
+            var registeredAttackListener = new org.bukkit.event.Listener() {
+                @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+                public void onBeeAttack(org.bukkit.event.entity.EntityDamageByEntityEvent event) {
+                    if (event.getDamager() == protectedBee && event.getEntity() == target) {
+                        protectedEvents.incrementAndGet();
+                        if (event.isCancelled()) protectedCancelled.incrementAndGet();
+                        else protectedAttacks.incrementAndGet();
+                    }
+                    if (event.getDamager() == controlBee && event.getEntity() == target) {
+                        controlEvents.incrementAndGet();
+                        if (event.isCancelled()) controlCancelled.incrementAndGet();
+                        else controlAttacks.incrementAndGet();
+                    }
+                }
+            };
+            attackListener = registeredAttackListener;
+            getServer().getPluginManager().registerEvents(registeredAttackListener, this);
+            protectedBee.setAware(true);
+            protectedBee.setAnger(1200);
+            protectedBee.setTarget(target);
+            final boolean[] controlStarted = {false};
+            final boolean[] protectedRestoredObserved = {false};
+            final boolean[] controlRetainedObserved = {false};
+            final org.bukkit.scheduler.BukkitTask[] attackTask = {null};
 
             Path cleanupSourceRoot = sourceRoot;
             java.util.List<Path> cleanupMobFiles = java.util.List.copyOf(mobFiles);
             java.util.List<Integer> cleanupInstanceIds = java.util.List.copyOf(instanceIds);
             boolean cleanupOutputDirectoryExisted = outputDirectoryExisted;
-            getServer().getScheduler().runTaskLater(this, () -> {
-                boolean protectedRestored = !protectedBee.hasStung();
-                boolean controlRetained = controlBee.hasStung();
-                boolean passed = imported && protectedEventDispatched && controlEventDispatched
-                        && protectedRestored && controlRetained;
-                getLogger().info("[自检] bee-stinger-loss-imported result=" + passed
-                        + " imported=" + imported
-                        + " protected-option=true control-option=false"
-                        + " protected-event=" + protectedEventDispatched
-                        + " control-event=" + controlEventDispatched
-                        + " protected-restored=" + protectedRestored
-                        + " control-retained=" + controlRetained
-                        + " event=synthetic");
-                if (target.isValid()) target.remove();
-                cleanupImportedMobProbe(cleanupSourceRoot, outputDirectory,
-                        cleanupOutputDirectoryExisted, cleanupMobFiles, cleanupInstanceIds);
-            }, 2L);
+            attackTask[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+                probeTicks[0]++;
+                boolean terminal = false;
+                try {
+                    if (target.isValid() && !target.isDead()) {
+                        target.setFireTicks(0);
+                        if (target.getHealth() < target.getMaxHealth()) {
+                            target.setHealth(target.getMaxHealth());
+                        }
+                        if (target.getNoDamageTicks() > 0) target.setNoDamageTicks(0);
+                        var activeResistance = target.getPotionEffect(
+                                org.bukkit.potion.PotionEffectType.RESISTANCE);
+                        if (activeResistance == null || activeResistance.getAmplifier() != 3) {
+                            target.removePotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE);
+                            target.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                                    org.bukkit.potion.PotionEffectType.RESISTANCE,
+                                    600, 3, false, false, false));
+                        }
+                        if (protectedAttacks.get() == 0) {
+                            maintainBeeProbeTarget(protectedBee, target, -3.0);
+                        }
+                    }
+                    if (protectedAttacks.get() > 0 && protectedBee.hasAI()) protectedBee.setAI(false);
+                    if (!controlStarted[0] && probeTicks[0] >= 30) {
+                        controlStarted[0] = true;
+                    }
+                    if (controlStarted[0] && controlAttacks.get() == 0
+                            && target.isValid() && !target.isDead()) {
+                        maintainBeeProbeTarget(controlBee, target, 3.0);
+                    }
+                    if (controlAttacks.get() > 0 && controlBee.hasAI()) controlBee.setAI(false);
+                    boolean protectedAttacked = protectedAttacks.get() > 0;
+                    boolean controlAttacked = controlAttacks.get() > 0;
+                    if (protectedAttacked && !protectedBee.hasStung()) protectedRestoredObserved[0] = true;
+                    if (controlAttacked && controlBee.hasStung()) controlRetainedObserved[0] = true;
+                    boolean protectedRestored = protectedRestoredObserved[0];
+                    boolean controlRetained = controlRetainedObserved[0];
+                    var targetResistance = target.getPotionEffect(
+                            org.bukkit.potion.PotionEffectType.RESISTANCE);
+                    int targetResistanceAmplifier = targetResistance == null
+                            ? -1 : targetResistance.getAmplifier();
+                    boolean targetReady = target.isValid()
+                            && !target.isDead()
+                            && !target.isInvulnerable()
+                            && targetResistanceAmplifier == 3;
+                    boolean passed = imported && protectedAttacked && controlAttacked
+                            && protectedRestored && controlRetained && targetReady
+                            && protectedCancelled.get() == 0 && controlCancelled.get() == 0;
+                    if (!(passed || probeTicks[0] >= 160)) return;
+                    terminal = true;
+                    if (attackTask[0] != null) attackTask[0].cancel();
+                    getLogger().info("[自检] bee-stinger-loss-imported result=" + passed
+                            + " imported=" + imported
+                            + " target-entity=ZOMBIE"
+                            + " target-ai=" + target.hasAI()
+                            + " target-invulnerable=" + target.isInvulnerable()
+                            + " target-resistance-amplifier=" + targetResistanceAmplifier
+                            + " protected-option=true control-option=false"
+                            + " protected-attacks=" + protectedAttacks.get()
+                            + " control-attacks=" + controlAttacks.get()
+                            + " protected-events=" + protectedEvents.get()
+                            + " control-events=" + controlEvents.get()
+                            + " protected-cancelled=" + protectedCancelled.get()
+                            + " control-cancelled=" + controlCancelled.get()
+                            + " protected-restored=" + protectedRestored
+                            + " control-retained=" + controlRetained
+                            + " protected-near=" + beeProbeNear(protectedBee, target)
+                            + " control-near=" + beeProbeNear(controlBee, target)
+                            + " trigger=entity-target-api"
+                            + " event=native-ai");
+                } catch (Throwable failure) {
+                    terminal = true;
+                    getLogger().warning("[自检] bee-stinger-loss-imported result=false error=" + failure);
+                } finally {
+                    if (terminal) {
+                        if (attackTask[0] != null) attackTask[0].cancel();
+                        try {
+                            org.bukkit.event.HandlerList.unregisterAll(registeredAttackListener);
+                        } finally {
+                            try {
+                                if (target.isValid()) target.remove();
+                            } finally {
+                                cleanupImportedMobProbe(cleanupSourceRoot, outputDirectory,
+                                        cleanupOutputDirectoryExisted, cleanupMobFiles, cleanupInstanceIds);
+                            }
+                        }
+                    }
+                }
+            }, 1L, 1L);
             cleanupDeferred[0] = true;
         } catch (Throwable failure) {
             getLogger().warning("[自检] bee-stinger-loss-imported result=false error=" + failure);
         } finally {
             if (!cleanupDeferred[0]) {
-                cleanupImportedMobProbe(sourceRoot, outputDirectory,
-                        outputDirectoryExisted, mobFiles, instanceIds);
+                try {
+                    if (attackListener != null) org.bukkit.event.HandlerList.unregisterAll(attackListener);
+                    if (probeTarget[0] != null && probeTarget[0].isValid()) probeTarget[0].remove();
+                } finally {
+                    cleanupImportedMobProbe(sourceRoot, outputDirectory,
+                            outputDirectoryExisted, mobFiles, instanceIds);
+                }
             }
         }
+    }
+
+    private void maintainBeeProbeTarget(org.bukkit.entity.Bee bee,
+            org.bukkit.entity.LivingEntity target, double horizontalOffset) {
+        var targetLocation = target.getLocation();
+        if (!bee.getWorld().equals(target.getWorld())
+                || bee.getLocation().distanceSquared(targetLocation) > 25.0) {
+            bee.teleport(targetLocation.clone().add(horizontalOffset, 1, 0));
+        }
+        bee.setAware(true);
+        if (bee.getAnger() <= 0) bee.setAnger(1200);
+        if (bee.getTarget() != target) bee.setTarget(target);
+    }
+
+    private boolean beeProbeNear(org.bukkit.entity.Bee bee, org.bukkit.entity.LivingEntity target) {
+        return bee.getWorld().equals(target.getWorld())
+                && bee.getLocation().distanceSquared(target.getLocation()) <= 64.0;
     }
 
     private void cleanupImportedMobProbe(Path sourceRoot, Path outputDirectory,
@@ -7938,7 +8071,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean lookingAtInvalidRejected = false;
                     boolean lookingAtRestored;
                     try {
-                        permissionProbe.teleport(permissionProbe.getWorld().getSpawnLocation().clone().add(0, 2, 0));
+                        // Keep unrelated mobs at the ground-level spawn from occluding the entity ray.
+                        permissionProbe.teleport(permissionProbe.getWorld().getSpawnLocation().clone().add(0, 128, 0));
                         permissionProbe.setRotation(0f, 0f);
                         Location eye = permissionProbe.getEyeLocation();
                         var direction = eye.getDirection().normalize();

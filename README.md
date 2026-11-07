@@ -2,20 +2,21 @@
 
 ## MythicMobs Parity Development Status (2026-11-07)
 
-Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r1` passes all
-387 release probes (368 passed, 19 expected rejections, zero incomplete) on
-Paper 1.21.1-133. It verifies imported Bee nectar/stung fields and
-`PreventStingerLoss` against inverse controls through production spawning. The
-stinger probe dispatches a synthetic Bukkit attack event; it verifies the
-production event listener, not a natural Bee AI attack. Report:
-`tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.json`
-(SHA-256 `48a548ef6b654715ba1233a89840de0f72c136256523fc393ddd32908a99e597`).
+Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` passes all
+387 release probes (368 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies imported Bee nectar/stung fields
+and `PreventStingerLoss` against inverse controls through production spawning.
+The stinger probe observes native Bee AI attacking a stationary Zombie:
+protected stinger restoration and control retention both pass with one
+uncancelled Bukkit damage event each. Report:
+`tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r6.json`
+(SHA-256 `a19476296ade4ac370e358a4b83d5f994d190f8cd871686f2bb9b68ab9fa1571`).
 Compressed server log SHA-256:
-`c1f63894797c25621927ddb4ccab0add07ea1f962254daf59eaa0c0128eb7c27`.
+`af282d10b5a26eba921689358a9f095937989ff1716b33ef13055ebabc6049d3`.
 Client log archive SHA-256:
-`e7beffcfec3282265d50e237e1b787433f68192a8bafb31711eb7cbee4ecfdef`.
+`be17f8a8a1c9263ed98866d3f5eb64d06bd1c655a5972c8380190ec2b509a270`.
 Plugin SHA-256:
-`a160f678fbeb42a2df3bb877b972ff99b3abb792dde9d6785b416ab539ac8e4b`.
+`d1f34a62d8be828a525af0a9a98ff65d0c3478b47883c921b1fa7002bd20b7c5`.
 Latest strict report has 387 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-horse-options-strict-20261107-r1` passes
@@ -678,7 +679,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r1` has 387 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` has 387 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -694,8 +695,8 @@ This is a partial parity release. The matrix currently has `37`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 505 cited IDs; 415 report files; 4 directories
-   without reports; 86 missing directories; 180 archived release reports. The
+   Current fixture inventory: 506 cited IDs; 415 report files; 4 directories
+   without reports; 87 missing directories; 182 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -865,7 +866,7 @@ the entire MythicMobs feature catalog.
 - Mythic `Options.Size` migrates positive integer ranges such as `2-5`/`2to5` to spawn-time randomized Slime/MagmaCube/Phantom sizes; fixed sizes remain unchanged and invalid ranges stay visible with migration warnings. Official Paper 1.21.1-133 strict evidence sampled the production Slime option path 64 times within inclusive bounds `2..5`.
 - Migration runtime contract audit now binds the canonical conditions and mechanics asserted by the importer tests through the real `SkillService`; missing runtime registrations fail `MigrationRuntimeConditionContractTest` instead of remaining a report-only mapping.
 - Mob Options, Spawners, Random Spawn, Audience, Custom Menu, SkillTree, and AI have focused Paper or unit evidence recorded in the parity matrix.
-- Exploratory Paper r55 records Creeper fuse, synthetic Bee attack-event stinger restoration, Zombie conversion prevention, and jockey mount-event probes as passed; the strict Paper 1.21.1 fixture now verifies imported `PreventStingerLoss` through the same synthetic event path. Natural Bee AI attack and natural AI jockey selection remain unverified.
+- Exploratory Paper r55 records Creeper fuse, synthetic Bee attack-event stinger restoration, Zombie conversion prevention, and jockey mount-event probes as passed. Strict Paper r6 verifies imported `PreventStingerLoss` against inverse controls through native Bee AI attacks on a stationary Zombie. The separate `mobOptionsNatural` Bee event remains explicitly synthetic; natural AI jockey selection remains unverified.
 - AI selector core is represented by a typed priority/`clear` plan with core goal/target aliases, relation/faction target resolution, conditional selectors, native `Mob#setTarget` synchronization, and an exploratory Paper `ai-selector-core` probe. Paper 1.21.1 release evidence is still required.
 - Exploratory Paper 1.21.11 r126 records `aiPriority=passed` and `aiPriorityTargets=passed` after the self-test revives and protects the online player before arbitration; `stateConditions=passed` covers real flying/sneaking/gliding state. The historical client Shield-use gap is closed by strict Paper r27, which records `stateBlocking=passed` from a real Mineflayer Shield-use window.
 - Exploratory Paper 1.21.11 r127 records independent `itemPickup=passed` and `environmentalDamage=passed` probes after isolating the managed player from earlier natural damage and binding a dedicated no-attacker damage profile.
