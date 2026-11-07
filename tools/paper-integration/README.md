@@ -38,18 +38,19 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-full-strict-20261107-r2` passes all 391
+Latest strict fixture `srv-paper-full-strict-20261107-r4` passes all 391
 probes (372 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. It includes the effective `CanJoinRaid` control and native-AI
-Bee `PreventStingerLoss` evidence alongside the registered Mythic parity
-catalog. Report: `reports/paper-1.21.1-full-strict-20261107-r2.json`;
-server log: `reports/paper-1.21.1-full-strict-20261107-r2.log.gz`;
+Paper 1.21.1-133. It includes the effective `CanJoinRaid` control, native-AI
+Bee `PreventStingerLoss` evidence, and native Zombie `NATURAL` jockey
+mount cancellation/allowance alongside the registered Mythic parity catalog.
+Report: `reports/paper-1.21.1-full-strict-20261107-r4.json`;
+server log: `reports/paper-1.21.1-full-strict-20261107-r4.log.gz`;
 client logs:
-`reports/paper-1.21.1-full-strict-20261107-r2-client-logs.tar.gz`.
-Report SHA-256: `9bc375fa779a72a2741f626fae0b063bccb4e879f3099fd8439caa3da732f4fa`;
-server log SHA-256: `677eadd25fa0df21a31d33388887d17ef7cd0d1c5b29ef9b9322c6535daae2bd`;
-client log SHA-256: `75da16e9087dee632d353b912f65ff35179308dd9df079ce297b77e834a36a05`;
-plugin SHA-256: `98dc5822132601682024cb58f648169f7ee8f2c7a2c80b720a9752d81e757fd7`.
+`reports/paper-1.21.1-full-strict-20261107-r4-client-logs.tar.gz`.
+Report SHA-256: `8567db2f97d44eb87141a2792e9faaa1b97e1c2abe689888ad6034d26b74d785`;
+server log SHA-256: `8be54663c2717c90d08721f0544e4fd682e3240cfccb2da1f359bb18fd7c30f3`;
+client log SHA-256: `a2462ce0a600ec565a582cf80640f3784479ab394ac3d3b4a8a8ba92937cb0f1`;
+plugin SHA-256: `ae36884bdde4163dc213d4fc2a9fd3850f8eb365b7c4af3b4326570765bb02cc`.
 
 Previous strict fixture `srv-paper-mythic-teleport-strict-20261107-r1` passes all
 391 probes (372 passed, 19 expected rejections, zero failed or incomplete) on
@@ -1838,11 +1839,11 @@ runtime `creeper-fuse-ticks` option, ignites a real Creeper, explicitly sets
 protected/control Bees to stung and dispatches synthetic Bukkit attack events,
 and runs protected/control Zombie conversion. `bee-event=synthetic` marks this
 path in the report; it does not establish a natural Bee AI attack. The test
-also emits a separate `mob-options-mount-event` probe for protected/control jockey
-mount event cancellation; that probe uses the Bukkit mount event path, not a
-claim of natural AI jockey selection. Exploratory r55 observes all four
-server-side probes as passed; timeout or missing behavior remains
-`not-observed`.
+also emits a separate `mob-options-mount-event` probe for protected/control
+jockey mount event cancellation. The explicit control remains on the Bukkit
+mount event path, while strict r4 additionally invokes Paper's native Zombie
+`NATURAL` spawn finalization and observes the protected cancellation/control
+allowance pair. Timeout or missing behavior remains `not-observed`.
 
 The server binds to `127.0.0.1:25731` with RCON disabled. The server runs
 offline mode and must only be used locally. Console and Paper logs stay under
