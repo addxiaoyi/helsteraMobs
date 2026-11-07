@@ -326,6 +326,7 @@ $probeSpecs = [ordered]@{
     fishTrigger = 'events .*fish-trigger=true'
     creeperNaturalFuse = 'mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true'
     mobOptionsNatural = 'mob-options-natural bee-stinger=true bee-event=synthetic .*zombie-conversion=true zombie-control=true zombie-protected=true .*passed=true'
+    preventSunburnNatural = 'prevent-sunburn-natural imported=true mapped=true protected-option=true control-option=false daylight=true weather-clear=true observer-present=true protected-player-distance=[0-9]+ control-player-distance=[0-9]+ sky-exposed=true protected-ai=true control-ai=true protected-age-ticks=[1-9][0-9]* control-age-ticks=[1-9][0-9]* protected-events=[1-9][0-9]* protected-cancelled=[1-9][0-9]* protected-fire-ticks=(-1|0) control-events=[1-9][0-9]* control-cancelled=0 control-fire-ticks=[1-9][0-9]* elapsed-ticks=[1-9][0-9]* restored=true passed=true'
     mobOptionsMountEvent = 'mob-options-mount-event prevented=true allowed=true generic-prevented=true generic-allowed=true .*passed=true'
     mobOptionsSlimeSplit = 'mob-options-slime-split prevented=true allowed=true passed=true'
     pathfinderClear = 'pathfinder-clear probe=path_clear_probe .*accepted=true .*cleared=true .*passed=true'

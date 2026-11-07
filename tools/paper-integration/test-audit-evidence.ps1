@@ -41,6 +41,10 @@ try {
     $naturalMobOptions[0].observations = @($naturalMobOptions[0].observations | ForEach-Object {
         $_ -replace 'bee-stinger=true ', 'bee-stinger=true bee-event=synthetic '
     })
+    $fullReport.expectedProbeIds += 'preventSunburnNatural'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'preventSunburnNatural'; status = 'passed'; observations = @('prevent-sunburn-natural imported=true mapped=true protected-option=true control-option=false daylight=true weather-clear=true observer-present=true protected-player-distance=7 control-player-distance=15 sky-exposed=true protected-ai=true control-ai=true protected-age-ticks=90 control-age-ticks=110 protected-events=2 protected-cancelled=2 protected-fire-ticks=0 control-events=1 control-cancelled=0 control-fire-ticks=154 elapsed-ticks=40 restored=true passed=true')
+    }
     $lookingAtProbe = @($fullReport.probes | Where-Object id -eq 'lookingAtCondition')
     if ($lookingAtProbe.Count -ne 1) { throw 'Synthetic release report must contain lookingAtCondition.' }
     $lookingAtProbe[0].observations = @('imported-looking-at-condition primary-mapped=true alias-mapped=true entity-mapped=true positive=true alias-positive=true wrong-block-rejected=true short-block-distance-rejected=true negative=true entity-positive=true wrong-entity-rejected=true short-entity-distance-rejected=true invalid-rejected=true restored=true')
