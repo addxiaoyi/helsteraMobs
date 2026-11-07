@@ -54,6 +54,8 @@ public final class SkillService {
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
     /** Runtime SetSkillCooldown overrides: "实例id|技能名" -> duration in milliseconds. */
     private final Map<String, Long> cooldownOverrides = new ConcurrentHashMap<>();
+    private volatile java.util.function.Function<org.bukkit.entity.Entity,
+            dev.helstera.api.instance.ModelInstance> instanceLookup = ignored -> null;
     /** 活跃读条："实例id|技能名" -> 施法记录。 */
     private final Map<String, SkillCast> activeCasts = new ConcurrentHashMap<>();
     /** Per-instance generation invalidates delayed/repeated actions after cancel, death, or reload. */
@@ -111,6 +113,9 @@ public final class SkillService {
          * 同一 tick 内多个技能触发时，高优先级先进队列；默认 0。
          */
         public int priority;
+        /** Optional player scope inherited by every action in this skill. */
+        public String executionAudience;
+        public boolean invalidExecutionAudience;
         /** Optional SkillTree branch gate. Empty means the skill is ungated. */
         public String branch = "";
         public final Set<String> branchRequires = new LinkedHashSet<>();
@@ -311,6 +316,19 @@ public final class SkillService {
             warn("未知技能条件 \"" + spec + "\"");
             return null;
         }
+        if ("skill-on-cooldown".equals(name)) {
+            String skillName = skillOnCooldownName(spec);
+            if (skillName == null) {
+                warn("技能冷却条件参数无效 \"" + spec + "\"");
+                return null;
+            }
+            String normalizedSkill = skillName.toLowerCase(Locale.ROOT);
+            String key = "skill-on-cooldown:" + normalizedSkill;
+            if (bound.add("c:" + key)) {
+                registry.registerCondition(key, ctx -> skillOnCooldown(normalizedSkill, ctx));
+            }
+            return key;
+        }
         if (Set.of("world-is", "weather-is", "time-is").contains(name)) {
             if (args.size() != 1 || args.get(0).isBlank()) return null;
             int open = spec.indexOf('{');
@@ -347,7 +365,7 @@ public final class SkillService {
                 "target-is-monster", "target-is-animal", "target-is-villager", "target-is-tameable",
                 "target-is-raider", "has-ai", "has-gravity", "is-silent", "is-dead", "is-alive", "is-valid",
                 "target-has-ai", "target-has-gravity", "target-is-silent", "target-dead", "target-is-alive",
-                "target-is-valid")
+                "target-is-valid", "is-in-audience")
                 .contains(name)) return null;
         if ("last-signal".equals(name) && spec.indexOf('{') >= 0) {
             try {
@@ -393,6 +411,71 @@ public final class SkillService {
             }
         }
         return key;
+    }
+
+    private static String skillOnCooldownName(String raw) {
+        try {
+            MythicSkillSpec parsed = MythicSkillSpec.parse(raw);
+            String mechanic = parsed.mechanic().replace("_", "").replace("-", "");
+            if (!"skill-on-cooldown".equals(canonicalConditionName(mechanic))
+                    || parsed.targeter() != null || parsed.trigger() != null || parsed.chance() != null
+                    || !parsed.inlineConditions().isEmpty() || !parsed.targetConditions().isEmpty()) {
+                return null;
+            }
+            String value = null;
+            if (!parsed.arguments().isEmpty()) {
+                if (parsed.arguments().size() != 1 || !parsed.positional().isEmpty()) return null;
+                var argument = parsed.arguments().entrySet().iterator().next();
+                if (!Set.of("skill", "s").contains(argument.getKey())) return null;
+                value = argument.getValue();
+            } else if (parsed.positional().size() == 1) {
+                value = parsed.positional().get(0);
+                int equals = value.indexOf('=');
+                if (equals >= 0) {
+                    String key = value.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                    if (!Set.of("skill", "s").contains(key)) return null;
+                    value = value.substring(equals + 1).trim();
+                }
+            } else {
+                return null;
+            }
+            return value == null || value.isBlank() ? null : value.trim();
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    private boolean skillOnCooldown(String skillName,
+                                    dev.helstera.api.behavior.BehaviorContext context) {
+        if (context == null) return false;
+        dev.helstera.api.instance.ModelInstance instance = context.instanceValid()
+                ? context.instance() : null;
+        org.bukkit.entity.LivingEntity entity = context.targetEntity().orElse(null);
+        if (entity == null && instance != null) {
+            org.bukkit.entity.Entity base = instance.baseEntity().orElse(null);
+            if (base instanceof org.bukkit.entity.LivingEntity living) entity = living;
+        }
+        if (entity == null || !entity.isValid() || entity.isDead()) return false;
+        if (!ownsEntity(instance, entity)) {
+            try {
+                instance = instanceLookup.apply(entity);
+            } catch (RuntimeException ignored) {
+                return false;
+            }
+        }
+        if (!ownsEntity(instance, entity)) return false;
+        SkillDef definition = defs.get(skillName);
+        if (definition == null) return false;
+        String key = cooldownKey(definition, instance.instanceId());
+        long duration = cooldownOverrides.getOrDefault(key, definition.cooldownMillis);
+        return duration > 0 && !cooldownReady(definition, key, System.currentTimeMillis());
+    }
+
+    private static boolean ownsEntity(dev.helstera.api.instance.ModelInstance instance,
+                                      org.bukkit.entity.Entity entity) {
+        if (instance == null || entity == null || !instance.isValid()) return false;
+        return instance.baseEntity().map(base -> base.getUniqueId().equals(entity.getUniqueId()))
+                .orElse(false);
     }
 
     private String bindCompositeCondition(String raw) {
@@ -626,6 +709,7 @@ public final class SkillService {
         if (factory == null && (parsed == null || targeterSpec == null)
                 && registry.hasAction(actionName)
                 && (parsed == null || parsed.chance() == null && parsed.inlineConditions().isEmpty()
+                && parsed.targetConditions().isEmpty()
                 && parsed.arguments().keySet().stream().noneMatch(SkillService::isExecutionAttribute))) {
             return actionName;
         }
@@ -636,20 +720,38 @@ public final class SkillService {
         }
 
         List<String> conditionKeys = new ArrayList<>();
+        List<String> targetConditionKeys = new ArrayList<>();
         if (parsed != null) {
             for (String condition : parsed.inlineConditions()) {
                 String key = bindCondition(condition);
                 if (key == null) return null;
                 conditionKeys.add(key);
             }
+            for (String condition : parsed.targetConditions()) {
+                String key = bindCondition(condition);
+                if (key == null) return null;
+                targetConditionKeys.add(key);
+            }
+        }
+        if (!targetConditionKeys.isEmpty() && targeterSpec != null) {
+            String targeterName = targeterSpec.trim().replaceFirst("^@", "");
+            int targeterArguments = targeterName.indexOf('{');
+            if (targeterArguments >= 0) targeterName = targeterName.substring(0, targeterArguments);
+            if (dev.helstera.api.behavior.Targeters.isLocationName(targeterName)
+                    || dev.helstera.api.behavior.Targeters.isVariableLocationName(targeterName)
+                    || PinTargeter.recognizes(targeterSpec)) {
+                warn("per-target inline conditions require an entity targeter in \"" + spec + "\"");
+                return null;
+            }
         }
 
         List<String> factoryArgs = args;
         String key = actionName + (factoryArgs.isEmpty() ? "" : ":" + String.join(" ", factoryArgs));
-        if (chance != null || !conditionKeys.isEmpty() || targeterSpec != null
+        if (chance != null || !conditionKeys.isEmpty() || !targetConditionKeys.isEmpty() || targeterSpec != null
                 || delayTicks > 0 || repeat > 0 || repeatInterval > 0) {
             key += "|meta:" + (chance == null ? "" : chance) + ":"
-                    + String.join(",", conditionKeys) + ":" + (targeterSpec == null ? "" : targeterSpec)
+                    + String.join(",", conditionKeys) + ":@" + String.join(",", targetConditionKeys)
+                    + ":" + (targeterSpec == null ? "" : targeterSpec)
                     + ":delay=" + delayTicks + ":repeat=" + repeat + ":interval=" + repeatInterval;
         }
         if (bound.add("a:" + key)) {
@@ -681,7 +783,9 @@ public final class SkillService {
                             if (!registry.testCondition(condition, attempt)) return;
                         }
                         if (targeterSpec != null) {
-                            invokeTargeted(action, targeterSpec, attempt);
+                            invokeTargeted(action, targeterSpec, attempt, targetConditionKeys);
+                        } else if (!targetConditionKeys.isEmpty()) {
+                            invokeTargeted(action, "targets", attempt, targetConditionKeys);
                         } else {
                             action.accept(attempt);
                         }
@@ -714,7 +818,8 @@ public final class SkillService {
 
     private void invokeTargeted(Consumer<dev.helstera.api.behavior.BehaviorContext> action,
                                 String targeterSpec,
-                                dev.helstera.api.behavior.BehaviorContext ctx) {
+                                dev.helstera.api.behavior.BehaviorContext ctx,
+                                List<String> targetConditionKeys) {
         if (ctx == null) return;
         String targeterName = targeterSpec.trim();
         if (targeterName.startsWith("@")) targeterName = targeterName.substring(1);
@@ -758,6 +863,17 @@ public final class SkillService {
         List<org.bukkit.entity.LivingEntity> selected = dev.helstera.api.behavior.Targeters.select(
                 targeterSpec, ctx, candidates, List.of());
         if (selected.isEmpty()) return;
+        if (!targetConditionKeys.isEmpty()) {
+            List<org.bukkit.entity.LivingEntity> passing = new ArrayList<>();
+            for (var candidate : selected) {
+                if (conditionsPass(targetConditionKeys,
+                        targetConditionContext(ctx, candidate, List.of(candidate)))) {
+                    passing.add(candidate);
+                }
+            }
+            selected = passing;
+            if (selected.isEmpty()) return;
+        }
         var tree = ctx.skillTree().orElse(null);
         if (tree != null) tree.targets(selected);
         org.bukkit.entity.LivingEntity activeTarget = selected.get(0);
@@ -773,7 +889,7 @@ public final class SkillService {
                 ctx.instance(), activeTarget, targetHealth, targetDistance, ctx.decisionCount(),
                 ctx.state(), ctx.payload().orElse(null), ctx.trigger().orElse(null), selected,
                 ctx.origin().orElse(null), tree, ctx.cancellableEvent().orElse(null),
-                ctx.damageCause().orElse(null));
+                ctx.damageCause().orElse(null)).withExecutionAudienceFrom(ctx);
         action.accept(scoped);
     }
 
@@ -962,6 +1078,16 @@ public final class SkillService {
             if (s.contains("priority")) def.priority = (int) s.get("priority");
             def.branch = s.getString("branch", "").trim();
             def.branchRequires.addAll(s.getStringList("branch-requires"));
+            if (s.contains("execution-audience")) {
+                Object configuredAudience = s.get("execution-audience");
+                if (configuredAudience instanceof String audience && !audience.isBlank()
+                        && ExecutionAudiences.isSupported(audience)) {
+                    def.executionAudience = audience.trim();
+                } else {
+                    def.invalidExecutionAudience = true;
+                    warn("技能 \"" + def.name + "\" 的 execution-audience 无效，已阻止执行");
+                }
+            }
             for (String spec : stringOrList(s, "require")) {
                 if (spec == null || spec.isBlank()) continue;
                 String dep = parseSkillRef(spec);
@@ -1160,7 +1286,16 @@ public final class SkillService {
         if (skillName == null || skillName.isBlank()) return false;
         SkillDef def = defs.get(skillName.toLowerCase(Locale.ROOT));
         if (def == null) return false;
-        if (def.invalidCondition) return false;
+        if (def.invalidCondition || def.invalidExecutionAudience) return false;
+        if (def.executionAudience != null) {
+            var resolution = ExecutionAudiences.resolve(def.executionAudience, ctx);
+            if (!resolution.supported()) return false;
+            if (ctx == null) {
+                ctx = dev.helstera.api.behavior.BehaviorContext.execution(null, null,
+                        1.0, -1, 0, "skill", null, null, List.of(), null);
+            }
+            ctx = ctx.withNarrowedExecutionAudience(resolution.players());
+        }
         if (!conditionsPass(def.require, ctx)) return false;
         ctx = filterTargetConditions(def.targetRequire, ctx);
         if (ctx == null || (!def.triggerRequire.isEmpty()
@@ -1191,7 +1326,8 @@ public final class SkillService {
                     ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),
                     ctx.payload().orElse(null), ctx.trigger().orElse(null),
                     ctx.targets(), ctx.origin().orElse(null), tree,
-                    ctx.cancellableEvent().orElse(null), ctx.damageCause().orElse(null));
+                    ctx.cancellableEvent().orElse(null), ctx.damageCause().orElse(null))
+                    .withExecutionAudienceFrom(ctx);
         }
         for (SkillDef declared : defs.values()) {
             if (!declared.branch.isBlank()) {
@@ -1255,7 +1391,8 @@ public final class SkillService {
                 ctx.instance(), target, ratio, distance, ctx.decisionCount(), ctx.state(),
                 ctx.payload().orElse(null), ctx.trigger().orElse(null), targets,
                 ctx.origin().orElse(null), ctx.skillTree().orElse(null),
-                ctx.cancellableEvent().orElse(null), ctx.damageCause().orElse(null));
+                ctx.cancellableEvent().orElse(null), ctx.damageCause().orElse(null))
+                .withExecutionAudienceFrom(ctx);
     }
 
     private dev.helstera.api.behavior.BehaviorContext filterTargetConditions(
@@ -1299,7 +1436,7 @@ public final class SkillService {
                 ctx.instance(), living, ratio, ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),
                 ctx.payload().orElse(null), trigger, inherited, ctx.origin().orElse(null),
                 ctx.skillTree().orElse(null), ctx.cancellableEvent().orElse(null),
-                ctx.damageCause().orElse(null));
+                ctx.damageCause().orElse(null)).withExecutionAudienceFrom(ctx);
     }
     private boolean isInstanceBusy(int instId) {
         // 读条完成判定：activeCasts 里有无该实例的活跃读条
@@ -1340,7 +1477,7 @@ public final class SkillService {
                             context.distanceToTarget(), context.decisionCount(), context.state(),
                             context.payload().orElse(null), context.trigger().orElse(null), context.targets(),
                             context.origin().orElse(null), tree, context.cancellableEvent().orElse(null),
-                            context.damageCause().orElse(null));
+                            context.damageCause().orElse(null)).withExecutionAudienceFrom(context);
                 }
                 int[] d = depth.get();
                 d[0]++;
@@ -1550,7 +1687,17 @@ public final class SkillService {
      */
     private String cooldownKey(SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx) {
         int id = ctx != null && ctx.instance() != null ? ctx.instance().instanceId() : -1;
-        return id + "|" + def.name;
+        return cooldownKey(def, id);
+    }
+
+    private static String cooldownKey(SkillDef def, int instanceId) {
+        return instanceId + "|" + def.name;
+    }
+
+    /** Resolves the managed instance which owns an entity evaluated by SkillOnCooldown. */
+    public void instanceLookup(java.util.function.Function<org.bukkit.entity.Entity,
+            dev.helstera.api.instance.ModelInstance> lookup) {
+        instanceLookup = lookup == null ? ignored -> null : lookup;
     }
 
     /** Dynamically changes one named skill's cooldown for the current instance. */
@@ -1789,6 +1936,7 @@ public final class SkillService {
 
     private static String canonicalConditionName(String name) {
         return switch (name) {
+            case "isinaudience", "inaudience", "audiencecontains", "is-in-audience" -> "is-in-audience";
             case "iscancelled", "iscanceled", "cancelled", "canceled", "is-cancelled", "is-canceled" -> "is-cancelled";
             case "permission", "permission-is", "haspermission" -> "has-permission";
             case "casterpermission", "caster-permission", "casterhaspermission" -> "caster-has-permission";
@@ -2083,6 +2231,7 @@ public final class SkillService {
             case "stringempty", "string-empty", "isempty" -> "string-empty";
             case "stringnotempty", "string-not-empty", "notempty" -> "string-not-empty";
             case "isskill", "is-skill", "skillexists", "skill-exists" -> "is-skill";
+            case "skilloncooldown", "skill-on-cooldown" -> "skill-on-cooldown";
             case "globalscore", "global-score", "scoreglobal" -> "global-score";
             case "score" -> "score";
             case "comparevalues", "compare-values", "comparevalue" -> "compare-values";
@@ -2116,13 +2265,17 @@ public final class SkillService {
             case "variable-unset", "var-unset", "variable-location-set", "location-unset",
                     "var-set", "set-variable", "var-add", "var-math",
                     "score-set", "score-add", "signal", "dot", "mythic-aura",
-                    "mythic-aura-remove" -> true;
+                    "mythic-aura-remove", "add-to-audience", "remove-from-audience",
+                    "unset-audience" -> true;
             default -> false;
         };
     }
 
     private static String canonicalActionName(String name) {
         return switch (name) {
+            case "addtoaudience", "addaudience", "audienceadd", "add-to-audience" -> "add-to-audience";
+            case "removefromaudience", "removeaudience", "audienceremove", "remove-from-audience" -> "remove-from-audience";
+            case "unsetaudience", "clearaudience", "audienceclear", "unset-audience" -> "unset-audience";
             case "variableunset", "unsetvariable", "unsetvar", "varunset" -> "variable-unset";
             case "setvariable", "setvar" -> "set-variable";
             case "variableadd", "varadd" -> "var-add";

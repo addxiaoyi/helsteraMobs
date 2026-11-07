@@ -353,15 +353,25 @@ public final class DisplayRenderer implements InstanceRenderer {
                                 java.util.Collection<org.bukkit.entity.Player> hidden) {
         Visuals v = visuals.get(inst.instanceId());
         if (v == null) return;
+        boolean restricted = inst.executionAudience().isPresent();
+        List<Entity> entities = new ArrayList<>();
+        for (UUID id : v.allEntityIds) {
+            Entity entity = org.bukkit.Bukkit.getEntity(id);
+            if (entity != null) entities.add(entity);
+        }
+        for (UUID id : attachDisplays.getOrDefault(inst.instanceId(), List.of())) {
+            Entity entity = org.bukkit.Bukkit.getEntity(id);
+            if (entity != null) entities.add(entity);
+        }
+        inst.baseEntity().ifPresent(entities::add);
+        if (restricted) {
+            for (Entity entity : entities) entity.setVisibleByDefault(false);
+        }
         for (org.bukkit.entity.Player p : visible) {
-            for (ItemDisplay d : v.boneDisplays) {
-                if (d.isValid()) p.showEntity(plugin, d);
-            }
+            for (Entity entity : entities) if (entity.isValid()) p.showEntity(plugin, entity);
         }
         for (org.bukkit.entity.Player p : hidden) {
-            for (ItemDisplay d : v.boneDisplays) {
-                if (d.isValid()) p.hideEntity(plugin, d);
-            }
+            for (Entity entity : entities) if (entity.isValid()) p.hideEntity(plugin, entity);
         }
     }
 

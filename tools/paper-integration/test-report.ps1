@@ -66,6 +66,11 @@ try {
         '[Server thread/INFO]: skill-tree-queue submitted=true restored=true',
         '[Server thread/INFO]: skill-lifecycle reload=true scheduled=true cancelled=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true bounds-condition=true bounding-box-overlap-condition=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-looking-at-condition primary-mapped=true alias-mapped=true entity-mapped=true positive=true alias-positive=true wrong-block-rejected=true short-block-distance-rejected=true negative=true entity-positive=true wrong-entity-rejected=true short-entity-distance-rejected=true invalid-rejected=true restored=true',
+        '[Server thread/INFO]: [helsteraMobs] execution-audience-mutation imported=true explicit-empty=true added=true persisted=true member-visible=true outsider-hidden=true removed=true empty-persisted=true unset=true unrestricted=true passed=true',
+        '[Server thread/INFO]: [helsteraMobs] execution-audience-mob-spawn imported=true mapped=true spawned=true selected-member=true outsider-excluded=true persisted=true member-visible=true outsider-hidden=true passed=true',
+        '[Server thread/INFO]: [helsteraMobs] execution-audience-mob-mutation imported=true targeter-removed=true empty-persisted=true hidden=true targeter-added=true restored-persisted=true member-visible=true outsider-hidden=true passed=true',
+        '[Server thread/INFO]: [helsteraMobs] execution-audience-mob-summon imported=true action-bound=true spawned=true inherited=true visuals=true member-visible=true outsider-hidden=true passed=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-mobility=true drowning-condition=true leashed-condition=true has-owner-condition=true has-tag-condition=true target-has-tag-condition=true scoreboard-tag-mechanics=true score-mechanics=true global-score-condition=true score-condition=true custom-owner-relation=true owner-condition=true children-condition=true inside-outside-conditions=true distance-from-location-condition=true coordinate-difference-condition=true origin-location-condition=true line-of-sight-from-origin-condition=true bounds-condition=true enchanting-conditions=true plugin-condition=true field-of-view-condition=true spawn-reason-condition=true water-mob-condition=true zombie-condition=true entity-type-condition=true aerial-condition=true enderman-condition=true enchantment-condition=true color-condition=true material-cooldown-condition=true material-cooldown-mechanic=true set-game-mode-mechanic=true jump-mechanic=true force-pull-mechanic=true set-offhand-mechanic=true set-armor-mechanic=true clear-inventory-mechanic=true remove-held-item-mechanic=true raw-experience-mechanic=true set-absorption-mechanic=true trigger-item-type-condition=true entity-item-type-condition=true entity-item-similar-condition=true item-similar-condition=true targets-condition=true item-type-condition=true structure-condition=true mythic-mob-type-condition=true trigger-block-type-condition=true frozen-condition=true dialogue-condition=true player-kills-condition=true absorption-condition=true health-absorption-condition=true potion-effect-condition=true aura-stacks-condition=true level-condition=true lunar-phase-condition=true string-equals-condition=true string-empty-condition=true compare-values-condition=true is-skill-condition=true owner-online-condition=true parent-relation=true is-child-condition=true is-child-import-condition=true adult-parent-positive=true adult-not-baby=true unrelated-baby-not-child=true baby-positive=true parent-derived-conditions=true player-experience-mechanics=true oxygen-mechanic=true consume-slot-mechanic=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true',
         '[Server thread/INFO]: skill-actions mythic-aura-action=true mythic-has-aura-condition=true mythic-target-has-aura-condition=true mythic-has-aura-stacks-condition=true mythic-has-aura-type-condition=true mythic-aura-remove=true mythic-aura-invalid-rejected=true',
@@ -78,6 +83,8 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-trigger-block-type-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true state-rejected=true constructed-context=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-origin-location-condition primary-mapped=true alias-mapped=true positive=true exact-positive=true negative=true invalid-rejected=true constructed-context=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-item-recharging-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true non-human-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-execution-audience-condition primary-mapped=true alias-mapped=true contains-mapped=true no-audience-player-allowed=true member-allowed=true outsider-rejected=true empty-rejected=true non-player-rejected=true invalid-preserved=true per-target-unattached=true per-target-explicit=true result=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-target-relationships-condition has-owner-mapped=true owner-player-mapped=true owner-online-mapped=true leashed-mapped=true leashed-alias-mapped=true owned-positive=true owner-player-positive=true owner-online-positive=true leashed-positive=true leashed-alias-positive=true leash-cleared-rejected=true owner-cleared-rejected=true missing-target-rejected=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-frozen-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true thawed=true alias-thawed=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-burning-condition actions=true target-priority=true target-positive=true target-negative=true composed-negation=true caster-fallback=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-entity-category-condition water-primary-mapped=true water-alias-mapped=true water-positive=true water-zombie-rejected=true zombie-primary-mapped=true zombie-alias-mapped=true zombie-positive=true zombie-cod-rejected=true invalid-preserved=true cod=COD zombie=ZOMBIE',
@@ -176,6 +183,7 @@ try {
         '[Server thread/INFO]: attribute-options result=true modifiers=1',
         '[Server thread/INFO]: [helsteraMobs] [自检] mob-pickup-option result=true disabled=true explicit-overrides-default=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawn-option-runtime result=true pickup-disabled=true explicit-pickup-overrides-fallback=true random-equipment-cleared=true explicit-equipment-preserved=true no-damage-ticks=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true',
         '[Server thread/INFO]: item-attribute-options result=true modifiers=1',
         '[Server thread/INFO]: [helsteraMobs] [自检] events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true prevent-transformation-reasons=true prevent-skeleton-conversion=true prevent-block-infection=true prevent-snow-formation=true tame-breed-tame=true tame-breed-breed=true leash-unleash-leash=true leash-unleash-unleash=true prevent-leash=true prevent-rename=true prevent-target=true prevent-vanilla-damage=true prevent-projectiles=true prevent-entity-explosions=true prevent-block-explosion-damage=true prevent-drowning=true prevent-fall-damage=true prevent-fire=true prevent-fire-causes=true prevent-pickup=true prevent-item-use=true interactable=true interactable-armor-stand=true prevent-teleport=true prevent-sunburn=true prevent-other-drops=true prevent-mob-kill-drops=true prevent-mob-kill-custom-loot=true shear-trigger=true bed-enter-leave-enter=true bed-enter-leave-leave=true trade-trigger=true quit-trigger=true item-drop-break-damage=true player-actions-interact=true world-change=true jump=true swing=true fish-trigger=true',
         '[Server thread/INFO]: mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true',
@@ -200,6 +208,9 @@ try {
         '[Server thread/INFO]: spawner-max-spawns id=max_spawn_probe first=true second=false total=1 failure=max spawns reached',
         '[Server thread/INFO]: spawner-group id=group_probe requested=true alive=2 total=2 max-alive=2 group-min=3 group-max=5 limit=true',
         '[Server thread/INFO]: spawner-natural-group id=natural_group_probe mode=live-scheduler before=0 after=2 alive=2 max-alive=2 group-min=3 group-max=5 limit=true',
+        '[Server thread/INFO]: mythic-spawner-chance imported=true valid-mapped=true invalid-mapped=true valid-natural=true invalid-rejected=true warning=true valid-spawned=1 invalid-spawned=0 passed=true',
+        '[Server thread/INFO]: mythic-spawner-random-pool imported=true mapped=true sampled=true expected-emberling=0.250000 expected-emberling_boss=0.750000 observed-emberling=0.240000 observed-emberling_boss=0.760000 max-abs-deviation=0.010000 samples=100 passed=true',
+        '[Server thread/INFO]: mythic-spawner-drop-table imported=true references=true weighted=true tables-loaded=true spawned=32 variants=true assigned=true common-table-reloaded=true rare-table-reloaded=true common-alive=true rare-alive=true common-natural=true rare-natural=true common-bread=1 common-diamond=0 rare-bread=0 rare-diamond=1 restored=true passed=true',
         '[Server thread/INFO]: spawner-recycle id=recycle_probe before=1 after=2 released=true respawned=true alive=1 interval=40',
         '[Server thread/INFO]: spawner-region id=region_probe requested=true region=integration_box failure=null',
         '[Server thread/INFO]: spawner-region-outside id=region_probe_outside requested=false region=integration_box failure=conditions rejected location',
@@ -301,6 +312,16 @@ try {
     Assert-True (($collisionFailure.probes | Where-Object id -eq 'custom-menu-player-workflow').status -ne 'passed') 'menu workflow rejects vanilla material in custom item collision'
     Set-Content -LiteralPath $logPath -Value $lines -Encoding utf8
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
+    $failedLookingAtLines = @($lines | ForEach-Object {
+        $_ -replace 'short-entity-distance-rejected=true', 'short-entity-distance-rejected=false'
+    })
+    Set-Content -LiteralPath $logPath -Value $failedLookingAtLines -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
+    $lookingAtFailureReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 |
+        ConvertFrom-Json
+    Assert-True (($lookingAtFailureReport.probes | Where-Object id -eq 'lookingAtCondition').status -eq 'not-observed') 'LookingAt probe rejects a missing entity-distance negative control'
+    Set-Content -LiteralPath $logPath -Value $lines -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
     $env:PAPER_RAW_POTION_WORKFLOW = 'false'
 
     $schemaPath = Join-Path $PSScriptRoot 'integration-report.schema.json'
@@ -355,11 +376,15 @@ try {
             'spawningDistanceClientWalk', 'isInCinematicCondition', 'aerialCondition',
             'importedAerialCondition', 'endermanCondition', 'importedColorCondition',
             'importedIsFrozenCondition', 'importedBurningCondition', 'importedEntityCategoryCondition',
+            'importedExecutionAudienceCondition', 'executionAudienceMutation', 'executionAudienceMobSpawn',
+            'executionAudienceMobMutation', 'executionAudienceMobSummon',
+            'importedTargetRelationshipsCondition',
             'importedEntityTypeVariantCondition',
             'importedEntityTypeTraitsCondition',
             'importedSpyglassCondition', 'importedSurvivalModeCondition', 'importedVariableConditions',
             'importedFreeInventorySlotCondition',
             'importedNameCondition',
+            'importedMobDefaults',
             'importedServerConditions',
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
@@ -374,6 +399,12 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'importedIsFrozenCondition').status -eq 'passed') 'imported IsFrozen aliases require strict Paper frozen/thawed and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedBurningCondition').status -eq 'passed') 'imported Burning requires target-priority, composed-negation, caster-fallback, and invalid-preservation evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedEntityCategoryCondition').status -eq 'passed') 'imported IsWaterMob/IsZombie aliases require strict Paper type and malformed-input evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedExecutionAudienceCondition').status -eq 'passed') 'imported execution audience requires strict Paper membership and per-target filter evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'executionAudienceMutation').status -eq 'passed') 'execution audience mutation requires imported action, PDC, and two-client visibility evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'executionAudienceMobSpawn').status -eq 'passed') 'mob execution audience requires importer, real spawn, PDC, target selection, and two-client visibility evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'executionAudienceMobMutation').status -eq 'passed') 'mob audience mutations require imported AddToAudience/RemoveFromAudience, targeter selection, PDC, and two-client visibility evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'executionAudienceMobSummon').status -eq 'passed') 'summoned mobs require imported summon execution, inherited audience, PDC, and two-client visibility evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedTargetRelationshipsCondition').status -eq 'passed') 'imported target relationship conditions require strict Paper owner, online-player, leash, and fail-closed evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedEntityTypeVariantCondition').status -eq 'passed') 'imported EntityType variants require strict Paper positive, alternative, wrong-variant, wrong-type, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedEntityTypeTraitsCondition').status -eq 'passed') 'imported EntityType traits require strict Paper getter coverage, negative controls, and all documented API-backed trait families'
     Assert-True (($report.probes | Where-Object id -eq 'importedSpyglassCondition').status -eq 'passed') 'imported Spyglass aliases require strict Paper active/inactive, target-type, and malformed-input evidence'
@@ -440,6 +471,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'endermanHeldBlock').status -eq 'passed') 'Enderman held block option probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnOptionRuntime').status -eq 'passed') 'spawn option runtime probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobPickupOption').status -eq 'passed') 'mob pickup option probe'
+    Assert-True (($report.probes | Where-Object id -eq 'importedMobDefaults').status -eq 'passed') 'imported mob defaults Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'sheep').status -eq 'not-observed') 'missing probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawner:reject').status -eq 'observed-rejected') 'rejected probe'
     Assert-True (($report.probes | Where-Object id -eq 'lootDynamicChance').status -eq 'passed') 'dynamic chance probe'
@@ -591,7 +623,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'foodLevelCondition').status -eq 'passed') 'food level condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'hasItemCondition').status -eq 'passed') 'has item condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'airLevelCondition').status -eq 'passed') 'air level condition probe'
-    Assert-True (($report.probes | Where-Object id -eq 'lookingAtCondition').status -eq 'passed') 'looking at condition probe'
+    $lookingAtProbe = $report.probes | Where-Object id -eq 'lookingAtCondition'
+    Assert-True ($lookingAtProbe.status -eq 'passed') 'imported LookingAt probe'
+    Assert-True ($lookingAtProbe.observations[0] -match 'primary-mapped=true alias-mapped=true entity-mapped=true positive=true alias-positive=true wrong-block-rejected=true short-block-distance-rejected=true negative=true entity-positive=true wrong-entity-rejected=true short-entity-distance-rejected=true invalid-rejected=true restored=true') 'imported LookingAt requires mapped selectors, real ray positives, negative controls, invalid preservation, and cleanup'
     Assert-True (($report.probes | Where-Object id -eq 'itemRechargingCondition').status -eq 'passed') 'item recharging condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'gameplayPlaceholders').status -eq 'passed') 'gameplay placeholder probe'
     Assert-True (($report.probes | Where-Object id -eq 'playerPotionConsume').status -eq 'passed') 'raw player potion consume probe'
@@ -609,6 +643,11 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'spawnerMaxSpawns').status -eq 'passed') 'spawner max-spawns probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerGroup').status -eq 'passed') 'spawner group limit probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerNaturalGroup').status -eq 'passed') 'natural spawner group limit probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mythicSpawnerChanceImported').status -eq 'passed') 'imported Mythic spawner Chance natural scheduler probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mythicSpawnerRandomPoolImported').status -eq 'passed') 'imported Mythic weighted random pool probe'
+    Assert-True ($report.expectedProbeIds -contains 'mythicSpawnerRandomPoolImported') 'imported Mythic weighted random pool is required in the catalog'
+    Assert-True (($report.probes | Where-Object id -eq 'mythicSpawnerRandomPoolDropTables').status -eq 'passed') 'imported Mythic random pool variants retain their own natural DropTables'
+    Assert-True ($report.expectedProbeIds -contains 'mythicSpawnerRandomPoolDropTables') 'random pool DropTable coupling is required in the catalog'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerRecycle').status -eq 'passed') 'spawner natural recycle probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerRegion').status -eq 'passed') 'spawner region probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnerRegionOutside').status -eq 'passed') 'spawner region outside negative probe'
@@ -762,6 +801,33 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'mythicAuraRuntime'; status = 'passed'; observations = @('skill-actions mythic-aura-action=true mythic-has-aura-condition=true mythic-target-has-aura-condition=true mythic-has-aura-stacks-condition=true mythic-has-aura-type-condition=true mythic-aura-remove=true mythic-aura-invalid-rejected=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'importedMobDefaults'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'mythicSpawnerChanceImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mythicSpawnerChanceImported'; status = 'passed'; observations = @('mythic-spawner-chance imported=true valid-mapped=true invalid-mapped=true valid-natural=true invalid-rejected=true warning=true valid-spawned=1 invalid-spawned=0 passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'mythicSpawnerGroupSizeImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mythicSpawnerGroupSizeImported'; status = 'passed'; observations = @('mythic-spawner-group-size imported=true mapped=true natural=true requested=3 spawned=2 alive=2 max-alive=2 passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'mythicSpawnerConditionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mythicSpawnerConditionsImported'; status = 'passed'; observations = @('mythic-spawner-conditions imported=true mapped=true world-mapped=true biome-mapped=true biome-natural=true biome-rejected=true biome-pass-spawned=1 biome-reject-spawned=0 world-natural=true world-rejected=true rain=true thunder=false natural=true rejected=true pass-spawned=1 reject-spawned=0 world-pass-spawned=1 world-reject-spawned=0 instance=true restored=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'mythicSpawnerRandomPoolImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mythicSpawnerRandomPoolImported'; status = 'passed'; observations = @('mythic-spawner-random-pool imported=true mapped=true sampled=true expected-emberling=0.250000 expected-emberling_boss=0.750000 observed-emberling=0.240000 observed-emberling_boss=0.760000 max-abs-deviation=0.010000 samples=100 passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'mythicSpawnerRandomPoolDropTables'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mythicSpawnerRandomPoolDropTables'; status = 'passed'; observations = @('mythic-spawner-drop-table imported=true references=true weighted=true tables-loaded=true spawned=32 variants=true assigned=true common-table-reloaded=true rare-table-reloaded=true common-alive=true rare-alive=true common-natural=true rare-natural=true common-bread=1 common-diamond=0 rare-bread=0 rare-diamond=1 restored=true passed=true')
+    }
+    $fullCatalogLookingAt = @($fullCatalogReport.probes | Where-Object id -eq 'lookingAtCondition')
+    if ($fullCatalogLookingAt.Count -ne 1) { throw 'Synthetic full catalog report must contain lookingAtCondition.' }
+    $fullCatalogLookingAt[0].observations = @('imported-looking-at-condition primary-mapped=true alias-mapped=true entity-mapped=true positive=true alias-positive=true wrong-block-rejected=true short-block-distance-rejected=true negative=true entity-positive=true wrong-entity-rejected=true short-entity-distance-rejected=true invalid-rejected=true restored=true')
     $fullCatalogAiSelector = @($fullCatalogReport.probes | Where-Object id -eq 'aiSelectorCore')
     if ($fullCatalogAiSelector.Count -ne 1) { throw 'Synthetic full catalog report must contain aiSelectorCore.' }
     $fullCatalogAiSelector[0].observations = @($fullCatalogAiSelector[0].observations) +
@@ -829,6 +895,30 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedEntityCategoryCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedEntityCategoryCondition'; status = 'passed'; observations = @('imported-entity-category-condition water-primary-mapped=true water-alias-mapped=true water-positive=true water-zombie-rejected=true zombie-primary-mapped=true zombie-alias-mapped=true zombie-positive=true zombie-cod-rejected=true invalid-preserved=true cod=COD zombie=ZOMBIE')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedExecutionAudienceCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedExecutionAudienceCondition'; status = 'passed'; observations = @('imported-execution-audience-condition primary-mapped=true alias-mapped=true contains-mapped=true no-audience-player-allowed=true member-allowed=true outsider-rejected=true empty-rejected=true non-player-rejected=true invalid-preserved=true per-target-unattached=true per-target-explicit=true result=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'executionAudienceMutation'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'executionAudienceMutation'; status = 'passed'; observations = @('execution-audience-mutation imported=true explicit-empty=true added=true persisted=true member-visible=true outsider-hidden=true removed=true empty-persisted=true unset=true unrestricted=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'executionAudienceMobSpawn'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'executionAudienceMobSpawn'; status = 'passed'; observations = @('execution-audience-mob-spawn imported=true mapped=true spawned=true selected-member=true outsider-excluded=true persisted=true member-visible=true outsider-hidden=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'executionAudienceMobMutation'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'executionAudienceMobMutation'; status = 'passed'; observations = @('execution-audience-mob-mutation imported=true targeter-removed=true empty-persisted=true hidden=true targeter-added=true restored-persisted=true member-visible=true outsider-hidden=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'executionAudienceMobSummon'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'executionAudienceMobSummon'; status = 'passed'; observations = @('execution-audience-mob-summon imported=true action-bound=true spawned=true inherited=true visuals=true member-visible=true outsider-hidden=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedTargetRelationshipsCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedTargetRelationshipsCondition'; status = 'passed'; observations = @('imported-target-relationships-condition has-owner-mapped=true owner-player-mapped=true owner-online-mapped=true leashed-mapped=true leashed-alias-mapped=true owned-positive=true owner-player-positive=true owner-online-positive=true leashed-positive=true leashed-alias-positive=true leash-cleared-rejected=true owner-cleared-rejected=true missing-target-rejected=true result=true')
     }
     $fullCatalogReport.expectedProbeIds += 'importedEntityTypeVariantCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -2323,6 +2413,70 @@ try {
     Assert-True $missingChanceRejected 'full release gate rejects missing imported chance evidence'
     $fullCatalogReport.expectedProbeIds += 'dropChanceImported'
     $fullCatalogReport.probes += $chanceProbe
+    $mythicSpawnerChanceProbe = $fullCatalogReport.probes | Where-Object id -eq 'mythicSpawnerChanceImported'
+    $mythicSpawnerChanceObservations = $mythicSpawnerChanceProbe.observations
+    $mythicSpawnerChanceProbe.observations = @('mythic-spawner-chance imported=true valid-mapped=true invalid-mapped=true valid-natural=false invalid-rejected=true warning=true passed=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badMythicSpawnerChanceRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badMythicSpawnerChanceRejected = $_.Exception.Message -match 'required observation for mythicSpawnerChanceImported' }
+    Assert-True $badMythicSpawnerChanceRejected 'full release gate rejects imported Chance without natural generation'
+    $mythicSpawnerChanceProbe.observations = $mythicSpawnerChanceObservations
+    $mythicSpawnerGroupProbe = $fullCatalogReport.probes | Where-Object id -eq 'mythicSpawnerGroupSizeImported'
+    $mythicSpawnerGroupObservations = $mythicSpawnerGroupProbe.observations
+    $mythicSpawnerGroupProbe.observations = @('mythic-spawner-group-size imported=true mapped=true natural=false requested=3 spawned=1 alive=1 max-alive=2 passed=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badMythicSpawnerGroupRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badMythicSpawnerGroupRejected = $_.Exception.Message -match 'required observation for mythicSpawnerGroupSizeImported' }
+    Assert-True $badMythicSpawnerGroupRejected 'full release gate rejects imported GroupSize without capped natural generation'
+    $mythicSpawnerGroupProbe.observations = $mythicSpawnerGroupObservations
+    $mythicSpawnerConditionsProbe = $fullCatalogReport.probes | Where-Object id -eq 'mythicSpawnerConditionsImported'
+    $mythicSpawnerConditionsObservations = $mythicSpawnerConditionsProbe.observations
+    $mythicSpawnerConditionsProbe.observations = @('mythic-spawner-conditions imported=true mapped=true world-mapped=true biome-mapped=true biome-natural=true biome-rejected=true biome-pass-spawned=1 biome-reject-spawned=0 world-natural=false world-rejected=false rain=true thunder=false natural=false rejected=true pass-spawned=0 reject-spawned=0 world-pass-spawned=0 world-reject-spawned=1 instance=false restored=true passed=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badMythicSpawnerConditionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badMythicSpawnerConditionsRejected = $_.Exception.Message -match 'required observation for mythicSpawnerConditionsImported' }
+    Assert-True $badMythicSpawnerConditionsRejected 'full release gate rejects imported Spawner conditions without natural pass and fail evidence'
+    $mythicSpawnerConditionsProbe.observations = $mythicSpawnerConditionsObservations
+    $mythicSpawnerConditionsProbe.observations = @('mythic-spawner-conditions imported=true mapped=true world-mapped=true biome-mapped=true biome-natural=false biome-rejected=false biome-pass-spawned=0 biome-reject-spawned=1 world-natural=true world-rejected=true rain=true thunder=false natural=true rejected=true pass-spawned=1 reject-spawned=0 world-pass-spawned=1 world-reject-spawned=0 instance=true restored=true passed=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badMythicSpawnerBiomeRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badMythicSpawnerBiomeRejected = $_.Exception.Message -match 'required observation for mythicSpawnerConditionsImported' }
+    Assert-True $badMythicSpawnerBiomeRejected 'full release gate rejects imported Spawner BiomeType without positive and negative evidence'
+    $mythicSpawnerConditionsProbe.observations = $mythicSpawnerConditionsObservations
+    $mythicSpawnerRandomPoolProbe = $fullCatalogReport.probes | Where-Object id -eq 'mythicSpawnerRandomPoolImported'
+    $mythicSpawnerRandomPoolObservations = $mythicSpawnerRandomPoolProbe.observations
+    $mythicSpawnerRandomPoolProbe.observations = @('mythic-spawner-random-pool imported=true mapped=true sampled=false expected-emberling=0.250000 expected-emberling_boss=0.750000 observed-emberling=0.240000 observed-emberling_boss=0.760000 max-abs-deviation=0.010000 samples=99 passed=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badMythicSpawnerRandomPoolRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badMythicSpawnerRandomPoolRejected = $_.Exception.Message -match 'required observation for mythicSpawnerRandomPoolImported' }
+    Assert-True $badMythicSpawnerRandomPoolRejected 'full release gate rejects an imported weighted pool without 100 successful samples'
+    $mythicSpawnerRandomPoolProbe.observations = $mythicSpawnerRandomPoolObservations
+    $mythicSpawnerDropTablesProbe = $fullCatalogReport.probes | Where-Object id -eq 'mythicSpawnerRandomPoolDropTables'
+    $mythicSpawnerDropTablesObservations = $mythicSpawnerDropTablesProbe.observations
+    $mythicSpawnerDropTablesProbe.observations = @('mythic-spawner-drop-table imported=true references=true weighted=true tables-loaded=true spawned=32 variants=true assigned=true common-table-reloaded=true rare-table-reloaded=true common-alive=true rare-alive=true common-natural=true rare-natural=true common-bread=1 common-diamond=0 rare-bread=0 rare-diamond=1 restored=false passed=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badMythicSpawnerDropTablesRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badMythicSpawnerDropTablesRejected = $_.Exception.Message -match 'required observation for mythicSpawnerRandomPoolDropTables' }
+    Assert-True $badMythicSpawnerDropTablesRejected 'full release gate rejects mismatched natural drops or failed fixture cleanup'
+    $mythicSpawnerDropTablesProbe.observations = $mythicSpawnerDropTablesObservations
     ($fullCatalogReport.probes | Where-Object id -eq 'expTierDeath').observations = @('incomplete evidence')
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $badTierEvidenceRejected = $false

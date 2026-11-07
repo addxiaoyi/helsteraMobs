@@ -30,7 +30,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <paper.version>1.21.1-R0.1-SNAPSHOT</paper.version>
         <junit.version>5.11.4</junit.version>
-        <spotbugs.maxHeap>2048</spotbugs.maxHeap>
+        <spotbugs.maxHeap>4096</spotbugs.maxHeap>
     </properties>
 
     <!--
@@ -201,7 +201,7 @@
                     <configuration>
                         <threshold>High</threshold>
                         <effort>Max</effort>
-                        <!-- HelsteraPlugin contains the integrated runtime and Paper probes. -->
+                        <!-- The integrated runtime and Paper probe catalog needs 4 GiB for analysis. -->
                         <maxHeap>${spotbugs.maxHeap}</maxHeap>
                         <failOnError>true</failOnError>
                         <excludeFilterFile>${maven.multiModuleProjectDirectory}/tools/spotbugs-exclude.xml</excludeFilterFile>

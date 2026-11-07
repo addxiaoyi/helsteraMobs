@@ -77,6 +77,8 @@ public final class PlayerVisibilityServiceImpl implements PlayerVisibilityServic
             Location pl = p.getLocation();
             if (pl.getWorld() != loc.getWorld()) continue;
             if (pl.distanceSquared(loc) > maxDistSq) continue;
+            var audience = instance.executionAudience().orElse(null);
+            if (audience != null && !audience.contains(p.getUniqueId())) continue;
             if (checkPermission && !p.hasPermission("helstera.view")) continue;
             if (!p.hasPermission("helstera.view." + instance.model().id().split("/")[0])) continue;
             boolean ok = true;

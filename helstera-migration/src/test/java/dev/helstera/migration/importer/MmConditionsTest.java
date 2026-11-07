@@ -151,6 +151,7 @@ class MmConditionsTest {
         assertTrue(translated("?hasTarget"));
         for (String condition : List.of("?isFrozen{unknown=true}", "?frozen{unknown=true}",
                 "?projectileHasEnded{unknown=true}", "?snowing{unknown=true}",
+                "?isInAudience{unknown=true}", "?inaudience{true}", "?audiencecontains{player=x}",
                 "?isInSurvivalMode{unknown=true}", "?inSurvivalMode{unknown=true}",
                 "?isSnowing{unknown=true}", "?isUsingSpyglass{unknown=true}",
                 "?isScoping{unknown=true}")) {
@@ -158,6 +159,10 @@ class MmConditionsTest {
             assertEquals(condition, t(condition));
         }
         assertEquals("is-frozen", t("?isFrozen{}"));
+        for (String alias : List.of("isInAudience", "inaudience", "audiencecontains")) {
+            assertEquals("is-in-audience", t("?" + alias), alias);
+            assertEquals("is-in-audience", t("?" + alias + "{}"), alias);
+        }
         assertEquals("projectile-has-ended", t("?projectileHasEnded{}"));
         for (String name : List.of("hasTarget", "night", "isRaining", "isThundering", "isLiving",
                 "snowing", "isSnowing",
@@ -263,6 +268,22 @@ class MmConditionsTest {
             assertEquals(raw, result.condition(), raw);
         }
         assertTrue(translated("?stringEquals{value1=<caster.var{phase}>;value2=ready}"));
+    }
+
+    @Test
+    @DisplayName("SkillOnCooldown imports its skill name and rejects ambiguous arguments")
+    void skillOnCooldownArguments() {
+        assertEquals("skill-on-cooldown TestSkill", t("?skillOnCooldown{skill=TestSkill}"));
+        assertEquals("skill-on-cooldown TestSkill", t("?skillOnCooldown{s=TestSkill}"));
+        assertEquals("skill-on-cooldown TestSkill", t("?skillOnCooldown TestSkill"));
+        assertTrue(translated("?skillOnCooldown{skill=TestSkill}"));
+
+        for (String raw : List.of("?skillOnCooldown", "?skillOnCooldown{}",
+                "?skillOnCooldown{unknown=TestSkill}",
+                "?skillOnCooldown{skill=TestSkill;s=OtherSkill}",
+                "?skillOnCooldown{skill=}")) {
+            assertUntranslatedPreserved(raw);
+        }
     }
 
     @Test
@@ -1090,9 +1111,17 @@ class MmConditionsTest {
 
     @Test
     void officialLookingAtConditionMapsTypeAndDistance() {
-        assertEquals("looking-at STONE 5", t("?lookingAt{b=STONE}"));
-        assertEquals("looking-at COW 8", t("?lookingAt{e=COW;d=8}"));
-        assertFalse(translated("?lookingAt{b=STONE;d=0}"));
+        assertEquals("looking-at block STONE 5", t("?lookingAt{b=STONE}"));
+        assertEquals("looking-at entity COW 8", t("?lookingAt{e=COW;d=8}"));
+        assertEquals("looking-at type STONE 7", t("?lookingAt{t=STONE;distance=7}"));
+        assertEquals("looking-at type STONE 5", t("?lookingAt{STONE}"));
+        for (String invalid : List.of(
+                "?lookingAt{b=STONE;d=0}", "?lookingAt{b=STONE;d=NaN}",
+                "?lookingAt{b=STONE;d=Infinity}", "?lookingAt{b=STONE;distance=6;d=7}",
+                "?lookingAt{b=STONE;entity=COW}", "?lookingAt{b=STONE;unknown=true}",
+                "?lookingAt{b=}", "?lookingAt{b=STONE;d=}")) {
+            assertUntranslatedPreserved(invalid);
+        }
     }
 
     @Test

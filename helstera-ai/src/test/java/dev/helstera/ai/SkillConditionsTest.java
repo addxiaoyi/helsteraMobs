@@ -1395,6 +1395,29 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("execution audience defaults to every player and honors an explicit player set")
+    void executionAudienceConditionUsesExplicitAudienceWhenPresent() {
+        Player member = mock(Player.class);
+        Player outsider = mock(Player.class);
+        LivingEntity zombie = mock(org.bukkit.entity.Zombie.class);
+        when(member.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        when(outsider.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        var condition = extraFactory("is-in-audience").create(List.of());
+
+        assertTrue(condition.test(BehaviorContext.of(null, outsider, 1.0, -1, 0, "IDLE")));
+        var audience = BehaviorContext.of(null, member, 1.0, -1, 0, "IDLE")
+                .withExecutionAudience(List.of(member));
+        assertTrue(condition.test(audience));
+        assertFalse(condition.test(BehaviorContext.of(null, outsider, 1.0, -1, 0, "IDLE")
+                .withExecutionAudience(List.of(member))));
+        assertFalse(condition.test(BehaviorContext.of(null, member, 1.0, -1, 0, "IDLE")
+                .withExecutionAudience(List.of())));
+        assertFalse(condition.test(BehaviorContext.of(null, zombie, 1.0, -1, 0, "IDLE")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("is-in-audience").create(List.of("unexpected")));
+    }
+
+    @Test
     @DisplayName("is-mythic-mob recognizes the managed caster and rejects an empty context")
     void officialMythicMobConditionUsesManagedInstance() {
         ModelInstance instance = mock(ModelInstance.class);

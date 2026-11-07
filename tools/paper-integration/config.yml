@@ -12,6 +12,10 @@ debug:
   self-test-events: true
   trace-triggers: true
   self-test-audience: true
+  self-test-execution-audience: true
+  self-test-execution-audience-mob: true
+  self-test-execution-audience-persistence: false
+  self-test-execution-audience-persistence-stage: write
   self-test-skilltree-persistence: false
   self-test-skilltree-stage: write
 web:

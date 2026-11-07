@@ -2,6 +2,7 @@ package dev.helstera.runtime.instance;
 
 import dev.helstera.api.Vec3;
 import dev.helstera.api.animation.AnimationController;
+import dev.helstera.api.behavior.ExecutionAudienceData;
 import dev.helstera.api.instance.ModelInstance;
 import dev.helstera.api.instance.SpawnOptions;
 import dev.helstera.api.model.ModelDefinition;
@@ -13,7 +14,9 @@ import org.bukkit.entity.Entity;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Map;
+import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -34,6 +37,7 @@ public final class ModelInstanceImpl implements ModelInstance {
     private volatile boolean valid = true;
     private Location lastLocation;
     private Location spawnLocation;
+    private volatile Set<UUID> executionAudience;
 
     /** 当前采样姿态（boneName -> pose），由调度线程写、渲染线程读。 */
     private volatile Map<String, BonePose> pose = Map.of();
@@ -118,6 +122,9 @@ public final class ModelInstanceImpl implements ModelInstance {
         this.options = options;
         this.scale = (options != null ? options.scale() : 1.0) * model.scale();
         this.showHealthBar = options != null && options.showHealthBar();
+        if (baseEntity != null) {
+            ExecutionAudienceData.read(baseEntity).ifPresent(audience -> executionAudience = audience);
+        }
     }
 
     public void initAnimation(AnimationControllerImpl controller) {
@@ -212,12 +219,29 @@ public final class ModelInstanceImpl implements ModelInstance {
         return baseEntity == null ? Optional.empty() : Optional.of(baseEntity.getUniqueId());
     }
 
+    @Override
+    public Optional<Set<UUID>> executionAudience() {
+        return Optional.ofNullable(executionAudience);
+    }
+
+    @Override
+    public void setExecutionAudience(Collection<UUID> players) {
+        executionAudience = players == null ? null : Set.copyOf(players);
+        ExecutionAudienceData.write(baseEntity, players);
+    }
+
     public Entity entity() {
         return baseEntity;
     }
 
     public void setBaseEntity(Entity e) {
         this.baseEntity = e;
+        var persisted = ExecutionAudienceData.read(e);
+        if (persisted.isPresent()) {
+            executionAudience = persisted.orElseThrow();
+        } else if (executionAudience != null) {
+            ExecutionAudienceData.write(e, executionAudience);
+        }
     }
 
     public SpawnOptions options() {

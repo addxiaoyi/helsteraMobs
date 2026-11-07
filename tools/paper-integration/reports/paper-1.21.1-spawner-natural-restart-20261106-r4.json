@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "srv-paper-spawner-natural-restart-20261106-r4",
+  "testType": "two-boot-natural-spawner-cooldown-and-chance",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "result": "passed",
+  "firstBoot": {
+    "result": "passed",
+    "source": "live-scheduler",
+    "totalSpawnedAtShutdown": 1,
+    "chanceOneSpawnObserved": true,
+    "chanceZeroSpawned": 0,
+    "cooldownAtSpawnTicks": 600,
+    "persistedCooldownTicks": 580,
+    "log": "paper-1.21.1-spawner-natural-restart-20261106-r4-first-boot.log.gz",
+    "logSha256": "f72b5ccdf878950cdee1972992f0d1e46a6c92309129716932f13b3282147e95"
+  },
+  "secondBoot": {
+    "result": "passed",
+    "restoredCooldownTicks": 580,
+    "elapsedTicksUntilNaturalSpawn": 579,
+    "totalSpawnedAtShutdown": 2,
+    "chanceOneSpawnsObserved": 2,
+    "chanceZeroSpawned": 0,
+    "cooldownAfterNaturalSpawnTicks": 600,
+    "source": "live-scheduler",
+    "manualForceCommand": false,
+    "log": "paper-1.21.1-spawner-natural-restart-20261106-r4-second-boot.log.gz",
+    "logSha256": "c7a7b32bb3cc5655459b170d2bcc882a2f91684255c4d6ee86da03b94619991b"
+  },
+  "pluginSha256": "9b567ff5096e7b0bade71d782dee75e57d0f74566dd87cc5a9ea2169f65adbfa"
+}

@@ -69,6 +69,9 @@ public final class MmConditions {
     private static final Map<String, String> SERVER_VERSION_BOUND_ARGUMENTS = Map.of(
             "version", "version", "sv", "version", "v", "version",
             "inclusive", "inclusive", "i", "inclusive");
+    private static final Map<String, String> LOOKING_AT_ARGUMENTS = Map.of(
+            "type", "type", "t", "type", "block", "block", "b", "block",
+            "entity", "entity", "e", "entity", "distance", "distance", "d", "distance");
     private static final Map<String, String> AURA_NAME_ARGUMENTS = Map.ofEntries(
             Map.entry("aura", "aura"), Map.entry("auraname", "aura"),
             Map.entry("b", "aura"), Map.entry("buff", "aura"),
@@ -92,6 +95,7 @@ public final class MmConditions {
             "amount", "a");
     private static final Set<String> NO_ARGUMENT_CONDITIONS = Set.of(
             "hastarget", "incombat", "offgcd", "offglobalcooldown",
+            "isinaudience", "inaudience", "audiencecontains",
             "night", "nighttime", "raining", "israining", "thundering", "isthundering",
             "snowing", "issnowing",
             "angry", "isangry", "pollinated", "ispollinated", "hasnectar",
@@ -433,6 +437,10 @@ public final class MmConditions {
             return new Mapped("mounted", true);
         }
         if ("incombat".equals(name)) return new Mapped("in-combat", true);
+        if ("isinaudience".equals(name) || "inaudience".equals(name)
+                || "audiencecontains".equals(name)) {
+            return new Mapped("is-in-audience", true);
+        }
         if ("playersinradius".equals(name)) {
             return radiusCondition(body, "players-in-radius");
         }
@@ -1388,6 +1396,13 @@ public final class MmConditions {
             return skill == null || skill.isBlank() ? new Mapped(s, false)
                     : new Mapped("is-skill " + skill, true);
         }
+        if ("skilloncooldown".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(body,
+                    Map.of("skill", "skill", "s", "skill"), "skill");
+            String skill = arguments == null ? null : arguments.get("skill");
+            return skill == null || skill.isBlank() ? new Mapped(s, false)
+                    : new Mapped("skill-on-cooldown " + conditionValue(skill), true);
+        }
         if ("globalscore".equals(name) || "scoreglobal".equals(name)) {
             String objective = firstArgument(body, "objective", "obj", "o");
             String value = firstArgument(body, "value", "val", "v");
@@ -1415,9 +1430,16 @@ public final class MmConditions {
                     : new Mapped(s, false);
         }
         if ("lookingat".equals(name)) {
-            String type = firstArgument(body, "type", "t", "block", "b", "entity", "e");
-            if (type == null) type = normalizeScalar(body);
-            String distance = firstArgument(body, "distance", "d");
+            Map<String, String> arguments = strictValueArguments(body, LOOKING_AT_ARGUMENTS, "type");
+            if (arguments == null) return new Mapped(s, false);
+            int selectors = (arguments.containsKey("type") ? 1 : 0)
+                    + (arguments.containsKey("block") ? 1 : 0)
+                    + (arguments.containsKey("entity") ? 1 : 0);
+            if (selectors != 1) return new Mapped(s, false);
+            String selector = arguments.containsKey("block") ? "block"
+                    : arguments.containsKey("entity") ? "entity" : "type";
+            String type = arguments.get(selector);
+            String distance = arguments.get("distance");
             if (type == null || type.isBlank()) return new Mapped(s, false);
             if (distance == null) distance = "5";
             try {
@@ -1426,7 +1448,8 @@ public final class MmConditions {
             } catch (NumberFormatException ignored) {
                 return new Mapped(s, false);
             }
-            return new Mapped("looking-at " + type + " " + distance, true);
+            return new Mapped("looking-at " + selector + " " + conditionValue(type)
+                    + " " + distance, true);
         }
         if ("bowtension".equals(name) || "bowshoottension".equals(name)) {
             String force = firstArgument(body, "force", "f", "value", "v", "val");

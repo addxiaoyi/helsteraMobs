@@ -9,7 +9,11 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.entity.EntityDamageEvent;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.UUID;
 
 import java.util.Optional;
 
@@ -23,6 +27,22 @@ import java.util.Optional;
  * 从而在不修改决策内核的前提下扩展行为。</p>
  */
 public final class BehaviorContext {
+
+    private static final class ExecutionAudienceScope {
+        private volatile Set<UUID> players;
+
+        private ExecutionAudienceScope(Collection<UUID> players) {
+            set(players);
+        }
+
+        private Set<UUID> get() {
+            return players;
+        }
+
+        private void set(Collection<UUID> players) {
+            this.players = players == null ? null : Set.copyOf(players);
+        }
+    }
 
     private final ModelInstance instance;
     private final Player target;
@@ -45,6 +65,7 @@ public final class BehaviorContext {
     private final SkillTreeContext skillTree;
     private final Cancellable cancellableEvent;
     private final EntityDamageEvent.DamageCause damageCause;
+    private final ExecutionAudienceScope executionAudience;
 
     private BehaviorContext(ModelInstance instance, Player target, double healthRatio,
                             double distanceToTarget, long decisionCount, String state) {
@@ -118,6 +139,29 @@ public final class BehaviorContext {
         this.skillTree = skillTree;
         this.cancellableEvent = cancellableEvent;
         this.damageCause = damageCause;
+        Optional<Set<UUID>> instanceAudience = instance == null ? Optional.empty()
+                : instance.executionAudience();
+        this.executionAudience = new ExecutionAudienceScope(instanceAudience == null
+                ? null : instanceAudience.orElse(null));
+    }
+
+    private BehaviorContext(BehaviorContext source, ExecutionAudienceScope executionAudience) {
+        this.instance = source.instance;
+        this.target = source.target;
+        this.targetEntity = source.targetEntity;
+        this.healthRatio = source.healthRatio;
+        this.distanceToTarget = source.distanceToTarget;
+        this.decisionCount = source.decisionCount;
+        this.state = source.state;
+        this.payload = source.payload;
+        this.trigger = source.trigger;
+        this.targets = source.targets;
+        this.origin = source.origin == null ? null : source.origin.clone();
+        this.targetLocation = source.targetLocation == null ? null : source.targetLocation.clone();
+        this.skillTree = source.skillTree;
+        this.cancellableEvent = source.cancellableEvent;
+        this.damageCause = source.damageCause;
+        this.executionAudience = executionAudience;
     }
 
     /**
@@ -286,6 +330,42 @@ public final class BehaviorContext {
         return targets;
     }
 
+    /** Optional execution audience; a present empty set explicitly allows no players. */
+    public Optional<Set<UUID>> executionAudience() {
+        return Optional.ofNullable(executionAudience.get());
+    }
+
+    /** Returns a context whose audience is the supplied set of players, including an explicit empty set. */
+    public BehaviorContext withExecutionAudience(Collection<? extends Player> players) {
+        Set<UUID> ids = new LinkedHashSet<>();
+        if (players != null) {
+            for (Player player : players) {
+                if (player != null && player.getUniqueId() != null) ids.add(player.getUniqueId());
+            }
+        }
+        return new BehaviorContext(this, new ExecutionAudienceScope(ids));
+    }
+
+    /** Returns a context restricted to the intersection of this and the supplied player IDs. */
+    public BehaviorContext withNarrowedExecutionAudience(Collection<UUID> players) {
+        Set<UUID> narrowed = new LinkedHashSet<>();
+        if (players != null) narrowed.addAll(players);
+        Set<UUID> active = executionAudience.get();
+        if (active != null) narrowed.retainAll(active);
+        return new BehaviorContext(this, new ExecutionAudienceScope(narrowed));
+    }
+
+    /** Replaces the active skill audience without changing the mob's persisted audience. */
+    public void setExecutionAudience(Collection<UUID> players) {
+        executionAudience.set(players);
+    }
+
+    /** Copies an explicitly attached audience from another context when one exists. */
+    public BehaviorContext withExecutionAudienceFrom(BehaviorContext source) {
+        return source == null || source.executionAudience.get() == null
+                ? this : new BehaviorContext(this, source.executionAudience);
+    }
+
     /** Origin used by location targeters and mechanics. */
     public Optional<Location> origin() {
         return Optional.ofNullable(origin == null ? null : origin.clone());
@@ -302,7 +382,8 @@ public final class BehaviorContext {
             throw new IllegalArgumentException("location target must have a world");
         }
         return new BehaviorContext(instance, null, null, 0, -1, decisionCount, state, payload,
-                trigger, List.of(), origin, skillTree, cancellableEvent, damageCause, location);
+                trigger, List.of(), origin, skillTree, cancellableEvent, damageCause, location)
+                .withExecutionAudienceFrom(this);
     }
 
     /** State shared by nested skills triggered from this context. */

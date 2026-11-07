@@ -89,6 +89,7 @@ public final class SpawnerService {
         private final double playersRadius;
         private final boolean enabled;
         private final double yRange;
+        private final double chance;
         /**
          * 成组生成的规模区间（Mythic 的 GroupSize / group-size）。
          *
@@ -120,13 +121,14 @@ public final class SpawnerService {
                  String aiProfile, RandomSpawnPool randomPool, List<String> conditions) {
             this(id, mobId, world, x, y, z, radius, intervalTicks, maxAlive, maxSpawns,
                     maxPerWorld, maxPerPlayer, minPlayers, playersRadius,
-                    enabled, yRange, 1, 1, 0, aiProfile, randomPool, conditions);
+                    enabled, yRange, 1.0, 1, 1, 0, aiProfile, randomPool, conditions);
         }
 
         Spawner(String id, String mobId, String world, double x, double y, double z,
                 double radius, int intervalTicks, int maxAlive, int maxSpawns,
                 int maxPerWorld, int maxPerPlayer, int minPlayers, double playersRadius,
-                boolean enabled, double yRange, int groupMin, int groupMax, double intervalJitter,
+                boolean enabled, double yRange, double chance,
+                int groupMin, int groupMax, double intervalJitter,
                  String aiProfile, RandomSpawnPool randomPool, List<String> conditions) {
             this.id = id;
             this.mobId = mobId;
@@ -144,6 +146,7 @@ public final class SpawnerService {
             this.playersRadius = Math.max(0, playersRadius);
             this.enabled = enabled;
             this.yRange = Math.max(0, yRange);
+            this.chance = Double.isFinite(chance) && chance >= 0 && chance <= 1 ? chance : 0.0;
             this.groupMin = Math.max(1, Math.min(groupMin, Math.max(1, groupMax)));
             this.groupMax = Math.max(1, groupMax);
             this.intervalJitter = Double.isFinite(intervalJitter) ? Math.max(0, Math.min(1, intervalJitter)) : 0;
@@ -168,6 +171,7 @@ public final class SpawnerService {
         public int minPlayers() { return minPlayers; }
         public double playersRadius() { return playersRadius; }
         public double yRange() { return yRange; }
+        public double chance() { return chance; }
         public int groupMin() { return groupMin; }
         public int groupMax() { return groupMax; }
         public double intervalJitter() { return intervalJitter; }
@@ -439,6 +443,7 @@ public final class SpawnerService {
                 }
             }
             int minPlayers = YamlNums.nonNegative(s, "min-players", 0, problems, where);
+            double chance = parseSpawnerChance(s, problems, where);
             double configuredX = coordinate(s, "x", 0, problems, where);
             double configuredY = coordinate(s, "y", 0, problems, where);
             double configuredZ = coordinate(s, "z", 0, problems, where);
@@ -544,6 +549,7 @@ public final class SpawnerService {
                     playersRadius,
                     s.getBoolean("enabled", true),
                     yRange,
+                    chance,
                     groupMin, groupMax, intervalJitter,
                     s.getString("ai-profile"), parseRandomPool(s, problems, where),
                     readConditions(s));
@@ -916,6 +922,7 @@ public final class SpawnerService {
             try {
                 if (!isActive(sp)) continue;
                 if (tickCounter < sp.nextSpawnTick) continue;
+                if (random.nextDouble() >= sp.chance()) continue;
                 if (trySpawn(sp)) {
                     sp.nextSpawnTick = tickCounter + sp.rollIntervalTicks(random);
                 }
@@ -1459,6 +1466,17 @@ public final class SpawnerService {
     private static int parseInt(String raw) {
         try { return Integer.parseInt(raw.trim()); }
         catch (NumberFormatException ignored) { return Integer.MIN_VALUE; }
+    }
+
+    private static double parseSpawnerChance(ConfigurationSection section,
+                                             List<String> problems, String where) {
+        if (!section.contains("chance")) return 1.0;
+        double chance = YamlNums.d(section, "chance", 0.0, problems, where);
+        if (!Double.isFinite(chance) || chance < 0 || chance > 1) {
+            problems.add(where + " 的 chance 必须是 0..1 的有限数值；该刷怪点的自然生成概率已按 0 处理。");
+            return 0.0;
+        }
+        return chance;
     }
 
     /**

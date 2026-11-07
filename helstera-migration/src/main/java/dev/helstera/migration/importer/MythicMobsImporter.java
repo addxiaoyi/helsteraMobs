@@ -297,7 +297,8 @@ public final class MythicMobsImporter implements MigrationImporter {
 
     @Override
     public List<Map<String, Object>> convert(Path sourceFile) {
-        return convertInCategory(sourceFile, sourceCategory(sourceFile));
+        Path category = sourceCategory(sourceFile);
+        return convertInCategory(sourceFile, category, category == null ? null : category.getParent());
     }
 
     @Override
@@ -311,10 +312,11 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (!Set.of("Mobs", "Skills", "Items", "Spawners", "DropTables").contains(category.getFileName().toString())) {
             throw new IllegalArgumentException("Unknown MythicMobs category: " + category);
         }
-        return convertInCategory(sourceFile, category);
+        return convertInCategory(sourceFile, category, root);
     }
 
-    private List<Map<String, Object>> convertInCategory(Path sourceFile, Path category) {
+    private List<Map<String, Object>> convertInCategory(Path sourceFile, Path category,
+                                                        Path pluginDataFolder) {
         List<Map<String, Object>> entries = new ArrayList<>();
         YamlConfiguration src = new YamlConfiguration();
         try {
@@ -334,7 +336,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         boolean isSpawnersDir = "spawners".equalsIgnoreCase(categoryName);
         if (isSpawnersDir) {
             preserveNullSpawnerConditions(src, sourceFile);
-            return convertSpawners(src, sourceFile, entries);
+            return convertSpawners(src, sourceFile, pluginDataFolder, entries);
         }
         boolean isDropTablesDir = "droptables".equalsIgnoreCase(categoryName);
         if (isDropTablesDir) preserveNullDropTableConditions(src, sourceFile);
@@ -345,6 +347,9 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "unsupported", "Source drop catalog could not be read completely; affected drop entries were preserved.", "WARN");
         }
         if (isDropTablesDir) return convertDropTables(src, sourceFile, entries, dropCatalog);
+
+        ConfigurationSection defaultMobOptions = readDefaultMobOptions(
+                pluginDataFolder, sourceFile, entries);
 
         for (String mobKey : src.getKeys(false)) {
             ConfigurationSection mob = src.getConfigurationSection(mobKey);
@@ -363,7 +368,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                 for (String nestedKey : mob.getKeys(false)) {
                     ConfigurationSection nested = mob.getConfigurationSection(nestedKey);
                     if (nested != null) {
-                        convertMob(nestedKey, nested, sourceFile.toString(), entries, dropCatalog);
+                        convertMob(nestedKey, nested, sourceFile.toString(), entries, dropCatalog,
+                                defaultMobOptions);
                     } else {
                         note(entries, sourceFile.toString(), "mobs." + nestedKey, "mobs", mob.get(nestedKey),
                                 "unsupported", "Mob definition must be a configuration section; original value preserved in migration report.", "WARN");
@@ -371,13 +377,34 @@ public final class MythicMobsImporter implements MigrationImporter {
                 }
             } else if (ciGet(mob, "Type", "MobType", "EntityType", "Health", "Damage", "Display",
                     "Options", "Skills", "Drops", "Equipment", "Disguise", "Faction", "LevelModifiers") != null) {
-                convertMob(mobKey, mob, sourceFile.toString(), entries, dropCatalog);
+                convertMob(mobKey, mob, sourceFile.toString(), entries, dropCatalog,
+                        defaultMobOptions);
             } else {
                 note(entries, sourceFile.toString(), mobKey, "mobs", mob.getValues(true), "unsupported",
                         "Unrecognized top-level mob definition preserved in migration report.", "WARN");
             }
         }
         return entries;
+    }
+
+    private ConfigurationSection readDefaultMobOptions(Path pluginDataFolder, Path sourceFile,
+                                                        List<Map<String, Object>> entries) {
+        if (pluginDataFolder == null) return null;
+        Path configFile = pluginDataFolder.resolve("config-mobs.yml");
+        if (Files.notExists(configFile)) return null;
+        YamlConfiguration config = new YamlConfiguration();
+        try {
+            config.load(configFile.toFile());
+        } catch (java.io.IOException | org.bukkit.configuration.InvalidConfigurationException
+                 | SecurityException ex) {
+            note(entries, sourceFile.toString(), "Configuration.DefaultMobOptions",
+                    "mob.unsupported.DefaultMobOptions", ex.getMessage(), "unsupported",
+                    "config-mobs.yml could not be parsed; documented Mythic built-in defaults are used.",
+                    "WARN");
+            return null;
+        }
+        ConfigurationSection configuration = ciSection(config, "Configuration");
+        return configuration == null ? null : ciSection(configuration, "DefaultMobOptions");
     }
 
     private static void preserveNullImmunityConditions(YamlConfiguration config, Path sourceFile) {
@@ -757,9 +784,11 @@ public final class MythicMobsImporter implements MigrationImporter {
         return entries;
     }
     private List<Map<String, Object>> convertSpawners(YamlConfiguration src, Path file,
+                                                        Path pluginDataFolder,
                                                         List<Map<String, Object>> entries) {
         ConfigurationSection root = src.getConfigurationSection("spawners");
         if (root == null) root = src;
+        MythicMobCatalog mobCatalog = MythicMobCatalog.read(pluginDataFolder);
         YamlConfiguration target = new YamlConfiguration();
         ConfigurationSection regions = src.getConfigurationSection("regions");
         Map<String, String> seenRegions = new LinkedHashMap<>();
@@ -794,13 +823,24 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
             if (duplicateDefinition(seenSpawners, key, "spawner", file, entries)) continue;
             String path = "spawners." + normalizeId(key);
-            target.set(path + ".mob", mob);
+            var mobResolution = mobCatalog.resolve(mob);
+            String targetMob = mobResolution.resolved() ? mobResolution.targetId() : mob;
+            target.set(path + ".mob", targetMob);
+            if (mobResolution.resolved()) {
+                note(entries, file.toString(), "Spawners." + key + ".Mob", path + ".mob",
+                        mob, "mapped", "Resolved the source Mob reference to " + targetMob + ".");
+            } else {
+                note(entries, file.toString(), "Spawners." + key + ".Mob", path + ".mob",
+                        mob, "unsupported", mobResolution.problem() + " Original reference preserved.", "WARN");
+            }
             copyFirst(sp, target, path + ".world", "world", "worldname", "world-name");
             copyFirst(sp, target, path + ".x", "x", "x-coord", "x-coordinate");
             copyFirst(sp, target, path + ".y", "y", "y-coord", "y-coordinate");
             copyFirst(sp, target, path + ".z", "z", "z-coord", "z-coordinate");
             copyFirst(sp, target, path + ".radius", "radius", "spawn-radius");
             copyFirst(sp, target, path + ".interval", "interval", "cooldown", "delay");
+            copyFirst(sp, target, path + ".chance", "chance");
+            copyFirst(sp, target, path + ".group-size", "groupsize", "group-size");
             copyFirst(sp, target, path + ".max-alive", "max-alive", "maxmobs", "max-mobs");
             copyFirst(sp, target, path + ".max-spawns", "max-spawns", "maxspawns", "max-spawn-count");
             copyFirst(sp, target, path + ".min-players", "min-players", "checkforplayers");
@@ -812,7 +852,19 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (random != null) {
                 for (String mobKey : random.getKeys(false)) {
                     Object weight = ciGet(random, mobKey);
-                    if (weight != null) target.set(path + ".random-mobs." + mobKey, weight);
+                    if (weight == null) continue;
+                    var resolution = mobCatalog.resolve(mobKey);
+                    String targetMobId = resolution.resolved() ? resolution.targetId() : mobKey;
+                    target.set(path + ".random-mobs." + targetMobId, weight);
+                    if (resolution.resolved()) {
+                        note(entries, file.toString(), "Spawners." + key + ".RandomMobs." + mobKey,
+                                path + ".random-mobs." + targetMobId, weight, "mapped",
+                                "Resolved the source Mob reference to " + targetMobId + ".");
+                    } else {
+                        note(entries, file.toString(), "Spawners." + key + ".RandomMobs." + mobKey,
+                                path + ".random-mobs." + targetMobId, weight, "unsupported",
+                                resolution.problem() + " Original reference preserved.", "WARN");
+                    }
                 }
             }
             target.set(path + ".enabled", sp.getBoolean("enabled", true));
@@ -932,7 +984,8 @@ public final class MythicMobsImporter implements MigrationImporter {
     }
 
     private void convertMob(String mobKey, ConfigurationSection mob, String srcFile,
-                            List<Map<String, Object>> entries, MythicDropCatalog dropCatalog) {
+                            List<Map<String, Object>> entries, MythicDropCatalog dropCatalog,
+                            ConfigurationSection defaultMobOptions) {
         List<String> typeKeys = mob.getKeys(false).stream()
                 .filter(key -> key.equalsIgnoreCase("Type") || key.equalsIgnoreCase("MobType")
                         || key.equalsIgnoreCase("EntityType"))
@@ -992,6 +1045,9 @@ public final class MythicMobsImporter implements MigrationImporter {
 
         // ---- Options：MythicMobs 里最常改的语义配置 ----
         ConfigurationSection options = ciSection(mob, "Options");
+        mapExecutionAudience(mob, options, srcFile, entries, target,
+                mobKey + ".ExecutionAudience", "mob.execution-audience",
+                "mob.unsupported.ExecutionAudience");
         boolean preventConversionMapped = true;
         boolean reviveHealthMapped = false;
         if (options != null) {
@@ -1044,15 +1100,11 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOptionInvertedBoolean(options, srcFile, entries, target, "NoGravity", "entity.gravity");
             mapOption(options, srcFile, entries, target, "HasGravity", "entity.gravity");
             mapOption(options, srcFile, entries, target, "Collidable", "entity.collidable");
-            mapOption(options, srcFile, entries, target, "PreventItemPickup", "entity.prevent-item-pickup");
             mapOption(options, srcFile, entries, target, "PreventOtherDrops", "entity.prevent-other-drops");
             mapOption(options, srcFile, entries, target, "PreventSunburn", "entity.prevent-sunburn");
             mapOption(options, srcFile, entries, target, "PreventRandomEquipment", "entity.prevent-random-equipment");
-            mapOption(options, srcFile, entries, target, "NoDamageTicks", "entity.no-damage-ticks");
             mapOption(options, srcFile, entries, target, "CanPickupItems", "entity.can-pickup-items");
-            mapOption(options, srcFile, entries, target, "PreventLeashing", "mob.prevent-leashing");
             mapOption(options, srcFile, entries, target, "PreventRenaming", "mob.prevent-renaming");
-            mapOption(options, srcFile, entries, target, "PreventTransformation", "mob.prevent-transformation");
             mapOption(options, srcFile, entries, target, "PreventTransformationReasons", "mob.prevent-transformation-reasons");
             preventConversionMapped = mapPreventConversion(options, srcFile, entries, target,
                     target.getString("mob.entity-type", ""));
@@ -1155,6 +1207,15 @@ public final class MythicMobsImporter implements MigrationImporter {
                         leftover, "unsupported", "Unmapped MythicMobs Options were preserved.", "WARN");
             }
         }
+
+        mapDefaultedMobOption(options, defaultMobOptions, srcFile, entries, target,
+                "PreventItemPickup", "entity.prevent-item-pickup", true, true);
+        mapDefaultedMobOption(options, defaultMobOptions, srcFile, entries, target,
+                "NoDamageTicks", "entity.no-damage-ticks", 10, false);
+        mapDefaultedMobOption(options, defaultMobOptions, srcFile, entries, target,
+                "PreventLeashing", "mob.prevent-leashing", true, true);
+        mapDefaultedMobOption(options, null, srcFile, entries, target,
+                "PreventTransformation", "mob.prevent-transformation", true, true);
 
         // ---- Equipment / Attributes ----
         mapEquipment(mob, srcFile, entries, target, mobKey);
@@ -1775,7 +1836,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "set-fire", "clear-fire", "freeze", "look-at", "set-rotation", "set-stance",
                     "set-owner", "remove-owner", "set-parent", "remove-parent", "eject-passenger",
                     "add-tag", "remove-tag", "score-set", "score-add", "mythic-aura",
-                    "mythic-aura-remove" -> true;
+                    "mythic-aura-remove", "add-to-audience", "remove-from-audience",
+                    "unset-audience" -> true;
             default -> false;
         };
     }
@@ -2168,9 +2230,18 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "removeowner" -> "remove-owner";
             case "setparent" -> "set-parent";
             case "removeparent" -> "remove-parent";
+            case "addtoaudience", "add-to-audience" -> preserveNamedMechanic("add-to-audience", trimmed, brace);
+            case "removefromaudience", "remove-from-audience" ->
+                    preserveNamedMechanic("remove-from-audience", trimmed, brace);
+            case "unsetaudience", "unset-audience" -> "unset-audience";
             default -> null;
         };
         return mapped == null ? null : withExecutionOptions(mapped + executionSuffix(trimmed), trimmed);
+    }
+
+    private static String preserveNamedMechanic(String name, String raw, int open) {
+        int close = mechanicClose(raw, open);
+        return open >= 0 && close >= open ? name + raw.substring(open, close + 1) : name;
     }
 
     private static String auraMechanic(String raw) {
@@ -2582,6 +2653,53 @@ public final class MythicMobsImporter implements MigrationImporter {
      * <p>MythicMobs 的 {@code Skills/Foo.yml} 是「一条列表含多个 mechanic 行」，
      * 输出为 helstera 的单个命名技能；同名冲突通过加文件前缀规避。</p>
      */
+    private void mapExecutionAudience(ConfigurationSection owner, ConfigurationSection options,
+                                      String srcFile, List<Map<String, Object>> entries,
+                                      YamlConfiguration target, String sourceKey,
+                                      String targetPath, String unsupportedPath) {
+        Object configured = ciGet(options, "ExecutionAudience");
+        String configuredSource = "Options.ExecutionAudience";
+        if (configured == null) {
+            configured = ciGet(owner, "ExecutionAudience");
+            configuredSource = "ExecutionAudience";
+        }
+        if (configured == null) return;
+        if (!(configured instanceof String audience) || !validExecutionAudience(audience)) {
+            target.set(unsupportedPath, configured);
+            note(entries, srcFile, sourceKey + "." + configuredSource, unsupportedPath,
+                    configured, "unsupported",
+                    "ExecutionAudience must be NONE, a supported audience type, or a non-empty @Targeter; original value preserved.",
+                    "WARN");
+            return;
+        }
+        String normalized = audience.trim();
+        target.set(targetPath, normalized);
+        note(entries, srcFile, sourceKey + "." + configuredSource, targetPath,
+                normalized, "mapped",
+                "ExecutionAudience is resolved at skill execution or mob spawn.");
+    }
+
+    private static boolean validExecutionAudience(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String value = raw.trim();
+        if (value.equalsIgnoreCase("NONE")) return true;
+        if (value.startsWith("@")) {
+            if (value.length() == 1) return false;
+            int depth = 0;
+            for (int i = 0; i < value.length(); i++) {
+                char c = value.charAt(i);
+                if (c == '{') depth++;
+                else if (c == '}' && --depth < 0) return false;
+            }
+            return depth == 0;
+        }
+        return switch (value.toLowerCase(Locale.ROOT)) {
+            case "self", "caster", "nonselfworld", "nonself", "target", "world",
+                    "tracked", "trackedplayers", "nearby", "nearbyplayers" -> true;
+            default -> false;
+        };
+    }
+
     private List<Map<String, Object>> convertSkills(YamlConfiguration src, Path file,
                                                      List<Map<String, Object>> entries) {
         String fileStem = file.getFileName() == null ? "skills"
@@ -2616,6 +2734,10 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
             if (!actions.isEmpty()) target.set("skills." + skillId + ".on-decision", actions);
             if (!scan.unsupported.isEmpty()) target.set("skills." + skillId + ".unsupported", scan.unsupported);
+            mapExecutionAudience(skill, ciSection(skill, "Options"), file.toString(), entries,
+                    target, key + ".ExecutionAudience",
+                    "skills." + skillId + ".execution-audience",
+                    "skills." + skillId + ".unsupported.ExecutionAudience");
             List<String> targetConditions = conditionValues(skill, "TargetConditions");
             List<String> triggerConditions = conditionValues(skill, "TriggerConditions");
             if (!targetConditions.isEmpty()) {
@@ -3618,6 +3740,7 @@ public final class MythicMobsImporter implements MigrationImporter {
      * 而报告里一条告警都没有，正是最难排查的一类失败。</p>
      */
     static Object ciGet(ConfigurationSection s, String... names) {
+        if (s == null) return null;
         for (String name : names) {
             Object v = s.get(name);
             if (v != null) return v;
@@ -3632,6 +3755,7 @@ public final class MythicMobsImporter implements MigrationImporter {
     }
 
     static ConfigurationSection ciSection(ConfigurationSection s, String... names) {
+        if (s == null) return null;
         for (String name : names) {
             ConfigurationSection sec = s.getConfigurationSection(name);
             if (sec != null) return sec;
@@ -3673,6 +3797,91 @@ public final class MythicMobsImporter implements MigrationImporter {
         target.set("mob.despawn", "PERSISTENT");
         note(entries, srcFile, "Options.Persistent", "mob.despawn", "PERSISTENT", "mapped",
                 "Persistent mobs are restored from their serialized Bukkit entity.");
+    }
+
+    private void mapDefaultedMobOption(ConfigurationSection options,
+                                       ConfigurationSection defaultMobOptions,
+                                       String srcFile, List<Map<String, Object>> entries,
+                                       YamlConfiguration target, String optionName,
+                                       String targetPath, Object builtInDefault,
+                                       boolean booleanOption) {
+        String explicitKey = findKeyIgnoreCase(options, optionName);
+        if (explicitKey != null) {
+            Object explicit = normalizeDefaultMobOption(options.get(explicitKey), booleanOption);
+            if (explicit == null) {
+                String preservedPath = "mob.unsupported.Options." + optionName;
+                Object raw = options.get(explicitKey);
+                target.set(preservedPath, raw);
+                note(entries, srcFile, "Options." + optionName, preservedPath, raw,
+                        "unsupported", "Invalid option value was preserved instead of being applied.", "WARN");
+            } else {
+                target.set(targetPath, explicit);
+                note(entries, srcFile, "Options." + optionName, targetPath, explicit,
+                        "mapped", "Explicit mob option overrides global and built-in defaults.");
+            }
+            return;
+        }
+
+        String globalKey = findKeyIgnoreCase(defaultMobOptions, optionName);
+        if (globalKey != null) {
+            Object raw = defaultMobOptions.get(globalKey);
+            Object configured = normalizeDefaultMobOption(raw, booleanOption);
+            if (configured != null) {
+                target.set(targetPath, configured);
+                note(entries, srcFile,
+                        "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
+                        targetPath, configured, "defaulted",
+                        "Global Mythic default applied because the mob has no explicit value.");
+                return;
+            }
+            String preservedPath = "mob.unsupported.DefaultMobOptions." + optionName;
+            target.set(preservedPath, raw);
+            note(entries, srcFile,
+                    "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
+                    preservedPath, raw, "unsupported",
+                    "Invalid global default was preserved; the documented built-in default is used.", "WARN");
+        }
+
+        target.set(targetPath, builtInDefault);
+        note(entries, srcFile, "MythicMobs.Options." + optionName + ".default", targetPath,
+                builtInDefault, "defaulted", globalKey == null
+                        ? "Documented MythicMobs built-in default applied."
+                        : "Documented MythicMobs built-in default applied after an invalid global value.");
+    }
+
+    private static Object normalizeDefaultMobOption(Object raw, boolean booleanOption) {
+        if (booleanOption) {
+            if (raw instanceof Boolean value) return value;
+            if (raw instanceof String text) {
+                return switch (text.trim().toLowerCase(Locale.ROOT)) {
+                    case "true", "yes", "1" -> true;
+                    case "false", "no", "0" -> false;
+                    default -> null;
+                };
+            }
+            return null;
+        }
+        if (raw instanceof Number number) {
+            double value = number.doubleValue();
+            if (Double.isFinite(value) && value >= 0 && value <= Integer.MAX_VALUE
+                    && value == Math.rint(value)) return (int) value;
+            return null;
+        }
+        if (raw instanceof String text) {
+            try {
+                int value = Integer.parseInt(text.trim());
+                return value >= 0 ? value : null;
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static String findKeyIgnoreCase(ConfigurationSection section, String name) {
+        if (section == null) return null;
+        return section.getKeys(false).stream().filter(key -> key.equalsIgnoreCase(name))
+                .findFirst().orElse(null);
     }
 
     private void mapOption(ConfigurationSection options, String srcFile,
