@@ -2,7 +2,23 @@
 
 ## MythicMobs Parity Development Status (2026-11-07)
 
-Latest strict fixture `srv-paper-slime-natural-strict-20261107-r10` passes all
+Latest strict fixture `srv-paper-mythic-teleport-strict-20261107-r1` passes all
+391 release probes (372 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies the imported Mythic `teleport`/`tp`
+mechanic for entity and location targets, safe landing, `unsafe` bypass,
+bounded spread, preserved and overridden orientation, and invalid-input
+preservation with warnings. Report:
+`tools/paper-integration/reports/paper-1.21.1-mythic-teleport-strict-20261107-r1.json`
+(SHA-256 `ceefa59fa0b73dce20cca9e1e41cc6cef3536bca4c695c9ffaadd704dacd6406`).
+Compressed server log SHA-256:
+`6c1afb1f8d38418618c119268b26ee5bdb8861dadecef41317f612e82dfd3ee2`.
+Client log archive SHA-256:
+`20ebcf32379083b80384b2993c00a706f718f58d4176ed25b0b7fea9a2247c24`.
+Plugin SHA-256:
+`7cf45192c315391cb726ed3afb89e775d7fb899367d7ec05f4d1330c8f19250c`.
+Latest strict report has 391 probes, zero incomplete.
+
+Previous strict fixture `srv-paper-slime-natural-strict-20261107-r10` passes all
 390 release probes (371 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. Its native Bukkit damage workflow verifies
 `PreventSlimeSplit` on an imported protected Slime: the protected parent dies,
@@ -732,7 +748,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-slime-natural-strict-20261107-r10` has 390 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-mythic-teleport-strict-20261107-r1` has 391 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -741,15 +757,15 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 ### Current Development Goals
 
-This is a partial parity release. The matrix currently has `37`
+This is a partial parity release. The matrix currently has `36`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-07). The full remaining work is:
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 510 cited IDs; 419 report files; 4 directories
-   without reports; 87 missing directories; 186 archived release reports. The
+   Current fixture inventory: 512 cited IDs; 420 report files; 4 directories
+   without reports; 88 missing directories; 188 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -801,6 +817,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
+- Mythic `teleport`/`tp` now imports into a dedicated runtime action with entity and location target support, safe landing checks, `unsafe` bypass, bounded `spreadh`/`spreadv`, preserved/target/numeric yaw and pitch, placeholder resolution, and fail-closed invalid-argument warnings. Strict Paper fixture `srv-paper-mythic-teleport-strict-20261107-r1` verifies the complete importer/runtime contract in 391 release probes.
 - Mythic Sheep `Options.SheepColor` and `Options.Sheared` now have strict importer-to-runtime evidence. Paper fixture `srv-paper-sheep-options-strict-20261107-r1` imports red/sheared and white/unshorn controls through production mob spawning, then completes the 384-probe release catalog with zero incomplete probes.
 - Official `IsInSurvivalMode` and `InSurvivalMode` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player in Survival, reject Adventure, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-survival-mode-import-strict-20261106-r1` completes the 361-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.
 - Official `IsUsingSpyglass` and `IsScoping` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player actively using a Spyglass, then reject the inactive state, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-spyglass-import-strict-20261106-r1` completes the 360-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.

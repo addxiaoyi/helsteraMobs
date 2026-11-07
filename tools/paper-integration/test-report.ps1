@@ -74,6 +74,7 @@ try {
         '[Server thread/INFO]: skill-tree-queue submitted=true restored=true',
         '[Server thread/INFO]: skill-lifecycle reload=true scheduled=true cancelled=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true bounds-condition=true bounding-box-overlap-condition=true',
+        '[Server thread/INFO]: [helsteraMobs] mythic-teleport imported=true entity-target=true location-target=true safe-blocked=true unsafe-bypass=true spread-bounded=true yaw-preserved=true orientation-override=true invalid-preserved=true warnings=true restored=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-looking-at-condition primary-mapped=true alias-mapped=true entity-mapped=true positive=true alias-positive=true wrong-block-rejected=true short-block-distance-rejected=true negative=true entity-positive=true wrong-entity-rejected=true short-entity-distance-rejected=true invalid-rejected=true restored=true',
         '[Server thread/INFO]: [helsteraMobs] execution-audience-mutation imported=true explicit-empty=true added=true persisted=true member-visible=true outsider-hidden=true removed=true empty-persisted=true unset=true unrestricted=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] execution-audience-mob-spawn imported=true mapped=true spawned=true selected-member=true outsider-excluded=true persisted=true member-visible=true outsider-hidden=true passed=true',
@@ -623,6 +624,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'deathLootTriggerConditions').status -eq 'passed') 'killer trigger conditions probe'
     Assert-True (($report.probes | Where-Object id -eq 'deathLootTriggerConditions').observations[0] -match 'effective-luck=1(?:\.0+)? luck-scaled-drop=true') 'Luck attribute drives a chance-scaled natural drop'
     Assert-True (($report.probes | Where-Object id -eq 'skillTeleport').status -eq 'passed') 'teleport mechanic probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mythicTeleport').status -eq 'passed') 'imported Mythic teleport Paper probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mythicTeleport').observations[0] -match
+        'imported=true entity-target=true location-target=true safe-blocked=true unsafe-bypass=true spread-bounded=true yaw-preserved=true orientation-override=true invalid-preserved=true warnings=true restored=true passed=true') 'Mythic teleport probe requires complete importer and runtime evidence'
     Assert-True (($report.probes | Where-Object id -eq 'skillScheduling').status -eq 'passed') 'Paper tick scheduler probe'
     Assert-True (($report.probes | Where-Object id -eq 'skillTreeBranches').status -eq 'passed') 'Paper SkillTree branch gates probe'
     Assert-True (($report.probes | Where-Object id -eq 'skillTreeCastPersistence').status -eq 'passed') 'Paper persisted SkillTree cast gate probe'
@@ -911,6 +915,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'mobOptionsSlimeSplitNatural'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'mobOptionsSlimeSplitNatural'; status = 'passed'; observations = @('mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=4 control-event=true control-cancelled=false control-event-count=3 protected-dead=true control-dead=true protected-children=0 control-children=3 monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'mythicTeleport'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mythicTeleport'; status = 'passed'; observations = @('mythic-teleport imported=true entity-target=true location-target=true safe-blocked=true unsafe-bypass=true spread-bounded=true yaw-preserved=true orientation-override=true invalid-preserved=true warnings=true restored=true passed=true')
     }
     $fullCatalogAudienceFilter = @($fullCatalogReport.probes | Where-Object id -eq 'audience-filter-delivery')
     if ($fullCatalogAudienceFilter.Count -ne 1) {
@@ -3193,6 +3201,7 @@ try {
         ConvertFrom-Json
     foreach ($dynamicProbeId in @('custom-menu-player-workflow', 'audience-player-delivery',
             'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates',
+            'mythicTeleport',
             'spawningDistanceClientWalk', 'interactableClient')) {
         $dynamicProbe = @($noClientReport.probes | Where-Object id -eq $dynamicProbeId)
         Assert-True ($dynamicProbe.Count -eq 1) "no-client report includes $dynamicProbeId"

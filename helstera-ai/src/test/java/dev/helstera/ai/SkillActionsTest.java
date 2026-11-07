@@ -155,6 +155,56 @@ class SkillActionsTest {
     }
 
     @Test
+    void mythicTeleportUsesTargetOrientationAndUnsafeBypassesSpread() {
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(LivingEntity.class);
+        var target = mock(LivingEntity.class);
+        var world = mock(World.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getLocation()).thenReturn(new Location(world, 0, 64, 0, 25, 12));
+        when(target.getLocation()).thenReturn(new Location(world, 10, 70, -4, 130, -30));
+        var context = BehaviorContext.continueExecution(instance, target, 1, 0, 0,
+                "skill", null, target, List.of(target), new Location(world, 0, 64, 0), null);
+
+        SkillExtras.actions().get("teleport-mythic")
+                .create(List.of("spreadh=50", "spreadv=50", "unsafe=true", "yaw=90", "pitch=-15"))
+                .accept(context);
+
+        verify(caster).teleport(new Location(world, 10, 70, -4, 90, -15));
+    }
+
+    @Test
+    void mythicTeleportSafeLandingRequiresGroundAndPassableBody() {
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(LivingEntity.class);
+        var target = mock(LivingEntity.class);
+        var world = mock(World.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getLocation()).thenReturn(new Location(world, 0, 64, 0, 25, 12));
+        when(target.getLocation()).thenReturn(new Location(world, 10, 70, -4, 130, -30));
+        when(world.getBlockAt(org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenAnswer(invocation -> {
+                    int y = invocation.getArgument(1);
+                    var block = mock(org.bukkit.block.Block.class);
+                    when(block.isLiquid()).thenReturn(false);
+                    when(block.getType()).thenReturn(y == 69 ? org.bukkit.Material.STONE : org.bukkit.Material.AIR);
+                    when(block.isPassable()).thenReturn(y != 69);
+                    return block;
+                });
+        var context = BehaviorContext.continueExecution(instance, target, 1, 0, 0,
+                "skill", null, target, List.of(target), new Location(world, 0, 64, 0), null);
+
+        SkillExtras.actions().get("teleport-mythic")
+                .create(List.of("spreadh=0", "spreadv=0", "unsafe=false", "yaw=preserve", "pitch=preserve"))
+                .accept(context);
+
+        verify(caster).teleport(new Location(world, 10, 70, -4, 25, 12));
+    }
+
+    @Test
     @DisplayName("world weather and time mechanics use Bukkit world APIs")
     void worldMechanicsWriteWeatherAndTime() {
         var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);

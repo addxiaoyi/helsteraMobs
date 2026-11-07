@@ -1541,12 +1541,14 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
         }
         if (mechanic.equals("teleport") || mechanic.equals("tp")) {
-            scan.unsupported.add(raw);
-            note(entries, srcFile, mobKey + ".Skills[]",
-                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
-                    "unsupported", "Mythic teleport moves the caster to the selected target; "
-                            + "safe landing, spread and orientation semantics are not implemented.", "WARN");
-            return;
+            if (!validTeleportMechanic(raw)) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid teleport arguments; original line preserved. "
+                                + "Supported options are spreadh, spreadv, unsafe, yaw and pitch.", "WARN");
+                return;
+            }
         }
 
         // Event suffixes must never fall through to the periodic decision list.
@@ -1849,7 +1851,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "set-owner", "remove-owner", "set-parent", "remove-parent", "eject-passenger",
                     "add-tag", "remove-tag", "score-set", "score-add", "mythic-aura",
                     "mythic-aura-remove", "add-to-audience", "remove-from-audience",
-                    "unset-audience" -> true;
+                    "unset-audience", "teleport-mythic" -> true;
             default -> false;
         };
     }
@@ -1926,6 +1928,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     + firstArgOrPositional(trimmed, 2, "0", "z", "dz");
             case "teleportcaster", "teleport-caster" -> "teleport-caster "
                     + firstArgOrPositional(trimmed, 0, "@origin", "target", "location");
+            case "teleport", "tp" -> teleportMechanic(trimmed);
             case "explosion", "explode" -> "explode "
                     + firstArgOrPositional(trimmed, 0, "2", "power", "yield") + " "
                     + firstArgOrPositional(trimmed, 1, "false", "fire") + " "
@@ -2251,6 +2254,101 @@ public final class MythicMobsImporter implements MigrationImporter {
             default -> null;
         };
         return mapped == null ? null : withExecutionOptions(mapped + executionSuffix(trimmed), trimmed);
+    }
+
+    /**
+     * Converts the official Mythic teleport options to a canonical positional action.
+     * The destination remains in the execution targeter suffix, so the runtime can
+     * resolve either an entity target or a location target without losing its type.
+     */
+    private static String teleportMechanic(String raw) {
+        if (!validTeleportMechanic(raw)) return null;
+        return "teleport-mythic "
+                + teleportArgument(raw, 0, "spreadh", "spread-horizontal", "horizontalspread") + " "
+                + teleportArgument(raw, 1, "spreadv", "spread-vertical", "verticalspread") + " "
+                + teleportArgument(raw, 2, "unsafe") + " "
+                + teleportArgument(raw, 3, "yaw") + " "
+                + teleportArgument(raw, 4, "pitch");
+    }
+
+    private static String teleportArgument(String raw, int index, String... names) {
+        String value = firstArg(raw, names);
+        if (value != null) return value;
+        return switch (index) {
+            case 0, 1 -> "0";
+            case 2 -> "false";
+            case 3, 4 -> "preserve";
+            default -> "";
+        };
+    }
+
+    /** Validates teleport's named options before mapping; invalid input is preserved. */
+    private static boolean validTeleportMechanic(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        int open = MythicSpec.mechanicOpen(raw);
+        Set<String> seen = new java.util.HashSet<>();
+        for (String argument : MythicSpec.keyedArguments(raw)) {
+            int equals = argument.indexOf('=');
+            if (equals <= 0) return false;
+            String key = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String value = argument.substring(equals + 1).trim();
+            if (value.isBlank()) return false;
+            String canonical = switch (key) {
+                case "spreadh", "spread-horizontal", "horizontalspread" -> "spreadh";
+                case "spreadv", "spread-vertical", "verticalspread" -> "spreadv";
+                case "unsafe" -> "unsafe";
+                case "yaw" -> "yaw";
+                case "pitch" -> "pitch";
+                case "delay", "repeat", "repeatinterval", "repeat-interval" -> key;
+                default -> null;
+            };
+            if (canonical == null) return false;
+            String duplicateKey = canonical.equals("repeat-interval") ? "repeatinterval" : canonical;
+            if (!seen.add(duplicateKey)) return false;
+            if (canonical.equals("spreadh") || canonical.equals("spreadv")) {
+                if (!finiteNonNegative(value)) return false;
+            } else if (canonical.equals("unsafe")) {
+                if (!validBoolean(value)) return false;
+            } else if (canonical.equals("yaw") || canonical.equals("pitch")) {
+                if (!validOrientation(value)) return false;
+            }
+        }
+
+        int close = mechanicClose(raw, open);
+        if (open >= 0 && close < 0) return false;
+        String suffix = open < 0 ? raw.substring(raw.indexOf(' ') < 0 ? raw.length() : raw.indexOf(' ') + 1)
+                : close < 0 ? "" : raw.substring(close + 1);
+        for (String token : suffix.trim().split("\\s+")) {
+            if (token.isBlank() || token.startsWith("@") || token.startsWith("?")
+                    || token.startsWith("~") || token.endsWith("%") || token.equals(">")) continue;
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean finiteNonNegative(String raw) {
+        if (raw.contains("<")) return true;
+        try {
+            double value = Double.parseDouble(raw);
+            return Double.isFinite(value) && value >= 0;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean validBoolean(String raw) {
+        return Set.of("true", "false", "yes", "no", "on", "off", "1", "0")
+                .contains(raw.toLowerCase(Locale.ROOT));
+    }
+
+    private static boolean validOrientation(String raw) {
+        if (raw.equalsIgnoreCase("preserve") || raw.equalsIgnoreCase("caster")
+                || raw.equalsIgnoreCase("target") || raw.contains("<")) return true;
+        try {
+            return Double.isFinite(Double.parseDouble(raw));
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
     }
 
     private static String preserveNamedMechanic(String name, String raw, int open) {

@@ -38,7 +38,21 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-audience-filter-negative-strict-20261107-r1`
+Latest strict fixture `srv-paper-mythic-teleport-strict-20261107-r1` passes all
+391 probes (372 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. It verifies imported Mythic `teleport`/`tp` for entity and
+location targets, safe landing, `unsafe` bypass, bounded spread, preserved and
+overridden orientation, and invalid-input preservation with warnings. Report:
+`reports/paper-1.21.1-mythic-teleport-strict-20261107-r1.json`;
+server log: `reports/paper-1.21.1-mythic-teleport-strict-20261107-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-mythic-teleport-strict-20261107-r1-client-logs.tar.gz`.
+Report SHA-256: `ceefa59fa0b73dce20cca9e1e41cc6cef3536bca4c695c9ffaadd704dacd6406`;
+server log SHA-256: `6c1afb1f8d38418618c119268b26ee5bdb8861dadecef41317f612e82dfd3ee2`;
+client log SHA-256: `20ebcf32379083b80384b2993c00a706f718f58d4176ed25b0b7fea9a2247c24`;
+plugin SHA-256: `7cf45192c315391cb726ed3afb89e775d7fb899367d7ec05f4d1330c8f19250c`.
+
+Previous strict fixture `srv-paper-audience-filter-negative-strict-20261107-r1`
 passed all 389 probes (370 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. Its two-client workflow verifies that
 `permission:!helstera.menu` excludes the permission-bearing tester and includes

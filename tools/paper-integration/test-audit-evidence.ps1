@@ -40,6 +40,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'mobOptionsSlimeSplitNatural'; status = 'passed'; observations = @('mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=4 control-event=true control-cancelled=false control-event-count=3 protected-dead=true control-dead=true protected-children=0 control-children=3 monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true')
     }
+    $fullReport.expectedProbeIds += 'mythicTeleport'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mythicTeleport'; status = 'passed'; observations = @('mythic-teleport imported=true entity-target=true location-target=true safe-blocked=true unsafe-bypass=true spread-bounded=true yaw-preserved=true orientation-override=true invalid-preserved=true warnings=true restored=true passed=true')
+    }
     $audienceFilterProbe = @($fullReport.probes | Where-Object id -eq 'audience-filter-delivery')
     if ($audienceFilterProbe.Count -ne 1) { throw 'Synthetic release report must contain audience-filter-delivery.' }
     $audienceFilterProbe[0].observations = @('{"permissionNegativeTesterOmitted":true,"permissionNegativeGuestIncluded":true,"factionNegativeTesterIncluded":true,"factionNegativeGuestExcluded":true}')

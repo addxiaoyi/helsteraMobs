@@ -1,6 +1,21 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-slime-natural-strict-20261107-r10` passed the full
+Latest fixture `srv-paper-mythic-teleport-strict-20261107-r1` passed the full
+strict gate on Paper 1.21.1-133: 391 registered probes, 372 passed, 19
+expected rejections, and zero failed or incomplete. It verifies imported
+Mythic `teleport`/`tp` for entity and location targets, safe landing,
+`unsafe` bypass, bounded spread, preserved and overridden orientation, and
+invalid-input preservation with warnings. Report:
+[paper-1.21.1-mythic-teleport-strict-20261107-r1.json](reports/paper-1.21.1-mythic-teleport-strict-20261107-r1.json), SHA-256:
+`ceefa59fa0b73dce20cca9e1e41cc6cef3536bca4c695c9ffaadd704dacd6406`.
+Compressed server log SHA-256:
+`6c1afb1f8d38418618c119268b26ee5bdb8861dadecef41317f612e82dfd3ee2`.
+Client log archive SHA-256:
+`20ebcf32379083b80384b2993c00a706f718f58d4176ed25b0b7fea9a2247c24`.
+Plugin SHA-256:
+`7cf45192c315391cb726ed3afb89e775d7fb899367d7ec05f4d1330c8f19250c`.
+
+Previous fixture `srv-paper-slime-natural-strict-20261107-r10` passed the full
 strict gate on Paper 1.21.1-133: 390 registered probes, 371 passed, 19
 expected rejections, and zero failed or incomplete. The imported protected
 Slime was killed through Bukkit's real damage path; its native

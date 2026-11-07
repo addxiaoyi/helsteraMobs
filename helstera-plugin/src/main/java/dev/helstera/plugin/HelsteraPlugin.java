@@ -667,6 +667,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         // 目的：跨版本验证不依赖人工进服，也不需要 RCON / 网页通道。
         if (getConfig().getBoolean("debug.self-test", false)) {
             runSelfTest();
+            runMythicTeleportSelfTest();
         }
         if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
             runEntityOptionsSelfTest();
@@ -9419,6 +9420,236 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (location == null) return "null";
         return String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f",
                 location.getX(), location.getY(), location.getZ());
+    }
+
+    /**
+     * Verifies the imported Mythic teleport mechanic against real Bukkit entities.
+     *
+     * <p>The native teleport self-test above intentionally covers a different
+     * contract. This probe exercises the importer, the canonical Mythic action,
+     * entity and location target contexts, and the safe/unsafe landing rules in
+     * one isolated Paper fixture.</p>
+     */
+    private void runMythicTeleportSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            boolean imported = false;
+            boolean entityTarget = false;
+            boolean locationTarget = false;
+            boolean safeBlocked = false;
+            boolean unsafeBypass = false;
+            boolean spreadBounded = false;
+            boolean yawPreserved = false;
+            boolean orientationOverride = false;
+            boolean invalidPreserved = false;
+            boolean warnings = false;
+            boolean restored = false;
+            Path probeRoot = null;
+            org.bukkit.entity.Zombie caster = null;
+            org.bukkit.entity.Zombie target = null;
+            dev.helstera.api.instance.ModelInstance managed = null;
+            Map<org.bukkit.block.Block, org.bukkit.block.BlockState> savedBlocks = new LinkedHashMap<>();
+            try {
+                var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+                if (world == null || instances() == null || behaviorRegistry() == null) {
+                    throw new IllegalStateException("world, instances, or behavior registry unavailable");
+                }
+
+                probeRoot = Files.createTempDirectory("helstera-mythic-teleport-");
+                Path source = Files.createDirectories(probeRoot.resolve("Skills"))
+                        .resolve("teleport.yml");
+                Files.writeString(source, """
+                        skills:
+                          move:
+                            Skills:
+                              - teleport @target
+                              - tp{spreadh=1;spreadv=0;unsafe=false;yaw=preserve;pitch=preserve} @target
+                              - tp{spreadh=-1} @target
+                              - tp{unsafe=maybe} @target
+                              - tp{unknown=1} @target
+                        """);
+
+                MythicMobsImporter importer = new MythicMobsImporter();
+                var plan = importer.convert(source).stream()
+                        .filter(entry -> "skills.yml".equals(entry.get("target-file")))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("teleport import plan missing"));
+                YamlConfiguration importedSkills = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(plan.get("content"))));
+                List<String> validLines = importedSkills.getStringList("skills.move.on-decision");
+                List<String> invalidLines = importedSkills.getStringList("skills.move.unsupported");
+                imported = validLines.equals(List.of(
+                        "teleport-mythic 0 0 false preserve preserve @target",
+                        "teleport-mythic 1 0 false preserve preserve @target"));
+                invalidPreserved = invalidLines.equals(List.of(
+                        "tp{spreadh=-1} @target", "tp{unsafe=maybe} @target",
+                        "tp{unknown=1} @target"));
+                warnings = importer.convert(source).stream()
+                        .filter(entry -> "WARN".equals(entry.get("severity")))
+                        .filter(entry -> String.valueOf(entry.get("note"))
+                                .contains("Invalid teleport arguments"))
+                        .count() == 3;
+                if (!imported) throw new IllegalStateException("valid teleport lines were not canonicalized");
+
+                var skills = new dev.helstera.ai.skill.SkillService(
+                        (dev.helstera.ai.BehaviorRegistryImpl) behaviorRegistry(), getLogger());
+                skills.loadSkills(importedSkills.getConfigurationSection("skills"));
+                String entityAction = validLines.get(0);
+                var behaviors = behaviorRegistry();
+
+                Location spawn = world.getSpawnLocation().clone();
+                int baseY = Math.min(world.getMaxHeight() - 24,
+                        Math.max(world.getMinHeight() + 20, spawn.getBlockY() + 4));
+                int safeX = spawn.getBlockX() + 32;
+                int safeZ = spawn.getBlockZ() + 32;
+                int blockedX = safeX + 12;
+                int blockedZ = safeZ;
+                Location safeLocation = new Location(world, safeX + 0.5, baseY + 1,
+                        safeZ + 0.5, 130F, -30F);
+                Location blockedLocation = new Location(world, blockedX + 0.5, baseY + 1,
+                        blockedZ + 0.5, 0F, 0F);
+                Location casterLocation = new Location(world, safeX - 18.5, baseY + 1,
+                        safeZ + 0.5, 25F, 12F);
+                safeLocation.getChunk().load();
+                blockedLocation.getChunk().load();
+                casterLocation.getChunk().load();
+
+                java.util.function.Consumer<org.bukkit.block.Block> remember = block ->
+                        savedBlocks.putIfAbsent(block, block.getState());
+                java.util.function.BiConsumer<org.bukkit.block.Block, org.bukkit.Material> setBlock =
+                        (block, material) -> {
+                            remember.accept(block);
+                            block.setType(material, false);
+                        };
+
+                // A broad, flat platform makes the safe and spread cases
+                // independent of the generated world's terrain.
+                for (int x = safeX - 5; x <= safeX + 5; x++) {
+                    for (int z = safeZ - 5; z <= safeZ + 5; z++) {
+                        setBlock.accept(world.getBlockAt(x, baseY, z), org.bukkit.Material.STONE);
+                        for (int y = baseY + 1; y <= baseY + 4; y++) {
+                            setBlock.accept(world.getBlockAt(x, y, z), org.bukkit.Material.AIR);
+                        }
+                    }
+                }
+                // Fill the entire safe-search band so safe landing cannot
+                // accidentally find a higher or lower standing position.
+                for (int x = blockedX - 3; x <= blockedX + 3; x++) {
+                    for (int z = blockedZ - 3; z <= blockedZ + 3; z++) {
+                        for (int y = baseY - 17; y <= baseY + 18; y++) {
+                            setBlock.accept(world.getBlockAt(x, y, z), org.bukkit.Material.OBSIDIAN);
+                        }
+                    }
+                }
+
+                caster = world.spawn(casterLocation, org.bukkit.entity.Zombie.class);
+                caster.setAI(false);
+                caster.setGravity(false);
+                caster.setInvulnerable(true);
+                target = world.spawn(safeLocation, org.bukkit.entity.Zombie.class);
+                target.setAI(false);
+                target.setGravity(false);
+                target.setInvulnerable(true);
+                managed = instances().bind("example/emberling", caster,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+
+                var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        managed, target, 1.0, 1.0, 0, "probe", null, target,
+                        List.of(target), casterLocation, null);
+                boolean entityDispatched = runIntegrationAction(skills, behaviors,
+                        entityAction, context);
+                entityTarget = entityDispatched
+                        && caster.getLocation().distanceSquared(safeLocation) < 1.0;
+
+                caster.teleport(casterLocation);
+                boolean locationDispatched = runIntegrationAction(skills, behaviors,
+                        "teleport-mythic 0 0 false preserve preserve",
+                        context.withLocationTarget(safeLocation));
+                locationTarget = locationDispatched
+                        && caster.getLocation().distanceSquared(safeLocation) < 1.0;
+
+                caster.teleport(casterLocation);
+                boolean blockedDispatched = runIntegrationAction(skills, behaviors,
+                        "teleport-mythic 0 0 false preserve preserve",
+                        context.withLocationTarget(blockedLocation));
+                safeBlocked = blockedDispatched
+                        && caster.getLocation().distanceSquared(casterLocation) < 1.0;
+
+                caster.teleport(casterLocation);
+                boolean unsafeDispatched = runIntegrationAction(skills, behaviors,
+                        "teleport-mythic 0 0 true preserve preserve",
+                        context.withLocationTarget(blockedLocation));
+                unsafeBypass = unsafeDispatched
+                        && caster.getLocation().distanceSquared(blockedLocation) < 1.0
+                        && !caster.getLocation().getBlock().isPassable();
+
+                caster.teleport(casterLocation);
+                boolean spreadDispatched = runIntegrationAction(skills, behaviors,
+                        "teleport-mythic 2 0 false preserve preserve",
+                        context.withLocationTarget(safeLocation));
+                Location spreadResult = caster.getLocation();
+                double spreadDistance = Math.sqrt(Math.pow(spreadResult.getX() - safeLocation.getX(), 2)
+                        + Math.pow(spreadResult.getZ() - safeLocation.getZ(), 2));
+                spreadBounded = spreadDispatched && spreadDistance <= 3.0;
+
+                caster.teleport(casterLocation);
+                caster.teleport(casterLocation.clone().setDirection(casterLocation.getDirection()));
+                boolean preservedDispatched = runIntegrationAction(skills, behaviors,
+                        "teleport-mythic 0 0 false preserve preserve",
+                        context.withLocationTarget(safeLocation));
+                Location preserved = caster.getLocation();
+                yawPreserved = preservedDispatched && Math.abs(preserved.getYaw() - 25F) < 0.5F
+                        && Math.abs(preserved.getPitch() - 12F) < 0.5F;
+
+                caster.teleport(casterLocation);
+                boolean overrideDispatched = runIntegrationAction(skills, behaviors,
+                        "teleport-mythic 0 0 false 90 -15",
+                        context.withLocationTarget(safeLocation));
+                Location overridden = caster.getLocation();
+                orientationOverride = overrideDispatched && Math.abs(overridden.getYaw() - 90F) < 0.5F
+                        && Math.abs(overridden.getPitch() + 15F) < 0.5F;
+            } catch (Throwable failure) {
+                getLogger().warning("mythic-teleport probe failed=" + failure);
+            } finally {
+                if (managed != null && instances() != null) {
+                    try { instances().despawn(managed.instanceId()); }
+                    catch (Throwable failure) { getLogger().warning("mythic-teleport instance cleanup failed=" + failure); }
+                }
+                if (caster != null && caster.isValid()) caster.remove();
+                if (target != null && target.isValid()) target.remove();
+                boolean clean = true;
+                for (var entry : savedBlocks.entrySet()) {
+                    try {
+                        if (!entry.getValue().update(true, false)) clean = false;
+                    } catch (Throwable failure) {
+                        clean = false;
+                    }
+                }
+                if (probeRoot != null) {
+                    try (var paths = Files.walk(probeRoot)) {
+                        for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                            Files.deleteIfExists(path);
+                        }
+                    } catch (Throwable failure) {
+                        clean = false;
+                    }
+                }
+                restored = clean && savedBlocks.entrySet().stream()
+                        .allMatch(entry -> entry.getKey().getType() == entry.getValue().getType());
+                getLogger().info("mythic-teleport imported=" + imported
+                        + " entity-target=" + entityTarget
+                        + " location-target=" + locationTarget
+                        + " safe-blocked=" + safeBlocked
+                        + " unsafe-bypass=" + unsafeBypass
+                        + " spread-bounded=" + spreadBounded
+                        + " yaw-preserved=" + yawPreserved
+                        + " orientation-override=" + orientationOverride
+                        + " invalid-preserved=" + invalidPreserved
+                        + " warnings=" + warnings
+                        + " restored=" + restored
+                        + " passed=" + (imported && entityTarget && locationTarget && safeBlocked
+                        && unsafeBypass && spreadBounded && yawPreserved && orientationOverride
+                        && invalidPreserved && warnings && restored));
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 60L);
     }
 
     private void runLootSelfTest() {
