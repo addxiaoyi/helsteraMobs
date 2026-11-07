@@ -2,6 +2,7 @@ package dev.helstera.integrations.mythicmobs;
 
 import dev.helstera.api.integration.Capability;
 import dev.helstera.api.integration.IntegrationAdapter;
+import dev.helstera.api.integration.IntegrationContract;
 import dev.helstera.runtime.instance.InstanceManagerImpl;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
@@ -48,6 +49,14 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
 
     @Override public String supportedVersions() {
         return "5.3.x - 5.7.x declared; installed-plugin runtime compatibility is not CI-verified";
+    }
+    @Override public IntegrationContract contract() {
+        return new IntegrationContract(pluginName(), supportedVersions(),
+                Set.of(Capability.MOB_MODEL_BINDING, Capability.EVENTS,
+                        Capability.SKILLS, Capability.CONDITIONS),
+                Set.of("MythicMobSpawnEvent", "MythicMobs mechanic/condition registration API",
+                        "version-specific integration fixture"),
+                true, true);
     }
 
     @Override

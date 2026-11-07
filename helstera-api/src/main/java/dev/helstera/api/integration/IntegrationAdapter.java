@@ -15,7 +15,14 @@ public interface IntegrationAdapter {
     /** 支持的版本范围描述，例如 "5.3.x - 5.7.x"。 */
     String supportedVersions();
 
-    /** 能力列表。 */
+    /**
+     * Static compatibility boundary. This is separate from
+     * {@link #capabilities()}, which only reports capabilities active after a
+     * successful runtime hook.
+     */
+    IntegrationContract contract();
+
+    /** 当前已连接并可安全调用的能力列表。 */
     Set<Capability> capabilities();
 
     /** 是否已连接（插件存在且版本匹配、钩子启用成功）。 */

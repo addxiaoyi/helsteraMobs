@@ -1,6 +1,7 @@
 package dev.helstera.integrations;
 
 import dev.helstera.api.integration.IntegrationAdapter;
+import dev.helstera.api.integration.IntegrationContract;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
@@ -18,7 +19,22 @@ public final class IntegrationRegistryImpl implements dev.helstera.api.integrati
 
     @Override
     public void register(IntegrationAdapter adapter) {
-        adapters.put(adapter.pluginName(), adapter);
+        if (adapter == null) throw new IllegalArgumentException("adapter must not be null");
+        String pluginName = adapter.pluginName();
+        if (pluginName == null || pluginName.isBlank()) {
+            throw new IllegalArgumentException("adapter pluginName must not be blank");
+        }
+        String supportedVersions = adapter.supportedVersions();
+        if (supportedVersions == null || supportedVersions.isBlank()) {
+            throw new IllegalArgumentException("adapter supportedVersions must not be blank");
+        }
+        IntegrationContract contract = adapter.contract();
+        if (contract == null
+                || !pluginName.equals(contract.pluginName())
+                || !supportedVersions.equals(contract.supportedVersions())) {
+            throw new IllegalArgumentException("adapter contract must match pluginName and supportedVersions");
+        }
+        adapters.put(pluginName, adapter);
     }
 
     @Override
@@ -60,9 +76,15 @@ public final class IntegrationRegistryImpl implements dev.helstera.api.integrati
         for (IntegrationAdapter a : adapters.values()) {
             Plugin p = Bukkit.getPluginManager().getPlugin(a.pluginName());
             String ver = p == null ? "未安装" : p.getDescription().getVersion();
+            IntegrationContract contract = a.contract();
             sb.append(String.format("· %s: %s（支持 %s）能力=%s%n",
                     a.pluginName(), a.isConnected() ? "已连接" : "未连接", ver,
                     a.capabilities()));
+            sb.append("  └ 契约能力=").append(contract.declaredCapabilities())
+                    .append(" 前置=").append(contract.prerequisites())
+                    .append(" fail-closed=").append(contract.failClosed())
+                    .append(" 保留源值=").append(contract.preservesSourceValues())
+                    .append('\n');
             if (!a.isConnected() && a.statusReport() != null) {
                 sb.append("  └ ").append(a.statusReport()).append('\n');
             }

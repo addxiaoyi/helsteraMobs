@@ -1,6 +1,7 @@
 package dev.helstera.integrations;
 
 import dev.helstera.api.integration.IntegrationAdapter;
+import dev.helstera.api.integration.IntegrationContract;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
@@ -29,6 +30,12 @@ public final class BlockedExternalAdapter implements IntegrationAdapter {
     @Override public String pluginName() { return pluginName; }
 
     @Override public String supportedVersions() { return supportedVersions; }
+
+    @Override
+    public IntegrationContract contract() {
+        return IntegrationContract.blocked(pluginName, supportedVersions,
+                "external runtime API bridge");
+    }
 
     @Override public Set<dev.helstera.api.integration.Capability> capabilities() {
         return Set.of();
