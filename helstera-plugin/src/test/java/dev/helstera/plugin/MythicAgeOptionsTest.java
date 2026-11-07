@@ -140,6 +140,50 @@ class MythicAgeOptionsTest {
     }
 
     @Test
+    void importedMobDefaultsFlowIntoRuntimeSpawnPolicies() {
+        var builtIn = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                entity:
+                  prevent-item-pickup: true
+                  no-damage-ticks: 10
+                mob:
+                  prevent-leashing: true
+                  prevent-transformation: true
+                """));
+        var global = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                entity:
+                  prevent-item-pickup: false
+                  no-damage-ticks: 19
+                mob:
+                  prevent-leashing: false
+                  prevent-transformation: true
+                """));
+        var explicit = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                entity:
+                  prevent-item-pickup: true
+                  no-damage-ticks: 27
+                mob:
+                  prevent-leashing: true
+                  prevent-transformation: false
+                """));
+
+        var builtInOptions = HelsteraPlugin.applyMobOptionPolicies(builtIn, SpawnOptions.defaults());
+        var globalOptions = HelsteraPlugin.applyMobOptionPolicies(global, SpawnOptions.defaults());
+        var explicitOptions = HelsteraPlugin.applyMobOptionPolicies(explicit, SpawnOptions.defaults());
+        assertTrue(builtInOptions.preventItemPickup());
+        assertEquals(10, builtInOptions.noDamageTicks());
+        assertTrue(builtInOptions.preventLeashing());
+        assertTrue(builtInOptions.preventTransformation());
+        assertFalse(globalOptions.preventItemPickup());
+        assertEquals(19, globalOptions.noDamageTicks());
+        assertFalse(globalOptions.preventLeashing());
+        assertTrue(globalOptions.preventTransformation());
+        assertTrue(explicitOptions.preventItemPickup());
+        assertEquals(27, explicitOptions.noDamageTicks());
+        assertTrue(explicitOptions.preventLeashing());
+        assertFalse(explicitOptions.preventTransformation());
+    }
+
+    @Test
     void appliesRaidAndTameOptionsOnlyThroughMatchingBukkitInterfaces() {
         Map<String, Object> calls = new LinkedHashMap<>();
         var patrolBlock = Proxy.newProxyInstance(org.bukkit.block.Block.class.getClassLoader(),

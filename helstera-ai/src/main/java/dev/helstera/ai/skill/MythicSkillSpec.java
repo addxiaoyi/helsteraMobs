@@ -18,7 +18,8 @@ public record MythicSkillSpec(
         String targeter,
         String trigger,
         Double chance,
-        List<String> inlineConditions) {
+        List<String> inlineConditions,
+        List<String> targetConditions) {
 
     private static final Pattern CHANCE = Pattern.compile(
             "^[+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?%$");
@@ -30,6 +31,7 @@ public record MythicSkillSpec(
         arguments = Collections.unmodifiableMap(new LinkedHashMap<>(arguments));
         positional = List.copyOf(positional);
         inlineConditions = List.copyOf(inlineConditions);
+        targetConditions = List.copyOf(targetConditions);
         if (chance != null && (!Double.isFinite(chance) || chance < 0 || chance > 100)) {
             throw new IllegalArgumentException("chance must be between 0 and 100");
         }
@@ -56,9 +58,10 @@ public record MythicSkillSpec(
         String trigger = null;
         Double chance = null;
         List<String> conditions = new ArrayList<>();
+        List<String> targetConditions = new ArrayList<>();
         for (int i = 0; i < tokens.size(); i++) {
             String token = tokens.get(i);
-            if (token.equals("@") || token.equals("?")) {
+            if (token.equals("@") || token.equals("?") || token.equals("?@")) {
                 throw new IllegalArgumentException("incomplete targeter or condition");
             }
             if (token.startsWith("@") && token.length() > 1) {
@@ -81,6 +84,7 @@ public record MythicSkillSpec(
                 if (trigger != null) throw new IllegalArgumentException("multiple event triggers");
                 trigger = token.substring(3);
             }
+            else if (token.startsWith("?@") && token.length() > 2) targetConditions.add(token.substring(2));
             else if (token.startsWith("?") && token.length() > 1) conditions.add(token.substring(1));
             else {
                 Matcher match = CHANCE.matcher(token);
@@ -97,7 +101,8 @@ public record MythicSkillSpec(
                 }
             }
         }
-        return new MythicSkillSpec(mechanic, args, positional, targeter, trigger, chance, conditions);
+        return new MythicSkillSpec(mechanic, args, positional, targeter, trigger, chance,
+                conditions, targetConditions);
     }
 
     private static void parseBody(String body, Map<String, String> args, List<String> positional) {

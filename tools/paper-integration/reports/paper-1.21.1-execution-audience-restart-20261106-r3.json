@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "srv-paper-execution-audience-restart-20261106-r3",
+  "testType": "two-boot-persistent-mob-execution-audience",
+  "paperVersion": "1.21.1-133",
+  "result": "passed",
+  "entityUuid": "8d8aed94-695e-4e7f-aaec-27ddde7f052a",
+  "audienceUuids": [
+    "00000000-0000-0000-0000-000000000001",
+    "00000000-0000-0000-0000-000000000002"
+  ],
+  "firstBoot": {
+    "result": "passed",
+    "pdcWritten": true,
+    "persistent": true,
+    "log": "paper-1.21.1-execution-audience-restart-20261106-r3-first-boot.log.gz",
+    "logSha256": "eea91b7db72c77dde5ae62e8a22dcf3011a465b4dc423bf9292dc5f0a9caaa1a"
+  },
+  "secondBoot": {
+    "result": "passed",
+    "sameEntityUuid": true,
+    "audienceRestored": true,
+    "pdcRestored": true,
+    "persistent": true,
+    "restoredManagedMobCount": 1,
+    "log": "paper-1.21.1-execution-audience-restart-20261106-r3-second-boot.log.gz",
+    "logSha256": "bb73f87dba8917651b879e64331255e06bfc051142240be46abb539817a5f144"
+  },
+  "pluginSha256": "6ba52a22a59492ec6d0fe82991d7d27d7298e152e91515974ff615a08091a750",
+  "postRestartClientVisibility": "not-tested"
+}

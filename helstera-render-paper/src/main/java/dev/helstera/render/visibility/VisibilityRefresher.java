@@ -63,30 +63,31 @@ public final class VisibilityRefresher {
 
     private void refresh() {
         for (ModelInstanceImpl inst : instances.allImpl()) {
-            if (!inst.isValid()) continue;
-            List<Player> target = visibility.targetViewers(inst);
-            List<UUID> current = visibility.subscribersOf(inst);
-            Set<UUID> targetIds = new HashSet<>();
-            for (Player p : target) targetIds.add(p.getUniqueId());
-
-            // 新增可见
-            List<Player> toShow = new ArrayList<>();
-            for (Player p : target) {
-                if (!current.contains(p.getUniqueId())) toShow.add(p);
-            }
-            // 移除可见
-            List<Player> toHide = new ArrayList<>();
-            for (UUID id : current) {
-                if (!targetIds.contains(id)) {
-                    Player p = Bukkit.getPlayer(id);
-                    if (p != null) toHide.add(p);
-                }
-            }
-            renderer.applyVisibility(inst, toShow, toHide);
-            visibility.setSubscribers(inst, target);
-
-            checkRegion(inst, target);
+            refreshInstance(inst);
         }
+    }
+
+    public void refreshInstance(ModelInstanceImpl inst) {
+        if (inst == null || !inst.isValid()) return;
+        List<Player> target = visibility.targetViewers(inst);
+        List<UUID> current = visibility.subscribersOf(inst);
+        Set<UUID> targetIds = new HashSet<>();
+        for (Player p : target) targetIds.add(p.getUniqueId());
+
+        List<Player> toShow = new ArrayList<>();
+        for (Player p : target) {
+            if (!current.contains(p.getUniqueId())) toShow.add(p);
+        }
+        List<Player> toHide = new ArrayList<>();
+        for (UUID id : current) {
+            if (!targetIds.contains(id)) {
+                Player p = Bukkit.getPlayer(id);
+                if (p != null) toHide.add(p);
+            }
+        }
+        renderer.applyVisibility(inst, toShow, toHide);
+        visibility.setSubscribers(inst, target);
+        checkRegion(inst, target);
     }
 
     /** 区域进入/离开检测。 */

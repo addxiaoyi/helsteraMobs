@@ -3,6 +3,7 @@ package dev.helstera.ai.skill;
 import dev.helstera.api.util.EntityTypeSelector;
 import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.api.behavior.VariableLocations;
+import dev.helstera.api.instance.ModelInstance;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -19,11 +20,14 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -167,6 +171,19 @@ public final class SkillExtras {
             Map.entry("name", "name"), Map.entry("stacks", "stacks"),
             Map.entry("s", "stacks"));
     private static volatile java.util.function.Consumer<String> audienceDiagnostic;
+
+    @FunctionalInterface
+    public interface AudienceMobSelector {
+        Collection<? extends ModelInstance> select(String targeter, BehaviorContext context);
+    }
+
+    @FunctionalInterface
+    public interface ExecutionAudienceWriter {
+        void write(ModelInstance instance, Collection<UUID> players);
+    }
+
+    private static volatile AudienceMobSelector audienceMobSelector;
+    private static volatile ExecutionAudienceWriter executionAudienceWriter;
     @FunctionalInterface
     public interface SkillCooldownSetter {
         boolean set(String skillName, BehaviorContext context, long durationMillis);
@@ -197,6 +214,21 @@ public final class SkillExtras {
     /** Optional integration-only recipient diagnostics; null in normal runtime. */
     public static void audienceDiagnostic(java.util.function.Consumer<String> diagnostic) {
         audienceDiagnostic = diagnostic;
+    }
+
+    public static void audienceMobSelector(AudienceMobSelector selector) {
+        audienceMobSelector = selector;
+    }
+
+    public static void executionAudienceWriter(ExecutionAudienceWriter writer) {
+        executionAudienceWriter = writer;
+    }
+
+    public static void updateExecutionAudience(ModelInstance instance, Collection<UUID> players) {
+        if (instance == null) return;
+        ExecutionAudienceWriter writer = executionAudienceWriter;
+        if (writer == null) instance.setExecutionAudience(players);
+        else writer.write(instance, players);
     }
 
     public static void skillCooldownSetter(SkillCooldownSetter setter) {
@@ -354,6 +386,8 @@ public final class SkillExtras {
         dialogueLookup = null;
         cinematicLookup = null;
         managedEntityLookup = null;
+        audienceMobSelector = null;
+        executionAudienceWriter = null;
         auraRegistry = null;
         audienceDiagnostic = null;
         skillCooldownSetter = null;
@@ -2316,6 +2350,18 @@ public final class SkillExtras {
                 }),
                 Map.entry("in-combat", (SkillCatalog.ConditionFactory) a ->
                         ctx -> inCombat(ctx)),
+                Map.entry("is-in-audience", (SkillCatalog.ConditionFactory) a -> {
+                    if (a != null && !a.isEmpty()) {
+                        throw new IllegalArgumentException("is-in-audience takes no arguments");
+                    }
+                    return ctx -> {
+                        LivingEntity entity = conditionEntity(ctx);
+                        if (!(entity instanceof Player player)) return false;
+                        var audience = ctx.executionAudience().orElse(null);
+                        return audience == null
+                                || audience.contains(player.getUniqueId());
+                    };
+                }),
                 Map.entry("target-faction-is", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = str(a, 0, "");
                     return ctx -> {
@@ -2741,12 +2787,18 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("looking-at", (SkillCatalog.ConditionFactory) a -> {
+                    String configuredMode = str(a, 0, "").toLowerCase(Locale.ROOT);
+                    boolean explicitMode = Set.of("block", "entity", "type").contains(configuredMode);
                     String key = keyedArg(a, "type", "t", "block", "b", "entity", "e");
-                    String wanted = key == null ? str(a, 0, "") : key;
+                    String wanted = explicitMode ? str(a, 1, "")
+                            : key == null ? str(a, 0, "") : key;
                     String blockKey = keyedArg(a, "block", "b");
-                    boolean blockMode = blockKey != null || Material.matchMaterial(wanted) != null;
+                    String entityKey = keyedArg(a, "entity", "e");
                     String distanceRaw = keyedArg(a, "distance", "d");
-                    if (distanceRaw == null) distanceRaw = str(a, 1, "5");
+                    if (distanceRaw == null) distanceRaw = str(a, explicitMode ? 2 : 1, "5");
+                    boolean blockMode = "block".equals(configuredMode)
+                            || !"entity".equals(configuredMode) && (blockKey != null
+                            || entityKey == null && Material.matchMaterial(wanted) != null);
                     double distance;
                     try { distance = Double.parseDouble(distanceRaw); }
                     catch (NumberFormatException ignored) { distance = Double.NaN; }
@@ -5353,6 +5405,12 @@ public final class SkillExtras {
                         setter.set(skillName, ctx, millis);
                     };
                 }),
+                Map.entry("add-to-audience", (SkillCatalog.ActionFactory) a ->
+                        audienceMutationAction(a, AudienceMutation.ADD)),
+                Map.entry("remove-from-audience", (SkillCatalog.ActionFactory) a ->
+                        audienceMutationAction(a, AudienceMutation.REMOVE)),
+                Map.entry("unset-audience", (SkillCatalog.ActionFactory) a ->
+                        audienceMutationAction(a, AudienceMutation.UNSET)),
 
                 // ---- 信息 ----
 
@@ -5361,10 +5419,12 @@ public final class SkillExtras {
                     return ctx -> {
                         if (raw.isBlank()) return;
                         try {
-                            // Paper 1.21 移除了 Bukkit#broadcast(String)，
-                            // 必须走 Adventure 的 Component 重载。
-                            org.bukkit.Bukkit.broadcast(net.kyori.adventure.text.Component
-                                    .text(Placeholders.resolve(raw, ctx)));
+                            var component = net.kyori.adventure.text.Component.text(
+                                    Placeholders.resolve(raw, ctx));
+                            org.bukkit.Bukkit.getConsoleSender().sendMessage(component);
+                            for (Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
+                                if (ExecutionAudiences.allows(ctx, player)) player.sendMessage(component);
+                            }
                         } catch (Throwable ignored) {
                             SkillFaults.swallow("SkillExtras#687");
                         }
@@ -5510,7 +5570,7 @@ public final class SkillExtras {
                                 Placeholders.resolve(raw, ctx));
                         try {
                             for (Player p : me.getWorld().getNearbyPlayers(me, radius)) {
-                                p.sendMessage(out);
+                                if (ExecutionAudiences.allows(ctx, p)) p.sendMessage(out);
                             }
                         } catch (Throwable ignored) {
                             SkillFaults.swallow("SkillExtras#730");
@@ -5521,7 +5581,8 @@ public final class SkillExtras {
                     String raw = str(a, 0, "");
                     return ctx -> {
                         if (raw.isBlank()) return;
-                        selfLiving(ctx).filter(e -> e instanceof Player).ifPresent(p -> {
+                        selfLiving(ctx).filter(e -> e instanceof Player)
+                                .filter(e -> ExecutionAudiences.allows(ctx, (Player) e)).ifPresent(p -> {
                             try {
                                 ((Player) p).sendMessage(org.bukkit.ChatColor
                                         .translateAlternateColorCodes('&',
@@ -5579,7 +5640,7 @@ public final class SkillExtras {
                     String pool = str(a, 0, "");
                     return ctx -> {
                         Player t = ctx.target().orElse(null);
-                        if (t == null || pool.isEmpty()) return;
+                        if (t == null || pool.isEmpty() || !ExecutionAudiences.allows(ctx, t)) return;
                         String[] options = pool.split("\\|");
                         String pick = options[java.util.concurrent.ThreadLocalRandom.current()
                                 .nextInt(options.length)].trim();
@@ -5612,7 +5673,16 @@ public final class SkillExtras {
                         Location l = selfLoc(ctx);
                         if (l == null) return;
                         try {
-                            l.getWorld().playSound(l, sound, 1f, 1f);
+                            var executionAudience = ctx.executionAudience().orElse(null);
+                            if (executionAudience == null) {
+                                l.getWorld().playSound(l, sound, 1f, 1f);
+                            } else {
+                                for (Player player : l.getWorld().getPlayers()) {
+                                    if (executionAudience.contains(player.getUniqueId())) {
+                                        player.playSound(l, sound, 1f, 1f);
+                                    }
+                                }
+                            }
                         } catch (Throwable ignored) {
                             SkillFaults.swallow("SkillExtras#799");
                         }
@@ -6467,6 +6537,112 @@ public final class SkillExtras {
     // 辅助
     // ------------------------------------------------------------------
 
+    private enum AudienceMutation { ADD, REMOVE, UNSET }
+
+    private static java.util.function.Consumer<BehaviorContext> audienceMutationAction(
+            List<String> args, AudienceMutation mutation) {
+        Map<String, String> options = new LinkedHashMap<>();
+        for (String arg : args == null ? List.<String>of() : args) {
+            int equals = arg.indexOf('=');
+            if (equals <= 0 || equals == arg.length() - 1) {
+                throw new IllegalArgumentException("audience mechanics accept named options only");
+            }
+            String key = arg.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String normalized = switch (key) {
+                case "a", "audience" -> "audience";
+                case "m", "mobs" -> "mobs";
+                case "isa", "ignoreskillaudience", "ignore-skill-audience" -> "ignore-skill-audience";
+                default -> throw new IllegalArgumentException("unknown audience option: " + key);
+            };
+            if (options.putIfAbsent(normalized, arg.substring(equals + 1).trim()) != null) {
+                throw new IllegalArgumentException("duplicate audience option: " + normalized);
+            }
+        }
+        String audienceSpec = options.get("audience");
+        if (audienceSpec != null && !ExecutionAudiences.isSupported(audienceSpec)) {
+            throw new IllegalArgumentException("unsupported audience selector: " + audienceSpec);
+        }
+        String mobsSpec = options.get("mobs");
+        if (mobsSpec != null && !mobsSpec.startsWith("@")) {
+            throw new IllegalArgumentException("mobs must be an @Targeter");
+        }
+        String ignoreRaw = options.getOrDefault("ignore-skill-audience", "false");
+        if (!ignoreRaw.equalsIgnoreCase("true") && !ignoreRaw.equalsIgnoreCase("false")) {
+            throw new IllegalArgumentException("ignoreSkillAudience must be true or false");
+        }
+        boolean ignoreSkillAudience = Boolean.parseBoolean(ignoreRaw);
+
+        return context -> {
+            if (context == null) return;
+            Set<UUID> selectedPlayers = selectAudiencePlayers(context, audienceSpec);
+            if (selectedPlayers == null) return;
+            if (!ignoreSkillAudience) {
+                Set<UUID> current = context.executionAudience().orElse(null);
+                Set<UUID> updated = mutateAudience(current, selectedPlayers, mutation);
+                if (!Objects.equals(current, updated)) context.setExecutionAudience(updated);
+            }
+            Set<ModelInstance> mobTargets = new LinkedHashSet<>();
+            if (!ignoreSkillAudience && context.instanceValid()) mobTargets.add(context.instance());
+            if (mobsSpec != null) {
+                AudienceMobSelector selector = audienceMobSelector;
+                if (selector != null) {
+                    Collection<? extends ModelInstance> selected;
+                    try {
+                        selected = selector.select(mobsSpec, context);
+                    } catch (RuntimeException ignored) {
+                        selected = null;
+                    }
+                    if (selected != null) mobTargets.addAll(selected);
+                }
+            }
+            for (ModelInstance target : mobTargets) {
+                if (target == null || !target.isValid()) continue;
+                Set<UUID> current = target.executionAudience().orElse(null);
+                Set<UUID> updated = mutateAudience(current, selectedPlayers, mutation);
+                if (!Objects.equals(current, updated)) updateExecutionAudience(target, updated);
+            }
+        };
+    }
+
+    private static Set<UUID> selectAudiencePlayers(BehaviorContext context, String audienceSpec) {
+        if (audienceSpec == null) {
+            Set<UUID> selected = new LinkedHashSet<>();
+            for (LivingEntity entity : targetEntities(context)) {
+                if (entity instanceof Player player) selected.add(player.getUniqueId());
+            }
+            return selected;
+        }
+        ExecutionAudiences.Resolution resolution = ExecutionAudiences.resolve(audienceSpec, context);
+        return resolution.supported() ? resolution.players() : null;
+    }
+
+    private static Set<UUID> mutateAudience(Set<UUID> current, Set<UUID> selected,
+                                            AudienceMutation mutation) {
+        if (mutation == AudienceMutation.UNSET) return null;
+        if (mutation == AudienceMutation.ADD && current == null) return Set.copyOf(selected);
+        Set<UUID> result = current == null ? allKnownPlayerIds() : new LinkedHashSet<>(current);
+        if (mutation == AudienceMutation.ADD) result.addAll(selected);
+        else result.removeAll(selected);
+        return Set.copyOf(result);
+    }
+
+    private static Set<UUID> allKnownPlayerIds() {
+        Set<UUID> players = new LinkedHashSet<>();
+        try {
+            for (org.bukkit.OfflinePlayer player : org.bukkit.Bukkit.getOfflinePlayers()) {
+                if (player.getUniqueId() != null) players.add(player.getUniqueId());
+            }
+            for (Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
+                if (player.getUniqueId() != null) players.add(player.getUniqueId());
+            }
+        } catch (RuntimeException ignored) {
+            for (Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
+                if (player.getUniqueId() != null) players.add(player.getUniqueId());
+            }
+        }
+        return players;
+    }
+
     private static java.util.List<Player> audiencePlayers(BehaviorContext ctx, String audience, double radius) {
         AudienceSpec spec = AudienceSpec.parse(audience, radius);
         String kind = spec.kind();
@@ -6515,6 +6691,7 @@ public final class SkillExtras {
             players.removeIf(player -> table == null || !audienceFactionAllowed(
                     spec.faction(), table.factionOf(player), spec.factionExcluded()));
         }
+        players.removeIf(player -> !ExecutionAudiences.allows(ctx, player));
         var diagnostic = audienceDiagnostic;
         if (diagnostic != null) {
             Location diagnosticOrigin = ctx.origin().orElse(null);

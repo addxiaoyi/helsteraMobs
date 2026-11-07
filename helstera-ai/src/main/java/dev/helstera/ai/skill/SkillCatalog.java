@@ -102,15 +102,25 @@ public final class SkillCatalog {
         int summon(String modelId, org.bukkit.Location at);
     }
 
+    @FunctionalInterface
+    public interface SummonedAudienceUpdater {
+        void setAudience(int instanceId, java.util.Collection<java.util.UUID> players);
+    }
+
     /**
      * 召唤钩子。由 {@code AiManager} 在启动时注入实例管理器。
      *
      * <p>未注入时 summon 动作静默返回——技能目录不应因为运行期组件缺失而无法加载。</p>
      */
     private static volatile Summoner summoner;
+    private static volatile SummonedAudienceUpdater summonedAudienceUpdater;
 
     public static void summoner(Summoner s) {
         summoner = s;
+    }
+
+    public static void summonedAudienceUpdater(SummonedAudienceUpdater updater) {
+        summonedAudienceUpdater = updater;
     }
 
     /**
@@ -220,6 +230,7 @@ public final class SkillCatalog {
     /** Clears plugin-owned catalog hooks so reloads cannot retain the old classloader. */
     public static void resetRuntimeHooks() {
         summoner = null;
+        summonedAudienceUpdater = null;
         summonGate = null;
         transformer = null;
         dialogueService = null;
@@ -898,7 +909,9 @@ public final class SkillCatalog {
                     return ctx -> {
                         if (text.isBlank()) return;
                         for (LivingEntity target : activeTargets(ctx)) {
-                            if (target instanceof Player player) player.sendMessage(text);
+                            if (target instanceof Player player && ExecutionAudiences.allows(ctx, player)) {
+                                player.sendMessage(text);
+                            }
                         }
                     };
                 }),
@@ -909,7 +922,7 @@ public final class SkillCatalog {
                                 () -> ctx.instanceValid() ? ctx.instance().location() : null);
                         if (l == null || l.getWorld() == null || name.isBlank()) return;
                         try {
-                            l.getWorld().playSound(l, Sound.valueOf(name.toUpperCase(Locale.ROOT)), 1f, 1f);
+                            playSound(l, Sound.valueOf(name.toUpperCase(Locale.ROOT)), ctx, 1f, 1f);
                         } catch (IllegalArgumentException ignored) {
                         }
                     };
@@ -954,8 +967,9 @@ public final class SkillCatalog {
                                 () -> ctx.instanceValid() ? ctx.instance().location() : null);
                         if (l == null || l.getWorld() == null || name.isBlank()) return;
                         try {
-                            l.getWorld().spawnParticle(Particle.valueOf(name.toUpperCase(Locale.ROOT)),
-                                    l.clone().add(0, 1, 0), 8, 0.4, 0.6, 0.4, 0.01);
+                            spawnParticle(l.clone().add(0, 1, 0),
+                                    Particle.valueOf(name.toUpperCase(Locale.ROOT)), ctx,
+                                    8, 0.4, 0.6, 0.4, 0.01);
                         } catch (IllegalArgumentException ignored) {
                         }
                     };
@@ -999,7 +1013,7 @@ public final class SkillCatalog {
                     return ctx -> {
                         if (text.isBlank()) return;
                         for (LivingEntity e : pick(ctx, tn, radius, count)) {
-                            if (e instanceof Player p) p.sendMessage(text);
+                            if (e instanceof Player p && ExecutionAudiences.allows(ctx, p)) p.sendMessage(text);
                         }
                     };
                 }),
@@ -1089,8 +1103,13 @@ public final class SkillCatalog {
                             Location at = me.clone().add(Math.cos(ang) * radius, 0, Math.sin(ang) * radius);
                             try {
                                 int minionId = hook.summon(modelId, at);
-                                if (minionId >= 0 && gate != null) {
-                                    gate.onSummoned(ctx.instance().instanceId(), minionId);
+                                if (minionId >= 0) {
+                                    SummonedAudienceUpdater audienceUpdater = summonedAudienceUpdater;
+                                    if (audienceUpdater != null) {
+                                        audienceUpdater.setAudience(minionId,
+                                                ctx.executionAudience().orElse(null));
+                                    }
+                                    if (gate != null) gate.onSummoned(ctx.instance().instanceId(), minionId);
                                 }
                             } catch (Throwable ignored) {
                             }
@@ -1212,6 +1231,36 @@ public final class SkillCatalog {
         if (ctx == null) return List.of();
         if (!ctx.targets().isEmpty()) return ctx.targets();
         return ctx.targetEntity().map(List::of).orElseGet(List::of);
+    }
+
+    private static void playSound(Location location, Sound sound, BehaviorContext context,
+                                  float volume, float pitch) {
+        var audience = context == null ? null : context.executionAudience().orElse(null);
+        if (audience == null) {
+            location.getWorld().playSound(location, sound, volume, pitch);
+            return;
+        }
+        for (Player player : location.getWorld().getPlayers()) {
+            if (audience.contains(player.getUniqueId())) {
+                player.playSound(location, sound, volume, pitch);
+            }
+        }
+    }
+
+    private static void spawnParticle(Location location, Particle particle, BehaviorContext context,
+                                      int count, double offsetX, double offsetY, double offsetZ,
+                                      double extra) {
+        var audience = context == null ? null : context.executionAudience().orElse(null);
+        if (audience == null) {
+            location.getWorld().spawnParticle(particle, location, count,
+                    offsetX, offsetY, offsetZ, extra);
+            return;
+        }
+        for (Player player : location.getWorld().getPlayers()) {
+            if (audience.contains(player.getUniqueId())) {
+                player.spawnParticle(particle, location, count, offsetX, offsetY, offsetZ, extra);
+            }
+        }
     }
 
     /**

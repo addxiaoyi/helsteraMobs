@@ -3,6 +3,7 @@ package dev.helstera.api.behavior;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.util.Vector;
 import dev.helstera.api.instance.ModelInstance;
@@ -10,10 +11,12 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class BehaviorContextLocationTargetTest {
     @Test
@@ -203,6 +206,31 @@ class BehaviorContextLocationTargetTest {
         Location copiedOrigin = targeted.origin().orElseThrow();
         assertSame(world, copiedOrigin.getWorld());
         assertEquals(origin.getX(), copiedOrigin.getX());
+    }
+
+    @Test
+    void executionAudienceIsDefensivelyCopiedAndPreservedByLocationTargeting() {
+        UUID id = UUID.randomUUID();
+        Player player = proxy(Player.class, (method, args) -> method.equals("getUniqueId") ? id : null);
+        BehaviorContext base = BehaviorContext.execution(null, player, 1, -1, 0,
+                "skill", null, player, java.util.List.of(player), null)
+                .withExecutionAudience(java.util.List.of(player));
+        BehaviorContext targeted = base.withLocationTarget(new Location(
+                (World) java.lang.reflect.Proxy.newProxyInstance(
+                        World.class.getClassLoader(), new Class<?>[]{World.class}, (proxy, method, args) -> null),
+                8, 9, 10));
+        assertEquals(java.util.Set.of(id), targeted.executionAudience().orElseThrow());
+        assertTrue(targeted.withExecutionAudienceFrom(BehaviorContext.of(null, null, 1, -1, 0))
+                .executionAudience().isPresent());
+        BehaviorContext nested = targeted.withNarrowedExecutionAudience(java.util.Set.of());
+        nested.setExecutionAudience(java.util.Set.of(id));
+        assertEquals(java.util.Set.of(id), base.executionAudience().orElseThrow());
+        base.setExecutionAudience(java.util.Set.of());
+        assertTrue(targeted.executionAudience().orElseThrow().isEmpty());
+        assertEquals(java.util.Set.of(id), nested.executionAudience().orElseThrow());
+        assertFalse(BehaviorContext.execution(null, player, 1, -1, 0,
+                "skill", null, player, java.util.List.of(player), null)
+                .executionAudience().isPresent());
     }
 
     private static <T> T proxy(Class<T> type, Invocation invocation) {

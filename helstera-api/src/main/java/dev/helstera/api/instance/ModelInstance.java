@@ -7,6 +7,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Optional;
+import java.util.Collection;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -24,6 +26,15 @@ public interface ModelInstance {
 
     /** 绑定实体 UUID（若有）。 */
     Optional<UUID> boundEntityId();
+
+    /** Optional set of players allowed to see this instance; empty means unrestricted. */
+    default Optional<Set<UUID>> executionAudience() {
+        return Optional.empty();
+    }
+
+    /** Assigns an execution audience. An empty collection allows nobody; null clears the restriction. */
+    default void setExecutionAudience(Collection<UUID> players) {
+    }
 
     /** 当前位置。 */
     Location location();

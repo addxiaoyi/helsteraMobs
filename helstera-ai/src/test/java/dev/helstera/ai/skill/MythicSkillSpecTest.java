@@ -20,6 +20,7 @@ class MythicSkillSpecTest {
         assertEquals("Attack", spec.trigger());
         assertEquals(25d, spec.chance());
         assertEquals(List.of("health{h=0.5}"), spec.inlineConditions());
+        assertEquals(List.of(), spec.targetConditions());
     }
 
     @Test
@@ -55,6 +56,7 @@ class MythicSkillSpecTest {
         assertEquals("Attack", spec.trigger());
         assertEquals(25d, spec.chance());
         assertEquals(List.of("health{h=1}"), spec.inlineConditions());
+        assertEquals(List.of(), spec.targetConditions());
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage @target >"));
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage @target > missing"));
         for (String separator : List.of(">", " >", "> ", " > ")) {
@@ -64,6 +66,9 @@ class MythicSkillSpecTest {
         }
         var comparison = MythicSkillSpec.parse("damage @nearestConditionalTarget{conditions=[health{h=>5}]} > @nearest");
         assertEquals("nearestConditionalTarget{conditions=[health{h=>5}]} > @nearest", comparison.targeter());
+        var targetCondition = MythicSkillSpec.parse("damage @PlayersInRadius{r=10} ?health{h=>10} ?@isInAudience");
+        assertEquals(List.of("health{h=>10}"), targetCondition.inlineConditions());
+        assertEquals(List.of("isInAudience"), targetCondition.targetConditions());
     }
 
     @Test
@@ -80,6 +85,7 @@ class MythicSkillSpecTest {
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage ~on"));
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage ~unknown"));
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage 4 ?"));
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage 4 ?@"));
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("damage 4 @"));
         assertEquals("Attack", MythicSkillSpec.parse("damage ~ONAttack").trigger());
     }
@@ -95,11 +101,11 @@ class MythicSkillSpecTest {
     void constructorEnforcesFiniteChanceBounds() {
         for (double chance : List.of(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, -1d, 101d)) {
             assertThrows(IllegalArgumentException.class,
-                    () -> new MythicSkillSpec("damage", Map.of(), List.of(), null, null, chance, List.of()));
+                    () -> new MythicSkillSpec("damage", Map.of(), List.of(), null, null, chance, List.of(), List.of()));
         }
         for (double chance : List.of(0d, 50d, 100d)) {
             assertEquals(chance,
-                    new MythicSkillSpec("damage", Map.of(), List.of(), null, null, chance, List.of()).chance());
+                    new MythicSkillSpec("damage", Map.of(), List.of(), null, null, chance, List.of(), List.of()).chance());
         }
     }
 }

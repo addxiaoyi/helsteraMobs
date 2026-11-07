@@ -143,6 +143,22 @@ if ($env:PAPER_SKILLTREE_STAGE) {
         "  self-test-skilltree-stage: $env:PAPER_SKILLTREE_STAGE")
     Set-Content -LiteralPath $pluginConfig -Value $yaml -Encoding utf8
 }
+if ($env:PAPER_EXECUTION_AUDIENCE_STAGE) {
+    $pluginConfig = Join-Path $pluginData 'config.yml'
+    $yaml = Get-Content -LiteralPath $pluginConfig -Raw
+    $yaml = [regex]::Replace($yaml, '(?m)^  self-test:.*$', '  self-test: false')
+    $yaml = [regex]::Replace($yaml, '(?m)^  (self-test-[A-Za-z0-9-]+):\s*true\s*$', '  $1: false')
+    $yaml = [regex]::Replace($yaml, '(?m)^  trace-triggers:.*$', '  trace-triggers: false')
+    $yaml = [regex]::Replace($yaml, '(?m)^  self-test-execution-audience:.*$',
+        '  self-test-execution-audience: false')
+    $yaml = [regex]::Replace($yaml, '(?m)^  self-test-execution-audience-mob:.*$',
+        '  self-test-execution-audience-mob: false')
+    $yaml = [regex]::Replace($yaml, '(?m)^  self-test-execution-audience-persistence:.*$',
+        '  self-test-execution-audience-persistence: true')
+    $yaml = [regex]::Replace($yaml, '(?m)^  self-test-execution-audience-persistence-stage:.*$',
+        "  self-test-execution-audience-persistence-stage: $env:PAPER_EXECUTION_AUDIENCE_STAGE")
+    Set-Content -LiteralPath $pluginConfig -Value $yaml -Encoding utf8
+}
 if ($env:PAPER_SPAWNER_PERSISTENCE_STAGE) {
     $pluginConfig = Join-Path $pluginData 'config.yml'
     $yaml = Get-Content -LiteralPath $pluginConfig -Raw
@@ -150,6 +166,17 @@ if ($env:PAPER_SPAWNER_PERSISTENCE_STAGE) {
         '  self-test-spawner-persistence: true')
     $yaml = [regex]::Replace($yaml, '(?m)^  self-test-spawner-persistence-stage:.*$',
         "  self-test-spawner-persistence-stage: $env:PAPER_SPAWNER_PERSISTENCE_STAGE")
+    if ($env:PAPER_SPAWNER_PERSISTENCE_STAGE -in @('natural-write', 'natural-verify')) {
+        $yaml = [regex]::Replace($yaml, '(?m)^  (self-test-[A-Za-z0-9-]+):\s*true\s*$', '  $1: false')
+        $yaml = [regex]::Replace($yaml, '(?m)^  self-test:.*$', '  self-test: false')
+        $yaml = [regex]::Replace($yaml, '(?m)^  trace-triggers:.*$', '  trace-triggers: false')
+        $yaml = [regex]::Replace($yaml, '(?m)^  self-test-spawner-persistence:.*$',
+            '  self-test-spawner-persistence: true')
+        $yaml = [regex]::Replace($yaml, '(?m)^  self-test-spawner-persistence-stage:.*$',
+            "  self-test-spawner-persistence-stage: $env:PAPER_SPAWNER_PERSISTENCE_STAGE")
+        $yaml = [regex]::Replace($yaml, '(?m)^  self-test-delay-ticks:.*$',
+            '  self-test-delay-ticks: 1')
+    }
     Set-Content -LiteralPath $pluginConfig -Value $yaml -Encoding utf8
 }
 if ($env:PAPER_WEB_RELOAD_PROBE -eq 'true') {
@@ -161,7 +188,11 @@ if ($env:PAPER_WEB_RELOAD_PROBE -eq 'true') {
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'loot.yml') -Destination (Join-Path $pluginData 'loot.yml') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'items.yml') -Destination (Join-Path $pluginData 'items.yml') -Force
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'spawners.yml') -Destination (Join-Path $pluginData 'spawners.yml') -Force
+if ($env:PAPER_EXECUTION_AUDIENCE_STAGE) {
+    [System.IO.File]::WriteAllText((Join-Path $pluginData 'spawners.yml'), "spawners: {}`n")
+} else {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'spawners.yml') -Destination (Join-Path $pluginData 'spawners.yml') -Force
+}
 if ($env:PAPER_SPAWNER_NATURAL_REPAIR_PROBE -eq 'true') {
     $configPath = Join-Path $pluginData 'config.yml'
     $configText = [System.IO.File]::ReadAllText($configPath)
@@ -172,6 +203,60 @@ if ($env:PAPER_SPAWNER_NATURAL_REPAIR_PROBE -eq 'true') {
     $probe = "spawners:`n  guard_natural_probe:`n    mob: emberling`n    x: 20.5`n    y: 70`n    z: 6.5`n    radius: 1.0`n    interval: 20`n    max-alive: 1`n    max-spawns: 1`n    enabled: true`n"
     $spawnerText = [regex]::Replace($spawnerText, '^spawners:\s*\r?\n', $probe, 1)
     [System.IO.File]::WriteAllText($spawnerPath, $spawnerText)
+}
+if ($env:PAPER_SPAWNER_PERSISTENCE_STAGE -in @('natural-write', 'natural-verify')) {
+    $spawnerText = @'
+spawners:
+  persistence_probe:
+    mob: emberling
+    world: ""
+    x: 0.5
+    y: 70
+    z: 0.5
+    radius: 1.0
+    interval: 600
+    chance: 1.0
+    max-alive: 1
+    max-spawns: 2
+    min-players: 0
+    players-radius: 0.0
+    enabled: true
+  chance_denied:
+    mob: emberling
+    world: ""
+    x: 0.5
+    y: 70
+    z: 0.5
+    radius: 1.0
+    interval: 20
+    chance: 0.0
+    max-alive: 1
+    max-spawns: 1
+    enabled: true
+  chance_invalid:
+    mob: emberling
+    world: ""
+    x: 0.5
+    y: 70
+    z: 0.5
+    radius: 1.0
+    interval: 20
+    chance: "Infinity"
+    max-alive: 1
+    max-spawns: 1
+    enabled: true
+  scheduler_clock:
+    mob: emberling
+    world: ""
+    x: 0.5
+    y: 70
+    z: 0.5
+    radius: 1.0
+    interval: 20
+    enabled: false
+'@
+    [System.IO.File]::WriteAllText((Join-Path $pluginData 'spawners.yml'), $spawnerText.TrimStart(),
+        [System.Text.UTF8Encoding]::new($false))
 }
 $mobs = Join-Path $pluginData 'mobs'
 New-Item -ItemType Directory -Path $mobs -Force | Out-Null
@@ -530,7 +615,21 @@ try {
         }
     }
 
-    if ($RunSeconds -gt 0 -and -not $process.HasExited) {
+    if ($env:PAPER_SPAWNER_PERSISTENCE_STAGE -in @('natural-write', 'natural-verify') -and
+            -not $process.HasExited) {
+        $stage = [regex]::Escape($env:PAPER_SPAWNER_PERSISTENCE_STAGE)
+        $probeDeadline = [DateTime]::UtcNow.AddSeconds(90)
+        while ([DateTime]::UtcNow -lt $probeDeadline -and -not $process.HasExited -and
+                -not (Select-String -LiteralPath $logPath -Pattern "spawner-persistence stage=$stage .*result=(true|false)" -Quiet)) {
+            Start-Sleep -Milliseconds 250
+        }
+        if (-not (Select-String -LiteralPath $logPath -Pattern "spawner-persistence stage=$stage .*result=true" -Quiet)) {
+            throw "Natural Spawner persistence probe did not pass during $($env:PAPER_SPAWNER_PERSISTENCE_STAGE)"
+        }
+        $process.StandardInput.WriteLine('stop')
+        $process.StandardInput.Flush()
+        if (-not $process.WaitForExit(15000)) { throw 'Paper did not stop after the natural Spawner probe' }
+    } elseif ($RunSeconds -gt 0 -and -not $process.HasExited) {
         $remaining = [Math]::Max(0, $RunSeconds * 1000)
         $process.WaitForExit($remaining) | Out-Null
     }

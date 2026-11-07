@@ -1,10 +1,68 @@
 # helsteraMobs
 
-## MythicMobs Parity Development Status (2026-11-06)
+## MythicMobs Parity Development Status (2026-11-07)
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-server-conditions-strict-20261106-r1` passes
+Latest strict fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2`
+passes all 382 release probes (363 passed, 19 expected rejections, zero
+incomplete) on Paper 1.21.1-133. The imported Spawner condition probe maps
+`BiomeType{type=plains;exact=false}`, naturally generates one managed mob in
+the matching category, and rejects the `desert` category with zero spawns; it
+restores both original biomes. The same fixture verifies matching and missing
+world conditions, rain without thunder, weighted `RandomMobs` at 1:3 across
+100 spawns, `GroupSize: 3` capped by `MaxMobs: 2`, valid and invalid `Chance`,
+and variant-specific natural DropTables. Report:
+`tools/paper-integration/reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json`.
+Plugin SHA-256:
+`fd72793b1e8a9aa8b62bc8d7a354dfaf1e36208f874e81fc37f10da1dadca9f5`.
+Latest strict report has 382 probes, zero incomplete.
+
+Previous strict fixture `srv-paper-mythic-random-pool-strict-20261106-r1`
+passed 380 release probes (361 passed, 19 expected rejections, zero
+incomplete), including 100 weighted-pool samples. Its report remains archived
+in `release-evidence.json`.
+
+Previous strict fixture `srv-paper-execution-audience-mob-strict-20261106-r5`
+passed the full 377-probe release catalog (358 passed, 19 expected rejections,
+zero incomplete) on Paper 1.21.1-133.
+`executionAudienceMobSpawn` imports Mythic Mob `Options.ExecutionAudience`,
+spawns the converted mob through production configuration, then verifies
+`@PlayersInRadius` selection, entity PDC persistence, and member-only visibility
+across two connected clients. `executionAudienceMobMutation` verifies imported
+`RemoveFromAudience`/`AddToAudience` actions with `@EntitiesInRadius`, empty
+audience persistence, and visibility removal/restoration across two clients.
+`executionAudienceMobSummon` verifies the imported summon action inherits the
+source audience and keeps summoned model visuals member-only across two clients.
+The two-boot Paper integration report verifies the
+same persistent mob entity UUID, PDC audience, and rebound instance audience
+after restart; member/outsider client visibility after restart remains unverified.
+Report:
+`tools/paper-integration/reports/paper-1.21.1-execution-audience-mob-strict-20261106-r5.json`.
+Plugin SHA-256:
+`5aa37479c888f3e77aaef920ee0920a32b97d16cf7df6f6cd047d59334dc9e0f`.
+
+Previous strict fixture `srv-paper-imported-mob-defaults-strict-20261106-r4`
+passed all 373 probes (354 passed, 19 expected rejections, zero incomplete).
+It verifies Mythic mob option defaults through import, configuration, and real
+Paper entities, plus natural Potion consumption/expiry, client-driven
+SpawningDistance removal, web reload, and dual-client menu flows. The player
+moved 13.14 blocks and the managed entity was removed 2 ticks after crossing its
+configured radius. Its report and tested artifact hash remain in
+`release-evidence.json`.
+
+Previous strict fixture `srv-paper-execution-audience-mob-strict-20261106-r3`
+passed all 376 probes (357 passed, 19 expected rejections, zero incomplete).
+It verifies imported mob audience spawn and targeter-based audience mutations;
+the summon-inheritance probe was added to the release catalog afterward.
+
+Previous strict fixture `srv-paper-execution-audience-strict-20261106-r1` passed
+the full 371-probe catalog (352 passed, 19 expected rejections, zero incomplete).
+It verifies imported audience membership and per-target filtering, plus
+block/entity `LookingAt` selectors with real ray-trace positive and negative
+controls. Its report and tested artifact hash remain in `release-evidence.json`.
+
+Previous strict fixture `srv-paper-server-conditions-strict-20261106-r1` passes
 the full 370-probe release catalog (351 passed, 19 expected rejections, zero
 incomplete) on Paper 1.21.1-133. Its imported `ServerIsPaper`/`IsPaper`,
 `ServerVersion`, `ServerAfter`, and `ServerBefore` probe verifies Paper identity,
@@ -566,7 +624,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict report has 370 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` has 382 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -582,8 +640,8 @@ This is a partial parity release. The matrix currently has `40`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 478 cited IDs; 388 report files; 4 directories
-   without reports; 86 missing directories; 155 archived release reports. The
+   Current fixture inventory: 494 cited IDs; 404 report files; 4 directories
+   without reports; 86 missing directories; 170 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -650,7 +708,7 @@ the entire MythicMobs feature catalog.
 - Scoreboard tag evidence: exploratory Paper 1.21.11 r22 passes real caster/targeter `addtag`/`removetag` mutations; the current strict Paper 1.21.1-133 aggregate also completes the registered tag probes.
 - DoT evidence: exploratory Paper self-test verifies bounded `dot` damage across multiple intervals and confirms no damage after `duration`; the current strict Paper 1.21.1-133 aggregate completes the registered DoT probe.
 - Conditions and Aura actions: world/biome/time/weather, `night`/`raining`/`thundering`, health/distance/permission/stance/entity state (including caster and target `on-ground`, `has-ai`, `has-gravity`, `is-silent`, `is-dead`, `is-alive`, `target-is-alive`, `is-valid`, `is-collidable`, and `has-offhand` from Bukkit entity state), `ownerIsPlayer`, exact faction conditions (`faction`, `targetfaction`, `samefaction`, `differentfaction`), Mythic `isChild`/`child` parent-relation semantics distinct from `isBaby` age checks (strict Paper fixture `srv-paper-is-child-import-strict-20261105-r1` verifies the importer-to-SkillService path), explicit `target-has-tag`/`targetHasScoreboardTag`, strict target-only permission/game-mode/food/air/item/potion/holding/wearing conditions, vehicle/passenger aliases (`hasPassenger`, `isVehicle`, `targetHasPassenger`, `targetIsVehicle`), `branch-unlocked`/`branch-locked` SkillTree gates, `falling`, `drowning`, `target-within`, equality/inequality comparators for health/target-health/distance/light-level, variables, composition, `food-level`, `has-item`, `air-level`, `damage-cause`, `damage-amount`, and `is-cancelled`. Mythic `HasAura`/`HasBuff`/`HasDebuff`, `targetHasAuras`, stack, and type conditions read named runtime Aura state; target Aura checks require an explicit target. `AuraRemove`, `RemoveAura`, `RemoveBuff`, and `RemoveDebuff` remove partial or all stacks by name; omitted names use `default`, and `ANY` clears all target auras. Strict Paper fixture `srv-paper-aura-target-strict-20261106-r1` verifies imported target Aura checks and removal paths. Aura visual/lifecycle features remain unsupported and are preserved with warnings.
-- Mythic `isInAudience` (`inaudience`, `audiencecontains`) is preserved with an `unsupported` migration warning: it depends on a per-skill execution-audience set that Helstera does not currently model. The warning distinguishes that missing context from Helstera's per-action audience recipient filters; no runtime equivalence is claimed.
+- Mythic `isInAudience` aliases bind to a runtime condition, and `?@condition` filters each selected entity after its targeter runs. Strict Paper fixture `srv-paper-execution-audience-strict-20261106-r1` verifies aliases, membership boundaries, and per-target filtering. Fixture `srv-paper-execution-audience-mutation-strict-20261106-r1` verifies imported skill audience configuration and `AddToAudience`/`RemoveFromAudience`/`UnsetAudience` against a managed model, including explicit-empty behavior, entity PDC writes, and two-client visibility changes. Strict fixture `srv-paper-execution-audience-mob-strict-20261106-r5` verifies imported Mob `Options.ExecutionAudience` through production mob spawn, `@PlayersInRadius` selection, PDC persistence, and two-client visibility; it verifies targeter-selected mob removal/addition with `@EntitiesInRadius`, persisted empty/restored audiences, visibility transitions, and imported summon audience inheritance with member-only model visuals. The two-boot Paper integration report confirms the same persistent entity UUID and restored PDC/runtime audience after restart. Post-restart client visibility remains unverified. The complete MythicMobs catalog remains in progress; see the [restart evidence report](tools/paper-integration/reports/paper-1.21.1-execution-audience-restart-20261106-r3.json).
 - Condition migration aliases now also cover Mythic `inCombat`, `playersInRadius`, `entitiesInRadius`, `mobsInRadius`, `randomChance`, `targetCount`, and `hungerBelow`; `mobsInRadius` uses a mob-only runtime evaluator.
 - Official condition aliases `Burning`, `Blocking`, `Charged`, `Crouching`, movement states, `Chance`, `Day`, `Dawn`, `Dusk`, and `Sunny` now map to runtime evaluators; strict fixture `srv-paper-chance-condition-strict-20261101-r1` verifies 0%, 100%, and fail-closed rejection of 101% on Paper 1.21.1-133.
 - Direct camel-case condition names such as `isOnGround`, `isInWater`, `isInLava`, `isInAir`, `isOnFire`, `isBlocked`, `standOn`, and `daylight` now bind to the same canonical Bukkit evaluators as migrated forms.
@@ -744,6 +802,7 @@ the entire MythicMobs feature catalog.
 - Mythic inline drop ranges now honor the official exclusive upper bound: `1-3` and `1to3` project to 1..2, fixed amounts remain fixed, and empty/reversed ranges are preserved as unsupported. Migration tests cover the projection; strict Paper fixture `srv-paper-drops-imported-range-strict-20261102-r5` verifies an imported standalone DropTable through runtime loading and natural mob death. Broader importer range combinations remain open.
 - Scalar condition compatibility now uses one parser across spawners, immunity/damage modifiers, drops, and Mythic imports: `day, !raining, time-between=0,12000` is split into separate conditions without corrupting range or coordinate commas; nested braces, quotes, YAML lists, and arrays remain intact.
 - Spawner file loading and Mythic spawner import reject explicit null conditions, including inherited YAML merge values; explicit valid overrides and omitted conditions retain their normal behavior. File and migration-to-runtime tests cover these cases and failed reload cleanup. Paper strict fixture `srv-paper-spawner-null-20261103-r2` verifies native direct and merged null rejection and an empty-list override using forced spawn; imported and natural scheduled spawns are not covered by this fixture.
+- Natural spawner `Chance` defaults to 1 when omitted, accepts finite values from 0 to 1, and warns then fails closed to 0 for malformed, non-finite, or out-of-range explicit values. Unit tests cover invalid values; Paper two-boot fixture `srv-paper-spawner-natural-restart-20261106-r5` verifies `Chance: 1` natural generation, `Chance: 0` rejection, `Chance: "Infinity"` warning and rejection, and 580/600 cooldown restoration followed by a natural spawn after 579 observed ticks. The Mythic importer-to-runtime `Chance` path still needs Paper verification; see the [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md) and [restart evidence](tools/paper-integration/reports/paper-1.21.1-spawner-natural-restart-20261106-r5.json).
 - Malformed spawner state YAML triggers backup recovery even when a Bukkit server logger is available. The independent two-boot Paper fixture `srv-paper-spawner-corrupt-restart-20261103-r1` verifies a generated count is restored after corrupting the primary state file; it is not a full strict release run.
 - A failed spawner configuration reload suppresses state writes until a successful load so retry or shutdown cannot overwrite saved counts; a unit test covers recovery. Reload failures are reported to commands and the web editor. These changes have not yet been verified on Paper.
 - Web-triggered loot and spawner reloads run on the Bukkit primary thread and return the actual reload result. Independent Paper fixture `srv-paper-web-reload-20261103-r2` verifies HTTP spawner reload rejects malformed YAML and restores 43 spawners after repair; it does not exercise the browser or the loot failure path.
@@ -799,6 +858,7 @@ the entire MythicMobs feature catalog.
 - Mythic `Blocking`/`is-blocking` now has strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r27` keeps a real online player in a client-driven Shield-use window and records `stateBlocking=passed`.
 - Spawner natural recycling now has strict Paper evidence: fixture `srv-paper-integration-exp-20261031-r28` records `released=true respawned=true alive=1` after removing a real tracked instance.
 - Spawner restart persistence now has Paper 1.21.1-133 evidence: fixture `srv-paper-spawner-restart-20261031-r2` performs two real plugin boots and records `stage=write before=0 after=1 generated=true result=true`, then `stage=verify before=1 after=1 restored=true result=true` from the same plugin data directory.
+- Spawner natural cooldown restoration passed four independent Paper 1.21.1-133 restarts. Latest fixture `srv-paper-spawner-natural-restart-20261106-r5` also confirms a non-finite Chance fails closed across both boots; the natural spawn restored 580 remaining ticks and occurred after 579 observed ticks. Reports and hashed logs are indexed in [Paper startup evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 - `set-target` and `clear-target` mechanics now have strict Paper evidence: fixture `srv-paper-integration-targeters-20261031-r3` records `set-target-mechanic=true clear-target-mechanic=true` after dispatching both actions through the production `SkillService` to a managed Bukkit Mob.
 - Runtime targeter aliases now have strict Paper evidence: fixture `srv-paper-runtime-alias-20261031-r2` executes `@Players_In_World`, `@Mobs_In_World`, `@Nearest_Living_Entity`, and `@Nearest_Mob` and records the complete `ai-selector-core` probe as passed.
 - Vehicle enter/exit/dismount/eject/destroy trigger coverage is now lifecycle-independent from the online player probe; strict fixture `srv-paper-integration-exp-20261031-r17` records `vehicle-events enter=true exit=true dismount=true eject=true destroy=true`.

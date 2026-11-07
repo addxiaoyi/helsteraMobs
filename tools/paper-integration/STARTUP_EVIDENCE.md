@@ -1,20 +1,120 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-server-conditions-strict-20261106-r1` passed the full
-strict gate on Paper 1.21.1-133: 370 registered probes, 351 passed, 19 expected
-rejections, and zero incomplete. `importedServerConditions` runs
-`ServerIsPaper`/`IsPaper`, `ServerVersion`, `ServerAfter`, and `ServerBefore`
-through the Mythic importer and `SkillService`; it verifies Paper identity,
-exact version matching, inclusive/exclusive equality boundaries, and
-preservation of unknown, duplicate, and invalid arguments.
+Latest fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` passed the
+full strict gate on Paper 1.21.1-133: 382 registered probes, 363 passed, 19
+expected rejections, and zero incomplete. The imported Mythic Spawner condition
+probe maps `BiomeType{type=plains;exact=false}`, naturally generates one managed
+mob in the matching category, rejects `desert` with zero spawns, and restores
+both original biomes. It also maps matching-world, raining, and non-thundering
+conditions, while missing-world and thunder controls remain at zero spawns.
+The same fixture verifies weighted `RandomMobs`, imported group-size capping,
+`Chance` validation, and per-variant DropTables through natural Bukkit death.
+Report: [paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json](reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json), SHA-256:
+`db1364e2628752d8264afb3ed777d14ecf30cd2a10743456445ffc112657e205`.
+Compressed server log SHA-256:
+`e754a66da9244e1749ddf463c5aebf82458935729c45437ac44b5f19a5b41284`.
+Client log archive SHA-256:
+`2f7b7c4e3df3f74e8fe0dca73949ee2f474d96672ab840cdeeb7885634bd830a`.
+Plugin SHA-256:
+`fd72793b1e8a9aa8b62bc8d7a354dfaf1e36208f874e81fc37f10da1dadca9f5`.
 
-Archived report: [paper-1.21.1-server-conditions-strict-20261106-r1.json](reports/paper-1.21.1-server-conditions-strict-20261106-r1.json), SHA-256:
-`51337550578c366abeeb721959daa1ab2762ce2f0631e22a500253c4163099d8`.
-Compressed server log: [paper-1.21.1-server-conditions-strict-20261106-r1.log.gz](reports/paper-1.21.1-server-conditions-strict-20261106-r1.log.gz), SHA-256:
-`71f3a1602a9508cbb524c420405125aebe14f275ba39d34951b89c667cebc482`.
-Client logs: [paper-1.21.1-server-conditions-strict-20261106-r1-client-logs.tar.gz](reports/paper-1.21.1-server-conditions-strict-20261106-r1-client-logs.tar.gz), SHA-256:
-`8e6927c57e8cdd48b125878ac4425e0ed8c7e02d9623f6b4e5a583bb14e45db4`.
-Plugin SHA-256: `5e5913d2eab60e1ab8156f07995a18b2264f35325ce28dab67ec525321c66b82`.
+Previous fixture `srv-paper-mythic-random-drops-strict-20261106-r4` passed
+the full strict gate on Paper 1.21.1-133: 381 registered probes, 362 passed,
+19 expected rejections, and zero incomplete. `mythicSpawnerRandomPoolImported`
+converts Mythic `RandomMobs` weights 1:3 and observes 0.25/0.75 across 100
+production spawns. The report also verifies imported `GroupSize: 3` capped by
+`MaxMobs: 2`, valid `Chance: 1.0`, and rejection of out-of-range `Chance: 1.5`.
+`mythicSpawnerRandomPoolDropTables` spawns 32 weighted variants and confirms
+each imported Mob retains its own `DropTable-1`; natural Bukkit damage produces
+one Bread for the common variant and one Diamond for the rare variant, with no
+cross-table drops. Each temporary table is reloaded before its kill and the
+original loot state is restored.
+Report SHA-256:
+`5e6dcf481074465073601a50236253d1d7d7a4d3c931eb8f3d155ddd4c8726fe`.
+Compressed server log SHA-256:
+`2b9e75a0bfa37bd6d032483e1b1766c979e370a87f832921de65279da586ea45`.
+Client log archive SHA-256:
+`cf77597a648d6a584aa0d6362b5938c64ac21aef3d0e81a73892414eceaf80ef`.
+Plugin SHA-256: `773367e232f2c48f5b96876c3572ad486e3918e84c3cfbe7fe925866c353202a`.
+
+Previous full strict fixture `srv-paper-mythic-random-pool-strict-20261106-r1`
+passed 380 probes (361 passed, 19 expected rejections, zero incomplete) and
+sampled the imported weighted pool at 0.27/0.73. Its report and hashes remain
+in `release-evidence.json`.
+
+Previous full strict fixture `srv-paper-mythic-spawner-group-size-strict-20261106-r5`
+records the real-client `SpawningDistance` movement and removal timing: 14.36
+blocks of player movement, 15.00 blocks between player and mob, and removal 2
+ticks after crossing the configured 8-block radius, within the 10-tick AI
+decision period.
+
+Previous full strict fixture `srv-paper-execution-audience-mob-strict-20261106-r5` passed
+the full strict gate on Paper 1.21.1-133: 377 registered probes, 358 passed, 19
+expected rejections, and zero incomplete. The imported Mob
+`Options.ExecutionAudience` path verifies production spawn, radius target
+selection, entity PDC persistence, and member-only visibility across two clients.
+Imported `RemoveFromAudience`/`AddToAudience` actions verify `@EntitiesInRadius`
+selection, persisted empty/restored audiences, and visibility transitions. The
+new `executionAudienceMobSummon` probe imports and dispatches `summon`, confirms
+the new mob inherits its source audience, and checks that its model visuals stay
+visible only to the member client.
+Report SHA-256:
+`a9da1ae78d324b01ceafdeb93c0e31b08783763020d3f6f0d3964c25a308824e`.
+Compressed server log SHA-256:
+`86a4b02339b0bb955339e32ec88ab04678582b0734ce819222903639df444019`.
+Client log archive SHA-256:
+`beee7dbf361bf8c3acc4907ac3f9fa3925c2da34c47c2b8ff574646510686db2`.
+Plugin SHA-256: `5aa37479c888f3e77aaef920ee0920a32b97d16cf7df6f6cd047d59334dc9e0f`.
+
+The two-boot Paper integration passed on Paper 1.21.1-133. It confirms a
+persistent managed mob keeps the same entity
+UUID and exact non-empty execution audience across server shutdown/startup; the
+startup restore path rebinds that audience to its runtime instance. This run
+had no clients, so post-restart member/outsider visibility is not claimed.
+Report SHA-256:
+`705b216133dee0e40ec46d72c96886fa0803da193d866566f813527004137573`.
+First-boot compressed log SHA-256:
+`eea91b7db72c77dde5ae62e8a22dcf3011a465b4dc423bf9292dc5f0a9caaa1a`.
+Second-boot compressed log SHA-256:
+`bb73f87dba8917651b879e64331255e06bfc051142240be46abb539817a5f144`.
+Plugin SHA-256:
+`6ba52a22a59492ec6d0fe82991d7d27d7298e152e91515974ff615a08091a750`.
+
+Previous fixture `srv-paper-execution-audience-mob-strict-20261106-r3` passed
+376 probes (357 passed, 19 expected rejections, zero incomplete). It verifies
+the imported mob audience spawn and targeter-based audience mutation paths;
+summon inheritance was added to the release catalog and proven in r5.
+
+Previous fixture `srv-paper-imported-mob-defaults-strict-20261106-r4` passed
+the full strict gate on Paper 1.21.1-133: 373 registered probes, 354 passed, 19
+expected rejections, and zero incomplete. It verifies Mythic mob option defaults
+and explicit overrides through real Paper entities, natural Potion consumption
+and expiry, client movement beyond `SpawningDistance`, web reload, and dual-client
+menu actions. Its original evidence remains in `release-evidence.json`.
+
+Previous fixture `srv-paper-imported-mob-defaults-strict-20261106-r2` passed
+the full strict gate on Paper 1.21.1-133: 372 registered probes, 353 passed,
+19 expected rejections, and zero incomplete. Its original evidence remains in
+`release-evidence.json`.
+
+Previous fixture `srv-paper-execution-audience-strict-20261106-r1` passed the full
+strict gate on Paper 1.21.1-133: 371 registered probes, 352 passed, 19 expected
+rejections, and zero incomplete. It verifies imported `isInAudience` aliases,
+absent/member/outsider/empty audience outcomes, non-player rejection, and `?@`
+target filtering. It also verifies imported block/entity `LookingAt` selectors
+through real Paper ray traces, type/distance negative controls, invalid-input
+preservation, and state cleanup. The Mineflayer menu client logged
+`PartialReadError` warnings while parsing menu packets; the server-side render
+and click checks and client workflow report passed, then the raw-potion client
+rejoined and completed its workflow.
+
+Archived report: [paper-1.21.1-execution-audience-strict-20261106-r1.json](reports/paper-1.21.1-execution-audience-strict-20261106-r1.json), SHA-256:
+`2d73ffe76e8bd39bd1e4eb2a595aada8dbfe040f7ce76777e4332fe37e1e32d7`.
+Compressed server log: [paper-1.21.1-execution-audience-strict-20261106-r1.log.gz](reports/paper-1.21.1-execution-audience-strict-20261106-r1.log.gz), SHA-256:
+`5a499bacfaa84c12838c4b19073f708e6682767d362c68509e5cec6e62260568`.
+Client logs: [paper-1.21.1-execution-audience-strict-20261106-r1-client-logs.tar.gz](reports/paper-1.21.1-execution-audience-strict-20261106-r1-client-logs.tar.gz), SHA-256:
+`fc822abf800c714cef5722b7996e8ecd2fa2281d551697a4b7cf3f0b52f69218`.
+Plugin SHA-256: `abbc8f64d612eb4cd7cf548f5cde663821b6183687e2c9649affe3003febd3cf`.
 
 Previous fixture `srv-paper-name-import-strict-20261106-r2` passed the full
 strict gate on Paper 1.21.1-133: 369 registered probes, 350 passed, 19 expected
@@ -3391,6 +3491,63 @@ spawner-persistence stage=verify before=1 after=1 restored=true result=true
 ```
 
 The dedicated script is `tools/paper-integration/test-spawner-restart.ps1`.
+
+Follow-up two-boot fixture `srv-paper-spawner-natural-restart-20261106-r1`
+passed on Paper 1.21.1-133 using the same production scheduler on both boots.
+Boot one naturally generated one `persistence_probe`, then saved 580 of its
+600 cooldown ticks during normal shutdown. Boot two restored exactly 580 ticks
+and naturally generated the second instance after 579 observed server ticks;
+the fixture sent no manual force command. The final state recorded
+`total-spawned: 2` and a fresh 600-tick cooldown.
+
+Report: [paper-1.21.1-spawner-natural-restart-20261106-r1.json](reports/paper-1.21.1-spawner-natural-restart-20261106-r1.json), SHA-256:
+`4af78ee39e598fe73ca2cb142059eae40bae2692bf5ff895da458cb087c55990`.
+First-boot log SHA-256:
+`9fd81cee7aab307e5673b959aa5399ea87a9950e67545832f2a968998bfb471f`.
+Second-boot log SHA-256:
+`8b677258d41833debfe850682fcbf18a3efd9594920e83d216946fa23c6aee3c`.
+
+Independent follow-up fixture `srv-paper-spawner-natural-restart-20261106-r2`
+passed on Paper 1.21.1-133 after tightening the timing assertion to one
+scheduler period. It again saved and restored 580 of 600 cooldown ticks and
+naturally spawned after 579 observed ticks, without issuing a force command.
+Report: [paper-1.21.1-spawner-natural-restart-20261106-r2.json](reports/paper-1.21.1-spawner-natural-restart-20261106-r2.json), SHA-256:
+`4d6a1b3618b1ec27061d14f5b19d91807db36508c5f56baac2c6e6242431ab78`.
+First-boot log SHA-256:
+`b1a79e983d7a0adf15c1b9eed35ffb451ae44ddfc7238ede5ebec2130e7e20e1`.
+Second-boot log SHA-256:
+`caaeb3c57cf60680a016184ee3081de80e8b1566bcd11756a225466515027b2a`.
+Plugin SHA-256: `1a720c987563702610542daf9cefbe8372c6793ba3718227edadf6ef3ae56026`.
+
+Independent follow-up fixture `srv-paper-spawner-natural-restart-20261106-r4`
+passed on Paper 1.21.1-133. It observed `Chance: 1` naturally spawn on both
+boots and `Chance: 0` remain at zero. Shutdown saved 580 of 600 cooldown ticks;
+the second boot restored 580 ticks and naturally spawned after 579 observed
+ticks, with no manual force command.
+
+Report: [paper-1.21.1-spawner-natural-restart-20261106-r4.json](reports/paper-1.21.1-spawner-natural-restart-20261106-r4.json), SHA-256:
+`afc78251cdb4bcf9fc5ceba5e3985d57978a46234adcf8e88190b4072beff700`.
+First-boot log SHA-256:
+`31f40fb7bec8dbba007c2015f40f91d721ccebec3cac9c69506769910b1db309`.
+Second-boot log SHA-256:
+`4c81aa33ae438b0a5069132a216c45eb59b1187f11f3cb5365f26f10b0e32e42`.
+Plugin SHA-256: `9b567ff5096e7b0bade71d782dee75e57d0f74566dd87cc5a9ea2169f65adbfa`.
+
+Latest natural Spawner fixture `srv-paper-spawner-natural-restart-20261106-r5`
+passed on Paper 1.21.1-133 using the current built plugin JAR on both boots.
+It observes natural generation for `Chance: 1`, zero generations for
+`Chance: 0`, and a warning plus zero generations for the non-finite explicit
+value `Chance: "Infinity"`. Shutdown saved 580 of 600 cooldown ticks; boot two
+restored 580 and naturally spawned after 579 observed ticks without a force
+command.
+
+Report: [paper-1.21.1-spawner-natural-restart-20261106-r5.json](reports/paper-1.21.1-spawner-natural-restart-20261106-r5.json), SHA-256:
+`9ba540ddb755c89ea8df6381d1193a7310ce45157e63f481d55c19615e099691`.
+First-boot log SHA-256:
+`f02bdb4466bcb951e8054b201ad326d3be10adfa86a8e47756ac5389b4bc1fc1`.
+Second-boot log SHA-256:
+`d7bcda57371ff0ee5a0b85b9e3095488dc5079a817c6eaa355b539e50db36f28`.
+Plugin SHA-256: `f588b8e2126e2439192337517a4e5e6ba85e8abf95ee4cb5622df9c1c9be5f4e`.
 
 Strict Paper 1.21.1-133 fixture `srv-paper-nearest-20261031-r1` recorded
 251 observed probes (239 passed, 12 expected rejected, zero incomplete).

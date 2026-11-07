@@ -13,8 +13,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-server-conditions-strict-20261106-r1",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-server-conditions-strict-20261106-r1.json"
+      "releaseFixtureId": "srv-paper-mythic-spawner-biome-strict-20261107-r2",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

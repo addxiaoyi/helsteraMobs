@@ -52,6 +52,10 @@ class SpawnerServiceTest {
     }
 
     private static SpawnerService automaticService(String yaml) {
+        return automaticService(yaml, (mob, location, aiProfile) -> 1);
+    }
+
+    private static SpawnerService automaticService(String yaml, SpawnerService.MobSpawner mobSpawner) {
         World world = mock(World.class);
         when(world.getName()).thenReturn("arena");
         when(world.getMinHeight()).thenReturn(0);
@@ -67,7 +71,7 @@ class SpawnerServiceTest {
         when(border.getSize()).thenReturn(1000.0);
         when(border.isInside(any(Location.class))).thenReturn(true);
 
-        SpawnerService s = new SpawnerService(null, (mob, loc, aiProfile) -> 1,
+        SpawnerService s = new SpawnerService(null, mobSpawner,
                 ignored -> world);
         s.load(YamlConfiguration.loadConfiguration(new StringReader(yaml))
                 .getConfigurationSection("spawners"));
@@ -110,6 +114,54 @@ class SpawnerServiceTest {
         assertEquals(200, service.nextSpawnInTicks("arena"));
         service.tickOnce(40);
         assertEquals(160, service.nextSpawnInTicks("arena"));
+    }
+
+    @Test
+    @DisplayName("natural spawner chance gates attempts without arming cooldown on a failed roll")
+    void naturalChanceDoesNotArmCooldownWhenRollFails() {
+        AtomicInteger spawns = new AtomicInteger();
+        SpawnerService service = automaticService("""
+                spawners:
+                  denied:
+                    mob: boss
+                    world: arena
+                    x: 0
+                    z: 0
+                    interval: 200
+                    chance: 0
+                """, (mob, location, aiProfile) -> {
+                    spawns.incrementAndGet();
+                    return 1;
+                });
+
+        for (int tick = 0; tick < 5; tick++) service.tickOnce(20);
+
+        assertEquals(0, spawns.get());
+        assertEquals(0, service.nextSpawnInTicks("denied"));
+    }
+
+    @Test
+    @DisplayName("natural spawner chance one allows the due attempt")
+    void naturalChanceOneAllowsSpawn() {
+        AtomicInteger spawns = new AtomicInteger();
+        SpawnerService service = automaticService("""
+                spawners:
+                  guaranteed:
+                    mob: boss
+                    world: arena
+                    x: 0
+                    z: 0
+                    interval: 200
+                    chance: 1
+                """, (mob, location, aiProfile) -> {
+                    spawns.incrementAndGet();
+                    return 1;
+                });
+
+        service.tickOnce(20);
+
+        assertEquals(1, spawns.get());
+        assertEquals(200, service.nextSpawnInTicks("guaranteed"));
     }
 
     @Test
@@ -212,6 +264,32 @@ class SpawnerServiceTest {
         assertEquals(20, sp.intervalTicks(), "interval<20 应抬到 20");
         assertEquals(4, sp.maxAlive());
         assertTrue(sp.enabled());
+    }
+
+    @Test
+    @DisplayName("spawner chance defaults to one and fails closed for invalid explicit values")
+    void parsesAndRejectsInvalidSpawnerChance() {
+        SpawnerService service = service("""
+                spawners:
+                  defaulted: {mob: boss, x: 0, z: 0}
+                  zero: {mob: boss, x: 0, z: 0, chance: 0}
+                  one: {mob: boss, x: 0, z: 0, chance: 1}
+                  denied: {mob: boss, x: 0, z: 0, chance: -0.5}
+                  guaranteed: {mob: boss, x: 0, z: 0, chance: 1.5}
+                  malformed: {mob: boss, x: 0, z: 0, chance: invalid}
+                  infinite: {mob: boss, x: 0, z: 0, chance: "Infinity"}
+                  not-a-number: {mob: boss, x: 0, z: 0, chance: "NaN"}
+                """);
+
+        assertEquals(1.0, service.get("defaulted").chance());
+        assertEquals(0.0, service.get("zero").chance());
+        assertEquals(1.0, service.get("one").chance());
+        assertEquals(0.0, service.get("denied").chance());
+        assertEquals(0.0, service.get("guaranteed").chance());
+        assertEquals(0.0, service.get("malformed").chance());
+        assertEquals(0.0, service.get("infinite").chance());
+        assertEquals(0.0, service.get("not-a-number").chance());
+        assertEquals(5, service.warnings().stream().filter(w -> w.contains("chance")).count());
     }
 
     @Test

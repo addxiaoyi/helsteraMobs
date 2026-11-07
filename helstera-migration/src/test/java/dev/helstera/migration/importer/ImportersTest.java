@@ -147,6 +147,88 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("MythicMobs: mob option defaults honor config-mobs precedence except PreventTransformation")
+    void mapsMobOptionDefaultsWithExplicitAndGlobalPrecedence(@TempDir Path root) throws Exception {
+        write(root, "config-mobs.yml", """
+                Configuration:
+                  DefaultMobOptions:
+                    PreventItemPickup: false
+                    NoDamageTicks: 19
+                    PreventLeashing: false
+                    PreventTransformation: false
+                """);
+        Path file = write(root, "Mobs/defaults.yml", """
+                GlobalDefaults:
+                  Type: ZOMBIE
+                ExplicitValues:
+                  Type: ZOMBIE
+                  Options:
+                    PreventItemPickup: true
+                    NoDamageTicks: 27
+                    PreventLeashing: true
+                    PreventTransformation: true
+                    CanPickupItems: true
+                """);
+
+        var importer = new MythicMobsImporter();
+        var entries = importer.convert(file, root);
+        var global = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(entries.stream()
+                .filter(e -> "mobs/mythic_globaldefaults.yml".equals(e.get("target-file")))
+                .findFirst().orElseThrow().get("content"))));
+        var explicit = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(entries.stream()
+                .filter(e -> "mobs/mythic_explicitvalues.yml".equals(e.get("target-file")))
+                .findFirst().orElseThrow().get("content"))));
+
+        assertFalse(global.getBoolean("entity.prevent-item-pickup"));
+        assertEquals(19, global.getInt("entity.no-damage-ticks"));
+        assertFalse(global.getBoolean("mob.prevent-leashing"));
+        assertTrue(global.getBoolean("mob.prevent-transformation"));
+        assertTrue(entries.stream().anyMatch(e -> "defaulted".equals(e.get("status"))
+                && "MythicMobs.Options.PreventTransformation.default".equals(e.get("source-key"))
+                && "true".equals(e.get("value"))));
+        assertTrue(entries.stream().noneMatch(e -> "defaulted".equals(e.get("status"))
+                && String.valueOf(e.get("source-key")).contains("DefaultMobOptions.PreventTransformation")));
+        assertTrue(explicit.getBoolean("entity.prevent-item-pickup"));
+        assertEquals(27, explicit.getInt("entity.no-damage-ticks"));
+        assertTrue(explicit.getBoolean("mob.prevent-leashing"));
+        assertTrue(explicit.getBoolean("mob.prevent-transformation"));
+        assertTrue(explicit.getBoolean("entity.can-pickup-items"));
+        assertTrue(entries.stream().anyMatch(e -> "defaulted".equals(e.get("status"))
+                && String.valueOf(e.get("source-key")).contains("DefaultMobOptions.PreventItemPickup")));
+        assertTrue(entries.stream().anyMatch(e -> "mapped".equals(e.get("status"))
+                && "Options.NoDamageTicks".equals(e.get("source-key"))
+                && "27".equals(e.get("value"))));
+    }
+
+    @Test
+    void preservesInvalidGlobalMobOptionAndUsesBuiltInDefault(@TempDir Path root) throws Exception {
+        write(root, "config-mobs.yml", """
+                Configuration:
+                  DefaultMobOptions:
+                    PreventItemPickup: maybe
+                    NoDamageTicks: -4
+                """);
+        Path file = write(root, "Mobs/invalid-defaults.yml", """
+                Probe:
+                  Type: ZOMBIE
+                """);
+
+        var entries = new MythicMobsImporter().convert(file, root);
+        var plan = entries.stream()
+                .filter(e -> "mobs/mythic_probe.yml".equals(e.get("target-file")))
+                .findFirst().orElseThrow();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(plan.get("content"))));
+        assertTrue(yaml.getBoolean("entity.prevent-item-pickup"));
+        assertEquals(10, yaml.getInt("entity.no-damage-ticks"));
+        assertTrue(yaml.getBoolean("mob.prevent-leashing"));
+        assertTrue(yaml.getBoolean("mob.prevent-transformation"));
+        assertTrue(yaml.contains("mob.unsupported.DefaultMobOptions.PreventItemPickup"));
+        assertTrue(yaml.contains("mob.unsupported.DefaultMobOptions.NoDamageTicks"));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && String.valueOf(e.get("source-key")).contains("DefaultMobOptions")));
+    }
+
+    @Test
     void convertsContentInScannedSubdirectories(@TempDir Path root) throws Exception {
         var importer = new MythicMobsImporter();
         Path item = write(root, "Items/area/items.yml", "blade:\n  Id: DIAMOND_SWORD\n");
@@ -1735,6 +1817,57 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic execution audience mechanics preserve named options and nested targeters")
+    void mythicMapsExecutionAudienceMechanics(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/audience.yml", """
+                skills:
+                  audience:
+                    Skills:
+                      - AddToAudience{a=target;mobs=@EntitiesInRadius{r=30};ignoreSkillAudience=true}
+                      - RemoveFromAudience{audience=target}
+                      - UnsetAudience
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+
+        assertEquals(List.of(
+                        "add-to-audience{a=target;mobs=@EntitiesInRadius{r=30};ignoreSkillAudience=true}",
+                        "remove-from-audience{audience=target}",
+                        "unset-audience"),
+                target.getStringList("skills.audience.on-decision"), target.saveToString());
+        assertFalse(target.contains("skills.audience.unsupported"));
+    }
+
+    @Test
+    @DisplayName("Mythic Mob and skill ExecutionAudience configuration imports")
+    void mythicMapsExecutionAudienceConfiguration(@TempDir Path root) throws Exception {
+        Path mobFile = write(root, "Mobs/audience.yml", """
+                Guard:
+                  Type: ZOMBIE
+                  Options:
+                    ExecutionAudience: '@PlayersInRadius{r=12}'
+                """);
+        List<Map<String, Object>> mobEntries = new MythicMobsImporter().convert(mobFile);
+        YamlConfiguration mob = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(
+                mobEntries.stream().filter(entry -> "mobs/mythic_guard.yml".equals(entry.get("target-file")))
+                        .findFirst().orElseThrow().get("content"))));
+        assertEquals("@PlayersInRadius{r=12}", mob.getString("mob.execution-audience"));
+
+        Path skillFile = write(root, "Skills/audience-config.yml", """
+                skills:
+                  private:
+                    ExecutionAudience: NONE
+                    Skills:
+                      - message{m=private}
+                """);
+        List<Map<String, Object>> skillEntries = new MythicMobsImporter().convert(skillFile);
+        YamlConfiguration skills = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(
+                plan(skillEntries).orElseThrow().get("content"))));
+        assertEquals("NONE", skills.getString("skills.private.execution-audience"));
+    }
+
+    @Test
     @DisplayName("Mythic score mechanics map to the existing instance score actions")
     void mythicMapsScoreMechanics(@TempDir Path root) throws Exception {
         Path file = write(root, "Skills/scores.yml", """
@@ -2688,8 +2821,8 @@ class ImportersTest {
     }
 
     @Test
-    @DisplayName("execution audience conditions are preserved with their missing-context reason")
-    void mythicPreservesExecutionAudienceConditions(@TempDir Path root) throws Exception {
+    @DisplayName("execution audience condition aliases import to the runtime evaluator")
+    void mythicMapsExecutionAudienceConditions(@TempDir Path root) throws Exception {
         Path file = write(root, "Skills/AudienceGate.yml", """
                 AudienceGate:
                   TargetConditions:
@@ -2703,15 +2836,11 @@ class ImportersTest {
         var plan = entries.stream().filter(e -> e.containsKey("target-file")).findFirst().orElseThrow();
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
-        List<String> preserved = List.of("?isInAudience", "?inaudience", "?audienceContains{}");
-
-        assertEquals(preserved, target.getStringList("skills.audiencegate.target-conditions"));
-        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
-                && "WARN".equals(e.get("severity"))
+        assertEquals(List.of("is-in-audience", "is-in-audience", "is-in-audience"),
+                target.getStringList("skills.audiencegate.target-conditions"));
+        assertFalse(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
                 && String.valueOf(e.get("source-key")).endsWith("TargetConditions.unmapped")
-                && String.valueOf(e.get("target-key")).equals("skills.audiencegate.target-conditions")
-                && String.valueOf(e.get("note")).contains("execution audience")
-                && String.valueOf(e.get("note")).contains("per action")));
+                && String.valueOf(e.get("target-key")).equals("skills.audiencegate.target-conditions")));
     }
 
     @Test
@@ -3717,7 +3846,7 @@ class ImportersTest {
         var entries = new MythicMobsImporter().convert(file);
         YamlConfiguration target = converted(file);
 
-        assertFalse(target.getBoolean("mob.prevent-transformation"));
+        assertTrue(target.getBoolean("mob.prevent-transformation"));
         assertEquals(List.of("SHEARED", "DROWNED", "CURED", "INFECTION"),
                 target.getStringList("mob.prevent-transformation-reasons"));
         for (String reason : target.getStringList("mob.prevent-transformation-reasons")) {
@@ -4132,6 +4261,41 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Spawner references resolve to imported Mob IDs")
+    void mythicSpawnerReferencesResolveToImportedMobIds(@TempDir Path root) throws Exception {
+        write(root, "Mobs/arena.yml", """
+                mobs:
+                  Guard:
+                    Type: ZOMBIE
+                  Boss:
+                    Type: SKELETON
+                """);
+        Path file = write(root, "Spawners/arena.yml", """
+                spawners:
+                  arena:
+                    Mob: GUARD
+                    RandomMobs:
+                      guard: 1
+                      Boss: 3
+                      external_mob: 2
+                """);
+
+        var converted = new MythicMobsImporter().convert(file, root);
+        var plan = converted.stream().filter(entry -> "spawners.yml".equals(entry.get("target-file")))
+                .findFirst().orElseThrow();
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan.get("content"))));
+
+        assertEquals("mythic_guard", target.getString("spawners.arena.mob"));
+        assertEquals(1, target.getInt("spawners.arena.random-mobs.mythic_guard"));
+        assertEquals(3, target.getInt("spawners.arena.random-mobs.mythic_boss"));
+        assertEquals(2, target.getInt("spawners.arena.random-mobs.external_mob"));
+        assertTrue(converted.stream().anyMatch(entry ->
+                "unsupported".equals(entry.get("status"))
+                        && "Spawners.arena.RandomMobs.external_mob".equals(entry.get("source-key"))));
+    }
+
+    @Test
     @DisplayName("MythicMobs spawner lifecycle and AI fields are preserved")
     void mythicSpawnerExtendedFieldsConvert(@TempDir Path root) throws Exception {
         Path file = write(root, "Spawners/extended.yml", """
@@ -4140,6 +4304,9 @@ class ImportersTest {
                     Mob: boss
                     X: 0
                     Z: 0
+                    Chance: 0.25
+                    GroupSize: 3-5
+                    MaxMobs: 2
                     MaxSpawns: 10
                     YRange: 8
                     AIProfile: elite
@@ -4153,6 +4320,9 @@ class ImportersTest {
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
         assertEquals(10, target.getInt("spawners.arena.max-spawns"));
+        assertEquals(0.25, target.getDouble("spawners.arena.chance"), 1e-9);
+        assertEquals("3-5", target.getString("spawners.arena.group-size"));
+        assertEquals(2, target.getInt("spawners.arena.max-alive"));
         assertEquals(8, target.getInt("spawners.arena.y-range"));
         assertEquals("elite", target.getString("spawners.arena.ai-profile"));
         assertEquals(List.of("night", "!raining"), target.getStringList("spawners.arena.conditions"));
@@ -4191,6 +4361,7 @@ class ImportersTest {
                     Mob: boss
                     Conditions:
                       - isRaining
+                      - "!isThundering"
                       - "?health{<50}"
                       - lunar-phase-is=FULL
                 """);
@@ -4200,7 +4371,7 @@ class ImportersTest {
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
 
-        assertEquals(List.of("raining", "health <50", "lunar-phase-is=FULL"),
+        assertEquals(List.of("raining", "!thundering", "health <50", "lunar-phase-is=FULL"),
                 target.getStringList("spawners.arena.conditions"));
     }
 

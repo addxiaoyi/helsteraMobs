@@ -267,9 +267,42 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 dev.helstera.ai.skill.SkillExtras.pinRegistry(pinRegistry);
                 reloadPins("启动");
                 dev.helstera.ai.skill.SkillExtras.managedEntityLookup(this::findInstanceSafe);
+                dev.helstera.ai.skill.SkillExtras.executionAudienceWriter((instance, players) -> {
+                    instance.setExecutionAudience(players);
+                    if (instance instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl
+                            && refresher instanceof VisibilityRefresher visibilityRefresher) {
+                        visibilityRefresher.refreshInstance(impl);
+                    }
+                });
+                dev.helstera.ai.skill.SkillExtras.audienceMobSelector((targeter, context) -> {
+                    List<org.bukkit.entity.LivingEntity> candidates = new ArrayList<>();
+                    for (org.bukkit.World world : Bukkit.getWorlds()) {
+                        candidates.addAll(world.getLivingEntities());
+                    }
+                    List<ModelInstance> selected = new ArrayList<>();
+                    Set<java.util.UUID> seen = new java.util.HashSet<>();
+                    for (org.bukkit.entity.LivingEntity entity
+                            : dev.helstera.api.behavior.Targeters.select(
+                            targeter, context, candidates, List.of())) {
+                        var managed = findInstance(entity);
+                        if (managed != null && seen.add(managed.boundEntityId().orElseThrow())) {
+                            selected.add(managed);
+                        }
+                    }
+                    return selected;
+                });
+                dev.helstera.ai.skill.SkillCatalog.summonedAudienceUpdater((instanceId, players) -> {
+                    if (instances instanceof InstanceManagerImpl manager) {
+                        dev.helstera.runtime.instance.ModelInstanceImpl summoned = manager.impl(instanceId);
+                        if (summoned != null) {
+                            dev.helstera.ai.skill.SkillExtras.updateExecutionAudience(summoned, players);
+                        }
+                    }
+                });
                 dev.helstera.ai.skill.SkillExtras.despawner(
                         instanceId -> ((InstanceManagerImpl) instances).despawn(instanceId));
                 SkillService skills = new SkillService(br, getLogger());
+                skills.instanceLookup(this::findInstance);
                 dev.helstera.ai.skill.SkillExtras.skillCooldownSetter(skills::setSkillCooldown);
                 if (!new java.io.File(getDataFolder(), "skills.yml").exists()) {
                     saveResource("skills.yml", false);
@@ -646,6 +679,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         if (getConfig().getBoolean("debug.self-test-spawner", false)) {
             runSpawnerSelfTest();
+            runMythicSpawnerChanceSelfTest();
+            runMythicSpawnerConditionsSelfTest();
+            runMythicRandomPoolDropTableSelfTest();
         }
         if (getConfig().getBoolean("debug.self-test-spawner-persistence", false)) {
             runSpawnerPersistenceSelfTest();
@@ -663,6 +699,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         if (getConfig().getBoolean("debug.self-test-audience", false)) {
             runAudienceSelfTest();
+        }
+        if (getConfig().getBoolean("debug.self-test-execution-audience", false)) {
+            runExecutionAudienceSelfTest();
+        }
+        if (getConfig().getBoolean("debug.self-test-execution-audience-mob", false)) {
+            runExecutionAudienceMobSelfTest();
         }
 
         boot.append("模型根目录: ").append(modelRoots()).append('\n');
@@ -870,6 +912,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     // 否则它们会一直显示为紫黑方块。
                     buildResourcePack(applyPackToPlayers);
                      restorePersistentMobs();
+                     if (getConfig().getBoolean("debug.self-test-execution-audience-persistence", false)) {
+                         runPersistentExecutionAudienceSelfTest();
+                     }
                      if (getConfig().getBoolean("debug.self-test-skilltree-persistence", false)) {
                          runPersistentSkillTreeSelfTest();
                      }
@@ -1638,6 +1683,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " explicit-equipment-preserved=" + explicitEquipmentPreserved
                         + " no-damage-ticks=" + noDamageTicksApplied);
 
+                runImportedMobDefaultsSelfTest(world, origin.clone().add(30, 0, 0));
+
                 var slime = world.spawn(origin.clone().add(16, 0, 0), org.bukkit.entity.Slime.class);
                 entities.add(slime);
                 var sizeConfig = new org.bukkit.configuration.file.YamlConfiguration();
@@ -1717,6 +1764,198 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 20L);
+    }
+
+    private void runImportedMobDefaultsSelfTest(org.bukkit.World world, Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        java.util.List<Integer> instanceIds = new java.util.ArrayList<>();
+        try {
+            if (world == null || origin == null || origin.getWorld() != world) {
+                throw new IllegalArgumentException("Invalid Paper probe world or origin");
+            }
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            Path tempRoot = Files.createTempDirectory("helstera-mob-defaults-import-");
+            sourceRoot = tempRoot;
+            Path builtInRoot = Files.createDirectories(tempRoot.resolve("builtin"));
+            Path configuredRoot = Files.createDirectories(tempRoot.resolve("configured"));
+            Path builtInSource = Files.createDirectories(builtInRoot.resolve("Mobs"))
+                    .resolve("defaults.yml");
+            Path configuredMobs = Files.createDirectories(configuredRoot.resolve("Mobs"));
+            Files.writeString(configuredRoot.resolve("config-mobs.yml"), """
+                    Configuration:
+                      DefaultMobOptions:
+                        PreventItemPickup: false
+                        NoDamageTicks: 19
+                        PreventLeashing: false
+                        PreventTransformation: false
+                    """);
+            Files.writeString(builtInSource, """
+                    BuiltIn_%1$s:
+                      Type: ZOMBIE
+                    """.formatted(suffix));
+            Path configuredSource = configuredMobs.resolve("defaults.yml");
+            Files.writeString(configuredSource, """
+                    Global_%1$s:
+                      Type: ZOMBIE
+                    Explicit_%1$s:
+                      Type: ZOMBIE
+                      Options:
+                        PreventItemPickup: true
+                        NoDamageTicks: 27
+                        PreventLeashing: true
+                        PreventTransformation: false
+                        CanPickupItems: true
+                    """.formatted(suffix));
+
+            var importer = new MythicMobsImporter();
+            var converted = new java.util.ArrayList<Map<String, Object>>();
+            converted.addAll(importer.convert(builtInSource, builtInRoot));
+            converted.addAll(importer.convert(configuredSource, configuredRoot));
+            var configurations = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe mob output path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                String sourceId = String.valueOf(entry.get("source-mob-id"));
+                String targetId = String.valueOf(entry.get("target-mob-id"));
+                configurations.put(sourceId, targetId);
+            }
+
+            var builtInId = configurations.get("BuiltIn_" + suffix);
+            var globalId = configurations.get("Global_" + suffix);
+            var explicitId = configurations.get("Explicit_" + suffix);
+            int builtInInstanceId = spawnImportedMobDefaultsProbe(builtInId, origin.clone());
+            int globalInstanceId = spawnImportedMobDefaultsProbe(globalId, origin.clone().add(3, 0, 0));
+            int explicitInstanceId = spawnImportedMobDefaultsProbe(explicitId, origin.clone().add(6, 0, 0));
+            if (builtInInstanceId > 0) instanceIds.add(builtInInstanceId);
+            if (globalInstanceId > 0) instanceIds.add(globalInstanceId);
+            if (explicitInstanceId > 0) instanceIds.add(explicitInstanceId);
+
+            var builtIn = builtInInstanceId > 0 ? instances().impl(builtInInstanceId) : null;
+            var global = globalInstanceId > 0 ? instances().impl(globalInstanceId) : null;
+            var explicit = explicitInstanceId > 0 ? instances().impl(explicitInstanceId) : null;
+            var globalDefaultsConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                    configuredRoot.resolve("config-mobs.yml").toFile());
+            boolean globalTransformationDefault = globalDefaultsConfig.getBoolean(
+                    "Configuration.DefaultMobOptions.PreventTransformation", true);
+            boolean globalTransformationDefaultIgnored = converted.stream().anyMatch(entry ->
+                    configuredSource.toString().equals(entry.get("source-file"))
+                            && "MythicMobs.Options.PreventTransformation.default".equals(entry.get("source-key"))
+                            && "defaulted".equals(entry.get("status"))
+                            && "true".equals(entry.get("value")));
+            var builtInMob = builtIn == null ? null
+                    : builtIn.baseEntity().filter(org.bukkit.entity.Mob.class::isInstance)
+                    .map(org.bukkit.entity.Mob.class::cast).orElse(null);
+            var globalMob = global == null ? null
+                    : global.baseEntity().filter(org.bukkit.entity.Mob.class::isInstance)
+                    .map(org.bukkit.entity.Mob.class::cast).orElse(null);
+            var explicitMob = explicit == null ? null
+                    : explicit.baseEntity().filter(org.bukkit.entity.Mob.class::isInstance)
+                    .map(org.bukkit.entity.Mob.class::cast).orElse(null);
+
+            boolean builtInDefaults = builtInMob != null && !builtInMob.getCanPickupItems()
+                    && builtInMob.getNoDamageTicks() == 10
+                    && builtIn.options().preventLeashing()
+                    && builtIn.options().preventTransformation();
+            boolean globalDefaults = globalMob != null && globalMob.getCanPickupItems()
+                    && globalMob.getNoDamageTicks() == 19
+                    && !global.options().preventLeashing()
+                    && !globalTransformationDefault
+                    && globalTransformationDefaultIgnored
+                    && global.options().preventTransformation();
+            boolean explicitOverrides = explicitMob != null && explicitMob.getCanPickupItems()
+                    && explicitMob.getNoDamageTicks() == 27
+                    && explicit.options().preventLeashing()
+                    && !explicit.options().preventTransformation();
+            boolean importedMappings = configurations.size() == 3
+                    && builtInId != null && globalId != null && explicitId != null;
+            boolean builtInTransformationCancelled = isTransformationCancelled(builtInMob);
+            boolean globalTransformationCancelled = isTransformationCancelled(globalMob);
+            boolean explicitTransformationAllowed = isTransformationAllowed(explicitMob);
+            getLogger().info("[自检] imported-mob-defaults result="
+                    + (importedMappings && builtInDefaults && globalDefaults && explicitOverrides
+                    && builtInTransformationCancelled && globalTransformationCancelled
+                    && explicitTransformationAllowed)
+                    + " imported=" + importedMappings
+                    + " builtin-pickup-disabled=" + (builtInMob != null && !builtInMob.getCanPickupItems())
+                    + " builtin-no-damage-ticks=" + (builtInMob != null && builtInMob.getNoDamageTicks() == 10)
+                    + " builtin-prevent-leashing=" + (builtIn != null && builtIn.options().preventLeashing())
+                    + " builtin-prevent-transformation=" + (builtIn != null && builtIn.options().preventTransformation())
+                    + " global-pickup-enabled=" + (globalMob != null && globalMob.getCanPickupItems())
+                    + " global-no-damage-ticks=" + (globalMob != null && globalMob.getNoDamageTicks() == 19)
+                    + " global-prevent-leashing=" + (global != null && global.options().preventLeashing())
+                    + " global-default-prevent-transformation=" + globalTransformationDefault
+                    + " global-default-ignored=" + globalTransformationDefaultIgnored
+                    + " global-prevent-transformation=" + (global != null && global.options().preventTransformation())
+                    + " explicit-pickup-enabled=" + (explicitMob != null && explicitMob.getCanPickupItems())
+                    + " explicit-no-damage-ticks=" + (explicitMob != null && explicitMob.getNoDamageTicks() == 27)
+                    + " explicit-prevent-leashing=" + (explicit != null && explicit.options().preventLeashing())
+                    + " explicit-prevent-transformation-disabled="
+                    + (explicit != null && !explicit.options().preventTransformation())
+                    + " builtin-transform-cancelled=" + builtInTransformationCancelled
+                    + " global-transform-cancelled=" + globalTransformationCancelled
+                    + " explicit-transform-allowed=" + explicitTransformationAllowed);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] imported-mob-defaults result=false error=" + failure);
+        } finally {
+            for (int instanceId : instanceIds) {
+                try { instances().despawn(instanceId); } catch (RuntimeException ignored) { }
+            }
+            if (sourceRoot != null) {
+                try (var paths = Files.walk(sourceRoot)) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("imported-mob-defaults source cleanup failed=" + cleanupFailure);
+                }
+            }
+            for (Path mobFile : mobFiles) {
+                try {
+                    Files.deleteIfExists(mobFile);
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("imported-mob-defaults target cleanup failed=" + cleanupFailure);
+                }
+            }
+            if (!outputDirectoryExisted) {
+                try { Files.deleteIfExists(outputDirectory); }
+                catch (IOException ignored) { }
+            }
+        }
+    }
+
+    private int spawnImportedMobDefaultsProbe(String mobId, Location location) {
+        if (mobId == null || instances == null) return -1;
+        MobSpawn spawned = spawnMobCore(mobId, "example/emberling", location, false, null);
+        return spawned == null ? -1 : spawned.instanceId();
+    }
+
+    private boolean isTransformationCancelled(org.bukkit.entity.Mob mob) {
+        if (mob == null) return false;
+        var event = new org.bukkit.event.entity.EntityTransformEvent(mob, java.util.List.of(mob),
+                org.bukkit.event.entity.EntityTransformEvent.TransformReason.DROWNED);
+        getServer().getPluginManager().callEvent(event);
+        return event.isCancelled();
+    }
+
+    private boolean isTransformationAllowed(org.bukkit.entity.Mob mob) {
+        if (mob == null) return false;
+        var event = new org.bukkit.event.entity.EntityTransformEvent(mob, java.util.List.of(mob),
+                org.bukkit.event.entity.EntityTransformEvent.TransformReason.DROWNED);
+        getServer().getPluginManager().callEvent(event);
+        return !event.isCancelled();
     }
 
     private void scheduleSpawningDistanceRuntimeProbe() {
@@ -6260,6 +6499,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean stateBlocking = false;
                 boolean spyglassCondition = false;
                 boolean importedSpyglassCondition = false;
+                boolean importedExecutionAudienceCondition = false;
                 boolean enchantingConditions = false;
                 boolean collidableCondition = false;
                 boolean offhandCondition = false;
@@ -6377,6 +6617,178 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " after=" + attackCooldownAfterValue
                             + " condition=" + rechargingConditionValue
                             + " attack-applied=" + attackApplied);
+                    var importedTargetHasOwner = dev.helstera.migration.importer.MmConditions.translate(
+                            "?targetHasOwner");
+                    var importedTargetOwnerIsPlayer = dev.helstera.migration.importer.MmConditions.translate(
+                            "?targetOwnerIsPlayer");
+                    var importedTargetOwnerIsOnline = dev.helstera.migration.importer.MmConditions.translate(
+                            "?targetOwnerIsOnline");
+                    var importedTargetIsLeashed = dev.helstera.migration.importer.MmConditions.translate(
+                            "?targetIsLeashed");
+                    var importedTargetLeashedAlias = dev.helstera.migration.importer.MmConditions.translate(
+                            "?targetLeashed");
+                    boolean targetHasOwnerMapped = importedTargetHasOwner.translated()
+                            && "target-has-owner".equals(importedTargetHasOwner.condition());
+                    boolean targetOwnerIsPlayerMapped = importedTargetOwnerIsPlayer.translated()
+                            && "target-owner-is-player".equals(importedTargetOwnerIsPlayer.condition());
+                    boolean targetOwnerIsOnlineMapped = importedTargetOwnerIsOnline.translated()
+                            && "target-owner-is-online".equals(importedTargetOwnerIsOnline.condition());
+                    boolean targetIsLeashedMapped = importedTargetIsLeashed.translated()
+                            && "target-is-leashed".equals(importedTargetIsLeashed.condition());
+                    boolean targetLeashedAliasMapped = importedTargetLeashedAlias.translated()
+                            && "target-is-leashed".equals(importedTargetLeashedAlias.condition());
+                    String targetHasOwnerKey = targetHasOwnerMapped
+                            ? skills.bindCondition(importedTargetHasOwner.condition()) : null;
+                    String targetOwnerIsPlayerKey = targetOwnerIsPlayerMapped
+                            ? skills.bindCondition(importedTargetOwnerIsPlayer.condition()) : null;
+                    String targetOwnerIsOnlineKey = targetOwnerIsOnlineMapped
+                            ? skills.bindCondition(importedTargetOwnerIsOnline.condition()) : null;
+                    String targetIsLeashedKey = targetIsLeashedMapped
+                            ? skills.bindCondition(importedTargetIsLeashed.condition()) : null;
+                    String targetLeashedAliasKey = targetLeashedAliasMapped
+                            ? skills.bindCondition(importedTargetLeashedAlias.condition()) : null;
+                    var relationTarget = permissionProbe.getWorld().spawn(
+                            permissionProbe.getLocation().clone().add(3, 0, 0),
+                            org.bukkit.entity.Wolf.class);
+                    conditionCategoryEntities.add(relationTarget);
+                    relationTarget.setTamed(true);
+                    relationTarget.setOwner(permissionProbe);
+                    relationTarget.setLeashHolder(permissionProbe);
+                    var relationContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            null, relationTarget, 1.0, -1, 0, "integration");
+                    boolean ownedPositive = targetHasOwnerKey != null
+                            && behaviors.testCondition(targetHasOwnerKey, relationContext);
+                    boolean ownerPlayerPositive = targetOwnerIsPlayerKey != null
+                            && behaviors.testCondition(targetOwnerIsPlayerKey, relationContext);
+                    boolean ownerOnlinePositive = targetOwnerIsOnlineKey != null
+                            && behaviors.testCondition(targetOwnerIsOnlineKey, relationContext);
+                    boolean leashPositive = targetIsLeashedKey != null
+                            && behaviors.testCondition(targetIsLeashedKey, relationContext);
+                    boolean leashAliasPositive = targetLeashedAliasKey != null
+                            && behaviors.testCondition(targetLeashedAliasKey, relationContext);
+                    relationTarget.setLeashHolder(null);
+                    boolean leashClearedRejected = targetIsLeashedKey != null
+                            && targetLeashedAliasKey != null
+                            && !behaviors.testCondition(targetIsLeashedKey, relationContext)
+                            && !behaviors.testCondition(targetLeashedAliasKey, relationContext);
+                    relationTarget.setOwner(null);
+                    relationTarget.setTamed(false);
+                    boolean ownerClearedRejected = targetHasOwnerKey != null
+                            && targetOwnerIsPlayerKey != null && targetOwnerIsOnlineKey != null
+                            && !behaviors.testCondition(targetHasOwnerKey, relationContext)
+                            && !behaviors.testCondition(targetOwnerIsPlayerKey, relationContext)
+                            && !behaviors.testCondition(targetOwnerIsOnlineKey, relationContext);
+                    var relationNoTargetContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+                    boolean missingTargetRejected = targetHasOwnerKey != null
+                            && targetOwnerIsPlayerKey != null && targetOwnerIsOnlineKey != null
+                            && targetIsLeashedKey != null
+                            && !behaviors.testCondition(targetHasOwnerKey, relationNoTargetContext)
+                            && !behaviors.testCondition(targetOwnerIsPlayerKey, relationNoTargetContext)
+                            && !behaviors.testCondition(targetOwnerIsOnlineKey, relationNoTargetContext)
+                            && !behaviors.testCondition(targetIsLeashedKey, relationNoTargetContext);
+                    boolean targetRelationshipsResult = targetHasOwnerMapped && targetOwnerIsPlayerMapped
+                            && targetOwnerIsOnlineMapped && targetIsLeashedMapped
+                            && targetLeashedAliasMapped && ownedPositive && ownerPlayerPositive
+                            && ownerOnlinePositive && leashPositive && leashAliasPositive
+                            && leashClearedRejected && ownerClearedRejected && missingTargetRejected;
+                    getLogger().info("[自检] imported-target-relationships-condition"
+                            + " has-owner-mapped=" + targetHasOwnerMapped
+                            + " owner-player-mapped=" + targetOwnerIsPlayerMapped
+                            + " owner-online-mapped=" + targetOwnerIsOnlineMapped
+                            + " leashed-mapped=" + targetIsLeashedMapped
+                            + " leashed-alias-mapped=" + targetLeashedAliasMapped
+                            + " owned-positive=" + ownedPositive
+                            + " owner-player-positive=" + ownerPlayerPositive
+                            + " owner-online-positive=" + ownerOnlinePositive
+                            + " leashed-positive=" + leashPositive
+                            + " leashed-alias-positive=" + leashAliasPositive
+                            + " leash-cleared-rejected=" + leashClearedRejected
+                            + " owner-cleared-rejected=" + ownerClearedRejected
+                            + " missing-target-rejected=" + missingTargetRejected
+                            + " result=" + targetRelationshipsResult);
+                    var audiencePeer = getServer().getPlayerExact("HelsteraTester");
+                    var importedAudience = dev.helstera.migration.importer.MmConditions.translate(
+                            "?isInAudience");
+                    var importedAudienceAlias = dev.helstera.migration.importer.MmConditions.translate(
+                            "?inaudience");
+                    var importedAudienceContains = dev.helstera.migration.importer.MmConditions.translate(
+                            "?audiencecontains{}");
+                    var importedAudienceInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                            "?isInAudience{unknown=true}");
+                    boolean audienceMapped = importedAudience.translated()
+                            && "is-in-audience".equals(importedAudience.condition());
+                    boolean audienceAliasMapped = importedAudienceAlias.translated()
+                            && "is-in-audience".equals(importedAudienceAlias.condition());
+                    boolean audienceContainsMapped = importedAudienceContains.translated()
+                            && "is-in-audience".equals(importedAudienceContains.condition());
+                    String audienceConditionKey = audienceMapped
+                            ? skills.bindCondition(importedAudience.condition()) : null;
+                    var audienceMemberContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                            null, permissionProbe, 1.0, -1, 0, "integration", null,
+                            permissionProbe, java.util.List.of(permissionProbe), permissionProbe.getLocation())
+                            .withExecutionAudience(java.util.List.of(permissionProbe));
+                    var audiencePeerContext = audiencePeer != null && audiencePeer.isOnline()
+                            ? dev.helstera.api.behavior.BehaviorContext.execution(
+                            null, audiencePeer, 1.0, -1, 0, "integration", null,
+                            permissionProbe, java.util.List.of(audiencePeer), audiencePeer.getLocation())
+                            .withExecutionAudience(java.util.List.of(permissionProbe)) : null;
+                    boolean noAudiencePlayerAllowed = audienceConditionKey != null
+                            && behaviors.testCondition(audienceConditionKey, stateContext);
+                    boolean audienceMemberAllowed = audienceConditionKey != null
+                            && behaviors.testCondition(audienceConditionKey, audienceMemberContext);
+                    boolean audienceOutsiderRejected = audienceConditionKey != null
+                            && audiencePeerContext != null
+                            && !behaviors.testCondition(audienceConditionKey, audiencePeerContext);
+                    boolean emptyAudienceRejected = audienceConditionKey != null
+                            && !behaviors.testCondition(audienceConditionKey,
+                            stateContext.withExecutionAudience(java.util.List.of()));
+                    boolean audienceNonPlayerRejected = audienceConditionKey != null
+                            && !behaviors.testCondition(audienceConditionKey,
+                            dev.helstera.api.behavior.BehaviorContext.of(
+                                    null, rechargingTarget, 1.0, -1, 0, "integration"));
+                    boolean audienceInvalidPreserved = !importedAudienceInvalid.translated()
+                            && "?isInAudience{unknown=true}".equals(importedAudienceInvalid.condition());
+
+                    var audienceTargets = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
+                    behaviors.registerAction("paper-execution-audience-capture",
+                            actionContext -> audienceTargets.addAll(actionContext.targets()));
+                    String audienceTargetAction = skills.bindAction(
+                            "paper-execution-audience-capture @targets ?@isInAudience");
+                    var audienceTargetList = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
+                    audienceTargetList.add(permissionProbe);
+                    if (audiencePeer != null && audiencePeer.isOnline()) audienceTargetList.add(audiencePeer);
+                    audienceTargetList.add(rechargingTarget);
+                    var unattachedAudienceTargets = dev.helstera.api.behavior.BehaviorContext.execution(
+                            null, permissionProbe, 1.0, -1, 0, "integration", null,
+                            permissionProbe, audienceTargetList, permissionProbe.getLocation());
+                    boolean perTargetWithoutAudience = audienceTargetAction != null && audiencePeer != null
+                            && audiencePeer.isOnline()
+                            && behaviors.runAction(audienceTargetAction, unattachedAudienceTargets)
+                            && audienceTargets.equals(java.util.List.of(permissionProbe, audiencePeer));
+                    audienceTargets.clear();
+                    var explicitAudienceTargets = unattachedAudienceTargets
+                            .withExecutionAudience(java.util.List.of(permissionProbe));
+                    boolean perTargetWithAudience = audienceTargetAction != null
+                            && behaviors.runAction(audienceTargetAction, explicitAudienceTargets)
+                            && audienceTargets.equals(java.util.List.of(permissionProbe));
+                    importedExecutionAudienceCondition = audienceMapped && audienceAliasMapped
+                            && audienceContainsMapped && noAudiencePlayerAllowed && audienceMemberAllowed
+                            && audienceOutsiderRejected && emptyAudienceRejected
+                            && audienceNonPlayerRejected && audienceInvalidPreserved
+                            && perTargetWithoutAudience && perTargetWithAudience;
+                    getLogger().info("[自检] imported-execution-audience-condition primary-mapped="
+                            + audienceMapped + " alias-mapped=" + audienceAliasMapped
+                            + " contains-mapped=" + audienceContainsMapped
+                            + " no-audience-player-allowed=" + noAudiencePlayerAllowed
+                            + " member-allowed=" + audienceMemberAllowed
+                            + " outsider-rejected=" + audienceOutsiderRejected
+                            + " empty-rejected=" + emptyAudienceRejected
+                            + " non-player-rejected=" + audienceNonPlayerRejected
+                            + " invalid-preserved=" + audienceInvalidPreserved
+                            + " per-target-unattached=" + perTargetWithoutAudience
+                            + " per-target-explicit=" + perTargetWithAudience
+                            + " result=" + importedExecutionAudienceCondition);
                     int oldEnderPearlCooldown = permissionProbe.getCooldown(org.bukkit.Material.ENDER_PEARL);
                     permissionProbe.setCooldown(org.bukkit.Material.ENDER_PEARL, 20);
                     var importedPearlCooldown = dev.helstera.migration.importer.MmConditions.translate(
@@ -6437,45 +6849,131 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             && !behaviors.testCondition(
                             skills.bindCondition("player-not-within 1"), stateContext);
                     Location oldLookingAtLocation = permissionProbe.getLocation().clone();
+                    org.bukkit.block.Block lookingAtTargetBlock = null;
+                    org.bukkit.Material oldLookingAtTargetType = null;
+                    org.bukkit.entity.Cow lookingAtCow = null;
                     var lookingAtBlockStates = new java.util.LinkedHashMap<org.bukkit.block.Block,
                             org.bukkit.block.BlockState>();
+                    boolean importedLookingAtPrimaryMapped = false;
+                    boolean importedLookingAtAliasMapped = false;
+                    boolean importedLookingAtEntityMapped = false;
+                    boolean lookingAtPositive = false;
+                    boolean lookingAtAliasPositive = false;
+                    boolean lookingAtWrongBlockRejected = false;
+                    boolean lookingAtShortBlockDistanceRejected = false;
+                    boolean lookingAtNegative = false;
+                    boolean lookingAtEntityPositive = false;
+                    boolean lookingAtWrongEntityRejected = false;
+                    boolean lookingAtShortEntityDistanceRejected = false;
+                    boolean lookingAtInvalidRejected = false;
+                    boolean lookingAtRestored;
                     try {
                         permissionProbe.teleport(permissionProbe.getWorld().getSpawnLocation().clone().add(0, 2, 0));
                         permissionProbe.setRotation(0f, 0f);
                         Location eye = permissionProbe.getEyeLocation();
                         var direction = eye.getDirection().normalize();
                         Location lookingAtBlock = eye.clone().add(direction.clone().multiply(3.0));
-                        var rayTargetBlock = lookingAtBlock.getBlock();
-                        lookingAtBlockStates.put(rayTargetBlock, rayTargetBlock.getState());
+                        lookingAtTargetBlock = lookingAtBlock.getBlock();
+                        oldLookingAtTargetType = lookingAtTargetBlock.getType();
+                        lookingAtBlockStates.put(lookingAtTargetBlock, lookingAtTargetBlock.getState());
                         // Clear only the ray segment so unrelated terrain cannot make
                         // the positive assertion depend on where the test player spawned.
                         for (double step = 0.5; step < 3.0; step += 0.5) {
                             var pathBlock = eye.clone().add(direction.clone().multiply(step)).getBlock();
-                            if (pathBlock.equals(rayTargetBlock)
+                            if (pathBlock.equals(lookingAtTargetBlock)
                                     || pathBlock.getType() == org.bukkit.Material.AIR) continue;
                             lookingAtBlockStates.putIfAbsent(pathBlock, pathBlock.getState());
                             pathBlock.setType(org.bukkit.Material.AIR, false);
                         }
-                        rayTargetBlock.setType(org.bukkit.Material.STONE, false);
-                        boolean lookingPositive = behaviors.testCondition(
-                                skills.bindCondition("looking-at{block=STONE;distance=6}"), stateContext);
-                        // Remove the exact probe block before the negative check;
-                        // unrelated terrain must not satisfy the ray trace.
-                        // Keep the same cleared ray and replace only the target
-                        // with a non-STONE block, so the negative assertion is
-                        // independent of whatever terrain lies behind the player.
-                        rayTargetBlock.setType(org.bukkit.Material.DIRT, false);
-                        boolean lookingNegative = !behaviors.testCondition(
-                                skills.bindCondition("looking-at{block=STONE;distance=6}"), stateContext);
-                        lookingAtCondition = lookingPositive && lookingNegative;
-                        getLogger().info("looking-at-condition-details positive=" + lookingPositive
-                                + " negative=" + lookingNegative);
+                        var importedLookingAtBlock = dev.helstera.migration.importer.MmConditions.translate(
+                                "?lookingAt{b=STONE;d=6}");
+                        var importedLookingAtBlockAlias = dev.helstera.migration.importer.MmConditions.translate(
+                                "?lookingAt{block=STONE;distance=6}");
+                        var importedLookingAtWrongBlock = dev.helstera.migration.importer.MmConditions.translate(
+                                "?lookingAt{b=DIRT;d=6}");
+                        var importedLookingAtShortBlock = dev.helstera.migration.importer.MmConditions.translate(
+                                "?lookingAt{b=STONE;d=1}");
+                        var importedLookingAtEntity = dev.helstera.migration.importer.MmConditions.translate(
+                                "?lookingAt{e=COW;d=6}");
+                        var importedLookingAtWrongEntity = dev.helstera.migration.importer.MmConditions.translate(
+                                "?lookingAt{e=PIG;d=6}");
+                        var importedLookingAtShortEntity = dev.helstera.migration.importer.MmConditions.translate(
+                                "?lookingAt{e=COW;d=1}");
+                        var importedLookingAtInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                                "?lookingAt{b=STONE;d=0}");
+                        importedLookingAtPrimaryMapped = importedLookingAtBlock.translated()
+                                && "looking-at block STONE 6".equals(importedLookingAtBlock.condition());
+                        importedLookingAtAliasMapped = importedLookingAtBlockAlias.translated()
+                                && importedLookingAtBlock.condition().equals(importedLookingAtBlockAlias.condition());
+                        importedLookingAtEntityMapped = importedLookingAtEntity.translated()
+                                && "looking-at entity COW 6".equals(importedLookingAtEntity.condition());
+                        String lookingAtBlockKey = importedLookingAtPrimaryMapped
+                                ? skills.bindCondition(importedLookingAtBlock.condition()) : null;
+                        String lookingAtBlockAliasKey = importedLookingAtAliasMapped
+                                ? skills.bindCondition(importedLookingAtBlockAlias.condition()) : null;
+                        String lookingAtWrongBlockKey = importedLookingAtWrongBlock.translated()
+                                ? skills.bindCondition(importedLookingAtWrongBlock.condition()) : null;
+                        String lookingAtShortBlockKey = importedLookingAtShortBlock.translated()
+                                ? skills.bindCondition(importedLookingAtShortBlock.condition()) : null;
+                        String lookingAtEntityKey = importedLookingAtEntityMapped
+                                ? skills.bindCondition(importedLookingAtEntity.condition()) : null;
+                        String lookingAtWrongEntityKey = importedLookingAtWrongEntity.translated()
+                                ? skills.bindCondition(importedLookingAtWrongEntity.condition()) : null;
+                        String lookingAtShortEntityKey = importedLookingAtShortEntity.translated()
+                                ? skills.bindCondition(importedLookingAtShortEntity.condition()) : null;
+                        lookingAtInvalidRejected = !importedLookingAtInvalid.translated()
+                                && "?lookingAt{b=STONE;d=0}".equals(importedLookingAtInvalid.condition());
+
+                        lookingAtTargetBlock.setType(org.bukkit.Material.STONE, false);
+                        lookingAtPositive = lookingAtBlockKey != null
+                                && behaviors.testCondition(lookingAtBlockKey, stateContext);
+                        lookingAtAliasPositive = lookingAtBlockAliasKey != null
+                                && behaviors.testCondition(lookingAtBlockAliasKey, stateContext);
+                        lookingAtWrongBlockRejected = lookingAtWrongBlockKey != null
+                                && !behaviors.testCondition(lookingAtWrongBlockKey, stateContext);
+                        lookingAtShortBlockDistanceRejected = lookingAtShortBlockKey != null
+                                && !behaviors.testCondition(lookingAtShortBlockKey, stateContext);
+                        // Keep the ray clear and change only the expected hit type for the negative case.
+                        lookingAtTargetBlock.setType(org.bukkit.Material.DIRT, false);
+                        lookingAtNegative = lookingAtBlockKey != null
+                                && !behaviors.testCondition(lookingAtBlockKey, stateContext);
+
+                        lookingAtTargetBlock.setType(org.bukkit.Material.AIR, false);
+                        Location cowLocation = eye.clone().add(direction.clone().multiply(2.5)).subtract(0, 0.5, 0);
+                        lookingAtCow = permissionProbe.getWorld().spawn(cowLocation, org.bukkit.entity.Cow.class);
+                        lookingAtCow.setAI(false);
+                        lookingAtEntityPositive = lookingAtEntityKey != null
+                                && behaviors.testCondition(lookingAtEntityKey, stateContext);
+                        lookingAtWrongEntityRejected = lookingAtWrongEntityKey != null
+                                && !behaviors.testCondition(lookingAtWrongEntityKey, stateContext);
+                        lookingAtShortEntityDistanceRejected = lookingAtShortEntityKey != null
+                                && !behaviors.testCondition(lookingAtShortEntityKey, stateContext);
                     } finally {
+                        if (lookingAtCow != null && lookingAtCow.isValid()) lookingAtCow.remove();
                         for (var blockState : lookingAtBlockStates.values()) {
                             blockState.update(true, false);
                         }
                         permissionProbe.teleport(oldLookingAtLocation);
                     }
+                    lookingAtRestored = permissionProbe.getLocation().distance(oldLookingAtLocation) < 0.01
+                            && lookingAtTargetBlock != null
+                            && lookingAtTargetBlock.getType() == oldLookingAtTargetType;
+                    lookingAtCondition = importedLookingAtPrimaryMapped && importedLookingAtAliasMapped
+                            && importedLookingAtEntityMapped && lookingAtPositive && lookingAtAliasPositive
+                            && lookingAtWrongBlockRejected && lookingAtShortBlockDistanceRejected
+                            && lookingAtNegative && lookingAtEntityPositive && lookingAtWrongEntityRejected
+                            && lookingAtShortEntityDistanceRejected && lookingAtInvalidRejected
+                            && lookingAtRestored;
+                    getLogger().info("[自检] imported-looking-at-condition primary-mapped="
+                            + importedLookingAtPrimaryMapped + " alias-mapped=" + importedLookingAtAliasMapped
+                            + " entity-mapped=" + importedLookingAtEntityMapped
+                            + " positive=" + lookingAtPositive + " alias-positive=" + lookingAtAliasPositive
+                            + " wrong-block-rejected=" + lookingAtWrongBlockRejected
+                            + " short-block-distance-rejected=" + lookingAtShortBlockDistanceRejected
+                            + " negative=" + lookingAtNegative + " entity-positive=" + lookingAtEntityPositive
+                            + " wrong-entity-rejected=" + lookingAtWrongEntityRejected
+                            + " short-entity-distance-rejected=" + lookingAtShortEntityDistanceRejected
+                            + " invalid-rejected=" + lookingAtInvalidRejected + " restored=" + lookingAtRestored);
                     permissionProbe.setFoodLevel(14);
                     permissionProbe.setRemainingAir(100);
                     gameplayPlaceholders = "14".equals(dev.helstera.ai.skill.Placeholders.lookup(
@@ -9451,6 +9949,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             String stage = getConfig().getString(
                     "debug.self-test-spawner-persistence-stage", "write");
+            if ("natural-write".equalsIgnoreCase(stage)
+                    || "natural-verify".equalsIgnoreCase(stage)) {
+                runSpawnerNaturalPersistenceProbe(sp, probe, stage);
+                return;
+            }
             Location location = getServer().getWorlds().isEmpty()
                     ? null : getServer().getWorlds().get(0).getSpawnLocation().clone().add(0, 2, 0);
             int before = probe.totalSpawned();
@@ -9468,6 +9971,52 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " after=" + after + " restored=" + restored
                     + " result=" + restored);
         }, Math.max(1, getConfig().getLong("debug.self-test-delay-ticks", 40L)));
+    }
+
+    private void runSpawnerNaturalPersistenceProbe(
+            dev.helstera.ai.spawner.SpawnerService sp,
+            dev.helstera.ai.spawner.SpawnerService.Spawner probe,
+            String stage) {
+        boolean write = "natural-write".equalsIgnoreCase(stage);
+        int before = probe.totalSpawned();
+        int expectedBefore = write ? 0 : 1;
+        int remainingAtStart = sp.nextSpawnInTicks("persistence_probe");
+        if (before != expectedBefore || (!write && remainingAtStart <= 0)) {
+            getLogger().warning("spawner-persistence stage=" + stage
+                    + " before=" + before + " after=" + before
+                    + " remaining-at-start=" + remainingAtStart
+                    + " elapsed-ticks=0 result=false");
+            return;
+        }
+
+        int timeoutTicks = write
+                ? probe.intervalTicks() + 40
+                : remainingAtStart + 40;
+        int[] elapsedTicks = {0};
+        org.bukkit.scheduler.BukkitTask[] monitor = {null};
+        monitor[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+            elapsedTicks[0]++;
+            int after = probe.totalSpawned();
+            if (after == before && elapsedTicks[0] < timeoutTicks) return;
+
+            int remainingAtSpawn = sp.nextSpawnInTicks("persistence_probe");
+            boolean oneNaturalSpawn = after == before + 1;
+            boolean cooldownRestored = write || elapsedTicks[0] + 1 >= remainingAtStart;
+            boolean withinSchedulerQuantum = write
+                    || elapsedTicks[0] <= remainingAtStart + 20;
+            boolean result = oneNaturalSpawn
+                    && (write ? remainingAtSpawn > 0
+                            : remainingAtStart > 0 && cooldownRestored && withinSchedulerQuantum);
+            getLogger().info("spawner-persistence stage=" + stage
+                    + " before=" + before + " after=" + after
+                    + " source=live-scheduler"
+                    + (write ? " remaining=" + remainingAtSpawn
+                            : " remaining-at-start=" + remainingAtStart
+                                    + " elapsed-ticks=" + elapsedTicks[0]
+                                    + " remaining-at-spawn=" + remainingAtSpawn)
+                    + " result=" + result);
+            monitor[0].cancel();
+        }, 1L, 1L);
     }
 
     private void runSpawnerSelfTest() {
@@ -9908,6 +10457,920 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 60L);
     }
 
+    private void runMythicSpawnerChanceSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            Path root = null;
+            dev.helstera.ai.spawner.SpawnerService importedService = null;
+            try {
+                if (getServer().getWorlds().isEmpty() || instances() == null
+                        || registry.get("example/emberling").isEmpty()) {
+                    throw new IllegalStateException("world, model, or instance service unavailable");
+                }
+                var world = getServer().getWorlds().get(0);
+                Location base = world.getSpawnLocation().clone().add(32, 0, 32);
+                base.setX(base.getBlockX() + 0.5);
+                base.setZ(base.getBlockZ() + 0.5);
+                world.getChunkAt(base.getBlockX() >> 4, base.getBlockZ() >> 4);
+
+                root = Files.createTempDirectory("helstera-mythic-spawner-chance-");
+                Path sourceFile = root.resolve("Spawners/chance.yml");
+                Path targetFile = root.resolve("generated/spawners.yml");
+                Files.createDirectories(sourceFile.getParent());
+                Files.createDirectories(targetFile.getParent());
+                YamlConfiguration source = new YamlConfiguration();
+                for (String id : List.of("imported_chance_valid", "imported_chance_invalid",
+                        "imported_group_size", "imported_random_pool")) {
+                    String path = "spawners." + id + ".";
+                    Location spawnerBase = "imported_group_size".equals(id)
+                            ? base.clone().add(8, 0, 0)
+                            : "imported_random_pool".equals(id) ? base.clone().add(16, 0, 0) : base;
+                    source.set(path + "Mob", "emberling");
+                    source.set(path + "World", world.getName());
+                    source.set(path + "X", spawnerBase.getX());
+                    source.set(path + "Y", spawnerBase.getY());
+                    source.set(path + "Z", spawnerBase.getZ());
+                    source.set(path + "Radius", 0.01);
+                    source.set(path + "Interval", 20);
+                    int groupLimit = "imported_group_size".equals(id) ? 2
+                            : "imported_random_pool".equals(id) ? 128 : 1;
+                    source.set(path + "MaxMobs", groupLimit);
+                    source.set(path + "MaxSpawns", "imported_group_size".equals(id) ? 10
+                            : "imported_random_pool".equals(id) ? 100 : groupLimit);
+                    source.set(path + "Enabled", !"imported_random_pool".equals(id));
+                }
+                source.set("spawners.imported_chance_valid.Chance", 1.0);
+                source.set("spawners.imported_chance_invalid.Chance", 1.5);
+                source.set("spawners.imported_group_size.GroupSize", 3);
+                source.set("spawners.imported_random_pool.RandomMobs.emberling", 1);
+                source.set("spawners.imported_random_pool.RandomMobs.emberling_boss", 3);
+                Files.writeString(sourceFile, source.saveToString());
+
+                int[] naturalSpawnInstanceId = {-1};
+                var converted = new MythicMobsImporter().convert(sourceFile);
+                var plan = converted.stream()
+                        .filter(entry -> "spawners.yml".equals(entry.get("target-file")))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("importer produced no spawners.yml"));
+                boolean importerMapped = "mapped".equals(plan.get("status"));
+                Files.writeString(targetFile, String.valueOf(plan.get("content")));
+                var importedConfig = YamlConfiguration.loadConfiguration(targetFile.toFile());
+
+                importedService = new dev.helstera.ai.spawner.SpawnerService(
+                        this, getLogger(), (mobId, location, aiProfile) -> {
+                            int id = spawnMobAt(mobId, location, aiProfile);
+                            var manager = instances();
+                            var instance = id > 0 && manager != null ? manager.impl(id) : null;
+                            var entity = instance == null ? null : instance.baseEntity().orElse(null);
+                            if (instance != null && instance.isValid() && entity != null && entity.isValid()) {
+                                naturalSpawnInstanceId[0] = id;
+                            }
+                            return id;
+                        }, name -> getServer().getWorld(name));
+                importedService.setAliveCheck(id -> {
+                    var manager = instances();
+                    var instance = manager == null ? null : manager.impl(id);
+                    return instance != null && instance.isValid();
+                });
+                importedService.loadFile(targetFile);
+                var valid = importedService.get("imported_chance_valid");
+                var invalid = importedService.get("imported_chance_invalid");
+                var group = importedService.get("imported_group_size");
+                double importedValidChance = importedConfig.getDouble(
+                        "spawners.imported_chance_valid.chance", Double.NaN);
+                double importedInvalidChance = importedConfig.getDouble(
+                        "spawners.imported_chance_invalid.chance", Double.NaN);
+                boolean validMapped = valid != null && importedValidChance == 1.0 && valid.chance() == 1.0;
+                boolean invalidMapped = invalid != null && importedInvalidChance == 1.5 && invalid.chance() == 0.0;
+                int importedGroupSize = importedConfig.getInt("spawners.imported_group_size.group-size", -1);
+                boolean groupMapped = group != null && importedGroupSize == 3
+                        && group.groupMin() == 3 && group.groupMax() == 3
+                        && importedConfig.getInt("spawners.imported_group_size.max-alive", -1) == 2
+                        && group.maxAlive() == 2;
+                boolean warning = importedService.warnings().stream().anyMatch(message ->
+                        message.contains("imported_chance_invalid")
+                                && message.toLowerCase(Locale.ROOT).contains("chance"));
+                importedService.start();
+
+                var randomPoolSpawner = importedService.get("imported_random_pool");
+                int randomPoolAccepted = 0;
+                if (randomPoolSpawner != null) {
+                    for (int sample = 0; sample < 100; sample++) {
+                        if (importedService.forceSpawn("imported_random_pool", base.clone().add(16, 0, 0))) {
+                            randomPoolAccepted++;
+                        }
+                    }
+                }
+                Map<String, Double> randomExpected = randomPoolSpawner == null
+                        ? Map.of() : randomPoolSpawner.expectedDistribution();
+                Map<String, Double> randomObserved = randomPoolSpawner == null
+                        ? Map.of() : randomPoolSpawner.observedDistribution();
+                double expectedEmberling = randomExpected.getOrDefault("emberling", 0.0);
+                double expectedBoss = randomExpected.getOrDefault("emberling_boss", 0.0);
+                double observedEmberling = randomObserved.getOrDefault("emberling", 0.0);
+                double observedBoss = randomObserved.getOrDefault("emberling_boss", 0.0);
+                double randomPoolMaxDeviation = randomPoolSpawner == null ? 1.0
+                        : randomPoolSpawner.distributionDeviation().values().stream()
+                                .mapToDouble(Math::abs).max().orElse(1.0);
+                boolean randomPoolMapped = randomPoolSpawner != null
+                        && randomPoolSpawner.randomPool() != null
+                        && importedConfig.getDouble("spawners.imported_random_pool.random-mobs.emberling", -1) == 1.0
+                        && importedConfig.getDouble("spawners.imported_random_pool.random-mobs.emberling_boss", -1) == 3.0
+                        && Math.abs(expectedEmberling - 0.25) < 1.0e-9
+                        && Math.abs(expectedBoss - 0.75) < 1.0e-9;
+                boolean randomPoolSampled = randomPoolAccepted == 100
+                        && randomPoolSpawner != null && randomPoolSpawner.totalSpawned() == 100;
+                boolean randomPoolPassed = importerMapped && randomPoolMapped && randomPoolSampled
+                        && randomPoolMaxDeviation <= 0.15;
+                getLogger().info("mythic-spawner-random-pool imported=" + importerMapped
+                        + " mapped=" + randomPoolMapped + " sampled=" + randomPoolSampled
+                        + " expected-emberling=" + String.format(Locale.ROOT, "%.6f", expectedEmberling)
+                        + " expected-emberling_boss=" + String.format(Locale.ROOT, "%.6f", expectedBoss)
+                        + " observed-emberling=" + String.format(Locale.ROOT, "%.6f", observedEmberling)
+                        + " observed-emberling_boss=" + String.format(Locale.ROOT, "%.6f", observedBoss)
+                        + " max-abs-deviation=" + String.format(Locale.ROOT, "%.6f", randomPoolMaxDeviation)
+                        + " samples=" + randomPoolAccepted + " passed=" + randomPoolPassed);
+
+                Path cleanupRoot = root;
+                dev.helstera.ai.spawner.SpawnerService cleanupService = importedService;
+                int[] groupSamples = {0};
+                org.bukkit.scheduler.BukkitTask[] groupTask = {null};
+                groupTask[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+                    groupSamples[0]++;
+                    var groupSpawner = cleanupService.get("imported_group_size");
+                    int groupSpawned = groupSpawner == null ? -1 : groupSpawner.totalSpawned();
+                    if (groupSpawned == 0 && groupSamples[0] < 120) return;
+                    int groupAlive = cleanupService.aliveCount("imported_group_size");
+                    int groupMaxAlive = groupSpawner == null ? -1 : groupSpawner.maxAlive();
+                    boolean groupNatural = groupSpawned == 2 && groupAlive == 2
+                            && groupMaxAlive == 2;
+                    boolean groupPassed = importerMapped && groupMapped && groupNatural;
+                    getLogger().info("mythic-spawner-group-size imported=" + importerMapped
+                            + " mapped=" + groupMapped + " natural=" + groupNatural
+                            + " requested=3 spawned=" + groupSpawned + " alive=" + groupAlive
+                            + " max-alive=" + groupMaxAlive + " passed=" + groupPassed);
+                    cleanupService.toggle("imported_group_size");
+                    groupTask[0].cancel();
+                }, 21L, 1L);
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    try {
+                        var validSpawner = cleanupService.get("imported_chance_valid");
+                        var invalidSpawner = cleanupService.get("imported_chance_invalid");
+                        int validSpawned = validSpawner == null ? 0 : validSpawner.totalSpawned();
+                        int invalidSpawned = invalidSpawner == null ? -1 : invalidSpawner.totalSpawned();
+                        boolean validNatural = validSpawned > 0 && naturalSpawnInstanceId[0] > 0;
+                        boolean invalidRejected = invalidSpawner != null
+                                && invalidSpawner.chance() == 0.0 && invalidSpawned == 0
+                                && cleanupService.aliveCount("imported_chance_invalid") == 0;
+                        boolean passed = importerMapped && validMapped && invalidMapped
+                                && validNatural && invalidRejected && warning;
+                        getLogger().info("mythic-spawner-chance imported=" + importerMapped
+                                + " valid-mapped=" + validMapped + " invalid-mapped=" + invalidMapped
+                                + " valid-natural=" + validNatural + " invalid-rejected=" + invalidRejected
+                                + " warning=" + warning + " valid-spawned=" + validSpawned
+                                + " invalid-spawned=" + invalidSpawned
+                                + " valid-instance=" + naturalSpawnInstanceId[0] + " passed=" + passed);
+                    } catch (Throwable failure) {
+                        getLogger().info("mythic-spawner-chance imported=" + importerMapped
+                                + " valid-mapped=" + validMapped + " invalid-mapped=" + invalidMapped
+                                + " valid-natural=false invalid-rejected=false warning=" + warning
+                                + " passed=false error=" + failure.getClass().getSimpleName());
+                    } finally {
+                        cleanupMythicSpawnerImportProbe(cleanupService, cleanupRoot);
+                    }
+                }, 80L);
+            } catch (Throwable failure) {
+                getLogger().warning("Mythic Spawner Chance probe failed: " + failure);
+                getLogger().info("mythic-spawner-chance imported=false valid-mapped=false invalid-mapped=false"
+                        + " valid-natural=false invalid-rejected=false warning=false passed=false");
+                cleanupMythicSpawnerImportProbe(importedService, root);
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 300L);
+    }
+
+    private void cleanupMythicSpawnerImportProbe(
+            dev.helstera.ai.spawner.SpawnerService service, Path root) {
+        if (service != null) {
+            List<Integer> tracked = new ArrayList<>();
+            tracked.addAll(service.trackedInstanceIds("imported_chance_valid"));
+            tracked.addAll(service.trackedInstanceIds("imported_chance_invalid"));
+            tracked.addAll(service.trackedInstanceIds("imported_group_size"));
+            tracked.addAll(service.trackedInstanceIds("imported_random_pool"));
+            service.stop();
+            var manager = instances();
+            if (manager != null) {
+                for (int id : tracked) {
+                    if (manager.impl(id) != null) manager.despawn(id);
+                }
+            }
+        }
+        if (root == null) return;
+        try (var paths = Files.walk(root)) {
+            for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                Files.deleteIfExists(path);
+            }
+        } catch (IOException failure) {
+            getLogger().warning("Mythic Spawner Chance probe cleanup failed: " + failure.getMessage());
+        }
+    }
+
+    private void runMythicSpawnerConditionsSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null || instances() == null || registry.get("example/emberling").isEmpty()) {
+                getLogger().info("mythic-spawner-conditions imported=false mapped=false world-mapped=false"
+                        + " biome-mapped=false biome-natural=false biome-rejected=false biome-pass-spawned=0"
+                        + " biome-reject-spawned=-1 world-natural=false world-rejected=false rain=false"
+                        + " thunder=false natural=false"
+                        + " rejected=false pass-spawned=0 reject-spawned=-1 world-pass-spawned=0"
+                        + " world-reject-spawned=-1 instance=false restored=false passed=false");
+                return;
+            }
+
+            Path root = null;
+            dev.helstera.ai.spawner.SpawnerService importedService = null;
+            Location[] biomePassAt = {null};
+            Location[] biomeRejectAt = {null};
+            org.bukkit.block.Biome[] originalPassBiome = {null};
+            org.bukkit.block.Biome[] originalRejectBiome = {null};
+            boolean[] biomePassInstanceObserved = {false};
+            boolean originalStorm = world.hasStorm();
+            boolean originalThundering = world.isThundering();
+            int originalWeatherDuration = world.getWeatherDuration();
+            int originalThunderDuration = world.getThunderDuration();
+            try {
+                Location base = world.getSpawnLocation().clone().add(32, 0, 32);
+                base.setX(base.getBlockX() + 0.5);
+                base.setZ(base.getBlockZ() + 0.5);
+                base.getChunk().load();
+                Location rejectedAt = base.clone().add(8, 0, 0);
+                rejectedAt.getChunk().load();
+                Location wrongWorldAt = base.clone().add(16, 0, 0);
+                wrongWorldAt.getChunk().load();
+                biomePassAt[0] = base.clone().add(24, 0, 0);
+                biomePassAt[0].getChunk().load();
+                biomeRejectAt[0] = base.clone().add(32, 0, 0);
+                biomeRejectAt[0].getChunk().load();
+                originalPassBiome[0] = biomePassAt[0].getBlock().getBiome();
+                originalRejectBiome[0] = biomeRejectAt[0].getBlock().getBiome();
+                biomePassAt[0].getBlock().setBiome(org.bukkit.block.Biome.SUNFLOWER_PLAINS);
+                biomeRejectAt[0].getBlock().setBiome(org.bukkit.block.Biome.SUNFLOWER_PLAINS);
+
+                root = Files.createTempDirectory("helstera-mythic-spawner-conditions-");
+                Path sourceFile = root.resolve("Spawners/weather.yml");
+                Path targetFile = root.resolve("generated/spawners.yml");
+                Files.createDirectories(sourceFile.getParent());
+                Files.createDirectories(targetFile.getParent());
+                YamlConfiguration source = new YamlConfiguration();
+                for (String id : List.of("imported_condition_pass", "imported_condition_reject",
+                        "imported_condition_world_reject", "imported_condition_biome_pass",
+                        "imported_condition_biome_reject")) {
+                    Location at = "imported_condition_pass".equals(id) ? base
+                            : "imported_condition_reject".equals(id) ? rejectedAt : wrongWorldAt;
+                    if ("imported_condition_biome_pass".equals(id)) at = biomePassAt[0];
+                    if ("imported_condition_biome_reject".equals(id)) at = biomeRejectAt[0];
+                    String path = "spawners." + id + ".";
+                    source.set(path + "Mob", "emberling");
+                    source.set(path + "World", world.getName());
+                    source.set(path + "X", at.getX());
+                    source.set(path + "Y", at.getY());
+                    source.set(path + "Z", at.getZ());
+                    source.set(path + "Radius", 0.01);
+                    source.set(path + "Interval", 20);
+                    source.set(path + "MaxMobs", 1);
+                    source.set(path + "MaxSpawns", 1);
+                    source.set(path + "Enabled", true);
+                }
+                source.set("spawners.imported_condition_pass.Conditions",
+                        List.of("isRaining", "!isThundering", "World{w=" + world.getName() + "}"));
+                source.set("spawners.imported_condition_reject.Conditions", List.of("isThundering"));
+                source.set("spawners.imported_condition_world_reject.Conditions",
+                        List.of("World{w=missing-world}"));
+                source.set("spawners.imported_condition_biome_pass.Conditions",
+                        List.of("BiomeType{type=plains;exact=false}"));
+                source.set("spawners.imported_condition_biome_reject.Conditions",
+                        List.of("BiomeType{type=desert;exact=false}"));
+                Files.writeString(sourceFile, source.saveToString());
+
+                var converted = new MythicMobsImporter().convert(sourceFile);
+                var plan = converted.stream()
+                        .filter(entry -> "spawners.yml".equals(entry.get("target-file")))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("importer produced no spawners.yml"));
+                boolean imported = "mapped".equals(plan.get("status"));
+                Files.writeString(targetFile, String.valueOf(plan.get("content")));
+                var importedConfig = YamlConfiguration.loadConfiguration(targetFile.toFile());
+
+                boolean[] spawnInstanceObserved = {false};
+                importedService = new dev.helstera.ai.spawner.SpawnerService(
+                        this, getLogger(), (mobId, location, aiProfile) -> {
+                            int instanceId = spawnMobAt(mobId, location, aiProfile);
+                            var manager = instances();
+                            var instance = manager == null || instanceId <= 0
+                                    ? null : manager.impl(instanceId);
+                            boolean instanceObserved = instance != null && instance.isValid()
+                                    && instance.baseEntity().map(org.bukkit.entity.Entity::isValid).orElse(false);
+                            spawnInstanceObserved[0] |= instanceObserved;
+                            if (instanceObserved && biomePassAt[0] != null && location != null
+                                    && location.getWorld() == biomePassAt[0].getWorld()
+                                    && location.getBlockX() == biomePassAt[0].getBlockX()
+                                    && location.getBlockZ() == biomePassAt[0].getBlockZ()) {
+                                biomePassInstanceObserved[0] = true;
+                            }
+                            return instanceId;
+                        }, name -> getServer().getWorld(name));
+                importedService.setAliveCheck(id -> {
+                    var manager = instances();
+                    var instance = manager == null ? null : manager.impl(id);
+                    return instance != null && instance.isValid();
+                });
+                if (skillService instanceof dev.helstera.ai.skill.SkillService skills
+                        && behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+                    importedService.setConditionTester((condition, location) -> {
+                        String key = skills.bindCondition(condition);
+                        if (key == null) return false;
+                        org.bukkit.entity.Player player = nearestSpawnerPlayer(location, 32.0);
+                        double distance = player == null || location == null
+                                ? -1 : location.distance(player.getLocation());
+                        var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                                null, player, 1.0, distance, 0, "spawner", null, player,
+                                player == null ? java.util.List.of() : java.util.List.of(player), location);
+                        return behaviors.testCondition(key, context);
+                    });
+                }
+                importedService.loadFile(targetFile);
+
+                List<String> expectedPassConditions = List.of("raining", "!thundering",
+                        "world-is " + world.getName());
+                List<String> expectedRejectConditions = List.of("thundering");
+                List<String> expectedWorldRejectConditions = List.of("world-is missing-world");
+                List<String> expectedBiomeConditions = List.of("biome-type-is plains false");
+                List<String> expectedBiomeRejectConditions = List.of("biome-type-is desert false");
+                var passSpawner = importedService.get("imported_condition_pass");
+                var rejectSpawner = importedService.get("imported_condition_reject");
+                var worldRejectSpawner = importedService.get("imported_condition_world_reject");
+                var biomePassSpawner = importedService.get("imported_condition_biome_pass");
+                var biomeRejectSpawner = importedService.get("imported_condition_biome_reject");
+                boolean weatherMapped = importedConfig.getStringList(
+                                "spawners.imported_condition_pass.conditions").equals(expectedPassConditions)
+                        && importedConfig.getStringList(
+                                "spawners.imported_condition_reject.conditions").equals(expectedRejectConditions)
+                        && passSpawner != null && passSpawner.conditions().equals(expectedPassConditions)
+                        && rejectSpawner != null && rejectSpawner.conditions().equals(expectedRejectConditions);
+                boolean worldMapped = importedConfig.getStringList(
+                                "spawners.imported_condition_pass.conditions").equals(expectedPassConditions)
+                        && importedConfig.getStringList(
+                                "spawners.imported_condition_world_reject.conditions")
+                                .equals(expectedWorldRejectConditions)
+                        && passSpawner != null && passSpawner.conditions().equals(expectedPassConditions)
+                        && worldRejectSpawner != null
+                        && worldRejectSpawner.conditions().equals(expectedWorldRejectConditions);
+                boolean biomeMapped = importedConfig.getStringList(
+                                "spawners.imported_condition_biome_pass.conditions").equals(expectedBiomeConditions)
+                        && importedConfig.getStringList(
+                                "spawners.imported_condition_biome_reject.conditions")
+                                .equals(expectedBiomeRejectConditions)
+                        && passSpawner != null && passSpawner.conditions().equals(expectedPassConditions)
+                        && biomePassSpawner != null && biomePassSpawner.conditions().equals(expectedBiomeConditions)
+                        && biomeRejectSpawner != null
+                        && biomeRejectSpawner.conditions().equals(expectedBiomeRejectConditions);
+                boolean mapped = weatherMapped && worldMapped && biomeMapped;
+
+                world.setStorm(true);
+                world.setThundering(false);
+                world.setWeatherDuration(1200);
+                world.setThunderDuration(1200);
+                boolean controlledWeather = world.hasStorm() && !world.isThundering();
+                if (!controlledWeather) throw new IllegalStateException("could not establish rain without thunder");
+
+                importedService.start();
+                Path cleanupRoot = root;
+                dev.helstera.ai.spawner.SpawnerService cleanupService = importedService;
+                boolean importerMapped = imported;
+                boolean conditionsMapped = mapped;
+                boolean worldConditionsMapped = worldMapped;
+                boolean biomeConditionsMapped = biomeMapped;
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    int passSpawned = 0;
+                    int rejectedSpawned = -1;
+                    int worldPassSpawned = 0;
+                    int worldRejectSpawned = -1;
+                    int biomePassSpawned = 0;
+                    int biomeRejectSpawned = -1;
+                    boolean rain = world.hasStorm();
+                    boolean thunder = world.isThundering();
+                    boolean natural = false;
+                    boolean rejected = false;
+                    boolean worldNatural = false;
+                    boolean worldRejected = false;
+                    boolean biomeNatural = false;
+                    boolean biomeRejected = false;
+                    boolean actualInstance = false;
+                    try {
+                        var passed = cleanupService.get("imported_condition_pass");
+                        var denied = cleanupService.get("imported_condition_reject");
+                        var worldDenied = cleanupService.get("imported_condition_world_reject");
+                        var biomePassed = cleanupService.get("imported_condition_biome_pass");
+                        var biomeDenied = cleanupService.get("imported_condition_biome_reject");
+                        passSpawned = passed == null ? 0 : passed.totalSpawned();
+                        rejectedSpawned = denied == null ? -1 : denied.totalSpawned();
+                        worldPassSpawned = passSpawned;
+                        worldRejectSpawned = worldDenied == null ? -1 : worldDenied.totalSpawned();
+                        biomePassSpawned = biomePassed == null ? 0 : biomePassed.totalSpawned();
+                        biomeRejectSpawned = biomeDenied == null ? -1 : biomeDenied.totalSpawned();
+                        var manager = instances();
+                        actualInstance = spawnInstanceObserved[0] || (manager != null && cleanupService
+                                .trackedInstanceIds("imported_condition_pass").stream()
+                                .anyMatch(id -> {
+                                    var instance = manager.impl(id);
+                                    return instance != null && instance.isValid()
+                                            && instance.baseEntity().map(org.bukkit.entity.Entity::isValid).orElse(false);
+                                }));
+                        natural = rain && !thunder && passed != null && passSpawned == 1
+                                && actualInstance;
+                        rejected = denied != null && rejectedSpawned == 0
+                                && cleanupService.aliveCount("imported_condition_reject") == 0;
+                        worldNatural = worldConditionsMapped && natural;
+                        worldRejected = worldDenied != null && worldRejectSpawned == 0
+                                && cleanupService.aliveCount("imported_condition_world_reject") == 0;
+                        biomeNatural = biomeConditionsMapped && biomePassed != null && biomePassSpawned == 1
+                                && biomePassInstanceObserved[0];
+                        biomeRejected = biomeDenied != null && biomeRejectSpawned == 0
+                                && cleanupService.aliveCount("imported_condition_biome_reject") == 0;
+                    } catch (Throwable failure) {
+                        getLogger().warning("Mythic Spawner Conditions probe observation failed: " + failure);
+                    }
+                    boolean restored = cleanupMythicSpawnerConditionsProbe(cleanupService, cleanupRoot,
+                            world, originalStorm, originalThundering,
+                            originalWeatherDuration, originalThunderDuration,
+                            biomePassAt[0], originalPassBiome[0], biomeRejectAt[0], originalRejectBiome[0]);
+                    boolean passed = importerMapped && conditionsMapped && worldNatural && worldRejected
+                            && biomeNatural && biomeRejected && natural && rejected && restored;
+                    getLogger().info("mythic-spawner-conditions imported=" + importerMapped
+                            + " mapped=" + conditionsMapped + " world-mapped=" + worldConditionsMapped
+                            + " biome-mapped=" + biomeConditionsMapped + " biome-natural=" + biomeNatural
+                            + " biome-rejected=" + biomeRejected + " biome-pass-spawned=" + biomePassSpawned
+                            + " biome-reject-spawned=" + biomeRejectSpawned
+                            + " world-natural=" + worldNatural + " world-rejected=" + worldRejected
+                            + " rain=" + rain + " thunder=" + thunder + " natural=" + natural
+                            + " rejected=" + rejected + " pass-spawned=" + passSpawned
+                            + " reject-spawned=" + rejectedSpawned + " world-pass-spawned=" + worldPassSpawned
+                            + " world-reject-spawned=" + worldRejectSpawned + " instance=" + actualInstance
+                            + " restored=" + restored + " passed=" + passed);
+                }, 40L);
+            } catch (Throwable failure) {
+                boolean restored = cleanupMythicSpawnerConditionsProbe(importedService, root,
+                        world, originalStorm, originalThundering,
+                        originalWeatherDuration, originalThunderDuration,
+                        biomePassAt[0], originalPassBiome[0], biomeRejectAt[0], originalRejectBiome[0]);
+                getLogger().warning("Mythic Spawner Conditions probe failed: " + failure);
+                getLogger().info("mythic-spawner-conditions imported=false mapped=false world-mapped=false"
+                        + " biome-mapped=false biome-natural=false biome-rejected=false biome-pass-spawned=0"
+                        + " biome-reject-spawned=-1 world-natural=false world-rejected=false rain=false"
+                        + " thunder=false natural=false"
+                        + " rejected=false pass-spawned=0 reject-spawned=-1 world-pass-spawned=0"
+                        + " world-reject-spawned=-1 instance=false restored=" + restored + " passed=false");
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 2200L);
+    }
+
+    private boolean cleanupMythicSpawnerConditionsProbe(
+            dev.helstera.ai.spawner.SpawnerService service, Path root, org.bukkit.World world,
+            boolean originalStorm, boolean originalThundering,
+            int originalWeatherDuration, int originalThunderDuration,
+            Location biomePassAt, org.bukkit.block.Biome originalPassBiome,
+            Location biomeRejectAt, org.bukkit.block.Biome originalRejectBiome) {
+        boolean clean = true;
+        if (service != null) {
+            var tracked = new java.util.LinkedHashSet<Integer>();
+            tracked.addAll(service.trackedInstanceIds("imported_condition_pass"));
+            tracked.addAll(service.trackedInstanceIds("imported_condition_reject"));
+            tracked.addAll(service.trackedInstanceIds("imported_condition_world_reject"));
+            tracked.addAll(service.trackedInstanceIds("imported_condition_biome_pass"));
+            tracked.addAll(service.trackedInstanceIds("imported_condition_biome_reject"));
+            try {
+                service.stop();
+                var manager = instances();
+                if (manager == null && !tracked.isEmpty()) {
+                    clean = false;
+                } else if (manager != null) {
+                    for (int id : tracked) {
+                        if (manager.impl(id) != null) manager.despawn(id);
+                    }
+                }
+            } catch (Throwable failure) {
+                clean = false;
+                getLogger().warning("Mythic Spawner Conditions entity cleanup failed: " + failure.getMessage());
+            }
+        }
+        try {
+            if (biomePassAt != null && originalPassBiome != null) {
+                biomePassAt.getBlock().setBiome(originalPassBiome);
+                clean &= biomePassAt.getBlock().getBiome() == originalPassBiome;
+            }
+            if (biomeRejectAt != null && originalRejectBiome != null) {
+                biomeRejectAt.getBlock().setBiome(originalRejectBiome);
+                clean &= biomeRejectAt.getBlock().getBiome() == originalRejectBiome;
+            }
+        } catch (Throwable failure) {
+            clean = false;
+            getLogger().warning("Mythic Spawner Conditions biome restore failed: " + failure.getMessage());
+        }
+        try {
+            world.setStorm(originalStorm);
+            world.setThundering(originalThundering);
+            world.setWeatherDuration(originalWeatherDuration);
+            world.setThunderDuration(originalThunderDuration);
+            clean &= world.hasStorm() == originalStorm && world.isThundering() == originalThundering
+                    && world.getWeatherDuration() == originalWeatherDuration
+                    && world.getThunderDuration() == originalThunderDuration;
+        } catch (Throwable failure) {
+            clean = false;
+            getLogger().warning("Mythic Spawner Conditions weather restore failed: " + failure.getMessage());
+        }
+        if (root != null) {
+            try (var paths = Files.walk(root)) {
+                for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(path);
+                }
+            } catch (IOException failure) {
+                clean = false;
+                getLogger().warning("Mythic Spawner Conditions file cleanup failed: " + failure.getMessage());
+            }
+        }
+        return clean;
+    }
+
+    private void runMythicRandomPoolDropTableSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null || instances() == null || loot() == null
+                    || registry.get("example/emberling").isEmpty()) {
+                getLogger().info("mythic-spawner-drop-table imported=false references=false weighted=false"
+                        + " spawned=0 variants=false assigned=false common-natural=false rare-natural=false"
+                        + " common-bread=0 common-diamond=0 rare-bread=0 rare-diamond=0 passed=false");
+                return;
+            }
+
+            Path probeRoot = null;
+            Location[] probeLocation = new Location[1];
+            var mobFiles = new ArrayList<Path>();
+            var existingItems = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                    .map(org.bukkit.entity.Entity::getUniqueId).collect(Collectors.toSet());
+            var serviceRef = new dev.helstera.ai.spawner.SpawnerService[1];
+            try {
+                probeRoot = Files.createTempDirectory(getDataFolder().toPath(),
+                        "integration-mythic-random-drops-");
+                Path sourceMobFile = probeRoot.resolve("Mobs/pool.yml");
+                Path sourceTableFile = probeRoot.resolve("DropTables/pool.yml");
+                Path sourceSpawnerFile = probeRoot.resolve("Spawners/pool.yml");
+                Path generatedSpawnerFile = probeRoot.resolve("generated/spawners.yml");
+                Files.createDirectories(sourceMobFile.getParent());
+                Files.createDirectories(sourceTableFile.getParent());
+                Files.createDirectories(sourceSpawnerFile.getParent());
+                Files.createDirectories(generatedSpawnerFile.getParent());
+                Files.writeString(sourceMobFile, """
+                        mobs:
+                          pool_common:
+                            Type: ZOMBIE
+                            Health: 8
+                            Options:
+                              NoAI: true
+                              PreventSunburn: true
+                            DropTable-1: pool_common_reward
+                          pool_rare:
+                            Type: ZOMBIE
+                            Health: 8
+                            Options:
+                              NoAI: true
+                              PreventSunburn: true
+                            DropTable-1: pool_rare_reward
+                        """);
+                Files.writeString(sourceTableFile, """
+                        pool_common_reward:
+                          Drops: [BREAD 1 1]
+                        pool_rare_reward:
+                          Drops: [DIAMOND 1 1]
+                        """);
+
+                Location base = world.getSpawnLocation().clone().add(96, 3, 0);
+                base.setX(base.getBlockX() + 0.5);
+                base.setZ(base.getBlockZ() + 0.5);
+                probeLocation[0] = base.clone();
+                base.getChunk().load();
+                YamlConfiguration sourceSpawner = new YamlConfiguration();
+                String spawnerPath = "spawners.drop_coupling.";
+                sourceSpawner.set(spawnerPath + "Mob", "pool_common");
+                sourceSpawner.set(spawnerPath + "World", world.getName());
+                sourceSpawner.set(spawnerPath + "X", base.getX());
+                sourceSpawner.set(spawnerPath + "Y", base.getY());
+                sourceSpawner.set(spawnerPath + "Z", base.getZ());
+                sourceSpawner.set(spawnerPath + "Radius", 0.01);
+                sourceSpawner.set(spawnerPath + "MaxMobs", 32);
+                sourceSpawner.set(spawnerPath + "MaxSpawns", 32);
+                sourceSpawner.set(spawnerPath + "RandomMobs.pool_common", 1);
+                sourceSpawner.set(spawnerPath + "RandomMobs.pool_rare", 3);
+                Files.writeString(sourceSpawnerFile, sourceSpawner.saveToString());
+
+                MythicMobsImporter importer = new MythicMobsImporter();
+                var mobPlans = importer.convert(sourceMobFile, probeRoot).stream()
+                        .filter(entry -> "mapped".equals(entry.get("status"))
+                                && String.valueOf(entry.get("target-file")).startsWith("mobs/"))
+                        .toList();
+                var tablePlans = importer.convert(sourceTableFile, probeRoot).stream()
+                        .filter(entry -> "mapped".equals(entry.get("status"))
+                                && "loot.yml".equals(entry.get("target-file")))
+                        .toList();
+                var spawnerPlan = importer.convert(sourceSpawnerFile, probeRoot).stream()
+                        .filter(entry -> "spawners.yml".equals(entry.get("target-file")))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("No imported spawner plan"));
+                boolean imported = mobPlans.size() == 2 && tablePlans.size() == 2
+                        && "mapped".equals(spawnerPlan.get("status"));
+                if (!imported) throw new IllegalStateException("Mythic fixture definitions were not fully mapped");
+
+                Path mobsDirectory = getDataFolder().toPath().resolve("mobs");
+                Files.createDirectories(mobsDirectory);
+                Map<String, String> expectedTables = Map.of(
+                        "mythic_pool_common", "pool_common_reward",
+                        "mythic_pool_rare", "pool_rare_reward");
+                for (var plan : mobPlans) {
+                    String mobId = String.valueOf(plan.get("target-mob-id"));
+                    Path mobFile = mobsDirectory.resolve(mobId + ".yml");
+                    if (!mobFile.normalize().startsWith(mobsDirectory.normalize()) || Files.exists(mobFile)) {
+                        throw new IllegalStateException("Temporary imported Mob file already exists: " + mobId);
+                    }
+                    YamlConfiguration mobConfig = YamlConfiguration.loadConfiguration(
+                            new java.io.StringReader(String.valueOf(plan.get("content"))));
+                    mobConfig.set("model", "example/emberling");
+                    mobConfig.set("entity.health", 8.0);
+                    mobConfig.set("entity.no-ai", true);
+                    mobConfig.set("entity.silent", true);
+                    String expectedTable = expectedTables.get(mobId);
+                    if (expectedTable == null
+                            || !expectedTable.equals(mobConfig.getString("mob.drops.table"))
+                            || !mobConfig.getBoolean("entity.prevent-sunburn", false)) {
+                        throw new IllegalStateException("Imported Mob has the wrong DropTable reference: " + mobId);
+                    }
+                    mobFiles.add(mobFile);
+                    Files.writeString(mobFile, mobConfig.saveToString());
+                }
+
+                Path lootFile = getDataFolder().toPath().resolve("loot.yml");
+                YamlConfiguration combinedLoot = YamlConfiguration.loadConfiguration(lootFile.toFile());
+                var importedTableIds = new java.util.HashSet<String>();
+                for (var plan : tablePlans) {
+                    YamlConfiguration projected = YamlConfiguration.loadConfiguration(
+                            new java.io.StringReader(String.valueOf(plan.get("content"))));
+                    ConfigurationSection projectedTables = projected.getConfigurationSection("tables");
+                    if (projectedTables == null) continue;
+                    for (String tableId : projectedTables.getKeys(false)) {
+                        ConfigurationSection table = projectedTables.getConfigurationSection(tableId);
+                        if (table == null) continue;
+                        importedTableIds.add(tableId);
+                        for (String key : table.getKeys(true)) {
+                            String targetPath = "tables." + tableId + "." + key;
+                            if (table.isConfigurationSection(key)) combinedLoot.createSection(targetPath);
+                            else combinedLoot.set(targetPath, table.get(key));
+                        }
+                    }
+                }
+                loot().load(combinedLoot.getConfigurationSection("tables"));
+                boolean tablesLoaded = importedTableIds.containsAll(expectedTables.values())
+                        && expectedTables.values().stream().allMatch(table -> loot().table(table) != null);
+
+                Files.writeString(generatedSpawnerFile, String.valueOf(spawnerPlan.get("content")));
+                var spawnedByMob = new LinkedHashMap<String, List<Integer>>();
+                serviceRef[0] = new dev.helstera.ai.spawner.SpawnerService(this, getLogger(),
+                        (mobId, location, aiProfile) -> {
+                            int id = spawnMobAt(mobId, location, aiProfile);
+                            if (id > 0) spawnedByMob.computeIfAbsent(mobId, ignored -> new ArrayList<>()).add(id);
+                            return id;
+                        }, name -> getServer().getWorld(name));
+                serviceRef[0].setAliveCheck(id -> {
+                    var manager = instances();
+                    var instance = manager == null ? null : manager.impl(id);
+                    return instance != null && instance.isValid();
+                });
+                serviceRef[0].loadFile(generatedSpawnerFile);
+                var spawner = serviceRef[0].get("drop_coupling");
+                int accepted = 0;
+                for (int sample = 0; sample < 32; sample++) {
+                    Location at = base.clone().add(((sample % 6) - 2.5) * 1.3, 0,
+                            ((sample / 6) - 2.5) * 1.3);
+                    if (serviceRef[0].forceSpawn("drop_coupling", at)) accepted++;
+                }
+                for (List<Integer> spawnedIds : spawnedByMob.values()) {
+                    for (int id : spawnedIds) {
+                        var instance = instances().impl(id);
+                        var entity = instance == null ? null : instance.baseEntity().orElse(null);
+                        if (!(entity instanceof org.bukkit.entity.LivingEntity living)) continue;
+                        living.setCollidable(false);
+                        living.setFireTicks(0);
+                        living.setPersistent(true);
+                        if (living instanceof org.bukkit.entity.Mob mob) {
+                            mob.setRemoveWhenFarAway(false);
+                            mob.setAI(false);
+                            mob.setAware(false);
+                        }
+                    }
+                }
+                boolean referencesMapped = spawner != null
+                        && "mythic_pool_common".equals(spawner.mobId())
+                        && spawner.randomPool() != null
+                        && Math.abs(spawner.expectedDistribution().getOrDefault("mythic_pool_common", 0.0) - 0.25) < 1.0e-9
+                        && Math.abs(spawner.expectedDistribution().getOrDefault("mythic_pool_rare", 0.0) - 0.75) < 1.0e-9;
+                boolean weighted = spawner != null && spawner.mobSpawnCounts().size() == 2
+                        && spawner.mobSpawnCounts().values().stream().mapToInt(Integer::intValue).sum() == 32;
+                List<Integer> commonIds = spawnedByMob.getOrDefault("mythic_pool_common", List.of());
+                List<Integer> rareIds = spawnedByMob.getOrDefault("mythic_pool_rare", List.of());
+                boolean variants = accepted == 32 && !commonIds.isEmpty() && !rareIds.isEmpty();
+                var commonInstance = variants ? instances().impl(commonIds.get(0)) : null;
+                var rareInstance = variants ? instances().impl(rareIds.get(0)) : null;
+                org.bukkit.entity.LivingEntity commonEntity = commonInstance == null ? null
+                        : commonInstance.baseEntity().filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                                .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+                org.bukkit.entity.LivingEntity rareEntity = rareInstance == null ? null
+                        : rareInstance.baseEntity().filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                                .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+                boolean assigned = commonInstance != null && rareInstance != null
+                        && "pool_common_reward".equals(commonInstance.lootTable)
+                        && "pool_rare_reward".equals(rareInstance.lootTable)
+                        && commonEntity != null && rareEntity != null;
+                if (!assigned) throw new IllegalStateException("Selected Mob instances did not receive their imported DropTables");
+
+                Location commonObservationLocation = base.clone().add(-4, 0, 0);
+                Location rareObservationLocation = base.clone().add(4, 0, 0);
+                commonObservationLocation.getChunk().load();
+                rareObservationLocation.getChunk().load();
+                if (!commonEntity.teleport(commonObservationLocation)
+                        || !rareEntity.teleport(rareObservationLocation)) {
+                    throw new IllegalStateException("Could not isolate the selected random-pool variants");
+                }
+                commonEntity.setFireTicks(0);
+                rareEntity.setFireTicks(0);
+                commonEntity.setInvulnerable(false);
+                rareEntity.setInvulnerable(false);
+                boolean commonAliveBeforeKill = commonEntity.isValid() && !commonEntity.isDead();
+                loot().load(combinedLoot.getConfigurationSection("tables"));
+                boolean commonTableReloaded = loot().table("pool_common_reward") != null;
+                var beforeCommon = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                        .map(org.bukkit.entity.Entity::getUniqueId).collect(Collectors.toSet());
+                Location commonDropLocation = commonEntity.getLocation();
+                var killer = getServer().getPlayerExact("HelsteraTester");
+                if (killer == null) commonEntity.damage(commonEntity.getHealth() + 10.0);
+                else commonEntity.damage(commonEntity.getHealth() + 10.0, killer);
+                boolean commonNatural = commonEntity.isDead();
+                var trackedCommon = commonEntity;
+                var trackedRare = rareEntity;
+                var service = serviceRef[0];
+                Path cleanupRoot = probeRoot;
+                List<Path> cleanupMobFiles = List.copyOf(mobFiles);
+                boolean mappedReferences = referencesMapped;
+                boolean sampledBoth = variants;
+                boolean importedTablesLoaded = tablesLoaded;
+                int spawned = accepted;
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    boolean rareTableReloaded = false;
+                    boolean rareAliveBeforeKill = false;
+                    boolean rareNatural = false;
+                    try {
+                        var commonDrops = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .filter(item -> !beforeCommon.contains(item.getUniqueId()))
+                                .filter(item -> item.getLocation().distanceSquared(commonDropLocation) < 4)
+                                .toList();
+                        int commonBread = commonDrops.stream()
+                                .filter(item -> item.getItemStack().getType() == org.bukkit.Material.BREAD)
+                                .mapToInt(item -> item.getItemStack().getAmount()).sum();
+                        int commonDiamond = commonDrops.stream()
+                                .filter(item -> item.getItemStack().getType() == org.bukkit.Material.DIAMOND)
+                                .mapToInt(item -> item.getItemStack().getAmount()).sum();
+                        loot().load(combinedLoot.getConfigurationSection("tables"));
+                        rareTableReloaded = loot().table("pool_rare_reward") != null;
+                        rareAliveBeforeKill = trackedRare.isValid() && !trackedRare.isDead();
+                        trackedRare.setFireTicks(0);
+                        Location rareDropLocation = rareObservationLocation.clone();
+                        var beforeRare = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                .map(org.bukkit.entity.Entity::getUniqueId).collect(Collectors.toSet());
+                        if (killer == null) trackedRare.damage(trackedRare.getHealth() + 10.0);
+                        else trackedRare.damage(trackedRare.getHealth() + 10.0, killer);
+                        rareNatural = trackedRare.isDead();
+                        boolean rareTableReady = rareTableReloaded;
+                        boolean rareWasAlive = rareAliveBeforeKill;
+                        boolean rareDiedNaturally = rareNatural;
+                        getServer().getScheduler().runTaskLater(this, () -> {
+                            int rareBread = 0;
+                            int rareDiamond = 0;
+                            try {
+                                var rareDrops = world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                                        .filter(item -> !beforeRare.contains(item.getUniqueId()))
+                                        .filter(item -> item.getLocation().distanceSquared(rareDropLocation) < 4)
+                                        .toList();
+                                rareBread = rareDrops.stream()
+                                        .filter(item -> item.getItemStack().getType() == org.bukkit.Material.BREAD)
+                                        .mapToInt(item -> item.getItemStack().getAmount()).sum();
+                                rareDiamond = rareDrops.stream()
+                                        .filter(item -> item.getItemStack().getType() == org.bukkit.Material.DIAMOND)
+                                        .mapToInt(item -> item.getItemStack().getAmount()).sum();
+                            } catch (Throwable failure) {
+                                getLogger().warning("Mythic random DropTable observation failed: " + failure);
+                            }
+                            boolean commonDropMatched = commonBread == 1 && commonDiamond == 0;
+                            boolean rareDropMatched = rareBread == 0 && rareDiamond == 1;
+                            boolean restored = cleanupMythicRandomPoolDropTableProbe(
+                                    service, cleanupMobFiles, cleanupRoot, lootFile, world, base, existingItems);
+                            boolean passed = imported && mappedReferences && weighted && importedTablesLoaded
+                                    && sampledBoth && assigned && commonTableReloaded && rareTableReady
+                                    && commonAliveBeforeKill && rareWasAlive && commonNatural && rareDiedNaturally
+                                    && commonDropMatched && rareDropMatched && restored;
+                            getLogger().info("mythic-spawner-drop-table imported=" + imported
+                                    + " references=" + mappedReferences + " weighted=" + weighted
+                                    + " tables-loaded=" + importedTablesLoaded
+                                    + " spawned=" + spawned + " variants=" + sampledBoth
+                                    + " assigned=" + assigned + " common-table-reloaded=" + commonTableReloaded
+                                    + " rare-table-reloaded=" + rareTableReady
+                                    + " common-alive=" + commonAliveBeforeKill
+                                    + " rare-alive=" + rareWasAlive + " common-natural=" + commonNatural
+                                    + " rare-natural=" + rareDiedNaturally + " common-bread=" + commonBread
+                                    + " common-diamond=" + commonDiamond + " rare-bread=" + rareBread
+                                    + " rare-diamond=" + rareDiamond + " restored=" + restored
+                                    + " passed=" + passed);
+                        }, 10L);
+                    } catch (Throwable failure) {
+                        boolean restored = cleanupMythicRandomPoolDropTableProbe(
+                                service, cleanupMobFiles, cleanupRoot, lootFile, world, base, existingItems);
+                        getLogger().warning("Mythic random DropTable observation failed: " + failure);
+                        getLogger().info("mythic-spawner-drop-table imported=" + imported
+                                + " references=" + mappedReferences + " weighted=" + weighted
+                                + " tables-loaded=" + importedTablesLoaded
+                                + " spawned=" + spawned + " variants=" + sampledBoth
+                                + " assigned=" + assigned + " common-table-reloaded=" + commonTableReloaded
+                                + " rare-table-reloaded=" + rareTableReloaded
+                                + " common-alive=" + commonAliveBeforeKill
+                                + " rare-alive=" + (trackedRare.isValid() && !trackedRare.isDead())
+                                + " common-natural=" + commonNatural
+                                + " rare-natural=false common-bread=0 common-diamond=0 rare-bread=0"
+                                + " rare-diamond=0 restored=" + restored + " passed=false");
+                    }
+                }, 1L);
+            } catch (Throwable failure) {
+                boolean restored = cleanupMythicRandomPoolDropTableProbe(serviceRef[0], mobFiles,
+                        probeRoot, getDataFolder().toPath().resolve("loot.yml"), world,
+                        probeLocation[0], existingItems);
+                getLogger().warning("Mythic random DropTable probe failed: " + failure);
+                getLogger().info("mythic-spawner-drop-table imported=false references=false weighted=false"
+                        + " spawned=0 variants=false assigned=false common-natural=false rare-natural=false"
+                        + " common-bread=0 common-diamond=0 rare-bread=0 rare-diamond=0 restored="
+                        + restored + " passed=false");
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 400L);
+    }
+
+    private boolean cleanupMythicRandomPoolDropTableProbe(
+            dev.helstera.ai.spawner.SpawnerService service, List<Path> mobFiles,
+            Path probeRoot, Path lootFile, org.bukkit.World world, Location location,
+            Set<java.util.UUID> existingItems) {
+        if (service != null) {
+            List<Integer> tracked = service.trackedInstanceIds("drop_coupling");
+            service.stop();
+            var manager = instances();
+            if (manager != null) {
+                for (int id : tracked) {
+                    if (manager.impl(id) != null) manager.despawn(id);
+                }
+            }
+        }
+        boolean restored = false;
+        try {
+            if (loot() != null && Files.isRegularFile(lootFile)) loot().loadFile(lootFile);
+            restored = loot() != null && loot().table("pool_common_reward") == null
+                    && loot().table("pool_rare_reward") == null;
+        } catch (Exception failure) {
+            getLogger().warning("Mythic random DropTable restore failed: " + failure.getMessage());
+        }
+        if (world != null && location != null) {
+            for (var item : world.getEntitiesByClass(org.bukkit.entity.Item.class)) {
+                if (!existingItems.contains(item.getUniqueId())
+                        && item.getLocation().distanceSquared(location) < 36) item.remove();
+            }
+        }
+        for (Path mobFile : mobFiles) {
+            try {
+                Files.deleteIfExists(mobFile);
+            } catch (IOException failure) {
+                getLogger().warning("Mythic random Mob config cleanup failed: " + failure.getMessage());
+                restored = false;
+            }
+        }
+        if (probeRoot != null) {
+            try (var paths = Files.walk(probeRoot)) {
+                for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(path);
+                }
+            } catch (IOException failure) {
+                getLogger().warning("Mythic random DropTable fixture cleanup failed: " + failure.getMessage());
+                restored = false;
+            }
+        }
+        return restored;
+    }
+
     private void runEventSelfTest() {
         getServer().getScheduler().runTaskLater(this, () -> {
             var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
@@ -10099,7 +11562,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             getLogger().info("item-pickup trigger=" + syntheticPickup
                                     + " player=" + holder.getName());
                             if (pickupItem.isValid()) pickupItem.remove();
-                        }, 10L);
+                }, 1L);
                         getServer().getScheduler().runTaskLater(this, () -> {
                             boolean itemPickup = "\u00a7aITEM_PICKUP_OK".equals(holder.getCustomName());
                             getLogger().info("item-pickup trigger=" + itemPickup
@@ -12764,6 +14227,422 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
     }
 
+    private void runExecutionAudienceSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            Player member = getServer().getPlayerExact("HelsteraTester");
+            Player outsider = getServer().getPlayerExact("AudienceGuest");
+            SkillService skills = skillService();
+            String modelId = getConfig().getString("debug.self-test-model", "example/emberling");
+            dev.helstera.runtime.instance.ModelInstanceImpl instance = instances().allImpl().stream()
+                    .filter(candidate -> candidate.isValid() && candidate.model().id().equals(modelId)
+                            && candidate.baseEntity().isPresent())
+                    .findFirst().orElse(null);
+            boolean imported = false;
+            boolean explicitEmpty = false;
+            boolean added = false;
+            boolean persisted = false;
+            boolean memberVisible = false;
+            boolean outsiderHidden = false;
+            boolean removed = false;
+            boolean emptyPersisted = false;
+            boolean unset = false;
+            boolean unrestricted = false;
+            Path importRoot = null;
+            Location memberOrigin = member == null ? null : member.getLocation().clone();
+            Location outsiderOrigin = outsider == null ? null : outsider.getLocation().clone();
+            Map<org.bukkit.permissions.PermissionAttachment, Player> attachments = new LinkedHashMap<>();
+            java.util.Set<java.util.UUID> originalAudience = instance == null
+                    ? null : instance.executionAudience().orElse(null);
+            PlayerVisibilityServiceImpl visibilityService = visibility instanceof PlayerVisibilityServiceImpl value
+                    ? value : null;
+            VisibilityRefresher visibilityRefresher = refresher instanceof VisibilityRefresher value
+                    ? value : null;
+            org.bukkit.entity.Entity entity = instance == null ? null : instance.baseEntity().orElse(null);
+            java.util.Set<java.util.UUID> baselineViewers = java.util.Set.of();
+            try {
+                if (member == null || outsider == null || skills == null || instance == null
+                        || entity == null || visibilityService == null || visibilityRefresher == null) {
+                    throw new IllegalStateException("players, managed model, or visibility services are missing");
+                }
+                String namespace = instance.model().id().split("/", 2)[0];
+                for (Player player : List.of(member, outsider)) {
+                    attachments.put(player.addAttachment(this, "helstera.view", true), player);
+                    attachments.put(player.addAttachment(this, "helstera.view." + namespace, true), player);
+                    player.recalculatePermissions();
+                }
+                Location anchor = instance.location();
+                if (anchor == null || anchor.getWorld() == null
+                        || !member.teleport(anchor.clone().add(2, 0, 0))
+                        || !outsider.teleport(anchor.clone().add(4, 0, 0))) {
+                    throw new IllegalStateException("could not place both clients near the managed model");
+                }
+                instance.setExecutionAudience(null);
+                visibilityRefresher.refreshInstance(instance);
+                baselineViewers = new java.util.LinkedHashSet<>(visibilityService.subscribersOf(instance));
+                if (!baselineViewers.contains(member.getUniqueId())
+                        || !baselineViewers.contains(outsider.getUniqueId())) {
+                    throw new IllegalStateException("both clients must be eligible viewers before mutation");
+                }
+
+                importRoot = Files.createTempDirectory("helstera-execution-audience-import-");
+                Path skillsDirectory = Files.createDirectory(importRoot.resolve("Skills"));
+                Path source = skillsDirectory.resolve("audience-probe.yml");
+                Files.writeString(source, """
+                        Probe:
+                          ExecutionAudience: NONE
+                          Skills:
+                            - AddToAudience{a=target}
+                            - RemoveFromAudience{a=target}
+                            - AddToAudience{a=target}
+                            - UnsetAudience
+                        """);
+                Map<String, Object> importedFile = new MythicMobsImporter().convert(source).stream()
+                        .filter(entry -> "skills.yml".equals(entry.get("target-file")))
+                        .findFirst().orElseThrow();
+                YamlConfiguration importedSkills = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(importedFile.get("content"))));
+                List<String> actionSpecs = importedSkills.getStringList("skills.probe.on-decision");
+                imported = "NONE".equals(importedSkills.getString("skills.probe.execution-audience"))
+                        && importedSkills.getStringList("skills.probe.unsupported").isEmpty()
+                        && actionSpecs.size() == 4
+                        && actionSpecs.get(0).startsWith("add-to-audience")
+                        && actionSpecs.get(1).startsWith("remove-from-audience")
+                        && actionSpecs.get(2).startsWith("add-to-audience")
+                        && actionSpecs.get(3).equals("unset-audience");
+                if (!imported) throw new IllegalStateException("Mythic audience configuration/actions did not import");
+
+                List<String> boundActions = new ArrayList<>();
+                for (String spec : actionSpecs) {
+                    String action = skills.bindAction(spec);
+                    if (action == null) throw new IllegalStateException("imported audience action did not bind: " + spec);
+                    boundActions.add(action);
+                }
+                instance.setExecutionAudience(java.util.Set.of());
+                visibilityRefresher.refreshInstance(instance);
+                explicitEmpty = instance.executionAudience().filter(java.util.Set::isEmpty).isPresent()
+                        && dev.helstera.api.behavior.ExecutionAudienceData.read(entity)
+                                .filter(java.util.Set::isEmpty).isPresent()
+                        && visibilityService.subscribersOf(instance).isEmpty()
+                        && !member.canSee(entity) && !outsider.canSee(entity);
+                if (!explicitEmpty) throw new IllegalStateException("explicit empty audience was not enforced");
+
+                var context = dev.helstera.api.behavior.BehaviorContext.execution(instance, member,
+                        1.0, 0.0, 0, "execution-audience-probe", null, member,
+                        List.of(member), member.getLocation()).withExecutionAudience(List.of());
+                added = skills.runAction(boundActions.get(0), context)
+                        && context.executionAudience().filter(audience -> audience.contains(member.getUniqueId())).isPresent()
+                        && instance.executionAudience().filter(audience -> audience.equals(
+                                java.util.Set.of(member.getUniqueId()))).isPresent();
+                persisted = dev.helstera.api.behavior.ExecutionAudienceData.read(entity)
+                        .filter(audience -> audience.equals(java.util.Set.of(member.getUniqueId()))).isPresent();
+                var memberOnly = new java.util.LinkedHashSet<>(visibilityService.subscribersOf(instance));
+                memberVisible = memberOnly.equals(java.util.Set.of(member.getUniqueId())) && member.canSee(entity);
+                outsiderHidden = !memberOnly.contains(outsider.getUniqueId()) && !outsider.canSee(entity);
+                if (!(added && persisted && memberVisible && outsiderHidden)) {
+                    throw new IllegalStateException("add did not persist and refresh member-only visibility");
+                }
+
+                removed = skills.runAction(boundActions.get(1), context)
+                        && instance.executionAudience().filter(java.util.Set::isEmpty).isPresent();
+                emptyPersisted = dev.helstera.api.behavior.ExecutionAudienceData.read(entity)
+                        .filter(java.util.Set::isEmpty).isPresent();
+                visibilityRefresher.refreshInstance(instance);
+                removed = removed && visibilityService.subscribersOf(instance).isEmpty()
+                        && !member.canSee(entity) && !outsider.canSee(entity);
+                if (!(removed && emptyPersisted)) {
+                    throw new IllegalStateException("remove did not persist the empty audience and hide the model");
+                }
+
+                boolean readded = skills.runAction(boundActions.get(2), context)
+                        && instance.executionAudience().filter(audience -> audience.equals(
+                                java.util.Set.of(member.getUniqueId()))).isPresent();
+                unset = readded && skills.runAction(boundActions.get(3), context)
+                        && instance.executionAudience().isEmpty()
+                        && dev.helstera.api.behavior.ExecutionAudienceData.read(entity).isEmpty();
+                var restoredViewers = new java.util.LinkedHashSet<>(visibilityService.subscribersOf(instance));
+                unrestricted = restoredViewers.equals(baselineViewers)
+                        && member.canSee(entity) && outsider.canSee(entity);
+            } catch (Throwable failure) {
+                getLogger().warning("[自检] execution-audience-mutation error=" + failure);
+            } finally {
+                if (instance != null) {
+                    instance.setExecutionAudience(originalAudience);
+                }
+                if (member != null && memberOrigin != null) member.teleport(memberOrigin);
+                if (outsider != null && outsiderOrigin != null) outsider.teleport(outsiderOrigin);
+                for (var attachment : attachments.entrySet()) {
+                    attachment.getValue().removeAttachment(attachment.getKey());
+                    attachment.getValue().recalculatePermissions();
+                }
+                if (instance != null && visibilityRefresher != null) {
+                    visibilityRefresher.refreshInstance(instance);
+                }
+                if (importRoot != null) {
+                    try (var paths = Files.walk(importRoot)) {
+                        paths.sorted(java.util.Comparator.reverseOrder()).forEach(path -> {
+                            try {
+                                Files.deleteIfExists(path);
+                            } catch (IOException ignored) {
+                            }
+                        });
+                    } catch (IOException ignored) {
+                    }
+                }
+            }
+            boolean passed = imported && explicitEmpty && added && persisted && memberVisible && outsiderHidden
+                    && removed && emptyPersisted && unset && unrestricted;
+            getLogger().info("execution-audience-mutation imported=" + imported
+                    + " explicit-empty=" + explicitEmpty + " added=" + added + " persisted=" + persisted
+                    + " member-visible=" + memberVisible + " outsider-hidden=" + outsiderHidden
+                    + " removed=" + removed + " empty-persisted=" + emptyPersisted
+                    + " unset=" + unset + " unrestricted=" + unrestricted + " passed=" + passed);
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 220L);
+    }
+
+    private void runExecutionAudienceMobSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            Player member = getServer().getPlayerExact("HelsteraTester");
+            Player outsider = getServer().getPlayerExact("AudienceGuest");
+            SkillService skills = skillService();
+            String modelId = getConfig().getString("debug.self-test-model", "example/emberling");
+            var manager = instances();
+            Location memberOrigin = member == null ? null : member.getLocation().clone();
+            Location outsiderOrigin = outsider == null ? null : outsider.getLocation().clone();
+            Map<org.bukkit.permissions.PermissionAttachment, Player> attachments = new LinkedHashMap<>();
+            Path importRoot = null;
+            Path generatedMobFile = null;
+            dev.helstera.runtime.instance.ModelInstanceImpl instance = null;
+            dev.helstera.runtime.instance.ModelInstanceImpl summonedInstance = null;
+            boolean imported = false;
+            boolean mapped = false;
+            boolean spawned = false;
+            boolean selectedMember = false;
+            boolean outsiderExcluded = false;
+            boolean persisted = false;
+            boolean memberVisible = false;
+            boolean outsiderHidden = false;
+            boolean mutationImported = false;
+            boolean targeterRemoved = false;
+            boolean emptyPersisted = false;
+            boolean hiddenAfterRemove = false;
+            boolean targeterAdded = false;
+            boolean restoredPersisted = false;
+            boolean visibleAfterAdd = false;
+            boolean outsiderHiddenAfterAdd = false;
+            boolean summonImported = false;
+            boolean summonActionBound = false;
+            boolean summonSpawned = false;
+            boolean summonInherited = false;
+            boolean summonVisuals = false;
+            boolean summonMemberVisible = false;
+            boolean summonOutsiderHidden = false;
+            try {
+                if (member == null || outsider == null || skills == null || manager == null
+                        || !(visibility instanceof PlayerVisibilityServiceImpl visibilityService)
+                        || !(refresher instanceof VisibilityRefresher visibilityRefresher)) {
+                    throw new IllegalStateException("players, instance manager, or visibility services are missing");
+                }
+                if (registry.get(modelId).isEmpty()) {
+                    throw new IllegalStateException("self-test model is not loaded: " + modelId);
+                }
+                String namespace = modelId.split("/", 2)[0];
+                for (Player player : List.of(member, outsider)) {
+                    attachments.put(player.addAttachment(this, "helstera.view", true), player);
+                    attachments.put(player.addAttachment(this, "helstera.view." + namespace, true), player);
+                    player.recalculatePermissions();
+                }
+
+                importRoot = Files.createTempDirectory("helstera-execution-audience-mob-import-");
+                Path sourceDirectory = Files.createDirectory(importRoot.resolve("Mobs"));
+                Path source = sourceDirectory.resolve("audience-probe.yml");
+                Files.writeString(source, """
+                        ExecutionAudienceProbe:
+                          Type: ZOMBIE
+                          Options:
+                            ExecutionAudience: '@PlayersInRadius{r=8}'
+                        """);
+                List<Map<String, Object>> entries = new MythicMobsImporter().convert(source);
+                Map<String, Object> importedEntry = entries.stream()
+                        .filter(entry -> "mobs/mythic_executionaudienceprobe.yml".equals(entry.get("target-file")))
+                        .findFirst().orElseThrow();
+                YamlConfiguration importedMob = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(importedEntry.get("content"))));
+                String configuredAudience = importedMob.getString("mob.execution-audience");
+                imported = "mapped".equals(importedEntry.get("status"))
+                        && "mythic_executionaudienceprobe".equals(importedMob.getString("id"));
+                mapped = "ZOMBIE".equals(importedMob.getString("mob.entity-type"))
+                        && "@PlayersInRadius{r=8}".equals(configuredAudience);
+                if (!(imported && mapped)) {
+                    throw new IllegalStateException("Mythic mob ExecutionAudience did not import to the runtime config");
+                }
+
+                importedMob.set("model", modelId);
+                importedMob.set("entity.no-ai", true);
+                importedMob.set("entity.invulnerable", true);
+                Path mobsDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+                generatedMobFile = mobsDirectory.resolve("mythic_executionaudienceprobe.yml").normalize();
+                if (!generatedMobFile.startsWith(mobsDirectory) || Files.exists(generatedMobFile)) {
+                    throw new IllegalStateException("generated mob config path is unsafe or already exists");
+                }
+                Files.createDirectories(mobsDirectory);
+                Files.writeString(generatedMobFile, importedMob.saveToString());
+
+                Location anchor = memberOrigin.clone().add(0, 0, 6);
+                if (!member.teleport(anchor.clone().add(2, 0, 0))
+                        || !outsider.teleport(anchor.clone().add(20, 0, 0))) {
+                    throw new IllegalStateException("could not place clients around the imported mob probe");
+                }
+                int instanceId = spawnMobAt("mythic_executionaudienceprobe", anchor, null);
+                instance = instanceId > 0 ? manager.impl(instanceId) : null;
+                org.bukkit.entity.Entity entity = instance == null
+                        ? null : instance.baseEntity().orElse(null);
+                spawned = instance != null && instance.isValid() && entity != null
+                        && entity.getType() == EntityType.ZOMBIE;
+                if (!spawned) throw new IllegalStateException("imported Mythic mob did not spawn as a managed zombie");
+
+                Set<java.util.UUID> expectedAudience = Set.of(member.getUniqueId());
+                selectedMember = instance.executionAudience().filter(expectedAudience::equals).isPresent();
+                outsiderExcluded = instance.executionAudience()
+                        .filter(audience -> !audience.contains(outsider.getUniqueId())).isPresent();
+                persisted = dev.helstera.api.behavior.ExecutionAudienceData.read(entity)
+                        .filter(expectedAudience::equals).isPresent();
+                visibilityRefresher.refreshInstance(instance);
+                Set<java.util.UUID> viewers = new java.util.LinkedHashSet<>(visibilityService.subscribersOf(instance));
+                memberVisible = viewers.equals(expectedAudience) && member.canSee(entity);
+                outsiderHidden = !viewers.contains(outsider.getUniqueId()) && !outsider.canSee(entity);
+
+                Path skillsDirectory = Files.createDirectory(importRoot.resolve("Skills"));
+                Path skillSource = skillsDirectory.resolve("audience-probe.yml");
+                Files.writeString(skillSource, """
+                        skills:
+                          mob_audience_probe:
+                            Skills:
+                              - RemoveFromAudience{a=target;mobs=@EntitiesInRadius{r=1};ignoreSkillAudience=true}
+                              - AddToAudience{a=target;mobs=@EntitiesInRadius{r=1};ignoreSkillAudience=true}
+                              - summon{type=%s;amount=1;radius=1}
+                        """.formatted(modelId));
+                Map<String, Object> importedSkillFile = new MythicMobsImporter().convert(skillSource).stream()
+                        .filter(entry -> "skills.yml".equals(entry.get("target-file")))
+                        .findFirst().orElseThrow();
+                YamlConfiguration importedSkills = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(importedSkillFile.get("content"))));
+                List<String> actionSpecs = importedSkills.getStringList("skills.mob_audience_probe.on-decision");
+                summonImported = actionSpecs.size() == 3
+                        && actionSpecs.get(2).equals("summon " + modelId + " 1 1");
+                mutationImported = actionSpecs.size() == 3
+                        && actionSpecs.get(0).startsWith("remove-from-audience{")
+                        && actionSpecs.get(0).contains("mobs=@EntitiesInRadius{r=1}")
+                        && actionSpecs.get(1).startsWith("add-to-audience{")
+                        && actionSpecs.get(1).contains("mobs=@EntitiesInRadius{r=1}")
+                        && summonImported
+                        && importedSkills.getStringList("skills.mob_audience_probe.unsupported").isEmpty();
+                if (!mutationImported) throw new IllegalStateException("Mythic audience actions did not import");
+                String removeAction = skills.bindAction(actionSpecs.get(0));
+                String addAction = skills.bindAction(actionSpecs.get(1));
+                String summonAction = skills.bindAction(actionSpecs.get(2));
+                if (removeAction == null || addAction == null) {
+                    throw new IllegalStateException("imported mob audience targeter action did not bind");
+                }
+                summonActionBound = summonAction != null;
+                if (!summonActionBound) throw new IllegalStateException("imported summon action did not bind");
+                var mutationContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                        instance, member, 1.0, 0.0, 0, "execution-audience-mob-mutation", null,
+                        member, List.of(member), anchor);
+                targeterRemoved = skills.runAction(removeAction, mutationContext)
+                        && instance.executionAudience().filter(Set::isEmpty).isPresent();
+                emptyPersisted = dev.helstera.api.behavior.ExecutionAudienceData.read(entity)
+                        .filter(Set::isEmpty).isPresent();
+                Set<java.util.UUID> hiddenViewers = new java.util.LinkedHashSet<>(
+                        visibilityService.subscribersOf(instance));
+                hiddenAfterRemove = hiddenViewers.isEmpty() && !member.canSee(entity) && !outsider.canSee(entity);
+
+                targeterAdded = skills.runAction(addAction, mutationContext)
+                        && instance.executionAudience().filter(expectedAudience::equals).isPresent();
+                restoredPersisted = dev.helstera.api.behavior.ExecutionAudienceData.read(entity)
+                        .filter(expectedAudience::equals).isPresent();
+                Set<java.util.UUID> restoredViewers = new java.util.LinkedHashSet<>(
+                        visibilityService.subscribersOf(instance));
+                visibleAfterAdd = restoredViewers.equals(expectedAudience) && member.canSee(entity);
+                outsiderHiddenAfterAdd = !restoredViewers.contains(outsider.getUniqueId())
+                        && !outsider.canSee(entity);
+
+                Set<Integer> instancesBeforeSummon = manager.allImpl().stream()
+                        .map(dev.helstera.runtime.instance.ModelInstanceImpl::instanceId)
+                        .collect(java.util.stream.Collectors.toSet());
+                boolean summonDispatched = skills.runAction(summonAction, mutationContext);
+                summonedInstance = manager.allImpl().stream()
+                        .filter(candidate -> !instancesBeforeSummon.contains(candidate.instanceId()))
+                        .findFirst().orElse(null);
+                summonSpawned = summonDispatched && summonedInstance != null && summonedInstance.isValid();
+                if (summonSpawned) {
+                    summonInherited = summonedInstance.executionAudience().filter(expectedAudience::equals).isPresent();
+                    List<org.bukkit.entity.Entity> summonedVisuals = manager.renderer()
+                            instanceof dev.helstera.render.display.DisplayRenderer displayRenderer
+                            ? displayRenderer.modelEntities(summonedInstance) : List.of();
+                    summonVisuals = !summonedVisuals.isEmpty()
+                            && summonedVisuals.stream().allMatch(org.bukkit.entity.Entity::isValid);
+                    visibilityRefresher.refreshInstance(summonedInstance);
+                    Set<java.util.UUID> summonedViewers = new java.util.LinkedHashSet<>(
+                            visibilityService.subscribersOf(summonedInstance));
+                    summonMemberVisible = summonedViewers.equals(expectedAudience) && summonVisuals
+                            && summonedVisuals.stream().allMatch(member::canSee);
+                    summonOutsiderHidden = !summonedViewers.contains(outsider.getUniqueId())
+                            && summonVisuals && summonedVisuals.stream().noneMatch(outsider::canSee);
+                }
+            } catch (Throwable failure) {
+                getLogger().warning("[自检] execution-audience-mob-spawn error=" + failure);
+            } finally {
+                if (summonedInstance != null && manager != null) manager.despawn(summonedInstance.instanceId());
+                if (instance != null && manager != null) manager.despawn(instance.instanceId());
+                if (member != null && memberOrigin != null) member.teleport(memberOrigin);
+                if (outsider != null && outsiderOrigin != null) outsider.teleport(outsiderOrigin);
+                for (var attachment : attachments.entrySet()) {
+                    attachment.getValue().removeAttachment(attachment.getKey());
+                    attachment.getValue().recalculatePermissions();
+                }
+                if (generatedMobFile != null) {
+                    try {
+                        Files.deleteIfExists(generatedMobFile);
+                    } catch (IOException ignored) {
+                    }
+                }
+                if (importRoot != null) {
+                    try (var paths = Files.walk(importRoot)) {
+                        paths.sorted(java.util.Comparator.reverseOrder()).forEach(path -> {
+                            try {
+                                Files.deleteIfExists(path);
+                            } catch (IOException ignored) {
+                            }
+                        });
+                    } catch (IOException ignored) {
+                    }
+                }
+            }
+            boolean passed = imported && mapped && spawned && selectedMember && outsiderExcluded
+                    && persisted && memberVisible && outsiderHidden;
+            getLogger().info("execution-audience-mob-spawn imported=" + imported
+                    + " mapped=" + mapped + " spawned=" + spawned + " selected-member=" + selectedMember
+                    + " outsider-excluded=" + outsiderExcluded + " persisted=" + persisted
+                    + " member-visible=" + memberVisible + " outsider-hidden=" + outsiderHidden
+                    + " passed=" + passed);
+            boolean mutationPassed = mutationImported && targeterRemoved && emptyPersisted && hiddenAfterRemove
+                    && targeterAdded && restoredPersisted && visibleAfterAdd && outsiderHiddenAfterAdd;
+            getLogger().info("execution-audience-mob-mutation imported=" + mutationImported
+                    + " targeter-removed=" + targeterRemoved + " empty-persisted=" + emptyPersisted
+                    + " hidden=" + hiddenAfterRemove + " targeter-added=" + targeterAdded
+                    + " restored-persisted=" + restoredPersisted + " member-visible=" + visibleAfterAdd
+                    + " outsider-hidden=" + outsiderHiddenAfterAdd
+                    + " passed=" + mutationPassed);
+            boolean summonPassed = summonImported && summonActionBound && summonSpawned && summonInherited
+                    && summonVisuals && summonMemberVisible && summonOutsiderHidden;
+            getLogger().info("execution-audience-mob-summon imported=" + summonImported
+                    + " action-bound=" + summonActionBound + " spawned=" + summonSpawned
+                    + " inherited=" + summonInherited + " visuals=" + summonVisuals
+                    + " member-visible=" + summonMemberVisible + " outsider-hidden=" + summonOutsiderHidden
+                    + " passed=" + summonPassed);
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 380L);
+    }
+
     // vecList 供内部及 WebBridgeAdapter.modelDetail 复用
     private static List<Double> vecList(Vec3 v) {
         return List.of(v.x(), v.y(), v.z());
@@ -12830,9 +14709,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (instances == null) return new MobSpawn(-1, "实例系统未启用（需 2.0+ 版本）");
         String model = modelOverride != null ? modelOverride : cfg.getString("model", "example/crystal_golem");
         org.bukkit.configuration.ConfigurationSection mobOptions = cfg.getConfigurationSection("mob");
+        String configuredExecutionAudience = cfg.getString("mob.execution-audience",
+                cfg.getString("execution-audience"));
         if (registry.get(model).isEmpty()) return new MobSpawn(-1, "模型未加载: " + model + "（/helstera reload models）");
 
-        SpawnOptions opts = SpawnOptions.defaults()
+        SpawnOptions opts = applyMobOptionPolicies(cfg, SpawnOptions.defaults()
                 .displayName(cfg.getString("display-name", mobOptions == null ? mobId : mobOptions.getString("display-name", mobId)))
                 .showName(cfg.getBoolean("show-name", true))
                 .glowing(cfg.getBoolean("glowing", false))
@@ -12842,9 +14723,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 .despawnMode(cfg.getString("mob.despawn", cfg.getString("despawn", "NORMAL")))
                 .despawnDistance(configuredDespawnDistance(cfg))
                 .knockbackResistance(cfg.getDouble("mob.knockback-resistance", cfg.getDouble("knockback-resistance", 0.0)))
-                .preventLeashing(cfg.getBoolean("mob.prevent-leashing", cfg.getBoolean("prevent-leashing", false)))
                 .preventRenaming(cfg.getBoolean("mob.prevent-renaming", cfg.getBoolean("prevent-renaming", true)))
-                .preventTransformation(cfg.getBoolean("mob.prevent-transformation", cfg.getBoolean("prevent-transformation", false)))
                 .preventTransformationReasons(configuredStringList(cfg,
                         "mob.prevent-transformation-reasons", "prevent-transformation-reasons"))
                 .preventMount(cfg.getBoolean("mob.prevent-mount", cfg.getBoolean("prevent-mount", false)))
@@ -12885,17 +14764,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 .invulnerable(cfg.getBoolean("entity.invulnerable", false))
                 .gravity(cfg.getBoolean("entity.gravity", true))
                 .collidable(cfg.getBoolean("entity.collidable", true))
-                .preventItemPickup(cfg.getBoolean("entity.prevent-item-pickup", false))
                 .preventOtherDrops(cfg.getBoolean("entity.prevent-other-drops", false))
                 .preventMobKillDrops(cfg.getBoolean("mob.prevent-mob-kill-drops", cfg.getBoolean("prevent-mob-kill-drops", false)))
                 .preventSunburn(cfg.getBoolean("entity.prevent-sunburn", false))
                 .preventRandomEquipment(cfg.getBoolean("entity.prevent-random-equipment", false))
-                .noDamageTicks(cfg.getInt("entity.no-damage-ticks", 0))
                 // 血条快捷开关：开启等价于 bossbar.enabled=true（无需写整个 bossbar 节）。
                 // 两个键都写时以 bossbar.enabled 为准——它更具体，能表达「不要血条」。
                 .showHealthBar(cfg.getBoolean("show-health-bar", false)
                         || cfg.getBoolean("bossbar.enabled", false))
-                .spawnHitbox(cfg.getBoolean("spawn-hitbox", true));
+                .spawnHitbox(cfg.getBoolean("spawn-hitbox", true)));
 
         if (base == null || base.getWorld() == null) return new MobSpawn(-1, "生成位置无效");
         org.bukkit.Location loc = base.clone();
@@ -13025,6 +14902,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
         // 掉落表挂到实例上：死亡事件靠它找到该投哪张表，避免按模型 ID 反查 mobs 配置
         org.bukkit.configuration.ConfigurationSection dropsSec = cfg.getConfigurationSection("drops");
+        if (dropsSec == null && mobOptions != null) {
+            dropsSec = mobOptions.getConfigurationSection("drops");
+        }
         if (dropsSec != null && inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl) {
             String table = dropsSec.getString("table");
             if (table != null && !table.isBlank()) {
@@ -13085,6 +14965,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             ai().attach((dev.helstera.runtime.instance.ModelInstanceImpl) inst,
                     overlay.apply(ai().profile(profileName)), profileName, overlay);
         }
+        initializeExecutionAudience(inst, configuredExecutionAudience);
+        if (inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl
+                && refresher instanceof VisibilityRefresher visibilityRefresher) {
+            visibilityRefresher.refreshInstance(impl);
+        }
         // 实例就绪后派发生成事件：SkillTriggers 的 on-spawn 依赖它。
         // 此前全工程没有任何地方 post 该事件，触发器链路完全未接通。
         if (existingEntity == null) {
@@ -13092,6 +14977,29 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     .map(org.bukkit.entity.Entity::getLocation).orElse(loc)));
         }
         return new MobSpawn(inst.instanceId(), "已生成 " + mobId + "（模型 " + model + ", 实例 #" + inst.instanceId() + "）");
+    }
+
+    private void initializeExecutionAudience(ModelInstance instance, String configured) {
+        if (instance == null) return;
+        org.bukkit.entity.Entity entity = instance.baseEntity().orElse(null);
+        var persisted = dev.helstera.api.behavior.ExecutionAudienceData.read(entity);
+        if (persisted.isPresent()) {
+            instance.setExecutionAudience(persisted.orElseThrow());
+        } else if (configured != null && !configured.isBlank()) {
+            var origin = entity == null ? instance.location() : entity.getLocation();
+            var context = dev.helstera.api.behavior.BehaviorContext.execution(instance, null,
+                    1.0, -1, 0, "execution-audience", null, null, java.util.List.of(), origin);
+            var resolution = dev.helstera.ai.skill.ExecutionAudiences.resolve(configured, context);
+            if (!resolution.supported()) {
+                getLogger().warning("[Audience] unsupported mob execution-audience \""
+                        + configured + "\"; restricting it to nobody");
+            }
+            instance.setExecutionAudience(resolution.supported()
+                    ? resolution.players() : java.util.Set.of());
+        }
+        if (instance.executionAudience().isPresent() && entity != null) {
+            entity.setVisibleByDefault(false);
+        }
     }
 
     static void applyNonLivingEntityOptions(org.bukkit.entity.Entity entity,
@@ -14014,6 +15922,62 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " foundation-restored=" + foundationRestored
                 + " prerequisite-restored=" + prerequisiteRestored
                 + " advanced-unlocked=" + advancedUnlocked);
+    }
+
+    private void runPersistentExecutionAudienceSelfTest() {
+        String stage = getConfig().getString("debug.self-test-execution-audience-persistence-stage", "write");
+        String mobId = "execution_audience_restart_probe";
+        java.util.Set<java.util.UUID> expectedAudience = java.util.Set.of(
+                java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                java.util.UUID.fromString("00000000-0000-0000-0000-000000000002"));
+        String audienceText = expectedAudience.stream().map(java.util.UUID::toString)
+                .sorted().collect(java.util.stream.Collectors.joining(","));
+
+        if ("write".equalsIgnoreCase(stage)) {
+            Location at = getServer().getWorlds().get(0).getSpawnLocation().clone().add(0, 3, 0);
+            int instanceId = spawnMobAt(mobId, at, null);
+            var instance = instanceId > 0 ? instances().impl(instanceId) : null;
+            var entity = instance == null ? null : instance.baseEntity().orElse(null);
+            if (instance == null || !(entity instanceof org.bukkit.entity.LivingEntity living)) {
+                getLogger().warning("[SelfTest] execution-audience-restart stage=write result=failed reason=spawn-failed");
+                return;
+            }
+            instance.setExecutionAudience(expectedAudience);
+            boolean pdcWritten = dev.helstera.api.behavior.ExecutionAudienceData.read(living)
+                    .filter(expectedAudience::equals).isPresent();
+            boolean persistent = living.isPersistent()
+                    && "PERSISTENT".equalsIgnoreCase(instance.options().despawnMode());
+            boolean passed = instance.isValid() && living.isValid() && pdcWritten && persistent;
+            getLogger().info("[SelfTest] execution-audience-restart stage=write result="
+                    + (passed ? "passed" : "failed") + " mob-id=" + mobId
+                    + " entity=" + living.getUniqueId() + " audience=" + audienceText
+                    + " pdc-written=" + pdcWritten + " persistent=" + persistent);
+            return;
+        }
+
+        var restored = instances().allImpl().stream()
+                .filter(instance -> instance.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity living
+                        && mobId.equals(living.getPersistentDataContainer().get(
+                        persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING)))
+                .toList();
+        if (restored.size() != 1) {
+            getLogger().warning("[SelfTest] execution-audience-restart stage=verify result=failed mob-id="
+                    + mobId + " restored-instances=" + restored.size());
+            return;
+        }
+        var instance = restored.get(0);
+        var living = (org.bukkit.entity.LivingEntity) instance.baseEntity().orElseThrow();
+        boolean audienceRestored = instance.executionAudience().filter(expectedAudience::equals).isPresent();
+        boolean pdcRestored = dev.helstera.api.behavior.ExecutionAudienceData.read(living)
+                .filter(expectedAudience::equals).isPresent();
+        boolean persistent = living.isPersistent()
+                && "PERSISTENT".equalsIgnoreCase(instance.options().despawnMode());
+        boolean passed = instance.isValid() && living.isValid() && audienceRestored && pdcRestored && persistent;
+        getLogger().info("[SelfTest] execution-audience-restart stage=verify result="
+                + (passed ? "passed" : "failed") + " mob-id=" + mobId
+                + " entity=" + living.getUniqueId() + " audience=" + audienceText
+                + " audience-restored=" + audienceRestored + " pdc-restored=" + pdcRestored
+                + " persistent=" + persistent);
     }
 
     private java.io.File persistentMobSkillTreeFile(String mobId) {
@@ -15184,6 +17148,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean fallback = options == null || !options.preventItemPickup();
         mob.setCanPickupItems(entityOptions == null
                 ? fallback : entityOptions.getBoolean("can-pickup-items", fallback));
+    }
+
+    static SpawnOptions applyMobOptionPolicies(
+            org.bukkit.configuration.ConfigurationSection config, SpawnOptions options) {
+        if (config == null || options == null) return options;
+        var entity = config.getConfigurationSection("entity");
+        return options
+                .preventLeashing(config.getBoolean("mob.prevent-leashing",
+                        config.getBoolean("prevent-leashing", false)))
+                .preventTransformation(config.getBoolean("mob.prevent-transformation",
+                        config.getBoolean("prevent-transformation", false)))
+                .preventItemPickup(entity != null && entity.getBoolean("prevent-item-pickup", false))
+                .noDamageTicks(entity == null ? 0 : entity.getInt("no-damage-ticks", 0));
     }
 
     static void applyRandomEquipmentPolicy(org.bukkit.entity.LivingEntity entity,

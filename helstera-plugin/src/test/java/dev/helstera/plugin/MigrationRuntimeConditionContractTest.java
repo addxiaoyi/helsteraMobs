@@ -46,6 +46,120 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported LookingAt selectors reach the matching Player ray trace")
+    void importedLookingAtSelectorsReachRuntime() {
+        var player = mock(org.bukkit.entity.Player.class);
+        var blockHit = mock(org.bukkit.util.RayTraceResult.class);
+        var block = mock(org.bukkit.block.Block.class);
+        var entityHit = mock(org.bukkit.util.RayTraceResult.class);
+        var entity = mock(org.bukkit.entity.Entity.class);
+        when(player.rayTraceBlocks(6.0, org.bukkit.FluidCollisionMode.NEVER)).thenReturn(blockHit);
+        when(player.rayTraceEntities(8, true)).thenReturn(entityHit);
+        when(blockHit.getHitBlock()).thenReturn(block);
+        when(block.getType()).thenReturn(org.bukkit.Material.STONE);
+        when(entityHit.getHitEntity()).thenReturn(entity);
+        when(entity.getType()).thenReturn(org.bukkit.entity.EntityType.FIREWORK_ROCKET);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, player, 1.0, -1, 0, "IDLE");
+        var nonPlayerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, mock(org.bukkit.entity.Zombie.class), 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+
+        var blockPrimary = dev.helstera.migration.importer.MmConditions.translate(
+                "?lookingAt{b=STONE;d=6}");
+        var blockAlias = dev.helstera.migration.importer.MmConditions.translate(
+                "?lookingAt{block=STONE;distance=6}");
+        assertTrue(blockPrimary.translated());
+        assertEquals("looking-at block STONE 6", blockPrimary.condition());
+        assertTrue(blockAlias.translated());
+        String blockPrimaryKey = service.bindCondition(blockPrimary.condition());
+        String blockAliasKey = service.bindCondition(blockAlias.condition());
+        assertNotNull(blockPrimaryKey);
+        assertNotNull(blockAliasKey);
+        assertTrue(registry.testCondition(blockPrimaryKey, context));
+        assertTrue(registry.testCondition(blockAliasKey, context));
+
+        var entitySelector = dev.helstera.migration.importer.MmConditions.translate(
+                "?lookingAt{e=FIREWORK_ROCKET;d=8}");
+        assertTrue(entitySelector.translated());
+        assertEquals("looking-at entity FIREWORK_ROCKET 8", entitySelector.condition());
+        String entityKey = service.bindCondition(entitySelector.condition());
+        assertNotNull(entityKey);
+        assertTrue(registry.testCondition(entityKey, context),
+                "an entity selector whose name is also a material must use the entity ray trace");
+
+        when(block.getType()).thenReturn(org.bukkit.Material.DIRT);
+        assertFalse(registry.testCondition(blockPrimaryKey, context));
+        when(entity.getType()).thenReturn(org.bukkit.entity.EntityType.COW);
+        assertFalse(registry.testCondition(entityKey, context));
+        assertFalse(registry.testCondition(blockPrimaryKey, nonPlayerContext));
+        assertFalse(dev.helstera.migration.importer.MmConditions.translate(
+                "?lookingAt{b=STONE;d=0}").translated());
+    }
+
+    @Test
+    @DisplayName("imported SkillOnCooldown reads the resolved target instance cooldown")
+    void importedSkillOnCooldownReadsTargetInstance() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var yaml = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                skills:
+                  pulse:
+                    cooldown: 30s
+                    on-decision: []
+                """));
+        service.loadSkills(yaml.getConfigurationSection("skills"));
+
+        var target = mock(org.bukkit.entity.Zombie.class);
+        var source = mock(org.bukkit.entity.Zombie.class);
+        var unbound = mock(org.bukkit.entity.Zombie.class);
+        UUID targetId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID();
+        UUID unboundId = UUID.randomUUID();
+        when(target.getUniqueId()).thenReturn(targetId);
+        when(source.getUniqueId()).thenReturn(sourceId);
+        when(unbound.getUniqueId()).thenReturn(unboundId);
+        for (var entity : List.of(target, source, unbound)) {
+            when(entity.isValid()).thenReturn(true);
+            when(entity.isDead()).thenReturn(false);
+        }
+
+        var targetInstance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var sourceInstance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(targetInstance.isValid()).thenReturn(true);
+        when(targetInstance.instanceId()).thenReturn(901);
+        when(targetInstance.baseEntity()).thenReturn(java.util.Optional.of(target));
+        when(sourceInstance.isValid()).thenReturn(true);
+        when(sourceInstance.instanceId()).thenReturn(902);
+        when(sourceInstance.baseEntity()).thenReturn(java.util.Optional.of(source));
+        service.instanceLookup(entity -> entity.getUniqueId().equals(targetId) ? targetInstance
+                : entity.getUniqueId().equals(sourceId) ? sourceInstance : null);
+
+        var translated = dev.helstera.migration.importer.MmConditions.translate(
+                "?skillOnCooldown{s=pulse}");
+        assertTrue(translated.translated());
+        assertEquals("skill-on-cooldown pulse", translated.condition());
+        String condition = service.bindCondition(translated.condition());
+        assertNotNull(condition, service.warnings().toString());
+        var targetContext = dev.helstera.api.behavior.BehaviorContext.of(
+                sourceInstance, target, 1.0, -1, 0, "IDLE");
+        assertFalse(registry.testCondition(condition, targetContext));
+
+        var ownerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                targetInstance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE");
+        assertTrue(service.castSkill("pulse", ownerContext));
+        assertTrue(registry.testCondition(condition, targetContext));
+
+        var unboundContext = dev.helstera.api.behavior.BehaviorContext.of(
+                sourceInstance, unbound, 1.0, -1, 0, "IDLE");
+        assertFalse(registry.testCondition(condition, unboundContext));
+        assertTrue(service.setSkillCooldown("pulse", ownerContext, 0));
+        assertFalse(registry.testCondition(condition, targetContext));
+        assertNull(service.bindCondition("SkillOnCooldown{unknown=pulse}"));
+    }
+
+    @Test
     @DisplayName("imported targetHasAuras checks only the explicit target's named Aura")
     void importedTargetHasAurasReachRuntime() {
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
@@ -116,6 +230,68 @@ class MigrationRuntimeConditionContractTest {
         }
 
         for (String source : List.of("?isInSurvivalMode{unknown=true}", "?inSurvivalMode{unknown=true}")) {
+            assertFalse(dev.helstera.migration.importer.MmConditions.translate(source).translated(), source);
+        }
+    }
+
+    @Test
+    @DisplayName("imported execution-audience aliases and per-target inline filters reach runtime")
+    void importedExecutionAudienceConditionsReachRuntime() {
+        var member = mock(org.bukkit.entity.Player.class);
+        var outsider = mock(org.bukkit.entity.Player.class);
+        UUID memberId = UUID.randomUUID();
+        UUID outsiderId = UUID.randomUUID();
+        when(member.getUniqueId()).thenReturn(memberId);
+        when(outsider.getUniqueId()).thenReturn(outsiderId);
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+
+        for (String source : List.of("?isInAudience", "?inaudience", "?audiencecontains")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertEquals("is-in-audience", mapped.condition());
+            String key = service.bindCondition(mapped.condition());
+            assertNotNull(key);
+            assertTrue(registry.testCondition(key,
+                    dev.helstera.api.behavior.BehaviorContext.of(null, outsider, 1.0, -1, 0, "IDLE")),
+                    "without an attached audience any Player passes");
+            assertTrue(registry.testCondition(key,
+                    dev.helstera.api.behavior.BehaviorContext.of(null, member, 1.0, -1, 0, "IDLE")
+                            .withExecutionAudience(List.of(member))));
+            assertFalse(registry.testCondition(key,
+                    dev.helstera.api.behavior.BehaviorContext.of(null, member, 1.0, -1, 0, "IDLE")
+                            .withExecutionAudience(List.of())));
+            assertFalse(registry.testCondition(key,
+                    dev.helstera.api.behavior.BehaviorContext.of(null,
+                            mock(org.bukkit.entity.Zombie.class), 1.0, -1, 0, "IDLE")));
+        }
+
+        List<org.bukkit.entity.LivingEntity> selected = new ArrayList<>();
+        registry.registerAction("capture-targets", context -> selected.addAll(context.targets()));
+        String action = service.bindAction("capture-targets @targets ?@isInAudience");
+        assertNotNull(action);
+        var unrestricted = dev.helstera.api.behavior.BehaviorContext.execution(
+                null, member, 1.0, -1, 0, "IDLE", null, null, List.of(member, outsider), null);
+        assertTrue(registry.runAction(action, unrestricted));
+        assertEquals(List.of(member, outsider), selected,
+                "without an attached audience every Player remains eligible");
+
+        selected.clear();
+        var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                null, member, 1.0, -1, 0, "IDLE", null, null, List.of(member, outsider), null)
+                .withExecutionAudience(List.of(member));
+        assertTrue(registry.runAction(action, context));
+        assertEquals(List.of(member), selected);
+
+        String implicitTargetAction = service.bindAction("capture-targets ?@isInAudience");
+        assertNotNull(implicitTargetAction);
+        selected.clear();
+        assertTrue(registry.runAction(implicitTargetAction, context));
+        assertEquals(List.of(member), selected,
+                "per-target conditions must also wrap registered actions without an explicit targeter");
+
+        for (String source : List.of("?isInAudience{unknown=true}", "?inaudience{true}",
+                "?audiencecontains{player=x}")) {
             assertFalse(dev.helstera.migration.importer.MmConditions.translate(source).translated(), source);
         }
     }

@@ -27,17 +27,135 @@ $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-server-conditions-strict-20261106-r1` passed all
-370 probes (351 passed, 19 expected rejections, zero incomplete) on Paper
-1.21.1-133. `importedServerConditions` verifies imported Paper identity aliases,
-exact Minecraft-version matching, inclusive/exclusive `ServerAfter` and
-`ServerBefore` boundaries, and malformed-input preservation. Report:
-`reports/paper-1.21.1-server-conditions-strict-20261106-r1.json`;
-server log: `reports/paper-1.21.1-server-conditions-strict-20261106-r1.log.gz`;
+Latest strict fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2`
+passed all 382 probes (363 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its imported Mythic Spawner condition probe maps
+`BiomeType{type=plains;exact=false}`, naturally spawns one managed mob in the
+matching category, and rejects `desert` with zero spawns. It restores both
+original biomes. The same fixture verifies matching and missing world
+conditions, rain without thunder, weighted `RandomMobs` at 1:3 across 100
+production spawns, `GroupSize: 3` capped by `MaxMobs: 2`, valid and fail-closed
+invalid `Chance`, and variant-specific natural DropTables. The DropTable probe
+spawns 32 weighted variants, verifies each Mob's imported `DropTable-1`
+assignment, reloads each table before natural Bukkit damage, observes Bread only
+for the common Mob and Diamond only for the rare Mob, and restores the original
+loot service state. Report:
+`reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json`;
+server log:
+`reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.log.gz`;
 client logs:
-`reports/paper-1.21.1-server-conditions-strict-20261106-r1-client-logs.tar.gz`.
+`reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2-client-logs.tar.gz`.
 Plugin SHA-256:
-`5e5913d2eab60e1ab8156f07995a18b2264f35325ce28dab67ec525321c66b82`.
+`fd72793b1e8a9aa8b62bc8d7a354dfaf1e36208f874e81fc37f10da1dadca9f5`.
+
+Previous strict fixture `srv-paper-mythic-random-drops-strict-20261106-r4` passed
+all 381 probes (362 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. `mythicSpawnerRandomPoolImported` imports Mythic `RandomMobs` with
+weights 1:3 and observes 25:75 across 100 production spawns. The same release
+run verifies imported `GroupSize: 3` capped by `MaxMobs: 2`, valid `Chance: 1`,
+and fail-closed `Chance: 1.5`. `mythicSpawnerRandomPoolDropTables` then spawns
+32 weighted variants, verifies each Mob's imported `DropTable-1` assignment,
+reloads each table immediately before natural Bukkit damage, observes Bread
+only for the common Mob and Diamond only for the rare Mob, and restores the
+original loot service state. Report:
+`reports/paper-1.21.1-mythic-random-pool-strict-20261106-r4.json`;
+server log:
+`reports/paper-1.21.1-mythic-random-pool-strict-20261106-r4.log.gz`;
+client logs:
+`reports/paper-1.21.1-mythic-random-pool-strict-20261106-r4-client-logs.tar.gz`.
+Plugin SHA-256:
+`773367e232f2c48f5b96876c3572ad486e3918e84c3cfbe7fe925866c353202a`.
+
+Previous strict fixture `srv-paper-mythic-spawner-group-size-strict-20261106-r5`
+records a real-client `SpawningDistance` walk: 14.36 blocks of player movement,
+15.00 blocks between player and mob, and removal 2 ticks after crossing the
+8-block radius, within the 10-tick AI decision period.
+
+Previous strict fixture `srv-paper-execution-audience-mob-strict-20261106-r5`
+passed all 377 probes (358 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. `executionAudienceMobSpawn` imports Mythic Mob
+`Options.ExecutionAudience` and runs the production mob spawn path. It verifies
+`@PlayersInRadius` selection, PDC persistence, and member-only visibility across
+two clients. `executionAudienceMobMutation` imports `RemoveFromAudience` and
+`AddToAudience` with `@EntitiesInRadius`; it verifies targeter selection,
+persisted empty/restored audiences, and member/outsider visibility transitions.
+`executionAudienceMobSummon` verifies the imported summon action inherits its
+source audience and restricts summoned model visuals to members.
+Report:
+`reports/paper-1.21.1-execution-audience-mob-strict-20261106-r5.json`;
+server log:
+`reports/paper-1.21.1-execution-audience-mob-strict-20261106-r5.log.gz`;
+client logs:
+`reports/paper-1.21.1-execution-audience-mob-strict-20261106-r5-client-logs.tar.gz`.
+Plugin SHA-256:
+`5aa37479c888f3e77aaef920ee0920a32b97d16cf7df6f6cd047d59334dc9e0f`.
+
+The two-boot Paper integration verifies
+that a persistent managed mob retains its entity UUID and exact non-empty
+execution audience in entity PDC, and that startup restores the same audience
+to the runtime instance. This fixture has no clients, so member/outsider
+visibility after restart is not covered. Run it with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/paper-integration/test-execution-audience-restart.ps1
+```
+
+Report: `reports/paper-1.21.1-execution-audience-restart-20261106-r3.json`,
+SHA-256 `705b216133dee0e40ec46d72c96886fa0803da193d866566f813527004137573`;
+first-boot and second-boot logs are archived beside the report. The tested
+plugin SHA-256 is
+`6ba52a22a59492ec6d0fe82991d7d27d7298e152e91515974ff615a08091a750`.
+
+Previous strict fixture `srv-paper-imported-mob-defaults-strict-20261106-r4`
+passed all 373 probes (354 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. `importedMobDefaults` verifies Mythic `PreventLeashing`,
+`PreventItemPickup`, `NoDamageTicks`, and `PreventTransformation` through real
+Paper entities and transform events. The same run verifies natural Potion
+consumption/expiry, movement beyond `SpawningDistance`, web reload, and dual-client
+menu behavior. Report and logs remain in `release-evidence.json`.
+
+Previous strict fixture `srv-paper-execution-audience-mob-strict-20261106-r3`
+passed 376 probes (357 passed, 19 expected rejections, zero incomplete). It
+verified imported mob audience spawn and targeter-based audience mutations;
+summon inheritance was added to the catalog and verified in r5.
+
+Previous strict fixture `srv-paper-execution-audience-strict-20261106-r1` passed
+all 371 probes (352 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. It verifies imported `isInAudience` aliases, no-audience/member/
+outsider/empty-audience and non-player behavior, `?@` target filtering, plus
+imported block/entity `LookingAt` selectors with real ray-trace type and distance
+controls. Report:
+`reports/paper-1.21.1-execution-audience-strict-20261106-r1.json`;
+server log: `reports/paper-1.21.1-execution-audience-strict-20261106-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-execution-audience-strict-20261106-r1-client-logs.tar.gz`.
+The Mineflayer menu client emitted `PartialReadError` warnings while reading
+menu protocol packets; server-side render/click assertions and the client
+workflow report passed, and the later raw-potion client rejoined successfully.
+Plugin SHA-256:
+`abbc8f64d612eb4cd7cf548f5cde663821b6183687e2c9649affe3003febd3cf`.
+
+Previous strict fixture `srv-paper-server-conditions-strict-20261106-r1`
+passed all 370 probes (351 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. `importedServerConditions` verifies imported Paper identity
+aliases, exact Minecraft-version matching, inclusive/exclusive `ServerAfter`
+and `ServerBefore` boundaries, and malformed-input preservation. Its report,
+server/client logs, and plugin hash remain in `release-evidence.json`.
+
+Latest strict follow-up `srv-paper-looking-at-import-strict-20261106-r1` also
+passed all 370 release probes (351 passed, 19 expected rejections, zero
+incomplete) on Paper 1.21.1-133. `importedLookingAtCondition` verifies
+`?lookingAt{b=STONE;d=6}`, the full-name block alias, and
+`?lookingAt{e=COW;d=6}` through the importer and SkillService. Real Paper
+ray traces cover matching and wrong block/entity types, distances shorter than
+the hit, invalid distance preservation, and restoration of the block, player
+location, and temporary Cow. Report:
+`reports/paper-1.21.1-looking-at-import-strict-20261106-r1.json`;
+server log: `reports/paper-1.21.1-looking-at-import-strict-20261106-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-looking-at-import-strict-20261106-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`cf2267186d343f2b80335b66f45bb215c4f155a3739d7e1df89a7b8b568b5273`.
 
 Previous strict fixture `srv-paper-name-import-strict-20261106-r2` passed all
 369 probes (350 passed, 19 expected rejections, zero incomplete) on Paper
@@ -1040,6 +1158,22 @@ The two boots share one plugin data directory. The first boot generates
 `spawner-state.yml`; the second boot verifies `before=1 after=1` after loading
 the state, proving the lifetime counter is restored without duplicate loading.
 
+Add `-NaturalScheduling` to verify the restart cooldown through production
+natural scheduling. The isolated fixture observes a scheduled spawn, saves its
+remaining cooldown on shutdown, then checks that the next boot waits for the
+restored cooldown before its next natural spawn. It does not issue a force
+command. It also checks that `Chance: 0` and a non-finite explicit Chance both
+remain at zero natural spawns across both boots:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/paper-integration/test-spawner-restart.ps1 -NaturalScheduling
+```
+
+The archived Paper 1.21.1-133 runs are
+`reports/paper-1.21.1-spawner-natural-restart-20261106-r1.json`,
+`-r2.json`, `-r4.json`, and `-r5.json`. The latest run verifies invalid
+non-finite Chance rejection alongside the one-scheduler-period cooldown bound.
+
 Named region gating is covered by
 `spawner-region id=region_probe requested=true region=integration_box failure=null`.
 
@@ -1481,11 +1615,12 @@ real SkillService, then checks prefix, suffix, `ALL`, and `ANY` containment.
 Exploratory fixture r3 records `variableContainsCondition=passed`; strict Paper
 1.21.1 evidence remains pending.
 
-The online-player self-test now controls a real Player's server-side rotation,
+The online-player self-test controls a real Player's server-side rotation,
 places a temporary STONE block along the eye ray, and checks positive/negative
-`LookingAt` paths before restoring both block and rotation. Exploratory fixture
-r2 records `lookingAtCondition=passed`; strict Paper 1.21.1 evidence remains
-pending.
+`LookingAt` paths before restoring the block and player state. The strict
+imported block/entity paths are covered by
+`srv-paper-looking-at-import-strict-20261106-r1`; natural client-originated
+view direction remains unverified.
 
 The same online-player self-test uses Bukkit `LivingEntity#attack` against an
 temporary Zombie, verifies `HumanEntity#getAttackCooldown()` falls below `1.0`,

@@ -36,6 +36,9 @@ try {
     $archivePath = Join-Path $temporaryRoot 'tools/paper-integration/reports/test-release.json'
     [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($archivePath))
     $fullReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-drop-inline-20261104-r2.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $lookingAtProbe = @($fullReport.probes | Where-Object id -eq 'lookingAtCondition')
+    if ($lookingAtProbe.Count -ne 1) { throw 'Synthetic release report must contain lookingAtCondition.' }
+    $lookingAtProbe[0].observations = @('imported-looking-at-condition primary-mapped=true alias-mapped=true entity-mapped=true positive=true alias-positive=true wrong-block-rejected=true short-block-distance-rejected=true negative=true entity-positive=true wrong-entity-rejected=true short-entity-distance-rejected=true invalid-rejected=true restored=true')
     $fullReport.expectedProbeIds += 'importedIsChildCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedIsChildCondition'; status = 'passed'; observations = @('skill-actions is-child-import-condition=true adult-parent-positive=true adult-not-baby=true unrelated-baby-not-child=true baby-positive=true')
@@ -163,6 +166,54 @@ try {
     $fullReport.expectedProbeIds += 'importedEntityCategoryCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedEntityCategoryCondition'; status = 'passed'; observations = @('imported-entity-category-condition water-primary-mapped=true water-alias-mapped=true water-positive=true water-zombie-rejected=true zombie-primary-mapped=true zombie-alias-mapped=true zombie-positive=true zombie-cod-rejected=true invalid-preserved=true cod=COD zombie=ZOMBIE')
+    }
+    $fullReport.expectedProbeIds += 'importedExecutionAudienceCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedExecutionAudienceCondition'; status = 'passed'; observations = @('imported-execution-audience-condition primary-mapped=true alias-mapped=true contains-mapped=true no-audience-player-allowed=true member-allowed=true outsider-rejected=true empty-rejected=true non-player-rejected=true invalid-preserved=true per-target-unattached=true per-target-explicit=true result=true')
+    }
+    $fullReport.expectedProbeIds += 'executionAudienceMutation'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'executionAudienceMutation'; status = 'passed'; observations = @('execution-audience-mutation imported=true explicit-empty=true added=true persisted=true member-visible=true outsider-hidden=true removed=true empty-persisted=true unset=true unrestricted=true passed=true')
+    }
+    $fullReport.expectedProbeIds += 'executionAudienceMobSpawn'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'executionAudienceMobSpawn'; status = 'passed'; observations = @('execution-audience-mob-spawn imported=true mapped=true spawned=true selected-member=true outsider-excluded=true persisted=true member-visible=true outsider-hidden=true passed=true')
+    }
+    $fullReport.expectedProbeIds += 'executionAudienceMobMutation'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'executionAudienceMobMutation'; status = 'passed'; observations = @('execution-audience-mob-mutation imported=true targeter-removed=true empty-persisted=true hidden=true targeter-added=true restored-persisted=true member-visible=true outsider-hidden=true passed=true')
+    }
+    $fullReport.expectedProbeIds += 'executionAudienceMobSummon'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'executionAudienceMobSummon'; status = 'passed'; observations = @('execution-audience-mob-summon imported=true action-bound=true spawned=true inherited=true visuals=true member-visible=true outsider-hidden=true passed=true')
+    }
+    $fullReport.expectedProbeIds += 'importedTargetRelationshipsCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedTargetRelationshipsCondition'; status = 'passed'; observations = @('imported-target-relationships-condition has-owner-mapped=true owner-player-mapped=true owner-online-mapped=true leashed-mapped=true leashed-alias-mapped=true owned-positive=true owner-player-positive=true owner-online-positive=true leashed-positive=true leashed-alias-positive=true leash-cleared-rejected=true owner-cleared-rejected=true missing-target-rejected=true result=true')
+    }
+    $fullReport.expectedProbeIds += 'importedMobDefaults'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
+    }
+    $fullReport.expectedProbeIds += 'mythicSpawnerChanceImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mythicSpawnerChanceImported'; status = 'passed'; observations = @('mythic-spawner-chance imported=true valid-mapped=true invalid-mapped=true valid-natural=true invalid-rejected=true warning=true valid-spawned=1 invalid-spawned=0 passed=true')
+    }
+    $fullReport.expectedProbeIds += 'mythicSpawnerGroupSizeImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mythicSpawnerGroupSizeImported'; status = 'passed'; observations = @('mythic-spawner-group-size imported=true mapped=true natural=true requested=3 spawned=2 alive=2 max-alive=2 passed=true')
+    }
+    $fullReport.expectedProbeIds += 'mythicSpawnerConditionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mythicSpawnerConditionsImported'; status = 'passed'; observations = @('mythic-spawner-conditions imported=true mapped=true world-mapped=true biome-mapped=true biome-natural=true biome-rejected=true biome-pass-spawned=1 biome-reject-spawned=0 world-natural=true world-rejected=true rain=true thunder=false natural=true rejected=true pass-spawned=1 reject-spawned=0 world-pass-spawned=1 world-reject-spawned=0 instance=true restored=true passed=true')
+    }
+    $fullReport.expectedProbeIds += 'mythicSpawnerRandomPoolImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mythicSpawnerRandomPoolImported'; status = 'passed'; observations = @('mythic-spawner-random-pool imported=true mapped=true sampled=true expected-emberling=0.250000 expected-emberling_boss=0.750000 observed-emberling=0.240000 observed-emberling_boss=0.760000 max-abs-deviation=0.010000 samples=100 passed=true')
+    }
+    $fullReport.expectedProbeIds += 'mythicSpawnerRandomPoolDropTables'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mythicSpawnerRandomPoolDropTables'; status = 'passed'; observations = @('mythic-spawner-drop-table imported=true references=true weighted=true tables-loaded=true spawned=32 variants=true assigned=true common-table-reloaded=true rare-table-reloaded=true common-alive=true rare-alive=true common-natural=true rare-natural=true common-bread=1 common-diamond=0 rare-bread=0 rare-diamond=1 restored=true passed=true')
     }
     $fullReport.expectedProbeIds += 'importedEntityTypeVariantCondition'
     $fullReport.probes += [pscustomobject]@{
@@ -376,6 +427,16 @@ try {
     if ($LASTEXITCODE -eq 0 -or $missingIdentityOutput -notmatch 'targeterIdentityFilter' -or
             $missingIdentityOutput -notmatch 'targeter-identity-filter') {
         throw "Release gate accepted missing targeter identity evidence: $missingIdentityOutput"
+    }
+    [System.IO.File]::WriteAllText($archivePath, ($fullReport | ConvertTo-Json -Depth 20))
+    $missingDropTableEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
+    $missingDropTableEvidenceProbe = @($missingDropTableEvidence.probes | Where-Object id -eq 'mythicSpawnerRandomPoolDropTables')
+    $missingDropTableEvidenceProbe[0].observations = @('mythic-spawner-drop-table imported=true references=true weighted=true tables-loaded=true spawned=32 variants=true assigned=true common-table-reloaded=true rare-table-reloaded=true common-alive=true rare-alive=true common-natural=true rare-natural=true common-bread=1 common-diamond=0 rare-bread=0 rare-diamond=1 restored=false passed=false')
+    [System.IO.File]::WriteAllText($archivePath, ($missingDropTableEvidence | ConvertTo-Json -Depth 20))
+    $missingDropTableOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $missingDropTableOutput -notmatch 'mythicSpawnerRandomPoolDropTables' -or
+            $missingDropTableOutput -notmatch 'restored=true') {
+        throw "Release gate accepted Mythic random-pool drops without restoration evidence: $missingDropTableOutput"
     }
     [System.IO.File]::WriteAllText($archivePath, ($fullReport | ConvertTo-Json -Depth 20))
     [System.IO.File]::WriteAllText($testLogPath, 'modified log')
