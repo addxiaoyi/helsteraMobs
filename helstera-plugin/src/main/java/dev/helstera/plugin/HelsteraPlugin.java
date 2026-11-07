@@ -17392,11 +17392,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
     public void onEntityMount(org.bukkit.event.entity.EntityMountEvent event) {
-        if (instances == null) return;
-        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
-        if (instance != null && preventsEntityMount(instance.options(), event.getEntity().getType())) {
+        if (instances == null || event == null) return;
+        org.bukkit.entity.Entity passenger = event.getEntity();
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(passenger);
+        if (instance != null && preventsEntityMount(instance.options(), passenger, event.getMount())) {
             event.setCancelled(true);
         }
+    }
+
+    /**
+     * Applies the broad Mythic PreventMount flag and the narrower zombie-jockey
+     * guard to the actual passenger/mount pair. The entity-type overload below
+     * remains useful for importer and option contract tests, but it cannot
+     * distinguish a chicken jockey from an unrelated explicit mount.
+     */
+    static boolean preventsEntityMount(SpawnOptions options, org.bukkit.entity.Entity passenger,
+                                       org.bukkit.entity.Entity mount) {
+        if (options == null || passenger == null || mount == null) return false;
+        return options.preventMount()
+                || (options.preventJockeyMounts()
+                && passenger instanceof org.bukkit.entity.Zombie
+                && mount instanceof org.bukkit.entity.Chicken);
     }
 
     static boolean preventsEntityMount(SpawnOptions options, org.bukkit.entity.EntityType type) {
