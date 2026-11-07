@@ -62,6 +62,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED',
         '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4',
+        '[Server thread/INFO]: [helsteraMobs] [自检] bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-stinger-loss-imported result=true imported=true target-entity=ZOMBIE target-ai=false target-invulnerable=false target-resistance-amplifier=3 protected-option=true control-option=false protected-attacks=1 control-attacks=1 protected-events=1 control-events=1 protected-cancelled=0 control-cancelled=0 protected-restored=true control-retained=true protected-near=true control-near=true trigger=entity-target-api event=native-ai',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-scheduler result=true delay=2 repeat=3 interval=2 executions=4 pre-delay-count=0',
@@ -567,6 +568,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'creeperNaturalFuse').status -eq 'passed') 'natural Creeper fuse probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsNatural').status -eq 'passed') 'synthetic Bee attack event and Zombie conversion probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsNatural').observations[0] -match 'bee-event=synthetic') 'combined Mob Options probe labels the Bee event as synthetic'
+    Assert-True (($report.probes | Where-Object id -eq 'beeAngerImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'beeAngerImported').observations[0] -match
+        '^bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0$') 'Bee anger probe requires imported values and inverse control'
     Assert-True (($report.probes | Where-Object id -eq 'preventSunburnNatural').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'preventSunburnNatural').observations[0] -match
         '^prevent-sunburn-natural imported=true mapped=true protected-option=true control-option=false daylight=true weather-clear=true observer-present=true protected-player-distance=[0-9]+ control-player-distance=[0-9]+ sky-exposed=true protected-ai=true control-ai=true protected-age-ticks=[1-9][0-9]* control-age-ticks=[1-9][0-9]* protected-events=[1-9][0-9]* protected-cancelled=[1-9][0-9]* protected-fire-ticks=(-1|0) control-events=[1-9][0-9]* control-cancelled=0 control-fire-ticks=[1-9][0-9]* elapsed-ticks=[1-9][0-9]* restored=true passed=true$') 'PreventSunburn requires nearby player, ticking entities, native daylight combustion, and inverse control'
@@ -951,6 +955,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'beeOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'beeOptionsImported'; status = 'passed'; observations = @('bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'beeAngerImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'beeAngerImported'; status = 'passed'; observations = @('bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0')
     }
     $fullCatalogReport.expectedProbeIds += 'beeStingerLossImported'
     $fullCatalogReport.probes += [pscustomobject]@{

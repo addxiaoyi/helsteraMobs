@@ -4127,6 +4127,50 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Bee anger maps as ticks and unsupported values remain visible")
+    void mythicMapsBeeAnger(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/bee-anger.yml", """
+                mobs:
+                  bee:
+                    Type: BEE
+                    Options:
+                      Anger: 1200
+                  calm_bee:
+                    Type: BEE
+                    Options:
+                      Anger: 0
+                  wrong_entity:
+                    Type: ZOMBIE
+                    Options:
+                      Anger: 2400
+                  invalid_bee:
+                    Type: BEE
+                    Options:
+                      Anger: -1
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var plans = entries.stream().filter(entry -> entry.containsKey("target-file"))
+                .map(entry -> YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content")))))
+                .collect(java.util.stream.Collectors.toMap(config -> config.getString("id"),
+                        java.util.function.Function.identity()));
+        var bee = plans.get("mythic_bee");
+        var calmBee = plans.get("mythic_calm_bee");
+        var wrongEntity = plans.get("mythic_wrong_entity");
+        var invalidBee = plans.get("mythic_invalid_bee");
+
+        assertEquals(1200, bee.getInt("entity.bee-anger"));
+        assertEquals(0, calmBee.getInt("entity.bee-anger", -1));
+        assertEquals(2400, wrongEntity.getInt("entity.unsupported.Options.Anger"));
+        assertEquals(-1, invalidBee.getInt("entity.unsupported.Options.Anger"));
+        assertFalse(wrongEntity.contains("entity.bee-anger"));
+        assertFalse(invalidBee.contains("entity.bee-anger"));
+        assertFalse(wrongEntity.contains("mob.unsupported.Options.Anger"));
+        assertEquals(2, entries.stream().filter(entry -> "unsupported".equals(entry.get("status")))
+                .filter(entry -> "Options.Anger".equals(entry.get("source-key"))).count());
+    }
+
+    @Test
     @DisplayName("Creeper-specific options map including PreventSuicide")
     void mythicMapsCreeperOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/creeper-options.yml", """

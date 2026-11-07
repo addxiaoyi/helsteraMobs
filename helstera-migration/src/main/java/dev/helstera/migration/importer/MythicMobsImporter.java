@@ -1136,6 +1136,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "SuperCharged", "entity.creeper-super-charged");
             mapOption(options, srcFile, entries, target, "HasNectar", "entity.has-nectar");
             mapOption(options, srcFile, entries, target, "HasStung", "entity.has-stung");
+            mapBeeAnger(options, srcFile, entries, target, normalizedType);
             mapOption(options, srcFile, entries, target, "PreventStingerLoss", "mob.prevent-stinger-loss");
             mapOption(options, srcFile, entries, target, "PreventTeleport", "mob.prevent-teleport");
             mapOption(options, srcFile, entries, target, "PreventPickup", "mob.prevent-pickup");
@@ -1198,7 +1199,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "UseThreatTable", "SpawningDistance",
                     "Scale", "ShowHealth", "Silent", "NoAI",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "Gravity", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
-                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Angry", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop")) {
+                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Angry", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop")) {
                 removeIgnoreCase(leftover, mapped);
             }
             if (preventConversionMapped) removeIgnoreCase(leftover, "PreventConversion");
@@ -4021,6 +4022,55 @@ public final class MythicMobsImporter implements MigrationImporter {
         target.set(targetPath, value);
         note(entries, srcFile, "Options." + optionName, targetPath, value, "unsupported",
                 reason, "WARN");
+    }
+
+    private void mapBeeAnger(ConfigurationSection options, String srcFile,
+                             List<Map<String, Object>> entries, YamlConfiguration target,
+                             String normalizedType) {
+        Object raw = ciGet(options, "Anger");
+        if (raw == null) return;
+        if (!"BEE".equals(normalizedType)) {
+            preserveUnsupportedBeeAnger(raw, srcFile, entries, target,
+                    "Anger is a Bee-only option; entity type " + normalizedType + " cannot consume it.");
+            return;
+        }
+
+        Integer anger = parseNonNegativeIntegerOption(raw);
+        if (anger == null) {
+            preserveUnsupportedBeeAnger(raw, srcFile, entries, target,
+                    "Anger must be a non-negative integer number of ticks.");
+            return;
+        }
+        target.set("entity.bee-anger", anger);
+        note(entries, srcFile, "Options.Anger", "entity.bee-anger", anger, "mapped",
+                "Bee anger duration mapped to Paper's Bee#setAnger tick value.");
+    }
+
+    private void preserveUnsupportedBeeAnger(Object raw, String srcFile,
+                                             List<Map<String, Object>> entries,
+                                             YamlConfiguration target, String reason) {
+        String targetPath = "entity.unsupported.Options.Anger";
+        target.set(targetPath, raw);
+        note(entries, srcFile, "Options.Anger", targetPath, raw,
+                "unsupported", reason, "WARN");
+    }
+
+    private static Integer parseNonNegativeIntegerOption(Object raw) {
+        if (raw instanceof Number number) {
+            double value = number.doubleValue();
+            if (Double.isFinite(value) && value >= 0 && value <= Integer.MAX_VALUE
+                    && value == Math.rint(value)) return (int) value;
+            return null;
+        }
+        if (raw instanceof String text) {
+            try {
+                int value = Integer.parseInt(text.trim());
+                return value >= 0 ? value : null;
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private static List<String> splitOptionList(String raw) {

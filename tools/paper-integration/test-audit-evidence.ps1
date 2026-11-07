@@ -216,6 +216,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'beeOptionsImported'; status = 'passed'; observations = @('bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true')
     }
+    $fullReport.expectedProbeIds += 'beeAngerImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'beeAngerImported'; status = 'passed'; observations = @('bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0')
+    }
     $fullReport.expectedProbeIds += 'beeStingerLossImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'beeStingerLossImported'; status = 'passed'; observations = @('bee-stinger-loss-imported result=true imported=true target-entity=ZOMBIE target-ai=false target-invulnerable=false target-resistance-amplifier=3 protected-option=true control-option=false protected-attacks=1 control-attacks=1 protected-events=1 control-events=1 protected-cancelled=0 control-cancelled=0 protected-restored=true control-retained=true protected-near=true control-near=true trigger=entity-target-api event=native-ai')

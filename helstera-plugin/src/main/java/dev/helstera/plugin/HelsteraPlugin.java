@@ -1980,12 +1980,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                       %1$s:
                         Type: BEE
                         Options:
+                          Anger: 1200
                           HasNectar: true
                           HasStung: false
                           NoAI: true
                       %2$s:
                         Type: BEE
                         Options:
+                          Anger: 0
                           HasNectar: false
                           HasStung: true
                           NoAI: true
@@ -2050,6 +2052,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean applied = imported
                     && configuredBee.hasNectar() && !configuredBee.hasStung()
                     && !controlBee.hasNectar() && controlBee.hasStung();
+            int configuredAnger = configuredBee == null ? -1 : configuredBee.getAnger();
+            int controlAnger = controlBee == null ? -1 : controlBee.getAnger();
+            boolean angerImported = configuredOptions != null && controlOptions != null
+                    && configuredOptions.getInt("bee-anger", -1) == 1200
+                    && controlOptions.getInt("bee-anger", -1) == 0;
+            boolean angerApplied = angerImported && configuredAnger == 1200 && controlAnger == 0;
+            getLogger().info("[自检] bee-anger-imported result=" + angerApplied
+                    + " imported=" + angerImported + " configured-anger=" + configuredAnger
+                    + " control-anger=" + controlAnger);
             getLogger().info("[自检] bee-options-imported result=" + (imported && applied)
                     + " imported=" + imported
                     + " nectar=" + (configuredBee != null && configuredBee.hasNectar())
@@ -18833,6 +18844,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         }
         if (entity instanceof org.bukkit.entity.Bee bee) {
+            int anger = options.getInt("bee-anger", -1);
+            if (anger >= 0) bee.setAnger(anger);
             if (options.contains("has-nectar")) bee.setHasNectar(options.getBoolean("has-nectar"));
             if (options.contains("has-stung")) bee.setHasStung(options.getBoolean("has-stung"));
         }
