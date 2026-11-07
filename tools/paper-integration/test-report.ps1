@@ -62,6 +62,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED',
         '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4',
+        '[Server thread/INFO]: [helsteraMobs] [自检] bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-scheduler result=true delay=2 repeat=3 interval=2 executions=4 pre-delay-count=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-tree-branches result=true condition-denied=true condition-unlock=true prerequisite-blocked=true prerequisite-unlock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] pin-targeters result=true multi-dispatch=true random-single=true move-single=true reject-multi-move=true region-set-break=true region-cap-rejected=true',
@@ -924,6 +925,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'horseOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'horseOptionsImported'; status = 'passed'; observations = @('horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4')
+    }
+    $fullCatalogReport.expectedProbeIds += 'beeOptionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'beeOptionsImported'; status = 'passed'; observations = @('bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true')
     }
     $fullCatalogHorseOptions = @($fullCatalogReport.probes | Where-Object id -eq 'horseOptionsImported')
     if ($fullCatalogHorseOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain horseOptionsImported.' }

@@ -99,6 +99,7 @@ $probeSpecs = [ordered]@{
     fallingBlock = 'falling-block-options result=true'
     creeper = 'creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true'
     bee = 'bee-options result=true'
+    beeOptionsImported = 'bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true'
     entitySizeRange = 'entity-size-range result=true samples=64 configured=2\.\.5 slime=[2-5]\.\.[2-5] magma-cube=[2-5]\.\.[2-5] phantom=[2-5]\.\.[2-5] imported=true'
     reinforcementsChanceOptions = 'reinforcements-chance-options result=true imported=true applied=true base=0\.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true'
     ageOptions = 'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true'
