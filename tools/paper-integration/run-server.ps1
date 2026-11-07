@@ -141,6 +141,13 @@ if ($env:PAPER_SKILLTREE_STAGE) {
         '  self-test-skilltree-persistence: true')
     $yaml = [regex]::Replace($yaml, '(?m)^  self-test-skilltree-stage:.*$',
         "  self-test-skilltree-stage: $env:PAPER_SKILLTREE_STAGE")
+    if ($env:PAPER_SKILLTREE_ONLY -eq 'true') {
+        $yaml = [regex]::Replace($yaml, '(?m)^  (self-test(?:-[A-Za-z0-9-]+)?):\s*true\s*$',
+            '  $1: false')
+        $yaml = [regex]::Replace($yaml, '(?m)^  trace-triggers:.*$', '  trace-triggers: false')
+        $yaml = [regex]::Replace($yaml, '(?m)^  self-test-skilltree-persistence:.*$',
+            '  self-test-skilltree-persistence: true')
+    }
     Set-Content -LiteralPath $pluginConfig -Value $yaml -Encoding utf8
 }
 if ($env:PAPER_EXECUTION_AUDIENCE_STAGE) {
@@ -188,7 +195,7 @@ if ($env:PAPER_WEB_RELOAD_PROBE -eq 'true') {
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'loot.yml') -Destination (Join-Path $pluginData 'loot.yml') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'items.yml') -Destination (Join-Path $pluginData 'items.yml') -Force
-if ($env:PAPER_EXECUTION_AUDIENCE_STAGE) {
+if ($env:PAPER_EXECUTION_AUDIENCE_STAGE -or $env:PAPER_SKILLTREE_ONLY -eq 'true') {
     [System.IO.File]::WriteAllText((Join-Path $pluginData 'spawners.yml'), "spawners: {}`n")
 } else {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'spawners.yml') -Destination (Join-Path $pluginData 'spawners.yml') -Force

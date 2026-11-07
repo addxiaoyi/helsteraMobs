@@ -51,6 +51,8 @@ class PluginRuntimeHookCleanupAuditTest {
         int bodyEnd = source.indexOf("\n    /**", death);
         assertTrue(bodyEnd > death, "death handler boundary is missing");
         String body = source.substring(death, bodyEnd);
+        assertTrue(body.contains("removePersistentMobSkillTreeSnapshot(e.getEntity())"),
+                "confirmed persistent mob death must remove its entity-specific SkillTree snapshot");
         assertTrue(body.contains("releasePersistentMobChunk(e.getEntity())"),
                 "confirmed death must release the force-loaded chunk");
 
