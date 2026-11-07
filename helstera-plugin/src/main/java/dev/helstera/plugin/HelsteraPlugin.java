@@ -1617,6 +1617,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().info("[自检] bee-options result="
                         + (bee.hasNectar() && !bee.hasStung()));
                 runImportedBeeOptionsSelfTest(origin.clone().add(40, 0, 0));
+                runImportedBeeStingerLossSelfTest(origin.clone().add(48, 0, 0));
 
                 var enderman = world.spawn(origin.clone().add(14, 0, 0),
                         org.bukkit.entity.Enderman.class);
@@ -2058,28 +2059,174 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } catch (Throwable failure) {
             getLogger().warning("[自检] bee-options-imported result=false error=" + failure);
         } finally {
-            for (int instanceId : instanceIds) {
-                try { instances().despawn(instanceId); } catch (RuntimeException ignored) { }
-            }
-            if (sourceRoot != null) {
-                try (var paths = Files.walk(sourceRoot)) {
-                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
-                        Files.deleteIfExists(path);
-                    }
-                } catch (IOException cleanupFailure) {
-                    getLogger().warning("bee-options source cleanup failed=" + cleanupFailure);
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedBeeStingerLossSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        boolean[] cleanupDeferred = {false};
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-bee-stinger-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("bee-stinger-loss.yml");
+            String protectedMobId = "ImportedBeeStingerProtected_" + suffix;
+            String controlMobId = "ImportedBeeStingerControl_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: BEE
+                        Options:
+                          HasStung: false
+                          PreventStingerLoss: true
+                          NoAI: true
+                      %2$s:
+                        Type: BEE
+                        Options:
+                          HasStung: false
+                          PreventStingerLoss: false
+                          NoAI: true
+                    """.formatted(protectedMobId, controlMobId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Bee stinger path: " + targetFile);
                 }
-            }
-            for (Path mobFile : mobFiles) {
-                try { Files.deleteIfExists(mobFile); }
-                catch (IOException cleanupFailure) {
-                    getLogger().warning("bee-options target cleanup failed=" + cleanupFailure);
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Bee stinger config: " + destination);
                 }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
             }
-            if (!outputDirectoryExisted) {
-                try { Files.deleteIfExists(outputDirectory); }
-                catch (IOException ignored) { }
+
+            String protectedTargetId = targetIds.get(protectedMobId);
+            String controlTargetId = targetIds.get(controlMobId);
+            if (protectedTargetId == null || controlTargetId == null) {
+                throw new IllegalStateException("Mythic Bee stinger options were not imported for both probe mobs");
             }
+            MobSpawn protectedSpawn = spawnMobCore(protectedTargetId, "example/emberling", origin,
+                    false, null);
+            MobSpawn controlSpawn = spawnMobCore(controlTargetId, "example/emberling",
+                    origin.clone().add(3, 0, 0), false, null);
+            if (protectedSpawn != null && protectedSpawn.instanceId() > 0) {
+                instanceIds.add(protectedSpawn.instanceId());
+            }
+            if (controlSpawn != null && controlSpawn.instanceId() > 0) {
+                instanceIds.add(controlSpawn.instanceId());
+            }
+            var protectedInstance = protectedSpawn == null || protectedSpawn.instanceId() <= 0
+                    ? null : instances().impl(protectedSpawn.instanceId());
+            var controlInstance = controlSpawn == null || controlSpawn.instanceId() <= 0
+                    ? null : instances().impl(controlSpawn.instanceId());
+            var protectedBee = protectedInstance == null ? null
+                    : protectedInstance.baseEntity().filter(org.bukkit.entity.Bee.class::isInstance)
+                    .map(org.bukkit.entity.Bee.class::cast).orElse(null);
+            var controlBee = controlInstance == null ? null
+                    : controlInstance.baseEntity().filter(org.bukkit.entity.Bee.class::isInstance)
+                    .map(org.bukkit.entity.Bee.class::cast).orElse(null);
+            var protectedConfig = mobConfig(protectedTargetId);
+            var controlConfig = mobConfig(controlTargetId);
+            boolean imported = protectedBee != null && controlBee != null
+                    && protectedInstance.options().preventStingerLoss()
+                    && !controlInstance.options().preventStingerLoss()
+                    && protectedConfig.getBoolean("mob.prevent-stinger-loss")
+                    && !controlConfig.getBoolean("mob.prevent-stinger-loss", true)
+                    && !protectedBee.hasStung() && !controlBee.hasStung();
+            if (!imported) {
+                getLogger().info("[自检] bee-stinger-loss-imported result=false imported=false"
+                        + " protected-option=" + (protectedInstance != null
+                            && protectedInstance.options().preventStingerLoss())
+                        + " control-option=" + (controlInstance != null
+                            && controlInstance.options().preventStingerLoss()));
+                return;
+            }
+
+            var target = origin.getWorld().spawn(origin.clone().add(6, 0, 0),
+                    org.bukkit.entity.Zombie.class);
+            target.setAI(false);
+            target.setInvulnerable(true);
+            protectedBee.setHasStung(true);
+            controlBee.setHasStung(true);
+            var protectedEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                    protectedBee, target, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0);
+            var controlEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                    controlBee, target, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0);
+            getServer().getPluginManager().callEvent(protectedEvent);
+            getServer().getPluginManager().callEvent(controlEvent);
+            boolean protectedEventDispatched = !protectedEvent.isCancelled();
+            boolean controlEventDispatched = !controlEvent.isCancelled();
+
+            Path cleanupSourceRoot = sourceRoot;
+            java.util.List<Path> cleanupMobFiles = java.util.List.copyOf(mobFiles);
+            java.util.List<Integer> cleanupInstanceIds = java.util.List.copyOf(instanceIds);
+            boolean cleanupOutputDirectoryExisted = outputDirectoryExisted;
+            getServer().getScheduler().runTaskLater(this, () -> {
+                boolean protectedRestored = !protectedBee.hasStung();
+                boolean controlRetained = controlBee.hasStung();
+                boolean passed = imported && protectedEventDispatched && controlEventDispatched
+                        && protectedRestored && controlRetained;
+                getLogger().info("[自检] bee-stinger-loss-imported result=" + passed
+                        + " imported=" + imported
+                        + " protected-option=true control-option=false"
+                        + " protected-event=" + protectedEventDispatched
+                        + " control-event=" + controlEventDispatched
+                        + " protected-restored=" + protectedRestored
+                        + " control-retained=" + controlRetained
+                        + " event=synthetic");
+                if (target.isValid()) target.remove();
+                cleanupImportedMobProbe(cleanupSourceRoot, outputDirectory,
+                        cleanupOutputDirectoryExisted, cleanupMobFiles, cleanupInstanceIds);
+            }, 2L);
+            cleanupDeferred[0] = true;
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] bee-stinger-loss-imported result=false error=" + failure);
+        } finally {
+            if (!cleanupDeferred[0]) {
+                cleanupImportedMobProbe(sourceRoot, outputDirectory,
+                        outputDirectoryExisted, mobFiles, instanceIds);
+            }
+        }
+    }
+
+    private void cleanupImportedMobProbe(Path sourceRoot, Path outputDirectory,
+            boolean outputDirectoryExisted, java.util.List<Path> mobFiles, java.util.List<Integer> instanceIds) {
+        for (int instanceId : instanceIds) {
+            try {
+                if (instances() != null) instances().despawn(instanceId);
+            } catch (RuntimeException ignored) { }
+        }
+        if (sourceRoot != null) {
+            try (var paths = Files.walk(sourceRoot)) {
+                for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(path);
+                }
+            } catch (IOException cleanupFailure) {
+                getLogger().warning("imported mob probe source cleanup failed=" + cleanupFailure);
+            }
+        }
+        for (Path mobFile : mobFiles) {
+            try { Files.deleteIfExists(mobFile); }
+            catch (IOException cleanupFailure) {
+                getLogger().warning("imported mob probe target cleanup failed=" + cleanupFailure);
+            }
+        }
+        if (!outputDirectoryExisted) {
+            try { Files.deleteIfExists(outputDirectory); }
+            catch (IOException ignored) { }
         }
     }
 
@@ -12303,7 +12450,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             Location location = world.getSpawnLocation().clone().add(0, 3, 0);
             runNaturalCreeperFuseProbe(world, location);
-            runNaturalMobOptionTimingProbe(world, location);
+            runMobOptionTimingProbe(world, location);
             runNaturalKillTriggerProbe(world, location);
             runNaturalPlayerKillTriggerProbe(world, location);
             if ("true".equalsIgnoreCase(System.getenv("PAPER_RAW_POTION_WORKFLOW"))) {
@@ -14277,7 +14424,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
      * public API can verify mount-event cancellation, but cannot request a
      * deterministic native AI jockey spawn.
      */
-    private void runNaturalMobOptionTimingProbe(org.bukkit.World world, Location origin) {
+    private void runMobOptionTimingProbe(org.bukkit.World world, Location origin) {
         if (world == null || origin == null || instances() == null) return;
         var target = world.spawn(origin.clone().add(24, 0, 0), org.bukkit.entity.Zombie.class);
         target.setAI(false);
@@ -14477,6 +14624,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if ((naturalCompleted && mountEventCompleted) || ticks[0] >= 240) {
                 if (task[0] != null) task[0].cancel();
                 getLogger().info("mob-options-natural bee-stinger=" + (beeObserved && beeRestored)
+                        + " bee-event=synthetic"
                         + " bee-attacks=" + protectedBeeAttacks.get() + "/" + controlBeeAttacks.get()
                         + " zombie-conversion=" + (controlConverted && protectedBlocked)
                         + " zombie-control=" + controlConverted
