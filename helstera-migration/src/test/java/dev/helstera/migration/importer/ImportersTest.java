@@ -2098,6 +2098,29 @@ class ImportersTest {
     }
 
     @Test
+    void mythicTrackLocationMechanicAliasesImportWithValidatedTargeters(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/tracked-location.yml", """
+                skills:
+                  track:
+                    Skills:
+                      - tracklocation @targetlocation
+                      - settrackedlocation @TrackedLocation
+                      - stl @selflocation
+                      - tracklocation{unknown=true} @targetlocation
+                      - tracklocation unexpected @targetlocation
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+
+        assertEquals(List.of("track-location @targetlocation", "track-location @trackedlocation",
+                "track-location @selflocation"), target.getStringList("skills.track.on-decision"));
+        assertEquals(List.of("tracklocation{unknown=true} @targetlocation",
+                        "tracklocation unexpected @targetlocation"),
+                target.getStringList("skills.track.unsupported"));
+    }
+
+    @Test
     void invalidVariableLocationOnMobEventIsPreserved(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/location.yml", """
                 mobs:
@@ -3625,6 +3648,64 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("MythicMobs ReinforcementsChance maps only valid Zombie-family values")
+    void mythicMapsZombieReinforcementsChanceAndPreservesInvalidValues(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/reinforcements.yml", """
+                mobs:
+                  ZombieChance:
+                    Type: ZOMBIE
+                    Options:
+                      ReinforcementsChance: 0.38
+                  HuskChance:
+                    Type: HUSK
+                    Options:
+                      ReinforcementsChance: "1"
+                  NonZombieChance:
+                    Type: SKELETON
+                    Options:
+                      ReinforcementsChance: 0.5
+                  OutOfRangeChance:
+                    Type: ZOMBIE
+                    Options:
+                      ReinforcementsChance: 1.01
+                  MalformedChance:
+                    Type: ZOMBIE
+                    Options:
+                      ReinforcementsChance: not-a-number
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        var zombie = convertedMob(entries, "zombiechance");
+        assertEquals(0.38, zombie.getDouble("entity.zombie-reinforcements-chance"), 1e-9);
+        assertFalse(zombie.contains("mob.unsupported.Options.ReinforcementsChance"));
+        var husk = convertedMob(entries, "huskchance");
+        assertEquals(1.0, husk.getDouble("entity.zombie-reinforcements-chance"), 1e-9);
+        var nonZombie = convertedMob(entries, "nonzombiechance");
+        assertEquals(0.5, nonZombie.getDouble("mob.unsupported.Options.ReinforcementsChance"), 1e-9);
+        assertFalse(nonZombie.contains("entity.zombie-reinforcements-chance"));
+        var outOfRange = convertedMob(entries, "outofrangechance");
+        assertEquals(1.01, outOfRange.getDouble("mob.unsupported.Options.ReinforcementsChance"), 1e-9);
+        assertFalse(outOfRange.contains("entity.zombie-reinforcements-chance"));
+        var malformed = convertedMob(entries, "malformedchance");
+        assertEquals("not-a-number", malformed.getString("mob.unsupported.Options.ReinforcementsChance"));
+        assertFalse(malformed.contains("entity.zombie-reinforcements-chance"));
+        assertTrue(entries.stream().anyMatch(entry ->
+                "mapped".equals(entry.get("status"))
+                        && "entity.zombie-reinforcements-chance".equals(entry.get("target-key"))));
+        assertTrue(entries.stream().filter(entry ->
+                        "unsupported".equals(entry.get("status"))
+                                && "Options.ReinforcementsChance".equals(entry.get("source-key")))
+                .count() >= 3);
+    }
+
+    private static YamlConfiguration convertedMob(List<Map<String, Object>> entries, String mobId) {
+        var plan = entries.stream().filter(entry ->
+                        ("mobs/mythic_" + mobId + ".yml").equals(entry.get("target-file")))
+                .findFirst().orElseThrow();
+        return YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(plan.get("content"))));
+    }
+
+    @Test
     @DisplayName("MythicMobs Options.MaxCombatDistance maps to the mob distance guard")
     void mythicMapsMaxCombatDistanceOption(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/combat-distance.yml", """
@@ -3974,6 +4055,10 @@ class ImportersTest {
                     Type: SLIME
                     Options:
                       Size: 6
+                  magma:
+                    Type: MAGMA_CUBE
+                    Options:
+                      Size: 2to5
                   ranged:
                     Type: PHANTOM
                     Options:
@@ -3988,6 +4073,9 @@ class ImportersTest {
         var fixed = plans.stream().map(entry -> YamlConfiguration.loadConfiguration(
                         new java.io.StringReader(String.valueOf(entry.get("content")))))
                 .filter(config -> "mythic_fixed".equals(config.getString("id"))).findFirst().orElseThrow();
+        var magma = plans.stream().map(entry -> YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content")))))
+                .filter(config -> "mythic_magma".equals(config.getString("id"))).findFirst().orElseThrow();
         var ranged = plans.stream().map(entry -> YamlConfiguration.loadConfiguration(
                         new java.io.StringReader(String.valueOf(entry.get("content")))))
                 .filter(config -> "mythic_ranged".equals(config.getString("id"))).findFirst().orElseThrow();
@@ -3997,6 +4085,10 @@ class ImportersTest {
 
         assertEquals(6, fixed.getInt("entity.size"));
         assertFalse(fixed.contains("mob.unsupported.Options.Size"));
+        assertEquals("MAGMA_CUBE", magma.getString("mob.entity-type"));
+        assertEquals(2, magma.getInt("entity.size-min"));
+        assertEquals(5, magma.getInt("entity.size-max"));
+        assertFalse(magma.contains("entity.unsupported.Options.Size"));
         assertEquals(1, ranged.getInt("entity.size-min"));
         assertEquals(8, ranged.getInt("entity.size-max"));
         assertFalse(ranged.contains("entity.unsupported.Options.Size"));
@@ -4058,6 +4150,59 @@ class ImportersTest {
         assertFalse(target.contains("mob.unsupported.Options.PreventSuicide"));
         assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
                 && "mob.prevent-suicide".equals(entry.get("target-key"))));
+    }
+
+    @Test
+    @DisplayName("Mythic Cat options map type, sitting, and collar color")
+    void mythicMapsCatOptions(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/cat-options.yml", """
+                mobs:
+                  cat:
+                    Type: CAT
+                    Options:
+                      CatType: SIAMESE
+                      Sitting: true
+                      CollarColor: BLUE
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = converted(file);
+
+        assertEquals("CAT", target.getString("mob.entity-type"));
+        assertEquals("SIAMESE", target.getString("entity.cat-type"));
+        assertTrue(target.getBoolean("entity.cat-sitting"));
+        assertEquals("BLUE", target.getString("entity.cat-collar-color"));
+        assertFalse(target.contains("mob.unsupported.Options"));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "entity.cat-type".equals(entry.get("target-key"))));
+    }
+
+    @Test
+    @DisplayName("Mythic Sheep options map color and sheared state")
+    void mythicMapsSheepOptions(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/sheep-options.yml", """
+                mobs:
+                  sheep:
+                    Type: SHEEP
+                    Options:
+                      SheepColor: RED
+                      Sheared: true
+                  control:
+                    Type: SHEEP
+                    Options:
+                      SheepColor: WHITE
+                      Sheared: false
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = converted(file);
+
+        assertEquals("SHEEP", target.getString("mob.entity-type"));
+        assertEquals("RED", target.getString("entity.sheep-color"));
+        assertTrue(target.getBoolean("entity.sheep-sheared"));
+        assertFalse(target.contains("mob.unsupported.Options"));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "entity.sheep-color".equals(entry.get("target-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "entity.sheep-sheared".equals(entry.get("target-key"))));
     }
 
     @Test

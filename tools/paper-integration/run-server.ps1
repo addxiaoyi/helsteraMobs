@@ -11,8 +11,9 @@ if ($Strict -and $Exploratory) {
 }
 if ($Strict -and ($env:PAPER_MENU_WORKFLOW -ne 'true' -or $env:PAPER_WEB_RELOAD_PROBE -ne 'true' -or
         $env:PAPER_RAW_POTION_WORKFLOW -ne 'true' -or $env:PAPER_RAW_POTION_SHORT -ne 'true' -or
-        $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW -ne 'true')) {
-    throw 'Strict mode requires PAPER_MENU_WORKFLOW, PAPER_WEB_RELOAD_PROBE, PAPER_RAW_POTION_WORKFLOW, PAPER_RAW_POTION_SHORT, and PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW set to true.'
+        $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW -ne 'true' -or
+        $env:PAPER_INTERACTABLE_WORKFLOW -ne 'true')) {
+    throw 'Strict mode requires PAPER_MENU_WORKFLOW, PAPER_WEB_RELOAD_PROBE, PAPER_RAW_POTION_WORKFLOW, PAPER_RAW_POTION_SHORT, PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW, and PAPER_INTERACTABLE_WORKFLOW set to true.'
 }
 $pythonInfo = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
 if ($LASTEXITCODE -ne 0 -or $null -eq $pythonInfo) {

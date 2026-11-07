@@ -149,6 +149,92 @@ class SkillServiceTest {
     }
 
     @Test
+    void trackLocationMechanicStoresTargetedLocationAndRejectsPlayerCasters() {
+        World world = mock(World.class);
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        LivingEntity target = mock(LivingEntity.class);
+        Location casterLocation = new Location(world, 1, 64, 2);
+        Location targetLocation = new Location(world, 8, 70, 9);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(instance.location()).thenReturn(casterLocation);
+        when(caster.getLocation()).thenReturn(casterLocation);
+        when(target.getLocation()).thenReturn(targetLocation);
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of(target), casterLocation);
+        BehaviorContext context = BehaviorContext.continueExecution(instance, target, 1, 10, 0,
+                "skill", null, null, List.of(target), casterLocation, tree);
+        var svc = service();
+
+        String action = svc.bindAction("stl @targetlocation");
+        assertNotNull(action);
+        assertTrue(svc.runAction(action, context));
+        assertEquals(targetLocation, dev.helstera.api.behavior.Targeters
+                .resolveLocation("@TrackedLocation", context).orElseThrow());
+
+        var block = mock(org.bukkit.block.Block.class);
+        when(world.getBlockAt(targetLocation)).thenReturn(block);
+        String blockAction = svc.bindAction("set-block STONE @TrackedLocation");
+        assertNotNull(blockAction);
+        assertTrue(svc.runAction(blockAction, context));
+        verify(block).setType(Material.STONE, false);
+
+        Player player = mock(Player.class);
+        ModelInstance playerInstance = mock(ModelInstance.class);
+        when(playerInstance.isValid()).thenReturn(true);
+        when(playerInstance.baseEntity()).thenReturn(Optional.of(player));
+        when(player.getLocation()).thenReturn(casterLocation);
+        var playerTree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of(target), casterLocation);
+        BehaviorContext playerContext = BehaviorContext.continueExecution(playerInstance, target, 1, 10, 0,
+                "skill", null, null, List.of(target), casterLocation, playerTree);
+        String playerAction = svc.bindAction("settrackedlocation @selflocation");
+        assertNotNull(playerAction, svc.warnings().toString());
+        assertTrue(svc.runAction(playerAction, playerContext));
+        assertTrue(playerTree.location(dev.helstera.api.behavior.SkillTreeContext.MYTHIC_TRACKED_LOCATION)
+                .isEmpty());
+        assertNull(svc.bindAction("track-location unexpected"));
+    }
+
+    @Test
+    void distanceFromTrackedLocationMeasuresCasterAndFailsClosed() {
+        World world = mock(World.class);
+        World otherWorld = mock(World.class);
+        ModelInstance instance = mock(ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        LivingEntity target = mock(LivingEntity.class);
+        Location casterLocation = new Location(world, 3, 4, 0);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(instance.location()).thenReturn(casterLocation);
+        when(caster.getLocation()).thenReturn(casterLocation);
+        when(target.getLocation()).thenReturn(new Location(world, 100, 0, 0));
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of(target), casterLocation);
+        tree.setLocation(dev.helstera.api.behavior.SkillTreeContext.MYTHIC_TRACKED_LOCATION,
+                new Location(world, 0, 0, 0));
+        BehaviorContext context = BehaviorContext.continueExecution(instance, target, 1, 100, 0,
+                "skill", null, null, List.of(target), casterLocation, tree);
+        var svc = service();
+
+        String exact = svc.bindCondition("distanceFromTL{d=5}");
+        assertNotNull(exact);
+        assertTrue(registry.testCondition(exact, context));
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "distance-from-tracked-location{distance=4to6}"), context));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "distance-from-tracked-location{d=<5}"), context));
+
+        tree.unsetLocation(dev.helstera.api.behavior.SkillTreeContext.MYTHIC_TRACKED_LOCATION);
+        assertFalse(registry.testCondition(exact, context));
+        tree.setLocation(dev.helstera.api.behavior.SkillTreeContext.MYTHIC_TRACKED_LOCATION,
+                new Location(otherWorld, 0, 0, 0));
+        assertFalse(registry.testCondition(exact, context));
+        assertNull(svc.bindCondition("distance-from-tracked-location{d=5;distance=6}"));
+        assertNull(svc.bindCondition("distance-from-tracked-location{d==5}"));
+        assertNull(svc.bindCondition("distance-from-tracked-location{d=!=5}"));
+        assertNull(svc.bindCondition("distance-from-tracked-location{d=Infinity}"));
+    }
+
+    @Test
     void explicitLocationDefaultsToCasterWorldRatherThanExecutionOriginWorld() {
         var instance = mock(ModelInstance.class);
         var casterWorld = mock(World.class);

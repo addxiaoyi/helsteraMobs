@@ -40,7 +40,7 @@ public final class Targeters {
             "selfeyelocation", "eyedirection", "castereyelocation", "bosseyelocation", "mobeyelocation",
             "targetlocation", "targetloc", "tl", "targetpredictedlocation", "targetpredictedloc",
             "tpl", "predictedtargetlocation", "triggerlocation", "spawnlocation",
-            "casterspawnlocation", "casterspawn", "forward", "projectileforward");
+            "casterspawnlocation", "casterspawn", "trackedlocation", "forward", "projectileforward");
     private static final Map<String, String> TARGET_LOCATION_ARGUMENTS = Map.of(
             "maxdistance", "maxdistance", "max", "maxdistance", "distance", "maxdistance",
             "d", "maxdistance", "ignoretransparent", "ignoretransparent", "it", "ignoretransparent");
@@ -490,6 +490,12 @@ public final class Targeters {
             if (!noLocationOptions(spec)) return java.util.Optional.empty();
             return context.origin();
         }
+        if (kind.equals("trackedlocation")) {
+            if (!noLocationOptions(spec)) return java.util.Optional.empty();
+            return context.skillTree()
+                    .flatMap(tree -> tree.location(SkillTreeContext.MYTHIC_TRACKED_LOCATION))
+                    .filter(location -> location.getWorld() != null);
+        }
         if (kind.equals("selflocation")) {
             if (!noLocationOptions(spec)) return java.util.Optional.empty();
             return casterLocation(context);
@@ -728,7 +734,8 @@ public final class Targeters {
         String kind = canonicalLocationName(parsed.name());
         if (isExplicitLocationName(kind)) return validLocationSpec(spec);
         if (isVariableLocationName(kind)) return validVariableLocationSpec(spec);
-        if (kind.equals("origin") || kind.equals("selflocation") || kind.equals("selfeyelocation")
+        if (kind.equals("origin") || kind.equals("trackedlocation")
+                || kind.equals("selflocation") || kind.equals("selfeyelocation")
                 || kind.equals("triggerlocation")
                 || kind.equals("spawnlocation") || kind.equals("casterspawnlocation")) {
             return noLocationOptions(spec);

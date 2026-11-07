@@ -153,7 +153,8 @@
     },
     {
       "id": "cat",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "^cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED$"
     },
     {
       "id": "chanceCondition",
@@ -196,7 +197,8 @@
     {
       "id": "locationTargeterDispatch",
       "status": "passed",
-      "requiredObservation": "location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true"
+      "requiredObservation": "location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true",
+      "requiredObservationContains": "tracked-location-parity action=true targeter=true distance=true missing-rejected=true"
     },
     {
       "id": "variableLocationDispatch",
@@ -391,7 +393,8 @@
     },
     {
       "id": "creeper",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "^creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true$"
     },
     {
       "id": "creeperNaturalFuse",
@@ -570,7 +573,13 @@
     },
     {
       "id": "entitySizeRange",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "entity-size-range result=true samples=64 configured=2\\.\\.5 slime=[2-5]\\.\\.[2-5] magma-cube=[2-5]\\.\\.[2-5] phantom=[2-5]\\.\\.[2-5] imported=true"
+    },
+    {
+      "id": "reinforcementsChanceOptions",
+      "status": "passed",
+      "requiredObservation": "reinforcements-chance-options result=true imported=true applied=true base=0.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true"
     },
     {
       "id": "entityStateConditions",
@@ -821,6 +830,11 @@
       "status": "passed"
     },
     {
+      "id": "horseOptionsImported",
+      "status": "passed",
+      "requiredObservationPattern": "^horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0\\.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0\\.4$"
+    },
+    {
       "id": "invulnerableCondition",
       "status": "passed"
     },
@@ -941,6 +955,11 @@
     {
       "id": "mobPickupOption",
       "status": "passed"
+    },
+    {
+      "id": "interactableClient",
+      "status": "passed",
+      "requiredObservationContains": "interactable-client result=true false-event=true false-cancelled=true true-event=true true-cancelled=false interactions=2"
     },
     {
       "id": "mobsInChunkCondition",
@@ -1136,7 +1155,8 @@
     },
     {
       "id": "sheep",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "^sheep-options result=true imported=true color=RED sheared=true control-color=WHITE control-sheared=false$"
     },
     {
       "id": "signalMechanics",

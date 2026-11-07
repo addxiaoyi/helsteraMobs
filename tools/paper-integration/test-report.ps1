@@ -2,9 +2,11 @@ $ErrorActionPreference = 'Stop'
 $previousRawPotionWorkflow = $env:PAPER_RAW_POTION_WORKFLOW
 $previousRawPotionShort = $env:PAPER_RAW_POTION_SHORT
 $previousSpawningDistanceWalkWorkflow = $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW
+$previousInteractableWorkflow = $env:PAPER_INTERACTABLE_WORKFLOW
 $env:PAPER_RAW_POTION_WORKFLOW = 'false'
 $env:PAPER_RAW_POTION_SHORT = 'false'
 $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
+$env:PAPER_INTERACTABLE_WORKFLOW = 'true'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $temp = Join-Path ([System.IO.Path]::GetTempPath()) ('helstera-paper-report-' + [guid]::NewGuid())
 $logDirectory = Join-Path $temp 'logs'
@@ -57,6 +59,9 @@ try {
         'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
         '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
         '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
+        '[Server thread/INFO]: [helsteraMobs] [自检] creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED',
+        '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-scheduler result=true delay=2 repeat=3 interval=2 executions=4 pre-delay-count=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-tree-branches result=true condition-denied=true condition-unlock=true prerequisite-blocked=true prerequisite-unlock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] pin-targeters result=true multi-dispatch=true random-single=true move-single=true reject-multi-move=true region-set-break=true region-cap-rejected=true',
@@ -136,6 +141,8 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true saddled=true armor=true chest=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] max-combat-distance result=true inside-allowed=true outside-blocked=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] scale-options result=true scale=1.25',
+        '[Server thread/INFO]: [helsteraMobs] [自检] entity-size-range result=true samples=64 configured=2..5 slime=2..5 magma-cube=2..5 phantom=2..5 imported=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] reinforcements-chance-options result=true imported=true applied=true base=0.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] health-options result=true health=42 max-health=42',
         '[Server thread/INFO]: [helsteraMobs] [自检] movement-speed-options result=true base=0.4',
         '[Server thread/INFO]: [helsteraMobs] [自检] knockback-resistance-options result=true base=0.75',
@@ -259,9 +266,11 @@ try {
     $lines += '[Server thread/INFO]: menu-click id=parity-page-1 slot=10 permitted=false ran=false'
     $lines += '[Server thread/INFO]: menu-click id=parity-page-1 slot=26 permitted=true ran=true pagination=next'
     $lines += '[Server thread/INFO]: menu-click id=parity-page-2 slot=13 permitted=true ran=true close=true'
+    $lines += '[Server thread/INFO]: [helsteraMobs] [自检] interactable-client result=true false-event=true false-cancelled=true true-event=true true-cancelled=false interactions=2'
     Set-Content -LiteralPath (Join-Path $logDirectory 'latest.log') -Value $lines -Encoding utf8
     Set-Content -LiteralPath (Join-Path $temp 'menu-client.stdout.log') -Value @(
-        'PAPER_MENU_REPORT {"status":"passed","observations":{"pageOne":true,"pageOneRedstone":true,"deniedClickStayedOpen":true,"paginationClick":true,"pageTwo":true,"pageTwoEmerald":true,"allowedActionMessage":true,"actionClosedInventory":true,"deniedActionMessageAbsent":true}}'
+        'PAPER_MENU_REPORT {"status":"passed","observations":{"pageOne":true,"pageOneRedstone":true,"deniedClickStayedOpen":true,"paginationClick":true,"pageTwo":true,"pageTwoEmerald":true,"allowedActionMessage":true,"actionClosedInventory":true,"deniedActionMessageAbsent":true}}',
+        'PAPER_INTERACTABLE_CLIENT_REPORT {"status":"passed","blockedEntityId":41,"allowedEntityId":42,"observations":{"distinctEntities":true,"blockedInteractionSent":true,"blockedEventObserved":true,"blockedCancelled":true,"allowedInteractionSent":true,"allowedEventObserved":true,"allowedCancelled":false}}'
     ) -Encoding utf8
     Set-Content -LiteralPath (Join-Path $temp 'audience-client.stdout.log') -Value @(
         'PAPER_AUDIENCE_REPORT {"status":"passed","observations":{"message":true,"title":true,"actionbar":true,"particle":true}}',
@@ -320,6 +329,30 @@ try {
     $lookingAtFailureReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 |
         ConvertFrom-Json
     Assert-True (($lookingAtFailureReport.probes | Where-Object id -eq 'lookingAtCondition').status -eq 'not-observed') 'LookingAt probe rejects a missing entity-distance negative control'
+    Set-Content -LiteralPath $logPath -Value $lines -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
+
+    $interactableClientLog = Join-Path $temp 'menu-client.stdout.log'
+    $validInteractableClientLines = @(Get-Content -LiteralPath $interactableClientLog -Encoding utf8)
+    $validInteractableClientLine = $validInteractableClientLines |
+        Where-Object { $_ -match '^PAPER_INTERACTABLE_CLIENT_REPORT ' } | Select-Object -Last 1
+    $invalidInteractableClientLines = @($validInteractableClientLines | ForEach-Object {
+        $_ -replace '"blockedCancelled":true', '"blockedCancelled":false'
+    })
+    Set-Content -LiteralPath $interactableClientLog -Value $invalidInteractableClientLines -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
+    $interactableReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 |
+        ConvertFrom-Json
+    Assert-True (($interactableReport.probes | Where-Object id -eq 'interactableClient').status -eq 'not-observed') 'Interactable rejects client evidence with an allowed protected click'
+    Set-Content -LiteralPath $interactableClientLog -Value $validInteractableClientLines -Encoding utf8
+    $wrongInteractableServerLines = @($lines | ForEach-Object {
+        $_ -replace 'false-cancelled=true', 'false-cancelled=false'
+    })
+    Set-Content -LiteralPath $logPath -Value $wrongInteractableServerLines -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
+    $interactableReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 |
+        ConvertFrom-Json
+    Assert-True (($interactableReport.probes | Where-Object id -eq 'interactableClient').status -eq 'not-observed') 'Interactable requires Paper cancellation evidence as well as the client report'
     Set-Content -LiteralPath $logPath -Value $lines -Encoding utf8
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
     $env:PAPER_RAW_POTION_WORKFLOW = 'false'
@@ -394,6 +427,8 @@ try {
     }
     Assert-True $report.pluginEnabled 'plugin enabled detection'
     Assert-True (($report.probes | Where-Object id -eq 'pathfinderClear').status -eq 'passed') 'native Pathfinder clear probe'
+    Assert-True (($report.probes | Where-Object id -eq 'interactableClient').status -eq 'passed') 'Interactable client/server evidence requires blocked and allowed real-client interactions'
+    Assert-True ($report.expectedProbeIds -contains 'interactableClient') 'Interactable client probe is registered in the strict report catalog'
     Assert-True (($report.probes | Where-Object id -eq 'spawningDistanceClientWalk').status -eq 'passed') 'real client movement despawn probe'
     Assert-True (($report.probes | Where-Object id -eq 'importedAerialCondition').status -eq 'passed') 'imported Aerial aliases require strict Paper positive and negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedIsFrozenCondition').status -eq 'passed') 'imported IsFrozen aliases require strict Paper frozen/thawed and malformed-input evidence'
@@ -442,6 +477,16 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'targeterSorts').status -eq 'passed') 'generic target sorting behavior'
     Assert-True ($report.paperVersion -eq '1.21.1-test') 'Paper version extraction'
     Assert-True (($report.probes | Where-Object id -eq 'horse').status -eq 'passed') 'positive probe'
+    Assert-True (($report.probes | Where-Object id -eq 'horseOptionsImported').status -eq 'passed') 'imported Horse option probe'
+    Assert-True (($report.probes | Where-Object id -eq 'creeper').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'creeper').observations[0] -match
+        'imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true') 'imported Creeper options require production Paper evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'cat').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'cat').observations[0] -match
+        'imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED') 'imported Cat options require production Paper evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'entitySizeRange').status -eq 'passed') 'imported entity size ranges across supported families'
+    Assert-True (($report.probes | Where-Object id -eq 'reinforcementsChanceOptions').status -eq 'passed') 'imported Zombie reinforcement chance and invalid-input evidence'
+    Assert-True ($report.expectedProbeIds -contains 'reinforcementsChanceOptions') 'reinforcement chance probe is part of every report catalog'
     Assert-True (($report.probes | Where-Object id -eq 'ageOptions').status -eq 'passed') 'age options probe'
     Assert-True (($report.probes | Where-Object id -eq 'entityFlagOptions').status -eq 'passed') 'entity flag options probe'
     Assert-True (($report.probes | Where-Object id -eq 'expOptions').status -eq 'passed') 'experience option probe'
@@ -473,6 +518,34 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'mobPickupOption').status -eq 'passed') 'mob pickup option probe'
     Assert-True (($report.probes | Where-Object id -eq 'importedMobDefaults').status -eq 'passed') 'imported mob defaults Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'sheep').status -eq 'not-observed') 'missing probe'
+    $sheepOptionsTemp = Join-Path $temp 'sheep-options-fixture'
+    $sheepOptionsLogDirectory = Join-Path $sheepOptionsTemp 'logs'
+    New-Item -ItemType Directory -Path $sheepOptionsLogDirectory -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $sheepOptionsLogDirectory 'latest.log') -Value @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
+        '[Server thread/INFO]: [helsteraMobs] [自检] sheep-options result=true imported=true color=RED sheared=true control-color=WHITE control-sheared=false'
+    ) -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $sheepOptionsTemp | Out-Null
+    $sheepOptionsReport = Get-Content -LiteralPath (Join-Path $sheepOptionsTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($sheepOptionsReport.probes | Where-Object id -eq 'sheep').status -eq 'passed' -and
+        ($sheepOptionsReport.probes | Where-Object id -eq 'sheep').observations[0] -match
+        'imported=true color=RED sheared=true control-color=WHITE control-sheared=false') 'report writer requires imported Sheep option evidence'
+    $horseOptionsTemp = Join-Path $temp 'horse-options-fixture'
+    $horseOptionsLogDirectory = Join-Path $horseOptionsTemp 'logs'
+    New-Item -ItemType Directory -Path $horseOptionsLogDirectory -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $horseOptionsLogDirectory 'latest.log') -Value @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
+        '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4'
+    ) -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $horseOptionsTemp | Out-Null
+    $horseOptionsReport = Get-Content -LiteralPath (Join-Path $horseOptionsTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($horseOptionsReport.probes | Where-Object id -eq 'horseOptionsImported').status -eq 'passed' -and
+        ($horseOptionsReport.probes | Where-Object id -eq 'horseOptionsImported').observations[0] -match
+        'imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0\.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0\.4') 'report writer requires imported Horse option evidence'
     Assert-True (($report.probes | Where-Object id -eq 'spawner:reject').status -eq 'observed-rejected') 'rejected probe'
     Assert-True (($report.probes | Where-Object id -eq 'lootDynamicChance').status -eq 'passed') 'dynamic chance probe'
     $events = @($report.probes | Where-Object id -eq 'events')
@@ -805,6 +878,10 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'interactableClient'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'interactableClient'; status = 'passed'; observations = @('interactable-client result=true false-event=true false-cancelled=true true-event=true true-cancelled=false interactions=2')
+    }
     $fullCatalogReport.expectedProbeIds += 'mythicSpawnerChanceImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'mythicSpawnerChanceImported'; status = 'passed'; observations = @('mythic-spawner-chance imported=true valid-mapped=true invalid-mapped=true valid-natural=true invalid-rejected=true warning=true valid-spawned=1 invalid-spawned=0 passed=true')
@@ -836,6 +913,32 @@ try {
     if ($fullCatalogAgeOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain ageOptions.' }
     $fullCatalogAgeOptions[0].observations = @(
         'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true')
+    $fullCatalogCatOptions = @($fullCatalogReport.probes | Where-Object id -eq 'cat')
+    if ($fullCatalogCatOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain cat.' }
+    $fullCatalogCatOptions[0].observations = @(
+        'cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED')
+    $fullCatalogSheepOptions = @($fullCatalogReport.probes | Where-Object id -eq 'sheep')
+    if ($fullCatalogSheepOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain sheep.' }
+    $fullCatalogSheepOptions[0].observations = @(
+        'sheep-options result=true imported=true color=RED sheared=true control-color=WHITE control-sheared=false')
+    $fullCatalogReport.expectedProbeIds += 'horseOptionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'horseOptionsImported'; status = 'passed'; observations = @('horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4')
+    }
+    $fullCatalogHorseOptions = @($fullCatalogReport.probes | Where-Object id -eq 'horseOptionsImported')
+    if ($fullCatalogHorseOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain horseOptionsImported.' }
+    $fullCatalogCreeperOptions = @($fullCatalogReport.probes | Where-Object id -eq 'creeper')
+    if ($fullCatalogCreeperOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain creeper.' }
+    $fullCatalogCreeperOptions[0].observations = @(
+        'creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true')
+    $fullCatalogSizeOptions = @($fullCatalogReport.probes | Where-Object id -eq 'entitySizeRange')
+    if ($fullCatalogSizeOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain entitySizeRange.' }
+    $fullCatalogSizeOptions[0].observations = @(
+        'entity-size-range result=true samples=64 configured=2..5 slime=2..5 magma-cube=2..5 phantom=2..5 imported=true')
+    $fullCatalogReport.expectedProbeIds += 'reinforcementsChanceOptions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'reinforcementsChanceOptions'; status = 'passed'; observations = @('reinforcements-chance-options result=true imported=true applied=true base=0.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'inCombatCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'inCombatCondition'; status = 'passed'; observations = @('in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true')
@@ -1055,7 +1158,9 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'locationTargeterDispatch'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'locationTargeterDispatch'; status = 'passed'; observations = @('location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true')
+        id = 'locationTargeterDispatch'; status = 'passed'; observations = @(
+            'location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true',
+            'tracked-location-parity action=true targeter=true distance=true missing-rejected=true')
     }
     $fullCatalogReport.expectedProbeIds += 'variableLocationDispatch'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -1398,6 +1503,31 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedOriginLocationCondition'
     $fullCatalogReport.probes += $importedOriginProbe
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $entitySizeProbe = $fullCatalogReport.probes | Where-Object id -eq 'entitySizeRange'
+    $entitySizeObservations = $entitySizeProbe.observations
+    $entitySizeProbe.observations = @('entity-size-range result=true samples=64 configured=2..5 observed=2..5')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $oldEntitySizeEvidenceRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $oldEntitySizeEvidenceRejected = $_.Exception.Message -match 'required observation for entitySizeRange' }
+    Assert-True $oldEntitySizeEvidenceRejected 'full release gate rejects size evidence missing MagmaCube and Phantom'
+    $entitySizeProbe.observations = $entitySizeObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $reinforcementsProbe = @($fullCatalogReport.probes | Where-Object id -eq 'reinforcementsChanceOptions')
+    if ($reinforcementsProbe.Count -ne 1) { throw 'Synthetic full catalog report must contain reinforcementsChanceOptions.' }
+    $reinforcementsObservations = $reinforcementsProbe[0].observations
+    $reinforcementsProbe[0].observations = @('reinforcements-chance-options result=true imported=true applied=true base=0.38 invalid-runtime-rejected=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteReinforcementsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteReinforcementsRejected = $_.Exception.Message -match 'required observation for reinforcementsChanceOptions' }
+    Assert-True $incompleteReinforcementsRejected 'full release gate rejects reinforcement evidence missing boundaries and preservation controls'
+    $reinforcementsProbe[0].observations = $reinforcementsObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $missingReviveRejected = $false
     try {
         & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
@@ -1547,6 +1677,50 @@ try {
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
         -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    $catOptionsObservations = $fullCatalogCatOptions[0].observations
+    $fullCatalogCatOptions[0].observations = @('cat-options result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteCatOptionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteCatOptionsRejected = $_.Exception.Message -match 'required observation for cat' }
+    Assert-True $incompleteCatOptionsRejected 'full release gate rejects incomplete imported Cat option evidence'
+    $fullCatalogCatOptions[0].observations = $catOptionsObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $sheepOptionsObservations = $fullCatalogSheepOptions[0].observations
+    $fullCatalogSheepOptions[0].observations = @('sheep-options result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteSheepOptionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteSheepOptionsRejected = $_.Exception.Message -match 'required observation for sheep' }
+    Assert-True $incompleteSheepOptionsRejected 'full release gate rejects incomplete imported Sheep option evidence'
+    $fullCatalogSheepOptions[0].observations = $sheepOptionsObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $horseOptionsObservations = $fullCatalogHorseOptions[0].observations
+    $fullCatalogHorseOptions[0].observations = @('horse-options result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteHorseOptionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteHorseOptionsRejected = $_.Exception.Message -match 'required observation for horseOptionsImported' }
+    Assert-True $incompleteHorseOptionsRejected 'full release gate rejects incomplete imported Horse option evidence'
+    $fullCatalogHorseOptions[0].observations = $horseOptionsObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $creeperOptionsObservations = $fullCatalogCreeperOptions[0].observations
+    $fullCatalogCreeperOptions[0].observations = @('creeper-options result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteCreeperOptionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteCreeperOptionsRejected = $_.Exception.Message -match 'required observation for creeper' }
+    Assert-True $incompleteCreeperOptionsRejected 'full release gate rejects incomplete imported Creeper option evidence'
+    $fullCatalogCreeperOptions[0].observations = $creeperOptionsObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $spawningDistanceProbe = $fullCatalogReport.probes | Where-Object id -eq 'spawningDistanceClientWalk'
     $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'spawningDistanceClientWalk' })
     $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'spawningDistanceClientWalk' })
@@ -2902,7 +3076,7 @@ try {
         ConvertFrom-Json
     foreach ($dynamicProbeId in @('custom-menu-player-workflow', 'audience-player-delivery',
             'audience-filter-delivery', 'random-spawn-distribution', 'skillTeleportCoordinates',
-            'spawningDistanceClientWalk')) {
+            'spawningDistanceClientWalk', 'interactableClient')) {
         $dynamicProbe = @($noClientReport.probes | Where-Object id -eq $dynamicProbeId)
         Assert-True ($dynamicProbe.Count -eq 1) "no-client report includes $dynamicProbeId"
         Assert-True ($dynamicProbe[0].status -eq 'not-observed') "no-client $dynamicProbeId is explicit missing evidence"
@@ -2954,6 +3128,7 @@ try {
     $env:PAPER_RAW_POTION_WORKFLOW = $previousRawPotionWorkflow
     $env:PAPER_RAW_POTION_SHORT = $previousRawPotionShort
     $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = $previousSpawningDistanceWalkWorkflow
+    $env:PAPER_INTERACTABLE_WORKFLOW = $previousInteractableWorkflow
     $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
     $tempPath = [System.IO.Path]::GetFullPath($temp)
     $isOwnedTemp = $tempPath.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase) -and

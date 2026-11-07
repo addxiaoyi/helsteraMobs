@@ -2,10 +2,49 @@
 
 ## MythicMobs Parity Development Status (2026-11-07)
 
+Latest strict fixture `srv-paper-horse-options-strict-20261107-r1` passes
+all 385 release probes (366 passed, 19 expected rejections, zero incomplete)
+on Paper 1.21.1-133. It imports Horse color, style, domestication, maximum
+domestication, and jump strength through production spawning and reads them
+back against a contrasting control. Report:
+`tools/paper-integration/reports/paper-1.21.1-horse-options-strict-20261107-r1.json`
+(SHA-256 `6c4c3a516d999fa409817075491db62d5d479db5b33a139672f75e4673faae6a`).
+Compressed server log SHA-256:
+`8dfa77dc66263d3fa6e4d53ed0b018b3dbb5458caefe6f1e029078b61d7d117f`.
+Client log archive SHA-256:
+`655667e0946236116aed9f46ec0090a2aca37b51ebd430afa389893ff0b5397d`.
+Plugin SHA-256:
+`740b24fb9990aaa7038665355e0ab153430ac26a46b37b492aa4c45523ff4016`.
+Latest strict report has 385 probes, zero incomplete.
+
+Previous strict fixture `srv-paper-sheep-options-strict-20261107-r1` passes
+all 384 release probes (365 passed, 19 expected rejections, zero incomplete)
+on Paper 1.21.1-133. Its imported Sheep options probe applies `SheepColor: RED`
+and `Sheared: true` through production mob spawning, and checks a white,
+unshorn control. Report:
+`tools/paper-integration/reports/paper-1.21.1-sheep-options-strict-20261107-r1.json`
+(SHA-256 `eea8fd2e6462b636425882145048d0de6ed9887b43a416aa7517e6f6cb93ad14`).
+Compressed server log SHA-256:
+`8fd0c7855beee03712338b5c482245157cff12b8dc848480e634f11836297afc`.
+Client log archive SHA-256:
+`279d6430528ce8315c8a094f97071a9b2ef57a597b62e8e1a78ee3faa053e1d2`.
+Plugin SHA-256:
+`b8174ab89cf0a585b063da12db46e9e8859da544698f51b61a9b596f7a8c7a77`.
+Latest strict report has 385 probes, zero incomplete.
+
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Latest strict fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2`
-passes all 382 release probes (363 passed, 19 expected rejections, zero
+Previous strict fixture `srv-paper-creeper-options-strict-20261107-r1` passed
+all 384 release probes (365 passed, 19 expected rejections, zero incomplete)
+on Paper 1.21.1-133. It imports Creeper `ExplosionRadius: 5`, `FuseTicks: 60`,
+`SuperCharged: true`, and `PreventSuicide: true` through production spawning;
+the protected Creeper's explosion is cancelled while the control's is allowed.
+Report: `tools/paper-integration/reports/paper-1.21.1-creeper-options-strict-20261107-r1.json`.
+Plugin SHA-256:
+`cfa2888713144cb1fec54d5b341a8d3d6e696de21457d7338e02ab895326f7f6`.
+
+Previous strict fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2`
+passed all 382 release probes (363 passed, 19 expected rejections, zero
 incomplete) on Paper 1.21.1-133. The imported Spawner condition probe maps
 `BiomeType{type=plains;exact=false}`, naturally generates one managed mob in
 the matching category, and rejects the `desert` category with zero spawns; it
@@ -16,7 +55,7 @@ and variant-specific natural DropTables. Report:
 `tools/paper-integration/reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json`.
 Plugin SHA-256:
 `fd72793b1e8a9aa8b62bc8d7a354dfaf1e36208f874e81fc37f10da1dadca9f5`.
-Latest strict report has 382 probes, zero incomplete.
+Latest strict report has 385 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-mythic-random-pool-strict-20261106-r1`
 passed 380 release probes (361 passed, 19 expected rejections, zero
@@ -624,7 +663,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` has 382 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-horse-options-strict-20261107-r1` has 385 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -633,15 +672,15 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 ### Current Development Goals
 
-This is a partial parity release. The matrix currently has `40`
+This is a partial parity release. The matrix currently has `38`
 `mapped-unverified` rows (counted from the status column in
-`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-06). The full remaining work is:
+`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-07). The full remaining work is:
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 494 cited IDs; 404 report files; 4 directories
-   without reports; 86 missing directories; 170 archived release reports. The
+   Current fixture inventory: 503 cited IDs; 413 report files; 4 directories
+   without reports; 86 missing directories; 178 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -693,6 +732,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
+- Mythic Sheep `Options.SheepColor` and `Options.Sheared` now have strict importer-to-runtime evidence. Paper fixture `srv-paper-sheep-options-strict-20261107-r1` imports red/sheared and white/unshorn controls through production mob spawning, then completes the 384-probe release catalog with zero incomplete probes.
 - Official `IsInSurvivalMode` and `InSurvivalMode` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player in Survival, reject Adventure, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-survival-mode-import-strict-20261106-r1` completes the 361-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.
 - Official `IsUsingSpyglass` and `IsScoping` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player actively using a Spyglass, then reject the inactive state, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-spyglass-import-strict-20261106-r1` completes the 360-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.
 - Official `IsFrozen` and `Frozen` aliases now have strict importer-to-runtime evidence: `?isFrozen` and `?frozen` both pass on a real frozen Zombie, fail after thawing, and reject malformed arguments through `SkillService`. Fixture `srv-paper-is-frozen-import-strict-20261106-r2` completes the full 359-probe release catalog on Paper 1.21.1-133; the broader Conditions catalog remains open.
@@ -831,7 +871,7 @@ the entire MythicMobs feature catalog.
 - Exploratory Paper 1.21.11 SkillTree restart fixture `srv-paper-skilltree-restart-034f7c7c184b48a9b2c57db5453effdb` now passes a two-boot persistent-chunk/entity/snapshot workflow; persistent chunk retention is released after the last managed persistent mob dies.
 - Focused Paper 1.21.1-133 fixture `srv-paper-skilltree-uuid-restart-20261107-r4` verifies same-ID persistent mobs keep distinct UUID SkillTree snapshots across restart; killing one removes only its snapshot, and shutdown does not recreate it. Full SkillTree parity remains open in the [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md).
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` records `targetStateConditions=passed`, including target glowing positive and no-target negative checks; the separate exploratory client fixture also covers a real player's glowing state restoration.
-- Mythic `Options.Interactable` now maps to the managed runtime policy with its documented imported default, and strict Paper 1.21.1 fixture `srv-paper-integration-armor-stand-20261031` records protected/control player interaction and Armor Stand manipulation pairs as `interactable=true` and `interactable-armor-stand=true`.
+- Mythic `Options.Interactable` maps to `mob.interactable` with the documented imported default and is enforced on managed entity interactions. Strict Paper 1.21.1-133 fixture `srv-paper-interactable-strict-20261107-r2` uses a real client to verify both cancellation and allowance; the earlier `srv-paper-integration-armor-stand-20261031` fixture verifies Armor Stand manipulation events. Importer tests cover explicit and default values; client-driven Armor Stand manipulation remains open.
 - Mythic `Options.PatrolSpawnPoint` now maps to Raider patrol target blocks, and strict Paper 1.21.1 fixture `srv-paper-integration-patrol-spawn-20261031` reads back a real Pillager patrol target at its spawn block.
 - Mythic `Options.Adult` and `Baby` use Bukkit age setters, including Zombie/Piglin-specific baby APIs. Exact tick `Age` and `AgeLock` apply to `Animals`; for ageable non-animal types such as Zombies/Husks, those two values are preserved under `entity.unsupported.Options.*` with migration warnings while `Adult`/`Baby` remain mapped. Non-Ageable values are also preserved with warnings. Importer/runtime tests cover animal, Husk, and Allay cases; strict Paper 1.21.1-133 fixture `srv-paper-age-options-strict-20261105-r3` records `age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true` on real Sheep and Zombie entities. Other Mob Options remain incomplete.
 - Official Armor Stand options `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` now map through the migration/runtime path; strict Paper 1.21.1 fixture `srv-paper-integration-armor-options-20261031-r3` reads back the production can-move/can-tick state.

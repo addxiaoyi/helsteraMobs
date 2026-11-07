@@ -76,6 +76,26 @@ class BehaviorContextLocationTargetTest {
     }
 
     @Test
+    void trackedLocationTargeterReadsOnlyTheSkillTreeLocation() {
+        World world = proxy(World.class, (method, args) -> null);
+        SkillTreeContext tree = new SkillTreeContext(null, null);
+        BehaviorContext context = BehaviorContext.continueExecution(null, (LivingEntity) null,
+                1, -1, 0, "skill", null, null, java.util.List.of(), null, tree);
+
+        assertTrue(Targeters.validLocationTargeterSpec("@TrackedLocation"));
+        assertFalse(Targeters.validLocationTargeterSpec("@TrackedLocation{unknown=true}"));
+        assertTrue(Targeters.resolveLocation("@TrackedLocation", context).isEmpty());
+
+        Location tracked = new Location(world, 8, 9, 10);
+        tree.setLocation(SkillTreeContext.MYTHIC_TRACKED_LOCATION, tracked);
+        assertEquals(tracked, Targeters.resolveLocation("@TrackedLocation", context).orElseThrow());
+        assertTrue(Targeters.resolveLocation("@TrackedLocation{unknown=true}", context).isEmpty());
+
+        tree.setLocation(SkillTreeContext.MYTHIC_TRACKED_LOCATION, new Location(null, 8, 9, 10));
+        assertTrue(Targeters.resolveLocation("@TrackedLocation", context).isEmpty());
+    }
+
+    @Test
     void selfEyeLocationFailsClosedWithoutLivingCaster() {
         World world = proxy(World.class, (method, args) -> null);
         org.bukkit.entity.Entity caster = proxy(org.bukkit.entity.Entity.class, (method, args) -> null);

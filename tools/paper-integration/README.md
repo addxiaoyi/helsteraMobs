@@ -24,10 +24,78 @@ $env:PAPER_WEB_RELOAD_PROBE = 'true'
 $env:PAPER_RAW_POTION_WORKFLOW = 'true'
 $env:PAPER_RAW_POTION_SHORT = 'true'
 $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
+$env:PAPER_INTERACTABLE_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2`
+Latest strict fixture `srv-paper-horse-options-strict-20261107-r1` passed all
+385 probes (366 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. Imported Horse color, style, domestication, maximum domestication,
+and jump strength are read back against a contrasting control. Report:
+`reports/paper-1.21.1-horse-options-strict-20261107-r1.json`;
+server log: `reports/paper-1.21.1-horse-options-strict-20261107-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-horse-options-strict-20261107-r1-client-logs.tar.gz`.
+Report SHA-256: `6c4c3a516d999fa409817075491db62d5d479db5b33a139672f75e4673faae6a`;
+server log SHA-256: `8dfa77dc66263d3fa6e4d53ed0b018b3dbb5458caefe6f1e029078b61d7d117f`;
+client log SHA-256: `655667e0946236116aed9f46ec0090a2aca37b51ebd430afa389893ff0b5397d`;
+plugin SHA-256: `740b24fb9990aaa7038665355e0ab153430ac26a46b37b492aa4c45523ff4016`.
+
+Previous strict fixture `srv-paper-sheep-options-strict-20261107-r1` passed all
+384 probes (365 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. Its imported Sheep probe applies `SheepColor: RED` and
+`Sheared: true` through production mob spawning, then checks a white, unshorn
+control. Report: `reports/paper-1.21.1-sheep-options-strict-20261107-r1.json`;
+server log: `reports/paper-1.21.1-sheep-options-strict-20261107-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-sheep-options-strict-20261107-r1-client-logs.tar.gz`.
+Report SHA-256: `eea8fd2e6462b636425882145048d0de6ed9887b43a416aa7517e6f6cb93ad14`;
+server log SHA-256: `8fd0c7855beee03712338b5c482245157cff12b8dc848480e634f11836297afc`;
+client log SHA-256: `279d6430528ce8315c8a094f97071a9b2ef57a597b62e8e1a78ee3faa053e1d2`;
+plugin SHA-256: `b8174ab89cf0a585b063da12db46e9e8859da544698f51b61a9b596f7a8c7a77`.
+
+Previous strict fixture `srv-paper-cat-options-strict-20261107-r3` passed the
+same 384-probe catalog and verifies imported Cat `Type`, `Sitting`, and
+`CollarColor` against a `TABBY`/not-sitting/`RED` control. Report:
+`reports/paper-1.21.1-cat-options-strict-20261107-r3.json`;
+plugin SHA-256: `5e08bb51d697fa77c885c1f5cd86eb3bca6b2a9d6da60dad7289c41f0358eddc`.
+
+Previous strict fixture `srv-paper-creeper-options-strict-20261107-r1` passed
+all 384 probes (365 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. It imports `ExplosionRadius: 5`, `FuseTicks: 60`,
+`SuperCharged: true`, and `PreventSuicide: true`; Paper cancels only the
+protected Creeper's explosion. Report:
+`reports/paper-1.21.1-creeper-options-strict-20261107-r1.json`;
+plugin SHA-256:
+`cfa2888713144cb1fec54d5b341a8d3d6e696de21457d7338e02ab895326f7f6`.
+
+Previous strict fixture `srv-paper-entity-size-range-strict-20261107-r1`
+passed all 383 probes (364 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. It imports Mythic `Options.Size: 2to5` for Slime, MagmaCube,
+and Phantom, then samples each real Paper entity 64 times; all observations
+stayed within range and covered both endpoints. Report:
+`reports/paper-1.21.1-entity-size-range-strict-20261107-r1.json`;
+server log: `reports/paper-1.21.1-entity-size-range-strict-20261107-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-entity-size-range-strict-20261107-r1-client-logs.tar.gz`.
+Plugin SHA-256:
+`9c2246042a36ed83bcca6b3e2d13d09ff73dd62101ed44f3c17a24a4e638c3c1`.
+
+Previous strict fixture `srv-paper-interactable-strict-20261107-r2` passed
+all 383 probes (364 passed, 19 expected rejections, zero incomplete). Its
+real-client `interactableClient` probe confirms Paper cancels interactions
+with protected managed entities and allows interactions with controls. Report:
+`reports/paper-1.21.1-interactable-strict-20261107-r2.json`.
+
+Previous strict fixture `srv-paper-tracked-location-strict-20261107-r1`
+passed all 382 probes (363 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. Its imported `TrackLocation`, `@TrackedLocation`,
+`DistanceFromTrackedLocation`, and missing-position checks are in
+`reports/paper-1.21.1-tracked-location-strict-20261107-r1.json`.
+Plugin SHA-256:
+`f360cbbd3b0102f406086f61c507cb994a32352c24fe1db090b29d9710802a1a`.
+
+Previous strict fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2`
 passed all 382 probes (363 passed, 19 expected rejections, zero incomplete) on
 Paper 1.21.1-133. Its imported Mythic Spawner condition probe maps
 `BiomeType{type=plains;exact=false}`, naturally spawns one managed mob in the
@@ -1690,14 +1758,17 @@ run; it exits non-zero if any registered probe is `not-observed` or
 $env:PAPER_MENU_WORKFLOW = 'true'
 $env:PAPER_RAW_POTION_WORKFLOW = 'true'
 $env:PAPER_RAW_POTION_SHORT = 'true'
+$env:PAPER_INTERACTABLE_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 `
   -RunSeconds 150 -Strict
 ```
 
 Strict mode requires Python with `jsonschema` 4.x in addition to the workflows
-needed by the registered probes (including the three environment variables above
-and the fixture's Mineflayer
-dependencies for player/menu/Audience evidence). It also rejects reports that
+needed by the registered probes (including the environment variables above and
+the fixture's Mineflayer dependencies for player/menu/Audience evidence). The
+Interactable workflow uses the real client's offhand entity-interact packet and
+requires both the client report and Paper's final cancellation observations. It
+also rejects reports that
 do not pass the JSON Schema, prove plugin enablement, or prove Paper
 implementation/API version 1.21.1, or include every registered probe listed in the
 report's expected probe catalog. The independent `release-probe-catalog.json`

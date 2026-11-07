@@ -92,13 +92,15 @@ $probeSpecs = [ordered]@{
     spawningDistanceRuntime = 'spawning-distance-runtime result=true inside-retained=true outside-removed=true'
     spawningDistanceClientWalk = 'spawning-distance-client-walk result=true player-displacement=(?:8|9|[1-9][0-9]+)(?:\.[0-9]+)? player-entity-distance=[0-9]+(?:\.[0-9]+)? instance-removed=true entity-removed=true despawn-elapsed-ticks=[0-9]+ decision-period-ticks=[0-9]+'
     visibilityOptions = 'visibility-options result=true visible-by-default=true invisible=true show-name=true'
-    sheep = 'sheep-options result=true'
+    sheep = 'sheep-options result=true imported=true color=RED sheared=true control-color=WHITE control-sheared=false'
+    horseOptionsImported = 'horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0\.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0\.4'
     armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false .*items=true'
-    cat = 'cat-options result=true'
+    cat = 'cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED'
     fallingBlock = 'falling-block-options result=true'
-    creeper = 'creeper-options result=true'
+    creeper = 'creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true'
     bee = 'bee-options result=true'
-    entitySizeRange = 'entity-size-range result=true samples=64 configured=2\.\.5 observed=[2-5]\.\.[2-5]'
+    entitySizeRange = 'entity-size-range result=true samples=64 configured=2\.\.5 slime=[2-5]\.\.[2-5] magma-cube=[2-5]\.\.[2-5] phantom=[2-5]\.\.[2-5] imported=true'
+    reinforcementsChanceOptions = 'reinforcements-chance-options result=true imported=true applied=true base=0\.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true'
     ageOptions = 'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true'
     entityFlagOptions = 'entity-flag-options result=true .*patrol-spawn-point=true'
     endermanHeldBlock = 'enderman-held-block result=true material=OBSIDIAN'
@@ -282,7 +284,7 @@ $probeSpecs = [ordered]@{
     contextTargeterControls = 'context-targeter-controls order=true radius=true invalid-rejected=true'
     contextTargeterChain = 'context-targeter-chain targets=true trigger=true excluded=true condition=true'
     targeterArgumentValidation = 'targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true target-players-specific=true target-players-disabled=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true target-flying=true ignore-flying=true target-invulnerable-disabled=true target-invulnerable-priority=true target-armorstands-disabled=true target-armorstands-priority=true target-animals-disabled=true target-animals-priority=true target-creatures-disabled=true target-creatures-priority=true target-villagers-disabled=true target-villagers-priority=true target-all=true target-creative=true ignore-creative=true target-creative-priority=true target-creative-disabled=true target-spectator=true ignore-spectator=true target-spectator-priority=true target-spectator-disabled=true'
-    locationTargeterDispatch = 'location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true'
+    locationTargeterDispatch = 'location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true|tracked-location-parity action=true targeter=true distance=true missing-rejected=true'
     variableLocationDispatch = 'variable-location-dispatch valid=true invalid-rejected=true import-preserved=true'
     explosionLocationDispatch = 'explosion-location-dispatch valid=true missing-rejected=true'
     dropItemLocation = 'drop-item-location valid=true invalid-rejected=true missing-rejected=true'
@@ -488,6 +490,51 @@ $probes += [ordered]@{
     observations = @($menuObservation)
 }
 
+$interactableClientStatus = 'not-observed'
+$interactableClientObservations = [System.Collections.Generic.List[string]]::new()
+$interactableClientLog = Join-Path $server 'menu-client.stdout.log'
+$interactableServerMatch = [regex]::Match($logText,
+    'interactable-client result=true false-event=true false-cancelled=true true-event=true true-cancelled=false interactions=2')
+if ($interactableServerMatch.Success) {
+    $interactableClientObservations.Add($interactableServerMatch.Value)
+}
+if (Test-Path -LiteralPath $interactableClientLog -PathType Leaf) {
+    $interactableLine = Get-Content -LiteralPath $interactableClientLog -Encoding utf8 |
+        Where-Object { $_ -match '^PAPER_INTERACTABLE_CLIENT_REPORT ' } | Select-Object -Last 1
+    if ($interactableLine -match '^PAPER_INTERACTABLE_CLIENT_REPORT (.+)$') {
+        try {
+            $interactableClient = $Matches[1] | ConvertFrom-Json
+            $interactableClientObservations.Add($Matches[1])
+            $requiredInteractableObservations = @('distinctEntities',
+                'blockedInteractionSent', 'blockedEventObserved', 'blockedCancelled',
+                'allowedInteractionSent', 'allowedEventObserved')
+            $allInteractableObservationsPassed = $interactableClient.status -eq 'passed' -and
+                $interactableClient.observations.allowedCancelled -eq $false -and
+                $interactableClient.blockedEntityId -gt 0 -and $interactableClient.allowedEntityId -gt 0 -and
+                $interactableClient.blockedEntityId -ne $interactableClient.allowedEntityId
+            foreach ($field in $requiredInteractableObservations) {
+                $allInteractableObservationsPassed = $allInteractableObservationsPassed -and
+                    $interactableClient.observations.$field -eq $true
+            }
+            if ($allInteractableObservationsPassed -and $interactableServerMatch.Success) {
+                $interactableClientStatus = 'passed'
+            }
+        } catch {
+            $interactableClientObservations.Add("invalid client report: $($_.Exception.Message)")
+        }
+    }
+}
+if ($interactableClientObservations.Count -eq 0) {
+    $interactableClientObservations.Add('client report or matching server cancellation evidence missing')
+} elseif ($interactableClientStatus -ne 'passed') {
+    $interactableClientObservations.Add('client observations and server cancellation state did not both pass')
+}
+$probes += [ordered]@{
+    id = 'interactableClient'
+    status = $interactableClientStatus
+    observations = @($interactableClientObservations)
+}
+
 $audienceClientLog = Join-Path $server 'audience-client.stdout.log'
 $audienceStatus = 'not-observed'
 $audienceObservation = 'client report missing'
@@ -675,7 +722,7 @@ $report = [ordered]@{
     log = 'logs/latest.log'
     expectedProbeIds = @($probeSpecs.Keys) + @(
         'custom-menu-player-workflow', 'audience-player-delivery', 'importedMessageClient', 'importedEscapedMessageClient',
-        'audience-filter-delivery', 'random-spawn-distribution',
+        'interactableClient', 'audience-filter-delivery', 'random-spawn-distribution',
         'skillTeleportCoordinates') + $(if ($env:PAPER_WEB_RELOAD_PROBE -eq 'true') {
             @('webSpawnerReload')
         } else { @() }) + $(if ($playerPotionConsumeRequested) {

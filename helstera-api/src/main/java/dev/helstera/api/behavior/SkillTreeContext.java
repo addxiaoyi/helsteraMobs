@@ -13,6 +13,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** Per-trigger state shared by nested skills in one Mythic-style skill tree. */
 public final class SkillTreeContext {
+    /** Internal location key used by MythicMobs' TrackLocation mechanic and TrackedLocation targeter. */
+    public static final String MYTHIC_TRACKED_LOCATION = "mythic.tracked-location";
+
     /** Immutable persistence form for skill-tree-local state. Entity references are restored by the caller. */
     public record Snapshot(Map<String, Object> variables,
                            Map<String, LocationSnapshot> locations,

@@ -1,15 +1,97 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` passed the
+Latest fixture `srv-paper-horse-options-strict-20261107-r1` passed the full
+strict gate on Paper 1.21.1-133: 385 registered probes, 366 passed, 19
+expected rejections, and zero incomplete. Imported Horse color, style,
+domestication, maximum domestication, and jump strength are read back against
+a contrasting control. Report:
+[paper-1.21.1-horse-options-strict-20261107-r1.json](reports/paper-1.21.1-horse-options-strict-20261107-r1.json), SHA-256:
+`6c4c3a516d999fa409817075491db62d5d479db5b33a139672f75e4673faae6a`.
+Compressed server log SHA-256:
+`8dfa77dc66263d3fa6e4d53ed0b018b3dbb5458caefe6f1e029078b61d7d117f`.
+Client log archive SHA-256:
+`655667e0946236116aed9f46ec0090a2aca37b51ebd430afa389893ff0b5397d`.
+Plugin SHA-256:
+`740b24fb9990aaa7038665355e0ab153430ac26a46b37b492aa4c45523ff4016`.
+
+Previous fixture `srv-paper-sheep-options-strict-20261107-r1` passed the full
+strict gate on Paper 1.21.1-133: 384 registered probes, 365 passed, 19
+expected rejections, and zero incomplete. The imported Sheep probe applies
+`SheepColor: RED` and `Sheared: true` through production mob spawning and
+checks a white, unshorn control. Report:
+[paper-1.21.1-sheep-options-strict-20261107-r1.json](reports/paper-1.21.1-sheep-options-strict-20261107-r1.json), SHA-256:
+`eea8fd2e6462b636425882145048d0de6ed9887b43a416aa7517e6f6cb93ad14`.
+Compressed server log SHA-256:
+`8fd0c7855beee03712338b5c482245157cff12b8dc848480e634f11836297afc`.
+Client log archive SHA-256:
+`279d6430528ce8315c8a094f97071a9b2ef57a597b62e8e1a78ee3faa053e1d2`.
+Plugin SHA-256:
+`b8174ab89cf0a585b063da12db46e9e8859da544698f51b61a9b596f7a8c7a77`.
+
+Previous fixture `srv-paper-cat-options-strict-20261107-r3` passed the same
+full strict gate and verifies imported Cat `Type`, `Sitting`, and
+`CollarColor` through production spawning against a `TABBY`/not-sitting/`RED`
+control. Report: [paper-1.21.1-cat-options-strict-20261107-r3.json](reports/paper-1.21.1-cat-options-strict-20261107-r3.json), SHA-256:
+`a461280efb0d311b64da172ca3fb45250c56038f2c25449ff8c7faf7b7bec096`.
+
+Previous fixture `srv-paper-creeper-options-strict-20261107-r1` passed the
+same full strict gate: 384 probes, 365 passed, 19 expected rejections, and
+zero incomplete. Its imported Creeper probe verifies radius, fuse, powered
+state, and protected/control explosion behavior. Report:
+[paper-1.21.1-creeper-options-strict-20261107-r1.json](reports/paper-1.21.1-creeper-options-strict-20261107-r1.json), SHA-256:
+`4088b4c42abe7521ee5f16e1323fa94198dd40c7d354906a738c9883ce1ce6e3`.
+Compressed server log SHA-256:
+`1657512ec9a2a00219e90dd07c594446aa899180c75196e10979efd5db21f554`.
+Client log archive SHA-256:
+`204ec5f413a0f6cc2f1de0b20f837733c09d78571963968988d4360bc1116986`.
+Plugin SHA-256:
+`cfa2888713144cb1fec54d5b341a8d3d6e696de21457d7338e02ab895326f7f6`.
+
+Previous fixture `srv-paper-entity-size-range-strict-20261107-r1` passed the
+full strict gate on Paper 1.21.1-133: 383 registered probes, 364 passed, 19
+expected rejections, and zero incomplete. Its `entitySizeRange` probe imports
+Mythic `Options.Size: 2to5` for Slime, MagmaCube, and Phantom, then samples each
+Paper entity 64 times; all values stayed inside the configured range and each
+family reached both endpoints. Report:
+[paper-1.21.1-entity-size-range-strict-20261107-r1.json](reports/paper-1.21.1-entity-size-range-strict-20261107-r1.json), SHA-256:
+`83d12f6314ce4a4a8138f514003d8c91ada0dcad3269de2612aabc8d289db8b9`.
+Compressed server log SHA-256:
+`9478995075cab22112f61c76ffff80559f35fb77d09cde6205b0fdb148434867`.
+Client log archive SHA-256:
+`40072bdb7eb2d1b78bf0f9492af57941a7a989bf54c23d802980fdddf4a71dd2`.
+Plugin SHA-256:
+`9c2246042a36ed83bcca6b3e2d13d09ff73dd62101ed44f3c17a24a4e638c3c1`.
+
+Previous fixture `srv-paper-interactable-strict-20261107-r2` passed the full
+strict gate on Paper 1.21.1-133: 383 probes, 364 passed, 19 expected
+rejections, and zero incomplete. Its real Mineflayer `use_entity` packets
+confirm `Interactable=false` is cancelled while `Interactable=true` is allowed.
+Report: [paper-1.21.1-interactable-strict-20261107-r2.json](reports/paper-1.21.1-interactable-strict-20261107-r2.json), SHA-256:
+`97b8088a4acfa2c5d161c5c41730f1c7c796b60cac046fa6f1ba9077ea1a1f4e`.
+
+Previous fixture `srv-paper-tracked-location-strict-20261107-r1` passed the
 full strict gate on Paper 1.21.1-133: 382 registered probes, 363 passed, 19
-expected rejections, and zero incomplete. The imported Mythic Spawner condition
-probe maps `BiomeType{type=plains;exact=false}`, naturally generates one managed
-mob in the matching category, rejects `desert` with zero spawns, and restores
-both original biomes. It also maps matching-world, raining, and non-thundering
-conditions, while missing-world and thunder controls remain at zero spawns.
-The same fixture verifies weighted `RandomMobs`, imported group-size capping,
-`Chance` validation, and per-variant DropTables through natural Bukkit death.
-Report: [paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json](reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json), SHA-256:
+expected rejections, and zero incomplete. Its `locationTargeterDispatch` probe
+verifies imported `TrackLocation`, `@TrackedLocation`,
+`DistanceFromTrackedLocation`, and missing-position rejection. Report:
+[paper-1.21.1-tracked-location-strict-20261107-r1.json](reports/paper-1.21.1-tracked-location-strict-20261107-r1.json), SHA-256:
+`b86a69aeeb3dde890b3845785fda47137faafc758484e697b68c3e066df4b41d`.
+Compressed server log SHA-256:
+`664d751529a197ff6c365a6f9d27bfa56d4c978a671a86988d6607107df97480`.
+Client log archive SHA-256:
+`fa1c49ec2656490216b16349494e25cafe08ffabf4acddcb90836bbf3e2f8d74`.
+Plugin SHA-256:
+`f360cbbd3b0102f406086f61c507cb994a32352c24fe1db090b29d9710802a1a`.
+
+Previous fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` passed the
+full strict gate on Paper 1.21.1-133: 382 registered probes, 363 passed, 19
+expected rejections, and zero incomplete. Its imported Spawner condition probe
+maps `BiomeType{type=plains;exact=false}`, naturally generates one managed mob
+in the matching category, rejects `desert` with zero spawns, and restores both
+original biomes. It also verifies matching-world, rain, and non-thundering
+conditions, weighted `RandomMobs`, imported group-size capping, `Chance`
+validation, and per-variant DropTables through natural Bukkit death. Report:
+[paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json](reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json), SHA-256:
 `db1364e2628752d8264afb3ed777d14ecf30cd2a10743456445ffc112657e205`.
 Compressed server log SHA-256:
 `fe9417b24cff08f4e16966e57514946fdc5e69e5ca8c1b69e13aa05bc1eb05f0`.
