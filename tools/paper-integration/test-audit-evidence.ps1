@@ -54,7 +54,7 @@ try {
     })
     $entityFlagOptionsProbe = @($fullReport.probes | Where-Object id -eq 'entityFlagOptions')
     if ($entityFlagOptionsProbe.Count -ne 1) { throw 'Synthetic release report must contain entityFlagOptions.' }
-    $entityFlagOptionsProbe[0].observations = @('entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true')
+    $entityFlagOptionsProbe[0].observations = @('entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true')
     $fullReport.expectedProbeIds += 'preventSunburnNatural'
     $fullReport.probes += [pscustomobject]@{
         id = 'preventSunburnNatural'; status = 'passed'; observations = @('prevent-sunburn-natural imported=true mapped=true protected-option=true control-option=false daylight=true weather-clear=true observer-present=true protected-player-distance=7 control-player-distance=15 sky-exposed=true protected-ai=true control-ai=true protected-age-ticks=90 control-age-ticks=110 protected-events=2 protected-cancelled=2 protected-fire-ticks=0 control-events=1 control-cancelled=0 control-fire-ticks=154 elapsed-ticks=40 restored=true passed=true')

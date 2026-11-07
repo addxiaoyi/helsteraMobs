@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-full-strict-20261107-r2",
+    "reportFixtureDirectory": "srv-paper-full-strict-20261107-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261107-r2.json",
+    "reportSha256": "9bc375fa779a72a2741f626fae0b063bccb4e879f3099fd8439caa3da732f4fa",
+    "log": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261107-r2.log.gz",
+    "logSha256": "677eadd25fa0df21a31d33388887d17ef7cd0d1c5b29ef9b9322c6535daae2bd",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261107-r2-client-logs.tar.gz",
+    "clientLogSha256": "75da16e9087dee632d353b912f65ff35179308dd9df079ce297b77e834a36a05",
+    "pluginSha256": "98dc5822132601682024cb58f648169f7ee8f2c7a2c80b720a9752d81e757fd7",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-mythic-teleport-strict-20261107-r1",
     "reportFixtureDirectory": "srv-paper-integration",
     "report": "tools/paper-integration/reports/paper-1.21.1-mythic-teleport-strict-20261107-r1.json",

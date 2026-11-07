@@ -38,7 +38,20 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-mythic-teleport-strict-20261107-r1` passes all
+Latest strict fixture `srv-paper-full-strict-20261107-r2` passes all 391
+probes (372 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. It includes the effective `CanJoinRaid` control and native-AI
+Bee `PreventStingerLoss` evidence alongside the registered Mythic parity
+catalog. Report: `reports/paper-1.21.1-full-strict-20261107-r2.json`;
+server log: `reports/paper-1.21.1-full-strict-20261107-r2.log.gz`;
+client logs:
+`reports/paper-1.21.1-full-strict-20261107-r2-client-logs.tar.gz`.
+Report SHA-256: `9bc375fa779a72a2741f626fae0b063bccb4e879f3099fd8439caa3da732f4fa`;
+server log SHA-256: `677eadd25fa0df21a31d33388887d17ef7cd0d1c5b29ef9b9322c6535daae2bd`;
+client log SHA-256: `75da16e9087dee632d353b912f65ff35179308dd9df079ce297b77e834a36a05`;
+plugin SHA-256: `98dc5822132601682024cb58f648169f7ee8f2c7a2c80b720a9752d81e757fd7`.
+
+Previous strict fixture `srv-paper-mythic-teleport-strict-20261107-r1` passes all
 391 probes (372 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. It verifies imported Mythic `teleport`/`tp` for entity and
 location targets, safe landing, `unsafe` bypass, bounded spread, preserved and

@@ -2038,14 +2038,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean patrolSpawnPoint = patrolTarget != null && patrolTarget.equals(locations.get(4).getBlock())
                     && raiderControl != null && raiderControl.getPatrolTarget() == null;
             boolean canJoinRaidSetter = spawnedIds.get(raiderId) > 0 && spawnedIds.get(raiderControlId) > 0;
+            boolean canJoinRaidState = raider != null && !raider.isCanJoinRaid()
+                    && raiderControl != null && raiderControl.isCanJoinRaid();
             boolean wrongType = wrongTypeEntity instanceof org.bukkit.entity.Husk;
             boolean passed = imported && wolfState && pigZombieState && patrolLeader
-                    && patrolSpawnPoint && canJoinRaidSetter && wrongType;
+                    && patrolSpawnPoint && canJoinRaidSetter && canJoinRaidState && wrongType;
             getLogger().info("[自检] entity-flag-options result=" + passed
                     + " imported=" + imported + " wolf-tamed=" + (wolf != null && wolf.isTamed())
                     + " wolf-angry=" + (wolf != null && wolf.isAngry())
                     + " pig-zombie-angry=" + (pigZombie != null && pigZombie.isAngry())
                     + " can-join-raid-setter=" + canJoinRaidSetter
+                    + " can-join-raid=" + (raider != null && raider.isCanJoinRaid())
+                    + " control-can-join-raid=" + (raiderControl != null && raiderControl.isCanJoinRaid())
                     + " patrol-leader=" + patrolLeader + " patrol-spawn-point=" + patrolSpawnPoint
                     + " wrong-type-preserved=" + (wrongType && wrongUnsupported != null));
         } catch (Throwable failure) {
@@ -2290,6 +2294,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     private void runImportedBeeStingerLossSelfTest(Location origin) {
+        runImportedBeeStingerLossSelfTest(origin, 0);
+    }
+
+    private void runImportedBeeStingerLossSelfTest(Location origin, int retryCount) {
+        var observer = getServer().getOnlinePlayers().stream()
+                .filter(player -> player.isValid() && !player.isDead()
+                        && player.getWorld().equals(origin.getWorld()))
+                .min(java.util.Comparator.comparingDouble(player ->
+                        player.getLocation().distanceSquared(origin)))
+                .orElse(null);
+        if (observer == null) {
+            if (retryCount >= 180) {
+                getLogger().info("[自检] bee-stinger-loss-imported result=false imported=false"
+                        + " reason=no-active-player-observer retries=" + retryCount);
+                return;
+            }
+            getServer().getScheduler().runTaskLater(this,
+                    () -> runImportedBeeStingerLossSelfTest(origin, retryCount + 1), 20L);
+            return;
+        }
+
         Path sourceRoot = null;
         Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
         boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
@@ -2345,10 +2370,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (protectedTargetId == null || controlTargetId == null) {
                 throw new IllegalStateException("Mythic Bee stinger options were not imported for both probe mobs");
             }
-            MobSpawn protectedSpawn = spawnMobCore(protectedTargetId, "example/emberling", origin,
+            // Paper's native entity activation requires a nearby player. The
+            // integration server connects its observer after plugin startup,
+            // so wait above and keep the native AI probe in that player's area.
+            Location probeOrigin = observer.getLocation().clone();
+            probeOrigin.getChunk().load();
+            MobSpawn protectedSpawn = spawnMobCore(protectedTargetId, "example/emberling", probeOrigin,
                     false, null);
             MobSpawn controlSpawn = spawnMobCore(controlTargetId, "example/emberling",
-                    origin.clone().add(3, 0, 0), false, null);
+                    probeOrigin.clone().add(3, 0, 0), false, null);
             if (protectedSpawn != null && protectedSpawn.instanceId() > 0) {
                 instanceIds.add(protectedSpawn.instanceId());
             }
@@ -2382,16 +2412,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 return;
             }
 
-            var probeAnchor = getServer().getOnlinePlayers().stream()
-                    .filter(player -> player.getWorld().equals(origin.getWorld()))
-                    .findFirst()
-                    .map(org.bukkit.entity.Player::getLocation)
-                    .orElse(origin.getWorld().getSpawnLocation())
-                    .clone();
-            var target = origin.getWorld().spawn(probeAnchor.clone().add(6, 0, 0),
+            var target = origin.getWorld().spawn(probeOrigin.clone().add(6, 0, 0),
                     org.bukkit.entity.Zombie.class);
             probeTarget[0] = target;
             target.setAI(false);
+            target.setGravity(false);
             target.setSilent(true);
             target.setMaxHealth(40.0);
             target.setHealth(target.getMaxHealth());
@@ -2444,6 +2469,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean terminal = false;
                 try {
                     if (target.isValid() && !target.isDead()) {
+                        target.setInvulnerable(false);
+                        target.setGravity(false);
                         target.setFireTicks(0);
                         if (target.getHealth() < target.getMaxHealth()) {
                             target.setHealth(target.getMaxHealth());
@@ -2490,6 +2517,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (!(passed || probeTicks[0] >= 160)) return;
                     terminal = true;
                     if (attackTask[0] != null) attackTask[0].cancel();
+                    if (!passed) {
+                        getLogger().info("[自检] bee-stinger-loss-diagnostic"
+                                + " observer=" + observer.getName()
+                                + " observer-distance=" + observer.getLocation().distance(target.getLocation())
+                                + " protected-ai=" + protectedBee.hasAI()
+                                + " control-ai=" + controlBee.hasAI()
+                                + " protected-aware=" + protectedBee.isAware()
+                                + " control-aware=" + controlBee.isAware()
+                                + " protected-anger=" + protectedBee.getAnger()
+                                + " control-anger=" + controlBee.getAnger()
+                                + " protected-target=" + (protectedBee.getTarget() == target)
+                                + " control-target=" + (controlBee.getTarget() == target)
+                                + " target-chunk-loaded=" + target.getChunk().isLoaded());
+                    }
                     getLogger().info("[自检] bee-stinger-loss-imported result=" + passed
                             + " imported=" + imported
                             + " target-entity=ZOMBIE"
@@ -6820,22 +6861,26 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 applyEntitySpecificOptions(wolf, flagConfig);
                 applyEntitySpecificOptions(pillager, flagConfig);
                 boolean canJoinRaidSetter = false;
+                boolean canJoinRaidReadback = false;
                 var raiderView = (org.bukkit.entity.Raider) pillager;
                 try {
                     raiderView.setCanJoinRaid(false);
                     canJoinRaidSetter = true;
+                    canJoinRaidReadback = !raiderView.isCanJoinRaid();
                 } catch (RuntimeException ignored) {
-                    // Some Paper versions expose the setter without a readable flag.
+                    // Keep the probe failed closed if a server version rejects either call.
                 }
                 boolean patrolSpawnPoint = raiderView.getPatrolTarget() != null
                         && raiderView.getPatrolTarget().getX() == pillager.getLocation().getBlockX()
                         && raiderView.getPatrolTarget().getY() == pillager.getLocation().getBlockY()
                         && raiderView.getPatrolTarget().getZ() == pillager.getLocation().getBlockZ();
                 boolean entityFlagOptions = wolf.isTamed() && wolf.isAngry()
-                        && raiderView.isPatrolLeader() && canJoinRaidSetter && patrolSpawnPoint;
+                        && raiderView.isPatrolLeader() && canJoinRaidSetter && canJoinRaidReadback
+                        && patrolSpawnPoint;
                 getLogger().info("[自检] entity-flag-options result=" + entityFlagOptions
                         + " tamed=" + wolf.isTamed() + " angry=" + wolf.isAngry()
                         + " can-join-raid-setter=" + canJoinRaidSetter
+                        + " can-join-raid=" + raiderView.isCanJoinRaid()
                         + " patrol-leader=" + raiderView.isPatrolLeader()
                         + " patrol-spawn-point=" + patrolSpawnPoint);
                 runImportedEntityFlagOptionsSelfTest(location.clone().add(25, 0, 0));
