@@ -1,18 +1,20 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-bee-options-strict-20261107-r1` passed the full
-strict gate on Paper 1.21.1-133: 386 registered probes, 367 passed, 19
-expected rejections, and zero incomplete. Imported Bee `HasNectar: true` and
-`HasStung: false` are read back against an inverse control through production
-spawning. Report:
-[paper-1.21.1-bee-options-strict-20261107-r1.json](reports/paper-1.21.1-bee-options-strict-20261107-r1.json), SHA-256:
-`4bed065ab26dbdabca9e511b4548399be2dec636424962d24a96fda5f10a6528`.
+Latest fixture `srv-paper-bee-stinger-loss-strict-20261107-r1` passed the full
+strict gate on Paper 1.21.1-133: 387 registered probes, 368 passed, 19
+expected rejections, and zero incomplete. Imported Bee nectar/stung fields
+and `PreventStingerLoss` are verified against inverse controls through
+production spawning. The stinger probe dispatches a synthetic Bukkit attack
+event, verifying the production listener but not natural Bee AI attack
+behavior. Report:
+[paper-1.21.1-bee-stinger-loss-strict-20261107-r1.json](reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.json), SHA-256:
+`48a548ef6b654715ba1233a89840de0f72c136256523fc393ddd32908a99e597`.
 Compressed server log SHA-256:
-`036ecf01a635ef856567f895918592e29597245bfa7c4fe67d0fe262b5c80a8c`.
+`c1f63894797c25621927ddb4ccab0add07ea1f962254daf59eaa0c0128eb7c27`.
 Client log archive SHA-256:
-`3bb848f8e671f62b0c5b5c70fc3995fc52f4cdec82870eddaa58c09d61080644`.
+`e7beffcfec3282265d50e237e1b787433f68192a8bafb31711eb7cbee4ecfdef`.
 Plugin SHA-256:
-`45efee36b1040d838f630961b7df21fc08301130044aeb83e91402bb9d3b21d4`.
+`a160f678fbeb42a2df3bb877b972ff99b3abb792dde9d6785b416ab539ac8e4b`.
 
 Previous fixture `srv-paper-horse-options-strict-20261107-r1` passed the full
 strict gate on Paper 1.21.1-133: 385 registered probes, 366 passed, 19
@@ -2038,9 +2040,9 @@ Follow-up exploratory fixtures `srv-paper-integration-exploratory-1.21.4-r11`
 through `r16` isolated the remaining Zombie conversion probe. The control
 Zombie stayed valid with `conversion-time=20`; the latest run recorded
 `control-block=WATER control-below=WATER control-above=WATER` but Paper still
-reported `control-in-water=false` and no Drowned entity. Bee stinger restoration,
-Creeper fuse timing, mount-event cancellation, and natural potion expiry
-continued to behave as before. The conversion result remains `not-observed`
+reported `control-in-water=false` and no Drowned entity. Synthetic Bee attack
+event stinger restoration, Creeper fuse timing, mount-event cancellation, and
+natural potion expiry continued to behave as before. The conversion result remains `not-observed`
 and is not promoted to release parity; the probe diagnostics are retained for
 future Paper-version compatibility work.
 
@@ -2100,7 +2102,7 @@ remain exploratory compatibility evidence.
 
 The Mineflayer player run `srv-paper-integration-exploratory-1.21.11-r6`
 recorded `spawnerPlayerLimits` with `first=true second=false total=1
-player-limit=1`, plus natural potion expiry, Bee stinger restoration, and the
+player-limit=1`, plus natural potion expiry, synthetic Bee attack-event stinger restoration, and the
 mount-event probe. Its Zombie conversion probe remained false on this Paper
 build. This confirms the player-limit path on 1.21.11 but does not upgrade the
 Paper 1.21.1 release evidence.
@@ -2267,8 +2269,10 @@ Paper 1.21.1 release target remains open.
 Fixture `srv-paper-integration-exploratory-1.21.11-r55` records the natural Mob
 Option probes as passed: `creeperNaturalFuse`, `mobOptionsNatural`, and
 `mobOptionsMountEvent`. The control Zombie converted in water while the
-managed `preventTransformation` Zombie remained valid; protected Bee stinger
-loss was restored after a real attack, and the protected/control mount-event
+managed `preventTransformation` Zombie remained valid; the probe manually set
+both Bees to stung and dispatched synthetic Bukkit attack events, after which
+the protected Bee's stinger state was restored. This does not establish natural
+Bee AI attack behavior. The protected/control mount-event
 pair recorded cancellation versus allowance. The probe keeps native Zombie AI
 enabled so the conversion path is actually ticked, and pins the entities in
 place without suppressing that behavior. This remains exploratory Paper
@@ -2934,7 +2938,7 @@ On 2026-10-21, the final strict artifact was rerun in the fresh
 `srv-paper-integration-final-r8` fixture on official Paper 1.21.1-133. The
 new final fixture `srv-paper-integration-final-r9` passed with 220 observed
 probes: 212 `passed`, 8 expected `observed-rejected`, and zero incomplete
-probes. The run includes the stable Bee stinger and jockey mount-event probes
+probes. The run includes the synthetic Bee stinger event and jockey mount-event probes
 (`mobOptionsNatural` and `mobOptionsMountEvent`), the persisted named-skill cast
 probe, and the independent `boundingBoxOverlapCondition` overlap/separation
 assertion against real Bukkit entities.

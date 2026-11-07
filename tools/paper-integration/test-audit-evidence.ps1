@@ -36,6 +36,11 @@ try {
     $archivePath = Join-Path $temporaryRoot 'tools/paper-integration/reports/test-release.json'
     [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($archivePath))
     $fullReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-drop-inline-20261104-r2.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $naturalMobOptions = @($fullReport.probes | Where-Object id -eq 'mobOptionsNatural')
+    if ($naturalMobOptions.Count -ne 1) { throw 'Synthetic release report must contain mobOptionsNatural.' }
+    $naturalMobOptions[0].observations = @($naturalMobOptions[0].observations | ForEach-Object {
+        $_ -replace 'bee-stinger=true ', 'bee-stinger=true bee-event=synthetic '
+    })
     $lookingAtProbe = @($fullReport.probes | Where-Object id -eq 'lookingAtCondition')
     if ($lookingAtProbe.Count -ne 1) { throw 'Synthetic release report must contain lookingAtCondition.' }
     $lookingAtProbe[0].observations = @('imported-looking-at-condition primary-mapped=true alias-mapped=true entity-mapped=true positive=true alias-positive=true wrong-block-rejected=true short-block-distance-rejected=true negative=true entity-positive=true wrong-entity-rejected=true short-entity-distance-rejected=true invalid-rejected=true restored=true')
@@ -206,6 +211,10 @@ try {
     $fullReport.expectedProbeIds += 'beeOptionsImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'beeOptionsImported'; status = 'passed'; observations = @('bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true')
+    }
+    $fullReport.expectedProbeIds += 'beeStingerLossImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'beeStingerLossImported'; status = 'passed'; observations = @('bee-stinger-loss-imported result=true imported=true protected-option=true control-option=false protected-event=true control-event=true protected-restored=true control-retained=true event=synthetic')
     }
     $fullReport.expectedProbeIds += 'mythicSpawnerChanceImported'
     $fullReport.probes += [pscustomobject]@{

@@ -1,5 +1,16 @@
 [
   {
+    "fixtureId": "srv-paper-bee-stinger-loss-strict-20261107-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.json",
+    "reportSha256": "48a548ef6b654715ba1233a89840de0f72c136256523fc393ddd32908a99e597",
+    "log": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.log.gz",
+    "logSha256": "c1f63894797c25621927ddb4ccab0add07ea1f962254daf59eaa0c0128eb7c27",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1-client-logs.tar.gz",
+    "clientLogSha256": "e7beffcfec3282265d50e237e1b787433f68192a8bafb31711eb7cbee4ecfdef",
+    "pluginSha256": "a160f678fbeb42a2df3bb877b972ff99b3abb792dde9d6785b416ab539ac8e4b",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-bee-options-strict-20261107-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-bee-options-strict-20261107-r1.json",
     "reportSha256": "4bed065ab26dbdabca9e511b4548399be2dec636424962d24a96fda5f10a6528",

@@ -28,18 +28,20 @@ $env:PAPER_INTERACTABLE_WORKFLOW = 'true'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
-Latest strict fixture `srv-paper-bee-options-strict-20261107-r1` passed all
-386 probes (367 passed, 19 expected rejections, zero incomplete) on Paper
-1.21.1-133. It imports Bee `HasNectar: true` and `HasStung: false` through
-production spawning and reads them against an inverse control. Report:
-`reports/paper-1.21.1-bee-options-strict-20261107-r1.json`;
-server log: `reports/paper-1.21.1-bee-options-strict-20261107-r1.log.gz`;
+Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r1` passed all
+387 probes (368 passed, 19 expected rejections, zero incomplete) on Paper
+1.21.1-133. It imports Bee nectar/stung fields and `PreventStingerLoss`
+through production spawning against inverse controls. The stinger probe
+dispatches a synthetic Bukkit attack event and verifies protected restoration
+versus control retention; it does not establish natural Bee AI attack behavior.
+Report: `reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.json`;
+server log: `reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.log.gz`;
 client logs:
-`reports/paper-1.21.1-bee-options-strict-20261107-r1-client-logs.tar.gz`.
-Report SHA-256: `4bed065ab26dbdabca9e511b4548399be2dec636424962d24a96fda5f10a6528`;
-server log SHA-256: `036ecf01a635ef856567f895918592e29597245bfa7c4fe67d0fe262b5c80a8c`;
-client log SHA-256: `3bb848f8e671f62b0c5b5c70fc3995fc52f4cdec82870eddaa58c09d61080644`;
-plugin SHA-256: `45efee36b1040d838f630961b7df21fc08301130044aeb83e91402bb9d3b21d4`.
+`reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1-client-logs.tar.gz`.
+Report SHA-256: `48a548ef6b654715ba1233a89840de0f72c136256523fc393ddd32908a99e597`;
+server log SHA-256: `c1f63894797c25621927ddb4ccab0add07ea1f962254daf59eaa0c0128eb7c27`;
+client log SHA-256: `e7beffcfec3282265d50e237e1b787433f68192a8bafb31711eb7cbee4ecfdef`;
+plugin SHA-256: `a160f678fbeb42a2df3bb877b972ff99b3abb792dde9d6785b416ab539ac8e4b`.
 
 Previous strict fixture `srv-paper-horse-options-strict-20261107-r1` passed all
 385 probes (366 passed, 19 expected rejections, zero incomplete) on Paper
@@ -1748,10 +1750,12 @@ entity's cached fluid state on the tick after block placement, so the probe
 places water, evaluates on the next tick, switches to lava, evaluates again,
 and restores both blocks. Same-tick checks remain diagnostic only.
 
-The same event self-test runs `mob-options-natural`, which applies the runtime
-`creeper-fuse-ticks` option, ignites a real Creeper, runs protected/control Bees
-through attack ticks, and runs protected/control Zombie conversion. It also
-emits a separate `mob-options-mount-event` probe for protected/control jockey
+The combined Mob Option self-test runs `mob-options-natural`, which applies the
+runtime `creeper-fuse-ticks` option, ignites a real Creeper, explicitly sets
+protected/control Bees to stung and dispatches synthetic Bukkit attack events,
+and runs protected/control Zombie conversion. `bee-event=synthetic` marks this
+path in the report; it does not establish a natural Bee AI attack. The test
+also emits a separate `mob-options-mount-event` probe for protected/control jockey
 mount event cancellation; that probe uses the Bukkit mount event path, not a
 claim of natural AI jockey selection. Exploratory r55 observes all four
 server-side probes as passed; timeout or missing behavior remains

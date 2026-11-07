@@ -63,6 +63,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED',
         '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] bee-stinger-loss-imported result=true imported=true protected-option=true control-option=false protected-event=true control-event=true protected-restored=true control-retained=true event=synthetic',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-scheduler result=true delay=2 repeat=3 interval=2 executions=4 pre-delay-count=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-tree-branches result=true condition-denied=true condition-unlock=true prerequisite-blocked=true prerequisite-unlock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] pin-targeters result=true multi-dispatch=true random-single=true move-single=true reject-multi-move=true region-set-break=true region-cap-rejected=true',
@@ -195,7 +196,7 @@ try {
         '[Server thread/INFO]: item-attribute-options result=true modifiers=1',
         '[Server thread/INFO]: [helsteraMobs] [自检] events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true prevent-transformation-reasons=true prevent-skeleton-conversion=true prevent-block-infection=true prevent-snow-formation=true tame-breed-tame=true tame-breed-breed=true leash-unleash-leash=true leash-unleash-unleash=true prevent-leash=true prevent-rename=true prevent-target=true prevent-vanilla-damage=true prevent-projectiles=true prevent-entity-explosions=true prevent-block-explosion-damage=true prevent-drowning=true prevent-fall-damage=true prevent-fire=true prevent-fire-causes=true prevent-pickup=true prevent-item-use=true interactable=true interactable-armor-stand=true prevent-teleport=true prevent-sunburn=true prevent-other-drops=true prevent-mob-kill-drops=true prevent-mob-kill-custom-loot=true shear-trigger=true bed-enter-leave-enter=true bed-enter-leave-leave=true trade-trigger=true quit-trigger=true item-drop-break-damage=true player-actions-interact=true world-change=true jump=true swing=true fish-trigger=true',
         '[Server thread/INFO]: mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true',
-        '[Server thread/INFO]: mob-options-natural bee-stinger=true bee-attacks=1/1 zombie-conversion=true zombie-control=true zombie-protected=true passed=true',
+        '[Server thread/INFO]: mob-options-natural bee-stinger=true bee-event=synthetic bee-attacks=1/1 zombie-conversion=true zombie-control=true zombie-protected=true passed=true',
         '[Server thread/INFO]: mob-options-mount-event prevented=true allowed=true generic-prevented=true generic-allowed=true jockey-instance=true jockey-type=ZOMBIE jockey-valid=true jockey-dead=false jockey-health=20.0 jockey-vehicle=none jockey-found=true jockey-found-prevent=true jockey-ticks=240 jockey-passenger-types= passed=true',
         '[Server thread/INFO]: mob-options-slime-split prevented=true allowed=true passed=true',
         '[Server thread/INFO]: pathfinder-clear probe=path_clear_probe found=true reachable=true started=true active-before=true accepted=true cleared=true stop-calls=1 passed=true',
@@ -422,7 +423,8 @@ try {
             'importedServerConditions',
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
-            'importedMaterialCooldownCondition', 'importedItemRechargingCondition')) {
+            'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
+            'beeStingerLossImported')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -562,7 +564,11 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'playerActions').status -eq 'passed') 'player action trigger probe'
     Assert-True (($report.probes | Where-Object id -eq 'fishTrigger').status -eq 'passed') 'fish trigger probe'
     Assert-True (($report.probes | Where-Object id -eq 'creeperNaturalFuse').status -eq 'passed') 'natural Creeper fuse probe'
-    Assert-True (($report.probes | Where-Object id -eq 'mobOptionsNatural').status -eq 'passed') 'natural Bee/Zombie probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mobOptionsNatural').status -eq 'passed') 'synthetic Bee attack event and Zombie conversion probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mobOptionsNatural').observations[0] -match 'bee-event=synthetic') 'combined Mob Options probe labels the Bee event as synthetic'
+    Assert-True (($report.probes | Where-Object id -eq 'beeStingerLossImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'beeStingerLossImported').observations[0] -match
+        '^bee-stinger-loss-imported result=true imported=true protected-option=true control-option=false protected-event=true control-event=true protected-restored=true control-retained=true event=synthetic$') 'imported Bee stinger option requires the synthetic production event path and inverse control'
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsMountEvent').status -eq 'passed') 'jockey mount event probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsSlimeSplit').status -eq 'passed') 'slime split option probe'
     Assert-True (($report.probes | Where-Object id -eq 'custom-menu-player-workflow').status -eq 'passed') 'menu client workflow probe'
@@ -867,6 +873,14 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogNaturalMobOptions = @($fullCatalogReport.probes | Where-Object id -eq 'mobOptionsNatural')
+    if ($fullCatalogNaturalMobOptions.Count -ne 1) {
+        throw 'Synthetic full catalog report must contain mobOptionsNatural.'
+    }
+    $fullCatalogNaturalMobOptions[0].observations = @(
+        $fullCatalogNaturalMobOptions[0].observations | ForEach-Object {
+            $_ -replace 'bee-stinger=true ', 'bee-stinger=true bee-event=synthetic '
+        })
     $fullCatalogReport.expectedProbeIds += 'importedIsChildCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedIsChildCondition'; status = 'passed'; observations = @('skill-actions is-child-import-condition=true adult-parent-positive=true adult-not-baby=true unrelated-baby-not-child=true baby-positive=true')
@@ -929,6 +943,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'beeOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'beeOptionsImported'; status = 'passed'; observations = @('bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'beeStingerLossImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'beeStingerLossImported'; status = 'passed'; observations = @('bee-stinger-loss-imported result=true imported=true protected-option=true control-option=false protected-event=true control-event=true protected-restored=true control-retained=true event=synthetic')
     }
     $fullCatalogHorseOptions = @($fullCatalogReport.probes | Where-Object id -eq 'horseOptionsImported')
     if ($fullCatalogHorseOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain horseOptionsImported.' }
@@ -1605,10 +1623,17 @@ try {
     $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'skillTreeQueueSnapshot' })
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $missingQueueRejected = $false
+    $missingQueueFailure = ''
     try {
         & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
             -RequireTargetPaperVersion -RequireFullReleaseCatalog
-    } catch { $missingQueueRejected = $_.Exception.Message -match 'skillTreeQueueSnapshot' }
+    } catch {
+        $missingQueueFailure = $_.Exception.Message
+        $missingQueueRejected = $missingQueueFailure -match 'skillTreeQueueSnapshot'
+    }
+    if (-not $missingQueueRejected) {
+        throw "Queue snapshot negative test failed for an unexpected reason: $missingQueueFailure"
+    }
     Assert-True $missingQueueRejected 'full release gate rejects missing queue snapshot evidence'
     $fullCatalogReport.expectedProbeIds += 'skillTreeQueueSnapshot'
     $fullCatalogReport.probes += [pscustomobject]@{

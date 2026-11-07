@@ -2,19 +2,21 @@
 
 ## MythicMobs Parity Development Status (2026-11-07)
 
-Latest strict fixture `srv-paper-bee-options-strict-20261107-r1` passes all
-386 release probes (367 passed, 19 expected rejections, zero incomplete) on
-Paper 1.21.1-133. It imports Bee `HasNectar: true` and `HasStung: false`
-through production spawning and reads them against an inverse control. Report:
-`tools/paper-integration/reports/paper-1.21.1-bee-options-strict-20261107-r1.json`
-(SHA-256 `4bed065ab26dbdabca9e511b4548399be2dec636424962d24a96fda5f10a6528`).
+Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r1` passes all
+387 release probes (368 passed, 19 expected rejections, zero incomplete) on
+Paper 1.21.1-133. It verifies imported Bee nectar/stung fields and
+`PreventStingerLoss` against inverse controls through production spawning. The
+stinger probe dispatches a synthetic Bukkit attack event; it verifies the
+production event listener, not a natural Bee AI attack. Report:
+`tools/paper-integration/reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r1.json`
+(SHA-256 `48a548ef6b654715ba1233a89840de0f72c136256523fc393ddd32908a99e597`).
 Compressed server log SHA-256:
-`036ecf01a635ef856567f895918592e29597245bfa7c4fe67d0fe262b5c80a8c`.
+`c1f63894797c25621927ddb4ccab0add07ea1f962254daf59eaa0c0128eb7c27`.
 Client log archive SHA-256:
-`3bb848f8e671f62b0c5b5c70fc3995fc52f4cdec82870eddaa58c09d61080644`.
+`e7beffcfec3282265d50e237e1b787433f68192a8bafb31711eb7cbee4ecfdef`.
 Plugin SHA-256:
-`45efee36b1040d838f630961b7df21fc08301130044aeb83e91402bb9d3b21d4`.
-Latest strict report has 386 probes, zero incomplete.
+`a160f678fbeb42a2df3bb877b972ff99b3abb792dde9d6785b416ab539ac8e4b`.
+Latest strict report has 387 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-horse-options-strict-20261107-r1` passes
 all 385 release probes (366 passed, 19 expected rejections, zero incomplete)
@@ -43,7 +45,7 @@ Client log archive SHA-256:
 `279d6430528ce8315c8a094f97071a9b2ef57a597b62e8e1a78ee3faa053e1d2`.
 Plugin SHA-256:
 `b8174ab89cf0a585b063da12db46e9e8859da544698f51b61a9b596f7a8c7a77`.
-Latest strict report has 386 probes, zero incomplete.
+Latest strict report has 387 probes, zero incomplete.
 
 This compatibility effort is still in progress on Paper 1.21.1. The detailed audit is tracked in [MYTHICMOBS_PARITY_MATRIX.md](MYTHICMOBS_PARITY_MATRIX.md), and runtime evidence is tracked in [tools/paper-integration/STARTUP_EVIDENCE.md](tools/paper-integration/STARTUP_EVIDENCE.md).
 
@@ -68,7 +70,7 @@ and variant-specific natural DropTables. Report:
 `tools/paper-integration/reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json`.
 Plugin SHA-256:
 `fd72793b1e8a9aa8b62bc8d7a354dfaf1e36208f874e81fc37f10da1dadca9f5`.
-Latest strict report has 386 probes, zero incomplete.
+Latest strict report has 387 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-mythic-random-pool-strict-20261106-r1`
 passed 380 release probes (361 passed, 19 expected rejections, zero
@@ -676,7 +678,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-bee-options-strict-20261107-r1` has 386 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r1` has 387 probes, zero incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -685,15 +687,15 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 ### Current Development Goals
 
-This is a partial parity release. The matrix currently has `38`
+This is a partial parity release. The matrix currently has `37`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-07). The full remaining work is:
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 504 cited IDs; 414 report files; 4 directories
-   without reports; 86 missing directories; 179 archived release reports. The
+   Current fixture inventory: 505 cited IDs; 415 report files; 4 directories
+   without reports; 86 missing directories; 180 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -863,7 +865,7 @@ the entire MythicMobs feature catalog.
 - Mythic `Options.Size` migrates positive integer ranges such as `2-5`/`2to5` to spawn-time randomized Slime/MagmaCube/Phantom sizes; fixed sizes remain unchanged and invalid ranges stay visible with migration warnings. Official Paper 1.21.1-133 strict evidence sampled the production Slime option path 64 times within inclusive bounds `2..5`.
 - Migration runtime contract audit now binds the canonical conditions and mechanics asserted by the importer tests through the real `SkillService`; missing runtime registrations fail `MigrationRuntimeConditionContractTest` instead of remaining a report-only mapping.
 - Mob Options, Spawners, Random Spawn, Audience, Custom Menu, SkillTree, and AI have focused Paper or unit evidence recorded in the parity matrix.
-- Exploratory Paper r55 now records natural Creeper fuse, Bee stinger restoration, Zombie conversion prevention, and jockey mount-event probes as passed; strict Paper 1.21.1 evidence and natural AI jockey selection remain open.
+- Exploratory Paper r55 records Creeper fuse, synthetic Bee attack-event stinger restoration, Zombie conversion prevention, and jockey mount-event probes as passed; the strict Paper 1.21.1 fixture now verifies imported `PreventStingerLoss` through the same synthetic event path. Natural Bee AI attack and natural AI jockey selection remain unverified.
 - AI selector core is represented by a typed priority/`clear` plan with core goal/target aliases, relation/faction target resolution, conditional selectors, native `Mob#setTarget` synchronization, and an exploratory Paper `ai-selector-core` probe. Paper 1.21.1 release evidence is still required.
 - Exploratory Paper 1.21.11 r126 records `aiPriority=passed` and `aiPriorityTargets=passed` after the self-test revives and protects the online player before arbitration; `stateConditions=passed` covers real flying/sneaking/gliding state. The historical client Shield-use gap is closed by strict Paper r27, which records `stateBlocking=passed` from a real Mineflayer Shield-use window.
 - Exploratory Paper 1.21.11 r127 records independent `itemPickup=passed` and `environmentalDamage=passed` probes after isolating the managed player from earlier natural damage and binding a dedicated no-attacker damage profile.

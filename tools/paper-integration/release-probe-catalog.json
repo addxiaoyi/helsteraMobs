@@ -113,6 +113,11 @@
       "requiredObservationPattern": "^bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true$"
     },
     {
+      "id": "beeStingerLossImported",
+      "status": "passed",
+      "requiredObservationPattern": "^bee-stinger-loss-imported result=true imported=true protected-option=true control-option=false protected-event=true control-event=true protected-restored=true control-retained=true event=synthetic$"
+    },
+    {
       "id": "biomeCondition",
       "status": "passed"
     },
@@ -951,7 +956,8 @@
     },
     {
       "id": "mobOptionsNatural",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationContains": "bee-event=synthetic"
     },
     {
       "id": "mobOptionsSlimeSplit",
