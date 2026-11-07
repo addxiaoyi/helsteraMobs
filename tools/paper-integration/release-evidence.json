@@ -1,5 +1,16 @@
 [
   {
+    "fixtureId": "srv-paper-bee-anger-strict-20261107-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-bee-anger-strict-20261107-r1.json",
+    "reportSha256": "077d1891e145fc3d21c33c625277462aaadb6bc301534f271f46513ca97cd719",
+    "log": "tools/paper-integration/reports/paper-1.21.1-bee-anger-strict-20261107-r1.log.gz",
+    "logSha256": "7b05c0f5cb30b0045d8dc246fec4814a0b26e6cc088a85e04e814830c385e7f2",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-bee-anger-strict-20261107-r1-client-logs.tar.gz",
+    "clientLogSha256": "2de1363123fc0e8d19b571f41d8815d9b9ddd937b9bb6e942cb302411859fd38",
+    "pluginSha256": "99b51d080e359cbe8524dd22de76e94696673a32e8c5b6750085862fbd92f2e9",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-prevent-sunburn-strict-20261107-r4",
     "report": "tools/paper-integration/reports/paper-1.21.1-prevent-sunburn-strict-20261107-r4.json",
     "reportSha256": "7dcdb9a10f0a5a62388f9578db3fd9d88d4417cea8e7ffb44dcce675203e3bbc",

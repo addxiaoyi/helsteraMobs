@@ -100,6 +100,7 @@ $probeSpecs = [ordered]@{
     creeper = 'creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true'
     bee = 'bee-options result=true'
     beeOptionsImported = 'bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true'
+    beeAngerImported = 'bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0'
     beeStingerLossImported = 'bee-stinger-loss-imported result=true imported=true target-entity=ZOMBIE target-ai=false target-invulnerable=false target-resistance-amplifier=3 protected-option=true control-option=false protected-attacks=[1-9][0-9]* control-attacks=[1-9][0-9]* protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=0 control-cancelled=0 protected-restored=true control-retained=true protected-near=true control-near=true trigger=entity-target-api event=native-ai'
     entitySizeRange = 'entity-size-range result=true samples=64 configured=2\.\.5 slime=[2-5]\.\.[2-5] magma-cube=[2-5]\.\.[2-5] phantom=[2-5]\.\.[2-5] imported=true'
     reinforcementsChanceOptions = 'reinforcements-chance-options result=true imported=true applied=true base=0\.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true'

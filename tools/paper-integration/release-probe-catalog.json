@@ -113,6 +113,11 @@
       "requiredObservationPattern": "^bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true$"
     },
     {
+      "id": "beeAngerImported",
+      "status": "passed",
+      "requiredObservationPattern": "^bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0$"
+    },
+    {
       "id": "beeStingerLossImported",
       "status": "passed",
       "requiredObservationPattern": "^bee-stinger-loss-imported result=true imported=true target-entity=ZOMBIE target-ai=false target-invulnerable=false target-resistance-amplifier=3 protected-option=true control-option=false protected-attacks=[1-9][0-9]* control-attacks=[1-9][0-9]* protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=0 control-cancelled=0 protected-restored=true control-retained=true protected-near=true control-near=true trigger=entity-target-api event=native-ai$"

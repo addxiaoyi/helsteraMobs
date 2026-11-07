@@ -38,14 +38,24 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-prevent-sunburn-strict-20261107-r4` passed all
-388 probes (369 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. It imports `Options.PreventSunburn` against an inverse
-control through production spawning. At clear-weather midday, two native
-sunlight events on the protected Zombie were cancelled; the control event was
-uncancelled and retained 132 fire ticks. Both entities ticked 40 times within
-14 blocks of an online player, and the probe restored world state and removed
-temporary entities/config. Report:
+Latest strict fixture `srv-paper-bee-anger-strict-20261107-r1` passed all
+389 probes (370 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. It imports Bee `Options.Anger: 1200` through the production
+mob path and reads back 1200 anger ticks; the inverse control remains at 0.
+Report: `reports/paper-1.21.1-bee-anger-strict-20261107-r1.json`;
+server log: `reports/paper-1.21.1-bee-anger-strict-20261107-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-bee-anger-strict-20261107-r1-client-logs.tar.gz`.
+Report SHA-256: `077d1891e145fc3d21c33c625277462aaadb6bc301534f271f46513ca97cd719`;
+server log SHA-256: `7b05c0f5cb30b0045d8dc246fec4814a0b26e6cc088a85e04e814830c385e7f2`;
+client log SHA-256: `2de1363123fc0e8d19b571f41d8815d9b9ddd937b9bb6e942cb302411859fd38`;
+plugin SHA-256: `99b51d080e359cbe8524dd22de76e94696673a32e8c5b6750085862fbd92f2e9`.
+
+Previous strict fixture `srv-paper-prevent-sunburn-strict-20261107-r4` passed
+388 probes (369 passed, 19 expected rejections, zero failed or incomplete).
+It verifies imported `Options.PreventSunburn` against an inverse control:
+both native midday sunlight events on the protected Zombie were cancelled,
+while the control event was uncancelled with 132 fire ticks. Report:
 `reports/paper-1.21.1-prevent-sunburn-strict-20261107-r4.json`;
 server log: `reports/paper-1.21.1-prevent-sunburn-strict-20261107-r4.log.gz`;
 client logs:

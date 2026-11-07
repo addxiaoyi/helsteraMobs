@@ -2,24 +2,20 @@
 
 ## MythicMobs Parity Development Status (2026-11-07)
 
-Latest strict fixture `srv-paper-prevent-sunburn-strict-20261107-r4` passes all
-388 release probes (369 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. It verifies imported `Options.PreventSunburn`
-against an inverse control through production spawning. In clear weather at
-midday, two native sunlight events for the protected Zombie were cancelled;
-the control's event remained uncancelled with 132 fire ticks. Both entities
-ticked 40 times at distances 4 and 14 blocks from the online player, and the
-probe restored the world state and removed its temporary entities/config.
-Paper reports the protected no-fire state as `-1`. Report:
-`tools/paper-integration/reports/paper-1.21.1-prevent-sunburn-strict-20261107-r4.json`
-(SHA-256 `7dcdb9a10f0a5a62388f9578db3fd9d88d4417cea8e7ffb44dcce675203e3bbc`).
+Latest strict fixture `srv-paper-bee-anger-strict-20261107-r1` passes all
+389 release probes (370 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Mythic `Options.Anger: 1200` imports to
+Paper Bee anger ticks and reads back as 1200 on a production-spawned Bee;
+the inverse control remains at 0. Report:
+`tools/paper-integration/reports/paper-1.21.1-bee-anger-strict-20261107-r1.json`
+(SHA-256 `077d1891e145fc3d21c33c625277462aaadb6bc301534f271f46513ca97cd719`).
 Compressed server log SHA-256:
-`3ec6c62d4362ed2d95a6300b605e17990286b9bfa8249bea6e950cbe80f3c0db`.
+`7b05c0f5cb30b0045d8dc246fec4814a0b26e6cc088a85e04e814830c385e7f2`.
 Client log archive SHA-256:
-`4c4baf391ffee276d4f635163402b5719b5cf5fc663825f55d9327ba05ca0e79`.
+`2de1363123fc0e8d19b571f41d8815d9b9ddd937b9bb6e942cb302411859fd38`.
 Plugin SHA-256:
-`362e44995f813fbab99f4a8c09ca65b685183602922cf9d794b4927f7ddda69b`.
-Latest strict report has 388 probes, zero incomplete.
+`99b51d080e359cbe8524dd22de76e94696673a32e8c5b6750085862fbd92f2e9`.
+Latest strict report has 389 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` passes all
 387 release probes (368 passed, 19 expected rejections, zero failed or
@@ -698,7 +694,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-prevent-sunburn-strict-20261107-r4` has 388 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-bee-anger-strict-20261107-r1` has 389 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -714,8 +710,8 @@ This is a partial parity release. The matrix currently has `37`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 507 cited IDs; 416 report files; 4 directories
-   without reports; 87 missing directories; 183 archived release reports. The
+   Current fixture inventory: 508 cited IDs; 417 report files; 4 directories
+   without reports; 87 missing directories; 184 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -909,6 +905,7 @@ the entire MythicMobs feature catalog.
 - Mythic `Options.Interactable` maps to `mob.interactable` with the documented imported default and is enforced on managed entity interactions. Strict Paper 1.21.1-133 fixture `srv-paper-interactable-strict-20261107-r2` uses a real client to verify both cancellation and allowance; the earlier `srv-paper-integration-armor-stand-20261031` fixture verifies Armor Stand manipulation events. Importer tests cover explicit and default values; client-driven Armor Stand manipulation remains open.
 - Mythic `Options.PatrolSpawnPoint` now maps to Raider patrol target blocks, and strict Paper 1.21.1 fixture `srv-paper-integration-patrol-spawn-20261031` reads back a real Pillager patrol target at its spawn block.
 - Mythic `Options.Adult` and `Baby` use Bukkit age setters, including Zombie/Piglin-specific baby APIs. Exact tick `Age` and `AgeLock` apply to `Animals`; for ageable non-animal types such as Zombies/Husks, those two values are preserved under `entity.unsupported.Options.*` with migration warnings while `Adult`/`Baby` remain mapped. Non-Ageable values are also preserved with warnings. Importer/runtime tests cover animal, Husk, and Allay cases; strict Paper 1.21.1-133 fixture `srv-paper-age-options-strict-20261105-r3` records `age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true` on real Sheep and Zombie entities. Other Mob Options remain incomplete.
+- Mythic Bee `Options.Anger` maps non-negative integer tick values to `entity.bee-anger` and Paper `Bee#setAnger`. Other entity types and invalid values remain preserved with migration warnings; importer/runtime tests cover both paths. Strict Paper fixture `srv-paper-bee-anger-strict-20261107-r1` verifies 1200 ticks against a zero-anger Bee control through production spawning.
 - Official Armor Stand options `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` now map through the migration/runtime path; strict Paper 1.21.1 fixture `srv-paper-integration-armor-options-20261031-r3` reads back the production can-move/can-tick state.
 - Official Armor Stand item options `ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`, `ItemHead`, and `ItemLegs` now resolve through the existing ItemStack/custom-item path; strict fixture `srv-paper-integration-armor-options-20261031-r3` reads back all six equipment slots.
 - Mythic `Options.Saddled` now applies through Paper `Steerable` and `AbstractHorse` APIs; strict fixture `srv-paper-integration-saddled-20261031-r2` reads back a real Horse saddle.

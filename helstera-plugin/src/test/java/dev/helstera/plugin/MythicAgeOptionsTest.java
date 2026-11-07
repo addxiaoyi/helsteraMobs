@@ -325,14 +325,25 @@ class MythicAgeOptionsTest {
         Map<String, Object> calls = new LinkedHashMap<>();
         var bee = proxy(Bee.class, calls);
         var options = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                bee-anger: 1200
                 has-nectar: true
                 has-stung: false
                 """));
 
         HelsteraPlugin.applyEntitySpecificOptions(bee, options);
 
+        assertEquals(1200, calls.get("setAnger"));
         assertEquals(true, calls.get("setHasNectar"));
         assertEquals(false, calls.get("setHasStung"));
+    }
+
+    @Test
+    void ignoresNegativeBeeAngerRuntimeValue() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        HelsteraPlugin.applyEntitySpecificOptions(proxy(Bee.class, calls),
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("bee-anger: -1")));
+
+        org.junit.jupiter.api.Assertions.assertFalse(calls.containsKey("setAnger"));
     }
 
     @Test
