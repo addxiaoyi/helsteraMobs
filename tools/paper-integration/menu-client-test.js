@@ -10,8 +10,11 @@ const events = [];
 let shieldTimer = null;
 let spawningDistanceWalkReady = false;
 let spawningDistanceWalkOutside = false;
+let spawningDistanceWalkClient = null;
+let spawningDistanceWalkTask = null;
 let targeterArgumentValidationComplete = false;
 let interactableProbeReady = null;
+let interactableClientProbeComplete = process.env.PAPER_INTERACTABLE_WORKFLOW !== 'true';
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`Invalid Paper port: ${rawPort}`);
@@ -22,25 +25,44 @@ const bot = mineflayer.createBot({ host, port, username: 'HelsteraTester', versi
 const guest = mineflayer.createBot({ host, port, username: 'AudienceGuest', version });
 const guestEvents = [];
 
-function waitFor(predicate, label) {
+function waitFor(predicate, label, clients = bot) {
+  const sources = Array.isArray(clients) ? clients : [clients];
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Timed out waiting for ${label}`)), timeoutMs);
+    const cleanup = () => {
+      clearTimeout(timer);
+      for (const client of sources) {
+        client.removeListener('message', check);
+        client.removeListener('windowOpen', check);
+        client.removeListener('windowClose', check);
+        client.removeListener('end', onEnd);
+        client.removeListener('error', onError);
+      }
+    };
     const check = value => {
       if (!predicate(value)) return;
-      clearTimeout(timer);
+      cleanup();
       resolve(value);
     };
-    bot.on('message', check);
-    bot.on('windowOpen', check);
-    bot.on('windowClose', check);
-    bot.on('end', reason => {
-      clearTimeout(timer);
+    const onEnd = reason => {
+      if (sources.some(client => !client.ended)) return;
+      cleanup();
       reject(new Error(`Disconnected while waiting for ${label}: ${reason}`));
-    });
-    bot.on('error', error => {
-      clearTimeout(timer);
+    };
+    const onError = error => {
+      cleanup();
       reject(new Error(`Client error while waiting for ${label}: ${error.message}`));
-    });
+    };
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Timed out waiting for ${label}`));
+    }, timeoutMs);
+    for (const client of sources) {
+      client.on('message', check);
+      client.on('windowOpen', check);
+      client.on('windowClose', check);
+      client.on('end', onEnd);
+      client.on('error', onError);
+    }
     check();
   });
 }
@@ -71,6 +93,27 @@ function packetText(value) {
   try { return JSON.stringify(value); } catch { return String(value); }
 }
 
+function observeProbeReadiness(client, text) {
+  if (text.includes('PAPER_SPAWNING_DISTANCE_WALK_READY')) {
+    spawningDistanceWalkReady = true;
+    spawningDistanceWalkClient = client;
+  }
+  if (text.includes('PAPER_SPAWNING_DISTANCE_WALK_OUTSIDE')) {
+    spawningDistanceWalkOutside = true;
+  }
+  if (text.includes('PAPER_TARGETER_ARGUMENT_VALIDATION_COMPLETE')) {
+    targeterArgumentValidationComplete = true;
+  }
+  const interactableReady = text.match(/PAPER_INTERACTABLE_READY (\d+) (\d+)/);
+  if (interactableReady) {
+    interactableProbeReady = {
+      blockedId: Number(interactableReady[1]),
+      allowedId: Number(interactableReady[2]),
+      client
+    };
+  }
+}
+
 bot.on('message', message => {
   const text = message.toString();
   events.push(`chat:${text}`);
@@ -80,22 +123,7 @@ bot.on('message', message => {
   if (text === 'PAPER_ESCAPE "quoted; radius=10" C:\\home } done') {
     console.log('PAPER_IMPORTED_ESCAPED_MESSAGE_RECEIVED exact=true');
   }
-  if (text.includes('PAPER_SPAWNING_DISTANCE_WALK_READY')) {
-    spawningDistanceWalkReady = true;
-  }
-  if (text.includes('PAPER_TARGETER_ARGUMENT_VALIDATION_COMPLETE')) {
-    targeterArgumentValidationComplete = true;
-  }
-  if (text.includes('PAPER_SPAWNING_DISTANCE_WALK_OUTSIDE')) {
-    spawningDistanceWalkOutside = true;
-  }
-  const interactableReady = text.match(/PAPER_INTERACTABLE_READY (\d+) (\d+)/);
-  if (interactableReady) {
-    interactableProbeReady = {
-      blockedId: Number(interactableReady[1]),
-      allowedId: Number(interactableReady[2])
-    };
-  }
+  observeProbeReadiness(bot, text);
 });
 bot.on('title', (message, type) => events.push(`title:${type}:${packetText(message)}`));
 bot.on('actionBar', message => events.push(`actionbar:${packetText(message)}`));
@@ -108,7 +136,11 @@ bot._client.on('set_slot', packet => events.push(
   `set-slot id=${packet.windowId} slot=${packet.slot} item=${packetText(packet.item)}`));
 bot.on('windowOpen', window => events.push(`open:${titleText(window)}`));
 bot.on('windowClose', window => events.push(`close:${titleText(window)}`));
-guest.on('message', message => guestEvents.push(`chat:${message.toString()}`));
+guest.on('message', message => {
+  const text = message.toString();
+  guestEvents.push(`chat:${text}`);
+  observeProbeReadiness(guest, text);
+});
 guest.on('error', error => guestEvents.push(`error:${error.message}`));
 
 // Keep the real player in a client-driven Shield use window while the delayed
@@ -135,13 +167,13 @@ function hasEvent(list, marker) {
 }
 
 async function runInteractableClientProbe() {
-  await waitFor(() => interactableProbeReady, 'Interactable client probe readiness');
-  const { blockedId, allowedId } = interactableProbeReady;
+  await waitFor(() => interactableProbeReady, 'Interactable client probe readiness', [bot, guest]);
+  const { blockedId, allowedId, client } = interactableProbeReady;
   if (blockedId === allowedId) throw new Error('Interactable probe reused an entity id');
 
   const interactWithOffhand = async (entityId, label) => {
-    await waitFor(() => bot.entities[entityId], `${label} entity spawn`);
-    bot._client.write('use_entity', {
+    await waitFor(() => client.entities[entityId], `${label} entity spawn`, client);
+    client._client.write('use_entity', {
       target: entityId,
       mouse: 0,
       hand: 1,
@@ -150,7 +182,7 @@ async function runInteractableClientProbe() {
     const observation = await waitFor(value => {
       const text = value?.toString?.() || '';
       return text.includes(`PAPER_INTERACTABLE_${label}_OBSERVED cancelled=`) ? text : false;
-    }, `${label} interaction result`);
+    }, `${label} interaction result`, client);
     const observedText = observation?.toString?.() || String(observation);
     const cancellation = observedText.match(/cancelled=(true|false)$/);
     if (!cancellation) {
@@ -178,8 +210,43 @@ async function runInteractableClientProbe() {
   const line = `PAPER_INTERACTABLE_CLIENT_REPORT ${JSON.stringify(report)}\n`;
   if (reportPath) fs.appendFileSync(reportPath, line, 'utf8');
   console.log(line.trim());
+  interactableClientProbeComplete = true;
   if (report.status !== 'passed') {
     throw new Error(`Interactable client observations failed: ${JSON.stringify(report)}`);
+  }
+}
+
+async function runSpawningDistanceWalk(client) {
+  try {
+    await waitFor(() => client.entity != null, 'spawning-distance client spawn', client);
+    const start = client.entity.position.clone();
+    client.creative.startFlying();
+    await client.look(0, 0, true);
+    client.setControlState('forward', true);
+    const deadline = Date.now() + 10000;
+    while (!client.ended && !spawningDistanceWalkOutside && Date.now() < deadline &&
+        client.entity.position.distanceTo(start) <= 20) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    client.setControlState('forward', false);
+    client.creative.stopFlying();
+    const displacement = client.entity.position.distanceTo(start);
+    const line = `PAPER_SPAWNING_DISTANCE_WALK displacement=${displacement.toFixed(2)} ` +
+      `outside-signal=${spawningDistanceWalkOutside}`;
+    if (reportPath) fs.appendFileSync(reportPath, `${line}\n`, 'utf8');
+    console.log(line);
+    if (displacement <= 8) {
+      if (reportPath) fs.appendFileSync(reportPath,
+        'PAPER_SPAWNING_DISTANCE_WALK_ERROR client movement stayed inside radius\n', 'utf8');
+      process.exitCode = 1;
+    }
+  } catch (error) {
+    client.setControlState('forward', false);
+    client.creative.stopFlying();
+    if (reportPath) fs.appendFileSync(reportPath,
+      `PAPER_SPAWNING_DISTANCE_WALK_ERROR ${error.message}\n`, 'utf8');
+    console.error(error.stack || error.message);
+    process.exitCode = 1;
   }
 }
 
@@ -187,6 +254,13 @@ async function run() {
   await waitFor(() => bot.entity != null, 'client spawn');
   if (process.env.PAPER_INTERACTABLE_WORKFLOW === 'true') {
     await runInteractableClientProbe();
+  }
+  if (process.env.PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW === 'true') {
+    await waitFor(() => spawningDistanceWalkReady
+      && targeterArgumentValidationComplete
+      && interactableClientProbeComplete,
+    'spawning-distance walk readiness and self-test completion', [bot, guest]);
+    spawningDistanceWalkTask = runSpawningDistanceWalk(spawningDistanceWalkClient || bot);
   }
   await new Promise((resolve, reject) => {
     const deadline = setTimeout(() => reject(new Error('Timed out waiting for guest spawn')), timeoutMs);
@@ -238,11 +312,19 @@ async function run() {
   await bot.clickWindow(26, 0, 0);
   await waitForWindowTitle('Parity Page 2');
   await bot.clickWindow(13, 0, 0);
-  await waitFor(value => value?.toString?.().includes('MENU_ALLOWED_ACTION_RAN'), 'allowed menu action');
+  await waitFor(
+    value => value?.toString?.().includes('MENU_ALLOWED_ACTION_RAN'),
+    'allowed menu action',
+    [bot, guest]
+  );
   await waitForWindowClose();
+  const actionMessageRecipient = events.some(event => event.includes('MENU_ALLOWED_ACTION_RAN'))
+    ? bot.username
+    : guestEvents.some(event => event.includes('MENU_ALLOWED_ACTION_RAN')) ? guest.username : null;
   const report = {
     status: 'passed',
     player: bot.username,
+    actionMessageRecipient,
     observations: {
       pageOne: true,
       deniedClickStayedOpen: true,
@@ -250,7 +332,8 @@ async function run() {
       pageTwo: true,
       allowedActionMessage: true,
       actionClosedInventory: true,
-      deniedActionMessageAbsent: !events.some(event => event.includes('MENU_DENIED_ACTION_RAN'))
+      deniedActionMessageAbsent: !events.concat(guestEvents)
+        .some(event => event.includes('MENU_DENIED_ACTION_RAN'))
     },
     events
   };
@@ -350,40 +433,15 @@ run().catch(error => {
 }).finally(async () => {
   // Keep the primary player online briefly after the menu assertions so the
   // server-side skill/event self-tests can finish before the fixture tears it down.
-  if (process.env.PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW === 'true' && bot.entity) {
-    try {
-      await waitFor(() => spawningDistanceWalkReady && targeterArgumentValidationComplete,
-        'server targeter and spawning-distance probe readiness');
-      const start = bot.entity.position.clone();
-      bot.creative.startFlying();
-      await bot.look(0, 0, true);
-      bot.setControlState('forward', true);
-      const deadline = Date.now() + 15000;
-      while (!bot.ended && !spawningDistanceWalkOutside && Date.now() < deadline &&
-          bot.entity.position.distanceTo(start) <= 10) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      bot.setControlState('forward', false);
-      bot.creative.stopFlying();
-      const displacement = bot.entity.position.distanceTo(start);
-      const line = `PAPER_SPAWNING_DISTANCE_WALK displacement=${displacement.toFixed(2)} ` +
-        `outside-signal=${spawningDistanceWalkOutside}`;
-      if (reportPath) fs.appendFileSync(reportPath, `${line}\n`, 'utf8');
-      console.log(line);
-      // The server marker follows authoritative Bukkit distance and removal checks.
-      if (displacement <= 8 && !spawningDistanceWalkOutside) {
-        if (reportPath) fs.appendFileSync(reportPath,
-          'PAPER_SPAWNING_DISTANCE_WALK_ERROR client movement stayed inside radius\n', 'utf8');
-        process.exitCode = 1;
-      }
-    } catch (error) {
-      bot.setControlState('forward', false);
-      bot.creative.stopFlying();
-      if (reportPath) fs.appendFileSync(reportPath,
-        `PAPER_SPAWNING_DISTANCE_WALK_ERROR ${error.message}\n`, 'utf8');
-      console.error(error.stack || error.message);
-      process.exitCode = 1;
+  if (process.env.PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW === 'true' && (bot.entity || guest.entity)) {
+    if (!spawningDistanceWalkTask) {
+      await waitFor(() => spawningDistanceWalkReady
+        && targeterArgumentValidationComplete
+        && interactableClientProbeComplete,
+      'spawning-distance walk readiness and self-test completion', [bot, guest]);
+      spawningDistanceWalkTask = runSpawningDistanceWalk(spawningDistanceWalkClient || bot);
     }
+    await spawningDistanceWalkTask;
   }
   await new Promise(resolve => setTimeout(resolve, 30000));
   if (shieldTimer) clearInterval(shieldTimer);

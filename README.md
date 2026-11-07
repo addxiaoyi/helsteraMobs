@@ -2,7 +2,24 @@
 
 ## MythicMobs Parity Development Status (2026-11-07)
 
-Latest strict fixture `srv-paper-audience-filter-negative-strict-20261107-r1`
+Latest strict fixture `srv-paper-slime-natural-strict-20261107-r10` passes all
+390 release probes (371 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Its native Bukkit damage workflow verifies
+`PreventSlimeSplit` on an imported protected Slime: the protected parent dies,
+its `SlimeSplitEvent` is cancelled, and no children are created; the inverse
+control emits an uncancelled event and creates real child Slimes. The probe
+also restores the temporary mob-spawning flags and game rule. Report:
+`tools/paper-integration/reports/paper-1.21.1-slime-natural-strict-20261107-r1.json`
+(SHA-256 `2b267ee50d929f69a93f8a8257f11c089c855e1b240e6c635fd4dc8d0ee6ae1c`).
+Compressed server log SHA-256:
+`7cfed098c088ee17ffd9d724c3f9fcd52123d23e7aa1b9ddf18a302553f78109`.
+Client log archive SHA-256:
+`6d74829591cf38ae24c50b5132c3d5f4e3bac18b15437f69e5709c02e86bfea3`.
+Plugin SHA-256:
+`a966568b9fcfb4de99c2268eccdce150be49f1fbf47fca20bd433a7e28b2edab`.
+The report has 390 probes, zero incomplete.
+
+Previous strict fixture `srv-paper-audience-filter-negative-strict-20261107-r1`
 passes all 389 release probes (370 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. Its two-client Paper workflow verifies
 negative permission filtering (`permission:!helstera.menu` excludes the
@@ -17,7 +34,7 @@ Client log archive SHA-256:
 `e6148a8360062ebb535ea6c9dec71ff5c659e6dfbc1f5e50d06d734994f7f8e2`.
 Plugin SHA-256:
 `f3e7d53ca06e9ef62d1c07425d66b0868f70d9b0ad81f02dae6b00b50477745b`.
-Latest strict report has 389 probes, zero incomplete.
+That previous strict report has 389 probes, zero incomplete.
 The archived logs redact web token query values; the isolated fixture retains
 the original run logs.
 
@@ -715,7 +732,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-audience-filter-negative-strict-20261107-r1` has 389 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-slime-natural-strict-20261107-r10` has 390 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |

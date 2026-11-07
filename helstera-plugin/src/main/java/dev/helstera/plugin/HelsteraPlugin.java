@@ -122,6 +122,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private HelsteraCommand command;
     private CustomMenuService customMenuService;
     private boolean itemEffectsWaitedForPlayer;
+    private final java.util.concurrent.atomic.AtomicBoolean targeterArgumentValidationComplete =
+            new java.util.concurrent.atomic.AtomicBoolean();
+    private final java.util.concurrent.atomic.AtomicBoolean spawningDistanceProbeRequested =
+            new java.util.concurrent.atomic.AtomicBoolean();
+    private final java.util.concurrent.atomic.AtomicBoolean spawningDistanceProbeStarted =
+            new java.util.concurrent.atomic.AtomicBoolean();
 
     private YamlConfiguration integrationsCfg;
 
@@ -1513,7 +1519,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + spawningDistanceOptionsResult + " mode=" + spawningDistanceMode
                             + " distance=" + spawningDistance);
                     if (spawningDistanceProbeId > 0) instances().despawn(spawningDistanceProbeId);
-                    scheduleSpawningDistanceRuntimeProbe();
+                    requestSpawningDistanceRuntimeProbe();
                 }
 
                 if (mobConfig("visibility_probe") != null) {
@@ -3357,6 +3363,36 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(probe, this);
         probe.timeout = getServer().getScheduler().runTaskLater(this, () -> probe.finish(), 400L);
         player.sendMessage("PAPER_INTERACTABLE_READY " + blocked.getEntityId() + " " + allowed.getEntityId());
+    }
+
+    private void requestSpawningDistanceRuntimeProbe() {
+        if (!spawningDistanceProbeRequested.compareAndSet(false, true)) return;
+        if (targeterArgumentValidationComplete.get()) {
+            startSpawningDistanceRuntimeProbe();
+            return;
+        }
+        // The targeter self-test normally completes first. Keep a delayed
+        // fallback so a missing completion signal cannot leave the requested
+        // distance probe permanently unstarted; the client still waits for
+        // the targeter marker before it moves.
+        getServer().getScheduler().runTaskLater(this, () -> {
+            if (spawningDistanceProbeRequested.compareAndSet(true, false)) {
+                startSpawningDistanceRuntimeProbe();
+            }
+        }, 200L);
+    }
+
+    private void completeTargeterArgumentValidation() {
+        targeterArgumentValidationComplete.set(true);
+        if (spawningDistanceProbeRequested.compareAndSet(true, false)) {
+            startSpawningDistanceRuntimeProbe();
+        }
+    }
+
+    private void startSpawningDistanceRuntimeProbe() {
+        if (spawningDistanceProbeStarted.compareAndSet(false, true)) {
+            scheduleSpawningDistanceRuntimeProbe();
+        }
     }
 
     private void scheduleSpawningDistanceRuntimeProbe() {
@@ -7500,6 +7536,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         if (gameModeFilterPlayer != null && gameModeFilterPlayer.isOnline()) {
                             gameModeFilterPlayer.sendMessage("PAPER_TARGETER_ARGUMENT_VALIDATION_COMPLETE");
                         }
+                        completeTargeterArgumentValidation();
                     }
                 }, 3L);
                 targetFilterBlockStates.clear();
@@ -15205,18 +15242,51 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean genericMountPrevented = protectedGenericMountEvent.isCancelled();
         boolean genericMountAllowed = !controlGenericMountEvent.isCancelled();
 
-        var protectedSlime = world.spawn(origin.clone().add(46, 0, 0), org.bukkit.entity.Slime.class);
-        var controlSlime = world.spawn(origin.clone().add(50, 0, 0), org.bukkit.entity.Slime.class);
+        var protectedSlimeLocation = origin.clone().add(46, 0, 0);
+        var controlSlimeLocation = origin.clone().add(70, 0, 0);
+        var protectedSlime = world.spawn(protectedSlimeLocation, org.bukkit.entity.Slime.class);
+        var controlSlime = world.spawn(controlSlimeLocation, org.bukkit.entity.Slime.class);
+        protectedSlime.setAI(false);
+        controlSlime.setAI(false);
+        protectedSlime.setSize(4);
+        controlSlime.setSize(4);
+        protectedSlime.setSilent(true);
+        controlSlime.setSilent(true);
+        protectedSlime.setPersistent(true);
+        controlSlime.setPersistent(true);
+        protectedSlime.setRemoveWhenFarAway(false);
+        controlSlime.setRemoveWhenFarAway(false);
         var protectedSlimeInstance = instances().bind("example/emberling", protectedSlime,
                 dev.helstera.api.instance.SpawnOptions.defaults().preventSlimeSplit(true));
         var controlSlimeInstance = instances().bind("example/emberling", controlSlime,
                 dev.helstera.api.instance.SpawnOptions.defaults());
-        var protectedSplit = new org.bukkit.event.entity.SlimeSplitEvent(protectedSlime, 3);
-        var controlSplit = new org.bukkit.event.entity.SlimeSplitEvent(controlSlime, 3);
+        var syntheticProtectedSlime = world.spawn(origin.clone().add(94, 0, 0),
+                org.bukkit.entity.Slime.class);
+        var syntheticControlSlime = world.spawn(origin.clone().add(98, 0, 0),
+                org.bukkit.entity.Slime.class);
+        syntheticProtectedSlime.setAI(false);
+        syntheticControlSlime.setAI(false);
+        syntheticProtectedSlime.setSize(4);
+        syntheticControlSlime.setSize(4);
+        var syntheticProtectedSlimeInstance = instances().bind("example/emberling", syntheticProtectedSlime,
+                dev.helstera.api.instance.SpawnOptions.defaults().preventSlimeSplit(true));
+        var syntheticControlSlimeInstance = instances().bind("example/emberling", syntheticControlSlime,
+                dev.helstera.api.instance.SpawnOptions.defaults());
+        var protectedSplit = new org.bukkit.event.entity.SlimeSplitEvent(syntheticProtectedSlime, 3);
+        var controlSplit = new org.bukkit.event.entity.SlimeSplitEvent(syntheticControlSlime, 3);
         getServer().getPluginManager().callEvent(protectedSplit);
         getServer().getPluginManager().callEvent(controlSplit);
         boolean slimeSplitPrevented = protectedSplit.isCancelled();
         boolean slimeSplitAllowed = !controlSplit.isCancelled();
+        var protectedNaturalSplitEvents = new java.util.concurrent.atomic.AtomicInteger();
+        var controlNaturalSplitEvents = new java.util.concurrent.atomic.AtomicInteger();
+        var protectedNaturalSplitCancelled = new java.util.concurrent.atomic.AtomicBoolean();
+        var controlNaturalSplitCancelled = new java.util.concurrent.atomic.AtomicBoolean(true);
+        var protectedNaturalSplitCount = new java.util.concurrent.atomic.AtomicInteger();
+        var controlNaturalSplitCount = new java.util.concurrent.atomic.AtomicInteger();
+        var slimeDamageStarted = new java.util.concurrent.atomic.AtomicBoolean();
+        Set<java.util.UUID> protectedSplitChildIds = new java.util.HashSet<>();
+        Set<java.util.UUID> controlSplitChildIds = new java.util.HashSet<>();
 
         var protectedBeeAttacks = new java.util.concurrent.atomic.AtomicInteger();
         var controlBeeAttacks = new java.util.concurrent.atomic.AtomicInteger();
@@ -15241,8 +15311,60 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     protectedConversionBlocked.set(true);
                 }
             }
+
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+            public void onNaturalSlimeSplit(org.bukkit.event.entity.SlimeSplitEvent event) {
+                if (event.getEntity().getUniqueId().equals(protectedSlime.getUniqueId())) {
+                    protectedNaturalSplitEvents.incrementAndGet();
+                    protectedNaturalSplitCancelled.set(event.isCancelled());
+                    protectedNaturalSplitCount.set(event.getCount());
+                }
+                if (event.getEntity().getUniqueId().equals(controlSlime.getUniqueId())) {
+                    controlNaturalSplitEvents.incrementAndGet();
+                    controlNaturalSplitCancelled.set(event.isCancelled());
+                    controlNaturalSplitCount.set(event.getCount());
+                }
+            }
+
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST,
+                    ignoreCancelled = true)
+            public void onProbeSlimeSpawn(org.bukkit.event.entity.EntitySpawnEvent event) {
+                if (!slimeDamageStarted.get()
+                        || !(event.getEntity() instanceof org.bukkit.entity.Slime child)
+                        || child.getSize() >= 4) return;
+                Location childLocation = child.getLocation();
+                if (childLocation.getWorld() == protectedSlimeLocation.getWorld()
+                        && childLocation.distanceSquared(protectedSlimeLocation) <= 64.0) {
+                    child.setPersistent(true);
+                    child.setRemoveWhenFarAway(false);
+                    child.setAI(false);
+                    protectedSplitChildIds.add(child.getUniqueId());
+                } else if (childLocation.getWorld() == controlSlimeLocation.getWorld()
+                        && childLocation.distanceSquared(controlSlimeLocation) <= 64.0) {
+                    child.setPersistent(true);
+                    child.setRemoveWhenFarAway(false);
+                    child.setAI(false);
+                    controlSplitChildIds.add(child.getUniqueId());
+                }
+            }
         };
         getServer().getPluginManager().registerEvents(beeProbeListener, this);
+
+        // Invoke Bukkit's real damage path so native death processing emits the
+        // SlimeSplitEvent and creates child entities in the control case.
+        boolean previousMobSpawning = Boolean.TRUE.equals(
+                world.getGameRuleValue(org.bukkit.GameRule.DO_MOB_SPAWNING));
+        boolean previousAllowMonsters = world.getAllowMonsters();
+        boolean previousAllowAnimals = world.getAllowAnimals();
+        world.setSpawnFlags(true, previousAllowAnimals);
+        if (!previousMobSpawning) {
+            world.setGameRule(org.bukkit.GameRule.DO_MOB_SPAWNING, true);
+        }
+        slimeDamageStarted.set(true);
+        protectedSlime.damage(1000.0);
+        controlSlime.damage(1000.0);
+        boolean monsterSpawningEnabled = world.getAllowMonsters()
+                && Boolean.TRUE.equals(world.getGameRuleValue(org.bukkit.GameRule.DO_MOB_SPAWNING));
 
         // Drive the same Bukkit damage path once for each Bee so the probe is
         // deterministic while still exercising the production stinger hook.
@@ -15311,8 +15433,32 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && protectedBlocked;
             boolean mountEventCompleted = jockeyEventPrevented && jockeyEventAllowed
                     && genericMountPrevented && genericMountAllowed;
-            if ((naturalCompleted && mountEventCompleted) || ticks[0] >= 240) {
+            protectedSplitChildIds.addAll(findSlimeSplitChildren(world, protectedSlimeLocation,
+                    protectedSlime.getUniqueId(), 4));
+            controlSplitChildIds.addAll(findSlimeSplitChildren(world, controlSlimeLocation,
+                    controlSlime.getUniqueId(), 4));
+            boolean protectedSlimeDead = protectedSlime.isDead() || !protectedSlime.isValid();
+            boolean controlSlimeDead = controlSlime.isDead() || !controlSlime.isValid();
+            boolean slimeNaturalPassed = protectedNaturalSplitEvents.get() > 0
+                    && protectedNaturalSplitCancelled.get()
+                    && controlNaturalSplitEvents.get() > 0
+                    && !controlNaturalSplitCancelled.get()
+                    && protectedSlimeDead && controlSlimeDead
+                    && protectedSplitChildIds.isEmpty() && !controlSplitChildIds.isEmpty();
+            boolean slimeNaturalSettled = ticks[0] >= 3
+                    && protectedNaturalSplitEvents.get() > 0
+                    && controlNaturalSplitEvents.get() > 0
+                    && protectedSlimeDead && controlSlimeDead;
+            if ((naturalCompleted && mountEventCompleted && slimeNaturalSettled) || ticks[0] >= 240) {
                 if (task[0] != null) task[0].cancel();
+                if (!previousMobSpawning) {
+                    world.setGameRule(org.bukkit.GameRule.DO_MOB_SPAWNING, false);
+                }
+                world.setSpawnFlags(previousAllowMonsters, previousAllowAnimals);
+                boolean spawnFlagsRestored = world.getAllowMonsters() == previousAllowMonsters
+                        && world.getAllowAnimals() == previousAllowAnimals
+                        && Boolean.TRUE.equals(world.getGameRuleValue(org.bukkit.GameRule.DO_MOB_SPAWNING))
+                            == previousMobSpawning;
                 getLogger().info("mob-options-natural bee-stinger=" + (beeObserved && beeRestored)
                         + " bee-event=synthetic"
                         + " bee-attacks=" + protectedBeeAttacks.get() + "/" + controlBeeAttacks.get()
@@ -15371,6 +15517,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().info("mob-options-slime-split prevented=" + slimeSplitPrevented
                         + " allowed=" + slimeSplitAllowed
                         + " passed=" + (slimeSplitPrevented && slimeSplitAllowed));
+                getLogger().info("mob-options-slime-split-natural protected-size=4 control-size=4"
+                        + " protected-event=" + (protectedNaturalSplitEvents.get() > 0)
+                        + " protected-cancelled=" + protectedNaturalSplitCancelled.get()
+                        + " protected-event-count=" + protectedNaturalSplitCount.get()
+                        + " control-event=" + (controlNaturalSplitEvents.get() > 0)
+                        + " control-cancelled=" + controlNaturalSplitCancelled.get()
+                        + " control-event-count=" + controlNaturalSplitCount.get()
+                        + " protected-dead=" + protectedSlimeDead
+                        + " control-dead=" + controlSlimeDead
+                        + " protected-children=" + protectedSplitChildIds.size()
+                        + " control-children=" + controlSplitChildIds.size()
+                        + " monster-spawning-enabled=" + monsterSpawningEnabled
+                        + " spawn-flags-restored=" + spawnFlagsRestored
+                        + " damage=api passed=" + (slimeNaturalPassed
+                                && monsterSpawningEnabled && spawnFlagsRestored));
                 org.bukkit.event.HandlerList.unregisterAll(beeProbeListener);
                 if (protectedBeeInstance != null && instances() != null) {
                     instances().despawn(protectedBeeInstance.instanceId());
@@ -15393,16 +15554,39 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 if (controlSlimeInstance != null && instances() != null) {
                     instances().despawn(controlSlimeInstance.instanceId());
                 }
+                if (syntheticProtectedSlimeInstance != null && instances() != null) {
+                    instances().despawn(syntheticProtectedSlimeInstance.instanceId());
+                }
+                if (syntheticControlSlimeInstance != null && instances() != null) {
+                    instances().despawn(syntheticControlSlimeInstance.instanceId());
+                }
                 for (var state : protectedWater) state.update(true, false);
                 for (var state : controlWater) state.update(true, false);
                 for (var entity : List.of(target, controlBee, protectedChicken, controlChicken,
                         controlJockey, protectedBee, protectedZombie, controlZombie, protectedJockey,
-                        protectedSlime, controlSlime, protectedGenericPassenger, protectedGenericMount,
+                        protectedSlime, controlSlime, syntheticProtectedSlime, syntheticControlSlime,
+                        protectedGenericPassenger, protectedGenericMount,
                         controlGenericPassenger, controlGenericMount)) {
                     if (entity != null && entity.isValid()) entity.remove();
                 }
+                for (var slime : world.getEntitiesByClass(org.bukkit.entity.Slime.class)) {
+                    if (protectedSplitChildIds.contains(slime.getUniqueId())
+                            || controlSplitChildIds.contains(slime.getUniqueId())) slime.remove();
+                }
             }
         }, 1L, 1L);
+    }
+
+    private static Set<java.util.UUID> findSlimeSplitChildren(org.bukkit.World world, Location center,
+                                                               java.util.UUID parentId, int parentSize) {
+        if (world == null || center == null) return Set.of();
+        return world.getNearbyEntities(center, 8, 5, 8).stream()
+                .filter(org.bukkit.entity.Slime.class::isInstance)
+                .map(org.bukkit.entity.Slime.class::cast)
+                .filter(slime -> !slime.getUniqueId().equals(parentId))
+                .filter(slime -> slime.isValid() && !slime.isDead() && slime.getSize() < parentSize)
+                .map(org.bukkit.entity.Entity::getUniqueId)
+                .collect(Collectors.toSet());
     }
 
     private static void fillProbeWater(Location center) {
@@ -16912,13 +17096,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
     public void onSlimeSplit(org.bukkit.event.entity.SlimeSplitEvent event) {
-        if (instances == null) return;
-        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
-        applySlimeSplitPolicy(event, instance == null ? null : instance.options());
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = instances == null
+                ? null : findInstance(event.getEntity());
+        boolean prevent = instance != null
+                ? instance.options().preventSlimeSplit()
+                : dev.helstera.api.instance.ManagedMobOptions.preventsSlimeSplit(event.getEntity());
+        applySlimeSplitPolicy(event, prevent);
+        dev.helstera.api.instance.ManagedMobOptions.clear(event.getEntity());
     }
 
     static void applySlimeSplitPolicy(org.bukkit.event.entity.SlimeSplitEvent event, SpawnOptions options) {
         if (event != null && options != null && options.preventSlimeSplit()) event.setCancelled(true);
+    }
+
+    private static void applySlimeSplitPolicy(org.bukkit.event.entity.SlimeSplitEvent event,
+                                               boolean preventSlimeSplit) {
+        if (event != null && preventSlimeSplit) event.setCancelled(true);
     }
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)

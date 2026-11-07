@@ -4,6 +4,7 @@ import dev.helstera.api.animation.AnimationOptions;
 import dev.helstera.api.event.HelsteraEventBus;
 import dev.helstera.api.event.ModelRemoveEvent;
 import dev.helstera.api.instance.InstanceManager;
+import dev.helstera.api.instance.ManagedMobOptions;
 import dev.helstera.api.instance.ModelInstance;
 import dev.helstera.api.instance.SpawnOptions;
 import dev.helstera.api.model.ModelDefinition;
@@ -64,6 +65,7 @@ public final class InstanceManagerImpl implements InstanceManager {
     public ModelInstance bind(String modelId, Entity entity, SpawnOptions options) {
         ModelDefinition def = requireModel(modelId);
         ModelInstanceImpl inst = createInstance((ModelDefinitionImpl) def, entity, options);
+        ManagedMobOptions.apply(entity, inst.options());
         inst.lastLocationSet(entity.getLocation());
         inst.spawnLocationSet(entity.getLocation());
         renderer.createVisuals(inst, entity.getLocation(), options);
@@ -125,6 +127,7 @@ public final class InstanceManagerImpl implements InstanceManager {
     public boolean despawn(int instanceId) {
         ModelInstanceImpl inst = instances.remove(instanceId);
         if (inst == null) return false;
+        ManagedMobOptions.clear(inst.entity());
         inst.despawn();
         logRemoval(inst, "manual");
         bus.post(new ModelRemoveEvent(inst, "manual"));
@@ -138,6 +141,7 @@ public final class InstanceManagerImpl implements InstanceManager {
             ModelInstanceImpl inst = it.next().getValue();
             if (inst.model().id().equalsIgnoreCase(modelId)) {
                 it.remove();
+                ManagedMobOptions.clear(inst.entity());
                 inst.despawn();
                 logRemoval(inst, "model_unload");
                 bus.post(new ModelRemoveEvent(inst, "model_unload"));
@@ -154,6 +158,7 @@ public final class InstanceManagerImpl implements InstanceManager {
             Location l = inst.location();
             if (l != null && world.equals(l.getWorld())) {
                 it.remove();
+                ManagedMobOptions.clear(inst.entity());
                 inst.despawn();
                 logRemoval(inst, "world_unload");
                 bus.post(new ModelRemoveEvent(inst, "world_unload"));
@@ -176,6 +181,9 @@ public final class InstanceManagerImpl implements InstanceManager {
             boolean baseGone = inst.entity() != null && !inst.entity().isValid();
             if (!inst.isValid() || baseGone) {
                 it.remove();
+                if (!(inst.entity() instanceof org.bukkit.entity.Slime slime && slime.isDead())) {
+                    ManagedMobOptions.clear(inst.entity());
+                }
                 if (inst.isValid()) inst.despawn();
                 logRemoval(inst, baseGone ? "base_entity_removed" : "invalid");
                 bus.post(new ModelRemoveEvent(inst, baseGone ? "base_entity_removed" : "invalid"));
