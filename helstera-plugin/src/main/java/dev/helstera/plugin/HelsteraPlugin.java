@@ -15893,13 +15893,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var permissionAttachment = player.addAttachment(this, "helstera.menu", true);
             var factionService = ai instanceof dev.helstera.ai.AiManager aiManager
                     ? aiManager.factions() : null;
+            var originalFactions = new java.util.LinkedHashMap<java.util.UUID, String>();
             try {
                 player.recalculatePermissions();
                 if (factionService != null) {
                     dev.helstera.api.behavior.Factions.install(factionService);
-                    factionService.bindInstance(player.getUniqueId(), "guards");
                     for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
-                        if (candidate != player) factionService.bindInstance(candidate.getUniqueId(), "guards");
+                        originalFactions.put(candidate.getUniqueId(), factionService.factionOf(candidate));
+                        factionService.bindInstance(candidate.getUniqueId(), "guards");
                     }
                     getLogger().info("audience-faction-setup tester=" + factionService.factionOf(player)
                             + " registry=" + (dev.helstera.api.behavior.Factions.table() == factionService));
@@ -15953,8 +15954,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var radiusIncluded = skills.bindAction("audience-message radius &dAUDIENCE_RADIUS_INCLUDED 4096");
                 var radiusExcluded = skills.bindAction("audience-message radius &dAUDIENCE_RADIUS_EXCLUDED 0.1");
                 var permissionIncluded = skills.bindAction("audience-message permission:helstera.menu &dAUDIENCE_PERMISSION_INCLUDED");
+                var permissionNegative = skills.bindAction("audience-message permission:!helstera.menu &dAUDIENCE_PERMISSION_NEGATIVE");
                 var factionIncluded = skills.bindAction("audience-message faction:guards &dAUDIENCE_FACTION_INCLUDED");
-                var factionExcluded = skills.bindAction("audience-message faction:undead &dAUDIENCE_FACTION_EXCLUDED");
+                var factionNegative = skills.bindAction("audience-message faction:-undead &dAUDIENCE_FACTION_NEGATIVE");
                 boolean messageSent = message != null && skills.runAction(message, context);
                 boolean titleSent = title != null && skills.runAction(title, context);
                 boolean actionbarSent = actionbar != null && skills.runAction(actionbar, context);
@@ -15962,8 +15964,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean radiusIncludedSent = radiusIncluded != null && skills.runAction(radiusIncluded, context);
                 boolean radiusExcludedSent = radiusExcluded != null && skills.runAction(radiusExcluded, context);
                 boolean permissionIncludedSent = permissionIncluded != null && skills.runAction(permissionIncluded, context);
+                boolean permissionNegativeSent = permissionNegative != null && skills.runAction(permissionNegative, context);
                 boolean factionIncludedSent = factionIncluded != null && skills.runAction(factionIncluded, context);
-                boolean factionExcludedSent = factionExcluded != null && skills.runAction(factionExcluded, context);
+                Player audienceGuest = getServer().getPlayerExact("AudienceGuest");
+                if (factionService != null && audienceGuest != null) {
+                    factionService.bindInstance(audienceGuest.getUniqueId(), "undead");
+                }
+                boolean factionNegativeSent = factionNegative != null && factionService != null
+                        && audienceGuest != null && skills.runAction(factionNegative, context);
                 getLogger().info("[自检] audience player=" + player.getName()
                         + " message-dispatched=" + messageSent
                         + " title-dispatched=" + titleSent
@@ -15972,18 +15980,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " radius-included-dispatched=" + radiusIncludedSent
                         + " radius-excluded-dispatched=" + radiusExcludedSent
                         + " permission-included-dispatched=" + permissionIncludedSent
+                        + " permission-negative-dispatched=" + permissionNegativeSent
                         + " faction-included-dispatched=" + factionIncludedSent
-                        + " faction-excluded-dispatched=" + factionExcludedSent);
+                        + " faction-negative-dispatched=" + factionNegativeSent);
+            } catch (Throwable t) {
+                getLogger().warning("[自检] audience 异常: " + t);
+            } finally {
                 player.removeAttachment(permissionAttachment);
                 player.recalculatePermissions();
                 if (factionService != null) {
-                    for (org.bukkit.entity.Player candidate : getServer().getOnlinePlayers()) {
-                        factionService.unbindInstance(candidate.getUniqueId());
+                    for (var entry : originalFactions.entrySet()) {
+                        factionService.bindInstance(entry.getKey(), entry.getValue());
                     }
                 }
                 dev.helstera.ai.skill.SkillExtras.audienceDiagnostic(null);
-            } catch (Throwable t) {
-                getLogger().warning("[自检] audience 异常: " + t);
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
     }

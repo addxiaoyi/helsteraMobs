@@ -279,7 +279,7 @@ try {
     ) -Encoding utf8
     Set-Content -LiteralPath (Join-Path $temp 'audience-client.stdout.log') -Value @(
         'PAPER_AUDIENCE_REPORT {"status":"passed","observations":{"message":true,"title":true,"actionbar":true,"particle":true}}',
-        'PAPER_AUDIENCE_FILTER_REPORT {"status":"passed","observations":{"radiusIncludedTester":true,"radiusIncludedGuest":true,"radiusExcludedTester":true,"radiusExcludedGuest":true,"permissionIncludedTester":true,"permissionIncludedGuest":true,"factionIncludedTester":true,"factionIncludedGuest":true,"factionExcludedTester":true,"factionExcludedGuest":true}}'
+        'PAPER_AUDIENCE_FILTER_REPORT {"status":"passed","observations":{"radiusIncludedTester":true,"radiusIncludedGuest":true,"radiusExcludedTester":true,"radiusExcludedGuest":true,"permissionIncludedTester":true,"permissionIncludedGuest":true,"permissionNegativeTesterOmitted":true,"permissionNegativeGuestIncluded":true,"factionIncludedTester":true,"factionIncludedGuest":true,"factionNegativeTesterIncluded":true,"factionNegativeGuestExcluded":true}}'
     ) -Encoding utf8
     $env:PAPER_RAW_POTION_WORKFLOW = 'true'
     $testPluginHash = 'a' * 64
@@ -318,6 +318,26 @@ try {
         $env:PAPER_WEB_RELOAD_PROBE = $oldWebProbe
         Set-Content -LiteralPath (Join-Path $logDirectory 'latest.log') -Value $lines -Encoding utf8
     }
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
+    $audienceClientLog = Join-Path $temp 'audience-client.stdout.log'
+    $validAudienceClientLines = @(Get-Content -LiteralPath $audienceClientLog -Encoding utf8)
+    $falseNegativeFilterLines = @($validAudienceClientLines | ForEach-Object {
+        $_ -replace '"permissionNegativeGuestIncluded":true', '"permissionNegativeGuestIncluded":false'
+    })
+    Set-Content -LiteralPath $audienceClientLog -Value $falseNegativeFilterLines -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
+    $falseNegativeFilterReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 |
+        ConvertFrom-Json
+    Assert-True (($falseNegativeFilterReport.probes | Where-Object id -eq 'audience-filter-delivery').status -eq 'not-observed') 'audience filter rejects an included permission-negative tester/guest result'
+    $missingNegativeFilterLines = @($validAudienceClientLines | ForEach-Object {
+        $_ -replace ',"factionNegativeGuestExcluded":true', ''
+    })
+    Set-Content -LiteralPath $audienceClientLog -Value $missingNegativeFilterLines -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
+    $missingNegativeFilterReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 |
+        ConvertFrom-Json
+    Assert-True (($missingNegativeFilterReport.probes | Where-Object id -eq 'audience-filter-delivery').status -eq 'not-observed') 'audience filter rejects a missing faction-negative client observation'
+    Set-Content -LiteralPath $audienceClientLog -Value $validAudienceClientLines -Encoding utf8
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
     $logPath = Join-Path $logDirectory 'latest.log'
     Set-Content -LiteralPath $logPath -Value ($lines -replace '12=GOLD_INGOT', '12=SPONGE') -Encoding utf8
@@ -884,6 +904,11 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogAudienceFilter = @($fullCatalogReport.probes | Where-Object id -eq 'audience-filter-delivery')
+    if ($fullCatalogAudienceFilter.Count -ne 1) {
+        throw 'Synthetic full catalog report must contain audience-filter-delivery.'
+    }
+    $fullCatalogAudienceFilter[0].observations = @('{"permissionNegativeTesterOmitted":true,"permissionNegativeGuestIncluded":true,"factionNegativeTesterIncluded":true,"factionNegativeGuestExcluded":true}')
     $fullCatalogNaturalMobOptions = @($fullCatalogReport.probes | Where-Object id -eq 'mobOptionsNatural')
     if ($fullCatalogNaturalMobOptions.Count -ne 1) {
         throw 'Synthetic full catalog report must contain mobOptionsNatural.'
@@ -1349,6 +1374,17 @@ try {
     }
     Assert-True $disabledPluginRejected 'full release catalog alone rejects a disabled plugin'
     $fullCatalogReport.pluginEnabled = $originalPluginEnabled
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $audienceFilterObservations = $fullCatalogAudienceFilter[0].observations
+    $fullCatalogAudienceFilter[0].observations = @('{"permissionNegativeTesterOmitted":true,"permissionNegativeGuestIncluded":false,"factionNegativeTesterIncluded":true,"factionNegativeGuestExcluded":true}')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badAudienceFilterRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badAudienceFilterRejected = $_.Exception.Message -match 'required observation for audience-filter-delivery' }
+    Assert-True $badAudienceFilterRejected 'full release gate rejects a false dual-client Audience exclusion observation'
+    $fullCatalogAudienceFilter[0].observations = $audienceFilterObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $endermanProbe = $fullCatalogReport.probes | Where-Object id -eq 'endermanCondition'
     $endermanObservations = $endermanProbe.observations

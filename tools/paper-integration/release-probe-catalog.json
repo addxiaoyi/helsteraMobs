@@ -60,7 +60,8 @@
     },
     {
       "id": "audience-filter-delivery",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "\"permissionNegativeTesterOmitted\":true.*\"permissionNegativeGuestIncluded\":true.*\"factionNegativeTesterIncluded\":true.*\"factionNegativeGuestExcluded\":true"
     },
     {
       "id": "audience-player-delivery",

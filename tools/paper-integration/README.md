@@ -38,7 +38,24 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-entity-flags-strict-20261107-r3` passed all
+Latest strict fixture `srv-paper-audience-filter-negative-strict-20261107-r1`
+passed all 389 probes (370 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Its two-client workflow verifies that
+`permission:!helstera.menu` excludes the permission-bearing tester and includes
+the guest, while `faction:-undead` includes the tester and excludes the guest
+bound to `undead`. Report:
+`reports/paper-1.21.1-audience-filter-negative-strict-20261107-r1.json`;
+server log: `reports/paper-1.21.1-audience-filter-negative-strict-20261107-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-audience-filter-negative-strict-20261107-r1-client-logs.tar.gz`.
+Report SHA-256: `a16283dff27ac196d2a36199718c62686d8032ee6481dfe0916f57c438458738`;
+server log SHA-256: `4b552b4b5df5f9b79c14ef73011cb5ad9eb74e2524b1a6729433f07d1b4b5030`;
+client log SHA-256: `e6148a8360062ebb535ea6c9dec71ff5c659e6dfbc1f5e50d06d734994f7f8e2`;
+plugin SHA-256: `f3e7d53ca06e9ef62d1c07425d66b0868f70d9b0ad81f02dae6b00b50477745b`.
+The archived logs redact web token query values; the source fixture logs remain
+unchanged.
+
+Previous strict fixture `srv-paper-entity-flags-strict-20261107-r3` passed all
 389 probes (370 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. It imports Wolf `Tamed`/`Angry`, Zombified Piglin `Angry`,
 and Pillager `PatrolLeader`/`PatrolSpawnPoint` through production spawning and

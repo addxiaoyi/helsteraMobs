@@ -2,7 +2,26 @@
 
 ## MythicMobs Parity Development Status (2026-11-07)
 
-Latest strict fixture `srv-paper-entity-flags-strict-20261107-r3` passes all
+Latest strict fixture `srv-paper-audience-filter-negative-strict-20261107-r1`
+passes all 389 release probes (370 passed, 19 expected rejections, zero failed
+or incomplete) on Paper 1.21.1-133. Its two-client Paper workflow verifies
+negative permission filtering (`permission:!helstera.menu` excludes the
+permission-bearing tester and includes the guest) and negative faction
+filtering (`faction:-undead` includes the tester and excludes the undead guest),
+alongside the existing positive filters. Report:
+`tools/paper-integration/reports/paper-1.21.1-audience-filter-negative-strict-20261107-r1.json`
+(SHA-256 `a16283dff27ac196d2a36199718c62686d8032ee6481dfe0916f57c438458738`).
+Compressed server log SHA-256:
+`4b552b4b5df5f9b79c14ef73011cb5ad9eb74e2524b1a6729433f07d1b4b5030`.
+Client log archive SHA-256:
+`e6148a8360062ebb535ea6c9dec71ff5c659e6dfbc1f5e50d06d734994f7f8e2`.
+Plugin SHA-256:
+`f3e7d53ca06e9ef62d1c07425d66b0868f70d9b0ad81f02dae6b00b50477745b`.
+Latest strict report has 389 probes, zero incomplete.
+The archived logs redact web token query values; the isolated fixture retains
+the original run logs.
+
+Previous strict fixture `srv-paper-entity-flags-strict-20261107-r3` passed all
 389 release probes (370 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. It verifies imported `Tamed` and `Angry` on a
 real Wolf, `Angry` on a Zombified Piglin, and `PatrolLeader` /
@@ -17,7 +36,7 @@ Client log archive SHA-256:
 `9c0e10957d681ca11040c8f614e493967c4a1da21b1a51ed6d1453352f70b073`.
 Plugin SHA-256:
 `dfa06ca836ad0d177962b3ee553197ad41c0989942c0637aafb4fe044015da28`.
-Latest strict report has 389 probes, zero incomplete.
+That previous strict report has 389 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-bee-stinger-loss-strict-20261107-r6` passes all
 387 release probes (368 passed, 19 expected rejections, zero failed or
@@ -696,7 +715,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-entity-flags-strict-20261107-r3` has 389 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-audience-filter-negative-strict-20261107-r1` has 389 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -712,8 +731,8 @@ This is a partial parity release. The matrix currently has `37`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 509 cited IDs; 418 report files; 4 directories
-   without reports; 87 missing directories; 185 archived release reports. The
+   Current fixture inventory: 510 cited IDs; 419 report files; 4 directories
+   without reports; 87 missing directories; 186 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

@@ -1,6 +1,24 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-entity-flags-strict-20261107-r3` passed the full
+Latest fixture `srv-paper-audience-filter-negative-strict-20261107-r1` passed
+the full strict gate on Paper 1.21.1-133: 389 registered probes, 370 passed,
+19 expected rejections, and zero failed or incomplete. A two-client workflow
+verified permission exclusion (`permission:!helstera.menu` omits the
+permission-bearing tester and includes the guest) and faction exclusion
+(`faction:-undead` includes the tester and omits the guest assigned to
+`undead`), alongside positive permission/faction and radius controls. Report:
+[paper-1.21.1-audience-filter-negative-strict-20261107-r1.json](reports/paper-1.21.1-audience-filter-negative-strict-20261107-r1.json), SHA-256:
+`a16283dff27ac196d2a36199718c62686d8032ee6481dfe0916f57c438458738`.
+Compressed server log SHA-256:
+`4b552b4b5df5f9b79c14ef73011cb5ad9eb74e2524b1a6729433f07d1b4b5030`.
+Client log archive SHA-256:
+`e6148a8360062ebb535ea6c9dec71ff5c659e6dfbc1f5e50d06d734994f7f8e2`.
+Plugin SHA-256:
+`f3e7d53ca06e9ef62d1c07425d66b0868f70d9b0ad81f02dae6b00b50477745b`.
+Archived logs replace web token query values with `[REDACTED]`; original
+fixture logs are unchanged.
+
+Previous fixture `srv-paper-entity-flags-strict-20261107-r3` passed the full
 strict gate on Paper 1.21.1-133: 389 registered probes, 370 passed, 19
 expected rejections, and zero failed or incomplete. Production import and
 spawning verified `Tamed`/`Angry` on Wolf, `Angry` on Zombified Piglin, and
