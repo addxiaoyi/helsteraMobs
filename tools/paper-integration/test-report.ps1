@@ -202,6 +202,7 @@ try {
         '[Server thread/INFO]: prevent-sunburn-natural imported=true mapped=true protected-option=true control-option=false daylight=true weather-clear=true observer-present=true protected-player-distance=7 control-player-distance=15 sky-exposed=true protected-ai=true control-ai=true protected-age-ticks=90 control-age-ticks=110 protected-events=2 protected-cancelled=2 protected-fire-ticks=0 control-events=1 control-cancelled=0 control-fire-ticks=154 elapsed-ticks=40 restored=true passed=true',
         '[Server thread/INFO]: mob-options-mount-event prevented=true allowed=true generic-prevented=true generic-allowed=true jockey-instance=true jockey-type=ZOMBIE jockey-valid=true jockey-dead=false jockey-health=20.0 jockey-vehicle=none jockey-found=true jockey-found-prevent=true jockey-ticks=240 jockey-passenger-types= passed=true',
         '[Server thread/INFO]: mob-options-slime-split prevented=true allowed=true passed=true',
+        '[Server thread/INFO]: mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=4 control-event=true control-cancelled=false control-event-count=3 protected-dead=true control-dead=true protected-children=0 control-children=3 monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true',
         '[Server thread/INFO]: pathfinder-clear probe=path_clear_probe found=true reachable=true started=true active-before=true accepted=true cleared=true stop-calls=1 passed=true',
         '[Server thread/INFO]: ai-priority-probe attack-first=true flee-first=true attack-state=ATTACK flee-state=FLEE',
         '[Server thread/INFO]: ai-priority-detail probe=priority_attack_probe target-assigned=true target-valid=true health-ratio=0.5 attack-priority=0 flee-priority=1 selector=mode=PLAYERS can-attack=true can-chase=true can-flee=true target-matches=true',
@@ -602,6 +603,9 @@ try {
         '^bee-stinger-loss-imported result=true imported=true target-entity=ZOMBIE target-ai=false target-invulnerable=false target-resistance-amplifier=3 protected-option=true control-option=false protected-attacks=[1-9][0-9]* control-attacks=[1-9][0-9]* protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=0 control-cancelled=0 protected-restored=true control-retained=true protected-near=true control-near=true trigger=entity-target-api event=native-ai$') 'imported Bee stinger option requires real AI attacks and an inverse control'
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsMountEvent').status -eq 'passed') 'jockey mount event probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsSlimeSplit').status -eq 'passed') 'slime split option probe'
+    $naturalSlimeSplit = @($report.probes | Where-Object id -eq 'mobOptionsSlimeSplitNatural')
+    Assert-True ($naturalSlimeSplit.Count -eq 1 -and $naturalSlimeSplit[0].status -eq 'passed' -and
+        $naturalSlimeSplit[0].observations[0] -match '^mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=[1-9][0-9]* control-event=true control-cancelled=false control-event-count=[1-9][0-9]* protected-dead=true control-dead=true protected-children=0 control-children=[1-9][0-9]* monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true$') 'natural Slime split requires native death, cancelled protected event, real control children, and restored spawn flags'
     Assert-True (($report.probes | Where-Object id -eq 'custom-menu-player-workflow').status -eq 'passed') 'menu client workflow probe'
     Assert-True (($report.probes | Where-Object id -eq 'audience-player-delivery').status -eq 'passed') 'audience client workflow probe'
     Assert-True (($report.probes | Where-Object id -eq 'audience-filter-delivery').status -eq 'passed') 'audience filter workflow probe'
@@ -904,6 +908,10 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogReport.expectedProbeIds += 'mobOptionsSlimeSplitNatural'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mobOptionsSlimeSplitNatural'; status = 'passed'; observations = @('mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=4 control-event=true control-cancelled=false control-event-count=3 protected-dead=true control-dead=true protected-children=0 control-children=3 monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true')
+    }
     $fullCatalogAudienceFilter = @($fullCatalogReport.probes | Where-Object id -eq 'audience-filter-delivery')
     if ($fullCatalogAudienceFilter.Count -ne 1) {
         throw 'Synthetic full catalog report must contain audience-filter-delivery.'
@@ -2954,6 +2962,26 @@ try {
     Assert-True $missingImportedBurningRejected 'full release gate rejects missing imported Burning evidence'
     $fullCatalogReport.expectedProbeIds += 'importedBurningCondition'
     $fullCatalogReport.probes += $importedBurningProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $naturalSlimeSplitProbe = $fullCatalogReport.probes | Where-Object id -eq 'mobOptionsSlimeSplitNatural'
+    $naturalSlimeSplitObservations = $naturalSlimeSplitProbe.observations
+    foreach ($invalidSlimeSplitObservation in @(
+            'mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=4 control-event=true control-cancelled=false control-event-count=3 protected-dead=true control-dead=true protected-children=1 control-children=3 monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true',
+            'mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=4 control-event=true control-cancelled=false control-event-count=3 protected-dead=true control-dead=true protected-children=0 control-children=0 monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true')) {
+        $naturalSlimeSplitProbe.observations = @($invalidSlimeSplitObservation)
+        $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+        $invalidSlimeSplitRejected = $false
+        $invalidSlimeSplitError = ''
+        try {
+            & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+                -RequireTargetPaperVersion -RequireFullReleaseCatalog
+        } catch {
+            $invalidSlimeSplitError = $_.Exception.Message
+            $invalidSlimeSplitRejected = $invalidSlimeSplitError -match 'required observation for mobOptionsSlimeSplitNatural'
+        }
+        Assert-True $invalidSlimeSplitRejected "full release gate rejects invalid natural Slime split evidence: $invalidSlimeSplitError"
+    }
+    $naturalSlimeSplitProbe.observations = $naturalSlimeSplitObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'skillTeleportCoordinates' })
     $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'skillTeleportCoordinates' })

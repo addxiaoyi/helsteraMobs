@@ -971,6 +971,11 @@
       "status": "passed"
     },
     {
+      "id": "mobOptionsSlimeSplitNatural",
+      "status": "passed",
+      "requiredObservationPattern": "^mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=[1-9][0-9]* control-event=true control-cancelled=false control-event-count=[1-9][0-9]* protected-dead=true control-dead=true protected-children=0 control-children=[1-9][0-9]* monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true$"
+    },
+    {
       "id": "mobPickupOption",
       "status": "passed"
     },

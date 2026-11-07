@@ -1,6 +1,22 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-audience-filter-negative-strict-20261107-r1` passed
+Latest fixture `srv-paper-slime-natural-strict-20261107-r10` passed the full
+strict gate on Paper 1.21.1-133: 390 registered probes, 371 passed, 19
+expected rejections, and zero failed or incomplete. The imported protected
+Slime was killed through Bukkit's real damage path; its native
+`SlimeSplitEvent` was observed and cancelled, while an inverse control emitted
+an uncancelled event and created real child Slimes. Temporary mob-spawning
+flags and the game rule were restored before cleanup. Report:
+[paper-1.21.1-slime-natural-strict-20261107-r1.json](reports/paper-1.21.1-slime-natural-strict-20261107-r1.json), SHA-256:
+`2b267ee50d929f69a93f8a8257f11c089c855e1b240e6c635fd4dc8d0ee6ae1c`.
+Compressed server log SHA-256:
+`7cfed098c088ee17ffd9d724c3f9fcd52123d23e7aa1b9ddf18a302553f78109`.
+Client log archive SHA-256:
+`6d74829591cf38ae24c50b5132c3d5f4e3bac18b15437f69e5709c02e86bfea3`.
+Plugin SHA-256:
+`a966568b9fcfb4de99c2268eccdce150be49f1fbf47fca20bd433a7e28b2edab`.
+
+Previous fixture `srv-paper-audience-filter-negative-strict-20261107-r1` passed
 the full strict gate on Paper 1.21.1-133: 389 registered probes, 370 passed,
 19 expected rejections, and zero failed or incomplete. A two-client workflow
 verified permission exclusion (`permission:!helstera.menu` omits the

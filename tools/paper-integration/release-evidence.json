@@ -1,5 +1,16 @@
 [
   {
+    "fixtureId": "srv-paper-slime-natural-strict-20261107-r10",
+    "report": "tools/paper-integration/reports/paper-1.21.1-slime-natural-strict-20261107-r1.json",
+    "reportSha256": "2b267ee50d929f69a93f8a8257f11c089c855e1b240e6c635fd4dc8d0ee6ae1c",
+    "log": "tools/paper-integration/reports/paper-1.21.1-slime-natural-strict-20261107-r1.log.gz",
+    "logSha256": "7cfed098c088ee17ffd9d724c3f9fcd52123d23e7aa1b9ddf18a302553f78109",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-slime-natural-strict-20261107-r1-client-logs.tar.gz",
+    "clientLogSha256": "6d74829591cf38ae24c50b5132c3d5f4e3bac18b15437f69e5709c02e86bfea3",
+    "pluginSha256": "a966568b9fcfb4de99c2268eccdce150be49f1fbf47fca20bd433a7e28b2edab",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-audience-filter-negative-strict-20261107-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-audience-filter-negative-strict-20261107-r1.json",
     "reportSha256": "a16283dff27ac196d2a36199718c62686d8032ee6481dfe0916f57c438458738",
