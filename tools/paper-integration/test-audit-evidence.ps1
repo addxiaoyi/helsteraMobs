@@ -195,6 +195,14 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
     }
+    $fullReport.expectedProbeIds += 'interactableClient'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'interactableClient'; status = 'passed'; observations = @('interactable-client result=true false-event=true false-cancelled=true true-event=true true-cancelled=false interactions=2')
+    }
+    $fullReport.expectedProbeIds += 'horseOptionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'horseOptionsImported'; status = 'passed'; observations = @('horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4')
+    }
     $fullReport.expectedProbeIds += 'mythicSpawnerChanceImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'mythicSpawnerChanceImported'; status = 'passed'; observations = @('mythic-spawner-chance imported=true valid-mapped=true invalid-mapped=true valid-natural=true invalid-rejected=true warning=true valid-spawned=1 invalid-spawned=0 passed=true')
@@ -267,6 +275,26 @@ try {
     if ($ageOptionsProbe.Count -ne 1) { throw 'Synthetic release report must contain ageOptions.' }
     $ageOptionsProbe[0].observations = @(
         'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true')
+    $creeperOptionsProbe = @($fullReport.probes | Where-Object id -eq 'creeper')
+    if ($creeperOptionsProbe.Count -ne 1) { throw 'Synthetic release report must contain creeper.' }
+    $creeperOptionsProbe[0].observations = @(
+        'creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true')
+    $catOptionsProbe = @($fullReport.probes | Where-Object id -eq 'cat')
+    if ($catOptionsProbe.Count -ne 1) { throw 'Synthetic release report must contain cat.' }
+    $catOptionsProbe[0].observations = @(
+        'cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED')
+    $sheepOptionsProbe = @($fullReport.probes | Where-Object id -eq 'sheep')
+    if ($sheepOptionsProbe.Count -ne 1) { throw 'Synthetic release report must contain sheep.' }
+    $sheepOptionsProbe[0].observations = @(
+        'sheep-options result=true imported=true color=RED sheared=true control-color=WHITE control-sheared=false')
+    $entitySizeRangeProbe = @($fullReport.probes | Where-Object id -eq 'entitySizeRange')
+    if ($entitySizeRangeProbe.Count -ne 1) { throw 'Synthetic release report must contain entitySizeRange.' }
+    $entitySizeRangeProbe[0].observations = @(
+        'entity-size-range result=true samples=64 configured=2..5 slime=2..5 magma-cube=2..5 phantom=2..5 imported=true')
+    $fullReport.expectedProbeIds += 'reinforcementsChanceOptions'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'reinforcementsChanceOptions'; status = 'passed'; observations = @('reinforcements-chance-options result=true imported=true applied=true base=0.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true')
+    }
     $aiSelectorCore = @($fullReport.probes | Where-Object id -eq 'aiSelectorCore')
     if ($aiSelectorCore.Count -ne 1) { throw 'Synthetic release report must contain aiSelectorCore.' }
     $aiSelectorCore[0].observations = @($aiSelectorCore[0].observations) +
@@ -279,7 +307,9 @@ try {
         'targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true target-players-specific=true target-players-disabled=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true target-flying=true ignore-flying=true target-invulnerable-disabled=true target-invulnerable-priority=true target-armorstands-disabled=true target-armorstands-priority=true target-animals-disabled=true target-animals-priority=true target-creatures-disabled=true target-creatures-priority=true target-villagers-disabled=true target-villagers-priority=true target-all=true target-creative=true ignore-creative=true target-creative-priority=true target-creative-disabled=true target-spectator=true ignore-spectator=true target-spectator-priority=true target-spectator-disabled=true')
     $locationTargeterProbe = @($fullReport.probes | Where-Object id -eq 'locationTargeterDispatch')
     if ($locationTargeterProbe.Count -ne 1) { throw 'Synthetic release report must contain locationTargeterDispatch.' }
-    $locationTargeterProbe[0].observations = @('location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true')
+    $locationTargeterProbe[0].observations = @(
+        'location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true',
+        'tracked-location-parity action=true targeter=true distance=true missing-rejected=true')
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

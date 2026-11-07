@@ -2,6 +2,7 @@ package dev.helstera.ai.skill;
 
 import dev.helstera.api.util.EntityTypeSelector;
 import dev.helstera.api.behavior.BehaviorContext;
+import dev.helstera.api.behavior.SkillTreeContext;
 import dev.helstera.api.behavior.VariableLocations;
 import dev.helstera.api.instance.ModelInstance;
 import org.bukkit.GameMode;
@@ -974,6 +975,39 @@ public final class SkillExtras {
 
     private static NumberRange rangeValue(String raw) {
         return raw == null || raw.isBlank() ? null : numberRange(List.of(raw), 0);
+    }
+
+    private static NumberRange trackedLocationRange(List<String> args) {
+        String named = null;
+        String positional = null;
+        for (String raw : args == null ? List.<String>of() : args) {
+            int equals = raw == null ? -1 : raw.indexOf('=');
+            if (equals > 0) {
+                String key = raw.substring(0, equals).trim();
+                if ((!key.equalsIgnoreCase("distance") && !key.equalsIgnoreCase("d")) || named != null) {
+                    throw new IllegalArgumentException("distance-from-tracked-location accepts one distance range");
+                }
+                named = raw.substring(equals + 1).trim();
+            } else if (positional == null) {
+                positional = raw;
+            } else {
+                throw new IllegalArgumentException("distance-from-tracked-location accepts one distance range");
+            }
+        }
+        if (named != null && positional != null) {
+            throw new IllegalArgumentException("distance-from-tracked-location accepts one distance range");
+        }
+        String expression = named == null ? positional : named;
+        NumberRange range = rangeValue(expression);
+        if (range == null || Double.isNaN(range.min()) || Double.isNaN(range.max())
+                || range.min() == Double.POSITIVE_INFINITY || range.max() == Double.NEGATIVE_INFINITY
+                || range.min() > range.max()
+                || range.max() < 0
+                || range.min() < 0 && range.min() != Double.NEGATIVE_INFINITY
+                || range.min() == Double.NEGATIVE_INFINITY && range.max() == Double.POSITIVE_INFINITY) {
+            throw new IllegalArgumentException("distance-from-tracked-location requires a finite distance range");
+        }
+        return range;
     }
 
     private static boolean keyedBoolean(List<String> args, int index, boolean fallback,
@@ -3308,6 +3342,21 @@ public final class SkillExtras {
                         return range.contains(location.distance(location.getWorld().getSpawnLocation()));
                     };
                 }),
+                Map.entry("distance-from-tracked-location", (SkillCatalog.ConditionFactory) a -> {
+                    NumberRange range = trackedLocationRange(a);
+                    return ctx -> {
+                        if (ctx == null || !ctx.instanceValid()) return false;
+                        Entity caster = ctx.instance().baseEntity().orElse(null);
+                        if (caster instanceof Player) return false;
+                        Location current = caster == null ? ctx.instance().location() : caster.getLocation();
+                        Location tracked = ctx.skillTree()
+                                .flatMap(tree -> tree.location(SkillTreeContext.MYTHIC_TRACKED_LOCATION))
+                                .orElse(null);
+                        if (current == null || tracked == null || current.getWorld() == null
+                                || current.getWorld() != tracked.getWorld()) return false;
+                        return range.contains(current.distance(tracked));
+                    };
+                }),
                 Map.entry("players-online", (SkillCatalog.ConditionFactory) a -> {
                     Comparison comparison = comparison(a, 0, ">=");
                     return ctx -> compare(org.bukkit.Bukkit.getOnlinePlayers().size(), comparison);
@@ -5266,6 +5315,21 @@ public final class SkillExtras {
                 Map.entry("location-unset", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
                     return ctx -> unsetLocation(ctx, ref);
+                }),
+                Map.entry("track-location", (SkillCatalog.ActionFactory) a -> {
+                    if (a != null && !a.isEmpty()) {
+                        throw new IllegalArgumentException("track-location accepts no arguments");
+                    }
+                    return ctx -> {
+                        if (ctx == null || !ctx.instanceValid()) return;
+                        Entity caster = ctx.instance().baseEntity().orElse(null);
+                        if (caster instanceof Player) return;
+                        Location location = ctx.targetLocation().orElseGet(() ->
+                                ctx.targetEntity().map(Entity::getLocation).orElse(null));
+                        if (location == null || location.getWorld() == null) return;
+                        ctx.skillTree().ifPresent(tree ->
+                                tree.setLocation(SkillTreeContext.MYTHIC_TRACKED_LOCATION, location));
+                    };
                 }),
                 Map.entry("branch-unlock", (SkillCatalog.ActionFactory) a -> branchUnlockAction(a, null)),
                 Map.entry("variable-location-set", (SkillCatalog.ActionFactory) a -> {

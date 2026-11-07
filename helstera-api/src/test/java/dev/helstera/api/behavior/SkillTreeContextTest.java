@@ -73,6 +73,22 @@ class SkillTreeContextTest {
     }
 
     @Test
+    void trackedLocationSurvivesSnapshotRestore() {
+        org.bukkit.World world = (org.bukkit.World) java.lang.reflect.Proxy.newProxyInstance(
+                org.bukkit.World.class.getClassLoader(), new Class<?>[]{org.bukkit.World.class},
+                (proxy, method, args) -> method.getName().equals("getName") ? "arena" : null);
+        SkillTreeContext tree = new SkillTreeContext(null, null);
+        tree.setLocation(SkillTreeContext.MYTHIC_TRACKED_LOCATION, new Location(world, 4, 5, 6));
+
+        SkillTreeContext restored = SkillTreeContext.restore(tree.snapshot(), null, null,
+                name -> name.equals("arena") ? world : null);
+        assertSame(world, restored.location(SkillTreeContext.MYTHIC_TRACKED_LOCATION)
+                .orElseThrow().getWorld());
+        assertEquals(4, restored.location(SkillTreeContext.MYTHIC_TRACKED_LOCATION)
+                .orElseThrow().getX());
+    }
+
+    @Test
     void snapshotRejectsNonPersistentVariableValues() {
         SkillTreeContext tree = new SkillTreeContext(null, null);
         tree.setVariable("object", new Object());

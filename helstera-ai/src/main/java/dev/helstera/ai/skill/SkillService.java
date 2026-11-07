@@ -1926,6 +1926,7 @@ public final class SkillService {
                     "variable-map-value-gte", "variable-map-value-lte", "variable-map-value-in-range",
                     "variable-map-value-not-in-range",
                     "variable-gte", "variable-lte", "directional-velocity", "distance-from-location",
+                    "distance-from-tracked-location",
                     "has-aura-stacks", "mythic-has-aura", "mythic-has-aura-stacks",
                     "mythic-has-aura-type", "mythic-target-has-aura", "health", "health-percent",
                     "compare-values", "score", "targets",
@@ -2090,6 +2091,8 @@ public final class SkillService {
             case "enderdragonphase", "ender-dragon-phase", "edragonphase" -> "ender-dragon-phase";
             case "distancefromspawn", "distance-from-spawn" -> "distance-from-spawn";
             case "distancefromlocation", "distance-from-location" -> "distance-from-location";
+            case "distancefromtrackedlocation", "distance-from-tracked-location", "distancefromtl" ->
+                    "distance-from-tracked-location";
             case "xdiff", "x-diff" -> "x-diff";
             case "ydiff", "y-diff" -> "y-diff";
             case "zdiff", "z-diff" -> "z-diff";
@@ -2282,6 +2285,7 @@ public final class SkillService {
             case "variablemath", "varmath" -> "var-math";
             case "setvariablelocation", "variablelocationset", "setvarloc" -> "variable-location-set";
             case "locationunset" -> "location-unset";
+            case "tracklocation", "settrackedlocation", "stl", "track-location" -> "track-location";
             case "aura", "buff", "debuff", "mythicaura" -> "mythic-aura";
             case "auraremove", "aura-remove", "mythicauraremove", "removeaura", "remove-aura",
                     "removebuff", "remove-buff", "removedebuff", "remove-debuff" -> "mythic-aura-remove";

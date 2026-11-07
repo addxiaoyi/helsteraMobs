@@ -1050,6 +1050,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                 "mob.unsupported.ExecutionAudience");
         boolean preventConversionMapped = true;
         boolean reviveHealthMapped = false;
+        boolean zombieReinforcementsMapped = false;
         if (options != null) {
             Object revive = ciGet(options, "ReviveHealth");
             if (revive instanceof Number number) {
@@ -1117,6 +1118,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "PreventSlimeSplit", "mob.prevent-slime-split");
             mapOption(options, srcFile, entries, target, "PreventBlockInfection", "mob.prevent-block-infection");
             mapOption(options, srcFile, entries, target, "PreventSnowFormation", "mob.prevent-snow-formation");
+            zombieReinforcementsMapped = mapZombieReinforcementsChance(
+                    options, srcFile, entries, target, normalizedType);
             mapAgeOptions(options, srcFile, entries, target, normalizedType);
             mapOption(options, srcFile, entries, target, "Saddled", "entity.saddled");
             mapOption(options, srcFile, entries, target, "HorseArmor", "entity.horse-armor");
@@ -1195,11 +1198,12 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "UseThreatTable", "SpawningDistance",
                     "Scale", "ShowHealth", "Silent", "NoAI",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "Gravity", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
-                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Angry", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs")) {
+                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Angry", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop")) {
                 removeIgnoreCase(leftover, mapped);
             }
             if (preventConversionMapped) removeIgnoreCase(leftover, "PreventConversion");
             if (reviveHealthMapped) removeIgnoreCase(leftover, "ReviveHealth");
+            if (zombieReinforcementsMapped) removeIgnoreCase(leftover, "ReinforcementsChance");
             removeIgnoreCase(leftover, "PreventSuicide");
             if (!leftover.isEmpty()) {
                 target.set("mob.unsupported.Options", leftover);
@@ -1817,6 +1821,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "actionbar", "title", "random-skill",
                     "signal",
                     "dot", "dot-targets",
+                    "track-location",
                     "damage-melee", "threat-add", "threat-clear", "threat-focus",
                     "message-all", "message-self", "random-message",
                     "set-global-cooldown", "gcd", "set-skill-cooldown",
@@ -2012,6 +2017,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "setvariablelocation", "variablelocationset" ->
                     variableSimpleAction("variable-location-set", trimmed);
             case "locationunset", "unsetlocation" -> variableSimpleAction("location-unset", trimmed);
+            case "tracklocation", "track-location", "settrackedlocation", "stl" ->
+                    noMechanicArguments(trimmed, brace) ? "track-location" : null;
             case "signal" -> signalAction(trimmed);
             case "dot" -> dotAction(trimmed);
             case "addthreat", "threatadd", "threat-add" ->
@@ -2242,6 +2249,26 @@ public final class MythicMobsImporter implements MigrationImporter {
     private static String preserveNamedMechanic(String name, String raw, int open) {
         int close = mechanicClose(raw, open);
         return open >= 0 && close >= open ? name + raw.substring(open, close + 1) : name;
+    }
+
+    private static boolean noMechanicArguments(String raw, int open) {
+        int suffixStart;
+        if (open >= 0) {
+            int close = mechanicClose(raw, open);
+            if (close < 0 || !raw.substring(open + 1, close).isBlank()) return false;
+            suffixStart = close + 1;
+        } else {
+            int space = raw.indexOf(' ');
+            suffixStart = space < 0 ? raw.length() : space;
+        }
+        String suffix = raw.substring(suffixStart).trim();
+        if (suffix.isEmpty()) return true;
+        for (String token : suffix.split("\\s+")) {
+            if (token.equals(">") || token.startsWith("@") || token.startsWith("?")
+                    || token.endsWith("%")) continue;
+            return false;
+        }
+        return true;
     }
 
     private static String auraMechanic(String raw) {
@@ -3902,6 +3929,53 @@ public final class MythicMobsImporter implements MigrationImporter {
         target.set(path, v instanceof ConfigurationSection ? resolved : v);
         note(entries, srcFile, "Options." + optionName, path, resolved, "mapped",
                 v instanceof ConfigurationSection ? "该 Options 项是嵌套节，helstera 侧结构不同，需人工确认" : null);
+    }
+
+    private boolean mapZombieReinforcementsChance(ConfigurationSection options, String srcFile,
+                                                  List<Map<String, Object>> entries,
+                                                  YamlConfiguration target, String normalizedType) {
+        Object raw = ciGet(options, "ReinforcementsChance");
+        if (raw == null) return false;
+        String unsupportedPath = "mob.unsupported.Options.ReinforcementsChance";
+        if (!isZombieEntityType(normalizedType)) {
+            target.set(unsupportedPath, raw);
+            note(entries, srcFile, "Options.ReinforcementsChance", unsupportedPath, raw,
+                    "unsupported", "ReinforcementsChance only applies to Zombie-family entities.", "WARN");
+            return false;
+        }
+        Double chance = null;
+        if (raw instanceof Number number) {
+            chance = number.doubleValue();
+        } else if (raw instanceof String text) {
+            try {
+                chance = Double.parseDouble(text.trim());
+            } catch (NumberFormatException ignored) {
+                // Invalid values are preserved below.
+            }
+        }
+        if (chance == null || !Double.isFinite(chance) || chance < 0 || chance > 1) {
+            target.set(unsupportedPath, raw);
+            note(entries, srcFile, "Options.ReinforcementsChance", unsupportedPath, raw,
+                    "unsupported", "ReinforcementsChance must be a finite number from 0 through 1.", "WARN");
+            return false;
+        }
+        target.set("entity.zombie-reinforcements-chance", chance);
+        note(entries, srcFile, "Options.ReinforcementsChance",
+                "entity.zombie-reinforcements-chance", chance, "mapped",
+                "Zombie reinforcement chance mapped to Paper's native spawn-reinforcements attribute.");
+        return true;
+    }
+
+    private static boolean isZombieEntityType(String normalizedType) {
+        if (normalizedType == null) return false;
+        try {
+            Class<? extends org.bukkit.entity.Entity> entityClass =
+                    org.bukkit.entity.EntityType.valueOf(normalizedType).getEntityClass();
+            return entityClass != null
+                    && org.bukkit.entity.Zombie.class.isAssignableFrom(entityClass);
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
     }
 
     private void mapAgeOptions(ConfigurationSection options, String srcFile,

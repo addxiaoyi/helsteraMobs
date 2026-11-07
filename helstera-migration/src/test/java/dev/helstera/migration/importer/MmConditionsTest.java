@@ -1391,6 +1391,25 @@ class MmConditionsTest {
     }
 
     @Test
+    void officialDistanceFromTrackedLocationMapsRangesAndAlias() {
+        assertEquals("distance-from-tracked-location 5",
+                t("?distanceFromTrackedLocation{d=5}"));
+        assertEquals("distance-from-tracked-location 2to10",
+                t("?distanceFromTL{distance=2to10}"));
+        assertTrue(translated("?distanceFromTrackedLocation{d=>5}"));
+        for (String invalid : List.of(
+                "?distanceFromTrackedLocation",
+                "?distanceFromTrackedLocation{d=NaN}",
+                "?distanceFromTrackedLocation{d=10to2}",
+                "?distanceFromTrackedLocation{d==5}",
+                "?distanceFromTrackedLocation{d=!=5}",
+                "?distanceFromTrackedLocation{d=5;distance=6}",
+                "?distanceFromTrackedLocation{d=5;unknown=true}")) {
+            assertUntranslatedPreserved(invalid);
+        }
+    }
+
+    @Test
     void officialAltitudeMapsSurfaceRangeAndMaximum() {
         assertEquals("altitude 3-5 30", t("?altitude{h=3-5}"));
         assertEquals("altitude >=0 20", t("?heightFromSurface{a=>=0;mH=20}"));

@@ -1,5 +1,93 @@
 [
   {
+    "fixtureId": "srv-paper-horse-options-strict-20261107-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-horse-options-strict-20261107-r1.json",
+    "reportSha256": "6c4c3a516d999fa409817075491db62d5d479db5b33a139672f75e4673faae6a",
+    "log": "tools/paper-integration/reports/paper-1.21.1-horse-options-strict-20261107-r1.log.gz",
+    "logSha256": "c69e91fd105f7e230ae703e8398a74334637e555a8bb9b15e7179a4e3818970a",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-horse-options-strict-20261107-r1-client-logs.tar.gz",
+    "clientLogSha256": "655667e0946236116aed9f46ec0090a2aca37b51ebd430afa389893ff0b5397d",
+    "pluginSha256": "740b24fb9990aaa7038665355e0ab153430ac26a46b37b492aa4c45523ff4016",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-sheep-options-strict-20261107-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-sheep-options-strict-20261107-r1.json",
+    "reportSha256": "eea8fd2e6462b636425882145048d0de6ed9887b43a416aa7517e6f6cb93ad14",
+    "log": "tools/paper-integration/reports/paper-1.21.1-sheep-options-strict-20261107-r1.log.gz",
+    "logSha256": "a58fe3c1c709a112ea5bcd2a7669fc8d8fdccc495b748413664f86ab86e73092",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-sheep-options-strict-20261107-r1-client-logs.tar.gz",
+    "clientLogSha256": "279d6430528ce8315c8a094f97071a9b2ef57a597b62e8e1a78ee3faa053e1d2",
+    "pluginSha256": "b8174ab89cf0a585b063da12db46e9e8859da544698f51b61a9b596f7a8c7a77",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-cat-options-strict-20261107-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-cat-options-strict-20261107-r3.json",
+    "reportSha256": "a461280efb0d311b64da172ca3fb45250c56038f2c25449ff8c7faf7b7bec096",
+    "log": "tools/paper-integration/reports/paper-1.21.1-cat-options-strict-20261107-r3.log.gz",
+    "logSha256": "00afb46346a8dbedfa10274d488f8fcf9dbf79f5e7d305d1b14d875a34cc3b7c",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-cat-options-strict-20261107-r3-client-logs.tar.gz",
+    "clientLogSha256": "34b2b2e0aec2b8ff2194993e956ba39b4314d219cc093896e756f3c5a8ae343e",
+    "pluginSha256": "5e08bb51d697fa77c885c1f5cd86eb3bca6b2a9d6da60dad7289c41f0358eddc",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-creeper-options-strict-20261107-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-creeper-options-strict-20261107-r1.json",
+    "reportSha256": "4088b4c42abe7521ee5f16e1323fa94198dd40c7d354906a738c9883ce1ce6e3",
+    "log": "tools/paper-integration/reports/paper-1.21.1-creeper-options-strict-20261107-r1.log.gz",
+    "logSha256": "590c2089132ada56a988d8eb0feced244afe66469b8a9588fd76c51a7a0f190d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-creeper-options-strict-20261107-r1-client-logs.tar.gz",
+    "clientLogSha256": "204ec5f413a0f6cc2f1de0b20f837733c09d78571963968988d4360bc1116986",
+    "pluginSha256": "cfa2888713144cb1fec54d5b341a8d3d6e696de21457d7338e02ab895326f7f6",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-reinforcements-chance-strict-20261107-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-reinforcements-chance-strict-20261107-r1.json",
+    "reportSha256": "ef7472eccd8b32f4934b34ced3e8ec41d3b95eea7df03a5145bcf5262f6fca83",
+    "log": "tools/paper-integration/reports/paper-1.21.1-reinforcements-chance-strict-20261107-r1.log.gz",
+    "logSha256": "1fd17cbcdf794888beaaf8c3b98e394a15a4bdf54c0d7901c3eeff414ecd34e9",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-reinforcements-chance-strict-20261107-r1-client-logs.tar.gz",
+    "clientLogSha256": "58cf06f3e8a5930d617b8372faea556e49a89798b6cae3bbde3e94000169b2e8",
+    "pluginSha256": "aba745ee16b07e955d3b3f176976949eaf000b20d38ad6399f57f1aac67cf9f4",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-entity-size-range-strict-20261107-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-entity-size-range-strict-20261107-r1.json",
+    "reportSha256": "83d12f6314ce4a4a8138f514003d8c91ada0dcad3269de2612aabc8d289db8b9",
+    "log": "tools/paper-integration/reports/paper-1.21.1-entity-size-range-strict-20261107-r1.log.gz",
+    "logSha256": "77e1e201502888f79bbd04eb0d3914c955d5263f9f846f285a014564e618c5a1",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-entity-size-range-strict-20261107-r1-client-logs.tar.gz",
+    "clientLogSha256": "40072bdb7eb2d1b78bf0f9492af57941a7a989bf54c23d802980fdddf4a71dd2",
+    "pluginSha256": "9c2246042a36ed83bcca6b3e2d13d09ff73dd62101ed44f3c17a24a4e638c3c1",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-interactable-strict-20261107-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-interactable-strict-20261107-r2.json",
+    "reportSha256": "97b8088a4acfa2c5d161c5c41730f1c7c796b60cac046fa6f1ba9077ea1a1f4e",
+    "log": "tools/paper-integration/reports/paper-1.21.1-interactable-strict-20261107-r2.log.gz",
+    "logSha256": "6da4c8df518a22f4286d420a7a4ab753597845fa66ddaeb7f7eb541470e5b59d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-interactable-strict-20261107-r2-client-logs.tar.gz",
+    "clientLogSha256": "4b58c130bf21c31d9e4d7a4be6b4166d951e0101f69e58d6bca69beb91cc12cc",
+    "pluginSha256": "2a7c0048fca0fb527d423368d9c721e1fc1893916281105787abdd707a5acc7b",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-tracked-location-strict-20261107-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-tracked-location-strict-20261107-r1.json",
+    "reportSha256": "b86a69aeeb3dde890b3845785fda47137faafc758484e697b68c3e066df4b41d",
+    "log": "tools/paper-integration/reports/paper-1.21.1-tracked-location-strict-20261107-r1.log.gz",
+    "logSha256": "bff27f5dcfbf4d1760c5ae3ec4fa388d924303303f3ad558fedbc05941b9ae6c",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-tracked-location-strict-20261107-r1-client-logs.tar.gz",
+    "clientLogSha256": "fa1c49ec2656490216b16349494e25cafe08ffabf4acddcb90836bbf3e2f8d74",
+    "pluginSha256": "f360cbbd3b0102f406086f61c507cb994a32352c24fe1db090b29d9710802a1a",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-mythic-spawner-biome-strict-20261107-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json",
     "reportSha256": "db1364e2628752d8264afb3ed777d14ecf30cd2a10743456445ffc112657e205",

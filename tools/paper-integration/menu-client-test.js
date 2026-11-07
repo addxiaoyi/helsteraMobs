@@ -11,6 +11,7 @@ let shieldTimer = null;
 let spawningDistanceWalkReady = false;
 let spawningDistanceWalkOutside = false;
 let targeterArgumentValidationComplete = false;
+let interactableProbeReady = null;
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`Invalid Paper port: ${rawPort}`);
@@ -88,6 +89,13 @@ bot.on('message', message => {
   if (text.includes('PAPER_SPAWNING_DISTANCE_WALK_OUTSIDE')) {
     spawningDistanceWalkOutside = true;
   }
+  const interactableReady = text.match(/PAPER_INTERACTABLE_READY (\d+) (\d+)/);
+  if (interactableReady) {
+    interactableProbeReady = {
+      blockedId: Number(interactableReady[1]),
+      allowedId: Number(interactableReady[2])
+    };
+  }
 });
 bot.on('title', (message, type) => events.push(`title:${type}:${packetText(message)}`));
 bot.on('actionBar', message => events.push(`actionbar:${packetText(message)}`));
@@ -126,8 +134,60 @@ function hasEvent(list, marker) {
   return list.some(event => event.includes(marker));
 }
 
+async function runInteractableClientProbe() {
+  await waitFor(() => interactableProbeReady, 'Interactable client probe readiness');
+  const { blockedId, allowedId } = interactableProbeReady;
+  if (blockedId === allowedId) throw new Error('Interactable probe reused an entity id');
+
+  const interactWithOffhand = async (entityId, label) => {
+    await waitFor(() => bot.entities[entityId], `${label} entity spawn`);
+    bot._client.write('use_entity', {
+      target: entityId,
+      mouse: 0,
+      hand: 1,
+      sneaking: false
+    });
+    const observation = await waitFor(value => {
+      const text = value?.toString?.() || '';
+      return text.includes(`PAPER_INTERACTABLE_${label}_OBSERVED cancelled=`) ? text : false;
+    }, `${label} interaction result`);
+    const observedText = observation?.toString?.() || String(observation);
+    const cancellation = observedText.match(/cancelled=(true|false)$/);
+    if (!cancellation) {
+      throw new Error(`Unexpected ${label} interaction observation: ${observedText}`);
+    }
+    return cancellation[1] === 'true';
+  };
+
+  const blockedCancelled = await interactWithOffhand(blockedId, 'BLOCKED');
+  const allowedCancelled = await interactWithOffhand(allowedId, 'ALLOWED');
+  const report = {
+    status: blockedCancelled && !allowedCancelled ? 'passed' : 'failed',
+    blockedEntityId: blockedId,
+    allowedEntityId: allowedId,
+    observations: {
+      distinctEntities: true,
+      blockedInteractionSent: true,
+      blockedEventObserved: true,
+      blockedCancelled,
+      allowedInteractionSent: true,
+      allowedEventObserved: true,
+      allowedCancelled
+    }
+  };
+  const line = `PAPER_INTERACTABLE_CLIENT_REPORT ${JSON.stringify(report)}\n`;
+  if (reportPath) fs.appendFileSync(reportPath, line, 'utf8');
+  console.log(line.trim());
+  if (report.status !== 'passed') {
+    throw new Error(`Interactable client observations failed: ${JSON.stringify(report)}`);
+  }
+}
+
 async function run() {
   await waitFor(() => bot.entity != null, 'client spawn');
+  if (process.env.PAPER_INTERACTABLE_WORKFLOW === 'true') {
+    await runInteractableClientProbe();
+  }
   await new Promise((resolve, reject) => {
     const deadline = setTimeout(() => reject(new Error('Timed out waiting for guest spawn')), timeoutMs);
     let timer;
@@ -169,6 +229,12 @@ async function run() {
   await waitFor(value => value?.toString?.().includes('MENU_PERMISSION_RESTORED'),
     'menu permission restoration');
 
+  if (bot.currentWindow) {
+    await bot.closeWindow(bot.currentWindow);
+    await waitForWindowClose();
+  }
+  bot.chat('/helstera menu open parity-page-1');
+  await waitForWindowTitle('Parity Page 1');
   await bot.clickWindow(26, 0, 0);
   await waitForWindowTitle('Parity Page 2');
   await bot.clickWindow(13, 0, 0);
@@ -196,7 +262,7 @@ async function run() {
     }
   }
   const line = `PAPER_MENU_REPORT ${JSON.stringify(report)}\n`;
-  if (reportPath) fs.writeFileSync(reportPath, line, 'utf8');
+  if (reportPath) fs.appendFileSync(reportPath, line, 'utf8');
   console.log(line.trim());
 
   if (audienceReportPath) {

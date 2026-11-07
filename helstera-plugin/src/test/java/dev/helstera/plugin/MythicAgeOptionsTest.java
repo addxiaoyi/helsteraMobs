@@ -5,6 +5,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Ageable;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.Creeper;
+import org.bukkit.entity.MagmaCube;
 import org.bukkit.entity.Phantom;
 import org.bukkit.entity.PigZombie;
 import org.bukkit.entity.Raider;
@@ -235,17 +236,21 @@ class MythicAgeOptionsTest {
     }
 
     @Test
-    void appliesSizeToSlimesAndPhantoms() {
+    void appliesSizeToSlimesMagmaCubesAndPhantoms() {
         Map<String, Object> slimeCalls = new LinkedHashMap<>();
+        Map<String, Object> magmaCubeCalls = new LinkedHashMap<>();
         Map<String, Object> phantomCalls = new LinkedHashMap<>();
         Slime slime = proxy(Slime.class, slimeCalls);
+        MagmaCube magmaCube = proxy(MagmaCube.class, magmaCubeCalls);
         Phantom phantom = proxy(Phantom.class, phantomCalls);
         var options = YamlConfiguration.loadConfiguration(new java.io.StringReader("size: 6"));
 
         HelsteraPlugin.applyEntitySpecificOptions(slime, options);
+        HelsteraPlugin.applyEntitySpecificOptions(magmaCube, options);
         HelsteraPlugin.applyEntitySpecificOptions(phantom, options);
 
         assertEquals(6, slimeCalls.get("setSize"));
+        assertEquals(6, magmaCubeCalls.get("setSize"));
         assertEquals(6, phantomCalls.get("setSize"));
     }
 

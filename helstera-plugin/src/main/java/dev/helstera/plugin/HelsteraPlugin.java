@@ -706,6 +706,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (getConfig().getBoolean("debug.self-test-execution-audience-mob", false)) {
             runExecutionAudienceMobSelfTest();
         }
+        if ("true".equalsIgnoreCase(System.getenv("PAPER_INTERACTABLE_WORKFLOW"))) {
+            scheduleInteractableClientProbe();
+        }
 
         boot.append("模型根目录: ").append(modelRoots()).append('\n');
         getLogger().info(boot.toString());
@@ -1559,6 +1562,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " zombie-baby=" + zombieBaby);
                 getLogger().info("[自检] sheep-options result="
                         + (sheep.getColor() == org.bukkit.DyeColor.RED && sheep.isSheared()));
+                runImportedSheepOptionsSelfTest(origin.clone().add(24, 0, 0));
 
                 var stand = world.spawn(origin.clone().add(4, 0, 0), org.bukkit.entity.ArmorStand.class);
                 var standOptions = new org.bukkit.configuration.file.YamlConfiguration();
@@ -1592,14 +1596,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " can-tick=" + stand.canTick()
                         + " items=" + armorStandItems);
 
-                var cat = world.spawn(origin.clone().add(6, 0, 0), org.bukkit.entity.Cat.class);
-                cat.setCatType(org.bukkit.entity.Cat.Type.SIAMESE);
-                cat.setSitting(true);
-                cat.setCollarColor(org.bukkit.DyeColor.BLUE);
-                entities.add(cat);
-                getLogger().info("[自检] cat-options result="
-                        + (cat.getCatType() == org.bukkit.entity.Cat.Type.SIAMESE
-                        && cat.isSitting() && cat.getCollarColor() == org.bukkit.DyeColor.BLUE));
+                runImportedCatOptionsSelfTest(world, origin.clone().add(6, 0, 0));
+                runImportedHorseOptionsSelfTest(origin.clone().add(32, 0, 0));
 
                 var falling = world.spawnFallingBlock(origin.clone().add(8, 0, 0),
                         org.bukkit.Material.SAND.createBlockData());
@@ -1610,14 +1608,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().info("[自检] falling-block-options result="
                         + (!falling.getDropItem() && falling.canHurtEntities() && falling.getCancelDrop()));
 
-                var creeper = world.spawn(origin.clone().add(10, 0, 0), org.bukkit.entity.Creeper.class);
-                creeper.setExplosionRadius(5);
-                creeper.setMaxFuseTicks(60);
-                creeper.setPowered(true);
-                entities.add(creeper);
-                getLogger().info("[自检] creeper-options result="
-                        + (creeper.getExplosionRadius() == 5 && creeper.getMaxFuseTicks() == 60
-                        && creeper.isPowered()));
+                runImportedCreeperOptionsSelfTest(world, origin.clone().add(10, 0, 0));
 
                 var bee = world.spawn(origin.clone().add(12, 0, 0), org.bukkit.entity.Bee.class);
                 bee.setHasNectar(true);
@@ -1685,23 +1676,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
                 runImportedMobDefaultsSelfTest(world, origin.clone().add(30, 0, 0));
 
-                var slime = world.spawn(origin.clone().add(16, 0, 0), org.bukkit.entity.Slime.class);
-                entities.add(slime);
-                var sizeConfig = new org.bukkit.configuration.file.YamlConfiguration();
-                sizeConfig.set("size-min", 2);
-                sizeConfig.set("size-max", 5);
-                boolean sizeRange = true;
-                int sizeMin = Integer.MAX_VALUE;
-                int sizeMax = Integer.MIN_VALUE;
-                for (int i = 0; i < 64; i++) {
-                    applyEntitySpecificOptions(slime, sizeConfig);
-                    int size = slime.getSize();
-                    sizeMin = Math.min(sizeMin, size);
-                    sizeMax = Math.max(sizeMax, size);
-                    sizeRange &= size >= 2 && size <= 5;
-                }
-                getLogger().info("[自检] entity-size-range result=" + sizeRange
-                        + " samples=64 configured=2..5 observed=" + sizeMin + ".." + sizeMax);
+                runEntitySizeRangeSelfTest(world, origin.clone().add(16, 0, 0), entities);
+                runReinforcementsChanceSelfTest(world, origin.clone().add(18, 0, 0), entities);
 
                 var zombie = world.spawn(origin.clone().add(14, 0, 0), org.bukkit.entity.Zombie.class);
                 entities.add(zombie);
@@ -1764,6 +1740,736 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 20L);
+    }
+
+    private void runEntitySizeRangeSelfTest(org.bukkit.World world, Location origin,
+                                            java.util.List<org.bukkit.entity.Entity> entities)
+            throws IOException {
+        var imported = importEntitySizeRangeProbeOptions();
+        var slime = world.spawn(origin, org.bukkit.entity.Slime.class);
+        var magmaCube = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.MagmaCube.class);
+        var phantom = world.spawn(origin.clone().add(4, 0, 0), org.bukkit.entity.Phantom.class);
+        entities.add(slime);
+        entities.add(magmaCube);
+        entities.add(phantom);
+
+        var slimeSamples = sampleEntitySizeRange(slime, imported.get("SlimeRange"));
+        var magmaSamples = sampleEntitySizeRange(magmaCube, imported.get("MagmaCubeRange"));
+        var phantomSamples = sampleEntitySizeRange(phantom, imported.get("PhantomRange"));
+        boolean withinRange = slimeSamples.withinRange()
+                && magmaSamples.withinRange() && phantomSamples.withinRange();
+        getLogger().info("[自检] entity-size-range result=" + withinRange
+                + " samples=64 configured=2..5 slime=" + slimeSamples.minimum() + ".." + slimeSamples.maximum()
+                + " magma-cube=" + magmaSamples.minimum() + ".." + magmaSamples.maximum()
+                + " phantom=" + phantomSamples.minimum() + ".." + phantomSamples.maximum()
+                + " imported=true");
+    }
+
+    private static Map<String, org.bukkit.configuration.ConfigurationSection> importEntitySizeRangeProbeOptions()
+            throws IOException {
+        Path sourceRoot = Files.createTempDirectory("helstera-entity-size-import-");
+        try {
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("entity-size.yml");
+            Files.writeString(source, """
+                    mobs:
+                      SlimeRange:
+                        Type: SLIME
+                        Options:
+                          Size: 2to5
+                      MagmaCubeRange:
+                        Type: MAGMA_CUBE
+                        Options:
+                          Size: 2to5
+                      PhantomRange:
+                        Type: PHANTOM
+                        Options:
+                          Size: 2to5
+                    """);
+            var importedOptions = new java.util.LinkedHashMap<String,
+                    org.bukkit.configuration.ConfigurationSection>();
+            for (var entry : new MythicMobsImporter().convert(source)) {
+                if (!entry.containsKey("target-file") || !"mapped".equals(entry.get("status"))) continue;
+                String sourceMobId = String.valueOf(entry.get("source-mob-id"));
+                var config = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                if (!"SLIME".equals(config.getString("mob.entity-type"))
+                        && !"MAGMA_CUBE".equals(config.getString("mob.entity-type"))
+                        && !"PHANTOM".equals(config.getString("mob.entity-type"))) continue;
+                var options = config.getConfigurationSection("entity");
+                if (options == null || options.getInt("size-min", -1) != 2
+                        || options.getInt("size-max", -1) != 5) {
+                    throw new IllegalStateException("Mythic Size range was not imported for " + sourceMobId);
+                }
+                importedOptions.put(sourceMobId, options);
+            }
+            for (String sourceMobId : java.util.List.of("SlimeRange", "MagmaCubeRange", "PhantomRange")) {
+                if (!importedOptions.containsKey(sourceMobId)) {
+                    throw new IllegalStateException("Mythic size probe mob was not imported: " + sourceMobId);
+                }
+            }
+            return Map.copyOf(importedOptions);
+        } finally {
+            try (var paths = Files.walk(sourceRoot)) {
+                for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
+    }
+
+    private static EntitySizeRangeSamples sampleEntitySizeRange(
+            org.bukkit.entity.LivingEntity entity,
+            org.bukkit.configuration.ConfigurationSection options) {
+        boolean withinRange = options != null;
+        int minimum = Integer.MAX_VALUE;
+        int maximum = Integer.MIN_VALUE;
+        for (int i = 0; i < 64 && options != null; i++) {
+            applyEntitySpecificOptions(entity, options);
+            int size = entity instanceof org.bukkit.entity.Slime slime ? slime.getSize()
+                    : ((org.bukkit.entity.Phantom) entity).getSize();
+            minimum = Math.min(minimum, size);
+            maximum = Math.max(maximum, size);
+            withinRange &= size >= 2 && size <= 5;
+        }
+        return new EntitySizeRangeSamples(minimum, maximum, withinRange);
+    }
+
+    private record EntitySizeRangeSamples(int minimum, int maximum, boolean withinRange) {
+    }
+
+    private void runImportedSheepOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-sheep-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("sheep-options.yml");
+            String configuredMobId = "ImportedSheepConfigured_" + suffix;
+            String controlMobId = "ImportedSheepControl_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: SHEEP
+                        Options:
+                          SheepColor: RED
+                          Sheared: true
+                      %2$s:
+                        Type: SHEEP
+                        Options:
+                          SheepColor: WHITE
+                          Sheared: false
+                    """.formatted(configuredMobId, controlMobId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Sheep mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Sheep mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            String configuredTargetId = targetIds.get(configuredMobId);
+            String controlTargetId = targetIds.get(controlMobId);
+            if (configuredTargetId == null || controlTargetId == null) {
+                throw new IllegalStateException("Mythic Sheep options were not imported for both probe mobs");
+            }
+            MobSpawn configuredSpawn = spawnMobCore(configuredTargetId, "example/emberling", origin,
+                    false, null);
+            MobSpawn controlSpawn = spawnMobCore(controlTargetId, "example/emberling",
+                    origin.clone().add(3, 0, 0), false, null);
+            if (configuredSpawn != null && configuredSpawn.instanceId() > 0) {
+                instanceIds.add(configuredSpawn.instanceId());
+            }
+            if (controlSpawn != null && controlSpawn.instanceId() > 0) {
+                instanceIds.add(controlSpawn.instanceId());
+            }
+            var configuredInstance = configuredSpawn == null || configuredSpawn.instanceId() <= 0
+                    ? null : instances().impl(configuredSpawn.instanceId());
+            var controlInstance = controlSpawn == null || controlSpawn.instanceId() <= 0
+                    ? null : instances().impl(controlSpawn.instanceId());
+            var configuredSheep = configuredInstance == null ? null
+                    : configuredInstance.baseEntity().filter(org.bukkit.entity.Sheep.class::isInstance)
+                    .map(org.bukkit.entity.Sheep.class::cast).orElse(null);
+            var controlSheep = controlInstance == null ? null
+                    : controlInstance.baseEntity().filter(org.bukkit.entity.Sheep.class::isInstance)
+                    .map(org.bukkit.entity.Sheep.class::cast).orElse(null);
+            var configuredOptions = configuredInstance == null ? null : mobConfig(configuredTargetId)
+                    .getConfigurationSection("entity");
+            var controlOptions = controlInstance == null ? null : mobConfig(controlTargetId)
+                    .getConfigurationSection("entity");
+
+            boolean imported = configuredSheep != null && controlSheep != null
+                    && configuredOptions != null && controlOptions != null
+                    && "RED".equalsIgnoreCase(configuredOptions.getString("sheep-color"))
+                    && configuredOptions.getBoolean("sheep-sheared")
+                    && "WHITE".equalsIgnoreCase(controlOptions.getString("sheep-color"))
+                    && !controlOptions.getBoolean("sheep-sheared", true);
+            boolean applied = imported
+                    && configuredSheep.getColor() == org.bukkit.DyeColor.RED
+                    && configuredSheep.isSheared()
+                    && controlSheep.getColor() == org.bukkit.DyeColor.WHITE
+                    && !controlSheep.isSheared();
+            getLogger().info("[自检] sheep-options result=" + (imported && applied)
+                    + " imported=" + imported
+                    + " color=" + (configuredSheep == null ? "missing" : configuredSheep.getColor().name())
+                    + " sheared=" + (configuredSheep != null && configuredSheep.isSheared())
+                    + " control-color=" + (controlSheep == null ? "missing" : controlSheep.getColor().name())
+                    + " control-sheared=" + (controlSheep != null && controlSheep.isSheared()));
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] sheep-options result=false error=" + failure);
+        } finally {
+            for (int instanceId : instanceIds) {
+                try { instances().despawn(instanceId); } catch (RuntimeException ignored) { }
+            }
+            if (sourceRoot != null) {
+                try (var paths = Files.walk(sourceRoot)) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("sheep-options source cleanup failed=" + cleanupFailure);
+                }
+            }
+            for (Path mobFile : mobFiles) {
+                try { Files.deleteIfExists(mobFile); }
+                catch (IOException cleanupFailure) {
+                    getLogger().warning("sheep-options target cleanup failed=" + cleanupFailure);
+                }
+            }
+            if (!outputDirectoryExisted) {
+                try { Files.deleteIfExists(outputDirectory); }
+                catch (IOException ignored) { }
+            }
+        }
+    }
+
+    private void runImportedCatOptionsSelfTest(org.bukkit.World world, Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-cat-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("cat-options.yml");
+            String configuredMobId = "ImportedCatConfigured_" + suffix;
+            String controlMobId = "ImportedCatControl_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: CAT
+                        Options:
+                          CatType: SIAMESE
+                          Sitting: true
+                          CollarColor: BLUE
+                      %2$s:
+                        Type: CAT
+                        Options:
+                          CatType: TABBY
+                          Sitting: false
+                          CollarColor: RED
+                    """.formatted(configuredMobId, controlMobId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Cat mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Cat mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            String configuredTargetId = targetIds.get(configuredMobId);
+            String controlTargetId = targetIds.get(controlMobId);
+            if (configuredTargetId == null || controlTargetId == null) {
+                throw new IllegalStateException("Mythic Cat options were not imported for both probe mobs");
+            }
+            MobSpawn configuredSpawn = spawnMobCore(configuredTargetId, "example/emberling", origin,
+                    false, null);
+            MobSpawn controlSpawn = spawnMobCore(controlTargetId, "example/emberling",
+                    origin.clone().add(3, 0, 0), false, null);
+            if (configuredSpawn != null && configuredSpawn.instanceId() > 0) {
+                instanceIds.add(configuredSpawn.instanceId());
+            }
+            if (controlSpawn != null && controlSpawn.instanceId() > 0) {
+                instanceIds.add(controlSpawn.instanceId());
+            }
+            var configuredInstance = configuredSpawn == null || configuredSpawn.instanceId() <= 0
+                    ? null : instances().impl(configuredSpawn.instanceId());
+            var controlInstance = controlSpawn == null || controlSpawn.instanceId() <= 0
+                    ? null : instances().impl(controlSpawn.instanceId());
+            var configuredCat = configuredInstance == null ? null
+                    : configuredInstance.baseEntity().filter(org.bukkit.entity.Cat.class::isInstance)
+                    .map(org.bukkit.entity.Cat.class::cast).orElse(null);
+            var controlCat = controlInstance == null ? null
+                    : controlInstance.baseEntity().filter(org.bukkit.entity.Cat.class::isInstance)
+                    .map(org.bukkit.entity.Cat.class::cast).orElse(null);
+            var configuredOptions = configuredInstance == null ? null : mobConfig(configuredTargetId)
+                    .getConfigurationSection("entity");
+            var controlOptions = controlInstance == null ? null : mobConfig(controlTargetId)
+                    .getConfigurationSection("entity");
+
+            boolean imported = configuredCat != null && controlCat != null
+                    && configuredOptions != null && controlOptions != null
+                    && "SIAMESE".equalsIgnoreCase(configuredOptions.getString("cat-type"))
+                    && configuredOptions.getBoolean("cat-sitting")
+                    && "BLUE".equalsIgnoreCase(configuredOptions.getString("cat-collar-color"))
+                    && "TABBY".equalsIgnoreCase(controlOptions.getString("cat-type"))
+                    && !controlOptions.getBoolean("cat-sitting", true)
+                    && "RED".equalsIgnoreCase(controlOptions.getString("cat-collar-color"));
+            boolean applied = imported
+                    && configuredCat.getCatType() == org.bukkit.entity.Cat.Type.SIAMESE
+                    && configuredCat.isSitting()
+                    && configuredCat.getCollarColor() == org.bukkit.DyeColor.BLUE
+                    && controlCat.getCatType() == org.bukkit.entity.Cat.Type.TABBY
+                    && !controlCat.isSitting()
+                    && controlCat.getCollarColor() == org.bukkit.DyeColor.RED;
+            getLogger().info("[自检] cat-options result=" + (imported && applied)
+                    + " imported=" + imported
+                    + " type=" + (configuredCat == null ? "missing" : configuredCat.getCatType().name())
+                    + " sitting=" + (configuredCat != null && configuredCat.isSitting())
+                    + " collar=" + (configuredCat == null ? "missing" : configuredCat.getCollarColor().name())
+                    + " control-type=" + (controlCat == null ? "missing" : controlCat.getCatType().name())
+                    + " control-sitting=" + (controlCat != null && controlCat.isSitting())
+                    + " control-collar=" + (controlCat == null ? "missing" : controlCat.getCollarColor().name()));
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] cat-options result=false error=" + failure);
+        } finally {
+            for (int instanceId : instanceIds) {
+                try { instances().despawn(instanceId); } catch (RuntimeException ignored) { }
+            }
+            if (sourceRoot != null) {
+                try (var paths = Files.walk(sourceRoot)) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("cat-options source cleanup failed=" + cleanupFailure);
+                }
+            }
+            for (Path mobFile : mobFiles) {
+                try { Files.deleteIfExists(mobFile); }
+                catch (IOException cleanupFailure) {
+                    getLogger().warning("cat-options target cleanup failed=" + cleanupFailure);
+                }
+            }
+            if (!outputDirectoryExisted) {
+                try { Files.deleteIfExists(outputDirectory); }
+                catch (IOException ignored) { }
+            }
+        }
+    }
+
+    private void runImportedHorseOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-horse-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("horse-options.yml");
+            String configuredMobId = "ImportedHorseConfigured_" + suffix;
+            String controlMobId = "ImportedHorseControl_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: HORSE
+                        Options:
+                          HorseColor: GRAY
+                          HorseStyle: WHITE_DOTS
+                          Domestication: 5
+                          MaxDomestication: 20
+                          JumpStrength: 0.8
+                      %2$s:
+                        Type: HORSE
+                        Options:
+                          HorseColor: BLACK
+                          HorseStyle: BLACK_DOTS
+                          Domestication: 1
+                          MaxDomestication: 12
+                          JumpStrength: 0.4
+                    """.formatted(configuredMobId, controlMobId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Horse mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Horse mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            String configuredTargetId = targetIds.get(configuredMobId);
+            String controlTargetId = targetIds.get(controlMobId);
+            if (configuredTargetId == null || controlTargetId == null) {
+                throw new IllegalStateException("Mythic Horse options were not imported for both probe mobs");
+            }
+            MobSpawn configuredSpawn = spawnMobCore(configuredTargetId, "example/emberling", origin,
+                    false, null);
+            MobSpawn controlSpawn = spawnMobCore(controlTargetId, "example/emberling",
+                    origin.clone().add(3, 0, 0), false, null);
+            if (configuredSpawn != null && configuredSpawn.instanceId() > 0) {
+                instanceIds.add(configuredSpawn.instanceId());
+            }
+            if (controlSpawn != null && controlSpawn.instanceId() > 0) {
+                instanceIds.add(controlSpawn.instanceId());
+            }
+            var configuredInstance = configuredSpawn == null || configuredSpawn.instanceId() <= 0
+                    ? null : instances().impl(configuredSpawn.instanceId());
+            var controlInstance = controlSpawn == null || controlSpawn.instanceId() <= 0
+                    ? null : instances().impl(controlSpawn.instanceId());
+            var configuredHorse = configuredInstance == null ? null
+                    : configuredInstance.baseEntity().filter(org.bukkit.entity.Horse.class::isInstance)
+                    .map(org.bukkit.entity.Horse.class::cast).orElse(null);
+            var controlHorse = controlInstance == null ? null
+                    : controlInstance.baseEntity().filter(org.bukkit.entity.Horse.class::isInstance)
+                    .map(org.bukkit.entity.Horse.class::cast).orElse(null);
+            var configuredOptions = configuredInstance == null ? null : mobConfig(configuredTargetId)
+                    .getConfigurationSection("entity");
+            var controlOptions = controlInstance == null ? null : mobConfig(controlTargetId)
+                    .getConfigurationSection("entity");
+
+            boolean imported = configuredHorse != null && controlHorse != null
+                    && configuredOptions != null && controlOptions != null
+                    && "GRAY".equalsIgnoreCase(configuredOptions.getString("horse-color"))
+                    && "WHITE_DOTS".equalsIgnoreCase(configuredOptions.getString("horse-style"))
+                    && configuredOptions.getInt("horse-domestication", -1) == 5
+                    && configuredOptions.getInt("horse-max-domestication", -1) == 20
+                    && Math.abs(configuredOptions.getDouble("horse-jump-strength", Double.NaN) - 0.8) < 1.0e-9
+                    && "BLACK".equalsIgnoreCase(controlOptions.getString("horse-color"))
+                    && "BLACK_DOTS".equalsIgnoreCase(controlOptions.getString("horse-style"))
+                    && controlOptions.getInt("horse-domestication", -1) == 1
+                    && controlOptions.getInt("horse-max-domestication", -1) == 12
+                    && Math.abs(controlOptions.getDouble("horse-jump-strength", Double.NaN) - 0.4) < 1.0e-9;
+            boolean applied = imported
+                    && configuredHorse.getColor() == org.bukkit.entity.Horse.Color.GRAY
+                    && configuredHorse.getStyle() == org.bukkit.entity.Horse.Style.WHITE_DOTS
+                    && configuredHorse.getDomestication() == 5
+                    && configuredHorse.getMaxDomestication() == 20
+                    && Math.abs(configuredHorse.getJumpStrength() - 0.8) < 1.0e-9
+                    && controlHorse.getColor() == org.bukkit.entity.Horse.Color.BLACK
+                    && controlHorse.getStyle() == org.bukkit.entity.Horse.Style.BLACK_DOTS
+                    && controlHorse.getDomestication() == 1
+                    && controlHorse.getMaxDomestication() == 12
+                    && Math.abs(controlHorse.getJumpStrength() - 0.4) < 1.0e-9;
+            getLogger().info("[自检] horse-options result=" + (imported && applied)
+                    + " imported=" + imported
+                    + " color=" + (configuredHorse == null ? "missing" : configuredHorse.getColor().name())
+                    + " style=" + (configuredHorse == null ? "missing" : configuredHorse.getStyle().name())
+                    + " domestication=" + (configuredHorse == null ? -1 : configuredHorse.getDomestication())
+                    + " max-domestication=" + (configuredHorse == null ? -1 : configuredHorse.getMaxDomestication())
+                    + " jump-strength=" + (configuredHorse == null ? "missing" : configuredHorse.getJumpStrength())
+                    + " control-color=" + (controlHorse == null ? "missing" : controlHorse.getColor().name())
+                    + " control-style=" + (controlHorse == null ? "missing" : controlHorse.getStyle().name())
+                    + " control-domestication=" + (controlHorse == null ? -1 : controlHorse.getDomestication())
+                    + " control-max-domestication=" + (controlHorse == null ? -1 : controlHorse.getMaxDomestication())
+                    + " control-jump-strength=" + (controlHorse == null ? "missing" : controlHorse.getJumpStrength()));
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] horse-options result=false error=" + failure);
+        } finally {
+            for (int instanceId : instanceIds) {
+                try { instances().despawn(instanceId); } catch (RuntimeException ignored) { }
+            }
+            if (sourceRoot != null) {
+                try (var paths = Files.walk(sourceRoot)) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("horse-options source cleanup failed=" + cleanupFailure);
+                }
+            }
+            for (Path mobFile : mobFiles) {
+                try { Files.deleteIfExists(mobFile); }
+                catch (IOException cleanupFailure) {
+                    getLogger().warning("horse-options target cleanup failed=" + cleanupFailure);
+                }
+            }
+            if (!outputDirectoryExisted) {
+                try { Files.deleteIfExists(outputDirectory); }
+                catch (IOException ignored) { }
+            }
+        }
+    }
+
+    private void runImportedCreeperOptionsSelfTest(org.bukkit.World world, Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-creeper-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("creeper-options.yml");
+            String protectedMobId = "ImportedCreeperProtected_" + suffix;
+            String controlMobId = "ImportedCreeperControl_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: CREEPER
+                        Options:
+                          ExplosionRadius: 5
+                          FuseTicks: 60
+                          SuperCharged: true
+                          PreventSuicide: true
+                      %2$s:
+                        Type: CREEPER
+                        Options:
+                          ExplosionRadius: 5
+                          FuseTicks: 60
+                          SuperCharged: true
+                          PreventSuicide: false
+                    """.formatted(protectedMobId, controlMobId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Creeper mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Creeper mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            String protectedTargetId = targetIds.get(protectedMobId);
+            String controlTargetId = targetIds.get(controlMobId);
+            if (protectedTargetId == null || controlTargetId == null) {
+                throw new IllegalStateException("Mythic Creeper options were not imported for both probe mobs");
+            }
+            MobSpawn protectedSpawn = spawnMobCore(protectedTargetId, "example/emberling", origin,
+                    false, null);
+            MobSpawn controlSpawn = spawnMobCore(controlTargetId, "example/emberling",
+                    origin.clone().add(3, 0, 0), false, null);
+            if (protectedSpawn != null && protectedSpawn.instanceId() > 0) {
+                instanceIds.add(protectedSpawn.instanceId());
+            }
+            if (controlSpawn != null && controlSpawn.instanceId() > 0) {
+                instanceIds.add(controlSpawn.instanceId());
+            }
+            var protectedInstance = protectedSpawn == null || protectedSpawn.instanceId() <= 0
+                    ? null : instances().impl(protectedSpawn.instanceId());
+            var controlInstance = controlSpawn == null || controlSpawn.instanceId() <= 0
+                    ? null : instances().impl(controlSpawn.instanceId());
+            var protectedCreeper = protectedInstance == null ? null
+                    : protectedInstance.baseEntity().filter(org.bukkit.entity.Creeper.class::isInstance)
+                    .map(org.bukkit.entity.Creeper.class::cast).orElse(null);
+            var controlCreeper = controlInstance == null ? null
+                    : controlInstance.baseEntity().filter(org.bukkit.entity.Creeper.class::isInstance)
+                    .map(org.bukkit.entity.Creeper.class::cast).orElse(null);
+
+            boolean imported = protectedInstance != null && controlInstance != null
+                    && protectedCreeper != null && controlCreeper != null
+                    && protectedInstance.options().preventSuicide()
+                    && !controlInstance.options().preventSuicide();
+            boolean propertiesApplied = imported
+                    && protectedCreeper.getExplosionRadius() == 5
+                    && protectedCreeper.getMaxFuseTicks() == 60
+                    && protectedCreeper.isPowered()
+                    && controlCreeper.getExplosionRadius() == 5
+                    && controlCreeper.getMaxFuseTicks() == 60
+                    && controlCreeper.isPowered();
+            boolean protectedCancelled = false;
+            boolean controlAllowed = false;
+            if (protectedCreeper != null && controlCreeper != null) {
+                var protectedEvent = new org.bukkit.event.entity.EntityExplodeEvent(protectedCreeper,
+                        protectedCreeper.getLocation(), new java.util.ArrayList<>(), 0.0f,
+                        org.bukkit.ExplosionResult.KEEP);
+                getServer().getPluginManager().callEvent(protectedEvent);
+                protectedCancelled = protectedEvent.isCancelled();
+                var controlEvent = new org.bukkit.event.entity.EntityExplodeEvent(controlCreeper,
+                        controlCreeper.getLocation(), new java.util.ArrayList<>(), 0.0f,
+                        org.bukkit.ExplosionResult.KEEP);
+                getServer().getPluginManager().callEvent(controlEvent);
+                controlAllowed = !controlEvent.isCancelled();
+            }
+            boolean passed = imported && propertiesApplied && protectedCancelled && controlAllowed;
+            getLogger().info("[自检] creeper-options result=" + passed
+                    + " imported=" + imported
+                    + " explosion-radius=5 fuse-ticks=60 super-charged=true"
+                    + " prevent-suicide=true protected-cancelled=" + protectedCancelled
+                    + " control-allowed=" + controlAllowed);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] creeper-options result=false error=" + failure);
+        } finally {
+            for (int instanceId : instanceIds) {
+                try { instances().despawn(instanceId); } catch (RuntimeException ignored) { }
+            }
+            if (sourceRoot != null) {
+                try (var paths = Files.walk(sourceRoot)) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("creeper-options source cleanup failed=" + cleanupFailure);
+                }
+            }
+            for (Path mobFile : mobFiles) {
+                try { Files.deleteIfExists(mobFile); }
+                catch (IOException cleanupFailure) {
+                    getLogger().warning("creeper-options target cleanup failed=" + cleanupFailure);
+                }
+            }
+            if (!outputDirectoryExisted) {
+                try { Files.deleteIfExists(outputDirectory); }
+                catch (IOException ignored) { }
+            }
+        }
+    }
+
+    private void runReinforcementsChanceSelfTest(org.bukkit.World world, Location origin,
+                                                 java.util.List<org.bukkit.entity.Entity> entities)
+            throws IOException {
+        var imported = importReinforcementsChanceProbeMobs();
+        var zombieOptions = imported.get("ZombieChance");
+        var zeroOptions = imported.get("ZeroChance");
+        var upperOptions = imported.get("UpperBoundChance");
+        var wrongTypeOptions = imported.get("WrongTypeChance");
+        var invalidOptions = imported.get("OutOfRangeChance");
+        var zombie = world.spawn(origin, org.bukkit.entity.Zombie.class);
+        var skeleton = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Skeleton.class);
+        entities.add(zombie);
+        entities.add(skeleton);
+
+        double importedChance = zombieOptions == null ? Double.NaN
+                : zombieOptions.getDouble("entity.zombie-reinforcements-chance", Double.NaN);
+        boolean applied = applyZombieReinforcementsChance(zombie, importedChance);
+        var reinforcementAttribute = zombie.getAttribute(
+                org.bukkit.attribute.Attribute.ZOMBIE_SPAWN_REINFORCEMENTS);
+        double observedChance = reinforcementAttribute == null
+                ? Double.NaN : reinforcementAttribute.getBaseValue();
+        boolean zeroMapped = zeroOptions != null
+                && zeroOptions.getDouble("entity.zombie-reinforcements-chance", Double.NaN) == 0.0;
+        boolean upperBoundMapped = upperOptions != null
+                && upperOptions.getDouble("entity.zombie-reinforcements-chance", Double.NaN) == 1.0;
+        boolean wrongTypePreserved = wrongTypeOptions != null
+                && wrongTypeOptions.contains("mob.unsupported.Options.ReinforcementsChance")
+                && !wrongTypeOptions.contains("entity.zombie-reinforcements-chance");
+        boolean invalidPreserved = invalidOptions != null
+                && invalidOptions.getDouble("mob.unsupported.Options.ReinforcementsChance", Double.NaN) == 1.01
+                && !invalidOptions.contains("entity.zombie-reinforcements-chance");
+        boolean wrongEntityRejected = !applyZombieReinforcementsChance(skeleton, 0.5);
+        boolean invalidRuntimeRejected = !applyZombieReinforcementsChance(zombie, 1.01)
+                && Math.abs(observedChance - 0.38) < 1.0e-9;
+        boolean passed = applied && Math.abs(observedChance - 0.38) < 1.0e-9
+                && zeroMapped && upperBoundMapped && wrongTypePreserved && invalidPreserved
+                && wrongEntityRejected && invalidRuntimeRejected;
+        getLogger().info("[自检] reinforcements-chance-options result=" + passed
+                + " imported=true applied=" + applied + " base=" + observedChance
+                + " zero-mapped=" + zeroMapped + " upper-bound-mapped=" + upperBoundMapped
+                + " wrong-type-preserved=" + wrongTypePreserved
+                + " invalid-preserved=" + invalidPreserved
+                + " wrong-entity-rejected=" + wrongEntityRejected
+                + " invalid-runtime-rejected=" + invalidRuntimeRejected);
+    }
+
+    private static Map<String, org.bukkit.configuration.file.YamlConfiguration>
+    importReinforcementsChanceProbeMobs() throws IOException {
+        Path sourceRoot = Files.createTempDirectory("helstera-reinforcements-import-");
+        try {
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("reinforcements.yml");
+            Files.writeString(source, """
+                    mobs:
+                      ZombieChance:
+                        Type: ZOMBIE
+                        Options:
+                          ReinforcementsChance: 0.38
+                      ZeroChance:
+                        Type: ZOMBIE
+                        Options:
+                          ReinforcementsChance: 0
+                      UpperBoundChance:
+                        Type: HUSK
+                        Options:
+                          ReinforcementsChance: 1
+                      WrongTypeChance:
+                        Type: SKELETON
+                        Options:
+                          ReinforcementsChance: 0.5
+                      OutOfRangeChance:
+                        Type: ZOMBIE
+                        Options:
+                          ReinforcementsChance: 1.01
+                    """);
+            var imported = new java.util.LinkedHashMap<String,
+                    org.bukkit.configuration.file.YamlConfiguration>();
+            for (var entry : new MythicMobsImporter().convert(source)) {
+                if (!entry.containsKey("target-file") || !"mapped".equals(entry.get("status"))) continue;
+                String sourceMobId = String.valueOf(entry.get("source-mob-id"));
+                var config = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                imported.put(sourceMobId, config);
+            }
+            for (String sourceMobId : java.util.List.of("ZombieChance", "ZeroChance",
+                    "UpperBoundChance", "WrongTypeChance", "OutOfRangeChance")) {
+                if (!imported.containsKey(sourceMobId)) {
+                    throw new IllegalStateException("ReinforcementsChance probe mob was not imported: " + sourceMobId);
+                }
+            }
+            return Map.copyOf(imported);
+        } finally {
+            try (var paths = Files.walk(sourceRoot)) {
+                for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
     }
 
     private void runImportedMobDefaultsSelfTest(org.bukkit.World world, Location origin) {
@@ -1956,6 +2662,79 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 org.bukkit.event.entity.EntityTransformEvent.TransformReason.DROWNED);
         getServer().getPluginManager().callEvent(event);
         return !event.isCancelled();
+    }
+
+    private void scheduleInteractableClientProbe() {
+        scheduleInteractableClientProbe(60);
+    }
+
+    private void scheduleInteractableClientProbe(int attemptsRemaining) {
+        var player = getServer().getOnlinePlayers().stream()
+                .filter(candidate -> candidate.isOnline() && !candidate.isDead()
+                        && candidate.getGameMode() != org.bukkit.GameMode.SPECTATOR)
+                .min(java.util.Comparator.comparing(candidate ->
+                        !candidate.getName().equalsIgnoreCase("HelsteraTester")))
+                .orElse(null);
+        if (player == null) {
+            if (attemptsRemaining > 0) {
+                getServer().getScheduler().runTaskLater(this,
+                        () -> scheduleInteractableClientProbe(attemptsRemaining - 1), 20L);
+            } else {
+                getLogger().info("[自检] interactable-client result=false reason=no-player");
+            }
+            return;
+        }
+
+        var origin = player.getLocation();
+        var blocked = origin.getWorld().spawn(origin.clone().add(2, 0, 1), org.bukkit.entity.Pig.class);
+        var allowed = origin.getWorld().spawn(origin.clone().add(2, 0, -1), org.bukkit.entity.Pig.class);
+        blocked.setAI(false);
+        allowed.setAI(false);
+        int blockedId = instances().bind("example/emberling", blocked,
+                dev.helstera.api.instance.SpawnOptions.defaults().interactable(false)).instanceId();
+        int allowedId = instances().bind("example/emberling", allowed,
+                dev.helstera.api.instance.SpawnOptions.defaults().interactable(true)).instanceId();
+        var probe = new org.bukkit.event.Listener() {
+            private boolean blockedObserved;
+            private boolean blockedCancelled;
+            private boolean allowedObserved;
+            private boolean allowedCancelled;
+            private org.bukkit.scheduler.BukkitTask timeout;
+            private boolean finished;
+
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+            public void onInteract(org.bukkit.event.player.PlayerInteractEntityEvent event) {
+                if (finished || !player.getUniqueId().equals(event.getPlayer().getUniqueId())) return;
+                var target = event.getRightClicked().getUniqueId();
+                if (blocked.getUniqueId().equals(target) && !blockedObserved) {
+                    blockedObserved = true;
+                    blockedCancelled = event.isCancelled();
+                    player.sendMessage("PAPER_INTERACTABLE_BLOCKED_OBSERVED cancelled=" + blockedCancelled);
+                } else if (allowed.getUniqueId().equals(target) && !allowedObserved) {
+                    allowedObserved = true;
+                    allowedCancelled = event.isCancelled();
+                    player.sendMessage("PAPER_INTERACTABLE_ALLOWED_OBSERVED cancelled=" + allowedCancelled);
+                }
+                if (blockedObserved && allowedObserved) finish();
+            }
+
+            private void finish() {
+                if (finished) return;
+                finished = true;
+                if (timeout != null) timeout.cancel();
+                org.bukkit.event.HandlerList.unregisterAll(this);
+                boolean passed = blockedObserved && blockedCancelled && allowedObserved && !allowedCancelled;
+                getLogger().info("[自检] interactable-client result=" + passed
+                        + " false-event=" + blockedObserved + " false-cancelled=" + blockedCancelled
+                        + " true-event=" + allowedObserved + " true-cancelled=" + allowedCancelled
+                        + " interactions=" + ((blockedObserved ? 1 : 0) + (allowedObserved ? 1 : 0)));
+                if (instances().impl(blockedId) != null) instances().despawn(blockedId);
+                if (instances().impl(allowedId) != null) instances().despawn(allowedId);
+            }
+        };
+        getServer().getPluginManager().registerEvents(probe, this);
+        probe.timeout = getServer().getScheduler().runTaskLater(this, () -> probe.finish(), 400L);
+        player.sendMessage("PAPER_INTERACTABLE_READY " + blocked.getEntityId() + " " + allowed.getEntityId());
     }
 
     private void scheduleSpawningDistanceRuntimeProbe() {
@@ -3919,6 +4698,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     targetLocationAliases &= dispatchLocationTargeter(
                             skills, behaviors, targeter, targetLocationContext);
                 }
+                Location trackedLocation = locationProbeTarget.getLocation().clone();
+                var trackedLocationContext = targetLocationContext.withLocationTarget(trackedLocation);
+                boolean trackedLocationAction = runIntegrationAction(
+                        skills, behaviors, "stl @targetlocation", targetLocationContext);
+                boolean trackedLocationTargeter = dispatchLocationTargeter(
+                        skills, behaviors, "@TrackedLocation", trackedLocationContext);
+                Location casterLocation = modelInstance.baseEntity()
+                        .map(org.bukkit.entity.Entity::getLocation).orElseGet(modelInstance::location);
+                String trackedDistanceValue = Double.toString(casterLocation.distance(trackedLocation));
+                String trackedDistanceKey = skills.bindCondition(
+                        "distanceFromTL{d=" + trackedDistanceValue + "}");
+                boolean trackedDistance = trackedDistanceKey != null
+                        && behaviors.testCondition(trackedDistanceKey, trackedLocationContext);
+                var trackedTree = trackedLocationContext.skillTree().orElseThrow();
+                trackedTree.unsetLocation(dev.helstera.api.behavior.SkillTreeContext.MYTHIC_TRACKED_LOCATION);
+                boolean missingTrackedDistance = trackedDistanceKey != null
+                        && !behaviors.testCondition(trackedDistanceKey, trackedLocationContext);
+                getLogger().info("tracked-location-parity action=" + trackedLocationAction
+                        + " targeter=" + trackedLocationTargeter
+                        + " distance=" + trackedDistance
+                        + " missing-rejected=" + missingTrackedDistance);
                 var triggerLocationContext = dev.helstera.api.behavior.BehaviorContext.execution(
                         modelInstance, null, 1.0, -1, 0, "integration", null, locationProbeTarget,
                         java.util.List.of(), blockMechanicLocation);
@@ -14864,6 +15664,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     ? hp
                     : Math.max(0.1, Math.min(hp, hp * Math.max(0, Math.min(1, healthRatio)))));
             applyEntityAttributes(ent, entitySec.getConfigurationSection("attributes"));
+            if (entitySec.contains("zombie-reinforcements-chance")) {
+                double chance = entitySec.getDouble("zombie-reinforcements-chance", Double.NaN);
+                if (!applyZombieReinforcementsChance(ent, chance)) {
+                    String warning = "ReinforcementsChance " + chance
+                            + " was not applied to " + ent.getType()
+                            + "; it requires a Zombie-family entity and a finite value from 0 through 1.";
+                    getLogger().warning("[Mob Options] " + warning);
+                    mobWarnings.add(warning);
+                }
+            }
             // 装备：items 节，支持 material:amount 和带附魔的写法
             applyRandomEquipmentPolicy(ent, opts);
             applyEntityEquipment(ent, entitySec);
@@ -17216,6 +18026,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     static void applySpawnNoDamageTicks(org.bukkit.entity.LivingEntity entity,
                                         dev.helstera.api.instance.SpawnOptions options) {
         if (entity != null && options != null) entity.setNoDamageTicks(options.noDamageTicks());
+    }
+
+    static boolean applyZombieReinforcementsChance(org.bukkit.entity.LivingEntity entity, double chance) {
+        if (!(entity instanceof org.bukkit.entity.Zombie) || !Double.isFinite(chance)
+                || chance < 0 || chance > 1) return false;
+        var attribute = entity.getAttribute(org.bukkit.attribute.Attribute.ZOMBIE_SPAWN_REINFORCEMENTS);
+        if (attribute == null) return false;
+        attribute.setBaseValue(chance);
+        return Math.abs(attribute.getBaseValue() - chance) < 1.0e-9;
     }
 
     static void applyEntitySpecificOptions(org.bukkit.entity.LivingEntity entity,

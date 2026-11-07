@@ -37,6 +37,8 @@ public final class MmConditions {
     private static final Map<String, String> DISTANCE_FROM_LOCATION_ARGUMENTS = Map.of(
             "x", "x", "y", "y", "z", "z", "world", "world", "w", "world",
             "distance", "distance", "d", "distance");
+    private static final Map<String, String> DISTANCE_FROM_TRACKED_ARGUMENTS = Map.of(
+            "distance", "distance", "d", "distance");
     private static final Map<String, String> ORIGIN_LOCATION_ARGUMENTS = Map.of(
             "loc", "location", "location", "location", "l", "location", "c", "location",
             "exact", "exact", "e", "exact", "x", "x", "y", "y", "z", "z");
@@ -534,6 +536,14 @@ public final class MmConditions {
         }
         if ("distancefromspawn".equals(name)) {
             return rangeCondition(body, "distance-from-spawn", s, "distance", "d");
+        }
+        if ("distancefromtrackedlocation".equals(name) || "distancefromtl".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(
+                    body, DISTANCE_FROM_TRACKED_ARGUMENTS, "distance");
+            String distance = arguments == null ? null : arguments.get("distance");
+            return distance == null || !validTrackedDistanceRange(distance)
+                    ? new Mapped(s, false)
+                    : new Mapped("distance-from-tracked-location " + distance, true);
         }
         if ("distancefromlocation".equals(name)) {
             if (!hasOnlyUniqueNamedArguments(body, DISTANCE_FROM_LOCATION_ARGUMENTS)) {
@@ -1850,6 +1860,27 @@ public final class MmConditions {
             return first != null && second != null && first <= second;
         }
         return validFiniteNumber(value);
+    }
+
+    private static boolean validTrackedDistanceRange(String raw) {
+        if (!validPinDistanceRange(raw)) return false;
+        String value = raw.trim();
+        if (value.startsWith("=") || value.startsWith("!")) return false;
+        value = value.replaceFirst("^(>=|<=|>|<)", "").trim();
+        String[] bounds;
+        int to = value.toLowerCase(Locale.ROOT).indexOf("to");
+        if (to > 0) bounds = new String[]{value.substring(0, to), value.substring(to + 2)};
+        else {
+            int separator = value.indexOf('-', 1);
+            bounds = separator > 0
+                    ? new String[]{value.substring(0, separator), value.substring(separator + 1)}
+                    : new String[]{value};
+        }
+        for (String bound : bounds) {
+            Double number = finiteNumber(bound);
+            if (number == null || number < 0) return false;
+        }
+        return true;
     }
 
     private static Double finiteNumber(String raw) {
