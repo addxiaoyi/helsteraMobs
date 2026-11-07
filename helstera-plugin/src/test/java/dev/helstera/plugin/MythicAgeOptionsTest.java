@@ -461,6 +461,27 @@ class MythicAgeOptionsTest {
     }
 
     @Test
+    void ignoresEntitySpecificOptionsOnIncompatibleRuntimeTypes() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var options = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                held-block: minecraft:obsidian
+                size: 5
+                creeper-explosion-radius: 5
+                has-nectar: true
+                horse-color: WHITE
+                cat-type: SIAMESE
+                sheep-color: RED
+                armor-stand-arms: true
+                falling-block-data: minecraft:sand
+                """));
+
+        HelsteraPlugin.applyEntitySpecificOptions(
+                proxy(org.bukkit.entity.Zombie.class, calls), options);
+
+        assertTrue(calls.isEmpty(), calls.toString());
+    }
+
+    @Test
     void appliesFallingBlockOptionsWithoutLivingEntityAssumptions() {
         Map<String, Object> calls = new LinkedHashMap<>();
         FallingBlock falling = proxy(FallingBlock.class, calls);

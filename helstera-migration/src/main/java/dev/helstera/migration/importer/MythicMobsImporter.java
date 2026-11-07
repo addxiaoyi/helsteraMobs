@@ -1104,46 +1104,81 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "PreventOtherDrops", "entity.prevent-other-drops");
             mapOption(options, srcFile, entries, target, "PreventSunburn", "entity.prevent-sunburn");
             mapOption(options, srcFile, entries, target, "PreventRandomEquipment", "entity.prevent-random-equipment");
-            mapOption(options, srcFile, entries, target, "CanPickupItems", "entity.can-pickup-items");
+            mapEntityScopedOption(options, srcFile, entries, target, "CanPickupItems",
+                    "entity.can-pickup-items", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Mob.class);
             mapOption(options, srcFile, entries, target, "PreventRenaming", "mob.prevent-renaming");
             mapOption(options, srcFile, entries, target, "PreventTransformationReasons", "mob.prevent-transformation-reasons");
             preventConversionMapped = mapPreventConversion(options, srcFile, entries, target,
                     target.getString("mob.entity-type", ""));
             mapOption(options, srcFile, entries, target, "PreventMount", "mob.prevent-mount");
-            mapOption(options, srcFile, entries, target, "PreventJockeyMounts", "mob.prevent-jockey-mounts");
+            mapEntityScopedOption(options, srcFile, entries, target, "PreventJockeyMounts",
+                    "mob.prevent-jockey-mounts", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Zombie.class);
             mapOption(options, srcFile, entries, target, "PreventTarget", "mob.prevent-target");
             mapOption(options, srcFile, entries, target, "PreventTargetReasons", "mob.prevent-target-reasons");
             mapOption(options, srcFile, entries, target, "PreventAttack", "mob.prevent-attack");
             mapOption(options, srcFile, entries, target, "PreventVanillaDamage", "mob.prevent-vanilla-damage");
-            mapOption(options, srcFile, entries, target, "PreventSlimeSplit", "mob.prevent-slime-split");
-            mapOption(options, srcFile, entries, target, "PreventBlockInfection", "mob.prevent-block-infection");
-            mapOption(options, srcFile, entries, target, "PreventSnowFormation", "mob.prevent-snow-formation");
+            mapEntityScopedOption(options, srcFile, entries, target, "PreventSlimeSplit",
+                    "mob.prevent-slime-split", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Slime.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "PreventBlockInfection",
+                    "mob.prevent-block-infection", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Silverfish.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "PreventSnowFormation",
+                    "mob.prevent-snow-formation", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Snowman.class);
             zombieReinforcementsMapped = mapZombieReinforcementsChance(
                     options, srcFile, entries, target, normalizedType);
             mapAgeOptions(options, srcFile, entries, target, normalizedType);
-            mapOption(options, srcFile, entries, target, "Saddled", "entity.saddled");
-            mapOption(options, srcFile, entries, target, "HorseArmor", "entity.horse-armor");
-            mapOption(options, srcFile, entries, target, "CarryingChest", "entity.carrying-chest");
+            mapEntityScopedOption(options, srcFile, entries, target, "Saddled",
+                    "entity.saddled", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Steerable.class, org.bukkit.entity.AbstractHorse.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "HorseArmor",
+                    "entity.horse-armor", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    org.bukkit.entity.Horse.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "CarryingChest",
+                    "entity.carrying-chest", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Horse.class, org.bukkit.entity.ChestedHorse.class);
             mapEntityScopedOption(options, srcFile, entries, target, "CanJoinRaid",
-                    "entity.can-join-raid", normalizedType, org.bukkit.entity.Raider.class);
+                    "entity.can-join-raid", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Raider.class);
             mapEntityScopedOption(options, srcFile, entries, target, "PatrolLeader",
-                    "entity.patrol-leader", normalizedType, org.bukkit.entity.Raider.class);
+                    "entity.patrol-leader", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Raider.class);
             mapEntityScopedOption(options, srcFile, entries, target, "PatrolSpawnPoint",
-                    "entity.patrol-spawn-point", normalizedType, org.bukkit.entity.Raider.class);
+                    "entity.patrol-spawn-point", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Raider.class);
             mapEntityScopedOption(options, srcFile, entries, target, "Tamed",
-                    "entity.tamed", normalizedType, org.bukkit.entity.Tameable.class);
+                    "entity.tamed", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Tameable.class);
             mapEntityScopedOption(options, srcFile, entries, target, "Angry",
-                    "entity.angry", normalizedType, org.bukkit.entity.Wolf.class,
+                    "entity.angry", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Wolf.class,
                     org.bukkit.entity.PigZombie.class);
-            mapOption(options, srcFile, entries, target, "HeldBlock", "entity.held-block");
-            mapEntitySize(options, srcFile, entries, target);
-            mapOption(options, srcFile, entries, target, "ExplosionRadius", "entity.creeper-explosion-radius");
-            mapOption(options, srcFile, entries, target, "FuseTicks", "entity.creeper-fuse-ticks");
-            mapOption(options, srcFile, entries, target, "SuperCharged", "entity.creeper-super-charged");
-            mapOption(options, srcFile, entries, target, "HasNectar", "entity.has-nectar");
-            mapOption(options, srcFile, entries, target, "HasStung", "entity.has-stung");
+            mapEntityScopedOption(options, srcFile, entries, target, "HeldBlock",
+                    "entity.held-block", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    org.bukkit.entity.Enderman.class);
+            mapEntitySize(options, srcFile, entries, target, normalizedType);
+            mapEntityScopedOption(options, srcFile, entries, target, "ExplosionRadius",
+                    "entity.creeper-explosion-radius", normalizedType,
+                    MythicMobsImporter::isNonNegativeIntegerOptionValue, org.bukkit.entity.Creeper.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "FuseTicks",
+                    "entity.creeper-fuse-ticks", normalizedType,
+                    MythicMobsImporter::isNonNegativeIntegerOptionValue, org.bukkit.entity.Creeper.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "SuperCharged",
+                    "entity.creeper-super-charged", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Creeper.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "HasNectar",
+                    "entity.has-nectar", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Bee.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "HasStung",
+                    "entity.has-stung", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Bee.class);
             mapBeeAnger(options, srcFile, entries, target, normalizedType);
-            mapOption(options, srcFile, entries, target, "PreventStingerLoss", "mob.prevent-stinger-loss");
+            mapEntityScopedOption(options, srcFile, entries, target, "PreventStingerLoss",
+                    "mob.prevent-stinger-loss", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Bee.class);
             mapOption(options, srcFile, entries, target, "PreventTeleport", "mob.prevent-teleport");
             mapOption(options, srcFile, entries, target, "PreventPickup", "mob.prevent-pickup");
             mapOption(options, srcFile, entries, target, "PreventItemUse", "mob.prevent-item-use");
@@ -1159,43 +1194,112 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "PreventFireCauses", "mob.prevent-fire-causes");
             mapOption(options, srcFile, entries, target, "PreventProjectiles", "mob.prevent-projectiles");
             mapOption(options, srcFile, entries, target, "PreventExplosions", "mob.prevent-explosions");
-            mapOption(options, srcFile, entries, target, "PreventSuicide", "mob.prevent-suicide");
+            mapEntityScopedOption(options, srcFile, entries, target, "PreventSuicide",
+                    "mob.prevent-suicide", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Creeper.class);
             mapOption(options, srcFile, entries, target, "PreventBlockExplosions", "mob.prevent-block-explosions");
             mapOption(options, srcFile, entries, target, "PreventEntityExplosions", "mob.prevent-entity-explosions");
             mapOption(options, srcFile, entries, target, "HealOnReload", "mob.heal-on-reload");
             mapOption(options, srcFile, entries, target, "DigOutOfGround", "mob.dig-out-of-ground");
             mapOption(options, srcFile, entries, target, "PreventMobKillDrops", "mob.prevent-mob-kill-drops");
-            mapOption(options, srcFile, entries, target, "HorseColor", "entity.horse-color");
-            mapOption(options, srcFile, entries, target, "HorseStyle", "entity.horse-style");
-            mapOption(options, srcFile, entries, target, "Domestication", "entity.horse-domestication");
-            mapOption(options, srcFile, entries, target, "MaxDomestication", "entity.horse-max-domestication");
-            mapOption(options, srcFile, entries, target, "JumpStrength", "entity.horse-jump-strength");
-            mapOption(options, srcFile, entries, target, "CatType", "entity.cat-type");
-            mapOption(options, srcFile, entries, target, "Sitting", "entity.cat-sitting");
-            mapOption(options, srcFile, entries, target, "CollarColor", "entity.cat-collar-color");
-            mapOption(options, srcFile, entries, target, "SheepColor", "entity.sheep-color");
-            mapOption(options, srcFile, entries, target, "Sheared", "entity.sheep-sheared");
-            mapOption(options, srcFile, entries, target, "ArmorStandArms", "entity.armor-stand-arms");
-            mapOption(options, srcFile, entries, target, "ArmorStandBasePlate", "entity.armor-stand-baseplate");
-            mapOption(options, srcFile, entries, target, "ArmorStandMarker", "entity.armor-stand-marker");
-            mapOption(options, srcFile, entries, target, "ArmorStandSmall", "entity.armor-stand-small");
-            mapOption(options, srcFile, entries, target, "HasArms", "entity.armor-stand-arms");
-            mapOption(options, srcFile, entries, target, "HasBasePlate", "entity.armor-stand-baseplate");
-            mapOption(options, srcFile, entries, target, "Marker", "entity.armor-stand-marker");
-            mapOption(options, srcFile, entries, target, "Small", "entity.armor-stand-small");
-            mapOption(options, srcFile, entries, target, "CanMove", "entity.armor-stand-can-move");
-            mapOption(options, srcFile, entries, target, "CanTick", "entity.armor-stand-can-tick");
-            mapOption(options, srcFile, entries, target, "ItemBody", "entity.armor-stand-item-body");
-            mapOption(options, srcFile, entries, target, "ItemFeet", "entity.armor-stand-item-feet");
-            mapOption(options, srcFile, entries, target, "ItemHand", "entity.armor-stand-item-hand");
-            mapOption(options, srcFile, entries, target, "ItemOffhand", "entity.armor-stand-item-offhand");
-            mapOption(options, srcFile, entries, target, "ItemHead", "entity.armor-stand-item-head");
-            mapOption(options, srcFile, entries, target, "ItemLegs", "entity.armor-stand-item-legs");
-            mapOption(options, srcFile, entries, target, "FallingBlockData", "entity.falling-block-data");
-            mapOption(options, srcFile, entries, target, "BlockData", "entity.falling-block-data");
-            mapOption(options, srcFile, entries, target, "FallingBlockDropItem", "entity.falling-block-drop-item");
-            mapOption(options, srcFile, entries, target, "FallingBlockHurtEntities", "entity.falling-block-hurt-entities");
-            mapOption(options, srcFile, entries, target, "FallingBlockCancelDrop", "entity.falling-block-cancel-drop");
+            mapEntityScopedOption(options, srcFile, entries, target, "HorseColor",
+                    "entity.horse-color", normalizedType,
+                    raw -> isEnumOptionValue(raw, org.bukkit.entity.Horse.Color.class),
+                    org.bukkit.entity.Horse.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "HorseStyle",
+                    "entity.horse-style", normalizedType,
+                    raw -> isEnumOptionValue(raw, org.bukkit.entity.Horse.Style.class),
+                    org.bukkit.entity.Horse.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Domestication",
+                    "entity.horse-domestication", normalizedType,
+                    MythicMobsImporter::isNonNegativeIntegerOptionValue,
+                    org.bukkit.entity.Horse.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "MaxDomestication",
+                    "entity.horse-max-domestication", normalizedType,
+                    MythicMobsImporter::isNonNegativeIntegerOptionValue,
+                    org.bukkit.entity.Horse.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "JumpStrength",
+                    "entity.horse-jump-strength", normalizedType,
+                    raw -> isFiniteNumberInRange(raw, 0, 2), org.bukkit.entity.Horse.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "CatType",
+                    "entity.cat-type", normalizedType,
+                    MythicMobsImporter::isCatTypeOptionValue,
+                    org.bukkit.entity.Cat.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Sitting",
+                    "entity.cat-sitting", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Cat.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "CollarColor",
+                    "entity.cat-collar-color", normalizedType,
+                    raw -> isEnumOptionValue(raw, org.bukkit.DyeColor.class), org.bukkit.entity.Cat.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "SheepColor",
+                    "entity.sheep-color", normalizedType,
+                    raw -> isEnumOptionValue(raw, org.bukkit.DyeColor.class), org.bukkit.entity.Sheep.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Sheared",
+                    "entity.sheep-sheared", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Sheep.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "ArmorStandArms",
+                    "entity.armor-stand-arms", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "ArmorStandBasePlate",
+                    "entity.armor-stand-baseplate", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "ArmorStandMarker",
+                    "entity.armor-stand-marker", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "ArmorStandSmall",
+                    "entity.armor-stand-small", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "HasArms",
+                    "entity.armor-stand-arms", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "HasBasePlate",
+                    "entity.armor-stand-baseplate", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Marker",
+                    "entity.armor-stand-marker", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Small",
+                    "entity.armor-stand-small", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "CanMove",
+                    "entity.armor-stand-can-move", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "CanTick",
+                    "entity.armor-stand-can-tick", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "ItemBody",
+                    "entity.armor-stand-item-body", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "ItemFeet",
+                    "entity.armor-stand-item-feet", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "ItemHand",
+                    "entity.armor-stand-item-hand", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "ItemOffhand",
+                    "entity.armor-stand-item-offhand", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "ItemHead",
+                    "entity.armor-stand-item-head", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "ItemLegs",
+                    "entity.armor-stand-item-legs", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    org.bukkit.entity.ArmorStand.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "FallingBlockData",
+                    "entity.falling-block-data", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    org.bukkit.entity.FallingBlock.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "BlockData",
+                    "entity.falling-block-data", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    org.bukkit.entity.FallingBlock.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "FallingBlockDropItem",
+                    "entity.falling-block-drop-item", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.FallingBlock.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "FallingBlockHurtEntities",
+                    "entity.falling-block-hurt-entities", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.FallingBlock.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "FallingBlockCancelDrop",
+                    "entity.falling-block-cancel-drop", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.FallingBlock.class);
             Map<String, Object> leftover = new LinkedHashMap<>(options.getValues(true));
             for (String mapped : List.of("FollowRange", "MovementSpeed", "KnockbackResistance", "MaxCombatDistance",
                     "Despawn", "Health", "Damage", "RangedAttack", "RangedAttackRange", "ProjectileSpeed",
@@ -4040,31 +4144,111 @@ public final class MythicMobsImporter implements MigrationImporter {
                                        List<Map<String, Object>> entries, YamlConfiguration target,
                                        String optionName, String path, String normalizedType,
                                        Class<?>... supportedEntityTypes) {
+        mapEntityScopedOption(options, srcFile, entries, target, optionName, path, normalizedType,
+                null, supportedEntityTypes);
+    }
+
+    private void mapEntityScopedOption(ConfigurationSection options, String srcFile,
+                                       List<Map<String, Object>> entries, YamlConfiguration target,
+                                       String optionName, String path, String normalizedType,
+                                       java.util.function.Predicate<Object> validator,
+                                       Class<?>... supportedEntityTypes) {
         Object raw = ciGet(options, optionName);
         if (raw == null) return;
 
         String entityTypeName = normalizedType == null ? "ZOMBIE" : normalizedType;
-        Class<? extends org.bukkit.entity.Entity> entityClass;
-        try {
-            entityClass = org.bukkit.entity.EntityType.valueOf(entityTypeName).getEntityClass();
-        } catch (IllegalArgumentException ignored) {
-            // Invalid explicit types are rejected earlier in conversion.
-            entityClass = null;
-        }
-        final Class<? extends org.bukkit.entity.Entity> resolvedEntityClass = entityClass;
+        Class<? extends org.bukkit.entity.Entity> resolvedEntityClass = resolveEntityClass(entityTypeName);
         boolean supported = resolvedEntityClass != null && java.util.Arrays.stream(supportedEntityTypes)
                 .anyMatch(requiredType -> requiredType.isAssignableFrom(resolvedEntityClass));
+        String unsupportedPath = "entity.unsupported.Options." + optionName;
         if (!supported) {
             String requiredTypes = java.util.Arrays.stream(supportedEntityTypes)
                     .map(Class::getSimpleName).collect(java.util.stream.Collectors.joining(" or "));
-            String unsupportedPath = "entity.unsupported.Options." + optionName;
             target.set(unsupportedPath, raw);
             note(entries, srcFile, "Options." + optionName, unsupportedPath, raw, "unsupported",
                     "Entity type " + entityTypeName + " does not implement " + requiredTypes
                             + "; the value is preserved and will not be applied.", "WARN");
             return;
         }
+        if (validator != null && !validator.test(raw)) {
+            target.set(unsupportedPath, raw);
+            note(entries, srcFile, "Options." + optionName, unsupportedPath, raw, "unsupported",
+                    "Value does not satisfy the runtime schema for " + optionName
+                            + "; the value is preserved and will not be applied.", "WARN");
+            return;
+        }
         mapOption(options, srcFile, entries, target, optionName, path);
+    }
+
+    private static Class<? extends org.bukkit.entity.Entity> resolveEntityClass(String entityTypeName) {
+        try {
+            return org.bukkit.entity.EntityType.valueOf(entityTypeName).getEntityClass();
+        } catch (IllegalArgumentException ignored) {
+            // Invalid explicit types are rejected earlier in conversion.
+            return null;
+        }
+    }
+
+    private static boolean isBooleanOptionValue(Object raw) {
+        if (raw instanceof Boolean) return true;
+        if (!(raw instanceof String text)) return false;
+        return switch (text.trim().toLowerCase(Locale.ROOT)) {
+            case "true", "false", "yes", "no", "1", "0" -> true;
+            default -> false;
+        };
+    }
+
+    private static boolean isNonNegativeIntegerOptionValue(Object raw) {
+        return parseNonNegativeIntegerOption(raw) != null;
+    }
+
+    private static boolean isFiniteNumberInRange(Object raw, double minimum, double maximum) {
+        Double value = parseFiniteNumberOption(raw);
+        return value != null && value >= minimum && value <= maximum;
+    }
+
+    private static Double parseFiniteNumberOption(Object raw) {
+        if (raw instanceof Number number) {
+            double value = number.doubleValue();
+            return Double.isFinite(value) ? value : null;
+        }
+        if (raw instanceof String text) {
+            try {
+                double value = Double.parseDouble(text.trim());
+                return Double.isFinite(value) ? value : null;
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isEnumOptionValue(Object raw, Class<?> enumType) {
+        if (!(raw instanceof String text) || text.isBlank()) return false;
+        String normalized = text.trim().toUpperCase(Locale.ROOT);
+        if (enumType.isEnum()) {
+            for (Object constant : enumType.getEnumConstants()) {
+                if (((Enum<?>) constant).name().equals(normalized)) return true;
+            }
+            return false;
+        }
+        try {
+            enumType.getMethod("valueOf", String.class).invoke(null, normalized);
+            return true;
+        } catch (ReflectiveOperationException | IllegalArgumentException | SecurityException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isCatTypeOptionValue(Object raw) {
+        if (!(raw instanceof String text) || text.isBlank()) return false;
+        return Set.of("TABBY", "BLACK", "RED", "SIAMESE", "BRITISH_SHORTHAIR",
+                "CALICO", "PERSIAN", "RAGDOLL", "WHITE", "JELLIE", "ALL_BLACK")
+                .contains(text.trim().toUpperCase(Locale.ROOT));
+    }
+
+    private static boolean isNonBlankStringOption(Object raw) {
+        return raw instanceof String text && !text.isBlank();
     }
 
     private boolean mapZombieReinforcementsChance(ConfigurationSection options, String srcFile,
@@ -4249,9 +4433,24 @@ public final class MythicMobsImporter implements MigrationImporter {
     }
 
     private void mapEntitySize(ConfigurationSection options, String srcFile,
-                               List<Map<String, Object>> entries, YamlConfiguration target) {
+                               List<Map<String, Object>> entries, YamlConfiguration target,
+                               String normalizedType) {
         Object raw = ciGet(options, "Size");
         if (raw == null) return;
+        String entityTypeName = normalizedType == null ? "ZOMBIE" : normalizedType;
+        Class<? extends org.bukkit.entity.Entity> entityClass = resolveEntityClass(entityTypeName);
+        boolean supported = entityClass != null
+                && (org.bukkit.entity.Slime.class.isAssignableFrom(entityClass)
+                || org.bukkit.entity.Phantom.class.isAssignableFrom(entityClass));
+        if (!supported) {
+            String targetPath = "entity.unsupported.Options.Size";
+            target.set(targetPath, raw);
+            note(entries, srcFile, "Options.Size", targetPath, raw, "unsupported",
+                    "Entity type " + entityTypeName
+                            + " does not implement Slime or Phantom; the value is preserved and will not be applied.",
+                    "WARN");
+            return;
+        }
         String value = String.valueOf(raw).trim();
         int size = parseInteger(value, Integer.MIN_VALUE);
         if (size > 0) {

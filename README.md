@@ -783,8 +783,12 @@ This is a partial parity release. The matrix currently has `35`
    cancellation, timing, and cleanup; distinguish natural server/client
    evidence from synthetic event dispatch.
 6. **Mob Options**: cover remaining options, entity-specific defaults,
-   application order, and interactions. `MaxCombatDistance` and the
-   `SpawningDistance` near/far removal lifecycle now have strict evidence.
+   application order, and interactions. The importer now preserves wrong-type
+   and malformed entity-specific values instead of reporting silent mappings;
+   interaction guards are now limited to the Bukkit entity families that
+   consume them.
+   `MaxCombatDistance` and the `SpawningDistance` near/far removal lifecycle
+   now have strict evidence.
 7. **Spawner and Random Spawn**: extend natural location, combined conditions,
    cooldowns, limits, player range, world border, restart, and random-pool / loot
    coupling coverage.
@@ -964,6 +968,8 @@ the entire MythicMobs feature catalog.
 - Mythic `Options.PatrolSpawnPoint` now maps to Raider patrol target blocks, and strict Paper 1.21.1 fixture `srv-paper-integration-patrol-spawn-20261031` reads back a real Pillager patrol target at its spawn block.
 - Mythic `Options.Adult` and `Baby` use Bukkit age setters, including Zombie/Piglin-specific baby APIs. Exact tick `Age` and `AgeLock` apply to `Animals`; for ageable non-animal types such as Zombies/Husks, those two values are preserved under `entity.unsupported.Options.*` with migration warnings while `Adult`/`Baby` remain mapped. Non-Ageable values are also preserved with warnings. Importer/runtime tests cover animal, Husk, and Allay cases; strict Paper 1.21.1-133 fixture `srv-paper-age-options-strict-20261105-r3` records `age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true` on real Sheep and Zombie entities. Other Mob Options remain incomplete.
 - Mythic Bee `Options.Anger` maps non-negative integer tick values to `entity.bee-anger` and Paper `Bee#setAnger`. Other entity types and invalid values remain preserved with migration warnings; importer/runtime tests cover both paths. Strict Paper fixture `srv-paper-bee-anger-strict-20261107-r1` verifies 1200 ticks against a zero-anger Bee control through production spawning.
+- Entity-scoped Mob Options now enforce their Bukkit type boundary during import: Creeper, Bee, Horse, Cat, Sheep, ArmorStand, Enderman, Slime/MagmaCube/Phantom, and FallingBlock fields map only for compatible entities. Wrong-type and malformed values remain under `entity.unsupported.Options.*` with WARN entries, while valid Horse and ArmorStand paths remain mapped; `ImportersTest.mythicPreservesEntityScopedOptionBoundaries` and `MythicAgeOptionsTest.ignoresEntitySpecificOptionsOnIncompatibleRuntimeTypes` cover the contract. Paper production evidence for the individual options remains tracked in the matrix and the full Mob Options catalog is still open.
+- Interaction guard options now follow the same import boundary: `CanPickupItems` requires a Bukkit `Mob`, `PreventJockeyMounts` a Zombie-family entity, `PreventSlimeSplit` a Slime-family entity, `PreventBlockInfection` a Silverfish, and `PreventSnowFormation` a Snowman. Wrong-type and malformed values are preserved under `entity.unsupported.Options.*`; importer tests cover valid, incompatible, and malformed cases. Existing Paper evidence covers the runtime guard paths, while their full Mythic option ordering and cross-version semantics remain open.
 - Official Armor Stand options `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` now map through the migration/runtime path; strict Paper 1.21.1 fixture `srv-paper-integration-armor-options-20261031-r3` reads back the production can-move/can-tick state.
 - Official Armor Stand item options `ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`, `ItemHead`, and `ItemLegs` now resolve through the existing ItemStack/custom-item path; strict fixture `srv-paper-integration-armor-options-20261031-r3` reads back all six equipment slots.
 - Mythic `Options.Saddled` now applies through Paper `Steerable` and `AbstractHorse` APIs; strict fixture `srv-paper-integration-saddled-20261031-r2` reads back a real Horse saddle.

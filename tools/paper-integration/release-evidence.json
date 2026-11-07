@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-jockey-guard-strict-20261107-r1",
+    "reportFixtureDirectory": "srv-paper-jockey-guard-strict-20261107-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-jockey-guard-strict-20261107-r1.json",
+    "reportSha256": "ba466b86ab98ec984b0a5fd06cb2f4e73efedb4d390136727892151ff9dac7db",
+    "log": "tools/paper-integration/reports/paper-1.21.1-jockey-guard-strict-20261107-r1.log.gz",
+    "logSha256": "84b65fc5d6204a4174788c348ba45bd19fe53026183f16a4f0660a35d131f2ec",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-jockey-guard-strict-20261107-r1-client-logs.tar.gz",
+    "clientLogSha256": "2cfdc718238cb6598ceb94686559c00085fdf7b761fa196648be2beffa023a0a",
+    "pluginSha256": "64b1eedc931a84964099bd14a71d43c45d866774ac5bc6815ad61cde1aa8a364",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-full-strict-20261107-r4",
     "reportFixtureDirectory": "srv-paper-full-strict-20261107-r4",
     "report": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261107-r4.json",

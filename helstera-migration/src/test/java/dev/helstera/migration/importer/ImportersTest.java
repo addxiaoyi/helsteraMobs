@@ -3787,6 +3787,7 @@ class ImportersTest {
                       PreventSlimeSplit: true
                       PreventBlockInfection: true
                       PreventSnowFormation: true
+                      CanPickupItems: false
                       Age: -1
                       AgeLock: true
                       Adult: true
@@ -3819,20 +3820,24 @@ class ImportersTest {
         assertTrue(target.getBoolean("mob.prevent-target"));
         assertTrue(target.getBoolean("mob.prevent-attack"));
         assertTrue(target.getBoolean("mob.prevent-vanilla-damage"));
-        assertTrue(target.getBoolean("mob.prevent-slime-split"));
-        assertTrue(target.getBoolean("mob.prevent-block-infection"));
-        assertTrue(target.getBoolean("mob.prevent-snow-formation"));
+        assertFalse(target.contains("mob.prevent-slime-split"));
+        assertFalse(target.contains("mob.prevent-block-infection"));
+        assertFalse(target.contains("mob.prevent-snow-formation"));
+        assertTrue(target.getBoolean("entity.unsupported.Options.PreventSlimeSplit"));
+        assertTrue(target.getBoolean("entity.unsupported.Options.PreventBlockInfection"));
+        assertTrue(target.getBoolean("entity.unsupported.Options.PreventSnowFormation"));
+        assertFalse(target.getBoolean("entity.can-pickup-items", true));
         assertFalse(target.contains("entity.age"));
         assertFalse(target.contains("entity.age-lock"));
         assertEquals(-1, target.getInt("entity.unsupported.Options.Age"));
         assertTrue(target.getBoolean("entity.unsupported.Options.AgeLock"));
         assertTrue(target.getBoolean("entity.adult"));
         assertTrue(target.getBoolean("entity.baby"));
-        assertTrue(target.getBoolean("entity.saddled"));
-        assertEquals("DIAMOND_HORSE_ARMOR", target.getString("entity.horse-armor"));
-        assertFalse(target.contains("mob.unsupported.Options.HorseArmor"));
-        assertTrue(target.getBoolean("entity.carrying-chest"));
-        assertFalse(target.contains("mob.unsupported.Options.CarryingChest"));
+        assertFalse(target.contains("entity.saddled"));
+        assertEquals("DIAMOND_HORSE_ARMOR",
+                target.getString("entity.unsupported.Options.HorseArmor"));
+        assertTrue(target.getBoolean("entity.unsupported.Options.Saddled"));
+        assertTrue(target.getBoolean("entity.unsupported.Options.CarryingChest"));
         assertFalse(target.contains("entity.can-join-raid"));
         assertFalse(target.contains("entity.patrol-leader"));
         assertFalse(target.contains("entity.patrol-spawn-point"));
@@ -3863,6 +3868,113 @@ class ImportersTest {
                 && "WARN".equals(entry.get("severity"))
                 && "Options.PatrolLeader".equals(entry.get("source-key"))
                 && String.valueOf(entry.get("note")).contains("does not implement Raider")));
+    }
+
+    @Test
+    @DisplayName("interaction guard options require their runtime entity types and boolean values")
+    void mythicPreservesInteractionGuardOptionBoundaries(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/interaction-guard-boundaries.yml", """
+                mobs:
+                  slime:
+                    Type: SLIME
+                    Options:
+                      PreventSlimeSplit: true
+                  silverfish:
+                    Type: SILVERFISH
+                    Options:
+                      PreventBlockInfection: true
+                  snow_golem:
+                    Type: SNOW_GOLEM
+                    Options:
+                      PreventSnowFormation: true
+                  zombie:
+                    Type: ZOMBIE
+                    Options:
+                      PreventJockeyMounts: true
+                      CanPickupItems: false
+                  malformed_slime:
+                    Type: SLIME
+                    Options:
+                      PreventSlimeSplit: maybe
+                  malformed_silverfish:
+                    Type: SILVERFISH
+                    Options:
+                      PreventBlockInfection: maybe
+                  malformed_snow_golem:
+                    Type: SNOW_GOLEM
+                    Options:
+                      PreventSnowFormation: maybe
+                  malformed_zombie:
+                    Type: ZOMBIE
+                    Options:
+                      PreventJockeyMounts: maybe
+                      CanPickupItems: maybe
+                  wrong_type:
+                    Type: ARMOR_STAND
+                    Options:
+                      PreventSlimeSplit: true
+                      PreventBlockInfection: true
+                      PreventSnowFormation: true
+                      PreventJockeyMounts: true
+                      CanPickupItems: true
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        var slime = convertedMob(entries, "slime");
+        assertTrue(slime.getBoolean("mob.prevent-slime-split"));
+        assertFalse(slime.contains("entity.unsupported.Options.PreventSlimeSplit"));
+
+        var silverfish = convertedMob(entries, "silverfish");
+        assertTrue(silverfish.getBoolean("mob.prevent-block-infection"));
+        assertFalse(silverfish.contains("entity.unsupported.Options.PreventBlockInfection"));
+
+        var snowGolem = convertedMob(entries, "snow_golem");
+        assertTrue(snowGolem.getBoolean("mob.prevent-snow-formation"));
+        assertFalse(snowGolem.contains("entity.unsupported.Options.PreventSnowFormation"));
+
+        var zombie = convertedMob(entries, "zombie");
+        assertTrue(zombie.getBoolean("mob.prevent-jockey-mounts"));
+        assertFalse(zombie.getBoolean("entity.can-pickup-items", true));
+        assertFalse(zombie.contains("entity.unsupported.Options.PreventJockeyMounts"));
+        assertFalse(zombie.contains("entity.unsupported.Options.CanPickupItems"));
+
+        var malformedSlime = convertedMob(entries, "malformed_slime");
+        assertEquals("maybe", malformedSlime.getString(
+                "entity.unsupported.Options.PreventSlimeSplit"));
+        assertFalse(malformedSlime.contains("mob.prevent-slime-split"));
+        var malformedSilverfish = convertedMob(entries, "malformed_silverfish");
+        assertEquals("maybe", malformedSilverfish.getString(
+                "entity.unsupported.Options.PreventBlockInfection"));
+        assertFalse(malformedSilverfish.contains("mob.prevent-block-infection"));
+        var malformedSnowGolem = convertedMob(entries, "malformed_snow_golem");
+        assertEquals("maybe", malformedSnowGolem.getString(
+                "entity.unsupported.Options.PreventSnowFormation"));
+        assertFalse(malformedSnowGolem.contains("mob.prevent-snow-formation"));
+        var malformedZombie = convertedMob(entries, "malformed_zombie");
+        assertEquals("maybe", malformedZombie.getString(
+                "entity.unsupported.Options.PreventJockeyMounts"));
+        assertEquals("maybe", malformedZombie.getString(
+                "entity.unsupported.Options.CanPickupItems"));
+        assertFalse(malformedZombie.contains("mob.prevent-jockey-mounts"));
+        assertFalse(malformedZombie.contains("entity.can-pickup-items"));
+
+        var wrongType = convertedMob(entries, "wrong_type");
+        for (String option : List.of("PreventSlimeSplit", "PreventBlockInfection",
+                "PreventSnowFormation", "PreventJockeyMounts", "CanPickupItems")) {
+            assertTrue(wrongType.contains("entity.unsupported.Options." + option), option);
+        }
+        assertFalse(wrongType.contains("mob.prevent-slime-split"));
+        assertFalse(wrongType.contains("mob.prevent-block-infection"));
+        assertFalse(wrongType.contains("mob.prevent-snow-formation"));
+        assertFalse(wrongType.contains("mob.prevent-jockey-mounts"));
+        assertFalse(wrongType.contains("entity.can-pickup-items"));
+        assertEquals(10, entries.stream().filter(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("target-key")).startsWith("entity.unsupported.Options."))
+                .filter(entry -> List.of("Options.PreventSlimeSplit", "Options.PreventBlockInfection",
+                        "Options.PreventSnowFormation", "Options.PreventJockeyMounts",
+                        "Options.CanPickupItems").contains(entry.get("source-key")))
+                .count());
     }
 
     @Test
@@ -4265,6 +4377,126 @@ class ImportersTest {
         assertFalse(target.contains("mob.unsupported.Options.PreventSuicide"));
         assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
                 && "mob.prevent-suicide".equals(entry.get("target-key"))));
+    }
+
+    @Test
+    @DisplayName("entity-specific options preserve incompatible types and malformed values")
+    void mythicPreservesEntityScopedOptionBoundaries(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/entity-option-boundaries.yml", """
+                mobs:
+                  horse:
+                    Type: HORSE
+                    Options:
+                      HorseColor: GRAY
+                      HorseStyle: WHITE_DOTS
+                      Domestication: 5
+                      MaxDomestication: 20
+                      JumpStrength: 0.8
+                      Saddled: true
+                      HorseArmor: DIAMOND_HORSE_ARMOR
+                  wrong:
+                    Type: ZOMBIE
+                    Options:
+                      HeldBlock: minecraft:obsidian
+                      Size: 5
+                      ExplosionRadius: 5
+                      HasNectar: true
+                      HorseColor: WHITE
+                      CatType: SIAMESE
+                      SheepColor: RED
+                      ArmorStandArms: true
+                      BlockData: minecraft:sand
+                  invalid_creeper:
+                    Type: CREEPER
+                    Options:
+                      ExplosionRadius: not-a-number
+                      FuseTicks: -1
+                      SuperCharged: maybe
+                  invalid_horse:
+                    Type: HORSE
+                    Options:
+                      HorseColor: PAISLEY
+                      JumpStrength: 3.5
+                      Domestication: -1
+                  invalid_cat:
+                    Type: CAT
+                    Options:
+                      CatType: NOT_A_CAT
+                  invalid_sheep:
+                    Type: SHEEP
+                    Options:
+                      SheepColor: NOT_A_COLOR
+                  invalid_falling:
+                    Type: FALLING_BLOCK
+                    Options:
+                      BlockData: []
+                  invalid_stand:
+                    Type: ARMOR_STAND
+                    Options:
+                      HasArms: maybe
+                  invalid_raider:
+                    Type: PILLAGER
+                    Options:
+                      CanJoinRaid: maybe
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        var horse = convertedMob(entries, "horse");
+        assertEquals("GRAY", horse.getString("entity.horse-color"));
+        assertEquals("WHITE_DOTS", horse.getString("entity.horse-style"));
+        assertEquals(5, horse.getInt("entity.horse-domestication"));
+        assertEquals(20, horse.getInt("entity.horse-max-domestication"));
+        assertEquals(0.8, horse.getDouble("entity.horse-jump-strength"), 1e-9);
+        assertTrue(horse.getBoolean("entity.saddled"));
+        assertEquals("DIAMOND_HORSE_ARMOR", horse.getString("entity.horse-armor"));
+
+        var wrong = convertedMob(entries, "wrong");
+        for (String mapped : List.of("entity.held-block", "entity.size",
+                "entity.creeper-explosion-radius", "entity.has-nectar", "entity.horse-color",
+                "entity.cat-type", "entity.sheep-color", "entity.armor-stand-arms",
+                "entity.falling-block-data")) {
+            assertFalse(wrong.contains(mapped), mapped);
+        }
+        assertEquals("minecraft:obsidian", wrong.getString("entity.unsupported.Options.HeldBlock"));
+        assertEquals(5, wrong.getInt("entity.unsupported.Options.Size"));
+        assertEquals(5, wrong.getInt("entity.unsupported.Options.ExplosionRadius"));
+        assertTrue(wrong.getBoolean("entity.unsupported.Options.HasNectar"));
+        assertEquals("WHITE", wrong.getString("entity.unsupported.Options.HorseColor"));
+        assertEquals("SIAMESE", wrong.getString("entity.unsupported.Options.CatType"));
+        assertEquals("RED", wrong.getString("entity.unsupported.Options.SheepColor"));
+        assertTrue(wrong.getBoolean("entity.unsupported.Options.ArmorStandArms"));
+        assertEquals("minecraft:sand", wrong.getString("entity.unsupported.Options.BlockData"));
+
+        var invalidCreeper = convertedMob(entries, "invalid_creeper");
+        assertEquals("not-a-number", invalidCreeper.getString(
+                "entity.unsupported.Options.ExplosionRadius"));
+        assertEquals(-1, invalidCreeper.getInt("entity.unsupported.Options.FuseTicks"));
+        assertEquals("maybe", invalidCreeper.getString("entity.unsupported.Options.SuperCharged"));
+        assertFalse(invalidCreeper.contains("entity.creeper-explosion-radius"));
+        assertFalse(invalidCreeper.contains("entity.creeper-fuse-ticks"));
+        assertFalse(invalidCreeper.contains("entity.creeper-super-charged"));
+
+        var invalidHorse = convertedMob(entries, "invalid_horse");
+        assertEquals("PAISLEY", invalidHorse.getString("entity.unsupported.Options.HorseColor"));
+        assertEquals(3.5, invalidHorse.getDouble("entity.unsupported.Options.JumpStrength"), 1e-9);
+        assertEquals(-1, invalidHorse.getInt("entity.unsupported.Options.Domestication"));
+        assertFalse(invalidHorse.contains("entity.horse-color"));
+        assertFalse(invalidHorse.contains("entity.horse-jump-strength"));
+        assertFalse(invalidHorse.contains("entity.horse-domestication"));
+
+        assertEquals("NOT_A_CAT", convertedMob(entries, "invalid_cat")
+                .getString("entity.unsupported.Options.CatType"));
+        assertEquals("NOT_A_COLOR", convertedMob(entries, "invalid_sheep")
+                .getString("entity.unsupported.Options.SheepColor"));
+        assertTrue(convertedMob(entries, "invalid_falling")
+                .contains("entity.unsupported.Options.BlockData"));
+        assertEquals("maybe", convertedMob(entries, "invalid_stand")
+                .getString("entity.unsupported.Options.HasArms"));
+        assertEquals("maybe", convertedMob(entries, "invalid_raider")
+                .getString("entity.unsupported.Options.CanJoinRaid"));
+        assertTrue(entries.stream().filter(entry -> "unsupported".equals(entry.get("status")))
+                .anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                        && "Options.HorseColor".equals(entry.get("source-key"))));
     }
 
     @Test
