@@ -2,7 +2,24 @@
 
 ## MythicMobs Parity Development Status (2026-11-08)
 
-Latest strict fixture `srv-paper-player-kills-import-strict-20261108-r1`
+Latest strict fixture `srv-paper-context-relations-strict-20261108-r2`
+passes all 401 release probes (382 passed, 19 expected rejections, zero failed
+or incomplete) on Paper 1.21.1-133. It verifies context-bound `@Passenger`,
+`@Passengers`, `@Mount`, `@Vehicle`, `@OwnerLocation`, and `@ParentLocation`
+resolution, active-entity filtering, and malformed-argument rejection through
+the production targeter path. Report:
+`tools/paper-integration/reports/paper-1.21.1-context-targeter-relations-strict-20261108-r2.json`
+(SHA-256 `d72a3fe89dbb17623219ae53b36fb07acde0a5a9bc257fe3ac06b598aca35800`).
+Compressed server log SHA-256:
+`13c5a6a019385370375a516dd5123655bc56dd3b7eea1f66a9cd6d1d80cb8940`.
+Client log archive SHA-256:
+`9a3f6dd620f6f671c1030e91a55df989b1df576117fc1991d51eb493f7c4624b`.
+Plugin SHA-256:
+`043139059115bd84f7e543d76c71486f06303163dc13b09d8aa186981609b7b6`.
+Latest strict report has 401 probes, zero incomplete. Archived logs redact web
+token query values; the source fixture retains the original run logs.
+
+Previous strict fixture `srv-paper-player-kills-import-strict-20261108-r1`
 passes all 400 release probes (381 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. It verifies imported `PlayerKills`
 primary/range/negative forms and malformed-input preservation through a real
@@ -16,7 +33,7 @@ Client log archive SHA-256:
 `0d079eb950937c4b8e1f935e490c5d9eddbdc3dfaadc04c0c06952d8b7f539d1`.
 Plugin SHA-256:
 `e699b8a21826b630af7e07d506ca2ed2e1fc828cf01d9c886f97d68ea3386dca`.
-Latest strict report has 400 probes, zero incomplete.
+That strict report has 400 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-radius-conditions-strict-20261108-r2`
 passes all 399 release probes (380 passed, 19 expected rejections, zero failed
@@ -934,6 +951,7 @@ the entire MythicMobs feature catalog.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies Oxygen, ConsumeSlot, RemoveHeldItem, material cooldown, game mode, Jump, ForcePull, SetOffhand, SetArmor, SetFaction, SetLevel, SetWeather, SetTime, Lightning, Score, and target-aware dispatch.
 - Mythic skill migration now preserves positional arguments alongside keyed arguments across common item, inventory, experience, oxygen, block, entity-state, movement, potion, animation, and audience mechanics; importer regression coverage protects both forms.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` also verifies Freeze, CompareValues, IsSkill, Cuboid/InBounds, MythicMobType, VariableContains, and ProjectileHasEnded. `Score` preserves explicit objective/entry/value semantics and supports shorthand; `Targets` supports inherited skill-tree target counts and optional context targeters.
+- Context targeters now reject inactive relation entities and support `@Passenger` (first passenger), `@Passengers` (all living passengers), `@Vehicle`/`@Mount`, and location-valued `@OwnerLocation`/`@ParentLocation`. Unit tests cover ordering, invalid entity state, and relation cleanup; strict Paper fixture `srv-paper-context-relations-strict-20261108-r2` verifies the complete relation probe in the 401-probe release catalog.
 - Official `EnderDragonPhase` now matches Bukkit `EnderDragon.Phase` lists; exploratory Paper r78 verifies a real `CIRCLING` phase.
 - Strict Paper fixture `srv-paper-ender-dragon-phase-strict-20261101-r3` verifies `EnderDragonPhase` against a real dragon, including a phase list, a negative match, fail-closed rejection of `CIRCLING,INVALID`, and restoration. All 260 registered probes pass their release outcomes with zero incomplete.
 - Official `Altitude` now measures target height above the Bukkit highest-block surface with Mythic range and `maxHeight` handling; exploratory Paper r79 keeps the utility probe passed.
@@ -1322,7 +1340,7 @@ Paper 1.21.1 release evidence 仍待匹配 server jar。
 
 ## 目标选择器（targeter）
 
-技能里的 `targeter:` 决定「挑谁」。内置排序 targeter 以及上下文 targeter 均可用，关系类包括 `@Owner`、`@Parent`、`@Children`、`@Passengers`、`@Passenger` 和 `@Vehicle`：
+技能里的 `targeter:` 决定「挑谁」。内置排序 targeter 以及上下文 targeter 均可用，关系类包括 `@Owner`、`@Parent`、`@Children`、`@Passengers`、`@Passenger`、`@Vehicle` 和 `@Mount`；位置类还包括 `@OwnerLocation` 与 `@ParentLocation`：
 
 | 名字 | 排序依据 |
 | --- | --- |

@@ -32,7 +32,7 @@ public final class Targeters {
             "playersonserver", "server", "everyone");
     private static final java.util.Set<String> DIRECT_CONTEXT_TARGETERS = java.util.Set.of(
             "self", "caster", "target", "targets", "trigger", "attacker", "owner", "parent",
-            "children", "child", "passengers", "passenger", "vehicle");
+            "children", "child", "passengers", "passenger", "vehicle", "mount");
     private static final List<String> CONTEXT_TARGETERS = List.of(
             "nearestconditionaltarget", "nearestconditionalentity", "nearestconditionalplayer");
     private static final java.util.Set<String> LOCATION_TARGETERS = java.util.Set.of(
@@ -40,7 +40,8 @@ public final class Targeters {
             "selfeyelocation", "eyedirection", "castereyelocation", "bosseyelocation", "mobeyelocation",
             "targetlocation", "targetloc", "tl", "targetpredictedlocation", "targetpredictedloc",
             "tpl", "predictedtargetlocation", "triggerlocation", "spawnlocation",
-            "casterspawnlocation", "casterspawn", "trackedlocation", "forward", "projectileforward");
+            "casterspawnlocation", "casterspawn", "trackedlocation", "ownerlocation", "parentlocation",
+            "forward", "projectileforward");
     private static final Map<String, String> TARGET_LOCATION_ARGUMENTS = Map.of(
             "maxdistance", "maxdistance", "max", "maxdistance", "distance", "maxdistance",
             "d", "maxdistance", "ignoretransparent", "ignoretransparent", "it", "ignoretransparent");
@@ -352,25 +353,19 @@ public final class Targeters {
         if (name.equals("owner")) {
             if (!context.instanceValid()) return List.of();
             var base = context.instance().baseEntity().orElse(null);
-            var storedOwner = MobRelations.owner(base);
-            if (storedOwner instanceof LivingEntity living) return List.of(living);
-            if (!(base instanceof org.bukkit.entity.Tameable tameable)) return List.of();
-            var owner = tameable.getOwner();
-            return owner instanceof LivingEntity living ? List.of(living) : List.of();
+            return ownerEntity(base).map(List::of).orElseGet(List::of);
         }
         if (name.equals("parent")) {
             if (!context.instanceValid()) return List.of();
             var base = context.instance().baseEntity().orElse(null);
-            var parent = MobRelations.parent(base);
-            return parent instanceof LivingEntity living && parent.isValid() && !parent.isDead()
-                    ? List.of(living) : List.of();
+            return parentEntity(base).map(List::of).orElseGet(List::of);
         }
         if (name.equals("children") || name.equals("child")) {
             if (!context.instanceValid()) return List.of();
             var base = context.instance().baseEntity().orElse(null);
             if (base == null || candidates == null) return List.of();
             return candidates.stream()
-                    .filter(candidate -> candidate != null && MobRelations.isChild(base, candidate))
+                    .filter(candidate -> isActiveLiving(candidate) && MobRelations.isChild(base, candidate))
                     .map(candidate -> (LivingEntity) candidate)
                     .toList();
         }
@@ -378,15 +373,20 @@ public final class Targeters {
             if (!context.instanceValid()) return List.of();
             var base = context.instance().baseEntity().orElse(null);
             if (base == null) return List.of();
-            return base.getPassengers().stream()
+            var passengers = base.getPassengers().stream()
                     .filter(LivingEntity.class::isInstance)
                     .map(LivingEntity.class::cast)
+                    .filter(Targeters::isActiveLiving)
                     .toList();
+            return name.equals("passenger")
+                    ? passengers.stream().findFirst().map(List::of).orElseGet(List::of)
+                    : passengers;
         }
-        if (name.equals("vehicle")) {
+        if (name.equals("vehicle") || name.equals("mount")) {
             if (!context.instanceValid()) return List.of();
             var base = context.instance().baseEntity().orElse(null);
             return base != null && base.getVehicle() instanceof LivingEntity living
+                    && isActiveLiving(living)
                     ? List.of(living) : List.of();
         }
         if (name.equals("nearestconditionaltarget")
@@ -395,6 +395,49 @@ public final class Targeters {
             return selectConditional(spec, context, candidates);
         }
         return select(spec, context.instance(), candidates, fallbackArgs);
+    }
+
+    private static java.util.Optional<LivingEntity> ownerEntity(org.bukkit.entity.Entity base) {
+        if (base == null) return java.util.Optional.empty();
+        var storedOwner = MobRelations.owner(base);
+        if (storedOwner instanceof LivingEntity living && isActiveLiving(living)) {
+            return java.util.Optional.of(living);
+        }
+        if (base instanceof org.bukkit.entity.Tameable tameable
+                && tameable.getOwner() instanceof LivingEntity living
+                && isActiveLiving(living)) {
+            return java.util.Optional.of(living);
+        }
+        return java.util.Optional.empty();
+    }
+
+    private static java.util.Optional<LivingEntity> parentEntity(org.bukkit.entity.Entity base) {
+        if (base == null) return java.util.Optional.empty();
+        var parent = MobRelations.parent(base);
+        return parent instanceof LivingEntity living && isActiveLiving(living)
+                ? java.util.Optional.of(living) : java.util.Optional.empty();
+    }
+
+    private static boolean isActiveLiving(LivingEntity entity) {
+        if (entity == null) return false;
+        try {
+            return entity.isValid() && !entity.isDead();
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private static java.util.Optional<Location> relationLocation(
+            BehaviorContext context, boolean parent) {
+        if (!context.instanceValid()) return java.util.Optional.empty();
+        var base = context.instance().baseEntity().orElse(null);
+        var relation = parent ? parentEntity(base) : ownerEntity(base);
+        if (relation.isEmpty()) return java.util.Optional.empty();
+        try {
+            return java.util.Optional.ofNullable(relation.get().getLocation());
+        } catch (RuntimeException ignored) {
+            return java.util.Optional.empty();
+        }
     }
 
     private static List<LivingEntity> selectConditional(
@@ -526,6 +569,14 @@ public final class Targeters {
             if (!noLocationOptions(spec)) return java.util.Optional.empty();
             return context.instanceValid()
                     ? context.instance().spawnLocation() : java.util.Optional.empty();
+        }
+        if (kind.equals("ownerlocation")) {
+            if (!noLocationOptions(spec)) return java.util.Optional.empty();
+            return relationLocation(context, false);
+        }
+        if (kind.equals("parentlocation")) {
+            if (!noLocationOptions(spec)) return java.util.Optional.empty();
+            return relationLocation(context, true);
         }
         if (kind.equals("forward")) {
             return resolveForwardLocation(spec, context);
@@ -716,6 +767,7 @@ public final class Targeters {
             case "targetloc", "tl" -> "targetlocation";
             case "targetpredictedloc", "tpl", "predictedtargetlocation" -> "targetpredictedlocation";
             case "casterspawn" -> "casterspawnlocation";
+            case "summonerlocation" -> "parentlocation";
             case "source" -> "origin";
             default -> compact;
         };
@@ -737,7 +789,8 @@ public final class Targeters {
         if (kind.equals("origin") || kind.equals("trackedlocation")
                 || kind.equals("selflocation") || kind.equals("selfeyelocation")
                 || kind.equals("triggerlocation")
-                || kind.equals("spawnlocation") || kind.equals("casterspawnlocation")) {
+                || kind.equals("spawnlocation") || kind.equals("casterspawnlocation")
+                || kind.equals("ownerlocation") || kind.equals("parentlocation")) {
             return noLocationOptions(spec);
         }
         if (kind.equals("targetlocation")) {

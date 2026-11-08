@@ -2502,11 +2502,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         controlBee.setAI(true);
                         controlBee.setAware(true);
                         controlBee.setAnger(1200);
+                        controlBee.teleport(target.getLocation().clone().add(1.25, 1, 0));
                         controlBee.setTarget(target);
                     }
                     if (controlStarted[0] && controlAttacks.get() == 0
                             && target.isValid() && !target.isDead()) {
-                        maintainBeeProbeTarget(controlBee, target, 2.0);
+                        maintainBeeProbeTarget(controlBee, target, 1.25);
                     }
                     if (controlAttacks.get() > 0 && controlBee.hasAI()) controlBee.setAI(false);
                     boolean protectedAttacked = protectedAttacks.get() > 0;
@@ -2526,7 +2527,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean passed = imported && protectedAttacked && controlAttacked
                             && protectedRestored && controlRetained && targetReady
                             && protectedCancelled.get() == 0 && controlCancelled.get() == 0;
-                    if (!(passed || probeTicks[0] >= 160)) return;
+                    if (!(passed || probeTicks[0] >= 240)) return;
                     terminal = true;
                     if (attackTask[0] != null) attackTask[0].cancel();
                     if (!passed) {
@@ -2605,7 +2606,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             bee.teleport(targetLocation.clone().add(horizontalOffset, 1, 0));
         }
         bee.setAware(true);
-        if (bee.getAnger() <= 0) bee.setAnger(1200);
+        bee.setAnger(1200);
         if (bee.getTarget() != target) bee.setTarget(target);
     }
 
@@ -8467,6 +8468,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             && parentAliveBeforeRemoval && !parentAliveAfterRemoval;
                     dev.helstera.api.behavior.MobRelations.clearParent(orphanProbe);
                 }
+                if (ownerProbe != null) {
+                    runContextTargeterRelationsSelfTest(world, wolf, ownerProbe, modelInstance, ownerInstance);
+                } else {
+                    getLogger().info("context-targeter-relations passenger=false passengers=false mount=false vehicle=false"
+                            + " owner-location=false parent-location=false invalid-rejected=false passed=false");
+                }
                 boolean patrolLeaderCondition = behaviors.testCondition(
                         skills.bindCondition("is-raider-patrol-leader"), pillagerContext);
                 raiderView.setPatrolLeader(false);
@@ -9902,6 +9909,95 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 30L);
+    }
+
+    private void runContextTargeterRelationsSelfTest(
+            org.bukkit.World world,
+            org.bukkit.entity.LivingEntity caster,
+            org.bukkit.entity.Player owner,
+            dev.helstera.api.instance.ModelInstance modelInstance,
+            dev.helstera.api.instance.ModelInstance ownerInstance) {
+        boolean passenger = false;
+        boolean passengers = false;
+        boolean mount = false;
+        boolean vehicle = false;
+        boolean ownerLocation = false;
+        boolean parentLocation = false;
+        boolean invalidRejected = false;
+        org.bukkit.entity.Pig relationPassenger = null;
+        org.bukkit.entity.Pig relationVehicle = null;
+        var modelMob = modelInstance == null ? null : modelInstance.baseEntity().orElse(null);
+        try {
+            var ownerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                    ownerInstance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+            var ownerPosition = dev.helstera.api.behavior.Targeters.resolveLocation(
+                    "@OwnerLocation", ownerContext).orElse(null);
+            ownerLocation = ownerPosition != null
+                    && ownerPosition.getWorld().equals(owner.getWorld())
+                    && ownerPosition.distanceSquared(owner.getLocation()) < 0.01;
+
+            relationPassenger = world.spawn(caster.getLocation(), org.bukkit.entity.Pig.class);
+            relationVehicle = world.spawn(caster.getLocation().clone().add(2, 0, 0),
+                    org.bukkit.entity.Pig.class);
+            boolean firstAdded = caster.addPassenger(owner);
+            boolean secondAdded = caster.addPassenger(relationPassenger);
+            var allPassengers = dev.helstera.api.behavior.Targeters.select(
+                    "@passengers", ownerContext, java.util.List.of(), java.util.List.of());
+            var firstPassenger = dev.helstera.api.behavior.Targeters.select(
+                    "@passenger", ownerContext, java.util.List.of(), java.util.List.of());
+            passengers = firstAdded && secondAdded && allPassengers.size() == 2
+                    && allPassengers.get(0).equals(owner)
+                    && allPassengers.get(1).equals(relationPassenger);
+            passenger = firstAdded && secondAdded
+                    && firstPassenger.equals(java.util.List.of(owner));
+            caster.removePassenger(owner);
+            caster.removePassenger(relationPassenger);
+
+            boolean vehicleAdded = relationVehicle.addPassenger(caster);
+            var vehicleTargets = dev.helstera.api.behavior.Targeters.select(
+                    "@vehicle", ownerContext, java.util.List.of(), java.util.List.of());
+            var mountTargets = dev.helstera.api.behavior.Targeters.select(
+                    "@mount", ownerContext, java.util.List.of(), java.util.List.of());
+            vehicle = vehicleAdded && vehicleTargets.equals(java.util.List.of(relationVehicle));
+            mount = vehicleAdded && mountTargets.equals(java.util.List.of(relationVehicle));
+            relationVehicle.removePassenger(caster);
+
+            boolean parentSet = dev.helstera.api.behavior.MobRelations.setParent(modelMob, owner);
+            var parentContext = dev.helstera.api.behavior.BehaviorContext.of(
+                    modelInstance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+            var parentPosition = dev.helstera.api.behavior.Targeters.resolveLocation(
+                    "@ParentLocation", parentContext).orElse(null);
+            var summonerPosition = dev.helstera.api.behavior.Targeters.resolveLocation(
+                    "@summonerlocation", parentContext).orElse(null);
+            parentLocation = parentSet && parentPosition != null && summonerPosition != null
+                    && parentPosition.getWorld().equals(owner.getWorld())
+                    && summonerPosition.getWorld().equals(owner.getWorld())
+                    && parentPosition.distanceSquared(owner.getLocation()) < 0.01
+                    && summonerPosition.distanceSquared(owner.getLocation()) < 0.01;
+            dev.helstera.api.behavior.MobRelations.clearParent(modelMob);
+            invalidRejected = !dev.helstera.api.behavior.Targeters.validLocationTargeterSpec(
+                    "@OwnerLocation{unsupported=true}")
+                    && !dev.helstera.api.behavior.Targeters.validLocationTargeterSpec(
+                    "@ParentLocation{unsupported=true}")
+                    && dev.helstera.api.behavior.Targeters.resolveLocation(
+                    "@ParentLocation", parentContext).isEmpty();
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] context targeter relations failed: " + failure);
+        } finally {
+            caster.removePassenger(owner);
+            if (relationPassenger != null) relationPassenger.remove();
+            if (relationVehicle != null) {
+                relationVehicle.removePassenger(caster);
+                relationVehicle.remove();
+            }
+            dev.helstera.api.behavior.MobRelations.clearParent(modelMob);
+        }
+        boolean passed = passenger && passengers && mount && vehicle
+                && ownerLocation && parentLocation && invalidRejected;
+        getLogger().info("context-targeter-relations passenger=" + passenger
+                + " passengers=" + passengers + " mount=" + mount + " vehicle=" + vehicle
+                + " owner-location=" + ownerLocation + " parent-location=" + parentLocation
+                + " invalid-rejected=" + invalidRejected + " passed=" + passed);
     }
 
     private boolean runAbsorptionPlayerConditionSelfTest(
