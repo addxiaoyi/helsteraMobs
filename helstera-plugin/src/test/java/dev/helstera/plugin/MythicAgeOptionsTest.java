@@ -9,6 +9,7 @@ import org.bukkit.entity.MagmaCube;
 import org.bukkit.entity.Phantom;
 import org.bukkit.entity.PigZombie;
 import org.bukkit.entity.Raider;
+import org.bukkit.entity.Rabbit;
 import org.bukkit.entity.Slime;
 import org.bukkit.entity.Tameable;
 import org.bukkit.entity.Wolf;
@@ -458,6 +459,23 @@ class MythicAgeOptionsTest {
         assertEquals(true, standCalls.get("setSmall"));
         assertEquals(false, standCalls.get("setCanMove"));
         assertEquals(false, standCalls.get("setCanTick"));
+    }
+
+    @Test
+    void appliesRabbitTypeAndRejectsMalformedValues() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var rabbit = proxy(Rabbit.class, calls);
+        HelsteraPlugin.applyEntitySpecificOptions(rabbit,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                        "rabbit-type: SALT_AND_PEPPER")));
+
+        assertEquals(Rabbit.Type.SALT_AND_PEPPER, calls.get("setRabbitType"), calls.toString());
+
+        calls.clear();
+        HelsteraPlugin.applyEntitySpecificOptions(rabbit,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                        "rabbit-type: NOT_A_RABBIT")));
+        assertTrue(calls.isEmpty(), calls.toString());
     }
 
     @Test

@@ -4524,6 +4524,44 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic RabbitType maps only to rabbits and preserves invalid values")
+    void mythicMapsRabbitTypeWithEntityBoundary(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/rabbit-options.yml", """
+                mobs:
+                  rabbit:
+                    Type: RABBIT
+                    Options:
+                      RabbitType: SALT_AND_PEPPER
+                  wrong:
+                    Type: ZOMBIE
+                    Options:
+                      RabbitType: BLACK
+                  invalid:
+                    Type: RABBIT
+                    Options:
+                      RabbitType: NOT_A_RABBIT
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        var rabbit = convertedMob(entries, "rabbit");
+        var wrong = convertedMob(entries, "wrong");
+        var invalid = convertedMob(entries, "invalid");
+
+        assertEquals("SALT_AND_PEPPER", rabbit.getString("entity.rabbit-type"));
+        assertFalse(rabbit.contains("entity.unsupported.Options.RabbitType"));
+
+        assertEquals("BLACK", wrong.getString("entity.unsupported.Options.RabbitType"));
+        assertFalse(wrong.contains("entity.rabbit-type"));
+
+        assertEquals("NOT_A_RABBIT", invalid.getString("entity.unsupported.Options.RabbitType"));
+        assertFalse(invalid.contains("entity.rabbit-type"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.RabbitType".equals(entry.get("source-key"))
+                && "entity.unsupported.Options.RabbitType".equals(entry.get("target-key"))));
+    }
+
+    @Test
     @DisplayName("Mythic Sheep options map color and sheared state")
     void mythicMapsSheepOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/sheep-options.yml", """
