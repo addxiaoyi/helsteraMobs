@@ -12,6 +12,11 @@
       "status": "passed"
     },
     {
+      "id": "absorptionPlayerCondition",
+      "status": "passed",
+      "requiredObservation": "absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true"
+    },
+    {
       "id": "ageOptions",
       "status": "passed",
       "requiredObservation": "age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true"
@@ -1109,6 +1114,11 @@
     {
       "id": "playerRadiusConditions",
       "status": "passed"
+    },
+    {
+      "id": "radiusConditions",
+      "status": "passed",
+      "requiredObservation": "radius-condition-details imported=true players-positive=true players-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true"
     },
     {
       "id": "preventSunburnNatural",
