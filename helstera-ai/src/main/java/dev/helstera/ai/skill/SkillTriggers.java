@@ -3,6 +3,7 @@ package dev.helstera.ai.skill;
 import dev.helstera.ai.AiManager;
 import dev.helstera.ai.AiProfile;
 import dev.helstera.ai.BossPhase;
+import dev.helstera.ai.DamageSourceResolver;
 import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.api.behavior.BehaviorRegistry;
 import dev.helstera.api.event.HelsteraEventBus;
@@ -768,15 +769,16 @@ public final class SkillTriggers implements Listener {
                     .toList());
         }
         if (damageInstance == null && attackedInstance == null) return;
-        LivingEntity attacker = e.getDamager() instanceof LivingEntity living ? living : null;
+        Entity damageSource = DamageSourceResolver.resolve(e.getDamager());
+        LivingEntity attacker = damageSource instanceof LivingEntity living ? living : null;
         if (damageInstance != null) {
-            dispatch(SkillTrigger.DAMAGE, damageInstance, attacker, e.getEntity().getLocation(), e.getDamager(),
+            dispatch(SkillTrigger.DAMAGE, damageInstance, attacker, e.getEntity().getLocation(), damageSource,
                     livingTargets(e.getEntity()), e, e.getCause());
         }
         // Mythic distinguishes the caster's damage trigger from the victim's
         // attacked trigger even though Bukkit exposes both through one event.
         if (attackedInstance != null) {
-            dispatch(SkillTrigger.ATTACKED, attackedInstance, attacker, e.getEntity().getLocation(), e.getDamager(),
+            dispatch(SkillTrigger.ATTACKED, attackedInstance, attacker, e.getEntity().getLocation(), damageSource,
                     livingTargets(e.getEntity()), e, e.getCause());
         }
     }
@@ -1419,12 +1421,7 @@ public final class SkillTriggers implements Listener {
         }
         try {
             if (!(victim.getLastDamageCause() instanceof EntityDamageByEntityEvent damage)) return null;
-            Entity damager = damage.getDamager();
-            if (damager instanceof org.bukkit.entity.Projectile projectile
-                    && projectile.getShooter() instanceof Entity shooter) {
-                return shooter;
-            }
-            return damager;
+            return DamageSourceResolver.resolve(damage.getDamager());
         } catch (RuntimeException ignored) {
             return null;
         }

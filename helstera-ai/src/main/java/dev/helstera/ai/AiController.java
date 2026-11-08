@@ -795,7 +795,7 @@ public final class AiController {
         LivingEntity result = null;
         if (attacker && relation.getLastDamageCause()
                 instanceof org.bukkit.event.entity.EntityDamageByEntityEvent damage
-                && damage.getDamager() instanceof LivingEntity living) {
+                && DamageSourceResolver.resolve(damage.getDamager()) instanceof LivingEntity living) {
             result = living;
         } else if (!attacker && relation instanceof org.bukkit.entity.Mob mob
                 && mob.getTarget() instanceof LivingEntity living) {

@@ -38,21 +38,20 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-condition-mobility-states-strict-20261108-r7`
-passes all 396 probes (377 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. It verifies positive and negative falling,
-climbing, and charged states, imported aliases, cleanup restoration, and the
-direct and AI-target line-of-sight conditions through real Bukkit entities. It
-also carries the registered Mythic parity catalog.
-Report: `reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7.json`;
-server log: `reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7.log.gz`;
+Latest strict fixture `srv-paper-damage-attribution-strict-20261108-r1`
+passes all 397 probes (378 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies real Player damage attribution,
+environmental no-trigger behavior, and restoration of the temporary Player
+state. It also carries the registered Mythic parity catalog.
+Report: `reports/paper-1.21.1-damage-attribution-strict-20261108-r1.json`;
+server log: `reports/paper-1.21.1-damage-attribution-strict-20261108-r1.log.gz`;
 client logs:
-`reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7-client-logs.tar.gz`.
-Report SHA-256: `e071b0d2c5e165396fbd88137747e2f61028d8f8888f255b333b0daf99b3b695`;
-server log SHA-256: `f13180a18d88dca002e88d575355d90e5376300aba7d61437a1a7ce77d845a3f`;
-client log SHA-256: `156df854894131376ed28bf1302c04fb0ec61af40e4b0eaa8ebdddd0517a54b1`;
-plugin SHA-256: `af8c6950fa77cf3b84efcf3f3f898bda10562b9d5955374ea4ddfd124c86f18e`.
-Latest strict report has 396 probes, zero incomplete.
+`reports/paper-1.21.1-damage-attribution-strict-20261108-r1-client-logs.tar.gz`.
+Report SHA-256: `bb2aeda75f1df84debad1ac9a559c037cdfb6fc2d8c886dcb60ddba2e122d4be`;
+server log SHA-256: `5bcbfb748fd285e72382abdba24e6fec8cd32ebbdd349af6d2fa27cf184bec95`;
+client log SHA-256: `17a8688897edc384af1858721266aa59e1b01676ce3200b2d5e93861e59b3d82`;
+plugin SHA-256: `84e8a91004bc8e2251c963c17f8d588dfd1d786fe0c4a3830f8da9fe04b5a76f`.
+Latest strict report has 397 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-rabbit-options-strict-20261107-r2` passes all
 392 probes (373 passed, 19 expected rejections, zero failed or incomplete) on

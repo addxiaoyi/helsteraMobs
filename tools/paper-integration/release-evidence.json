@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-damage-attribution-strict-20261108-r1",
+    "reportFixtureDirectory": "srv-paper-damage-attribution-strict-20261108-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-damage-attribution-strict-20261108-r1.json",
+    "reportSha256": "bb2aeda75f1df84debad1ac9a559c037cdfb6fc2d8c886dcb60ddba2e122d4be",
+    "log": "tools/paper-integration/reports/paper-1.21.1-damage-attribution-strict-20261108-r1.log.gz",
+    "logSha256": "5bcbfb748fd285e72382abdba24e6fec8cd32ebbdd349af6d2fa27cf184bec95",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-damage-attribution-strict-20261108-r1-client-logs.tar.gz",
+    "clientLogSha256": "17a8688897edc384af1858721266aa59e1b01676ce3200b2d5e93861e59b3d82",
+    "pluginSha256": "84e8a91004bc8e2251c963c17f8d588dfd1d786fe0c4a3830f8da9fe04b5a76f",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-condition-mobility-states-strict-20261108-r7",
     "reportFixtureDirectory": "srv-paper-condition-mobility-states-strict-20261108-r7",
     "report": "tools/paper-integration/reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7.json",

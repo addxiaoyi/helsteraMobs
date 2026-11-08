@@ -66,6 +66,7 @@ $probeSpecs = [ordered]@{
     reviveNatural = 'revive-natural result=true alive=true attached=true health=8(?:\.0+)?(?:\s|$)'
     reviveLate = 'revive-late result=true cancelled=true alive=true attached=true health=8(?:\.0+)? no-drops=true'
     damageImported = 'damage-imported mapped=true entity-damage=true attacker-name=true attacker-equipment=true environmental-damage=true environmental-no-trigger=true passed=true'
+    damageAttribution = 'damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true'
     immunityImported = 'immunity-imported result=true reduced=true condition-rejected=true invalid-rejected=true'
     immunityNativeInvalid = 'immunity-native-invalid result=true false-rejected=true null-rejected=true unknown-rejected=true null-modifier-rejected=true'
     immunityInvalidFields = 'immunity-invalid-fields null-immunity=true null-modifier-field=true unknown-modifier-field=true invalid-immune=true null-immune=true'

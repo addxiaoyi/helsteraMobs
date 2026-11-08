@@ -11,6 +11,7 @@ import dev.helstera.api.resourcepack.ResourcePackService;
 import dev.helstera.api.visibility.PlayerVisibilityService;
 import dev.helstera.ai.AiManager;
 import dev.helstera.ai.BehaviorRegistryImpl;
+import dev.helstera.ai.DamageSourceResolver;
 import dev.helstera.ai.skill.SkillService;
 import dev.helstera.ai.skill.SkillTriggers;
 import dev.helstera.core.ModelRegistryImpl;
@@ -11984,6 +11985,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             Path root = null;
             int id = -1;
             org.bukkit.entity.Zombie attacker = null;
+            org.bukkit.entity.Player playerAttacker = null;
+            Location previousPlayerLocation = null;
+            String previousPlayerName = null;
             try {
                 root = Files.createTempDirectory("helstera-damaged-import-");
                 Path mobDir = Files.createDirectory(root.resolve("Mobs"));
@@ -12033,9 +12037,54 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " attacker-equipment=" + equipped + " environmental-damage=" + environmentalDamage
                         + " environmental-no-trigger=" + noEnvironmentalTrigger
                         + " passed=" + (mapped && named && equipped && environmentalDamage && noEnvironmentalTrigger));
+
+                // Player#attack is the real Paper path that exposes a player as the
+                // direct damage source. This catches regressions where trigger
+                // context is built from a synthetic damager or from the victim.
+                playerAttacker = getServer().getPlayerExact("HelsteraTester");
+                boolean playerPresent = playerAttacker != null;
+                boolean playerAttack = false;
+                boolean targetIsPlayer = false;
+                boolean environmentalNoTrigger = false;
+                boolean restored = false;
+                if (playerAttacker != null) {
+                    previousPlayerLocation = playerAttacker.getLocation().clone();
+                    previousPlayerName = playerAttacker.getCustomName();
+                    playerAttacker.teleport(location.clone().add(2, 0, 0));
+                    playerAttacker.setCustomName(null);
+                    victim.setHealth(victim.getMaxHealth());
+                    victim.setNoDamageTicks(0);
+                    playerAttacker.attack(victim);
+                    playerAttack = victim.getLastDamageCause()
+                            instanceof org.bukkit.event.entity.EntityDamageByEntityEvent damage
+                            && damage.getDamager() == playerAttacker;
+                    targetIsPlayer = "IMPORTED_DAMAGE".equals(playerAttacker.getCustomName());
+                    String beforeEnvironmentalPlayerName = playerAttacker.getCustomName();
+                    victim.setNoDamageTicks(0);
+                    victim.damage(1);
+                    environmentalNoTrigger = java.util.Objects.equals(
+                            beforeEnvironmentalPlayerName, playerAttacker.getCustomName());
+                    playerAttacker.setCustomName(previousPlayerName);
+                    playerAttacker.teleport(previousPlayerLocation);
+                    restored = java.util.Objects.equals(previousPlayerName, playerAttacker.getCustomName())
+                            && playerAttacker.getLocation().getWorld() == previousPlayerLocation.getWorld();
+                }
+                getLogger().info("damage-attribution player-present=" + playerPresent
+                        + " player-attack=" + playerAttack + " target-is-player=" + targetIsPlayer
+                        + " environmental-no-trigger=" + environmentalNoTrigger
+                        + " restored=" + restored
+                        + " passed=" + (playerPresent && playerAttack && targetIsPlayer
+                        && environmentalNoTrigger && restored));
             } catch (Exception failure) {
                 getLogger().warning("damage-imported passed=false error=" + failure.getClass().getSimpleName());
+                getLogger().warning("damage-attribution passed=false error=" + failure.getClass().getSimpleName());
             } finally {
+                if (playerAttacker != null) {
+                    try {
+                        playerAttacker.setCustomName(previousPlayerName);
+                        if (previousPlayerLocation != null) playerAttacker.teleport(previousPlayerLocation);
+                    } catch (RuntimeException ignored) { }
+                }
                 if (attacker != null) attacker.remove();
                 if (id > 0 && instances() != null) instances().despawn(id);
                 if (root != null) {
@@ -18750,11 +18799,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     static org.bukkit.entity.Entity resolveDamageSource(org.bukkit.entity.Entity damager) {
-        if (damager instanceof org.bukkit.entity.Projectile projectile
-                && projectile.getShooter() instanceof org.bukkit.entity.Entity shooter) {
-            return shooter;
-        }
-        return damager;
+        return DamageSourceResolver.resolve(damager);
     }
 
     /**
