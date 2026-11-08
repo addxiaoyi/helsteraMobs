@@ -252,16 +252,6 @@ async function runSpawningDistanceWalk(client) {
 
 async function run() {
   await waitFor(() => bot.entity != null, 'client spawn');
-  if (process.env.PAPER_INTERACTABLE_WORKFLOW === 'true') {
-    await runInteractableClientProbe();
-  }
-  if (process.env.PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW === 'true') {
-    await waitFor(() => spawningDistanceWalkReady
-      && targeterArgumentValidationComplete
-      && interactableClientProbeComplete,
-    'spawning-distance walk readiness and self-test completion', [bot, guest]);
-    spawningDistanceWalkTask = runSpawningDistanceWalk(spawningDistanceWalkClient || bot);
-  }
   await new Promise((resolve, reject) => {
     const deadline = setTimeout(() => reject(new Error('Timed out waiting for guest spawn')), timeoutMs);
     let timer;
@@ -347,6 +337,21 @@ async function run() {
   const line = `PAPER_MENU_REPORT ${JSON.stringify(report)}\n`;
   if (reportPath) fs.appendFileSync(reportPath, line, 'utf8');
   console.log(line.trim());
+
+  // Run the high-volume client probes after the menu protocol has completed.
+  // Mineflayer's 1.21.1 component decoder can lose framing while entity and
+  // inventory packets arrive together; the menu assertions need a stable
+  // window sequence before those probes start sending movement/click traffic.
+  if (process.env.PAPER_INTERACTABLE_WORKFLOW === 'true') {
+    await runInteractableClientProbe();
+  }
+  if (process.env.PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW === 'true') {
+    await waitFor(() => spawningDistanceWalkReady
+      && targeterArgumentValidationComplete
+      && interactableClientProbeComplete,
+    'spawning-distance walk readiness and self-test completion', [bot, guest]);
+    spawningDistanceWalkTask = runSpawningDistanceWalk(spawningDistanceWalkClient || bot);
+  }
 
   if (audienceReportPath) {
     bot.chat('MENU_FILTER_READY');

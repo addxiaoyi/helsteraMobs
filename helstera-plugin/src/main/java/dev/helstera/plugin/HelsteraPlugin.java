@@ -2498,6 +2498,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (protectedAttacks.get() > 0 && protectedBee.hasAI()) protectedBee.setAI(false);
                     if (!controlStarted[0] && probeTicks[0] >= 30) {
                         controlStarted[0] = true;
+                        controlBee.setAI(true);
+                        controlBee.setAware(true);
+                        controlBee.setAnger(1200);
+                        controlBee.setTarget(target);
                     }
                     if (controlStarted[0] && controlAttacks.get() == 0
                             && target.isValid() && !target.isDead()) {
@@ -4070,6 +4074,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             org.bukkit.entity.LivingEntity dotProbeTarget = null;
             org.bukkit.block.BlockState conditionTargetBlockState = null;
             org.bukkit.block.BlockState conditionTargetHeadBlockState = null;
+            var lineOfSightBlockStates = new java.util.ArrayList<org.bukkit.block.BlockState>();
             org.bukkit.block.BlockState blockMechanicState = null;
             var targetFilterBlockStates = new java.util.ArrayList<org.bukkit.block.BlockState>();
             Location blockMechanicLocation = null;
@@ -4172,6 +4177,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean triggerBlockTypeCondition = false;
             boolean originLocationCondition = false;
             boolean importedOriginLocationCondition = false;
+            boolean lineOfSightCondition = false;
+            boolean importedLineOfSightCondition = false;
             boolean lineOfSightFromOriginCondition = false;
             boolean boundsCondition = false;
             boolean playerKillsCondition = false;
@@ -4212,6 +4219,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         || !(behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors)) {
                     throw new IllegalStateException("SkillService/BehaviorRegistry unavailable");
                 }
+                runConditionMobilityStateSelfTest(location.clone().add(30, 0, 0));
                 try {
                     var pinConfig = new org.bukkit.configuration.file.YamlConfiguration();
                     String pinWorld = world.getName();
@@ -6614,6 +6622,156 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     biomeCondition = biomeExact && biomePartial && biomeReject && biomeTypeCategory;
                     lineOfSightFromOriginCondition = behaviors.testCondition(
                             skills.bindCondition("line-of-sight-from-origin"), conditionContext);
+                    boolean directLineOfSightPositive = false;
+                    boolean directLineOfSightBlocked = false;
+                    boolean targetLineOfSightPositive = false;
+                    boolean targetLineOfSightBlocked = false;
+                    boolean targetLineOfSightNegative = false;
+                    boolean lineOfSightRestoredPositive = false;
+                    boolean lineOfSightBlocksRestored = false;
+                    boolean lineOfSightInvalidPreserved = false;
+                    boolean importedLineOfSightAliases = false;
+                    boolean importedLineOfSightWarning = false;
+                    boolean originalConditionTargetAi = conditionTarget.hasAI();
+                    boolean originalConditionTargetGravity = conditionTarget.hasGravity();
+                    boolean originalZombieGravity = zombie.hasGravity();
+                    org.bukkit.entity.LivingEntity originalConditionTargetTarget = conditionTarget.getTarget();
+                    Path lineOfSightImportRoot = null;
+                    try {
+                        conditionTarget.setAI(false);
+                        conditionTarget.setGravity(false);
+                        conditionTarget.setTarget(zombie);
+                        zombie.setGravity(false);
+                        int wallX = Math.min(zombie.getLocation().getBlockX(),
+                                conditionTarget.getLocation().getBlockX()) + 1;
+                        int wallY = Math.min(zombie.getLocation().getBlockY(),
+                                conditionTarget.getLocation().getBlockY());
+                        int wallZ = zombie.getLocation().getBlockZ();
+                        for (int y = wallY; y <= wallY + 2; y++) {
+                            var wallBlock = world.getBlockAt(wallX, y, wallZ);
+                            lineOfSightBlockStates.add(wallBlock.getState());
+                            wallBlock.setType(org.bukkit.Material.AIR, false);
+                        }
+                        directLineOfSightPositive = behaviors.testCondition(
+                                skills.bindCondition("has-line-of-sight"), conditionContext);
+                        targetLineOfSightPositive = behaviors.testCondition(
+                                skills.bindCondition("target-has-line-of-sight"), conditionContext);
+                        var importedLineOfSight = dev.helstera.migration.importer.MmConditions.translate(
+                                "?lineOfSight");
+                        var importedHasLineOfSight = dev.helstera.migration.importer.MmConditions.translate(
+                                "?hasLineOfSight");
+                        var importedTargetLineOfSight = dev.helstera.migration.importer.MmConditions.translate(
+                                "?targetInLineOfSight");
+                        var importedTargetNotLineOfSight = dev.helstera.migration.importer.MmConditions.translate(
+                                "?targetNotInLineOfSight");
+                        String invalidLineOfSightSource = "?lineOfSight{unexpected=true}";
+                        var invalidLineOfSight = dev.helstera.migration.importer.MmConditions.translate(
+                                invalidLineOfSightSource);
+                        lineOfSightInvalidPreserved = !invalidLineOfSight.translated()
+                                && invalidLineOfSightSource.equals(invalidLineOfSight.condition());
+                        importedLineOfSightAliases = importedLineOfSight.translated()
+                                && "has-line-of-sight".equals(importedLineOfSight.condition())
+                                && importedHasLineOfSight.translated()
+                                && "has-line-of-sight".equals(importedHasLineOfSight.condition())
+                                && importedTargetLineOfSight.translated()
+                                && "target-has-line-of-sight".equals(importedTargetLineOfSight.condition())
+                                && importedTargetNotLineOfSight.translated()
+                                && "target-not-in-line-of-sight".equals(
+                                importedTargetNotLineOfSight.condition());
+                        lineOfSightImportRoot = Files.createTempDirectory("helstera-line-of-sight-import-");
+                        Path lineOfSightSource = Files.createDirectories(lineOfSightImportRoot.resolve("Skills"))
+                                .resolve("probe.yml");
+                        Files.writeString(lineOfSightSource, """
+                                LineOfSightProbe:
+                                  TargetConditions:
+                                    - '?lineOfSight'
+                                    - '?hasLineOfSight'
+                                    - '?targetInLineOfSight'
+                                    - '?targetNotInLineOfSight'
+                                    - '?lineOfSight{unexpected=true}'
+                                  Skills:
+                                    - message{m=hello}
+                                """);
+                        var lineOfSightEntries = new dev.helstera.migration.importer.MythicMobsImporter()
+                                .convert(lineOfSightSource);
+                        var lineOfSightPlan = lineOfSightEntries.stream()
+                                .filter(entry -> "skills.yml".equals(entry.get("target-file")))
+                                .findFirst().orElseThrow();
+                        var lineOfSightConfig = org.bukkit.configuration.file.YamlConfiguration
+                                .loadConfiguration(new java.io.StringReader(
+                                        String.valueOf(lineOfSightPlan.get("content"))));
+                        var lineOfSightSkills = lineOfSightConfig.getConfigurationSection("skills");
+                        String lineOfSightSkillId = lineOfSightSkills == null ? null
+                                : lineOfSightSkills.getKeys(false).stream().findFirst().orElse(null);
+                        var importedTargetConditions = lineOfSightSkillId == null ? java.util.List.<String>of()
+                                : lineOfSightConfig.getStringList(
+                                "skills." + lineOfSightSkillId + ".target-conditions");
+                        importedLineOfSightWarning = importedTargetConditions.contains(invalidLineOfSightSource)
+                                && lineOfSightEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                                && String.valueOf(entry.get("source-key"))
+                                .endsWith(".TargetConditions.unmapped")
+                                && String.valueOf(entry.get("value")).contains(invalidLineOfSightSource));
+                        importedLineOfSightCondition = importedLineOfSightAliases && importedLineOfSightWarning;
+                        directLineOfSightPositive = directLineOfSightPositive
+                                && importedLineOfSightAliases;
+                        for (var wallBlockState : lineOfSightBlockStates) {
+                            wallBlockState.getBlock().setType(org.bukkit.Material.STONE, false);
+                        }
+                        directLineOfSightBlocked = !behaviors.testCondition(
+                                skills.bindCondition("has-line-of-sight"), conditionContext);
+                        targetLineOfSightBlocked = !behaviors.testCondition(
+                                skills.bindCondition("target-has-line-of-sight"), conditionContext);
+                        targetLineOfSightNegative = behaviors.testCondition(
+                                skills.bindCondition("target-not-in-line-of-sight"), conditionContext);
+                    } finally {
+                        for (var wallBlockState : lineOfSightBlockStates) {
+                            wallBlockState.update(true, false);
+                        }
+                        lineOfSightBlocksRestored = lineOfSightBlockStates.stream().allMatch(state ->
+                                state.getBlock().getType() == state.getType()
+                                        && state.getBlock().getBlockData().equals(state.getBlockData()));
+                        lineOfSightBlockStates.clear();
+                        if (lineOfSightImportRoot != null) {
+                            try (var paths = Files.walk(lineOfSightImportRoot)) {
+                                for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                                    Files.deleteIfExists(path);
+                                }
+                            }
+                        }
+                        conditionTarget.setTarget(originalConditionTargetTarget);
+                        conditionTarget.setAI(originalConditionTargetAi);
+                        conditionTarget.setGravity(originalConditionTargetGravity);
+                        zombie.setGravity(originalZombieGravity);
+                    }
+                    // The restored check still needs a live target. The cleanup above restores the
+                    // original Mob target, which is commonly null, so temporarily rebind the probe
+                    // target after the wall has been restored and then put the original target back.
+                    try {
+                        conditionTarget.setTarget(zombie);
+                        lineOfSightRestoredPositive = behaviors.testCondition(
+                                skills.bindCondition("has-line-of-sight"), conditionContext)
+                                && behaviors.testCondition(
+                                skills.bindCondition("target-has-line-of-sight"), conditionContext);
+                    } finally {
+                        conditionTarget.setTarget(originalConditionTargetTarget);
+                    }
+                    lineOfSightCondition = directLineOfSightPositive && directLineOfSightBlocked
+                            && targetLineOfSightPositive && targetLineOfSightBlocked
+                            && targetLineOfSightNegative && lineOfSightRestoredPositive
+                            && lineOfSightBlocksRestored && lineOfSightInvalidPreserved
+                            && importedLineOfSightCondition;
+                    getLogger().info("[自检] line-of-sight-condition result=" + lineOfSightCondition
+                            + " imported=" + importedLineOfSightCondition
+                            + " aliases=" + importedLineOfSightAliases
+                            + " direct-positive=" + directLineOfSightPositive
+                            + " direct-blocked=" + directLineOfSightBlocked
+                            + " target-positive=" + targetLineOfSightPositive
+                            + " target-blocked=" + targetLineOfSightBlocked
+                            + " target-negative=" + targetLineOfSightNegative
+                            + " restored-positive=" + lineOfSightRestoredPositive
+                            + " restored=" + lineOfSightBlocksRestored
+                            + " invalid-preserved=" + lineOfSightInvalidPreserved
+                            + " warning=" + importedLineOfSightWarning);
                     Location targetCoordinates = conditionTarget.getLocation();
                     String coordinateCondition = "distanceFromLocation{x=" + targetCoordinates.getX()
                             + ";y=" + targetCoordinates.getY() + ";z=" + targetCoordinates.getZ()
@@ -9560,6 +9718,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " variable-contains-condition=" + variableContainsCondition
                         + " trigger-block-type-condition=" + triggerBlockTypeCondition
                         + " origin-location-condition=" + originLocationCondition
+                        + " line-of-sight-condition=" + lineOfSightCondition
+                        + " imported-line-of-sight-condition=" + importedLineOfSightCondition
                         + " line-of-sight-from-origin-condition=" + lineOfSightFromOriginCondition
                         + " bounds-condition=" + boundsCondition
                         + " bounding-box-overlap-condition=" + boundingBoxOverlapCondition
@@ -9702,6 +9862,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 if (projectileProbe != null && !projectileProbeScheduled) projectileProbe.remove();
                 if (conditionTargetBlockState != null) conditionTargetBlockState.update(true, false);
                 if (conditionTargetHeadBlockState != null) conditionTargetHeadBlockState.update(true, false);
+                for (var lineOfSightBlockState : lineOfSightBlockStates) {
+                    lineOfSightBlockState.update(true, false);
+                }
                 if (blockMechanicState != null) blockMechanicState.update(true, false);
                 for (var filterBlockState : targetFilterBlockStates) filterBlockState.update(true, false);
                 if (conditionTarget != null && conditionTarget.isValid()
@@ -9729,6 +9892,187 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 30L);
+    }
+
+    private void runConditionMobilityStateSelfTest(Location origin) {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            if (origin == null || origin.getWorld() == null) {
+                getLogger().info("[自检] condition-mobility-states result=false reason=no-world");
+                return;
+            }
+            var world = origin.getWorld();
+            org.bukkit.entity.Spider spider = null;
+            org.bukkit.entity.Spider negativeSpider = null;
+            org.bukkit.entity.Creeper creeper = null;
+            dev.helstera.api.instance.ModelInstance instance = null;
+            dev.helstera.api.instance.ModelInstance negativeInstance = null;
+            var wallStates = new java.util.ArrayList<org.bukkit.block.BlockState>();
+            try {
+                int wallX = origin.getBlockX();
+                int wallY = origin.getBlockY() + 1;
+                int wallZ = origin.getBlockZ();
+                for (int y = wallY; y <= wallY + 2; y++) {
+                    var wall = world.getBlockAt(wallX, y, wallZ);
+                    wallStates.add(wall.getState());
+                    wall.setType(org.bukkit.Material.STONE, false);
+                    var ladder = world.getBlockAt(wallX + 1, y, wallZ);
+                    wallStates.add(ladder.getState());
+                    ladder.setType(org.bukkit.Material.LADDER, false);
+                    var ladderData = (org.bukkit.block.data.Directional) ladder.getBlockData();
+                    ladderData.setFacing(org.bukkit.block.BlockFace.EAST);
+                    ladder.setBlockData(ladderData, false);
+                }
+                spider = world.spawn(origin.clone().add(1.45, 1.2, 0.5), org.bukkit.entity.Spider.class);
+                spider.setAI(false);
+                spider.setGravity(false);
+                spider.setInvulnerable(true);
+                instance = instances().bind("example/emberling", spider,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                if (!(skillService instanceof dev.helstera.ai.skill.SkillService skills)
+                        || !(behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors)) {
+                    throw new IllegalStateException("SkillService/BehaviorRegistry unavailable");
+                }
+                var fallingContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        instance, null, 1.0, -1, 0, "condition-mobility-states");
+                spider.setVelocity(new org.bukkit.util.Vector(0, -0.35, 0));
+                boolean fallingPositive = behaviors.testCondition(
+                        skills.bindCondition("falling"), fallingContext);
+                spider.setVelocity(new org.bukkit.util.Vector());
+                boolean fallingNegative = !behaviors.testCondition(
+                        skills.bindCondition("falling"), fallingContext);
+
+                creeper = world.spawn(origin.clone().add(4, 1, 0.5), org.bukkit.entity.Creeper.class);
+                creeper.setAI(false);
+                creeper.setInvulnerable(true);
+                boolean originalPowered = creeper.isPowered();
+                creeper.setPowered(true);
+                var chargedContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        instance, creeper, 1.0, 3.0, 0, "condition-mobility-states");
+                String chargedCondition = skills.bindCondition("charged");
+                String chargedAlias = skills.bindCondition("isPowered");
+                boolean chargedPositive = chargedCondition != null && chargedAlias != null
+                        && behaviors.testCondition(chargedCondition, chargedContext)
+                        && behaviors.testCondition(chargedAlias, chargedContext);
+                creeper.setPowered(false);
+                boolean chargedNegative = !behaviors.testCondition(chargedCondition, chargedContext)
+                        && !behaviors.testCondition(chargedAlias, chargedContext);
+                creeper.setPowered(originalPowered);
+
+                // Paper derives LivingEntity#isClimbing from the entity's current block
+                // state. Use explicit block coordinates so world-relative fractional
+                // origins and gravity cannot move the probe out of the ladder before the
+                // API is sampled.
+                // isClimbing is updated from the entity's movement collision state,
+                // so teleporting next to a ladder is insufficient. Give the Spider
+                // one controlled horizontal collision with the prepared wall.
+                spider.setAI(true);
+                spider.setGravity(false);
+                var climbLocation = new org.bukkit.Location(world, wallX + 1.7, wallY + 0.2, wallZ + 0.5);
+                var airLocation = new org.bukkit.Location(world, wallX + 4.5, wallY + 0.2, wallZ + 0.5);
+                spider.teleport(climbLocation);
+                spider.setVelocity(new org.bukkit.util.Vector(-0.35, 0, 0));
+                String climbingCondition = skills.bindCondition("climbing");
+                String climbingAlias = skills.bindCondition("isClimbing");
+                negativeSpider = world.spawn(airLocation, org.bukkit.entity.Spider.class);
+                negativeSpider.setAI(false);
+                negativeSpider.setGravity(false);
+                negativeSpider.setInvulnerable(true);
+                negativeInstance = instances().bind("example/emberling", negativeSpider,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                negativeSpider.setAI(false);
+                negativeSpider.setGravity(false);
+                final var finalSpider = spider;
+                final var finalNegativeSpider = negativeSpider;
+                final var finalCreeper = creeper;
+                final var finalInstance = instance;
+                final var finalNegativeInstance = negativeInstance;
+                final var negativeContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        finalNegativeInstance, null, 1.0, -1, 0, "condition-mobility-states");
+                final boolean[] climbingPositive = {false};
+                final boolean[] climbingNegative = {false};
+                new org.bukkit.scheduler.BukkitRunnable() {
+                    private int phase;
+                    private int retries;
+
+                    @Override
+                    public void run() {
+                        try {
+                            if (phase == 0) {
+                                climbingPositive[0] = climbingCondition != null && climbingAlias != null
+                                        && finalSpider.isClimbing()
+                                        && behaviors.testCondition(climbingCondition, fallingContext)
+                                        && behaviors.testCondition(climbingAlias, fallingContext);
+                                if (!climbingPositive[0] && retries++ < 10) {
+                                    finalSpider.setVelocity(new org.bukkit.util.Vector(-0.35, 0, 0));
+                                    return;
+                                }
+                                finalSpider.setAI(false);
+                                finalSpider.teleport(airLocation);
+                                phase = 1;
+                                retries = 0;
+                                return;
+                            }
+                            climbingNegative[0] = climbingCondition != null && climbingAlias != null
+                                    && !finalNegativeSpider.isClimbing()
+                                    && !behaviors.testCondition(climbingCondition, negativeContext)
+                                    && !behaviors.testCondition(climbingAlias, negativeContext);
+                            if (!climbingNegative[0] && retries++ < 10) {
+                                return;
+                            }
+                            cancel();
+                            boolean restored = finalCreeper.isValid()
+                                    && finalCreeper.isPowered() == originalPowered;
+                            for (var state : wallStates) state.update(true, false);
+                            restored = restored && wallStates.stream().allMatch(state ->
+                                    state.getBlock().getType() == state.getType()
+                                            && state.getBlock().getBlockData().equals(state.getBlockData()));
+                            getLogger().info("[自检] condition-mobility-states result="
+                                    + (fallingPositive && fallingNegative && climbingPositive[0]
+                                    && climbingNegative[0] && chargedPositive && chargedNegative && restored)
+                                    + " falling-positive=" + fallingPositive
+                                    + " falling-negative=" + fallingNegative
+                                    + " climbing-positive=" + climbingPositive[0]
+                                    + " climbing-negative=" + climbingNegative[0]
+                                    + " charged-positive=" + chargedPositive
+                                    + " charged-negative=" + chargedNegative
+                                    + " restored=" + restored + " aliases=true");
+                            if (finalInstance != null && instances() != null) {
+                                instances().despawn(finalInstance.instanceId());
+                            }
+                            if (finalNegativeInstance != null && instances() != null) {
+                                instances().despawn(finalNegativeInstance.instanceId());
+                            }
+                            if (finalSpider.isValid()) finalSpider.remove();
+                            if (finalNegativeSpider.isValid()) finalNegativeSpider.remove();
+                            if (finalCreeper.isValid()) finalCreeper.remove();
+                        } catch (Throwable failure) {
+                            cancel();
+                            getLogger().warning("[自检] condition-mobility-states failed: " + failure);
+                            for (var state : wallStates) state.update(true, false);
+                            if (finalInstance != null && instances() != null) {
+                                instances().despawn(finalInstance.instanceId());
+                            }
+                            if (finalNegativeInstance != null && instances() != null) {
+                                instances().despawn(finalNegativeInstance.instanceId());
+                            }
+                            if (finalSpider.isValid()) finalSpider.remove();
+                            if (finalNegativeSpider.isValid()) finalNegativeSpider.remove();
+                            if (finalCreeper.isValid()) finalCreeper.remove();
+                        }
+                    }
+                }.runTaskTimer(this, 1L, 1L);
+            } catch (Throwable failure) {
+                getLogger().warning("[自检] condition-mobility-states failed: " + failure);
+                for (var state : wallStates) state.update(true, false);
+                if (instance != null && instances() != null) instances().despawn(instance.instanceId());
+                if (negativeInstance != null && instances() != null) {
+                    instances().despawn(negativeInstance.instanceId());
+                }
+                if (spider != null && spider.isValid()) spider.remove();
+                if (negativeSpider != null && negativeSpider.isValid()) negativeSpider.remove();
+                if (creeper != null && creeper.isValid()) creeper.remove();
+            }
+        }, 1L);
     }
 
     private static boolean testTargetCategory(dev.helstera.ai.skill.SkillService skills,

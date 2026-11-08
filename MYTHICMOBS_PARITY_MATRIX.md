@@ -41,9 +41,22 @@ plugin tests cover the boundaries. Strict Paper fixture
 inverse controls through production spawning and completes 394 probes with
 zero failed or incomplete results.
 That same report carries the stabilized native-AI Bee stinger-loss probe: its
-next-tick assertion observes one uncancelled attack from each Bee at a
-two-block stationary-Zombie target, with stinger restoration only for the
-protected Bee.
+next-tick assertion observes one uncancelled attack from each Bee at an
+independent two-block stationary-Zombie target, with stinger restoration only
+for the protected Bee.
+
+Line-of-sight condition update: direct `LineOfSight`/`HasLineOfSight` and
+AI-target `TargetInLineOfSight`/`TargetNotInLineOfSight` now use Bukkit's real
+line-of-sight checks. Strict Paper fixture
+`srv-paper-line-of-sight-condition-strict-20261108-r4` verifies positive and
+blocked paths, negative matching, imported aliases, cleanup restoration, and
+invalid-input preservation in the 395-probe release catalog.
+
+Condition mobility-state update: `falling`, `climbing`, and `charged` now have
+strict positive and negative Paper evidence, including imported aliases and
+cleanup restoration. Strict fixture
+`srv-paper-condition-mobility-states-strict-20261108-r7` completes the 396-probe
+release catalog with zero failed or incomplete results.
 
 Snowing condition update: `snowing` and `isSnowing` map to a target-location
 runtime check using world storm state and Paper's height-adjusted block
@@ -754,8 +767,10 @@ negated thunder while preserving their source and emitting warnings.
 Climbing, invisibility, glowing, falling and target frozen aliases have the
 same argument validation, with importer-to-runtime and negation tests. Paper
 verifies glowing, invisible and frozen Zombie target states and rejects six
-invalid inputs with individual preservation and warnings; positive climbing,
-falling and charged states still need dedicated Paper evidence.
+invalid inputs with individual preservation and warnings. Strict fixture
+`srv-paper-condition-mobility-states-strict-20261108-r7` adds positive and
+negative climbing, falling, and charged state evidence with alias and cleanup
+assertions.
 Real damage events cover imported conditional reduction, condition rejection,
 and rejection of an invalid native multiplier. Explicit null multipliers and
 multiple same-type rules lack dedicated Paper probes; profile reload also lacks one.
@@ -1466,11 +1481,13 @@ Paper 1.21.1 evidence remains pending.
 Incremental spatial-condition update: official `LineOfSightFromOrigin` now
 ray-traces from the metaskill origin to the target eye location, rejects world
 mismatches and missing context, and maps the `inlineofsightfromorigin` alias.
-Migration, unit, and condition-catalog self-test coverage are included.
-Exploratory Paper 1.21.4 fixture r2 records
+Direct and AI-target line-of-sight conditions now use Bukkit's real checks with
+imported aliases and fail-closed invalid arguments. Migration, unit, and
+condition-catalog self-test coverage are included. Strict Paper 1.21.1 fixture
+`srv-paper-line-of-sight-condition-strict-20261108-r4` records
+`lineOfSightCondition=passed`, while exploratory Paper 1.21.4 fixture r2 records
 `lineOfSightFromOriginCondition=passed`, `originLocationCondition=passed`, and
-`triggerBlockTypeCondition=passed`; strict Paper 1.21.1 evidence remains
-pending.
+`triggerBlockTypeCondition=passed`.
 
 Incremental health-condition update: `Health` and `HealthPercent` now preserve
 Mythic `includeabsorption`/`ia` and include Bukkit absorption in raw or
@@ -2610,7 +2627,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-falling-block-options-strict-20261108-r3` completes 394 probes (375 passed, 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133, including imported FallingBlock block data and drop/hurt/cancel flags with wrong-type and malformed preservation, alongside imported Fox `Options.FoxType`, Rabbit `Options.RabbitType`, the earlier `CanJoinRaid`, native-AI Bee `PreventStingerLoss`, native Zombie `NATURAL` jockey mount, Mythic teleport, and native `PreventSlimeSplit` evidence. Previous strict fixtures verify imported entity options, natural spawner/drop behavior, real-client interactions and movement, skills and audience persistence, menus, targeters, conditions, and restart workflows. The separate `mobOptionsNatural` Bee event remains synthetic. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-condition-mobility-states-strict-20261108-r7` completes 396 probes (377 passed, 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133, including positive and negative falling, climbing, and charged states with aliases and cleanup restoration, direct and AI-target line-of-sight conditions, imported FallingBlock block data and drop/hurt/cancel flags, Fox `Options.FoxType`, Rabbit `Options.RabbitType`, the earlier `CanJoinRaid`, native-AI Bee `PreventStingerLoss`, native Zombie `NATURAL` jockey mount, Mythic teleport, and native `PreventSlimeSplit` evidence. Previous strict fixtures verify imported entity options, natural spawner/drop behavior, real-client interactions and movement, skills and audience persistence, menus, targeters, conditions, and restart workflows. The separate `mobOptionsNatural` Bee event remains synthetic. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.

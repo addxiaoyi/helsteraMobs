@@ -86,6 +86,8 @@ try {
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-mobility=true drowning-condition=true leashed-condition=true has-owner-condition=true has-tag-condition=true target-has-tag-condition=true scoreboard-tag-mechanics=true score-mechanics=true global-score-condition=true score-condition=true custom-owner-relation=true owner-condition=true children-condition=true inside-outside-conditions=true distance-from-location-condition=true coordinate-difference-condition=true origin-location-condition=true line-of-sight-from-origin-condition=true bounds-condition=true enchanting-conditions=true plugin-condition=true field-of-view-condition=true spawn-reason-condition=true water-mob-condition=true zombie-condition=true entity-type-condition=true aerial-condition=true enderman-condition=true enchantment-condition=true color-condition=true material-cooldown-condition=true material-cooldown-mechanic=true set-game-mode-mechanic=true jump-mechanic=true force-pull-mechanic=true set-offhand-mechanic=true set-armor-mechanic=true clear-inventory-mechanic=true remove-held-item-mechanic=true raw-experience-mechanic=true set-absorption-mechanic=true trigger-item-type-condition=true entity-item-type-condition=true entity-item-similar-condition=true item-similar-condition=true targets-condition=true item-type-condition=true structure-condition=true mythic-mob-type-condition=true trigger-block-type-condition=true frozen-condition=true dialogue-condition=true player-kills-condition=true absorption-condition=true health-absorption-condition=true potion-effect-condition=true aura-stacks-condition=true level-condition=true lunar-phase-condition=true string-equals-condition=true string-empty-condition=true compare-values-condition=true is-skill-condition=true owner-online-condition=true parent-relation=true is-child-condition=true is-child-import-condition=true adult-parent-positive=true adult-not-baby=true unrelated-baby-not-child=true baby-positive=true parent-derived-conditions=true player-experience-mechanics=true oxygen-mechanic=true consume-slot-mechanic=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true',
         '[Server thread/INFO]: skill-actions mythic-aura-action=true mythic-has-aura-condition=true mythic-target-has-aura-condition=true mythic-has-aura-stacks-condition=true mythic-has-aura-type-condition=true mythic-aura-remove=true mythic-aura-invalid-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] line-of-sight-condition result=true imported=true aliases=true direct-positive=true direct-blocked=true target-positive=true target-blocked=true target-negative=true restored-positive=true restored=true invalid-preserved=true warning=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true',
         '[Server thread/INFO]: raider-patrol-leader-condition positive=true negative=true entity=PILLAGER restored=true',
         '[Server thread/INFO]: creeper-primed-condition positive=true negative=true restored=true',
         '[Server thread/INFO]: ender-dragon-alive-condition positive=true negative=true removed=true',
@@ -692,6 +694,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'itemTypeCondition').status -eq 'passed') 'item type condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'structureCondition').status -eq 'passed') 'structure condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'lineOfSightFromOriginCondition').status -eq 'passed') 'line of sight from origin probe'
+    Assert-True (($report.probes | Where-Object id -eq 'lineOfSightCondition').status -eq 'passed') 'line of sight condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'originLocationCondition').status -eq 'passed') 'origin location condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'triggerBlockTypeCondition').status -eq 'passed') 'trigger block type condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'worldBiome').status -eq 'passed') 'world and biome condition probe'
@@ -735,6 +738,8 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'threatActions').status -eq 'passed') 'threat action probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionComposition').status -eq 'passed') 'condition composition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionMobility').status -eq 'passed') 'condition mobility probe'
+    Assert-True (($report.probes | Where-Object id -eq 'conditionMobilityStates').status -eq 'passed') 'condition mobility states probe'
+    Assert-True (($report.probes | Where-Object id -eq 'conditionMobilityStates').observations[0] -ceq 'condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true') 'condition mobility states require native state evidence'
     Assert-True (($report.probes | Where-Object id -eq 'conditionLeashed').status -eq 'passed') 'leashed condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionHasOwner').status -eq 'passed') 'has-owner condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionHasTag').status -eq 'passed') 'has-tag condition probe'
@@ -1091,6 +1096,14 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedOriginLocationCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedOriginLocationCondition'; status = 'passed'; observations = @('imported-origin-location-condition primary-mapped=true alias-mapped=true positive=true exact-positive=true negative=true invalid-rejected=true constructed-context=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'lineOfSightCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'lineOfSightCondition'; status = 'passed'; observations = @('line-of-sight-condition result=true imported=true aliases=true direct-positive=true direct-blocked=true target-positive=true target-blocked=true target-negative=true restored-positive=true restored=true invalid-preserved=true warning=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'conditionMobilityStates'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'conditionMobilityStates'; status = 'passed'; observations = @('condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true')
     }
     $fullCatalogReport.expectedProbeIds += 'importedMaterialCooldownCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

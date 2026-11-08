@@ -1,23 +1,19 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-falling-block-options-strict-20261108-r3` passed the
-full strict gate on Paper 1.21.1-133: 394 registered probes, 375 passed, 19
-expected rejections, and zero failed or incomplete. It verifies imported
-FallingBlock block data, drop-item, hurt-entities, and cancel-drop options
-against an inverse control through production spawning, while wrong-entity and
-malformed values remain preserved. Report:
-[paper-1.21.1-falling-block-options-strict-20261108-r3.json](reports/paper-1.21.1-falling-block-options-strict-20261108-r3.json), SHA-256:
-`f52a91ad198ca26707ec9f2ccc89d8e1a8ec3007429638002c15afa270a3f984`.
+Latest fixture `srv-paper-condition-mobility-states-strict-20261108-r7` passed
+the full strict gate on Paper 1.21.1-133: 396 registered probes, 377 passed,
+19 expected rejections, and zero failed or incomplete. It verifies positive and
+negative falling, climbing, and charged states, imported aliases, cleanup
+restoration, and direct and AI-target line-of-sight conditions. Report:
+[paper-1.21.1-condition-mobility-states-strict-20261108-r7.json](reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7.json), SHA-256:
+`e071b0d2c5e165396fbd88137747e2f61028d8f8888f255b333b0daf99b3b695`.
 Compressed server log SHA-256:
-`3b358d0db2eb60a80a2bd38717ac87e6878b5f6aeff119c04a90065159020db7`.
+`de9906db489f84e07c65772cdd3c0ac48e2d7b9339b6a9c32e317e70ab962515`.
 Client log archive SHA-256:
-`8c46327b295e9f7f69f28fccd8d858522d455c2eccc37abe2bc2fc066e78e853`.
+`156df854894131376ed28bf1302c04fb0ec61af40e4b0eaa8ebdddd0517a54b1`.
 Plugin SHA-256:
-`c127b64c7bd7ae288c1f33840b3afbafc4bffbba004403ed956cb5e7a989bde2`.
-The same run includes the stabilized native-AI Bee stinger-loss probe: its
-assertion is scheduled on the next tick and the stationary Zombie target is two
-blocks from each Bee; both attacks are observed without cancelled damage
-events, with stinger restoration only on the protected Bee.
+`af8c6950fa77cf3b84efcf3f3f898bda10562b9d5955374ea4ddfd124c86f18e`.
+Latest strict report has 396 probes, zero incomplete.
 
 Previous fixture `srv-paper-rabbit-options-strict-20261107-r2` passed the
 full strict gate with 392 registered probes, 373 passed, 19 expected
