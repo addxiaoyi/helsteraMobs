@@ -83,6 +83,25 @@ class SkillConditionsTest {
         assertFalse(p.test(ctx()));
     }
 
+    @Test
+    @DisplayName("has-line-of-sight：读取施法者和目标的真实 Bukkit 视线状态")
+    void lineOfSightReadsCasterAndTargetState() {
+        var instance = mock(ModelInstance.class);
+        var caster = mock(LivingEntity.class);
+        var target = mock(LivingEntity.class);
+        var world = mock(World.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.getWorld()).thenReturn(world);
+        when(target.getWorld()).thenReturn(world);
+        when(caster.hasLineOfSight(target)).thenReturn(true, false);
+
+        var condition = factory("has-line-of-sight").create(List.of());
+        var context = BehaviorContext.of(instance, target, 1.0, 3.0, 0, "LOS");
+        assertTrue(condition.test(context));
+        assertFalse(condition.test(context));
+    }
+
     // ---- target-is ----
 
     @Test

@@ -1047,6 +1047,20 @@ class MmConditionsTest {
     }
 
     @Test
+    void officialLineOfSightConditionsMapAliasesAndRejectArguments() {
+        assertEquals("has-line-of-sight", t("?lineOfSight"));
+        assertEquals("has-line-of-sight", t("?hasLineOfSight"));
+        assertEquals("target-has-line-of-sight", t("?targetInLineOfSight"));
+        assertEquals("target-not-in-line-of-sight", t("?targetNotInLineOfSight"));
+        for (String raw : List.of("?lineOfSight{unexpected=true}", "?hasLineOfSight extra",
+                "?targetInLineOfSight{target=zombie}", "?targetNotInLineOfSight{value=true}")) {
+            var mapped = MmConditions.translate(raw);
+            assertFalse(mapped.translated(), raw);
+            assertEquals(raw, mapped.condition(), raw);
+        }
+    }
+
+    @Test
     void officialStructureConditionMapsDefaultAndNamespacedValues() {
         assertEquals("structure minecraft:desert_pyramid",
                 t("?structure{structure=minecraft:desert_pyramid}"));

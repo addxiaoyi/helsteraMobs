@@ -38,24 +38,21 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-falling-block-options-strict-20261108-r3`
-passes all 394 probes (375 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. It adds imported FallingBlock options for
-block data, drop items, hurt entities, and cancelled drops, with production
-control comparisons and preservation of wrong-type and malformed source
-values. It also carries the registered Mythic parity catalog.
-Report: `reports/paper-1.21.1-falling-block-options-strict-20261108-r3.json`;
-server log: `reports/paper-1.21.1-falling-block-options-strict-20261108-r3.log.gz`;
+Latest strict fixture `srv-paper-condition-mobility-states-strict-20261108-r7`
+passes all 396 probes (377 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies positive and negative falling,
+climbing, and charged states, imported aliases, cleanup restoration, and the
+direct and AI-target line-of-sight conditions through real Bukkit entities. It
+also carries the registered Mythic parity catalog.
+Report: `reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7.json`;
+server log: `reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7.log.gz`;
 client logs:
-`reports/paper-1.21.1-falling-block-options-strict-20261108-r3-client-logs.tar.gz`.
-Report SHA-256: `f52a91ad198ca26707ec9f2ccc89d8e1a8ec3007429638002c15afa270a3f984`;
-server log SHA-256: `f355bfcff07174d84301e3c36023b9e1f1651ebf008ffc4e5ab4fc244d7c6d4d`;
-client log SHA-256: `8c46327b295e9f7f69f28fccd8d858522d455c2eccc37abe2bc2fc066e78e853`;
-plugin SHA-256: `c127b64c7bd7ae288c1f33840b3afbafc4bffbba004403ed956cb5e7a989bde2`.
-The same run includes the stabilized native-AI Bee stinger-loss probe: its
-assertion is scheduled on the next tick and the stationary Zombie target is two
-blocks from each Bee; both attacks are observed without cancelled damage
-events, with stinger restoration only on the protected Bee.
+`reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7-client-logs.tar.gz`.
+Report SHA-256: `e071b0d2c5e165396fbd88137747e2f61028d8f8888f255b333b0daf99b3b695`;
+server log SHA-256: `f13180a18d88dca002e88d575355d90e5376300aba7d61437a1a7ce77d845a3f`;
+client log SHA-256: `156df854894131376ed28bf1302c04fb0ec61af40e4b0eaa8ebdddd0517a54b1`;
+plugin SHA-256: `af8c6950fa77cf3b84efcf3f3f898bda10562b9d5955374ea4ddfd124c86f18e`.
+Latest strict report has 396 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-rabbit-options-strict-20261107-r2` passes all
 392 probes (373 passed, 19 expected rejections, zero failed or incomplete) on
@@ -950,7 +947,10 @@ Previous fixture `srv-paper-visibility-arguments-20261103-r1` passed all 301 req
 `6078768cc112024d97caf360ddd8f184999e7d98dba1e98c761d4f85c23feb8d`.
 The probe verifies a glowing, invisible and frozen Zombie target and rejects
 six invalid conditions, checking each source and migration warning separately.
-It does not establish positive climbing, falling or charged state behavior.
+That earlier fixture did not establish positive climbing, falling or charged
+state behavior; the current strict fixture
+`srv-paper-condition-mobility-states-strict-20261108-r7` supplies those
+positive and negative controls in the 396-probe release catalog.
 
 Previous-build fixture `srv-paper-time-weather-arguments-20261103-r1` passed all 300 required probes
 (283 passed, 17 expected rejections) on Paper 1.21.1-133. Its report is

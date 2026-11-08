@@ -1,5 +1,29 @@
 [
   {
+    "fixtureId": "srv-paper-condition-mobility-states-strict-20261108-r7",
+    "reportFixtureDirectory": "srv-paper-condition-mobility-states-strict-20261108-r7",
+    "report": "tools/paper-integration/reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7.json",
+    "reportSha256": "e071b0d2c5e165396fbd88137747e2f61028d8f8888f255b333b0daf99b3b695",
+    "log": "tools/paper-integration/reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7.log.gz",
+    "logSha256": "f13180a18d88dca002e88d575355d90e5376300aba7d61437a1a7ce77d845a3f",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7-client-logs.tar.gz",
+    "clientLogSha256": "156df854894131376ed28bf1302c04fb0ec61af40e4b0eaa8ebdddd0517a54b1",
+    "pluginSha256": "af8c6950fa77cf3b84efcf3f3f898bda10562b9d5955374ea4ddfd124c86f18e",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-line-of-sight-condition-strict-20261108-r4",
+    "reportFixtureDirectory": "srv-paper-line-of-sight-condition-strict-20261108-r4",
+    "report": "tools/paper-integration/reports/paper-1.21.1-line-of-sight-condition-strict-20261108-r4.json",
+    "reportSha256": "9e5d67457fef21820d5c839f660d41f7dec387715d79e0ea3e96cdbb7aaa69a6",
+    "log": "tools/paper-integration/reports/paper-1.21.1-line-of-sight-condition-strict-20261108-r4.log.gz",
+    "logSha256": "45e0d082fcd5725141943909e274735e89bdc0c416299a1d3c084e2d66743a33",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-line-of-sight-condition-strict-20261108-r4-client-logs.tar.gz",
+    "clientLogSha256": "398b9bf3995e7ffe9f7dcc415421de12cc8468b21b7db4ca3d644914a7ef2c5b",
+    "pluginSha256": "575b42d5fb09568416f2efad9aa533aec637781e9459637c14bd4fa4010672c9",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-falling-block-options-strict-20261108-r3",
     "reportFixtureDirectory": "srv-paper-falling-block-options-strict-20261108-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-falling-block-options-strict-20261108-r3.json",

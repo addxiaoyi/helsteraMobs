@@ -2,27 +2,21 @@
 
 ## MythicMobs Parity Development Status (2026-11-08)
 
-Latest strict fixture `srv-paper-falling-block-options-strict-20261108-r3`
-passes all 394 release probes (375 passed, 19 expected rejections, zero failed
-or incomplete) on Paper 1.21.1-133. It adds imported Mythic FallingBlock
-options: `FallingBlockData`, `BlockData`, `FallingBlockDropItem`,
-`FallingBlockHurtEntities`, and `FallingBlockCancelDrop` apply to FallingBlock
-entities, while wrong entity types and malformed block data remain preserved
-under `entity.unsupported.Options`. Report:
-`tools/paper-integration/reports/paper-1.21.1-falling-block-options-strict-20261108-r3.json`
-(SHA-256 `f52a91ad198ca26707ec9f2ccc89d8e1a8ec3007429638002c15afa270a3f984`).
+Latest strict fixture `srv-paper-condition-mobility-states-strict-20261108-r7`
+passes all 396 release probes (377 passed, 19 expected rejections, zero failed
+or incomplete) on Paper 1.21.1-133. It closes strict Paper coverage for the
+positive and negative `falling`, `climbing`, and `charged` states, imported
+aliases, cleanup restoration, and the direct and AI-target line-of-sight
+conditions carried by the same release catalog. Report:
+`tools/paper-integration/reports/paper-1.21.1-condition-mobility-states-strict-20261108-r7.json`
+(SHA-256 `e071b0d2c5e165396fbd88137747e2f61028d8f8888f255b333b0daf99b3b695`).
 Compressed server log SHA-256:
-`f355bfcff07174d84301e3c36023b9e1f1651ebf008ffc4e5ab4fc244d7c6d4d`.
+`f13180a18d88dca002e88d575355d90e5376300aba7d61437a1a7ce77d845a3f`.
 Client log archive SHA-256:
-`8c46327b295e9f7f69f28fccd8d858522d455c2eccc37abe2bc2fc066e78e853`.
+`156df854894131376ed28bf1302c04fb0ec61af40e4b0eaa8ebdddd0517a54b1`.
 Plugin SHA-256:
-`c127b64c7bd7ae288c1f33840b3afbafc4bffbba004403ed956cb5e7a989bde2`.
-Latest strict report has 394 probes, zero incomplete.
-The same strict run includes the stabilized native-AI Bee stinger-loss probe:
-the probe schedules its assertion on the next tick and uses a two-block target
-distance, so both protected and inverse-control Bee attacks are observed
-without cancelled damage events. Its release artifact is covered by the
-plugin SHA-256 above.
+`af8c6950fa77cf3b84efcf3f3f898bda10562b9d5955374ea4ddfd124c86f18e`.
+Latest strict report has 396 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-rabbit-options-strict-20261107-r2` passes all
 392 release probes (373 passed, 19 expected rejections, zero failed or
@@ -593,8 +587,10 @@ the current world state and rejects invalid morning, rain and negated thunder.
 Climbing, invisibility, glowing, falling and target frozen aliases also reject
 unexpected arguments. Paper verifies a Zombie's glowing, invisible and frozen
 states and rejection, source preservation and warnings for six invalid inputs,
-including climbing, falling, charged and negated target invisibility. Positive
-climbing, falling and charged states still need dedicated Paper evidence.
+including climbing, falling, charged and negated target invisibility. Strict
+fixture `srv-paper-condition-mobility-states-strict-20261108-r7` now verifies
+positive and negative climbing, falling, and charged states with alias and
+cleanup assertions.
 Unsupported immunity and damage-modifier sections now preserve nested YAML
 under `mob.unsupported.Immunities` and `mob.unsupported.DamageModifiers`; this
 change has importer/runtime tests but no dedicated Paper preservation probe.
@@ -785,7 +781,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-falling-block-options-strict-20261108-r3` has 394 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-condition-mobility-states-strict-20261108-r7` has 396 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -801,8 +797,8 @@ This is a partial parity release. The matrix currently has `35`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 515 cited IDs; 423 report files; 4 directories
-   without reports; 88 missing directories; 193 archived release reports. The
+   Current fixture inventory: 518 cited IDs; 426 report files; 4 directories
+   without reports; 88 missing directories; 196 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -861,6 +857,8 @@ the entire MythicMobs feature catalog.
 - The full strict Paper 1.21.1-133 fixture `srv-paper-full-strict-20261107-r4` records 391 probes with zero incomplete results. Its imported entity-flag probe reads `CanJoinRaid=false` on the protected Pillager and `true` on the inverse control, the native-AI Bee probe verifies imported `PreventStingerLoss`, and the native Zombie `NATURAL` spawn path observes protected jockey cancellation with control allowance.
 - Mythic FallingBlock options now have strict importer-to-runtime evidence. Paper fixture `srv-paper-falling-block-options-strict-20261108-r3` imports block data and drop, hurt-entity, and cancel-drop flags through production FallingBlock spawning; the configured and inverse controls are read back, and wrong-entity or malformed values remain preserved. The fixture completes all 394 registered release probes.
 - The same release fixture stabilizes the imported Bee `PreventStingerLoss` native-AI probe by scheduling its assertion on the next tick and placing the stationary Zombie two blocks from each Bee. Both protected/control attacks are observed as uncancelled damage events; the protected Bee restores its stinger while the control remains stung.
+- Strict Paper 1.21.1-133 fixture `srv-paper-line-of-sight-condition-strict-20261108-r4` verifies direct and AI-target line-of-sight conditions, imported aliases, wall blocking, negative matching, cleanup restoration, and invalid-input preservation in 395 registered release probes.
+- Strict Paper 1.21.1-133 fixture `srv-paper-condition-mobility-states-strict-20261108-r7` verifies positive and negative falling, climbing, and charged conditions, imported aliases, cleanup restoration, and the complete 396-probe release catalog.
 - Mythic Fox `Options.FoxType` now has strict importer-to-runtime evidence. Paper fixture `srv-paper-fox-options-strict-20261108-r1` imports `SNOW` and `RED` controls through production Fox spawning, applies the option only to Fox entities, and preserves wrong-entity and malformed values under `entity.unsupported.Options.FoxType` while completing all 393 registered release probes.
 - Mythic `teleport`/`tp` now imports into a dedicated runtime action with entity and location target support, safe landing checks, `unsafe` bypass, bounded `spreadh`/`spreadv`, preserved/target/numeric yaw and pitch, placeholder resolution, and fail-closed invalid-argument warnings. Strict Paper fixture `srv-paper-mythic-teleport-strict-20261107-r1` verifies the complete importer/runtime contract in 391 release probes.
 - Mythic Sheep `Options.SheepColor` and `Options.Sheared` now have strict importer-to-runtime evidence. Paper fixture `srv-paper-sheep-options-strict-20261107-r1` imports red/sheared and white/unshorn controls through production mob spawning, then completes the 384-probe release catalog with zero incomplete probes.

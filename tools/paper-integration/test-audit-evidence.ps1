@@ -170,6 +170,14 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedOriginLocationCondition'; status = 'passed'; observations = @('imported-origin-location-condition primary-mapped=true alias-mapped=true positive=true exact-positive=true negative=true invalid-rejected=true constructed-context=true')
     }
+    $fullReport.expectedProbeIds += 'lineOfSightCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'lineOfSightCondition'; status = 'passed'; observations = @('line-of-sight-condition result=true imported=true aliases=true direct-positive=true direct-blocked=true target-positive=true target-blocked=true target-negative=true restored-positive=true restored=true invalid-preserved=true warning=true')
+    }
+    $fullReport.expectedProbeIds += 'conditionMobilityStates'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'conditionMobilityStates'; status = 'passed'; observations = @('condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true')
+    }
     $fullReport.expectedProbeIds += 'importedMaterialCooldownCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedMaterialCooldownCondition'; status = 'passed'; observations = @('imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true')

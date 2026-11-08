@@ -341,6 +341,11 @@
       "status": "passed"
     },
     {
+      "id": "conditionMobilityStates",
+      "status": "passed",
+      "requiredObservation": "condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true"
+    },
+    {
       "id": "conditionUtilityAliases",
       "status": "passed"
     },
@@ -938,6 +943,11 @@
     {
       "id": "lineOfSightFromOriginCondition",
       "status": "passed"
+    },
+    {
+      "id": "lineOfSightCondition",
+      "status": "passed",
+      "requiredObservationPattern": "^line-of-sight-condition result=true imported=true aliases=true direct-positive=true direct-blocked=true target-positive=true target-blocked=true target-negative=true restored-positive=true restored=true invalid-preserved=true warning=true$"
     },
     {
       "id": "lineTargeterParameters",
