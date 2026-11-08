@@ -226,6 +226,14 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedTargetRelationshipsCondition'; status = 'passed'; observations = @('imported-target-relationships-condition has-owner-mapped=true owner-player-mapped=true owner-online-mapped=true leashed-mapped=true leashed-alias-mapped=true owned-positive=true owner-player-positive=true owner-online-positive=true leashed-positive=true leashed-alias-positive=true leash-cleared-rejected=true owner-cleared-rejected=true missing-target-rejected=true result=true')
     }
+    $fullReport.expectedProbeIds += 'contextTargeterRelations'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'contextTargeterRelations'; status = 'passed'; observations = @('context-targeter-relations passenger=true passengers=true mount=true vehicle=true owner-location=true parent-location=true invalid-rejected=true passed=true')
+    }
+    $fullReport.expectedProbeIds += 'importedPopulationConditions'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedPopulationConditions'; status = 'passed'; observations = @('imported-population-conditions players-online-mapped=true online-alias-mapped=true players-world-mapped=true mobs-world-mapped=true players-online-negative-mapped=true online-alias-negative-mapped=true players-world-negative-mapped=true mobs-world-negative-mapped=true players-online-positive=true online-alias-positive=true players-world-positive=true mobs-world-positive=true players-online-negative=true online-alias-negative=true players-world-negative=true mobs-world-negative=true invalid-preserved=true result=true')
+    }
     $fullReport.expectedProbeIds += 'importedMobDefaults'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
@@ -313,6 +321,10 @@ try {
     $fullReport.expectedProbeIds += 'importedServerConditions'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedServerConditions'; status = 'passed'; observations = @('imported-server-conditions paper-primary=true paper-alias=true exact=true exact-negative=true after-inclusive=true after-exclusive-rejected=true after-higher-rejected=true before-inclusive=true before-exclusive-rejected=true invalid-preserved=true result=true')
+    }
+    $fullReport.expectedProbeIds += 'importedCoordinateDifferenceCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedCoordinateDifferenceCondition'; status = 'passed'; observations = @('imported-coordinate-difference-condition primary-mapped=true alias-mapped=true x-positive=true y-positive=true z-positive=true out-of-range-rejected=true invalid-preserved=true result=true')
     }
     $fullReport.expectedProbeIds += 'snowingCondition'
     $fullReport.probes += [pscustomobject]@{
