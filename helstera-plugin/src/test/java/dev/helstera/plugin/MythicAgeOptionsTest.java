@@ -16,6 +16,7 @@ import org.bukkit.entity.Wolf;
 import org.bukkit.entity.Horse;
 import org.bukkit.entity.Cat;
 import org.bukkit.entity.Sheep;
+import org.bukkit.entity.Fox;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.FallingBlock;
 import org.bukkit.inventory.meta.PotionMeta;
@@ -475,6 +476,23 @@ class MythicAgeOptionsTest {
         HelsteraPlugin.applyEntitySpecificOptions(rabbit,
                 YamlConfiguration.loadConfiguration(new java.io.StringReader(
                         "rabbit-type: NOT_A_RABBIT")));
+        assertTrue(calls.isEmpty(), calls.toString());
+    }
+
+    @Test
+    void appliesFoxTypeAndRejectsMalformedValues() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var fox = proxy(Fox.class, calls);
+        HelsteraPlugin.applyEntitySpecificOptions(fox,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                        "fox-type: SNOW")));
+
+        assertEquals(Fox.Type.SNOW, calls.get("setFoxType"), calls.toString());
+
+        calls.clear();
+        HelsteraPlugin.applyEntitySpecificOptions(fox,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                        "fox-type: NOT_A_FOX")));
         assertTrue(calls.isEmpty(), calls.toString());
     }
 

@@ -4562,6 +4562,44 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic FoxType maps only to foxes and preserves invalid values")
+    void mythicMapsFoxTypeWithEntityBoundary(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/fox-options.yml", """
+                mobs:
+                  fox:
+                    Type: FOX
+                    Options:
+                      FoxType: SNOW
+                  wrong:
+                    Type: ZOMBIE
+                    Options:
+                      FoxType: RED
+                  invalid:
+                    Type: FOX
+                    Options:
+                      FoxType: NOT_A_FOX
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        var fox = convertedMob(entries, "fox");
+        var wrong = convertedMob(entries, "wrong");
+        var invalid = convertedMob(entries, "invalid");
+
+        assertEquals("SNOW", fox.getString("entity.fox-type"));
+        assertFalse(fox.contains("entity.unsupported.Options.FoxType"));
+
+        assertEquals("RED", wrong.getString("entity.unsupported.Options.FoxType"));
+        assertFalse(wrong.contains("entity.fox-type"));
+
+        assertEquals("NOT_A_FOX", invalid.getString("entity.unsupported.Options.FoxType"));
+        assertFalse(invalid.contains("entity.fox-type"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.FoxType".equals(entry.get("source-key"))
+                && "entity.unsupported.Options.FoxType".equals(entry.get("target-key"))));
+    }
+
+    @Test
     @DisplayName("Mythic Sheep options map color and sheared state")
     void mythicMapsSheepOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/sheep-options.yml", """

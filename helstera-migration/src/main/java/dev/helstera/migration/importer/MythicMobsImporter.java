@@ -1225,6 +1225,10 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "entity.cat-type", normalizedType,
                     MythicMobsImporter::isCatTypeOptionValue,
                     org.bukkit.entity.Cat.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "FoxType",
+                    "entity.fox-type", normalizedType,
+                    raw -> isEnumOptionValue(raw, org.bukkit.entity.Fox.Type.class),
+                    org.bukkit.entity.Fox.class);
             mapEntityScopedOption(options, srcFile, entries, target, "RabbitType",
                     "entity.rabbit-type", normalizedType,
                     raw -> isEnumOptionValue(raw, org.bukkit.entity.Rabbit.Type.class),

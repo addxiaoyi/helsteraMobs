@@ -62,6 +62,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED',
         '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4',
+        '[Server thread/INFO]: [helsteraMobs] [自检] fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true',
@@ -450,7 +451,7 @@ try {
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
-            'beeStingerLossImported', 'rabbitOptionsImported')) {
+            'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -507,6 +508,9 @@ try {
     Assert-True ($report.paperVersion -eq '1.21.1-test') 'Paper version extraction'
     Assert-True (($report.probes | Where-Object id -eq 'horse').status -eq 'passed') 'positive probe'
     Assert-True (($report.probes | Where-Object id -eq 'horseOptionsImported').status -eq 'passed') 'imported Horse option probe'
+    Assert-True (($report.probes | Where-Object id -eq 'foxOptionsImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'foxOptionsImported').observations[0] -ceq
+        'fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true') 'imported Fox option probe'
     Assert-True (($report.probes | Where-Object id -eq 'creeper').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'creeper').observations[0] -match
         'imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true') 'imported Creeper options require production Paper evidence'
@@ -1020,6 +1024,10 @@ try {
     }
     $fullCatalogHorseOptions = @($fullCatalogReport.probes | Where-Object id -eq 'horseOptionsImported')
     if ($fullCatalogHorseOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain horseOptionsImported.' }
+    $fullCatalogReport.expectedProbeIds += 'foxOptionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'foxOptionsImported'; status = 'passed'; observations = @('fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'rabbitOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'rabbitOptionsImported'; status = 'passed'; observations = @('rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true')
