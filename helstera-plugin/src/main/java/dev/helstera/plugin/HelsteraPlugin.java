@@ -4141,6 +4141,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean blockTypeRadiusWildcardCondition = false;
             boolean biomeCondition = false;
             boolean playerRadiusConditions = false;
+            boolean radiusConditions = false;
             boolean cooldownMechanics = false;
             boolean lastDamageCauseCondition = false;
             boolean motionConditions = false;
@@ -4184,6 +4185,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean boundsCondition = false;
             boolean playerKillsCondition = false;
             boolean absorptionCondition = false;
+            boolean absorptionPlayerCondition = false;
             boolean healthAbsorptionCondition = false;
             boolean setAbsorptionMechanic = false;
             boolean levelCondition = false;
@@ -9448,6 +9450,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     var permissionContext = dev.helstera.api.behavior.BehaviorContext.execution(
                             null, permissionProbe, 1.0, -1, 0, "integration", null,
                             permissionProbe, java.util.List.of(permissionProbe), permissionProbe.getLocation());
+                    absorptionPlayerCondition = runAbsorptionPlayerConditionSelfTest(
+                            skills, behaviors, permissionContext, permissionProbe);
+                    radiusConditions = runRadiusConditionsSelfTest(
+                            skills, behaviors, stateInstance, permissionProbe, world,
+                            conditionCategoryEntities);
                     String permissionCondition = skills.bindCondition("caster-has-permission integration.probe");
                     casterPermission = behaviors.testCondition(permissionCondition, permissionContext);
                     permissionProbe.setGameMode(org.bukkit.GameMode.SURVIVAL);
@@ -9684,6 +9691,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " in-combat-condition=" + utilityInCombat
                         + " mobs-in-chunk-condition=" + mobsInChunkCondition
                         + " player-radius-conditions=" + playerRadiusConditions
+                        + " radius-conditions=" + radiusConditions
                         + " cooldown-mechanics=" + cooldownMechanics
                         + " last-damage-cause=" + lastDamageCauseCondition
                         + " motion-conditions=" + motionConditions
@@ -9726,6 +9734,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " bounding-box-overlap-condition=" + boundingBoxOverlapCondition
                         + " player-kills-condition=" + playerKillsCondition
                         + " absorption-condition=" + absorptionCondition
+                        + " absorption-player-condition=" + absorptionPlayerCondition
                         + " health-absorption-condition=" + healthAbsorptionCondition
                         + " set-absorption-mechanic=" + setAbsorptionMechanic
                         + " level-condition=" + levelCondition
@@ -9893,6 +9902,194 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 30L);
+    }
+
+    private boolean runAbsorptionPlayerConditionSelfTest(
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext permissionContext,
+            org.bukkit.entity.Player permissionProbe) {
+        double originalAbsorption = permissionProbe.getAbsorptionAmount();
+        boolean dispatched = false;
+        boolean observed = false;
+        boolean positive = false;
+        boolean exact = false;
+        boolean negative = false;
+        boolean imported = false;
+        boolean importedPositive = false;
+        try {
+            dispatched = runIntegrationAction(skills, behaviors, "set-absorption 4", permissionContext);
+            positive = behaviors.testCondition(skills.bindCondition("absorption >=4"), permissionContext);
+            exact = behaviors.testCondition(skills.bindCondition("absorption =4"), permissionContext);
+            negative = !behaviors.testCondition(skills.bindCondition("absorption >4"), permissionContext);
+            var importedCondition = dev.helstera.migration.importer.MmConditions.translate(
+                    "?absorption{amount=>=4}");
+            imported = importedCondition.translated()
+                    && "absorption >=4".equals(importedCondition.condition());
+            importedPositive = imported && behaviors.testCondition(
+                    skills.bindCondition(importedCondition.condition()), permissionContext);
+            observed = Math.abs(permissionProbe.getAbsorptionAmount() - 4.0) < 0.01;
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] absorption player condition failed: " + failure);
+        } finally {
+            try {
+                permissionProbe.setAbsorptionAmount(originalAbsorption);
+            } catch (Throwable restoreFailure) {
+                getLogger().warning("[自检] absorption player condition restore failed: " + restoreFailure);
+            }
+        }
+        boolean restored = Math.abs(permissionProbe.getAbsorptionAmount() - originalAbsorption) < 0.01;
+        boolean passed = dispatched && positive && exact && negative && imported && importedPositive
+                && observed && restored;
+        getLogger().info("absorption-player-condition imported=" + imported
+                + " dispatched=" + dispatched + " positive=" + positive + " exact=" + exact
+                + " negative=" + negative + " observed=" + observed + " restored=" + restored
+                + " passed=" + passed);
+        return passed;
+    }
+
+    private boolean runRadiusConditionsSelfTest(
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors,
+            dev.helstera.api.instance.ModelInstance stateInstance,
+            org.bukkit.entity.Player permissionProbe,
+            org.bukkit.World world,
+            java.util.List<org.bukkit.entity.LivingEntity> conditionCategoryEntities) {
+        boolean imported = false;
+        boolean playersPositive = false;
+        boolean playersNegative = false;
+        boolean entitiesPositive = false;
+        boolean entitiesNegative = false;
+        boolean mobsPositive = false;
+        boolean mobsNegative = false;
+        boolean livingPositive = false;
+        boolean livingNegative = false;
+        boolean playerWithinPositive = false;
+        boolean playerWithinNegative = false;
+        boolean playerNotWithinPositive = false;
+        boolean playerNotWithinNegative = false;
+        boolean subjectRestored = false;
+        boolean peerRestored = true;
+        org.bukkit.Location subjectOriginalLocation = permissionProbe.getLocation().clone();
+        org.bukkit.entity.Player peer = getServer().getOnlinePlayers().stream()
+                .filter(player -> player != permissionProbe && player.isOnline() && !player.isDead())
+                .findFirst().orElse(null);
+        org.bukkit.Location peerOriginalLocation = peer == null ? null : peer.getLocation().clone();
+        try {
+            int radiusX = subjectOriginalLocation.getBlockX() + 48;
+            int radiusZ = subjectOriginalLocation.getBlockZ() + 48;
+            int radiusY = world.getHighestBlockYAt(radiusX, radiusZ) + 1;
+            org.bukkit.Location radiusOrigin = new org.bukkit.Location(world, radiusX + 0.5, radiusY,
+                    radiusZ + 0.5, subjectOriginalLocation.getYaw(), subjectOriginalLocation.getPitch());
+            permissionProbe.teleport(radiusOrigin);
+            if (peer != null) peer.teleport(radiusOrigin.clone().add(1.0, 0, 0));
+            org.bukkit.entity.Zombie zombie = world.spawn(radiusOrigin.clone().add(2.0, 0, 0),
+                    org.bukkit.entity.Zombie.class);
+            org.bukkit.entity.Cow cow = world.spawn(radiusOrigin.clone().add(3.0, 0, 0),
+                    org.bukkit.entity.Cow.class);
+            conditionCategoryEntities.add(zombie);
+            conditionCategoryEntities.add(cow);
+            zombie.setAI(false);
+            zombie.setInvulnerable(true);
+            cow.setAI(false);
+            cow.setInvulnerable(true);
+            var radiusContext = dev.helstera.api.behavior.BehaviorContext.execution(
+                    stateInstance, permissionProbe, 1.0, -1, 0, "integration", null,
+                    permissionProbe, java.util.List.of(permissionProbe), radiusOrigin);
+            var radiusTargetContext = dev.helstera.api.behavior.BehaviorContext.of(
+                    null, zombie, 1.0, 2.0, 0, "integration");
+            var importedPlayers = dev.helstera.migration.importer.MmConditions.translate(
+                    "?playersInRadius{r=4}");
+            var importedEntities = dev.helstera.migration.importer.MmConditions.translate(
+                    "?entitiesInRadius{count=2;radius=4}");
+            var importedMobs = dev.helstera.migration.importer.MmConditions.translate(
+                    "?mobsInRadius{radius=4}");
+            var importedLiving = dev.helstera.migration.importer.MmConditions.translate(
+                    "?livingInRadius{a=>=2;r=4}");
+            var importedWithin = dev.helstera.migration.importer.MmConditions.translate(
+                    "?playerWithin{d=4}");
+            var importedNotWithin = dev.helstera.migration.importer.MmConditions.translate(
+                    "?playerNotWithin{distance=4}");
+            imported = importedPlayers.translated()
+                    && "players-in-radius 1 4".equals(importedPlayers.condition())
+                    && importedEntities.translated()
+                    && "entities-in-radius 2 4".equals(importedEntities.condition())
+                    && importedMobs.translated()
+                    && "mobs-in-radius 1 4".equals(importedMobs.condition())
+                    && importedLiving.translated()
+                    && "living-in-radius >=2 4".equals(importedLiving.condition())
+                    && importedWithin.translated()
+                    && "player-within 4".equals(importedWithin.condition())
+                    && importedNotWithin.translated()
+                    && "player-not-within 4".equals(importedNotWithin.condition());
+            String playersKey = imported ? skills.bindCondition(importedPlayers.condition()) : null;
+            String entitiesKey = imported ? skills.bindCondition(importedEntities.condition()) : null;
+            String mobsKey = imported ? skills.bindCondition(importedMobs.condition()) : null;
+            String livingKey = imported ? skills.bindCondition(importedLiving.condition()) : null;
+            String withinKey = imported ? skills.bindCondition(importedWithin.condition()) : null;
+            String notWithinKey = imported ? skills.bindCondition(importedNotWithin.condition()) : null;
+            playersPositive = playersKey != null && behaviors.testCondition(playersKey, radiusContext);
+            entitiesPositive = entitiesKey != null && behaviors.testCondition(entitiesKey, radiusContext);
+            mobsPositive = mobsKey != null && behaviors.testCondition(mobsKey, radiusContext);
+            livingPositive = livingKey != null && behaviors.testCondition(livingKey, radiusContext);
+            playerWithinPositive = withinKey != null
+                    && behaviors.testCondition(withinKey, radiusTargetContext);
+
+            permissionProbe.teleport(radiusOrigin.clone().add(16.0, 0, 0));
+            if (peer != null) peer.teleport(radiusOrigin.clone().add(18.0, 0, 0));
+            playersNegative = playersKey != null && !behaviors.testCondition(playersKey, radiusContext);
+            playerWithinNegative = withinKey != null
+                    && !behaviors.testCondition(withinKey, radiusTargetContext);
+            playerNotWithinPositive = notWithinKey != null
+                    && behaviors.testCondition(notWithinKey, radiusTargetContext);
+
+            zombie.teleport(radiusOrigin.clone().add(16.0, 0, 0));
+            cow.teleport(radiusOrigin.clone().add(18.0, 0, 0));
+            entitiesNegative = entitiesKey != null && !behaviors.testCondition(entitiesKey, radiusContext);
+            mobsNegative = mobsKey != null && !behaviors.testCondition(mobsKey, radiusContext);
+            livingNegative = livingKey != null && !behaviors.testCondition(livingKey, radiusContext);
+
+            permissionProbe.teleport(radiusOrigin);
+            if (peer != null) peer.teleport(radiusOrigin.clone().add(1.0, 0, 0));
+            zombie.teleport(radiusOrigin.clone().add(2.0, 0, 0));
+            playerNotWithinNegative = notWithinKey != null
+                    && !behaviors.testCondition(notWithinKey, radiusTargetContext);
+            imported = imported && playersKey != null && entitiesKey != null && mobsKey != null
+                    && livingKey != null && withinKey != null && notWithinKey != null;
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] radius conditions failed: " + failure);
+        } finally {
+            try {
+                permissionProbe.teleport(subjectOriginalLocation);
+                subjectRestored = permissionProbe.getLocation().distance(subjectOriginalLocation) < 0.01;
+            } catch (Throwable restoreFailure) {
+                getLogger().warning("[自检] radius subject restore failed: " + restoreFailure);
+            }
+            if (peer != null && peerOriginalLocation != null) {
+                try {
+                    peer.teleport(peerOriginalLocation);
+                    peerRestored = peer.getLocation().distance(peerOriginalLocation) < 0.01;
+                } catch (Throwable restoreFailure) {
+                    peerRestored = false;
+                    getLogger().warning("[自检] radius peer restore failed: " + restoreFailure);
+                }
+            }
+        }
+        boolean passed = imported && playersPositive && playersNegative && entitiesPositive
+                && entitiesNegative && mobsPositive && mobsNegative && livingPositive && livingNegative
+                && playerWithinPositive && playerWithinNegative && playerNotWithinPositive
+                && playerNotWithinNegative && subjectRestored && peerRestored;
+        getLogger().info("radius-condition-details imported=" + imported
+                + " players-positive=" + playersPositive + " players-negative=" + playersNegative
+                + " entities-positive=" + entitiesPositive + " entities-negative=" + entitiesNegative
+                + " mobs-positive=" + mobsPositive + " mobs-negative=" + mobsNegative
+                + " living-positive=" + livingPositive + " living-negative=" + livingNegative
+                + " player-within-positive=" + playerWithinPositive
+                + " player-within-negative=" + playerWithinNegative
+                + " player-not-within-positive=" + playerNotWithinPositive
+                + " player-not-within-negative=" + playerNotWithinNegative
+                + " restored=" + (subjectRestored && peerRestored) + " passed=" + passed);
+        return passed;
     }
 
     private void runConditionMobilityStateSelfTest(Location origin) {

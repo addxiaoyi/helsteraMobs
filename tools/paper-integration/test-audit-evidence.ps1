@@ -369,6 +369,14 @@ try {
     $locationTargeterProbe[0].observations = @(
         'location-targeter-dispatch valid=true invalid-rejected=true self-aliases=true self-eye=true caster-spawn=true spawn=true target-aliases=true trigger=true forward=true projectile-forward=true predicted=true',
         'tracked-location-parity action=true targeter=true distance=true missing-rejected=true')
+    $fullReport.expectedProbeIds += 'absorptionPlayerCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'absorptionPlayerCondition'; status = 'passed'; observations = @('absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true')
+    }
+    $fullReport.expectedProbeIds += 'radiusConditions'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'radiusConditions'; status = 'passed'; observations = @('radius-condition-details imported=true players-positive=true players-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

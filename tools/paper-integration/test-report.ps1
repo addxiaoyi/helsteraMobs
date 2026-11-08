@@ -166,6 +166,8 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] revive-late result=true cancelled=true alive=true attached=true health=8.0 no-drops=true',
         '[Server thread/INFO]: [helsteraMobs] damage-imported mapped=true entity-damage=true attacker-name=true attacker-equipment=true environmental-damage=true environmental-no-trigger=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true',
+        '[Server thread/INFO]: absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true',
+        '[Server thread/INFO]: radius-condition-details imported=true players-positive=true players-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-imported result=true reduced=true condition-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-native-invalid result=true false-rejected=true null-rejected=true unknown-rejected=true null-modifier-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-invalid-fields null-immunity=true null-modifier-field=true unknown-modifier-field=true invalid-immune=true null-immune=true',
@@ -543,6 +545,12 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'damageAttribution').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'damageAttribution').observations[0] -match
         '^damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true$') 'real Player damage attribution probe'
+    Assert-True (($report.probes | Where-Object id -eq 'absorptionPlayerCondition').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'absorptionPlayerCondition').observations[0] -ceq
+        'absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true') 'real Player absorption condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'radiusConditions').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'radiusConditions').observations[0] -ceq
+        'radius-condition-details imported=true players-positive=true players-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true') 'Paper radius condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'immunityImported').status -eq 'passed') 'imported immunity probe'
     Assert-True (($report.probes | Where-Object id -eq 'immunityNativeInvalid').status -eq 'passed') 'invalid native immunity probe'
     Assert-True (($report.probes | Where-Object id -eq 'immunityInvalidFields').status -eq 'passed') 'invalid immunity fields probe'
@@ -935,6 +943,14 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogReport.expectedProbeIds += 'absorptionPlayerCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'absorptionPlayerCondition'; status = 'passed'; observations = @('absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'radiusConditions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'radiusConditions'; status = 'passed'; observations = @('radius-condition-details imported=true players-positive=true players-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'mobOptionsSlimeSplitNatural'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'mobOptionsSlimeSplitNatural'; status = 'passed'; observations = @('mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=4 control-event=true control-cancelled=false control-event-count=3 protected-dead=true control-dead=true protected-children=0 control-children=3 monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true')
@@ -1715,13 +1731,15 @@ try {
     $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'biomeImported' })
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $missingBiomeRejected = $false
+    $missingBiomeFailure = ''
     try {
         & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
             -RequireTargetPaperVersion -RequireFullReleaseCatalog
     } catch {
-        $missingBiomeRejected = $_.Exception.Message -match 'biomeImported'
+        $missingBiomeFailure = $_.Exception.Message
+        $missingBiomeRejected = $missingBiomeFailure -match 'biomeImported'
     }
-    Assert-True $missingBiomeRejected 'full release gate rejects missing imported biome evidence'
+    Assert-True $missingBiomeRejected "full release gate rejects missing imported biome evidence (actual failure: $missingBiomeFailure)"
     $fullCatalogReport.expectedProbeIds += 'biomeImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'biomeImported'; status = 'passed'; observations = @('synthetic imported biome test evidence')

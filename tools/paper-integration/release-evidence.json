@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-radius-conditions-strict-20261108-r2",
+    "reportFixtureDirectory": "srv-paper-radius-conditions-strict-20261108-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-radius-conditions-strict-20261108-r2.json",
+    "reportSha256": "dfcec3d4becd5b3f89f9001448f48122e607a85ec289c7bca6ab85cb8ecd9195",
+    "log": "tools/paper-integration/reports/paper-1.21.1-radius-conditions-strict-20261108-r2.log.gz",
+    "logSha256": "2143ab88fbe2cb801f985236f62f2637206df76fbc011ec63c610ccc27b8adee",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-radius-conditions-strict-20261108-r2-client-logs.tar.gz",
+    "clientLogSha256": "bd28e895cc1c7a8988b7d9272992e47fffa7efcab23f032a72fa70722b4cf57d",
+    "pluginSha256": "9659402a08f17640a0fcc255b1693d6988eab69cdb78694ed4f040b051a5084d",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-damage-attribution-strict-20261108-r1",
     "reportFixtureDirectory": "srv-paper-damage-attribution-strict-20261108-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-damage-attribution-strict-20261108-r1.json",

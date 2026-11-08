@@ -1,19 +1,20 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-damage-attribution-strict-20261108-r1` passed
-the full strict gate on Paper 1.21.1-133: 397 registered probes, 378 passed,
-19 expected rejections, and zero failed or incomplete. It verifies real Player
-damage attribution, environmental no-trigger behavior, and restoration of the
-temporary Player state. Report:
-[paper-1.21.1-damage-attribution-strict-20261108-r1.json](reports/paper-1.21.1-damage-attribution-strict-20261108-r1.json), SHA-256:
-`bb2aeda75f1df84debad1ac9a559c037cdfb6fc2d8c886dcb60ddba2e122d4be`.
+Latest fixture `srv-paper-radius-conditions-strict-20261108-r2` passed
+the full strict gate on Paper 1.21.1-133: 399 registered probes, 380 passed,
+19 expected rejections, and zero failed or incomplete. It verifies Player
+absorption comparisons, six imported radius conditions with positive and
+negative real-entity controls, and the native-AI Bee stinger workflow. Report:
+[paper-1.21.1-radius-conditions-strict-20261108-r2.json](reports/paper-1.21.1-radius-conditions-strict-20261108-r2.json), SHA-256:
+`dfcec3d4becd5b3f89f9001448f48122e607a85ec289c7bca6ab85cb8ecd9195`.
 Compressed server log SHA-256:
-`5bcbfb748fd285e72382abdba24e6fec8cd32ebbdd349af6d2fa27cf184bec95`.
+`2143ab88fbe2cb801f985236f62f2637206df76fbc011ec63c610ccc27b8adee`.
 Client log archive SHA-256:
-`17a8688897edc384af1858721266aa59e1b01676ce3200b2d5e93861e59b3d82`.
+`bd28e895cc1c7a8988b7d9272992e47fffa7efcab23f032a72fa70722b4cf57d`.
 Plugin SHA-256:
-`84e8a91004bc8e2251c963c17f8d588dfd1d786fe0c4a3830f8da9fe04b5a76f`.
-Latest strict report has 397 probes, zero incomplete.
+`9659402a08f17640a0fcc255b1693d6988eab69cdb78694ed4f040b051a5084d`.
+Latest strict report has 399 probes, zero incomplete. Archived logs redact web
+token query values; the source fixture retains the original run logs.
 
 Previous fixture `srv-paper-condition-mobility-states-strict-20261108-r7`
 passed the full strict gate with 396 registered probes, 377 passed, 19
