@@ -234,6 +234,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'rabbitOptionsImported'; status = 'passed'; observations = @('rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true')
     }
+    $fullReport.expectedProbeIds += 'fallingBlockOptionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'fallingBlockOptionsImported'; status = 'passed'; observations = @('falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true')
+    }
     $fullReport.expectedProbeIds += 'beeOptionsImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'beeOptionsImported'; status = 'passed'; observations = @('bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true')

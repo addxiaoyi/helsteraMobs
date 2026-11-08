@@ -38,20 +38,24 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-fox-options-strict-20261108-r1` passes all 393
-probes (374 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. It adds imported Fox `Options.FoxType` coverage with
-Fox-only application and preservation of wrong-type and malformed source
-values under `entity.unsupported.Options`. It also carries the registered
-Mythic parity catalog.
-Report: `reports/paper-1.21.1-fox-options-strict-20261108-r1.json`;
-server log: `reports/paper-1.21.1-fox-options-strict-20261108-r1.log.gz`;
+Latest strict fixture `srv-paper-falling-block-options-strict-20261108-r3`
+passes all 394 probes (375 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It adds imported FallingBlock options for
+block data, drop items, hurt entities, and cancelled drops, with production
+control comparisons and preservation of wrong-type and malformed source
+values. It also carries the registered Mythic parity catalog.
+Report: `reports/paper-1.21.1-falling-block-options-strict-20261108-r3.json`;
+server log: `reports/paper-1.21.1-falling-block-options-strict-20261108-r3.log.gz`;
 client logs:
-`reports/paper-1.21.1-fox-options-strict-20261108-r1-client-logs.tar.gz`.
-Report SHA-256: `2c284780511545ba2eda56677ae27b25da0f27255b42ec033b84e89763895a07`;
-server log SHA-256: `49e9f232b73108c914f85dc4a85edf58e8ce37493684005d485c6eef7009e659`;
-client log SHA-256: `1c860e8d5b7460534ae9ea49f8a2c72196e4df5423c57e16b64b089a2747daf9`;
-plugin SHA-256: `237955368a1a1cfc60f1a17c0153b7b3d65f9081a1c9f42d29ad8e80eb4a68aa`.
+`reports/paper-1.21.1-falling-block-options-strict-20261108-r3-client-logs.tar.gz`.
+Report SHA-256: `f52a91ad198ca26707ec9f2ccc89d8e1a8ec3007429638002c15afa270a3f984`;
+server log SHA-256: `f355bfcff07174d84301e3c36023b9e1f1651ebf008ffc4e5ab4fc244d7c6d4d`;
+client log SHA-256: `8c46327b295e9f7f69f28fccd8d858522d455c2eccc37abe2bc2fc066e78e853`;
+plugin SHA-256: `c127b64c7bd7ae288c1f33840b3afbafc4bffbba004403ed956cb5e7a989bde2`.
+The same run includes the stabilized native-AI Bee stinger-loss probe: its
+assertion is scheduled on the next tick and the stationary Zombie target is two
+blocks from each Bee; both attacks are observed without cancelled damage
+events, with stinger restoration only on the protected Bee.
 
 Previous strict fixture `srv-paper-rabbit-options-strict-20261107-r2` passes all
 392 probes (373 passed, 19 expected rejections, zero failed or incomplete) on

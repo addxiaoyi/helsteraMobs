@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-falling-block-options-strict-20261108-r3",
+    "reportFixtureDirectory": "srv-paper-falling-block-options-strict-20261108-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-falling-block-options-strict-20261108-r3.json",
+    "reportSha256": "f52a91ad198ca26707ec9f2ccc89d8e1a8ec3007429638002c15afa270a3f984",
+    "log": "tools/paper-integration/reports/paper-1.21.1-falling-block-options-strict-20261108-r3.log.gz",
+    "logSha256": "f355bfcff07174d84301e3c36023b9e1f1651ebf008ffc4e5ab4fc244d7c6d4d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-falling-block-options-strict-20261108-r3-client-logs.tar.gz",
+    "clientLogSha256": "8c46327b295e9f7f69f28fccd8d858522d455c2eccc37abe2bc2fc066e78e853",
+    "pluginSha256": "c127b64c7bd7ae288c1f33840b3afbafc4bffbba004403ed956cb5e7a989bde2",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-fox-options-strict-20261108-r1",
     "reportFixtureDirectory": "srv-paper-fox-options-strict-20261108-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-fox-options-strict-20261108-r1.json",

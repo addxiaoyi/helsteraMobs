@@ -1,21 +1,23 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-fox-options-strict-20261108-r1` passed the full
-strict gate on Paper 1.21.1-133: 393 registered probes, 374 passed, 19
-expected rejections, and zero failed or incomplete. It verifies imported Fox
-`Options.FoxType` with `SNOW` and `RED` controls, Fox-only application, and
-preservation of wrong-entity and malformed values under
-`entity.unsupported.Options.FoxType`, alongside the registered Mythic
-teleport, spawner, drops, skills, conditions, targeter, menu, and persistence
-probes. Report:
-[paper-1.21.1-fox-options-strict-20261108-r1.json](reports/paper-1.21.1-fox-options-strict-20261108-r1.json), SHA-256:
-`2c284780511545ba2eda56677ae27b25da0f27255b42ec033b84e89763895a07`.
+Latest fixture `srv-paper-falling-block-options-strict-20261108-r3` passed the
+full strict gate on Paper 1.21.1-133: 394 registered probes, 375 passed, 19
+expected rejections, and zero failed or incomplete. It verifies imported
+FallingBlock block data, drop-item, hurt-entities, and cancel-drop options
+against an inverse control through production spawning, while wrong-entity and
+malformed values remain preserved. Report:
+[paper-1.21.1-falling-block-options-strict-20261108-r3.json](reports/paper-1.21.1-falling-block-options-strict-20261108-r3.json), SHA-256:
+`f52a91ad198ca26707ec9f2ccc89d8e1a8ec3007429638002c15afa270a3f984`.
 Compressed server log SHA-256:
-`49e9f232b73108c914f85dc4a85edf58e8ce37493684005d485c6eef7009e659`.
+`f355bfcff07174d84301e3c36023b9e1f1651ebf008ffc4e5ab4fc244d7c6d4d`.
 Client log archive SHA-256:
-`1c860e8d5b7460534ae9ea49f8a2c72196e4df5423c57e16b64b089a2747daf9`.
+`8c46327b295e9f7f69f28fccd8d858522d455c2eccc37abe2bc2fc066e78e853`.
 Plugin SHA-256:
-`237955368a1a1cfc60f1a17c0153b7b3d65f9081a1c9f42d29ad8e80eb4a68aa`.
+`c127b64c7bd7ae288c1f33840b3afbafc4bffbba004403ed956cb5e7a989bde2`.
+The same run includes the stabilized native-AI Bee stinger-loss probe: its
+assertion is scheduled on the next tick and the stationary Zombie target is two
+blocks from each Bee; both attacks are observed without cancelled damage
+events, with stinger restoration only on the protected Bee.
 
 Previous fixture `srv-paper-rabbit-options-strict-20261107-r2` passed the
 full strict gate with 392 registered probes, 373 passed, 19 expected

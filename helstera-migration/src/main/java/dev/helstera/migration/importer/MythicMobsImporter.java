@@ -1294,10 +1294,10 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "entity.armor-stand-item-legs", normalizedType, MythicMobsImporter::isNonBlankStringOption,
                     org.bukkit.entity.ArmorStand.class);
             mapEntityScopedOption(options, srcFile, entries, target, "FallingBlockData",
-                    "entity.falling-block-data", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    "entity.falling-block-data", normalizedType, MythicMobsImporter::isBlockDataOption,
                     org.bukkit.entity.FallingBlock.class);
             mapEntityScopedOption(options, srcFile, entries, target, "BlockData",
-                    "entity.falling-block-data", normalizedType, MythicMobsImporter::isNonBlankStringOption,
+                    "entity.falling-block-data", normalizedType, MythicMobsImporter::isBlockDataOption,
                     org.bukkit.entity.FallingBlock.class);
             mapEntityScopedOption(options, srcFile, entries, target, "FallingBlockDropItem",
                     "entity.falling-block-drop-item", normalizedType, MythicMobsImporter::isBooleanOptionValue,
@@ -4257,6 +4257,34 @@ public final class MythicMobsImporter implements MigrationImporter {
 
     private static boolean isNonBlankStringOption(Object raw) {
         return raw instanceof String text && !text.isBlank();
+    }
+
+    /**
+     * Validates the material token of a Bukkit BlockData string.  Paper's
+     * Material block registry is unavailable in importer unit tests, so the
+     * offline fallback accepts a known non-air material and leaves exact
+     * block/state validation to the live BlockData parser.
+     */
+    private static boolean isBlockDataOption(Object raw) {
+        if (!(raw instanceof String text) || text.isBlank()) return false;
+        String value = text.trim();
+        int stateStart = value.indexOf('[');
+        if (stateStart >= 0) {
+            if (!value.endsWith("]") || stateStart == 0
+                    || value.substring(stateStart + 1, value.length() - 1).isBlank()) return false;
+            value = value.substring(0, stateStart).trim();
+        }
+        if (value.isBlank() || value.indexOf('{') >= 0 || value.indexOf('}') >= 0) return false;
+        org.bukkit.Material material = org.bukkit.Material.matchMaterial(value);
+        if (material == null && value.regionMatches(true, 0, "minecraft:", 0, 10)) {
+            material = org.bukkit.Material.matchMaterial(value.substring(10));
+        }
+        if (material == null || material == org.bukkit.Material.AIR) return false;
+        try {
+            return material.isBlock();
+        } catch (LinkageError | IllegalStateException unavailableRegistry) {
+            return true;
+        }
     }
 
     private boolean mapZombieReinforcementsChance(ConfigurationSection options, String srcFile,

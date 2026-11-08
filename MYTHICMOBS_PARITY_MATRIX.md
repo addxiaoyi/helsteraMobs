@@ -31,6 +31,20 @@ importer, and plugin tests cover the boundaries. Strict Paper fixture
 `BROWN` controls through production spawning and completes 392 probes with
 zero failed or incomplete results.
 
+FallingBlock parity update: Mythic `FallingBlockData`/`BlockData`,
+`FallingBlockDropItem`, `FallingBlockHurtEntities`, and `FallingBlockCancelDrop`
+now map only for FallingBlock entities. The runtime applies the block data and
+native Paper flags, while wrong-entity and malformed values remain under
+`entity.unsupported.Options.*` with migration warnings. Unit, importer, and
+plugin tests cover the boundaries. Strict Paper fixture
+`srv-paper-falling-block-options-strict-20261108-r3` observes configured and
+inverse controls through production spawning and completes 394 probes with
+zero failed or incomplete results.
+That same report carries the stabilized native-AI Bee stinger-loss probe: its
+next-tick assertion observes one uncancelled attack from each Bee at a
+two-block stationary-Zombie target, with stinger restoration only for the
+protected Bee.
+
 Snowing condition update: `snowing` and `isSnowing` map to a target-location
 runtime check using world storm state and Paper's height-adjusted block
 temperature (`< 0.15`). Unit tests cover target precedence, clear weather,
@@ -2596,7 +2610,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-fox-options-strict-20261108-r1` completes 393 probes (374 passed, 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133, including imported Fox `Options.FoxType` application and wrong-type/malformed preservation, alongside imported Rabbit `Options.RabbitType`, the earlier `CanJoinRaid`, native-AI Bee `PreventStingerLoss`, native Zombie `NATURAL` jockey mount, Mythic teleport, and native `PreventSlimeSplit` evidence. Previous strict fixtures verify imported entity options, natural spawner/drop behavior, real-client interactions and movement, skills and audience persistence, menus, targeters, conditions, and restart workflows. The separate `mobOptionsNatural` Bee event remains synthetic. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-falling-block-options-strict-20261108-r3` completes 394 probes (375 passed, 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133, including imported FallingBlock block data and drop/hurt/cancel flags with wrong-type and malformed preservation, alongside imported Fox `Options.FoxType`, Rabbit `Options.RabbitType`, the earlier `CanJoinRaid`, native-AI Bee `PreventStingerLoss`, native Zombie `NATURAL` jockey mount, Mythic teleport, and native `PreventSlimeSplit` evidence. Previous strict fixtures verify imported entity options, natural spawner/drop behavior, real-client interactions and movement, skills and audience persistence, menus, targeters, conditions, and restart workflows. The separate `mobOptionsNatural` Bee event remains synthetic. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.

@@ -862,6 +862,11 @@
       "requiredObservation": "rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true"
     },
     {
+      "id": "fallingBlockOptionsImported",
+      "status": "passed",
+      "requiredObservation": "falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true"
+    },
+    {
       "id": "invulnerableCondition",
       "status": "passed"
     },

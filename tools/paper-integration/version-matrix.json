@@ -13,8 +13,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-fox-options-strict-20261108-r1",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-fox-options-strict-20261108-r1.json"
+      "releaseFixtureId": "srv-paper-falling-block-options-strict-20261108-r3",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-falling-block-options-strict-20261108-r3.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",
