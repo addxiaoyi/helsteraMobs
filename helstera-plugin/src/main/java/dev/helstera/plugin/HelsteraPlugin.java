@@ -1604,6 +1604,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " items=" + armorStandItems);
 
                 runImportedCatOptionsSelfTest(world, origin.clone().add(6, 0, 0));
+                runImportedFoxOptionsSelfTest(origin.clone().add(7, 0, 0));
                 runImportedRabbitOptionsSelfTest(origin.clone().add(8, 0, 0));
                 runImportedHorseOptionsSelfTest(origin.clone().add(32, 0, 0));
 
@@ -2758,6 +2759,142 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 try { Files.deleteIfExists(outputDirectory); }
                 catch (IOException ignored) { }
             }
+        }
+    }
+
+    private void runImportedFoxOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-fox-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("fox-options.yml");
+            String configuredMobId = "ImportedFoxConfigured_" + suffix;
+            String controlMobId = "ImportedFoxControl_" + suffix;
+            String wrongTypeMobId = "ImportedFoxWrongType_" + suffix;
+            String invalidMobId = "ImportedFoxInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: FOX
+                        Options:
+                          FoxType: SNOW
+                      %2$s:
+                        Type: FOX
+                        Options:
+                          FoxType: RED
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          FoxType: RED
+                      %4$s:
+                        Type: FOX
+                        Options:
+                          FoxType: NOT_A_FOX
+                    """.formatted(configuredMobId, controlMobId, wrongTypeMobId, invalidMobId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Fox mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Fox mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            var sourceIds = java.util.List.of(configuredMobId, controlMobId, wrongTypeMobId, invalidMobId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic FoxType probe mobs were not all imported");
+            }
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0),
+                    origin.clone().add(6, 0, 0), origin.clone().add(9, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        locations.get(i), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var configuredInstance = instances().impl(spawnedIds.get(configuredMobId));
+            var controlInstance = instances().impl(spawnedIds.get(controlMobId));
+            var wrongTypeInstance = instances().impl(spawnedIds.get(wrongTypeMobId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidMobId));
+            var configuredFox = configuredInstance == null ? null : configuredInstance.baseEntity()
+                    .filter(org.bukkit.entity.Fox.class::isInstance)
+                    .map(org.bukkit.entity.Fox.class::cast).orElse(null);
+            var controlFox = controlInstance == null ? null : controlInstance.baseEntity()
+                    .filter(org.bukkit.entity.Fox.class::isInstance)
+                    .map(org.bukkit.entity.Fox.class::cast).orElse(null);
+            var wrongTypeEntity = wrongTypeInstance == null ? null : wrongTypeInstance.baseEntity().orElse(null);
+            var invalidFox = invalidInstance == null ? null : invalidInstance.baseEntity()
+                    .filter(org.bukkit.entity.Fox.class::isInstance)
+                    .map(org.bukkit.entity.Fox.class::cast).orElse(null);
+
+            var configuredOptions = mobConfig(targetIds.get(configuredMobId));
+            var controlOptions = mobConfig(targetIds.get(controlMobId));
+            var wrongTypeOptions = mobConfig(targetIds.get(wrongTypeMobId));
+            var invalidOptions = mobConfig(targetIds.get(invalidMobId));
+            var configuredEntityOptions = configuredOptions == null ? null
+                    : configuredOptions.getConfigurationSection("entity");
+            var controlEntityOptions = controlOptions == null ? null
+                    : controlOptions.getConfigurationSection("entity");
+            var wrongTypeEntityOptions = wrongTypeOptions == null ? null
+                    : wrongTypeOptions.getConfigurationSection("entity");
+            var invalidEntityOptions = invalidOptions == null ? null
+                    : invalidOptions.getConfigurationSection("entity");
+            var wrongTypeUnsupported = wrongTypeEntityOptions == null ? null
+                    : wrongTypeEntityOptions.getConfigurationSection("unsupported.Options");
+            var invalidUnsupported = invalidEntityOptions == null ? null
+                    : invalidEntityOptions.getConfigurationSection("unsupported.Options");
+
+            boolean imported = configuredFox != null && controlFox != null && invalidFox != null
+                    && configuredEntityOptions != null && controlEntityOptions != null
+                    && wrongTypeUnsupported != null && invalidUnsupported != null
+                    && "SNOW".equalsIgnoreCase(configuredEntityOptions.getString("fox-type"))
+                    && "RED".equalsIgnoreCase(controlEntityOptions.getString("fox-type"))
+                    && "RED".equalsIgnoreCase(wrongTypeUnsupported.getString("FoxType"))
+                    && "NOT_A_FOX".equalsIgnoreCase(invalidUnsupported.getString("FoxType"))
+                    && !wrongTypeEntityOptions.contains("fox-type")
+                    && !invalidEntityOptions.contains("fox-type");
+            boolean applied = imported
+                    && configuredFox.getFoxType() == org.bukkit.entity.Fox.Type.SNOW
+                    && controlFox.getFoxType() == org.bukkit.entity.Fox.Type.RED
+                    && invalidFox.getFoxType() != null;
+            boolean wrongTypePreserved = wrongTypeEntity instanceof org.bukkit.entity.Zombie;
+            boolean invalidPreserved = invalidFox != null
+                    && invalidEntityOptions != null
+                    && !invalidEntityOptions.contains("fox-type")
+                    && invalidUnsupported != null
+                    && "NOT_A_FOX".equalsIgnoreCase(
+                            invalidUnsupported.getString("FoxType"));
+            boolean passed = imported && applied && wrongTypePreserved && invalidPreserved;
+            getLogger().info("[自检] fox-options result=" + passed
+                    + " imported=" + imported
+                    + " type=" + (configuredFox == null ? "missing" : configuredFox.getFoxType().name())
+                    + " control-type=" + (controlFox == null ? "missing" : controlFox.getFoxType().name())
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] fox-options result=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
     }
 
@@ -19960,6 +20097,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (entity instanceof org.bukkit.entity.Cat cat) {
             applyCatOptions(cat, options);
         }
+        if (entity instanceof org.bukkit.entity.Fox fox) {
+            applyFoxOptions(fox, options);
+        }
         if (entity instanceof org.bukkit.entity.Rabbit rabbit) {
             applyRabbitOptions(rabbit, options);
         }
@@ -20008,6 +20148,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (options.contains("cat-collar-color")) cat.setCollarColor(org.bukkit.DyeColor.valueOf(
                     options.getString("cat-collar-color", "RED").toUpperCase(java.util.Locale.ROOT)));
         } catch (IllegalArgumentException | LinkageError ignored) {
+        }
+    }
+
+    private static void applyFoxOptions(org.bukkit.entity.Fox fox,
+                                        org.bukkit.configuration.ConfigurationSection options) {
+        if (!options.contains("fox-type")) return;
+        try {
+            String value = options.getString("fox-type", "");
+            if (value == null || value.isBlank()) return;
+            fox.setFoxType(org.bukkit.entity.Fox.Type.valueOf(
+                    value.trim().toUpperCase(java.util.Locale.ROOT)));
+        } catch (IllegalArgumentException | LinkageError ignored) {
+            // Invalid imported values remain visible under entity.unsupported.Options.FoxType.
         }
     }
 

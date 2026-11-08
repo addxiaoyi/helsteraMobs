@@ -1,21 +1,27 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-rabbit-options-strict-20261107-r2` passed the full
-strict gate on Paper 1.21.1-133: 392 registered probes, 373 passed, 19
-expected rejections, and zero failed or incomplete. It verifies imported
-Rabbit `Options.RabbitType` with `SALT_AND_PEPPER` and `BROWN` controls,
-Rabbit-only application, and preservation of wrong-entity and malformed
-values under `entity.unsupported.Options`, alongside the registered Mythic
+Latest fixture `srv-paper-fox-options-strict-20261108-r1` passed the full
+strict gate on Paper 1.21.1-133: 393 registered probes, 374 passed, 19
+expected rejections, and zero failed or incomplete. It verifies imported Fox
+`Options.FoxType` with `SNOW` and `RED` controls, Fox-only application, and
+preservation of wrong-entity and malformed values under
+`entity.unsupported.Options.FoxType`, alongside the registered Mythic
 teleport, spawner, drops, skills, conditions, targeter, menu, and persistence
 probes. Report:
-[paper-1.21.1-rabbit-options-strict-20261107-r2.json](reports/paper-1.21.1-rabbit-options-strict-20261107-r2.json), SHA-256:
-`1bb1df4af3e0b0f368d88552c73a3d2691464083a15d3fae584c9777d79ddaa8`.
+[paper-1.21.1-fox-options-strict-20261108-r1.json](reports/paper-1.21.1-fox-options-strict-20261108-r1.json), SHA-256:
+`2c284780511545ba2eda56677ae27b25da0f27255b42ec033b84e89763895a07`.
 Compressed server log SHA-256:
-`01eb167ccadb67405a9cd3bd134fe74aed692f62c6c669142bba7d8a3238e581`.
+`49e9f232b73108c914f85dc4a85edf58e8ce37493684005d485c6eef7009e659`.
 Client log archive SHA-256:
-`7bcdb84f3f7cf5b3ae703511e70bd90925a1ee70a1e5f17f5e845f510103bc3d`.
+`1c860e8d5b7460534ae9ea49f8a2c72196e4df5423c57e16b64b089a2747daf9`.
 Plugin SHA-256:
-`713af670615765f52f1f1d9a876fb63e6b2a711e237e97112a4c16e9c6f514e5`.
+`237955368a1a1cfc60f1a17c0153b7b3d65f9081a1c9f42d29ad8e80eb4a68aa`.
+
+Previous fixture `srv-paper-rabbit-options-strict-20261107-r2` passed the
+full strict gate with 392 registered probes, 373 passed, 19 expected
+rejections, and zero failed or incomplete. It verifies imported Rabbit
+`Options.RabbitType`, Rabbit-only application, and preservation of
+wrong-entity and malformed values under `entity.unsupported.Options`.
 
 Previous full strict fixture `srv-paper-full-strict-20261107-r4` passed the
 391-probe baseline with 372 passed, 19 expected rejections, and zero failed

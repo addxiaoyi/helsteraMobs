@@ -1,8 +1,24 @@
 # helsteraMobs
 
-## MythicMobs Parity Development Status (2026-11-07)
+## MythicMobs Parity Development Status (2026-11-08)
 
-Latest strict fixture `srv-paper-rabbit-options-strict-20261107-r2` passes all
+Latest strict fixture `srv-paper-fox-options-strict-20261108-r1` passes all
+393 release probes (374 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It adds imported Mythic `Options.FoxType`
+coverage: `SNOW` and `RED` controls apply only to Fox entities, while wrong
+entity types and malformed values remain preserved under
+`entity.unsupported.Options.FoxType`. Report:
+`tools/paper-integration/reports/paper-1.21.1-fox-options-strict-20261108-r1.json`
+(SHA-256 `2c284780511545ba2eda56677ae27b25da0f27255b42ec033b84e89763895a07`).
+Compressed server log SHA-256:
+`49e9f232b73108c914f85dc4a85edf58e8ce37493684005d485c6eef7009e659`.
+Client log archive SHA-256:
+`1c860e8d5b7460534ae9ea49f8a2c72196e4df5423c57e16b64b089a2747daf9`.
+Plugin SHA-256:
+`237955368a1a1cfc60f1a17c0153b7b3d65f9081a1c9f42d29ad8e80eb4a68aa`.
+Latest strict report has 393 probes, zero incomplete.
+
+Previous strict fixture `srv-paper-rabbit-options-strict-20261107-r2` passes all
 392 release probes (373 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. It adds imported Rabbit `Options.RabbitType`
 coverage: `SALT_AND_PEPPER` and `BROWN` controls apply only to Rabbits, while
@@ -18,8 +34,6 @@ Client log archive SHA-256:
 `7bcdb84f3f7cf5b3ae703511e70bd90925a1ee70a1e5f17f5e845f510103bc3d`.
 Plugin SHA-256:
 `713af670615765f52f1f1d9a876fb63e6b2a711e237e97112a4c16e9c6f514e5`.
-Latest strict report has 392 probes, zero incomplete.
-
 Previous full strict fixture `srv-paper-full-strict-20261107-r4` passes all
 391 release probes (372 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. It includes the imported `CanJoinRaid`
@@ -765,7 +779,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-rabbit-options-strict-20261107-r2` has 392 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-fox-options-strict-20261108-r1` has 393 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -776,13 +790,13 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 This is a partial parity release. The matrix currently has `35`
 `mapped-unverified` rows (counted from the status column in
-`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-07). The full remaining work is:
+`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-08). The full remaining work is:
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 514 cited IDs; 422 report files; 4 directories
-   without reports; 88 missing directories; 192 archived release reports. The
+   Current fixture inventory: 515 cited IDs; 423 report files; 4 directories
+   without reports; 88 missing directories; 193 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -839,6 +853,7 @@ the entire MythicMobs feature catalog.
 ### Verified Progress
 
 - The full strict Paper 1.21.1-133 fixture `srv-paper-full-strict-20261107-r4` records 391 probes with zero incomplete results. Its imported entity-flag probe reads `CanJoinRaid=false` on the protected Pillager and `true` on the inverse control, the native-AI Bee probe verifies imported `PreventStingerLoss`, and the native Zombie `NATURAL` spawn path observes protected jockey cancellation with control allowance.
+- Mythic Fox `Options.FoxType` now has strict importer-to-runtime evidence. Paper fixture `srv-paper-fox-options-strict-20261108-r1` imports `SNOW` and `RED` controls through production Fox spawning, applies the option only to Fox entities, and preserves wrong-entity and malformed values under `entity.unsupported.Options.FoxType` while completing all 393 registered release probes.
 - Mythic `teleport`/`tp` now imports into a dedicated runtime action with entity and location target support, safe landing checks, `unsafe` bypass, bounded `spreadh`/`spreadv`, preserved/target/numeric yaw and pitch, placeholder resolution, and fail-closed invalid-argument warnings. Strict Paper fixture `srv-paper-mythic-teleport-strict-20261107-r1` verifies the complete importer/runtime contract in 391 release probes.
 - Mythic Sheep `Options.SheepColor` and `Options.Sheared` now have strict importer-to-runtime evidence. Paper fixture `srv-paper-sheep-options-strict-20261107-r1` imports red/sheared and white/unshorn controls through production mob spawning, then completes the 384-probe release catalog with zero incomplete probes.
 - Official `IsInSurvivalMode` and `InSurvivalMode` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player in Survival, reject Adventure, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-survival-mode-import-strict-20261106-r1` completes the 361-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.

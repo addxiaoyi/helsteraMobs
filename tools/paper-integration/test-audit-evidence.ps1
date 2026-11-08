@@ -226,6 +226,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'horseOptionsImported'; status = 'passed'; observations = @('horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4')
     }
+    $fullReport.expectedProbeIds += 'foxOptionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'foxOptionsImported'; status = 'passed'; observations = @('fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true')
+    }
     $fullReport.expectedProbeIds += 'rabbitOptionsImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'rabbitOptionsImported'; status = 'passed'; observations = @('rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true')
