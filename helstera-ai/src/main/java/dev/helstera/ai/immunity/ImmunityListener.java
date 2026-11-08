@@ -2,6 +2,7 @@ package dev.helstera.ai.immunity;
 
 import dev.helstera.ai.AiManager;
 import dev.helstera.ai.AiProfile;
+import dev.helstera.ai.DamageSourceResolver;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.EventHandler;
@@ -151,9 +152,9 @@ public final class ImmunityListener implements Listener {
         var reg = ai.behaviors();
         if (reg == null) return null;
         var base = e.getEntity();
-        org.bukkit.entity.Player attacker =
-                e instanceof org.bukkit.event.entity.EntityDamageByEntityEvent by
-                        && by.getDamager() instanceof org.bukkit.entity.Player p ? p : null;
+        Entity damageSource = e instanceof org.bukkit.event.entity.EntityDamageByEntityEvent by
+                ? DamageSourceResolver.resolve(by.getDamager()) : null;
+        org.bukkit.entity.Player attacker = damageSource instanceof org.bukkit.entity.Player p ? p : null;
         double healthRatio = 1.0;
         if (base instanceof org.bukkit.entity.LivingEntity le && le.getMaxHealth() > 0) {
             healthRatio = le.getHealth() / le.getMaxHealth();

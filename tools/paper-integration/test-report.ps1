@@ -165,6 +165,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] revive-natural result=true alive=true attached=true health=8.0',
         '[Server thread/INFO]: [helsteraMobs] [自检] revive-late result=true cancelled=true alive=true attached=true health=8.0 no-drops=true',
         '[Server thread/INFO]: [helsteraMobs] damage-imported mapped=true entity-damage=true attacker-name=true attacker-equipment=true environmental-damage=true environmental-no-trigger=true passed=true',
+        '[Server thread/INFO]: [helsteraMobs] damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-imported result=true reduced=true condition-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-native-invalid result=true false-rejected=true null-rejected=true unknown-rejected=true null-modifier-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-invalid-fields null-immunity=true null-modifier-field=true unknown-modifier-field=true invalid-immune=true null-immune=true',
@@ -539,6 +540,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'reviveNatural').status -eq 'passed') 'natural revive probe'
     Assert-True (($report.probes | Where-Object id -eq 'reviveLate').status -eq 'passed') 'late cancelled revive probe'
     Assert-True (($report.probes | Where-Object id -eq 'damageImported').status -eq 'passed') 'imported damage trigger probe'
+    Assert-True (($report.probes | Where-Object id -eq 'damageAttribution').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'damageAttribution').observations[0] -match
+        '^damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true$') 'real Player damage attribution probe'
     Assert-True (($report.probes | Where-Object id -eq 'immunityImported').status -eq 'passed') 'imported immunity probe'
     Assert-True (($report.probes | Where-Object id -eq 'immunityNativeInvalid').status -eq 'passed') 'invalid native immunity probe'
     Assert-True (($report.probes | Where-Object id -eq 'immunityInvalidFields').status -eq 'passed') 'invalid immunity fields probe'
@@ -1702,6 +1706,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'damageImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'damageImported'; status = 'passed'; observations = @('synthetic imported damage test evidence')
+    }
+    $fullCatalogReport.expectedProbeIds += 'damageAttribution'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'damageAttribution'; status = 'passed'; observations = @('damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'biomeImported' })
     $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'biomeImported' })

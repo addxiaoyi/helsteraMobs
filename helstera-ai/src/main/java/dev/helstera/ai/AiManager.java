@@ -620,7 +620,7 @@ public final class AiManager implements Listener {
     public void onFactionDamage(EntityDamageByEntityEvent e) {
         if (!factions.blockFriendlyFire()) return;
         Entity victim = e.getEntity();
-        Entity damager = e.getDamager();
+        Entity damager = DamageSourceResolver.resolve(e.getDamager());
         if (factions.factionOf(victim) == null || factions.factionOf(damager) == null) return;
         if (factions.allied(victim, damager)) {
             e.setCancelled(true);
@@ -698,7 +698,8 @@ public final class AiManager implements Listener {
         AiProfile profile = profileOf(inst.instanceId());
         if (profile == null || !Double.isFinite(profile.maxCombatDistance)
                 || profile.maxCombatDistance <= 0) return;
-        Entity damager = e.getDamager();
+        Entity damager = DamageSourceResolver.resolve(e.getDamager());
+        if (damager == null) return;
         Location victimLocation = e.getEntity().getLocation();
         Location damagerLocation = damager.getLocation();
         if (victimLocation.getWorld() == null || !victimLocation.getWorld().equals(damagerLocation.getWorld())) return;
@@ -714,7 +715,10 @@ public final class AiManager implements Listener {
             AiController c = controllers.get(inst.instanceId());
             // 传实际结算伤害（已扣除护甲/抗性）：威胁按真实扣血计，
             // 否则高护甲目标会凭空拿到成倍仇恨
-            if (c != null) c.onDamaged(e.getDamager(), Math.max(0, e.getFinalDamage()));
+            if (c != null) {
+                c.onDamaged(DamageSourceResolver.resolve(e.getDamager()),
+                        Math.max(0, e.getFinalDamage()));
+            }
             // Boss 血条更新：挂在同一条路径上，避免血条与仇恨脱节
             updateBossBar(inst);
         }

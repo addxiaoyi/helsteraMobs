@@ -654,6 +654,11 @@
       "status": "passed"
     },
     {
+      "id": "damageAttribution",
+      "status": "passed",
+      "requiredObservation": "damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true"
+    },
+    {
       "id": "immunityImported",
       "status": "passed",
       "requiredObservation": "immunity-imported result=true reduced=true condition-rejected=true invalid-rejected=true"
