@@ -48,9 +48,11 @@ public final class MobRelations {
 
     public static boolean setOwner(Entity mob, Entity owner) {
         if (mob == null || owner == null || mob.equals(owner)) return false;
+        UUID ownerId = owner.getUniqueId();
+        if (ownerId == null) return false;
         var data = mob.getPersistentDataContainer();
         if (data == null) return false;
-        data.set(OWNER_KEY, PersistentDataType.STRING, owner.getUniqueId().toString());
+        data.set(OWNER_KEY, PersistentDataType.STRING, ownerId.toString());
         if (mob instanceof org.bukkit.entity.Tameable tameable
                 && owner instanceof org.bukkit.entity.Player player
                 && (mob instanceof org.bukkit.entity.Wolf
@@ -74,20 +76,24 @@ public final class MobRelations {
 
     public static boolean setParent(Entity child, Entity parent) {
         if (child == null || parent == null || child.equals(parent)) return false;
+        UUID childId = child.getUniqueId();
+        UUID parentUuid = parent.getUniqueId();
+        if (childId == null || parentUuid == null) return false;
         clearParent(child);
         if (parent instanceof org.bukkit.entity.Player) {
-            PLAYER_PARENTS.put(child.getUniqueId(), parent.getUniqueId());
+            PLAYER_PARENTS.put(childId, parentUuid);
             return true;
         }
         var data = child.getPersistentDataContainer();
         if (data == null) return false;
-        data.set(PARENT_KEY, PersistentDataType.STRING, parent.getUniqueId().toString());
+        data.set(PARENT_KEY, PersistentDataType.STRING, parentUuid.toString());
         return true;
     }
 
     public static void clearParent(Entity child) {
         if (child == null) return;
-        PLAYER_PARENTS.remove(child.getUniqueId());
+        UUID childId = child.getUniqueId();
+        if (childId != null) PLAYER_PARENTS.remove(childId);
         var data = child.getPersistentDataContainer();
         if (data != null) data.remove(PARENT_KEY);
     }
@@ -98,7 +104,9 @@ public final class MobRelations {
 
     public static UUID parentId(Entity child) {
         if (child == null) return null;
-        UUID playerParent = PLAYER_PARENTS.get(child.getUniqueId());
+        UUID childId = child.getUniqueId();
+        if (childId == null) return null;
+        UUID playerParent = PLAYER_PARENTS.get(childId);
         if (playerParent != null) return playerParent;
         var data = child.getPersistentDataContainer();
         if (data == null) return null;
@@ -144,7 +152,8 @@ public final class MobRelations {
     public static boolean isChild(Entity parent, Entity candidate) {
         if (parent == null || candidate == null || !parent.isValid() || parent.isDead()
                 || !candidate.isValid() || candidate.isDead()) return false;
-        return parent.getUniqueId().equals(parentId(candidate));
+        UUID parentUuid = parent.getUniqueId();
+        return parentUuid != null && parentUuid.equals(parentId(candidate));
     }
 
     public static boolean areSiblings(Entity first, Entity second) {

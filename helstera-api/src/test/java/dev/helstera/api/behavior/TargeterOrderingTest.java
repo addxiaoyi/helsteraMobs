@@ -992,15 +992,17 @@ class TargeterOrderingTest {
     }
 
     @Test
-    @DisplayName("passengers and vehicle targeters resolve managed entity relations")
+    @DisplayName("passenger, passengers, vehicle, and mount targeters preserve relation semantics")
     void passengerAndVehicleTargetersResolveRelations() {
-        var passenger = livingProxy(org.bukkit.entity.LivingEntity.class);
-        var vehicle = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var invalidPassenger = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var firstPassenger = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
+        var secondPassenger = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
+        var vehicle = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
         var caster = (org.bukkit.entity.LivingEntity) Proxy.newProxyInstance(
                 org.bukkit.entity.LivingEntity.class.getClassLoader(),
                 new Class<?>[]{org.bukkit.entity.LivingEntity.class},
                 (proxy, method, args) -> switch (method.getName()) {
-                    case "getPassengers" -> List.of(passenger);
+                    case "getPassengers" -> List.of(invalidPassenger, firstPassenger, secondPassenger);
                     case "getVehicle" -> vehicle;
                     default -> defaultValue(method.getReturnType());
                 });
@@ -1015,9 +1017,58 @@ class TargeterOrderingTest {
         var context = BehaviorContext.continueExecution(instance, (org.bukkit.entity.LivingEntity) null, 1, -1, 0,
                 "skill", null, caster, List.of(), null, null);
 
-        assertEquals(List.of(passenger), Targeters.select("@passengers", context, List.of(), List.of()));
-        assertEquals(List.of(passenger), Targeters.select("@Passenger", context, List.of(), List.of()));
+        assertEquals(List.of(firstPassenger, secondPassenger),
+                Targeters.select("@passengers", context, List.of(), List.of()));
+        assertEquals(List.of(firstPassenger),
+                Targeters.select("@Passenger", context, List.of(), List.of()));
         assertEquals(List.of(vehicle), Targeters.select("@vehicle", context, List.of(), List.of()));
+        assertEquals(List.of(vehicle), Targeters.select("@mount", context, List.of(), List.of()));
+    }
+
+    @Test
+    @DisplayName("owner and parent location targeters resolve relations and fail closed when absent")
+    void relationLocationTargetersResolveRelationsAndMissingRelations() {
+        var ownerLocation = new org.bukkit.Location(null, 11.5, 64, -3.25, 90, 10);
+        var ownerEntity = (org.bukkit.entity.Player) Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Player.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "isValid" -> true;
+                    case "isDead" -> false;
+                    case "getLocation" -> ownerLocation;
+                    case "getType" -> org.bukkit.entity.EntityType.PLAYER;
+                    default -> defaultValue(method.getReturnType());
+                });
+        var caster = (org.bukkit.entity.Wolf) Proxy.newProxyInstance(
+                org.bukkit.entity.Wolf.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Wolf.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getPersistentDataContainer" -> null;
+                    case "getOwner" -> ownerEntity;
+                    default -> defaultValue(method.getReturnType());
+                });
+        var instance = (dev.helstera.api.instance.ModelInstance) Proxy.newProxyInstance(
+                dev.helstera.api.instance.ModelInstance.class.getClassLoader(),
+                new Class<?>[]{dev.helstera.api.instance.ModelInstance.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "isValid" -> true;
+                    case "baseEntity" -> java.util.Optional.of(caster);
+                    default -> defaultValue(method.getReturnType());
+                });
+        var context = BehaviorContext.continueExecution(instance, (org.bukkit.entity.LivingEntity) null,
+                1, -1, 0, "skill", null, caster, List.of(), null, null);
+
+        assertEquals(ownerLocation, Targeters.resolveLocation("@OwnerLocation", context).orElseThrow());
+        assertTrue(Targeters.validLocationTargeterSpec("@OwnerLocation"));
+        assertTrue(Targeters.validLocationTargeterSpec("@ParentLocation"));
+        assertTrue(Targeters.validLocationTargeterSpec("@summonerlocation"));
+        assertEquals(List.of(), Targeters.select("@ParentLocation", context, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@summonerlocation", context, List.of(), List.of()));
+        assertEquals(java.util.Optional.empty(), Targeters.resolveLocation(
+                "@OwnerLocation{unsupported=true}", context));
+        assertEquals(java.util.Optional.empty(), Targeters.resolveLocation(
+                "@ParentLocation", BehaviorContext.continueExecution(null, null, 1, -1, 0,
+                        "skill", null, null, List.of(), null, null)));
     }
 
     @Test
@@ -1141,6 +1192,20 @@ class TargeterOrderingTest {
                     if (method.getName().equals("getType")) return org.bukkit.entity.EntityType.ZOMBIE;
                     if (method.getName().equals("getLocation")) return new org.bukkit.Location(null, 0, 0, 0);
                     return defaultValue(method.getReturnType());
+                }));
+    }
+
+    private static <T extends org.bukkit.entity.LivingEntity> T activeLivingProxy(Class<T> type) {
+        return type.cast(Proxy.newProxyInstance(type.getClassLoader(),
+                new Class<?>[]{type}, (proxy, method, args) -> switch (method.getName()) {
+                    case "isValid" -> true;
+                    case "isDead" -> false;
+                    case "getType" -> org.bukkit.entity.Player.class.isAssignableFrom(type)
+                            ? org.bukkit.entity.EntityType.PLAYER : org.bukkit.entity.EntityType.ZOMBIE;
+                    case "getLocation" -> new org.bukkit.Location(null, 0, 0, 0);
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    default -> defaultValue(method.getReturnType());
                 }));
     }
 

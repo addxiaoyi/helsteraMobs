@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MobRelationsTest {
@@ -28,6 +30,17 @@ class MobRelationsTest {
         assertFalse(MobRelations.hasParent(child));
 
         MobRelations.clearParent(child);
+        assertFalse(MobRelations.hasParentRelation(child));
+    }
+
+    @Test
+    void missingEntityUuidFailsClosedAndCanStillBeCleared() {
+        Entity child = entity(data(), null);
+        Entity parent = entity(data(), UUID.randomUUID());
+
+        assertFalse(MobRelations.setParent(child, parent));
+        assertDoesNotThrow(() -> MobRelations.clearParent(child));
+        assertNull(MobRelations.parentId(child));
         assertFalse(MobRelations.hasParentRelation(child));
     }
 

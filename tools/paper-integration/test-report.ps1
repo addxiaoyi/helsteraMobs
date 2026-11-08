@@ -458,7 +458,7 @@ try {
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
-            'importedPlayerKillsCondition', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported')) {
+            'importedPlayerKillsCondition', 'contextTargeterRelations', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -964,6 +964,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'mythicTeleport'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'mythicTeleport'; status = 'passed'; observations = @('mythic-teleport imported=true entity-target=true location-target=true safe-blocked=true unsafe-bypass=true spread-bounded=true yaw-preserved=true orientation-override=true invalid-preserved=true warnings=true restored=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'contextTargeterRelations'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'contextTargeterRelations'; status = 'passed'; observations = @('context-targeter-relations passenger=true passengers=true mount=true vehicle=true owner-location=true parent-location=true invalid-rejected=true passed=true')
     }
     $fullCatalogAudienceFilter = @($fullCatalogReport.probes | Where-Object id -eq 'audience-filter-delivery')
     if ($fullCatalogAudienceFilter.Count -ne 1) {
