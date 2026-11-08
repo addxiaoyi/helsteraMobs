@@ -3098,6 +3098,56 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("legacy durability rejects negative, malformed, and over-limit damage in items and equipment")
+    void mythicRejectsInvalidLegacyDurability(@TempDir Path root) throws Exception {
+        Path items = write(root, "Items/legacy-durability-bounds.yml", """
+                items:
+                  valid: {Id: 276, Data: 1560}
+                  shorthand: {Id: "276:37"}
+                  negative: {Id: 276, Data: -1}
+                  over_limit: {Id: 276, Data: 1561}
+                  malformed: {Id: 276, Data: not-a-number}
+                  shield_over_limit: {Id: 442, Data: 336}
+                """);
+        var itemEntries = new MythicMobsImporter().convert(items);
+        YamlConfiguration itemTarget = YamlConfiguration.loadConfiguration(new StringReader(
+                String.valueOf(plan(itemEntries).orElseThrow().get("content"))));
+
+        assertEquals("DIAMOND_SWORD", itemTarget.getString("items.valid.id"));
+        assertEquals(1560, itemTarget.getInt("items.valid.durability"));
+        assertEquals(37, itemTarget.getInt("items.shorthand.durability"));
+        assertEquals("-1", itemTarget.getString("items.negative.unsupported.legacy-data"));
+        assertEquals("1561", itemTarget.getString("items.over_limit.unsupported.legacy-data"));
+        assertEquals("not-a-number", itemTarget.getString("items.malformed.unsupported.legacy-data"));
+        assertEquals("336", itemTarget.getString("items.shield_over_limit.unsupported.legacy-data"));
+        assertTrue(itemEntries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && String.valueOf(entry.get("note")).contains("modern Material durability range")));
+
+        Path mobs = write(root, "Mobs/legacy-durability-bounds.yml", """
+                mobs:
+                  Boss:
+                    Equipment:
+                      - '276{data=1560} HAND'
+                      - '276{data=1561} OFFHAND'
+                      - '276{data=-1} HEAD'
+                      - '276{data=not-a-number} CHEST'
+                      - '276:37 FEET'
+                """);
+        var equipmentEntries = new MythicMobsImporter().convert(mobs);
+        YamlConfiguration equipmentTarget = YamlConfiguration.loadConfiguration(new StringReader(
+                String.valueOf(plan(equipmentEntries).orElseThrow().get("content"))));
+
+        assertEquals(1560, equipmentTarget.getInt("entity.items.main-hand.durability"));
+        assertEquals("1561", equipmentTarget.getString("entity.items.off-hand.unsupported.data"));
+        assertEquals("-1", equipmentTarget.getString("entity.items.helmet.unsupported.data"));
+        assertEquals("not-a-number", equipmentTarget.getString("entity.items.chestplate.unsupported.data"));
+        assertEquals(37, equipmentTarget.getInt("entity.items.boots.durability"));
+        assertFalse(equipmentTarget.contains("entity.items.off-hand.durability"));
+        assertFalse(equipmentTarget.contains("entity.items.helmet.durability"));
+        assertFalse(equipmentTarget.contains("entity.items.chestplate.durability"));
+    }
+
+    @Test
     @DisplayName("out-of-range legacy numeric IDs and data remain visible")
     void mythicPreservesOutOfRangeLegacyNumbers(@TempDir Path root) throws Exception {
         Path items = write(root, "Items/overflow.yml", """

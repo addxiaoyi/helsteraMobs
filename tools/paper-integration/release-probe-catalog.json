@@ -909,6 +909,11 @@
       "status": "passed"
     },
     {
+      "id": "legacyNumericItems",
+      "status": "passed",
+      "requiredObservation": "legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true"
+    },
+    {
       "id": "itemLifecycle",
       "status": "passed"
     },

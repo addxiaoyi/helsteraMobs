@@ -393,6 +393,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedPlayerKillsCondition'; status = 'passed'; observations = @('imported-player-kills-condition primary-mapped=true range-mapped=true positive=true negative=true invalid-preserved=true')
     }
+    $fullReport.expectedProbeIds += 'legacyNumericItems'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'legacyNumericItems'; status = 'passed'; observations = @('legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'
