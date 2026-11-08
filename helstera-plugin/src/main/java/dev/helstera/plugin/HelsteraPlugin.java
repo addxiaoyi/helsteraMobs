@@ -4202,6 +4202,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean nameCondition = false;
             boolean importedNameCondition = false;
             boolean importedServerCondition = false;
+            boolean importedCoordinateDifferenceCondition = false;
             boolean moistureConditions = false;
             boolean mobSizeCondition = false;
             boolean ownerCondition = false;
@@ -6405,6 +6406,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + behaviors.testCondition(skills.bindCondition("x-diff 2to4"), conditionContext)
                         + " y=" + behaviors.testCondition(skills.bindCondition("y-diff -1to1"), conditionContext)
                         + " z=" + behaviors.testCondition(skills.bindCondition("z-diff -1to1"), conditionContext));
+                importedCoordinateDifferenceCondition = runImportedCoordinateDifferenceSelfTest(
+                        skills, behaviors, conditionContext);
                 Location originProbeLocation = conditionTarget.getLocation().clone();
                 var originProbeContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
                         modelInstance, conditionTarget, 1.0, 3.0, 0, "integration", null,
@@ -9758,6 +9761,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " name-condition=" + nameCondition
                         + " imported-name-condition=" + importedNameCondition
                         + " imported-server-condition=" + importedServerCondition
+                        + " imported-coordinate-difference-condition=" + importedCoordinateDifferenceCondition
                         + " moisture-conditions=" + moistureConditions
                         + " mob-size-condition=" + mobSizeCondition
                         + " block-type-radius-condition=" + blockTypeRadiusCondition
@@ -9998,6 +10002,55 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " passengers=" + passengers + " mount=" + mount + " vehicle=" + vehicle
                 + " owner-location=" + ownerLocation + " parent-location=" + parentLocation
                 + " invalid-rejected=" + invalidRejected + " passed=" + passed);
+    }
+
+    private boolean runImportedCoordinateDifferenceSelfTest(
+            SkillService skills,
+            BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext conditionContext) {
+        var importedCoordinatePrimary = dev.helstera.migration.importer.MmConditions.translate(
+                "?xDiff{d=2to4}");
+        var importedCoordinateAlias = dev.helstera.migration.importer.MmConditions.translate(
+                "?zDiff{difference=-1to1}");
+        var importedCoordinateY = dev.helstera.migration.importer.MmConditions.translate(
+                "?yDiff{d=-1to1}");
+        var importedCoordinateOutOfRange = dev.helstera.migration.importer.MmConditions.translate(
+                "?xDiff{d=>4}");
+        boolean primaryMapped = importedCoordinatePrimary.translated()
+                && "x-diff 2to4".equals(importedCoordinatePrimary.condition());
+        boolean aliasMapped = importedCoordinateAlias.translated()
+                && "z-diff -1to1".equals(importedCoordinateAlias.condition());
+        boolean yMapped = importedCoordinateY.translated()
+                && "y-diff -1to1".equals(importedCoordinateY.condition());
+        String primaryKey = primaryMapped ? skills.bindCondition(importedCoordinatePrimary.condition()) : null;
+        String yKey = yMapped ? skills.bindCondition(importedCoordinateY.condition()) : null;
+        String aliasKey = aliasMapped ? skills.bindCondition(importedCoordinateAlias.condition()) : null;
+        String outOfRangeKey = importedCoordinateOutOfRange.translated()
+                ? skills.bindCondition(importedCoordinateOutOfRange.condition()) : null;
+        boolean xPositive = primaryKey != null && behaviors.testCondition(primaryKey, conditionContext);
+        boolean yPositive = yKey != null && behaviors.testCondition(yKey, conditionContext);
+        boolean zPositive = aliasKey != null && behaviors.testCondition(aliasKey, conditionContext);
+        boolean outOfRangeRejected = outOfRangeKey != null
+                && !behaviors.testCondition(outOfRangeKey, conditionContext);
+        boolean invalidPreserved = true;
+        for (String source : java.util.List.of(
+                "?xDiff{unexpected=true}",
+                "?yDiff{d=NaN}",
+                "?zDiff{difference=not-a-range}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            invalidPreserved &= !mapped.translated() && source.equals(mapped.condition());
+        }
+        boolean result = primaryMapped && aliasMapped && yMapped
+                && xPositive && yPositive && zPositive && outOfRangeRejected && invalidPreserved;
+        getLogger().info("imported-coordinate-difference-condition primary-mapped=" + primaryMapped
+                + " alias-mapped=" + aliasMapped
+                + " x-positive=" + xPositive
+                + " y-positive=" + yPositive
+                + " z-positive=" + zPositive
+                + " out-of-range-rejected=" + outOfRangeRejected
+                + " invalid-preserved=" + invalidPreserved
+                + " result=" + result);
+        return result;
     }
 
     private boolean runAbsorptionPlayerConditionSelfTest(

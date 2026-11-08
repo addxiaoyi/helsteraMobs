@@ -814,6 +814,11 @@
       "requiredObservation": "imported-server-conditions paper-primary=true paper-alias=true exact=true exact-negative=true after-inclusive=true after-exclusive-rejected=true after-higher-rejected=true before-inclusive=true before-exclusive-rejected=true invalid-preserved=true result=true"
     },
     {
+      "id": "importedCoordinateDifferenceCondition",
+      "status": "passed",
+      "requiredObservation": "imported-coordinate-difference-condition primary-mapped=true alias-mapped=true x-positive=true y-positive=true z-positive=true out-of-range-rejected=true invalid-preserved=true result=true"
+    },
+    {
       "id": "importedVariableConditions",
       "status": "passed",
       "requiredObservation": "imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true"

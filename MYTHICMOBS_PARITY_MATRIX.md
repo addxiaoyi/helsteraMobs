@@ -2666,7 +2666,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-context-relations-strict-20261108-r2` completes 401 probes (382 passed, 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133, including context relation targeters (`@Passenger`, `@Passengers`, `@Mount`, `@Vehicle`, `@OwnerLocation`, `@ParentLocation`) and malformed-argument rejection; it carries the real Player absorption comparisons, imported Players/Entities/Mobs/Living radius conditions, native-AI Bee PreventStingerLoss, real Player damage attribution, environmental no-trigger behavior, and restored Player state from the prior complete catalog. Previous strict fixtures verify imported entity options, natural spawner/drop behavior, real-client interactions and movement, skills and audience persistence, menus, targeters, conditions, and restart workflows. The separate `mobOptionsNatural` Bee event remains synthetic. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-coordinate-difference-strict-20261108-r1` completes 402 probes (383 passed, 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133, including imported `XDiff`/`YDiff`/`ZDiff` primary and alias forms with positive axis ranges, out-of-range rejection, and malformed-input preservation; it carries the context relation targeters (`@Passenger`, `@Passengers`, `@Mount`, `@Vehicle`, `@OwnerLocation`, `@ParentLocation`), real Player absorption comparisons, imported Players/Entities/Mobs/Living radius conditions, native-AI Bee PreventStingerLoss, real Player damage attribution, environmental no-trigger behavior, and restored Player state from the prior complete catalog. Previous strict fixtures verify imported entity options, natural spawner/drop behavior, real-client interactions and movement, skills and audience persistence, menus, targeters, conditions, and restart workflows. The separate `mobOptionsNatural` Bee event remains synthetic. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
@@ -3504,11 +3504,12 @@ remains mapped-unverified.
 
 Coordinate difference update: official `XDiff`, `YDiff`, and `ZDiff` now
 compare target-minus-caster Bukkit coordinates with Mythic numeric ranges and
-`difference/diff/d` aliases. Exploratory Paper
-`srv-paper-integration-exploratory-1.21.11-r114` verifies positive X/Y/Z ranges
-and an out-of-range X rejection through
-`coordinate-difference-condition=true`. Strict Paper 1.21.1 evidence remains
-open.
+`difference/diff/d` aliases. Strict Paper 1.21.1-133 fixture
+`srv-paper-coordinate-difference-strict-20261108-r1` verifies the imported
+primary, alias, and Y-axis forms through the production importer and condition
+runtime, with positive X/Y/Z ranges, out-of-range X rejection, and malformed
+input preservation. The overall Conditions catalog remains
+`mapped-unverified`.
 
 Origin-location update: official `OriginLocation` matches
 `BehaviorContext.origin()` by block or exact coordinates with `loc/l/c`,

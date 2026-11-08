@@ -38,7 +38,25 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-context-relations-strict-20261108-r2`
+Latest strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
+passes all 402 probes (383 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies imported Mythic `XDiff`, `YDiff`,
+and `ZDiff` aliases through the production importer and condition runtime,
+including positive axis ranges, out-of-range rejection, and malformed input
+preservation. Report:
+`reports/paper-1.21.1-coordinate-difference-strict-20261108-r1.json`;
+server log:
+`reports/paper-1.21.1-coordinate-difference-strict-20261108-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-coordinate-difference-strict-20261108-r1-client-logs.tar.gz`.
+Report SHA-256: `feb7799cbbcb65ef558060b07e677545aae4e7e7c64c1be54a95604146c85996`;
+server log SHA-256: `affaeaf4b94b359a05e6f49aac3814eb62f02d4480f82e1f36e148eae2663326`;
+client log SHA-256: `5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`;
+plugin SHA-256: `d824761cdb575b50c5061706c7fde362b80f521aa9d4c46d68c296b7c64c343f`.
+Latest strict report has 402 probes, zero incomplete. Archived logs redact web
+token query values; the source fixture retains the original run logs.
+
+Previous strict fixture `srv-paper-context-relations-strict-20261108-r2`
 passes all 401 probes (382 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. It verifies context-bound `@Passenger`,
 `@Passengers`, `@Mount`, `@Vehicle`, `@OwnerLocation`, and `@ParentLocation`
@@ -53,7 +71,7 @@ Report SHA-256: `d72a3fe89dbb17623219ae53b36fb07acde0a5a9bc257fe3ac06b598aca3580
 server log SHA-256: `13c5a6a019385370375a516dd5123655bc56dd3b7eea1f66a9cd6d1d80cb8940`;
 client log SHA-256: `9a3f6dd620f6f671c1030e91a55df989b1df576117fc1991d51eb493f7c4624b`;
 plugin SHA-256: `043139059115bd84f7e543d76c71486f06303163dc13b09d8aa186981609b7b6`.
-Latest strict report has 401 probes, zero incomplete. Archived logs redact web
+That strict report has 401 probes, zero incomplete. Archived logs redact web
 token query values; the source fixture retains the original run logs.
 
 Previous strict fixture `srv-paper-player-kills-import-strict-20261108-r1`

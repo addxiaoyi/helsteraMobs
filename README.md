@@ -2,7 +2,24 @@
 
 ## MythicMobs Parity Development Status (2026-11-08)
 
-Latest strict fixture `srv-paper-context-relations-strict-20261108-r2`
+Latest strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
+passes all 402 release probes (383 passed, 19 expected rejections, zero failed
+or incomplete) on Paper 1.21.1-133. It verifies imported Mythic `XDiff`,
+`YDiff`, and `ZDiff` aliases through the production importer and condition
+runtime, including positive axis ranges, out-of-range rejection, and malformed
+input preservation. Report:
+`tools/paper-integration/reports/paper-1.21.1-coordinate-difference-strict-20261108-r1.json`
+(SHA-256 `feb7799cbbcb65ef558060b07e677545aae4e7e7c64c1be54a95604146c85996`).
+Compressed server log SHA-256:
+`affaeaf4b94b359a05e6f49aac3814eb62f02d4480f82e1f36e148eae2663326`.
+Client log archive SHA-256:
+`5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`.
+Plugin SHA-256:
+`d824761cdb575b50c5061706c7fde362b80f521aa9d4c46d68c296b7c64c343f`.
+Latest strict report has 402 probes, zero incomplete. Archived logs redact web
+token query values; the source fixture retains the original run logs.
+
+Previous strict fixture `srv-paper-context-relations-strict-20261108-r2`
 passes all 401 release probes (382 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. It verifies context-bound `@Passenger`,
 `@Passengers`, `@Mount`, `@Vehicle`, `@OwnerLocation`, and `@ParentLocation`
@@ -16,7 +33,7 @@ Client log archive SHA-256:
 `9a3f6dd620f6f671c1030e91a55df989b1df576117fc1991d51eb493f7c4624b`.
 Plugin SHA-256:
 `043139059115bd84f7e543d76c71486f06303163dc13b09d8aa186981609b7b6`.
-Latest strict report has 401 probes, zero incomplete. Archived logs redact web
+That strict report has 401 probes, zero incomplete. Archived logs redact web
 token query values; the source fixture retains the original run logs.
 
 Previous strict fixture `srv-paper-player-kills-import-strict-20261108-r1`
@@ -808,7 +825,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-player-kills-import-strict-20261108-r1` has 400 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-coordinate-difference-strict-20261108-r1` has 402 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
