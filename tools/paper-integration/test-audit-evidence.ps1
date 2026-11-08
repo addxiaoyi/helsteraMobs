@@ -377,6 +377,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'radiusConditions'; status = 'passed'; observations = @('radius-condition-details imported=true players-positive=true players-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true')
     }
+    $fullReport.expectedProbeIds += 'importedPlayerKillsCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedPlayerKillsCondition'; status = 'passed'; observations = @('imported-player-kills-condition primary-mapped=true range-mapped=true positive=true negative=true invalid-preserved=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

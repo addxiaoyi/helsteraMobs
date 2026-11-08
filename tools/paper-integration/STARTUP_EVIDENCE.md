@@ -1,6 +1,23 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-radius-conditions-strict-20261108-r2` passed
+Latest fixture `srv-paper-player-kills-import-strict-20261108-r1` passed
+the full strict gate on Paper 1.21.1-133: 400 registered probes, 381 passed,
+19 expected rejections, and zero failed or incomplete. It verifies imported
+`PlayerKills` primary, range, negative, and malformed-input preservation paths
+through a real Player death workflow while retaining the complete prior
+release catalog. Report:
+[paper-1.21.1-player-kills-import-strict-20261108-r1.json](reports/paper-1.21.1-player-kills-import-strict-20261108-r1.json), SHA-256:
+`cddad86f19b04c40ca23b364e5a0e223b056c65d358e05ed5f67d5f3e6c38ee1`.
+Compressed server log SHA-256:
+`590891ca6d4c597aba4d17e7c8db45d228006bee94764974676539ed71edd382`.
+Client log archive SHA-256:
+`0d079eb950937c4b8e1f935e490c5d9eddbdc3dfaadc04c0c06952d8b7f539d1`.
+Plugin SHA-256:
+`e699b8a21826b630af7e07d506ca2ed2e1fc828cf01d9c886f97d68ea3386dca`.
+Latest strict report has 400 probes, zero incomplete. Archived logs redact web
+token query values; the source fixture retains the original run logs.
+
+Previous fixture `srv-paper-radius-conditions-strict-20261108-r2` passed
 the full strict gate on Paper 1.21.1-133: 399 registered probes, 380 passed,
 19 expected rejections, and zero failed or incomplete. It verifies Player
 absorption comparisons, six imported radius conditions with positive and
@@ -13,8 +30,6 @@ Client log archive SHA-256:
 `bd28e895cc1c7a8988b7d9272992e47fffa7efcab23f032a72fa70722b4cf57d`.
 Plugin SHA-256:
 `9659402a08f17640a0fcc255b1693d6988eab69cdb78694ed4f040b051a5084d`.
-Latest strict report has 399 probes, zero incomplete. Archived logs redact web
-token query values; the source fixture retains the original run logs.
 
 Previous fixture `srv-paper-condition-mobility-states-strict-20261108-r7`
 passed the full strict gate with 396 registered probes, 377 passed, 19

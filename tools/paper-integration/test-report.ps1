@@ -139,6 +139,7 @@ try {
         '[Server thread/INFO]: potion-natural-expiry=true expired=true event-observed=false action-observed=true item-marker-observed=false',
         '[Server thread/INFO]: kill-trigger natural=true victim-dead=true action-observed=true passed=true',
         '[Server thread/INFO]: player-kill-trigger natural=true victim-player=true victim-death-observed=true action-observed=true player-kills-positive=true player-kills-negative=true passed=true',
+        '[Server thread/INFO]: imported-player-kills-condition primary-mapped=true range-mapped=true positive=true negative=true invalid-preserved=true',
         '[Server thread/INFO]: tempt-probe-delayed entity-target-trigger=true target-events=1 target-find-misses=0',
         '[Server thread/INFO]: item-pickup trigger=true player=HelsteraTester',
         '[Server thread/INFO]: vehicle-events enter=true exit=true dismount=true eject=true destroy=true player=HelsteraTester',
@@ -457,7 +458,7 @@ try {
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
-            'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported')) {
+            'importedPlayerKillsCondition', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -679,6 +680,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'potionNaturalExpiry').status -eq 'passed') 'natural potion expiry probe'
     Assert-True (($report.probes | Where-Object id -eq 'playerKillTrigger').status -eq 'passed') 'player kill trigger and counter probe'
     Assert-True (($report.probes | Where-Object id -eq 'playerKillsCondition').status -eq 'passed') 'player kills condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'importedPlayerKillsCondition').status -eq 'passed') 'imported player kills condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'mythicMobTypeCondition').status -eq 'passed') 'mythic mob type condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'variableContainsCondition').status -eq 'passed') 'variable contains condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionCatalog').status -eq 'passed') 'condition catalog probe'
@@ -950,6 +952,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'radiusConditions'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'radiusConditions'; status = 'passed'; observations = @('radius-condition-details imported=true players-positive=true players-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedPlayerKillsCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedPlayerKillsCondition'; status = 'passed'; observations = @('imported-player-kills-condition primary-mapped=true range-mapped=true positive=true negative=true invalid-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'mobOptionsSlimeSplitNatural'
     $fullCatalogReport.probes += [pscustomobject]@{

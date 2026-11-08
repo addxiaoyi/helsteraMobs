@@ -2,7 +2,23 @@
 
 ## MythicMobs Parity Development Status (2026-11-08)
 
-Latest strict fixture `srv-paper-radius-conditions-strict-20261108-r2`
+Latest strict fixture `srv-paper-player-kills-import-strict-20261108-r1`
+passes all 400 release probes (381 passed, 19 expected rejections, zero failed
+or incomplete) on Paper 1.21.1-133. It verifies imported `PlayerKills`
+primary/range/negative forms and malformed-input preservation through a real
+Player death workflow while retaining the previous complete strict catalog.
+Report:
+`tools/paper-integration/reports/paper-1.21.1-player-kills-import-strict-20261108-r1.json`
+(SHA-256 `cddad86f19b04c40ca23b364e5a0e223b056c65d358e05ed5f67d5f3e6c38ee1`).
+Compressed server log SHA-256:
+`590891ca6d4c597aba4d17e7c8db45d228006bee94764974676539ed71edd382`.
+Client log archive SHA-256:
+`0d079eb950937c4b8e1f935e490c5d9eddbdc3dfaadc04c0c06952d8b7f539d1`.
+Plugin SHA-256:
+`e699b8a21826b630af7e07d506ca2ed2e1fc828cf01d9c886f97d68ea3386dca`.
+Latest strict report has 400 probes, zero incomplete.
+
+Previous strict fixture `srv-paper-radius-conditions-strict-20261108-r2`
 passes all 399 release probes (380 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. It verifies Player absorption comparisons
 and imported `PlayersInRadius`, `EntitiesInRadius`, `MobsInRadius`,
@@ -11,13 +27,6 @@ negative real-entity controls, while retaining the native-AI Bee stinger
 probe. Report:
 `tools/paper-integration/reports/paper-1.21.1-radius-conditions-strict-20261108-r2.json`
 (SHA-256 `dfcec3d4becd5b3f89f9001448f48122e607a85ec289c7bca6ab85cb8ecd9195`).
-Compressed server log SHA-256:
-`2143ab88fbe2cb801f985236f62f2637206df76fbc011ec63c610ccc27b8adee`.
-Client log archive SHA-256:
-`bd28e895cc1c7a8988b7d9272992e47fffa7efcab23f032a72fa70722b4cf57d`.
-Plugin SHA-256:
-`9659402a08f17640a0fcc255b1693d6988eab69cdb78694ed4f040b051a5084d`.
-Latest strict report has 399 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-rabbit-options-strict-20261107-r2` passes all
 392 release probes (373 passed, 19 expected rejections, zero failed or
@@ -782,7 +791,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-radius-conditions-strict-20261108-r2` has 399 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-player-kills-import-strict-20261108-r1` has 400 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -798,8 +807,8 @@ This is a partial parity release. The matrix currently has `35`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 520 cited IDs; 428 report files; 4 directories
-   without reports; 88 missing directories; 198 archived release reports. The
+   Current fixture inventory: 521 cited IDs; 429 report files; 4 directories
+   without reports; 88 missing directories; 199 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -920,7 +929,7 @@ the entire MythicMobs feature catalog.
 - Official `IsCreeperPrimed` now maps to Bukkit `Creeper#isIgnited()`; strict Paper fixture `srv-paper-creeper-primed-condition-strict-20261101-r1` verifies both boolean states on a real Creeper, restores its state, and requires a dedicated report probe. Official `IsFrozen` reads Paper's `Entity#isFrozen()` boolean; strict fixture `srv-paper-runtime-alias-20261031-r2` records `frozenCondition=passed`.
 - Official `IsUsingSpyglass` reads only a target Player's active Bukkit item and matches SPYGLASS. Strict Paper fixture `srv-paper-is-spyglass-import-strict-20261106-r1` verifies imported `?isUsingSpyglass`/`?isScoping`, active/inactive transitions, Zombie rejection, and malformed-argument preservation.
 - Official `EnderDragonAlive` checks for a valid EnderDragon in the target world's entity set. Strict Paper 1.21.1-133 fixture `srv-paper-ender-dragon-alive-strict-20261102-r1` passes the dedicated `enderDragonAliveCondition`: a real dragon is accepted, then removed and rejected; the complete report has 263 probes and zero incomplete.
-- Official `PlayerKills` uses a lifetime counter owned by each managed mob instance and increments only when that instance is resolved as the killer of a Player death; aliases, range syntax, teardown cleanup, and migration coverage are implemented. Strict fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` verifies the online-player death event with controlled `lastDamageCause` attribution, passes `player-kills >=1`, and rejects `player-kills >1`; this does not establish natural PvP damage attribution.
+- Official `PlayerKills` uses a lifetime counter owned by each managed mob instance and increments only when that instance is resolved as the killer of a Player death; aliases, range syntax, teardown cleanup, and migration coverage are implemented. Strict fixture `srv-paper-player-kills-import-strict-20261108-r1` verifies imported primary and range forms, a negative range, and malformed-input preservation through the real Player death workflow. The same report retains the online-player death event with controlled `lastDamageCause` attribution, passes `player-kills >=1`, and rejects `player-kills >1`; this does not establish natural PvP damage attribution.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies `Absorption`, `HasPotionEffect`, the internal PotionEffect-backed `has-aura-stacks` evaluator, managed `Level`, health-with-absorption comparisons, `LunarPhase`, `LastSignal`, `LineOfSightFromOrigin`, `BowTension`, string and comparator conditions, `GlobalScore`, `Score`, `LookingAt`, `Structure`, Item type/similarity, `Targets`, `ItemRecharging`, and player experience/absorption/passenger condition paths. Fixture `srv-paper-item-recharging-import-strict-20261106-r1` additionally verifies imported `?itemRecharging`/`?recharging` aliases after a real Bukkit attack and rejects non-HumanEntity targets. Lunar phase parsing now rejects the whole condition when any phase token is invalid or empty, including a trailing comma. Strict fixture `srv-paper-aura-target-strict-20261106-r1` verifies imported target Aura checks plus AuraRemove partial/default/ANY removal and aliases in the real Paper runtime; Aura components and lifecycle effects remain unsupported.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies Oxygen, ConsumeSlot, RemoveHeldItem, material cooldown, game mode, Jump, ForcePull, SetOffhand, SetArmor, SetFaction, SetLevel, SetWeather, SetTime, Lightning, Score, and target-aware dispatch.
 - Mythic skill migration now preserves positional arguments alongside keyed arguments across common item, inventory, experience, oxygen, block, entity-state, movement, potion, animation, and audience mechanics; importer regression coverage protects both forms.

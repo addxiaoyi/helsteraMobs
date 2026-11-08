@@ -38,21 +38,28 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-radius-conditions-strict-20261108-r2`
+Latest strict fixture `srv-paper-player-kills-import-strict-20261108-r1`
+passes all 400 probes (381 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies imported `PlayerKills` primary,
+range, negative, and malformed-input paths through a real Player death
+workflow while retaining the complete previous release catalog.
+Report: `reports/paper-1.21.1-player-kills-import-strict-20261108-r1.json`;
+server log: `reports/paper-1.21.1-player-kills-import-strict-20261108-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-player-kills-import-strict-20261108-r1-client-logs.tar.gz`.
+Report SHA-256: `cddad86f19b04c40ca23b364e5a0e223b056c65d358e05ed5f67d5f3e6c38ee1`;
+server log SHA-256: `590891ca6d4c597aba4d17e7c8db45d228006bee94764974676539ed71edd382`;
+client log SHA-256: `0d079eb950937c4b8e1f935e490c5d9eddbdc3dfaadc04c0c06952d8b7f539d1`;
+plugin SHA-256: `e699b8a21826b630af7e07d506ca2ed2e1fc828cf01d9c886f97d68ea3386dca`.
+Latest strict report has 400 probes, zero incomplete. Archived logs redact web
+token query values; the source fixture retains the original run logs.
+
+Previous strict fixture `srv-paper-radius-conditions-strict-20261108-r2`
 passes all 399 probes (380 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. It verifies Player absorption comparisons,
 imported radius conditions for Players, Entities, Mobs, Living entities,
 PlayerWithin, and PlayerNotWithin, plus the native-AI Bee stinger probe.
-Report: `reports/paper-1.21.1-radius-conditions-strict-20261108-r2.json`;
-server log: `reports/paper-1.21.1-radius-conditions-strict-20261108-r2.log.gz`;
-client logs:
-`reports/paper-1.21.1-radius-conditions-strict-20261108-r2-client-logs.tar.gz`.
-Report SHA-256: `dfcec3d4becd5b3f89f9001448f48122e607a85ec289c7bca6ab85cb8ecd9195`;
-server log SHA-256: `2143ab88fbe2cb801f985236f62f2637206df76fbc011ec63c610ccc27b8adee`;
-client log SHA-256: `bd28e895cc1c7a8988b7d9272992e47fffa7efcab23f032a72fa70722b4cf57d`;
-plugin SHA-256: `9659402a08f17640a0fcc255b1693d6988eab69cdb78694ed4f040b051a5084d`.
-Latest strict report has 399 probes, zero incomplete. Archived logs redact web
-token query values; the source fixture retains the original run logs.
+Report: `reports/paper-1.21.1-radius-conditions-strict-20261108-r2.json`.
 
 Previous strict fixture `srv-paper-rabbit-options-strict-20261107-r2` passes all
 392 probes (373 passed, 19 expected rejections, zero failed or incomplete) on

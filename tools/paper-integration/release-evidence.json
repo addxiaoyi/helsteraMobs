@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-player-kills-import-strict-20261108-r1",
+    "reportFixtureDirectory": "srv-paper-player-kills-import-strict-20261108-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-player-kills-import-strict-20261108-r1.json",
+    "reportSha256": "cddad86f19b04c40ca23b364e5a0e223b056c65d358e05ed5f67d5f3e6c38ee1",
+    "log": "tools/paper-integration/reports/paper-1.21.1-player-kills-import-strict-20261108-r1.log.gz",
+    "logSha256": "590891ca6d4c597aba4d17e7c8db45d228006bee94764974676539ed71edd382",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-player-kills-import-strict-20261108-r1-client-logs.tar.gz",
+    "clientLogSha256": "0d079eb950937c4b8e1f935e490c5d9eddbdc3dfaadc04c0c06952d8b7f539d1",
+    "pluginSha256": "e699b8a21826b630af7e07d506ca2ed2e1fc828cf01d9c886f97d68ea3386dca",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-radius-conditions-strict-20261108-r2",
     "reportFixtureDirectory": "srv-paper-radius-conditions-strict-20261108-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-radius-conditions-strict-20261108-r2.json",
