@@ -358,6 +358,7 @@ $probeSpecs = [ordered]@{
     potionNaturalExpiry = 'potion-natural-expiry=true .*expired=true .*(?:action-observed=true|item-marker-observed=true)'
     killTrigger = 'kill-trigger natural=true .*victim-dead=true .*action-observed=true passed=true'
     playerKillTrigger = 'player-kill-trigger natural=true .*victim-player=true .*victim-death-observed=true .*action-observed=true .*player-kills-positive=true .*player-kills-negative=true passed=true'
+    importedPlayerKillsCondition = 'imported-player-kills-condition primary-mapped=true range-mapped=true positive=true negative=true invalid-preserved=true'
     playerKillsCondition = 'skill-actions .*player-kills-condition=true'
     mythicMobTypeCondition = 'skill-actions .*mythic-mob-type-condition=true'
     variableContainsCondition = 'skill-actions .*variable-contains-condition=true'

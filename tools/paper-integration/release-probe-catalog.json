@@ -1100,6 +1100,10 @@
       "status": "passed"
     },
     {
+      "id": "importedPlayerKillsCondition",
+      "status": "passed"
+    },
+    {
       "id": "playerPotionConsume",
       "status": "passed"
     },

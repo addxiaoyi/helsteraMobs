@@ -3272,6 +3272,59 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported PlayerKills comparisons reach the instance counter and fail closed")
+    void importedPlayerKillsReachesRuntimeAndFailsClosed() {
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var player = mock(org.bukkit.entity.Player.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(73);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(player));
+        when(player.isValid()).thenReturn(true);
+        when(player.isDead()).thenReturn(false);
+
+        var counter = new dev.helstera.ai.skill.PlayerKillCount();
+        counter.record(73);
+        SkillExtras.playerKillCount(counter);
+        try {
+            var registry = new BehaviorRegistryImpl();
+            var skills = new SkillService(registry, null);
+            var context = dev.helstera.api.behavior.BehaviorContext.of(
+                    instance, player, 1.0, -1, 0, "on-kill-player");
+
+            var primary = dev.helstera.migration.importer.MmConditions.translate(
+                    "?playerKills{k=>=1}");
+            var range = dev.helstera.migration.importer.MmConditions.translate(
+                    "?playerKills{k=1to1}");
+            var negative = dev.helstera.migration.importer.MmConditions.translate(
+                    "?playerKills{k=>1}");
+            var invalid = dev.helstera.migration.importer.MmConditions.translate(
+                    "?playerKills{k=invalid}");
+            assertTrue(primary.translated());
+            assertTrue(range.translated());
+            assertTrue(negative.translated());
+            assertFalse(invalid.translated());
+
+            String primaryKey = skills.bindCondition(primary.condition());
+            String rangeKey = skills.bindCondition(range.condition());
+            String negativeKey = skills.bindCondition(negative.condition());
+            assertNotNull(primaryKey);
+            assertNotNull(rangeKey);
+            assertNotNull(negativeKey);
+            assertTrue(registry.testCondition(primaryKey, context));
+            assertTrue(registry.testCondition(rangeKey, context));
+            assertFalse(registry.testCondition(negativeKey, context));
+            assertNull(skills.bindCondition(invalid.condition()));
+
+            counter.record(73);
+            assertTrue(registry.testCondition(primaryKey, context));
+            assertFalse(registry.testCondition(rangeKey, context));
+            assertTrue(registry.testCondition(negativeKey, context));
+        } finally {
+            SkillExtras.playerKillCount(null);
+        }
+    }
+
+    @Test
     void importedTargetHealthPercentUsesMultiplierAndFailsClosedWithoutTarget() {
         var target = mock(org.bukkit.entity.LivingEntity.class);
         when(target.getHealth()).thenReturn(10.0);

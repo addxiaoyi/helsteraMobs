@@ -16010,6 +16010,43 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("player-kills >=1"), context);
                     playerKillsNegative = !behaviors.testCondition(
                             skills.bindCondition("player-kills >1"), context);
+
+                    var importedPrimary = dev.helstera.migration.importer.MmConditions.translate(
+                            "?playerKills{k=>=1}");
+                    var importedRange = dev.helstera.migration.importer.MmConditions.translate(
+                            "?playerKills{k=1to1}");
+                    var importedNegative = dev.helstera.migration.importer.MmConditions.translate(
+                            "?playerKills{k=>1}");
+                    var importedInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                            "?playerKills{k=invalid}");
+                    String importedPrimaryKey = importedPrimary.translated()
+                            ? skills.bindCondition(importedPrimary.condition()) : null;
+                    String importedRangeKey = importedRange.translated()
+                            ? skills.bindCondition(importedRange.condition()) : null;
+                    String importedNegativeKey = importedNegative.translated()
+                            ? skills.bindCondition(importedNegative.condition()) : null;
+                    boolean importedPlayerKillsPrimaryMapped = importedPrimary.translated()
+                            && "player-kills >=1".equals(importedPrimary.condition())
+                            && importedPrimaryKey != null;
+                    boolean importedPlayerKillsRangeMapped = importedRange.translated()
+                            && "player-kills 1to1".equals(importedRange.condition())
+                            && importedRangeKey != null;
+                    boolean importedPlayerKillsPositive = importedPlayerKillsPrimaryMapped
+                            && behaviors.testCondition(importedPrimaryKey, context)
+                            && importedPlayerKillsRangeMapped
+                            && behaviors.testCondition(importedRangeKey, context);
+                    boolean importedPlayerKillsNegative = importedNegative.translated()
+                            && "player-kills >1".equals(importedNegative.condition())
+                            && importedNegativeKey != null
+                            && !behaviors.testCondition(importedNegativeKey, context);
+                    boolean importedPlayerKillsInvalidPreserved = !importedInvalid.translated()
+                            && skills.bindCondition(importedInvalid.condition()) == null;
+                    getLogger().info("imported-player-kills-condition primary-mapped="
+                            + importedPlayerKillsPrimaryMapped + " range-mapped="
+                            + importedPlayerKillsRangeMapped + " positive="
+                            + importedPlayerKillsPositive + " negative="
+                            + importedPlayerKillsNegative + " invalid-preserved="
+                            + importedPlayerKillsInvalidPreserved);
                 }
                 boolean passed = deathObserved && actionObserved
                         && playerKillsPositive && playerKillsNegative;
