@@ -2,7 +2,25 @@
 
 ## MythicMobs Parity Development Status (2026-11-08)
 
-Latest strict fixture `srv-paper-population-conditions-strict-20261108-r2`
+Latest strict fixture `srv-paper-legacy-numeric-items-strict-20261108-r1`
+passes all 404 release probes (385 passed, 19 expected rejections, zero failed
+or incomplete) on Paper 1.21.1-133. It verifies legacy numeric `Items` and Mob
+`Equipment` through the production Mythic importer and ItemStack path: modern
+material resolution, durability, PotionType, BlockData, and amounts. Negative,
+out-of-range, and non-numeric legacy data remains under `unsupported` with
+migration warnings. Report:
+`tools/paper-integration/reports/paper-1.21.1-legacy-numeric-items-strict-20261108-r1.json`
+(SHA-256 `77895f7159fa09c975edc4b8dab8c61f8713b5b0fdf91c6228f34066759f1902`).
+Compressed server log SHA-256:
+`6664b875c5e3e934b6733f0555d844e57d62c213c6095fc8b2c0e1b06bc84daa`.
+Client log archive SHA-256:
+`4b33d91842231f069e2151aced2706725aebeca3e6b2e89e6416ca765013fece`.
+Plugin SHA-256:
+`bce3b592d25b24e3155ad9e88951c56f318ba7c1acf7f49db65366241842e709`.
+The strict probe covers both configured Items and inline Equipment, including
+durability bounds and preservation of invalid source values.
+
+Previous strict fixture `srv-paper-population-conditions-strict-20261108-r2`
 passes all 403 release probes (384 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. It verifies imported Mythic
 `PlayersOnline`, `onlinePlayerCount`, `PlayersInWorld`, and `MobsInWorld`
@@ -17,7 +35,7 @@ Client log archive SHA-256:
 `bb3fcd1c276b4c4bb8b956baf2d47dd1f7dbdbd8069048c5756d879b1a6bf86e`.
 Plugin SHA-256:
 `9accae95e38c76fcf0a80af20ec1ad074c12a7ab33ead134d7c1685f405f7826`.
-The importer now rejects non-finite numeric values and unknown population
+The importer rejects non-finite numeric values and unknown population
 arguments instead of translating them into a misleading runtime condition.
 
 Previous strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
@@ -36,7 +54,7 @@ Client log archive SHA-256:
 `5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`.
 Plugin SHA-256:
 `d824761cdb575b50c5061706c7fde362b80f521aa9d4c46d68c296b7c64c343f`.
-Latest strict report has 402 probes, zero incomplete. Archived logs redact web
+Latest strict report has 404 probes, zero incomplete. Archived logs redact web
 token query values; the source fixture retains the original run logs.
 
 Previous strict fixture `srv-paper-context-relations-strict-20261108-r2`
@@ -845,7 +863,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-coordinate-difference-strict-20261108-r1` has 402 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-legacy-numeric-items-strict-20261108-r1` has 404 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -861,8 +879,8 @@ This is a partial parity release. The matrix currently has `35`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 521 cited IDs; 429 report files; 4 directories
-   without reports; 88 missing directories; 199 archived release reports. The
+   Current fixture inventory: 525 cited IDs; 433 report files; 4 directories
+   without reports; 88 missing directories; 203 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1111,7 +1129,7 @@ Many rows remain `mapped-unverified`; the project is not complete:
 2. Drops: `TotalItems`, paired `MinItems`/`MaxItems`, or either Bonus option enable weighted entry selection; single bounds without bonuses retain ordered selection. Fractional Bonus multipliers add the integer part plus one line probabilistically at the fractional remainder. Strict natural-death evidence covers level/Luck combinations and dropper conditions; the earlier single-bound ordering assertion is invalid and is being replaced. Standalone `DropTables/` files project supported settings with an importer-to-runtime contract, and `exp`/`xp`/`experience` rows have natural-death coverage. Remaining work includes `BiasStat`, Mythic custom Luck enchantment/curses inputs, broader placeholders and the complete official catalog.
 3. Pin conditions resolve through the plugin's own `pins.yml`; location-valued `@Pin` resolves every configured point or one random point, `@BlocksInPinRegion` enumerates inclusive cuboids up to 16,384 blocks, and `MovePin` updates single-point pins in memory. Strict Paper fixture `srv-paper-pin-targeters-strict-20261102-r2` passes the required `pinTargeters` probe on Paper 1.21.1-133: multi-point/random dispatch, single-point movement, multi-point movement rejection, real cuboid `set-block`/`break-block` with block restoration, and fail-closed rejection of a 16,385-block region before action dispatch. Compatibility with Mythic pack pin-file formats remains unverified; in-memory movement resets when the plugin reloads its own `pins.yml`.
 4. Complete the official targeter/filter catalog: ground, water, flying, player, Creative, Spectator, invulnerability, ArmorStand, animal, creature, villager, and Helstera-managed mob identity filters now have API and strict Paper coverage. External MythicMobs/Citizens identity, non-living targets, premium selectors, and native Pathfinder Goal mutation remain open or outside the public Paper API boundary.
-5. Expand the remaining legacy numeric ID/data families; `ItemModel` and `DamageType` are explicitly preserved because Paper 1.21.1 `ItemMeta` has no public component API for them.
+5. Expand the remaining legacy numeric ID/data families; the common Items and Equipment subset now has strict Paper evidence, while `ItemModel` and `DamageType` are explicitly preserved because Paper 1.21.1 `ItemMeta` has no public component API for them.
 6. Strict Paper 1.21.1-133 now records the registered Creeper/Bee/Zombie and native jockey mount-event probes; finish universal Mob Option ordering and the remaining conversion/mount combinations.
 7. Add remaining Bukkit event, Audience version, and SkillTree lifecycle/restart evidence.
 8. Keep the Maven quality gate and strict Paper 1.21.1-133 release gate passing; the latest archived targeter follow-up `srv-paper-targeter-sorting-strict-20261102-r1` has 272 probes, while parity breadth and cross-version evidence remain open.

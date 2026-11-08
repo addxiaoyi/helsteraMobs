@@ -653,14 +653,18 @@ public final class MythicMobsImporter implements MigrationImporter {
                                     : "Legacy data value 0 is the neutral metadata value for the converted Material.");
                     String blockStates = legacyBlockStates(legacyIdText, legacyDataText);
                     if (blockStates != null) target.set(path + ".block-states", blockStates);
-                } else if (legacyId != Integer.MIN_VALUE && LEGACY_DURABILITY_IDS.contains(legacyId)
-                        && dataValue >= 0 && ciGet(item, "Durability", "durability") == null) {
+                } else if (legacyId != Integer.MIN_VALUE && isValidLegacyDurability(legacyId, legacyDataText)
+                        && ciGet(item, "Durability", "durability") == null) {
                     target.set(path + ".durability", dataValue);
+                    note(entries, file.toString(), "Items." + key + ".Data", path + ".durability",
+                            legacyDataText, "mapped", "Legacy item damage converted to modern durability.");
                 } else {
                     target.set(path + ".unsupported.legacy-data", rawData == null ? legacyDataText : rawData);
                     note(entries, file.toString(), "Items." + key + ".Data",
                             path + ".unsupported.legacy-data", rawData == null ? legacyDataText : rawData, "unsupported",
-                            "Legacy data value is item-specific and has no verified modern equivalent.", "WARN");
+                            legacyId != Integer.MIN_VALUE && LEGACY_DURABILITY_IDS.contains(legacyId)
+                                    ? "Legacy item damage is malformed, negative, or outside the modern Material durability range."
+                                    : "Legacy data value is item-specific and has no verified modern equivalent.", "WARN");
                 }
             }
             String legacyBlockStates = legacyBlockStates(legacyIdText, legacyDataText);
@@ -3141,8 +3145,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                                 legacyPotionType != null || skullMaterial != null || legacyVariantMaterial(sourceMaterial, legacyData) != null
                                         ? "Legacy item data value converted to a modern Material variant."
                                         : "Legacy item data value 0 is the neutral metadata value for the converted Material.");
-                    } else if (LEGACY_DURABILITY_IDS.contains(legacyId)
-                            && parseInteger(legacyData, Integer.MIN_VALUE) >= 0) {
+                    } else if (isValidLegacyDurability(legacyId, legacyData)) {
                         target.set(itemPath + ".durability", parseInteger(legacyData, 0));
                         note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".durability",
                                 legacyData, "mapped", "Legacy item damage converted to modern durability.");
@@ -3150,7 +3153,9 @@ public final class MythicMobsImporter implements MigrationImporter {
                         target.set(itemPath + ".unsupported.data", legacyData);
                         note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".unsupported.data",
                                 legacyData, "unsupported",
-                                "Legacy data values depend on the old numeric item type; no safe modern Material or BlockData mapping was found.",
+                                LEGACY_DURABILITY_IDS.contains(legacyId)
+                                        ? "Legacy item damage is malformed, negative, or outside the modern Material durability range."
+                                        : "Legacy data values depend on the old numeric item type; no safe modern Material or BlockData mapping was found.",
                                 "WARN");
                     }
                 }
@@ -3191,8 +3196,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                                                 inlinePotionType != null || skullMaterial != null || legacyVariantMaterial(sourceMaterial, value) != null
                                                 ? "Legacy item data value converted to a modern Material variant."
                                                 : "Legacy item data value 0 is the neutral metadata value for the converted Material.");
-                            } else if (LEGACY_DURABILITY_IDS.contains(legacyId)
-                                    && parseInteger(value, Integer.MIN_VALUE) >= 0) {
+                            } else if (isValidLegacyDurability(legacyId, value)) {
                                 target.set(itemPath + ".durability", parseInteger(value, 0));
                                 note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".durability",
                                         value, "mapped", "Legacy item damage converted to modern durability.");
@@ -3200,7 +3204,9 @@ public final class MythicMobsImporter implements MigrationImporter {
                                 target.set(itemPath + ".unsupported.data", value);
                                 note(entries, srcFile, mobKey + ".Equipment[]", itemPath + ".unsupported.data",
                                         value, "unsupported",
-                                        "Legacy data values depend on the old numeric item type; no safe modern Material or BlockData mapping was found.",
+                                        LEGACY_DURABILITY_IDS.contains(legacyId)
+                                                ? "Legacy item damage is malformed, negative, or outside the modern Material durability range."
+                                                : "Legacy data values depend on the old numeric item type; no safe modern Material or BlockData mapping was found.",
                                         "WARN");
                             }
                         }
@@ -3333,6 +3339,23 @@ public final class MythicMobsImporter implements MigrationImporter {
 
     private static boolean isDecimalInteger(String value) {
         return value != null && value.trim().matches("[+-]?[0-9]+");
+    }
+
+    /**
+     * Legacy item data is damage only for the old durability-bearing IDs. The
+     * data must fit the modern Material's damage range; accepting arbitrary
+     * non-negative integers would create broken ItemStacks during import.
+     */
+    private static boolean isValidLegacyDurability(int id, String rawData) {
+        if (!LEGACY_DURABILITY_IDS.contains(id) || !isInteger(rawData)) return false;
+        int damage = parseInteger(rawData, Integer.MIN_VALUE);
+        if (damage < 0) return false;
+        String materialName = LEGACY_EQUIPMENT_IDS.get(id);
+        if (materialName == null) materialName = LEGACY_ITEM_MATERIALS.get(id);
+        if (materialName == null) return false;
+        org.bukkit.Material material = org.bukkit.Material.matchMaterial(materialName);
+        int maximum = material == null ? 0 : material.getMaxDurability();
+        return maximum > 0 && damage < maximum;
     }
 
     private static boolean isKnownLegacyItemId(int id) {

@@ -1746,6 +1746,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         == org.bukkit.attribute.AttributeModifier.Operation.ADD_SCALAR;
                 getLogger().info("item-attribute-options result=" + itemAttributes
                         + " modifiers=" + itemModifiers.size());
+                runLegacyNumericItemSelfTest(world, origin.clone().add(20, 0, 0));
             } catch (Throwable t) {
                 getLogger().warning("[自检] entity-options 异常: " + t);
             } finally {
@@ -1754,6 +1755,151 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 20L);
+    }
+
+    private void runLegacyNumericItemSelfTest(org.bukkit.World world, Location origin) {
+        Path sourceRoot = null;
+        ConfigurationSection previousItems = customItems;
+        org.bukkit.entity.Zombie equipmentProbe = null;
+        boolean imported = false;
+        boolean itemsMaterial = false;
+        boolean itemsDurability = false;
+        boolean itemsPotion = false;
+        boolean itemsBlockData = false;
+        boolean itemsAmount = false;
+        boolean equipmentMaterial = false;
+        boolean equipmentDurability = false;
+        boolean equipmentPotion = false;
+        boolean equipmentBlockData = false;
+        boolean equipmentAmount = false;
+        boolean invalidPreserved = false;
+        try {
+            sourceRoot = Files.createTempDirectory("helstera-legacy-item-import-");
+            Path itemSource = Files.createDirectories(sourceRoot.resolve("Items"))
+                    .resolve("legacy-items.yml");
+            Files.writeString(itemSource, """
+                    items:
+                      legacy_sword:
+                        Id: 276
+                        Data: 37
+                        Amount: 2
+                      legacy_potion:
+                        Id: 373
+                        Data: 8193
+                      legacy_slab:
+                        Id: 44
+                        Data: 8
+                      invalid_over:
+                        Id: 276
+                        Data: 1561
+                      invalid_negative:
+                        Id: 276
+                        Data: -1
+                      invalid_text:
+                        Id: 276
+                        Data: not-a-number
+                    """);
+            Path mobSource = Files.createDirectories(sourceRoot.resolve("Mobs"))
+                    .resolve("legacy-equipment.yml");
+            Files.writeString(mobSource, """
+                    mobs:
+                      LegacyEquipmentProbe:
+                        Type: ZOMBIE
+                        Equipment:
+                          - '276{data=37;amount=2} HAND'
+                          - '373{data=8193} OFFHAND'
+                          - '44{data=8} FEET'
+                    """);
+
+            var importer = new MythicMobsImporter();
+            var itemPlan = importer.convert(itemSource).stream()
+                    .filter(entry -> "items.yml".equals(entry.get("target-file"))
+                            && "mapped".equals(entry.get("status")))
+                    .findFirst().orElseThrow(() -> new IllegalStateException("legacy item plan missing"));
+            var itemConfig = YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                    String.valueOf(itemPlan.get("content"))));
+            var importedItems = itemConfig.getConfigurationSection("items");
+            if (importedItems == null) throw new IllegalStateException("legacy item section missing");
+            customItems = importedItems;
+
+            var sword = resolveConfiguredItem("legacy_sword");
+            var potion = resolveConfiguredItem("legacy_potion");
+            var slab = resolveConfiguredItem("legacy_slab");
+            itemsMaterial = sword != null && sword.getType() == org.bukkit.Material.DIAMOND_SWORD;
+            itemsDurability = sword != null && sword.getItemMeta() instanceof org.bukkit.inventory.meta.Damageable damageable
+                    && damageable.getDamage() == 37;
+            itemsAmount = sword != null && sword.getAmount() == 2;
+            itemsPotion = potion != null
+                    && potion.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta potionMeta
+                    && potionMeta.getBasePotionType() == org.bukkit.potion.PotionType.REGENERATION;
+            itemsBlockData = slab != null
+                    && slab.getItemMeta() instanceof org.bukkit.inventory.meta.BlockDataMeta blockMeta
+                    && blockMeta.getBlockData(slab.getType()) != null
+                    && blockMeta.getBlockData(slab.getType()).getAsString().contains("type=top");
+            invalidPreserved = "1561".equals(itemConfig.getString("items.invalid_over.unsupported.legacy-data"))
+                    && "-1".equals(itemConfig.getString("items.invalid_negative.unsupported.legacy-data"))
+                    && "not-a-number".equals(itemConfig.getString("items.invalid_text.unsupported.legacy-data"));
+
+            var mobPlan = importer.convert(mobSource).stream()
+                    .filter(entry -> String.valueOf(entry.get("target-file")).startsWith("mobs/")
+                            && "mapped".equals(entry.get("status")))
+                    .findFirst().orElseThrow(() -> new IllegalStateException("legacy equipment plan missing"));
+            var mobConfig = YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                    String.valueOf(mobPlan.get("content"))));
+            var equipment = mobConfig.getConfigurationSection("entity");
+            if (equipment == null) throw new IllegalStateException("legacy equipment section missing");
+            equipmentProbe = world.spawn(origin, org.bukkit.entity.Zombie.class);
+            applyEntityEquipment(equipmentProbe, equipment);
+            var liveEquipment = equipmentProbe.getEquipment();
+            var mainHand = liveEquipment == null ? null : liveEquipment.getItemInMainHand();
+            var offHand = liveEquipment == null ? null : liveEquipment.getItemInOffHand();
+            var boots = liveEquipment == null ? null : liveEquipment.getBoots();
+            equipmentMaterial = mainHand != null && mainHand.getType() == org.bukkit.Material.DIAMOND_SWORD;
+            equipmentDurability = mainHand != null
+                    && mainHand.getItemMeta() instanceof org.bukkit.inventory.meta.Damageable damageable
+                    && damageable.getDamage() == 37;
+            equipmentAmount = mainHand != null && mainHand.getAmount() == 2;
+            equipmentPotion = offHand != null
+                    && offHand.getType() == org.bukkit.Material.POTION
+                    && offHand.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta potionMeta
+                    && potionMeta.getBasePotionType() == org.bukkit.potion.PotionType.REGENERATION;
+            equipmentBlockData = boots != null
+                    && boots.getType() == org.bukkit.Material.STONE_SLAB
+                    && boots.getItemMeta() instanceof org.bukkit.inventory.meta.BlockDataMeta blockMeta
+                    && blockMeta.getBlockData(boots.getType()) != null
+                    && blockMeta.getBlockData(boots.getType()).getAsString().contains("type=top");
+            imported = true;
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] legacy-numeric-items exception: " + failure);
+        } finally {
+            customItems = previousItems;
+            if (equipmentProbe != null) equipmentProbe.remove();
+            if (sourceRoot != null) {
+                try (var paths = Files.walk(sourceRoot)) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("[自检] legacy-numeric-items cleanup failed: " + cleanupFailure);
+                }
+            }
+        }
+        boolean result = imported && itemsMaterial && itemsDurability && itemsPotion
+                && itemsBlockData && itemsAmount && equipmentMaterial && equipmentDurability
+                && equipmentPotion && equipmentBlockData && equipmentAmount && invalidPreserved;
+        getLogger().info("[自检] legacy-numeric-items imported=" + imported
+                + " items-material=" + itemsMaterial
+                + " items-durability=" + itemsDurability
+                + " items-potion=" + itemsPotion
+                + " items-block-data=" + itemsBlockData
+                + " items-amount=" + itemsAmount
+                + " equipment-material=" + equipmentMaterial
+                + " equipment-durability=" + equipmentDurability
+                + " equipment-potion=" + equipmentPotion
+                + " equipment-block-data=" + equipmentBlockData
+                + " equipment-amount=" + equipmentAmount
+                + " invalid-preserved=" + invalidPreserved
+                + " result=" + result);
     }
 
     private void runEntitySizeRangeSelfTest(org.bukkit.World world, Location origin,

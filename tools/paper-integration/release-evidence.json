@@ -1,4 +1,15 @@
-[
+[{
+    "fixtureId": "srv-paper-legacy-numeric-items-strict-20261108-r1",
+    "reportFixtureDirectory": "srv-paper-legacy-numeric-items-strict-20261108-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-legacy-numeric-items-strict-20261108-r1.json",
+    "reportSha256": "77895f7159fa09c975edc4b8dab8c61f8713b5b0fdf91c6228f34066759f1902",
+    "log": "tools/paper-integration/reports/paper-1.21.1-legacy-numeric-items-strict-20261108-r1.log.gz",
+    "logSha256": "6664b875c5e3e934b6733f0555d844e57d62c213c6095fc8b2c0e1b06bc84daa",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-legacy-numeric-items-strict-20261108-r1-client-logs.tar.gz",
+    "clientLogSha256": "4b33d91842231f069e2151aced2706725aebeca3e6b2e89e6416ca765013fece",
+    "pluginSha256": "bce3b592d25b24e3155ad9e88951c56f318ba7c1acf7f49db65366241842e709",
+    "fullReleaseCatalog": true
+  },
   {
     "fixtureId": "srv-paper-coordinate-difference-strict-20261108-r1",
     "reportFixtureDirectory": "srv-paper-coordinate-difference-strict-20261108-r1",

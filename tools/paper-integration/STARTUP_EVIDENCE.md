@@ -1,6 +1,25 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-population-conditions-strict-20261108-r2` passed
+Latest fixture `srv-paper-legacy-numeric-items-strict-20261108-r1` passed
+the full strict gate on Paper 1.21.1-133: 404 registered probes, 385 passed,
+19 expected rejections, and zero failed or incomplete. It verifies legacy
+numeric `Items` and Mob `Equipment` through the production importer and
+ItemStack path, including material, durability, PotionType, BlockData, amount,
+and invalid-data preservation. Report:
+[paper-1.21.1-legacy-numeric-items-strict-20261108-r1.json](reports/paper-1.21.1-legacy-numeric-items-strict-20261108-r1.json), SHA-256:
+`77895f7159fa09c975edc4b8dab8c61f8713b5b0fdf91c6228f34066759f1902`.
+Compressed server log SHA-256:
+`6664b875c5e3e934b6733f0555d844e57d62c213c6095fc8b2c0e1b06bc84daa`.
+Client log archive SHA-256:
+`4b33d91842231f069e2151aced2706725aebeca3e6b2e89e6416ca765013fece`.
+Plugin SHA-256:
+`bce3b592d25b24e3155ad9e88951c56f318ba7c1acf7f49db65366241842e709`.
+The strict probe covers both configured Items and inline Equipment, including
+durability bounds and preservation of invalid source values.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous fixture `srv-paper-population-conditions-strict-20261108-r2` passed
 the full strict gate on Paper 1.21.1-133: 403 registered probes, 384 passed,
 19 expected rejections, and zero failed or incomplete. It verifies imported
 Mythic `PlayersOnline`, `onlinePlayerCount`, `PlayersInWorld`, and
@@ -18,8 +37,6 @@ Plugin SHA-256:
 `9accae95e38c76fcf0a80af20ec1ad074c12a7ab33ead134d7c1685f405f7826`.
 The importer rejects non-finite numeric values and unknown population
 arguments instead of translating them into a misleading runtime condition.
-Archived logs redact web token query values; the source fixture retains the
-original run logs.
 
 Previous fixture `srv-paper-coordinate-difference-strict-20261108-r1` passed
 the full strict gate on Paper 1.21.1-133: 402 registered probes, 383 passed,
@@ -37,7 +54,7 @@ Client log archive SHA-256:
 `5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`.
 Plugin SHA-256:
 `d824761cdb575b50c5061706c7fde362b80f521aa9d4c46d68c296b7c64c343f`.
-Latest strict report has 402 probes, zero incomplete. Archived logs redact web
+Latest strict report has 404 probes, zero incomplete. Archived logs redact web
 token query values; the source fixture retains the original run logs.
 
 Previous fixture `srv-paper-context-relations-strict-20261108-r2` passed

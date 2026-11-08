@@ -38,7 +38,27 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-population-conditions-strict-20261108-r2`
+Latest strict fixture `srv-paper-legacy-numeric-items-strict-20261108-r1`
+passes all 404 probes (385 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies legacy numeric `Items` and Mob
+`Equipment` through the production importer and ItemStack path, including
+material, durability, PotionType, BlockData, amount, and invalid-data
+preservation. Report:
+`reports/paper-1.21.1-legacy-numeric-items-strict-20261108-r1.json`;
+server log:
+`reports/paper-1.21.1-legacy-numeric-items-strict-20261108-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-legacy-numeric-items-strict-20261108-r1-client-logs.tar.gz`.
+Report SHA-256: `77895f7159fa09c975edc4b8dab8c61f8713b5b0fdf91c6228f34066759f1902`;
+server log SHA-256: `6664b875c5e3e934b6733f0555d844e57d62c213c6095fc8b2c0e1b06bc84daa`;
+client log SHA-256: `4b33d91842231f069e2151aced2706725aebeca3e6b2e89e6416ca765013fece`;
+plugin SHA-256: `bce3b592d25b24e3155ad9e88951c56f318ba7c1acf7f49db65366241842e709`.
+The strict probe covers both configured Items and inline Equipment, including
+durability bounds and preservation of invalid source values.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-population-conditions-strict-20261108-r2`
 passes all 403 probes (384 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. It verifies imported Mythic
 `PlayersOnline`, `onlinePlayerCount`, `PlayersInWorld`, and `MobsInWorld`
@@ -57,8 +77,6 @@ client log SHA-256: `bb3fcd1c276b4c4bb8b956baf2d47dd1f7dbdbd8069048c5756d879b1a6
 plugin SHA-256: `9accae95e38c76fcf0a80af20ec1ad074c12a7ab33ead134d7c1685f405f7826`.
 The importer rejects non-finite numeric values and unknown population
 arguments instead of translating them into a misleading runtime condition.
-Archived logs redact web token query values; the source fixture retains the
-original run logs.
 
 Previous strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
 passes all 402 probes (383 passed, 19 expected rejections, zero failed or
@@ -77,7 +95,7 @@ Report SHA-256: `feb7799cbbcb65ef558060b07e677545aae4e7e7c64c1be54a95604146c8599
 server log SHA-256: `affaeaf4b94b359a05e6f49aac3814eb62f02d4480f82e1f36e148eae2663326`;
 client log SHA-256: `5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`;
 plugin SHA-256: `d824761cdb575b50c5061706c7fde362b80f521aa9d4c46d68c296b7c64c343f`.
-Latest strict report has 402 probes, zero incomplete. Archived logs redact web
+Latest strict report has 404 probes, zero incomplete. Archived logs redact web
 token query values; the source fixture retains the original run logs.
 
 Previous strict fixture `srv-paper-context-relations-strict-20261108-r2`
