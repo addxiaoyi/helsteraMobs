@@ -399,6 +399,13 @@ class MmConditionsTest {
         assertEquals("player-not-within 10", t("?playerNotWithin{distance=10}"));
         assertEquals("random-chance 25", t("?randomChance{chance=25}"));
         assertFalse(translated("?randomChance{chance=invalid}"));
+        for (String invalid : List.of(
+                "?playersOnline{amount=NaN}",
+                "?onlinePlayerCount{a=Infinity}",
+                "?playersInWorld{unknown=5}",
+                "?mobsInWorld{amount=1;unknown=true}")) {
+            assertUntranslatedPreserved(invalid);
+        }
         assertEquals("global-cooldown __mythic_gcd 1", t("?offgcd"));
         assertEquals("target-count-at-least 2", t("?targetCount{min=2}"));
         assertEquals("hunger-below 10", t("?hungerBelow{level=10}"));

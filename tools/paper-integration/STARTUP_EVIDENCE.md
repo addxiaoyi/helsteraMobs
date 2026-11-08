@@ -1,11 +1,34 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-coordinate-difference-strict-20261108-r1` passed
+Latest fixture `srv-paper-population-conditions-strict-20261108-r2` passed
+the full strict gate on Paper 1.21.1-133: 403 registered probes, 384 passed,
+19 expected rejections, and zero failed or incomplete. It verifies imported
+Mythic `PlayersOnline`, `onlinePlayerCount`, `PlayersInWorld`, and
+`MobsInWorld` through the production importer and condition runtime, including
+positive live counts, large-threshold negative controls, and malformed/unknown
+argument preservation. The aggregate `conditionUtilityAliases` probe also
+passes. Report:
+[paper-1.21.1-population-conditions-strict-20261108-r2.json](reports/paper-1.21.1-population-conditions-strict-20261108-r2.json), SHA-256:
+`67d7b23a3e96802fcf990e3a5e5c8315ef62429ea78d5cb4fffb20339f93b976`.
+Compressed server log SHA-256:
+`dc10faaba09fefe535083a34db7b189e77e0a28670a75005ddd7d3e763f62cf1`.
+Client log archive SHA-256:
+`bb3fcd1c276b4c4bb8b956baf2d47dd1f7dbdbd8069048c5756d879b1a6bf86e`.
+Plugin SHA-256:
+`9accae95e38c76fcf0a80af20ec1ad074c12a7ab33ead134d7c1685f405f7826`.
+The importer rejects non-finite numeric values and unknown population
+arguments instead of translating them into a misleading runtime condition.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous fixture `srv-paper-coordinate-difference-strict-20261108-r1` passed
 the full strict gate on Paper 1.21.1-133: 402 registered probes, 383 passed,
 19 expected rejections, and zero failed or incomplete. It verifies imported
 Mythic `XDiff`, `YDiff`, and `ZDiff` aliases through the production importer
 and condition runtime, including positive axis ranges, out-of-range rejection,
-and malformed-input preservation. Report:
+and malformed-input preservation. The same catalog verifies imported owner,
+online-owner, leash, cleanup rejection, and missing-target fail-closed target
+relationship paths. Report:
 [paper-1.21.1-coordinate-difference-strict-20261108-r1.json](reports/paper-1.21.1-coordinate-difference-strict-20261108-r1.json), SHA-256:
 `feb7799cbbcb65ef558060b07e677545aae4e7e7c64c1be54a95604146c85996`.
 Compressed server log SHA-256:

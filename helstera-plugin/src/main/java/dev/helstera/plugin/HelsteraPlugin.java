@@ -4127,6 +4127,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean targetKillMechanic = false;
             boolean damageMeleeMechanic = false;
             boolean conditionUtilityAliases = false;
+            boolean importedPopulationConditions = false;
             boolean snowingCondition = false;
             boolean snowingTargetMoved = false;
             boolean snowingTargetPositive = false;
@@ -7172,6 +7173,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().info("survival-mode-condition positive=" + survivalAccepted
                         + " negative=" + survivalRejected
                         + " restored=" + survivalModeRestored);
+                importedPopulationConditions = runImportedPopulationConditionsSelfTest(
+                        skills, behaviors, conditionContext);
                 conditionUtilityAliases = utilityInCombat && utilityTargetCount
                         && utilityMobsRadius && utilityMobsOrigin && utilitySpawnDistance
                         && utilitySpawnDistanceExact && utilitySpawnDistanceOverRejected
@@ -7221,6 +7224,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && enderDragonAliveCondition
                         && enderDragonPhaseCondition
                         && survivalModeCondition
+                        && importedPopulationConditions
                         && behaviors.testCondition(
                         skills.bindCondition("is-mythic-mob"), context)
                         && behaviors.testCondition(
@@ -9762,6 +9766,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " imported-name-condition=" + importedNameCondition
                         + " imported-server-condition=" + importedServerCondition
                         + " imported-coordinate-difference-condition=" + importedCoordinateDifferenceCondition
+                        + " imported-population-conditions=" + importedPopulationConditions
                         + " moisture-conditions=" + moistureConditions
                         + " mob-size-condition=" + mobSizeCondition
                         + " block-type-radius-condition=" + blockTypeRadiusCondition
@@ -10002,6 +10007,117 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " passengers=" + passengers + " mount=" + mount + " vehicle=" + vehicle
                 + " owner-location=" + ownerLocation + " parent-location=" + parentLocation
                 + " invalid-rejected=" + invalidRejected + " passed=" + passed);
+    }
+
+    private boolean runImportedPopulationConditionsSelfTest(
+            SkillService skills,
+            BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext conditionContext) {
+        var importedPlayersOnline = dev.helstera.migration.importer.MmConditions.translate(
+                "?playersOnline{amount=>=1}");
+        var importedOnlinePlayerCount = dev.helstera.migration.importer.MmConditions.translate(
+                "?onlinePlayerCount{a=>=1}");
+        var importedPlayersInWorld = dev.helstera.migration.importer.MmConditions.translate(
+                "?playersInWorld{a=>=1}");
+        var importedMobsInWorld = dev.helstera.migration.importer.MmConditions.translate(
+                "?mobsInWorld{a=>=1}");
+        var importedPlayersOnlineNegative = dev.helstera.migration.importer.MmConditions.translate(
+                "?playersOnline{amount=>1000000}");
+        var importedOnlinePlayerCountNegative = dev.helstera.migration.importer.MmConditions.translate(
+                "?onlinePlayerCount{a=>1000000}");
+        var importedPlayersInWorldNegative = dev.helstera.migration.importer.MmConditions.translate(
+                "?playersInWorld{a=>1000000}");
+        var importedMobsInWorldNegative = dev.helstera.migration.importer.MmConditions.translate(
+                "?mobsInWorld{a=>1000000}");
+
+        boolean playersOnlineMapped = importedPlayersOnline.translated()
+                && "players-online >=1".equals(importedPlayersOnline.condition());
+        boolean onlinePlayerCountMapped = importedOnlinePlayerCount.translated()
+                && "players-online >=1".equals(importedOnlinePlayerCount.condition());
+        boolean playersInWorldMapped = importedPlayersInWorld.translated()
+                && "players-in-world >=1".equals(importedPlayersInWorld.condition());
+        boolean mobsInWorldMapped = importedMobsInWorld.translated()
+                && "mobs-in-world >=1".equals(importedMobsInWorld.condition());
+        boolean playersOnlineNegativeMapped = importedPlayersOnlineNegative.translated()
+                && "players-online >1000000".equals(importedPlayersOnlineNegative.condition());
+        boolean onlinePlayerCountNegativeMapped = importedOnlinePlayerCountNegative.translated()
+                && "players-online >1000000".equals(importedOnlinePlayerCountNegative.condition());
+        boolean playersInWorldNegativeMapped = importedPlayersInWorldNegative.translated()
+                && "players-in-world >1000000".equals(importedPlayersInWorldNegative.condition());
+        boolean mobsInWorldNegativeMapped = importedMobsInWorldNegative.translated()
+                && "mobs-in-world >1000000".equals(importedMobsInWorldNegative.condition());
+
+        String playersOnlineKey = playersOnlineMapped
+                ? skills.bindCondition(importedPlayersOnline.condition()) : null;
+        String onlinePlayerCountKey = onlinePlayerCountMapped
+                ? skills.bindCondition(importedOnlinePlayerCount.condition()) : null;
+        String playersInWorldKey = playersInWorldMapped
+                ? skills.bindCondition(importedPlayersInWorld.condition()) : null;
+        String mobsInWorldKey = mobsInWorldMapped
+                ? skills.bindCondition(importedMobsInWorld.condition()) : null;
+        String playersOnlineNegativeKey = playersOnlineNegativeMapped
+                ? skills.bindCondition(importedPlayersOnlineNegative.condition()) : null;
+        String onlinePlayerCountNegativeKey = onlinePlayerCountNegativeMapped
+                ? skills.bindCondition(importedOnlinePlayerCountNegative.condition()) : null;
+        String playersInWorldNegativeKey = playersInWorldNegativeMapped
+                ? skills.bindCondition(importedPlayersInWorldNegative.condition()) : null;
+        String mobsInWorldNegativeKey = mobsInWorldNegativeMapped
+                ? skills.bindCondition(importedMobsInWorldNegative.condition()) : null;
+
+        boolean playersOnlinePositive = playersOnlineKey != null
+                && behaviors.testCondition(playersOnlineKey, conditionContext);
+        boolean onlinePlayerCountPositive = onlinePlayerCountKey != null
+                && behaviors.testCondition(onlinePlayerCountKey, conditionContext);
+        boolean playersInWorldPositive = playersInWorldKey != null
+                && behaviors.testCondition(playersInWorldKey, conditionContext);
+        boolean mobsInWorldPositive = mobsInWorldKey != null
+                && behaviors.testCondition(mobsInWorldKey, conditionContext);
+        boolean playersOnlineNegative = playersOnlineNegativeKey != null
+                && !behaviors.testCondition(playersOnlineNegativeKey, conditionContext);
+        boolean onlinePlayerCountNegative = onlinePlayerCountNegativeKey != null
+                && !behaviors.testCondition(onlinePlayerCountNegativeKey, conditionContext);
+        boolean playersInWorldNegative = playersInWorldNegativeKey != null
+                && !behaviors.testCondition(playersInWorldNegativeKey, conditionContext);
+        boolean mobsInWorldNegative = mobsInWorldNegativeKey != null
+                && !behaviors.testCondition(mobsInWorldNegativeKey, conditionContext);
+
+        boolean invalidPreserved = true;
+        for (String source : java.util.List.of(
+                "?playersOnline{unknown=true}",
+                "?playersInWorld{a=NaN}",
+                "?mobsInWorld{a=not-a-number}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            invalidPreserved &= !mapped.translated() && source.equals(mapped.condition());
+        }
+        boolean result = playersOnlineMapped && onlinePlayerCountMapped
+                && playersInWorldMapped && mobsInWorldMapped
+                && playersOnlineNegativeMapped && onlinePlayerCountNegativeMapped
+                && playersInWorldNegativeMapped && mobsInWorldNegativeMapped
+                && playersOnlinePositive && onlinePlayerCountPositive
+                && playersInWorldPositive && mobsInWorldPositive
+                && playersOnlineNegative && onlinePlayerCountNegative
+                && playersInWorldNegative && mobsInWorldNegative
+                && invalidPreserved;
+        getLogger().info("[自检] imported-population-conditions"
+                + " players-online-mapped=" + playersOnlineMapped
+                + " online-alias-mapped=" + onlinePlayerCountMapped
+                + " players-world-mapped=" + playersInWorldMapped
+                + " mobs-world-mapped=" + mobsInWorldMapped
+                + " players-online-negative-mapped=" + playersOnlineNegativeMapped
+                + " online-alias-negative-mapped=" + onlinePlayerCountNegativeMapped
+                + " players-world-negative-mapped=" + playersInWorldNegativeMapped
+                + " mobs-world-negative-mapped=" + mobsInWorldNegativeMapped
+                + " players-online-positive=" + playersOnlinePositive
+                + " online-alias-positive=" + onlinePlayerCountPositive
+                + " players-world-positive=" + playersInWorldPositive
+                + " mobs-world-positive=" + mobsInWorldPositive
+                + " players-online-negative=" + playersOnlineNegative
+                + " online-alias-negative=" + onlinePlayerCountNegative
+                + " players-world-negative=" + playersInWorldNegative
+                + " mobs-world-negative=" + mobsInWorldNegative
+                + " invalid-preserved=" + invalidPreserved
+                + " result=" + result);
+        return result;
     }
 
     private boolean runImportedCoordinateDifferenceSelfTest(

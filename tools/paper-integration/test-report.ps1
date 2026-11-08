@@ -110,6 +110,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-name-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true default-name-rejected=true fallback=true custom-name-rejected=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-server-conditions paper-primary=true paper-alias=true exact=true exact-negative=true after-inclusive=true after-exclusive-rejected=true after-higher-rejected=true before-inclusive=true before-exclusive-rejected=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] imported-coordinate-difference-condition primary-mapped=true alias-mapped=true x-positive=true y-positive=true z-positive=true out-of-range-rejected=true invalid-preserved=true result=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-population-conditions players-online-mapped=true online-alias-mapped=true players-world-mapped=true mobs-world-mapped=true players-online-negative-mapped=true online-alias-negative-mapped=true players-world-negative-mapped=true mobs-world-negative-mapped=true players-online-positive=true online-alias-positive=true players-world-positive=true mobs-world-positive=true players-online-negative=true online-alias-negative=true players-world-negative=true mobs-world-negative=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true',
         '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true in-combat-condition=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
@@ -457,6 +458,7 @@ try {
             'importedMobDefaults',
             'importedServerConditions',
             'importedCoordinateDifferenceCondition',
+            'importedPopulationConditions',
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
@@ -488,6 +490,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'importedNameCondition').status -eq 'passed') 'imported Name aliases require custom-name priority, entity-name fallback, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedServerConditions').status -eq 'passed') 'imported server conditions require Paper identity, version comparisons, boundary controls, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedCoordinateDifferenceCondition').status -eq 'passed') 'imported coordinate difference conditions require strict Paper mapping, positive axes, out-of-range rejection, and malformed-input evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedPopulationConditions').status -eq 'passed') 'imported population conditions require strict Paper aliases, positive counts, out-of-range rejection, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedColorCondition').status -eq 'passed') 'imported Color and clr require strict Paper positive and negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedHasEnchantmentCondition').status -eq 'passed') 'imported HasEnchantment requires strict Paper mapping, level and type evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedTriggerItemTypeCondition').status -eq 'passed') 'imported TriggerItemType requires strict Paper mapping and positive/negative evidence'
@@ -1218,6 +1221,10 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedCoordinateDifferenceCondition'; status = 'passed'; observations = @('imported-coordinate-difference-condition primary-mapped=true alias-mapped=true x-positive=true y-positive=true z-positive=true out-of-range-rejected=true invalid-preserved=true result=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'importedPopulationConditions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedPopulationConditions'; status = 'passed'; observations = @('imported-population-conditions players-online-mapped=true online-alias-mapped=true players-world-mapped=true mobs-world-mapped=true players-online-negative-mapped=true online-alias-negative-mapped=true players-world-negative-mapped=true mobs-world-negative-mapped=true players-online-positive=true online-alias-positive=true players-world-positive=true mobs-world-positive=true players-online-negative=true online-alias-negative=true players-world-negative=true mobs-world-negative=true invalid-preserved=true result=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'spawningDistanceClientWalk'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'spawningDistanceClientWalk'; status = 'passed'; observations = @('spawning-distance-client-walk result=true player-displacement=14.25 player-entity-distance=12.25 instance-removed=true entity-removed=true despawn-elapsed-ticks=3 decision-period-ticks=10')
@@ -1887,6 +1894,30 @@ try {
     Assert-True $missingImportedCoordinateRejected 'full release gate rejects missing imported coordinate difference evidence'
     $fullCatalogReport.expectedProbeIds += 'importedCoordinateDifferenceCondition'
     $fullCatalogReport.probes += $importedCoordinateProbe
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $importedPopulationProbe = $fullCatalogReport.probes | Where-Object id -eq 'importedPopulationConditions'
+    $importedPopulationObservations = @($importedPopulationProbe.observations)
+    $failedImportedPopulationObservation = ([string]$importedPopulationObservations[0]) -replace 'mobs-world-positive=true', 'mobs-world-positive=false'
+    $importedPopulationProbe.observations = @($failedImportedPopulationObservation)
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badImportedPopulationRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badImportedPopulationRejected = $_.Exception.Message -match 'required observation for importedPopulationConditions' }
+    Assert-True $badImportedPopulationRejected 'full release gate rejects failed imported population condition evidence'
+    $importedPopulationProbe.observations = $importedPopulationObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'importedPopulationConditions' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'importedPopulationConditions' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingImportedPopulationRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingImportedPopulationRejected = $_.Exception.Message -match 'importedPopulationConditions' }
+    Assert-True $missingImportedPopulationRejected 'full release gate rejects missing imported population condition evidence'
+    $fullCatalogReport.expectedProbeIds += 'importedPopulationConditions'
+    $fullCatalogReport.probes += $importedPopulationProbe
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $catOptionsObservations = $fullCatalogCatOptions[0].observations
     $fullCatalogCatOptions[0].observations = @('cat-options result=true')

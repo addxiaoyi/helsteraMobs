@@ -605,13 +605,13 @@ public final class MmConditions {
         }
         if ("playersonline".equals(name) || "onlineplayercount".equals(name)
                 || "onlineplayers".equals(name)) {
-            return numericCondition(body, "players-online", s, "amount", "a");
+            return strictNumericCondition(body, "players-online", s, "amount", "a");
         }
         if ("playersinworld".equals(name)) {
-            return numericCondition(body, "players-in-world", s, "amount", "a");
+            return strictNumericCondition(body, "players-in-world", s, "amount", "a");
         }
         if ("mobsinworld".equals(name)) {
-            return numericCondition(body, "mobs-in-world", s, "amount", "a");
+            return strictNumericCondition(body, "mobs-in-world", s, "amount", "a");
         }
         if ("playerwithin".equals(name) || "playerswithin".equals(name)) {
             return radiusOnlyCondition(body, "player-within", s);
@@ -1966,7 +1966,7 @@ public final class MmConditions {
     private static Mapped numericCondition(String body, String runtimeName, String original,
                                            String... keys) {
         if (body == null || body.isBlank()) return new Mapped(runtimeName + " >=0", true);
-        String value = firstArgument(body, keys);
+        String value = keys.length == 0 ? body.trim() : firstArgument(body, keys);
         if (value == null) value = normalizeScalar(body);
         if (value == null) return new Mapped(original, false);
         value = value.trim();
@@ -1983,11 +1983,40 @@ public final class MmConditions {
         else if (value.startsWith("==")) { value = value.substring(2).trim(); }
         else if (value.startsWith("=")) value = value.substring(1).trim();
         try {
-            Double.parseDouble(value);
+            if (!Double.isFinite(Double.parseDouble(value))) return new Mapped(original, false);
             return new Mapped(runtimeName + " " + operator + value, true);
         } catch (NumberFormatException ignored) {
             return new Mapped(original, false);
         }
+    }
+
+    private static Mapped strictNumericCondition(String body, String runtimeName, String original,
+                                                 String... keys) {
+        if (body == null || body.isBlank()) return new Mapped(runtimeName + " >=0", true);
+        String value = null;
+        for (String rawPart : body.split("[;,]", -1)) {
+            String part = rawPart.trim();
+            if (part.isEmpty()) return new Mapped(original, false);
+            int equals = part.indexOf('=');
+            String candidate;
+            if (equals > 0) {
+                String key = part.substring(0, equals).trim();
+                boolean known = false;
+                for (String expected : keys) {
+                    if (expected.equalsIgnoreCase(key)) {
+                        known = true;
+                        break;
+                    }
+                }
+                if (!known) return new Mapped(original, false);
+                candidate = part.substring(equals + 1).trim();
+            } else {
+                candidate = part;
+            }
+            if (candidate.isBlank() || value != null) return new Mapped(original, false);
+            value = candidate;
+        }
+        return numericCondition(value, runtimeName, original);
     }
 
     private static Mapped radiusOnlyCondition(String body, String runtimeName, String original) {

@@ -1854,5 +1854,15 @@
     "clientLogSha256": "fb69a65fb4b872f3b1031de451d4e83efc55034d55fda440af99a5cf230c21e7",
     "pluginSha256": "7e4b194a8beb0645e457108ab19d349c9888c783b74724d2cdb78ed533fecc91",
     "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-population-conditions-strict-20261108-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-population-conditions-strict-20261108-r2.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-population-conditions-strict-20261108-r2.log.gz",
+    "logSha256": "dc10faaba09fefe535083a34db7b189e77e0a28670a75005ddd7d3e763f62cf1",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-population-conditions-strict-20261108-r2-client-logs.tar.gz",
+    "clientLogSha256": "bb3fcd1c276b4c4bb8b956baf2d47dd1f7dbdbd8069048c5756d879b1a6bf86e",
+    "pluginSha256": "9accae95e38c76fcf0a80af20ec1ad074c12a7ab33ead134d7c1685f405f7826",
+    "fullReleaseCatalog": true
   }
 ]

@@ -2,12 +2,32 @@
 
 ## MythicMobs Parity Development Status (2026-11-08)
 
-Latest strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
+Latest strict fixture `srv-paper-population-conditions-strict-20261108-r2`
+passes all 403 release probes (384 passed, 19 expected rejections, zero failed
+or incomplete) on Paper 1.21.1-133. It verifies imported Mythic
+`PlayersOnline`, `onlinePlayerCount`, `PlayersInWorld`, and `MobsInWorld`
+through the production importer and condition runtime: positive live counts,
+large-threshold negative controls, and preservation of malformed or unknown
+arguments. The aggregate `conditionUtilityAliases` probe also passes. Report:
+`tools/paper-integration/reports/paper-1.21.1-population-conditions-strict-20261108-r2.json`
+(SHA-256 `67d7b23a3e96802fcf990e3a5e5c8315ef62429ea78d5cb4fffb20339f93b976`).
+Compressed server log SHA-256:
+`dc10faaba09fefe535083a34db7b189e77e0a28670a75005ddd7d3e763f62cf1`.
+Client log archive SHA-256:
+`bb3fcd1c276b4c4bb8b956baf2d47dd1f7dbdbd8069048c5756d879b1a6bf86e`.
+Plugin SHA-256:
+`9accae95e38c76fcf0a80af20ec1ad074c12a7ab33ead134d7c1685f405f7826`.
+The importer now rejects non-finite numeric values and unknown population
+arguments instead of translating them into a misleading runtime condition.
+
+Previous strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
 passes all 402 release probes (383 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. It verifies imported Mythic `XDiff`,
 `YDiff`, and `ZDiff` aliases through the production importer and condition
 runtime, including positive axis ranges, out-of-range rejection, and malformed
-input preservation. Report:
+input preservation. The same catalog includes strict imported target
+relationship evidence for owner, online-owner, leash, cleanup rejection, and
+missing-target fail-closed behavior. Report:
 `tools/paper-integration/reports/paper-1.21.1-coordinate-difference-strict-20261108-r1.json`
 (SHA-256 `feb7799cbbcb65ef558060b07e677545aae4e7e7c64c1be54a95604146c85996`).
 Compressed server log SHA-256:
@@ -929,7 +949,7 @@ the entire MythicMobs feature catalog.
 - Direct camel-case condition names such as `isOnGround`, `isInWater`, `isInLava`, `isInAir`, `isOnFire`, `isBlocked`, `standOn`, and `daylight` now bind to the same canonical Bukkit evaluators as migrated forms.
 - Parameterless Mythic time/weather aliases `morning`, `noon`, `midnight`, `clear`, `sun`, `rain`, `storm`, `thunder`, and `thunderstorm` now translate to registered runtime conditions; `MmConditionsTest` and the cross-module runtime binding contract cover the importer path and fail-closed registration boundary.
 - `TargetIsFrozen`/`TargetFrozen` now map to `target-is-frozen`, which reads Bukkit `Entity#isFrozen()` and fails closed without a target; importer and runtime tests cover both aliases and both state outcomes.
-- Target relationship aliases now include `TargetIsLeashed`, `TargetHasOwner`, `TargetOwnerIsPlayer`, and `TargetOwnerIsOnline`; they use the explicit target entity and fail closed when target or owner data is absent. Paper strict evidence for these target relationship paths remains open.
+- Target relationship aliases now include `TargetIsLeashed`, `TargetHasOwner`, `TargetOwnerIsPlayer`, and `TargetOwnerIsOnline`; they use the explicit target entity and fail closed when target or owner data is absent. Strict fixture `srv-paper-coordinate-difference-strict-20261108-r1` verifies the imported owner, online-owner, leash, cleanup rejection, and missing-target paths through `importedTargetRelationshipsCondition`.
 - Mythic `FoodSaturation`/`hungerSaturation` conditions now use Bukkit saturation comparators, including explicit target context; strict Paper fixture `srv-paper-drowning-strict-20261102-r2` verifies `<=1` at saturation 1.0 and rejects it at 2.0, restoring the player's original saturation.
 - Mythic `LastDamageCause` is mapped separately from current event `damage-cause` and reads the target entity's stored Bukkit damage event; strict Paper fixture `srv-paper-drowning-strict-20261102-r2` requires and passes the dedicated `lastDamageCauseCondition` probe, including FIRE acceptance and ENTITY_ATTACK rejection.
 - Mythic `Drowning`/`IsDrowning` comparator input rejects malformed and non-finite air values during migration; runtime binding validates the numeric comparator and reads caster `LivingEntity#getRemainingAir()`. Unit and strict Paper verified by `srv-paper-drowning-strict-20261102-r2`; broader Conditions parity remains incomplete.
@@ -937,7 +957,7 @@ the entire MythicMobs feature catalog.
 - Exploratory Paper r48 also verifies the stored FIRE cause path and rejects ENTITY_ATTACK for `LastDamageCause`.
 - Mythic `MotionX`/`MotionY`/`MotionZ`/`Velocity` conditions now use target velocity comparator evaluators; exploratory Paper coverage is included in the skill self-test.
 - Exploratory Paper r49 verifies all three velocity components and vector magnitude on a real target.
-- Mythic `PlayersOnline`/`PlayersInWorld`/`MobsInWorld` conditions now use Bukkit world population comparators; exploratory Paper r50 verifies the live counts.
+- Mythic `PlayersOnline`/`onlinePlayerCount`/`PlayersInWorld`/`MobsInWorld` conditions now use strict importer mappings and Bukkit population comparators. Strict Paper fixture `srv-paper-population-conditions-strict-20261108-r2` verifies positive live counts, large-threshold negatives, and malformed/unknown argument preservation in the complete 403-probe release catalog.
 - Mythic `PlayerWithin`/`PlayerNotWithin` conditions now use world-safe online-player radius checks with explicit-target semantics.
 - Exploratory Paper r51 verifies the positive/negative player-radius pair for a real online target.
 - Mythic `isCaster` now compares active target identity with the managed caster explicitly.

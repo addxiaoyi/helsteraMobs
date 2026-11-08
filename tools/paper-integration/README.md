@@ -38,12 +38,36 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
+Latest strict fixture `srv-paper-population-conditions-strict-20261108-r2`
+passes all 403 probes (384 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies imported Mythic
+`PlayersOnline`, `onlinePlayerCount`, `PlayersInWorld`, and `MobsInWorld`
+through the production importer and condition runtime, including positive live
+counts, large-threshold negative controls, and malformed/unknown argument
+preservation. The aggregate `conditionUtilityAliases` probe also passes.
+Report:
+`reports/paper-1.21.1-population-conditions-strict-20261108-r2.json`;
+server log:
+`reports/paper-1.21.1-population-conditions-strict-20261108-r2.log.gz`;
+client logs:
+`reports/paper-1.21.1-population-conditions-strict-20261108-r2-client-logs.tar.gz`.
+Report SHA-256: `67d7b23a3e96802fcf990e3a5e5c8315ef62429ea78d5cb4fffb20339f93b976`;
+server log SHA-256: `dc10faaba09fefe535083a34db7b189e77e0a28670a75005ddd7d3e763f62cf1`;
+client log SHA-256: `bb3fcd1c276b4c4bb8b956baf2d47dd1f7dbdbd8069048c5756d879b1a6bf86e`;
+plugin SHA-256: `9accae95e38c76fcf0a80af20ec1ad074c12a7ab33ead134d7c1685f405f7826`.
+The importer rejects non-finite numeric values and unknown population
+arguments instead of translating them into a misleading runtime condition.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
 passes all 402 probes (383 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. It verifies imported Mythic `XDiff`, `YDiff`,
 and `ZDiff` aliases through the production importer and condition runtime,
 including positive axis ranges, out-of-range rejection, and malformed input
-preservation. Report:
+preservation. The same catalog verifies imported owner, online-owner, leash,
+cleanup rejection, and missing-target fail-closed target relationship paths.
+Report:
 `reports/paper-1.21.1-coordinate-difference-strict-20261108-r1.json`;
 server log:
 `reports/paper-1.21.1-coordinate-difference-strict-20261108-r1.log.gz`;
@@ -1602,9 +1626,12 @@ trigger state rejects. The same r113 exploratory run records
 
 The catalog also checks official `XDiff`/`YDiff`/`ZDiff` against the real
 managed caster and target locations. Positive coordinate ranges pass and an
-out-of-range X difference rejects. Exploratory Paper 1.21.11 r114 records
-`coordinate-difference-condition=true`; strict Paper 1.21.1 release evidence
-remains separate.
+out-of-range X difference rejects. The strict Paper 1.21.1-133 catalog records
+`importedCoordinateDifferenceCondition` with primary and alias mapping,
+positive X/Y/Z ranges, out-of-range rejection, and malformed-input
+preservation. The same report carries
+`importedTargetRelationshipsCondition` for owner, online-owner, leash, cleanup
+rejection, and missing-target fail-closed behavior.
 
 The catalog also checks official `OriginLocation` against a real execution
 origin: block-coordinate and exact-coordinate matches pass, while a distant
