@@ -852,6 +852,11 @@
       "requiredObservationPattern": "^horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0\\.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0\\.4$"
     },
     {
+      "id": "rabbitOptionsImported",
+      "status": "passed",
+      "requiredObservation": "rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true"
+    },
+    {
       "id": "invulnerableCondition",
       "status": "passed"
     },

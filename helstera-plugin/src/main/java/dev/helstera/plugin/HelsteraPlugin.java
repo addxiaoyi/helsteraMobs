@@ -1604,6 +1604,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " items=" + armorStandItems);
 
                 runImportedCatOptionsSelfTest(world, origin.clone().add(6, 0, 0));
+                runImportedRabbitOptionsSelfTest(origin.clone().add(8, 0, 0));
                 runImportedHorseOptionsSelfTest(origin.clone().add(32, 0, 0));
 
                 var falling = world.spawnFallingBlock(origin.clone().add(8, 0, 0),
@@ -2757,6 +2758,145 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 try { Files.deleteIfExists(outputDirectory); }
                 catch (IOException ignored) { }
             }
+        }
+    }
+
+    private void runImportedRabbitOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-rabbit-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("rabbit-options.yml");
+            String configuredMobId = "ImportedRabbitConfigured_" + suffix;
+            String controlMobId = "ImportedRabbitControl_" + suffix;
+            String wrongTypeMobId = "ImportedRabbitWrongType_" + suffix;
+            String invalidMobId = "ImportedRabbitInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: RABBIT
+                        Options:
+                          RabbitType: SALT_AND_PEPPER
+                      %2$s:
+                        Type: RABBIT
+                        Options:
+                          RabbitType: BROWN
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          RabbitType: BLACK
+                      %4$s:
+                        Type: RABBIT
+                        Options:
+                          RabbitType: NOT_A_RABBIT
+                    """.formatted(configuredMobId, controlMobId, wrongTypeMobId, invalidMobId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Rabbit mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Rabbit mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            var sourceIds = java.util.List.of(configuredMobId, controlMobId, wrongTypeMobId, invalidMobId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic RabbitType probe mobs were not all imported");
+            }
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0),
+                    origin.clone().add(6, 0, 0), origin.clone().add(9, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        locations.get(i), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var configuredInstance = instances().impl(spawnedIds.get(configuredMobId));
+            var controlInstance = instances().impl(spawnedIds.get(controlMobId));
+            var wrongTypeInstance = instances().impl(spawnedIds.get(wrongTypeMobId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidMobId));
+            var configuredRabbit = configuredInstance == null ? null : configuredInstance.baseEntity()
+                    .filter(org.bukkit.entity.Rabbit.class::isInstance)
+                    .map(org.bukkit.entity.Rabbit.class::cast).orElse(null);
+            var controlRabbit = controlInstance == null ? null : controlInstance.baseEntity()
+                    .filter(org.bukkit.entity.Rabbit.class::isInstance)
+                    .map(org.bukkit.entity.Rabbit.class::cast).orElse(null);
+            var wrongTypeEntity = wrongTypeInstance == null ? null : wrongTypeInstance.baseEntity().orElse(null);
+            var invalidRabbit = invalidInstance == null ? null : invalidInstance.baseEntity()
+                    .filter(org.bukkit.entity.Rabbit.class::isInstance)
+                    .map(org.bukkit.entity.Rabbit.class::cast).orElse(null);
+
+            var configuredOptions = mobConfig(targetIds.get(configuredMobId));
+            var controlOptions = mobConfig(targetIds.get(controlMobId));
+            var wrongTypeOptions = mobConfig(targetIds.get(wrongTypeMobId));
+            var invalidOptions = mobConfig(targetIds.get(invalidMobId));
+            var configuredEntityOptions = configuredOptions == null ? null
+                    : configuredOptions.getConfigurationSection("entity");
+            var controlEntityOptions = controlOptions == null ? null
+                    : controlOptions.getConfigurationSection("entity");
+            var wrongTypeEntityOptions = wrongTypeOptions == null ? null
+                    : wrongTypeOptions.getConfigurationSection("entity");
+            var invalidEntityOptions = invalidOptions == null ? null
+                    : invalidOptions.getConfigurationSection("entity");
+            var wrongTypeUnsupported = wrongTypeEntityOptions == null ? null
+                    : wrongTypeEntityOptions.getConfigurationSection("unsupported.Options");
+            var invalidUnsupported = invalidEntityOptions == null ? null
+                    : invalidEntityOptions.getConfigurationSection("unsupported.Options");
+
+            boolean imported = configuredRabbit != null && controlRabbit != null && invalidRabbit != null
+                    && configuredEntityOptions != null && controlEntityOptions != null
+                    && wrongTypeUnsupported != null && invalidUnsupported != null
+                    && "SALT_AND_PEPPER".equalsIgnoreCase(
+                            configuredEntityOptions.getString("rabbit-type"))
+                    && "BROWN".equalsIgnoreCase(controlEntityOptions.getString("rabbit-type"))
+                    && "BLACK".equalsIgnoreCase(
+                            wrongTypeUnsupported.getString("RabbitType"))
+                    && "NOT_A_RABBIT".equalsIgnoreCase(
+                            invalidUnsupported.getString("RabbitType"))
+                    && !wrongTypeEntityOptions.contains("rabbit-type")
+                    && !invalidEntityOptions.contains("rabbit-type");
+            boolean applied = imported
+                    && configuredRabbit.getRabbitType() == org.bukkit.entity.Rabbit.Type.SALT_AND_PEPPER
+                    && controlRabbit.getRabbitType() == org.bukkit.entity.Rabbit.Type.BROWN
+                    && invalidRabbit.getRabbitType() != null;
+            boolean wrongTypePreserved = wrongTypeEntity instanceof org.bukkit.entity.Zombie;
+            boolean invalidPreserved = invalidRabbit != null
+                    && invalidEntityOptions != null
+                    && !invalidEntityOptions.contains("rabbit-type")
+                    && invalidUnsupported != null
+                    && "NOT_A_RABBIT".equalsIgnoreCase(
+                            invalidUnsupported.getString("RabbitType"));
+            boolean passed = imported && applied && wrongTypePreserved && invalidPreserved;
+            getLogger().info("[自检] rabbit-options result=" + passed
+                    + " imported=" + imported
+                    + " type=" + (configuredRabbit == null ? "missing" : configuredRabbit.getRabbitType().name())
+                    + " control-type=" + (controlRabbit == null ? "missing" : controlRabbit.getRabbitType().name())
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] rabbit-options result=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
     }
 
@@ -19820,6 +19960,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (entity instanceof org.bukkit.entity.Cat cat) {
             applyCatOptions(cat, options);
         }
+        if (entity instanceof org.bukkit.entity.Rabbit rabbit) {
+            applyRabbitOptions(rabbit, options);
+        }
         if (entity instanceof org.bukkit.entity.Sheep sheep) {
             applySheepOptions(sheep, options);
         }
@@ -19865,6 +20008,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (options.contains("cat-collar-color")) cat.setCollarColor(org.bukkit.DyeColor.valueOf(
                     options.getString("cat-collar-color", "RED").toUpperCase(java.util.Locale.ROOT)));
         } catch (IllegalArgumentException | LinkageError ignored) {
+        }
+    }
+
+    private static void applyRabbitOptions(org.bukkit.entity.Rabbit rabbit,
+                                           org.bukkit.configuration.ConfigurationSection options) {
+        if (!options.contains("rabbit-type")) return;
+        try {
+            String value = options.getString("rabbit-type", "");
+            if (value == null || value.isBlank()) return;
+            rabbit.setRabbitType(org.bukkit.entity.Rabbit.Type.valueOf(
+                    value.trim().toUpperCase(java.util.Locale.ROOT)));
+        } catch (IllegalArgumentException | LinkageError ignored) {
+            // Invalid imported values remain visible under entity.unsupported.Options.RabbitType.
         }
     }
 

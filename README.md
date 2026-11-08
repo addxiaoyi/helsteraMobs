@@ -2,13 +2,30 @@
 
 ## MythicMobs Parity Development Status (2026-11-07)
 
-Latest strict fixture `srv-paper-full-strict-20261107-r4` passes all
+Latest strict fixture `srv-paper-rabbit-options-strict-20261107-r2` passes all
+392 release probes (373 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It adds imported Rabbit `Options.RabbitType`
+coverage: `SALT_AND_PEPPER` and `BROWN` controls apply only to Rabbits, while
+wrong entity types and malformed values remain preserved under the unsupported
+source options. The fixture also carries the complete registered Mythic
+teleport, spawner, drops, skills, conditions, targeter, menu, and persistence
+probes. Report:
+`tools/paper-integration/reports/paper-1.21.1-rabbit-options-strict-20261107-r2.json`
+(SHA-256 `1bb1df4af3e0b0f368d88552c73a3d2691464083a15d3fae584c9777d79ddaa8`).
+Compressed server log SHA-256:
+`01eb167ccadb67405a9cd3bd134fe74aed692f62c6c669142bba7d8a3238e581`.
+Client log archive SHA-256:
+`7bcdb84f3f7cf5b3ae703511e70bd90925a1ee70a1e5f17f5e845f510103bc3d`.
+Plugin SHA-256:
+`713af670615765f52f1f1d9a876fb63e6b2a711e237e97112a4c16e9c6f514e5`.
+Latest strict report has 392 probes, zero incomplete.
+
+Previous full strict fixture `srv-paper-full-strict-20261107-r4` passes all
 391 release probes (372 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. It includes the imported `CanJoinRaid`
 effective-state control, native-AI Bee `PreventStingerLoss`, and native
-Zombie jockey mount cancellation/allowance for protected/control entities,
-alongside the complete registered Mythic teleport, spawner, drops, skills,
-conditions, targeter, menu, and persistence probes. Report:
+Zombie jockey mount cancellation/allowance for protected/control entities.
+Report:
 `tools/paper-integration/reports/paper-1.21.1-full-strict-20261107-r4.json`
 (SHA-256 `8567db2f97d44eb87141a2792e9faaa1b97e1c2abe689888ad6034d26b74d785`).
 Compressed server log SHA-256:
@@ -17,7 +34,6 @@ Client log archive SHA-256:
 `a2462ce0a600ec565a582cf80640f3784479ab394ac3d3b4a8a8ba92937cb0f1`.
 Plugin SHA-256:
 `ae36884bdde4163dc213d4fc2a9fd3850f8eb365b7c4af3b4326570765bb02cc`.
-Latest strict report has 391 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-slime-natural-strict-20261107-r10` passes all
 390 release probes (371 passed, 19 expected rejections, zero failed or
@@ -749,7 +765,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-full-strict-20261107-r4` has 391 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-rabbit-options-strict-20261107-r2` has 392 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -765,8 +781,8 @@ This is a partial parity release. The matrix currently has `35`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 513 cited IDs; 421 report files; 4 directories
-   without reports; 88 missing directories; 189 archived release reports. The
+   Current fixture inventory: 514 cited IDs; 422 report files; 4 directories
+   without reports; 88 missing directories; 192 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

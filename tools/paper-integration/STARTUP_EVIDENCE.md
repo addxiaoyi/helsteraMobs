@@ -1,20 +1,25 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-full-strict-20261107-r4` passed the full
-strict gate on Paper 1.21.1-133: 391 registered probes, 372 passed, 19
-expected rejections, and zero failed or incomplete. It verifies the imported
-`CanJoinRaid` effective-state control and native-AI Bee
-`PreventStingerLoss` and native Zombie `NATURAL` jockey mount cancellation/
-allowance alongside the registered Mythic teleport, spawner, drops, skills,
-conditions, targeter, menu, and persistence probes. Report:
-[paper-1.21.1-full-strict-20261107-r4.json](reports/paper-1.21.1-full-strict-20261107-r4.json), SHA-256:
-`8567db2f97d44eb87141a2792e9faaa1b97e1c2abe689888ad6034d26b74d785`.
+Latest fixture `srv-paper-rabbit-options-strict-20261107-r2` passed the full
+strict gate on Paper 1.21.1-133: 392 registered probes, 373 passed, 19
+expected rejections, and zero failed or incomplete. It verifies imported
+Rabbit `Options.RabbitType` with `SALT_AND_PEPPER` and `BROWN` controls,
+Rabbit-only application, and preservation of wrong-entity and malformed
+values under `entity.unsupported.Options`, alongside the registered Mythic
+teleport, spawner, drops, skills, conditions, targeter, menu, and persistence
+probes. Report:
+[paper-1.21.1-rabbit-options-strict-20261107-r2.json](reports/paper-1.21.1-rabbit-options-strict-20261107-r2.json), SHA-256:
+`1bb1df4af3e0b0f368d88552c73a3d2691464083a15d3fae584c9777d79ddaa8`.
 Compressed server log SHA-256:
-`227fc40ca768bb8ae5aaa3dd3ad7db6e6e2e5c295ab0816751f28430c660a4ac`.
+`01eb167ccadb67405a9cd3bd134fe74aed692f62c6c669142bba7d8a3238e581`.
 Client log archive SHA-256:
-`a2462ce0a600ec565a582cf80640f3784479ab394ac3d3b4a8a8ba92937cb0f1`.
+`7bcdb84f3f7cf5b3ae703511e70bd90925a1ee70a1e5f17f5e845f510103bc3d`.
 Plugin SHA-256:
-`ae36884bdde4163dc213d4fc2a9fd3850f8eb365b7c4af3b4326570765bb02cc`.
+`713af670615765f52f1f1d9a876fb63e6b2a711e237e97112a4c16e9c6f514e5`.
+
+Previous full strict fixture `srv-paper-full-strict-20261107-r4` passed the
+391-probe baseline with 372 passed, 19 expected rejections, and zero failed
+or incomplete. It remains the pre-RabbitType full-catalog evidence.
 
 Previous fixture `srv-paper-mythic-teleport-strict-20261107-r1` passed the full
 strict gate on Paper 1.21.1-133: 391 registered probes, 372 passed, 19

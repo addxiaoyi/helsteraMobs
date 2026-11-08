@@ -38,19 +38,24 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-full-strict-20261107-r4` passes all 391
-probes (372 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. It includes the effective `CanJoinRaid` control, native-AI
-Bee `PreventStingerLoss` evidence, and native Zombie `NATURAL` jockey
-mount cancellation/allowance alongside the registered Mythic parity catalog.
-Report: `reports/paper-1.21.1-full-strict-20261107-r4.json`;
-server log: `reports/paper-1.21.1-full-strict-20261107-r4.log.gz`;
+Latest strict fixture `srv-paper-rabbit-options-strict-20261107-r2` passes all 392
+probes (373 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. It adds imported Rabbit `Options.RabbitType` coverage with
+Rabbit-only application and preservation of wrong-type and malformed source
+values under `entity.unsupported.Options`. It also carries the registered
+Mythic parity catalog.
+Report: `reports/paper-1.21.1-rabbit-options-strict-20261107-r2.json`;
+server log: `reports/paper-1.21.1-rabbit-options-strict-20261107-r2.log.gz`;
 client logs:
-`reports/paper-1.21.1-full-strict-20261107-r4-client-logs.tar.gz`.
-Report SHA-256: `8567db2f97d44eb87141a2792e9faaa1b97e1c2abe689888ad6034d26b74d785`;
-server log SHA-256: `227fc40ca768bb8ae5aaa3dd3ad7db6e6e2e5c295ab0816751f28430c660a4ac`;
-client log SHA-256: `a2462ce0a600ec565a582cf80640f3784479ab394ac3d3b4a8a8ba92937cb0f1`;
-plugin SHA-256: `ae36884bdde4163dc213d4fc2a9fd3850f8eb365b7c4af3b4326570765bb02cc`.
+`reports/paper-1.21.1-rabbit-options-strict-20261107-r2-client-logs.tar.gz`.
+Report SHA-256: `1bb1df4af3e0b0f368d88552c73a3d2691464083a15d3fae584c9777d79ddaa8`;
+server log SHA-256: `01eb167ccadb67405a9cd3bd134fe74aed692f62c6c669142bba7d8a3238e581`;
+client log SHA-256: `7bcdb84f3f7cf5b3ae703511e70bd90925a1ee70a1e5f17f5e845f510103bc3d`;
+plugin SHA-256: `713af670615765f52f1f1d9a876fb63e6b2a711e237e97112a4c16e9c6f514e5`.
+
+Previous full strict fixture `srv-paper-full-strict-20261107-r4` passed all 391
+probes (372 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133 and remains the complete pre-RabbitType baseline.
 
 Previous strict fixture `srv-paper-mythic-teleport-strict-20261107-r1` passes all
 391 probes (372 passed, 19 expected rejections, zero failed or incomplete) on
