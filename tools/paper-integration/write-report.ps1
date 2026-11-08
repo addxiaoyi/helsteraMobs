@@ -99,6 +99,7 @@ $probeSpecs = [ordered]@{
     armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false .*items=true'
     cat = 'cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED'
     fallingBlock = 'falling-block-options result=true'
+    fallingBlockOptionsImported = 'falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true'
     creeper = 'creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true'
     bee = 'bee-options result=true'
     beeOptionsImported = 'bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true'

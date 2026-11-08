@@ -4430,6 +4430,10 @@ class ImportersTest {
                     Type: FALLING_BLOCK
                     Options:
                       BlockData: []
+                  invalid_falling_name:
+                    Type: FALLING_BLOCK
+                    Options:
+                      FallingBlockData: NOT_A_BLOCK
                   invalid_stand:
                     Type: ARMOR_STAND
                     Options:
@@ -4490,6 +4494,10 @@ class ImportersTest {
                 .getString("entity.unsupported.Options.SheepColor"));
         assertTrue(convertedMob(entries, "invalid_falling")
                 .contains("entity.unsupported.Options.BlockData"));
+        var invalidFallingName = convertedMob(entries, "invalid_falling_name");
+        assertEquals("NOT_A_BLOCK", invalidFallingName.getString(
+                "entity.unsupported.Options.FallingBlockData"));
+        assertFalse(invalidFallingName.contains("entity.falling-block-data"));
         assertEquals("maybe", convertedMob(entries, "invalid_stand")
                 .getString("entity.unsupported.Options.HasArms"));
         assertEquals("maybe", convertedMob(entries, "invalid_raider")
@@ -4497,6 +4505,9 @@ class ImportersTest {
         assertTrue(entries.stream().filter(entry -> "unsupported".equals(entry.get("status")))
                 .anyMatch(entry -> "WARN".equals(entry.get("severity"))
                         && "Options.HorseColor".equals(entry.get("source-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "Options.FallingBlockData".equals(entry.get("source-key"))
+                && "WARN".equals(entry.get("severity"))));
     }
 
     @Test

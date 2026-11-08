@@ -64,6 +64,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4',
         '[Server thread/INFO]: [helsteraMobs] [自检] fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-stinger-loss-imported result=true imported=true target-entity=ZOMBIE target-ai=false target-invulnerable=false target-resistance-amplifier=3 protected-option=true control-option=false protected-attacks=1 control-attacks=1 protected-events=1 control-events=1 protected-cancelled=0 control-cancelled=0 protected-restored=true control-retained=true protected-near=true control-near=true trigger=entity-target-api event=native-ai',
@@ -520,6 +521,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'rabbitOptionsImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'rabbitOptionsImported').observations[0] -ceq
         'rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true') 'imported Rabbit options require production Paper evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'fallingBlockOptionsImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'fallingBlockOptionsImported').observations[0] -ceq
+        'falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true') 'imported FallingBlock options require production Paper evidence'
     Assert-True (($report.probes | Where-Object id -eq 'entitySizeRange').status -eq 'passed') 'imported entity size ranges across supported families'
     Assert-True (($report.probes | Where-Object id -eq 'reinforcementsChanceOptions').status -eq 'passed') 'imported Zombie reinforcement chance and invalid-input evidence'
     Assert-True ($report.expectedProbeIds -contains 'reinforcementsChanceOptions') 'reinforcement chance probe is part of every report catalog'
@@ -1031,6 +1035,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'rabbitOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'rabbitOptionsImported'; status = 'passed'; observations = @('rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'fallingBlockOptionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'fallingBlockOptionsImported'; status = 'passed'; observations = @('falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true')
     }
     $fullCatalogCreeperOptions = @($fullCatalogReport.probes | Where-Object id -eq 'creeper')
     if ($fullCatalogCreeperOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain creeper.' }
@@ -1832,6 +1840,19 @@ try {
     } catch { $incompleteHorseOptionsRejected = $_.Exception.Message -match 'required observation for horseOptionsImported' }
     Assert-True $incompleteHorseOptionsRejected 'full release gate rejects incomplete imported Horse option evidence'
     $fullCatalogHorseOptions[0].observations = $horseOptionsObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $fullCatalogFallingBlockOptions = @($fullCatalogReport.probes | Where-Object id -eq 'fallingBlockOptionsImported')
+    if ($fullCatalogFallingBlockOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain fallingBlockOptionsImported.' }
+    $fallingBlockOptionsObservations = $fullCatalogFallingBlockOptions[0].observations
+    $fullCatalogFallingBlockOptions[0].observations = @('falling-block-options-imported result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteFallingBlockOptionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteFallingBlockOptionsRejected = $_.Exception.Message -match 'required observation for fallingBlockOptionsImported' }
+    Assert-True $incompleteFallingBlockOptionsRejected 'full release gate rejects incomplete imported FallingBlock option evidence'
+    $fullCatalogFallingBlockOptions[0].observations = $fallingBlockOptionsObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $creeperOptionsObservations = $fullCatalogCreeperOptions[0].observations
     $fullCatalogCreeperOptions[0].observations = @('creeper-options result=true')

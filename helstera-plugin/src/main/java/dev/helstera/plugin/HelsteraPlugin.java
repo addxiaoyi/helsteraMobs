@@ -1617,6 +1617,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().info("[自检] falling-block-options result="
                         + (!falling.getDropItem() && falling.canHurtEntities() && falling.getCancelDrop()));
 
+                runImportedFallingBlockOptionsSelfTest(origin.clone().add(56, 0, 0));
+
                 runImportedCreeperOptionsSelfTest(world, origin.clone().add(10, 0, 0));
 
                 var bee = world.spawn(origin.clone().add(12, 0, 0), org.bukkit.entity.Bee.class);
@@ -2296,7 +2298,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     private void runImportedBeeStingerLossSelfTest(Location origin) {
-        runImportedBeeStingerLossSelfTest(origin, 0);
+        // Let the larger entity-options self-test finish its synchronous setup
+        // before native Bee AI is asked to produce an attack event.
+        getServer().getScheduler().runTaskLater(this,
+                () -> runImportedBeeStingerLossSelfTest(origin, 0), 1L);
     }
 
     private void runImportedBeeStingerLossSelfTest(Location origin, int retryCount) {
@@ -2414,7 +2419,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 return;
             }
 
-            var target = origin.getWorld().spawn(probeOrigin.clone().add(6, 0, 0),
+            var target = origin.getWorld().spawn(probeOrigin.clone().add(4, 0, 0),
                     org.bukkit.entity.Zombie.class);
             probeTarget[0] = target;
             target.setAI(false);
@@ -2428,8 +2433,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             target.getEquipment().setHelmetDropChance(0.0f);
             target.addPotionEffect(new org.bukkit.potion.PotionEffect(
                     org.bukkit.potion.PotionEffectType.RESISTANCE, 600, 3, false, false, false));
-            protectedBee.teleport(target.getLocation().clone().add(-3, 1, 0));
-            controlBee.teleport(target.getLocation().clone().add(3, 1, 0));
+            protectedBee.teleport(target.getLocation().clone().add(-2, 1, 0));
+            controlBee.teleport(target.getLocation().clone().add(2, 1, 0));
 
             var protectedAttacks = new java.util.concurrent.atomic.AtomicInteger();
             var controlAttacks = new java.util.concurrent.atomic.AtomicInteger();
@@ -2487,7 +2492,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                     600, 3, false, false, false));
                         }
                         if (protectedAttacks.get() == 0) {
-                            maintainBeeProbeTarget(protectedBee, target, -3.0);
+                            maintainBeeProbeTarget(protectedBee, target, -2.0);
                         }
                     }
                     if (protectedAttacks.get() > 0 && protectedBee.hasAI()) protectedBee.setAI(false);
@@ -2496,7 +2501,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     }
                     if (controlStarted[0] && controlAttacks.get() == 0
                             && target.isValid() && !target.isDead()) {
-                        maintainBeeProbeTarget(controlBee, target, 3.0);
+                        maintainBeeProbeTarget(controlBee, target, 2.0);
                     }
                     if (controlAttacks.get() > 0 && controlBee.hasAI()) controlBee.setAI(false);
                     boolean protectedAttacked = protectedAttacks.get() > 0;
@@ -3032,6 +3037,189 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " invalid-preserved=" + invalidPreserved);
         } catch (Throwable failure) {
             getLogger().warning("[自检] rabbit-options result=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedFallingBlockOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-falling-block-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("falling-block-options.yml");
+            String configuredMobId = "ImportedFallingBlockConfigured_" + suffix;
+            String controlMobId = "ImportedFallingBlockControl_" + suffix;
+            String wrongTypeMobId = "ImportedFallingBlockWrongType_" + suffix;
+            String invalidMobId = "ImportedFallingBlockInvalid_" + suffix;
+            String defaultMobId = "ImportedFallingBlockDefault_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: FALLING_BLOCK
+                        Options:
+                          FallingBlockData: minecraft:obsidian
+                          FallingBlockDropItem: false
+                          FallingBlockHurtEntities: true
+                          FallingBlockCancelDrop: true
+                          Gravity: false
+                      %2$s:
+                        Type: FALLING_BLOCK
+                        Options:
+                          BlockData: minecraft:sand
+                          FallingBlockDropItem: true
+                          FallingBlockHurtEntities: false
+                          FallingBlockCancelDrop: false
+                          Gravity: false
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          BlockData: minecraft:obsidian
+                      %4$s:
+                        Type: FALLING_BLOCK
+                        Options:
+                          FallingBlockData: NOT_A_BLOCK
+                          Gravity: false
+                      %5$s:
+                        Type: FALLING_BLOCK
+                        Options:
+                          Gravity: false
+                    """.formatted(configuredMobId, controlMobId, wrongTypeMobId,
+                    invalidMobId, defaultMobId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe FallingBlock mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing FallingBlock mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            var sourceIds = java.util.List.of(configuredMobId, controlMobId, wrongTypeMobId,
+                    invalidMobId, defaultMobId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic FallingBlock option probe mobs were not all imported");
+            }
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0),
+                    origin.clone().add(6, 0, 0), origin.clone().add(9, 0, 0),
+                    origin.clone().add(12, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        locations.get(i), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var configuredInstance = spawnedIds.get(configuredMobId) > 0
+                    ? instances().impl(spawnedIds.get(configuredMobId)) : null;
+            var controlInstance = spawnedIds.get(controlMobId) > 0
+                    ? instances().impl(spawnedIds.get(controlMobId)) : null;
+            var wrongTypeInstance = spawnedIds.get(wrongTypeMobId) > 0
+                    ? instances().impl(spawnedIds.get(wrongTypeMobId)) : null;
+            var invalidInstance = spawnedIds.get(invalidMobId) > 0
+                    ? instances().impl(spawnedIds.get(invalidMobId)) : null;
+            var defaultInstance = spawnedIds.get(defaultMobId) > 0
+                    ? instances().impl(spawnedIds.get(defaultMobId)) : null;
+            var configuredFalling = configuredInstance == null ? null : configuredInstance.baseEntity()
+                    .filter(org.bukkit.entity.FallingBlock.class::isInstance)
+                    .map(org.bukkit.entity.FallingBlock.class::cast).orElse(null);
+            var controlFalling = controlInstance == null ? null : controlInstance.baseEntity()
+                    .filter(org.bukkit.entity.FallingBlock.class::isInstance)
+                    .map(org.bukkit.entity.FallingBlock.class::cast).orElse(null);
+            var wrongTypeEntity = wrongTypeInstance == null ? null : wrongTypeInstance.baseEntity().orElse(null);
+            var invalidFalling = invalidInstance == null ? null : invalidInstance.baseEntity()
+                    .filter(org.bukkit.entity.FallingBlock.class::isInstance)
+                    .map(org.bukkit.entity.FallingBlock.class::cast).orElse(null);
+            var defaultFalling = defaultInstance == null ? null : defaultInstance.baseEntity()
+                    .filter(org.bukkit.entity.FallingBlock.class::isInstance)
+                    .map(org.bukkit.entity.FallingBlock.class::cast).orElse(null);
+
+            var configuredOptions = mobConfig(targetIds.get(configuredMobId));
+            var controlOptions = mobConfig(targetIds.get(controlMobId));
+            var wrongTypeOptions = mobConfig(targetIds.get(wrongTypeMobId));
+            var invalidOptions = mobConfig(targetIds.get(invalidMobId));
+            var configuredEntityOptions = configuredOptions == null ? null
+                    : configuredOptions.getConfigurationSection("entity");
+            var controlEntityOptions = controlOptions == null ? null
+                    : controlOptions.getConfigurationSection("entity");
+            var wrongTypeEntityOptions = wrongTypeOptions == null ? null
+                    : wrongTypeOptions.getConfigurationSection("entity");
+            var invalidEntityOptions = invalidOptions == null ? null
+                    : invalidOptions.getConfigurationSection("entity");
+            var wrongTypeUnsupported = wrongTypeEntityOptions == null ? null
+                    : wrongTypeEntityOptions.getConfigurationSection("unsupported.Options");
+            var invalidUnsupported = invalidEntityOptions == null ? null
+                    : invalidEntityOptions.getConfigurationSection("unsupported.Options");
+
+            boolean imported = configuredFalling != null && controlFalling != null && invalidFalling != null
+                    && defaultFalling != null && configuredEntityOptions != null && controlEntityOptions != null
+                    && wrongTypeUnsupported != null && invalidUnsupported != null
+                    && "minecraft:obsidian".equalsIgnoreCase(
+                            configuredEntityOptions.getString("falling-block-data"))
+                    && "minecraft:sand".equalsIgnoreCase(
+                            controlEntityOptions.getString("falling-block-data"))
+                    && !wrongTypeEntityOptions.contains("falling-block-data")
+                    && "minecraft:obsidian".equalsIgnoreCase(
+                            wrongTypeUnsupported.getString("BlockData"))
+                    && !invalidEntityOptions.contains("falling-block-data")
+                    && "NOT_A_BLOCK".equalsIgnoreCase(
+                            invalidUnsupported.getString("FallingBlockData"));
+            String configuredMaterial = configuredFalling == null ? "missing"
+                    : configuredFalling.getBlockData().getMaterial().name();
+            String controlMaterial = controlFalling == null ? "missing"
+                    : controlFalling.getBlockData().getMaterial().name();
+            String invalidMaterial = invalidFalling == null ? "missing"
+                    : invalidFalling.getBlockData().getMaterial().name();
+            String defaultMaterial = defaultFalling == null ? "missing"
+                    : defaultFalling.getBlockData().getMaterial().name();
+            boolean applied = imported
+                    && "OBSIDIAN".equals(configuredMaterial)
+                    && "SAND".equals(controlMaterial)
+                    && !configuredFalling.getDropItem()
+                    && configuredFalling.canHurtEntities()
+                    && configuredFalling.getCancelDrop()
+                    && controlFalling.getDropItem()
+                    && !controlFalling.canHurtEntities()
+                    && !controlFalling.getCancelDrop();
+            boolean wrongTypePreserved = wrongTypeEntity instanceof org.bukkit.entity.Zombie
+                    && wrongTypeUnsupported != null
+                    && "minecraft:obsidian".equalsIgnoreCase(wrongTypeUnsupported.getString("BlockData"));
+            boolean invalidPreserved = "NOT_A_BLOCK".equalsIgnoreCase(
+                    invalidUnsupported == null ? null : invalidUnsupported.getString("FallingBlockData"))
+                    && invalidFalling != null && defaultFalling != null
+                    && invalidMaterial.equals(defaultMaterial)
+                    && !"OBSIDIAN".equals(invalidMaterial);
+            boolean passed = imported && applied && wrongTypePreserved && invalidPreserved;
+            getLogger().info("[自检] falling-block-options-imported result=" + passed
+                    + " imported=" + imported
+                    + " material=" + configuredMaterial
+                    + " control-material=" + controlMaterial
+                    + " drop-item=" + (configuredFalling != null && configuredFalling.getDropItem())
+                    + " hurt-entities=" + (configuredFalling != null && configuredFalling.canHurtEntities())
+                    + " cancel-drop=" + (configuredFalling != null && configuredFalling.getCancelDrop())
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] falling-block-options-imported result=false imported=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
