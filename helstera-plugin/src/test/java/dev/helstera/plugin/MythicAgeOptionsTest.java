@@ -480,6 +480,26 @@ class MythicAgeOptionsTest {
     }
 
     @Test
+    void appliesKillerBunnyAfterRabbitTypeWithoutChangingFalseValues() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var rabbit = proxy(Rabbit.class, calls);
+        HelsteraPlugin.applyEntitySpecificOptions(rabbit,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                        rabbit-type: SALT_AND_PEPPER
+                        rabbit-killer-bunny: true
+                        """)));
+        assertEquals(Rabbit.Type.THE_KILLER_BUNNY, calls.get("setRabbitType"), calls.toString());
+
+        calls.clear();
+        HelsteraPlugin.applyEntitySpecificOptions(rabbit,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                        rabbit-type: SALT_AND_PEPPER
+                        rabbit-killer-bunny: false
+                        """)));
+        assertEquals(Rabbit.Type.SALT_AND_PEPPER, calls.get("setRabbitType"), calls.toString());
+    }
+
+    @Test
     void appliesFoxTypeAndRejectsMalformedValues() {
         Map<String, Object> calls = new LinkedHashMap<>();
         var fox = proxy(Fox.class, calls);

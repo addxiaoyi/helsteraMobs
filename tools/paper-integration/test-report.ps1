@@ -63,7 +63,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED',
         '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4',
         '[Server thread/INFO]: [helsteraMobs] [自检] fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true',
-        '[Server thread/INFO]: [helsteraMobs] [自检] rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN killer-type=THE_KILLER_BUNNY angry-type=THE_KILLER_BUNNY false-killer-type=SALT_AND_PEPPER wrong-type-preserved=true invalid-preserved=true conflict-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true',
@@ -538,8 +538,8 @@ try {
         ($report.probes | Where-Object id -eq 'cat').observations[0] -match
         'imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED') 'imported Cat options require production Paper evidence'
     Assert-True (($report.probes | Where-Object id -eq 'rabbitOptionsImported').status -eq 'passed' -and
-        ($report.probes | Where-Object id -eq 'rabbitOptionsImported').observations[0] -ceq
-        'rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true') 'imported Rabbit options require production Paper evidence'
+        ($report.probes | Where-Object id -eq 'rabbitOptionsImported').observations[0] -match
+        '^rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN killer-type=THE_KILLER_BUNNY angry-type=THE_KILLER_BUNNY false-killer-type=SALT_AND_PEPPER wrong-type-preserved=true invalid-preserved=true conflict-preserved=true$') 'imported Rabbit options require production Paper evidence'
     Assert-True (($report.probes | Where-Object id -eq 'fallingBlockOptionsImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'fallingBlockOptionsImported').observations[0] -ceq
         'falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true') 'imported FallingBlock options require production Paper evidence'
@@ -1138,7 +1138,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'rabbitOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'rabbitOptionsImported'; status = 'passed'; observations = @('rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true')
+        id = 'rabbitOptionsImported'; status = 'passed'; observations = @('rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN killer-type=THE_KILLER_BUNNY angry-type=THE_KILLER_BUNNY false-killer-type=SALT_AND_PEPPER wrong-type-preserved=true invalid-preserved=true conflict-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'fallingBlockOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{

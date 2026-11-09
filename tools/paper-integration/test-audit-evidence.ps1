@@ -256,7 +256,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'rabbitOptionsImported'
     $fullReport.probes += [pscustomobject]@{
-        id = 'rabbitOptionsImported'; status = 'passed'; observations = @('rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN wrong-type-preserved=true invalid-preserved=true')
+        id = 'rabbitOptionsImported'; status = 'passed'; observations = @('rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN killer-type=THE_KILLER_BUNNY angry-type=THE_KILLER_BUNNY false-killer-type=SALT_AND_PEPPER wrong-type-preserved=true invalid-preserved=true conflict-preserved=true')
     }
     $fullReport.expectedProbeIds += 'fallingBlockOptionsImported'
     $fullReport.probes += [pscustomobject]@{
