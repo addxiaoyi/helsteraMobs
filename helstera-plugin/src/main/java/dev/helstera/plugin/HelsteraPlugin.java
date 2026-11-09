@@ -48,6 +48,7 @@ import dev.helstera.api.model.Bone;
 import dev.helstera.api.model.ModelCube;
 import dev.helstera.ai.AiProfile;
 import dev.helstera.ai.level.MobLevel;
+import dev.helstera.ai.stats.MythicStatsService;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.util.Vector;
@@ -112,6 +113,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private dev.helstera.ai.immunity.ImmunityListener immunityListener;
     private Object ai;                           // AiManager
     private Object lootService;                 // dev.helstera.ai.loot.LootService
+    private MythicStatsService mythicStatsService;
     private Object spawnerService;              // dev.helstera.ai.spawner.SpawnerService
     private dev.helstera.ai.dialog.DialogueService dialogueService;
     private volatile ConfigurationSection customItems;
@@ -417,6 +419,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 + " 被玩家 " + uuid + " 触发: " + lever.triggers())),
                 this);
 
+        // ---- Mythic stats（stats.yml）----
+        // 先于掉落表初始化，这样 weighted DropTable 的 BiasStat 默认可以
+        // 读取本插件自己的 stat provider，而不会依赖第三方插件存在。
+        try {
+            if (!new java.io.File(getDataFolder(), "stats.yml").exists()) {
+                saveResource("stats.yml", false);
+            }
+            MythicStatsService stats = new MythicStatsService("helsteramobs", getLogger());
+            this.mythicStatsService = stats;
+            stats.loadFile(new java.io.File(getDataFolder(), "stats.yml").toPath());
+            for (String warning : stats.warnings()) getLogger().warning("[Stats] " + warning);
+        } catch (Throwable t) {
+            // Loot remains usable with its zero-bias fail-closed behavior when
+            // an administrator has temporarily broken stats.yml.
+            getLogger().warning("Stats provider 不可用，BiasStat 将回退为 0: " + t);
+        }
+
         // ---- 掉落表 + 刷怪点（helstera-ai）----
         // 两者都依赖 mobs/*.yml 的解析能力，放在 AI 块之后初始化。
         try {
@@ -455,6 +474,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             loot.setDynamicChanceEvaluator((expression, location, killer, luck) -> {
                 return resolveDropChance(expression, location, killer);
             });
+            if (mythicStatsService != null) {
+                loot.setDefaultLootBiasResolver(mythicStatsService::resolve);
+            }
             this.lootService = loot;
         } catch (Throwable t) {
             getLogger().warning("掉落表不可用: " + t);
@@ -681,6 +703,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         if (getConfig().getBoolean("debug.self-test-death-loot", false)) {
             runDeathLootSelfTest();
+            runMythicStatsSelfTest();
             runDropTableCountSelfTest();
             runDropTableBonusSelfTest();
             runImportedDropTableSelfTest();
@@ -11807,6 +11830,164 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 250L);
     }
 
+    private void runMythicStatsSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            var stats = mythicStatsService;
+            var loot = loot();
+            var killer = getServer().getPlayerExact("HelsteraTester");
+            if (world == null || stats == null || loot == null || killer == null) {
+                getLogger().warning("[自检] mythic-stats result=false reason=runtime-unavailable");
+                return;
+            }
+
+            var origin = world.getSpawnLocation().clone().add(4, 3, 0);
+            org.bukkit.entity.Zombie dropper = null;
+            Double originalKillerOverride = stats.entityStatOverride(killer, "LOOT_BIAS");
+            Double originalDropperOverride = null;
+            double base = Double.NaN;
+            int positiveRare = 0;
+            boolean defaultValue = false;
+            boolean unknownRejected = false;
+            boolean disabledRejected = false;
+            boolean attribution = false;
+            boolean positiveWeighted = false;
+            boolean negativeWeighted = false;
+            boolean unknownFailsClosed = false;
+            boolean restored = false;
+            boolean dropperRemoved = false;
+            Throwable failure = null;
+            try {
+                dropper = world.spawn(origin, org.bukkit.entity.Zombie.class);
+                originalDropperOverride = stats.entityStatOverride(dropper, "LOOT_BIAS");
+
+                var baseDefinition = stats.definition("LOOT_BIAS");
+                if (baseDefinition == null || !baseDefinition.enabled()) {
+                    throw new IllegalStateException("LOOT_BIAS is not enabled in stats.yml");
+                }
+                stats.clearEntityStat(killer, "LOOT_BIAS");
+                base = stats.resolve("LOOT_BIAS", origin, killer, dropper);
+                defaultValue = Double.compare(base, baseDefinition.baseValue()) == 0;
+
+                var disabledConfig = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                        stats:
+                          DISABLED_PROBE:
+                            enabled: false
+                            base-value: 20
+                        """));
+                var disabledStats = new MythicStatsService("helsteramobs_probe", null);
+                disabledStats.load(disabledConfig);
+                unknownRejected = stats.resolve("UNREGISTERED_PROBE", origin, killer, dropper) == null;
+                disabledRejected = disabledStats.resolve(
+                        "DISABLED_PROBE", origin, killer, dropper) == null;
+
+                boolean killerSet = stats.setEntityStat(killer, "LOOT_BIAS", 100);
+                boolean dropperSet = stats.setEntityStat(dropper, "LOOT_BIAS", -100);
+                double killerValue = stats.resolve("LOOT_BIAS", origin, killer, dropper);
+                double dropperValue = stats.resolve("LOOT_BIAS", origin, null, dropper);
+                attribution = killerSet && dropperSet
+                        && Double.compare(killerValue, 100d) == 0
+                        && Double.compare(dropperValue, -100d) == 0;
+
+                var tableConfig = new YamlConfiguration();
+                tableConfig.set("probe.total-items", 1);
+                tableConfig.set("probe.bias-stat", "LOOT_BIAS");
+                tableConfig.set("probe.entries", java.util.List.of(
+                        java.util.Map.of("item", "BREAD", "chance", 1.0, "luck-scaling", false),
+                        java.util.Map.of("item", "DIAMOND", "chance", 0.1, "luck-scaling", false)));
+                var problems = new java.util.ArrayList<String>();
+                var weighted = dev.helstera.ai.loot.DropTable.parse(
+                        "integration_mythic_stats", tableConfig.getConfigurationSection("probe"), problems);
+                if (!problems.isEmpty()) throw new IllegalStateException("invalid BiasStat test table: " + problems);
+
+                var positiveRandom = new java.util.Random(20261109L);
+                for (int sample = 0; sample < 4096; sample++) {
+                    var hits = loot.rollPlan(weighted, 0, positiveRandom, origin,
+                            killer, 0, dropper);
+                    if (hits.size() == 1 && "DIAMOND".equals(hits.get(0).entry().itemId())) positiveRare++;
+                }
+                positiveWeighted = positiveRare >= 560 && positiveRare <= 820;
+
+                stats.setEntityStat(killer, "LOOT_BIAS", -100);
+                negativeWeighted = true;
+                for (int seed = 0; seed < 64; seed++) {
+                    var hits = loot.rollPlan(weighted, 0, new java.util.Random(seed), origin,
+                            killer, 0, dropper);
+                    if (hits.size() != 1 || !"BREAD".equals(hits.get(0).entry().itemId())) {
+                        negativeWeighted = false;
+                        break;
+                    }
+                }
+
+                var unknownConfig = new YamlConfiguration();
+                unknownConfig.set("probe.total-items", 1);
+                unknownConfig.set("probe.bias-stat", "UNREGISTERED_PROBE");
+                unknownConfig.set("probe.entries", java.util.List.of(
+                        java.util.Map.of("item", "BREAD", "chance", 1.0),
+                        java.util.Map.of("item", "DIAMOND", "chance", 0.1)));
+                var unknownTable = dev.helstera.ai.loot.DropTable.parse(
+                        "integration_mythic_stats_unknown", unknownConfig.getConfigurationSection("probe"),
+                        new java.util.ArrayList<>());
+                var neutralConfig = new YamlConfiguration();
+                neutralConfig.set("probe.total-items", 1);
+                neutralConfig.set("probe.entries", unknownConfig.get("probe.entries"));
+                var neutralTable = dev.helstera.ai.loot.DropTable.parse(
+                        "integration_mythic_stats_neutral", neutralConfig.getConfigurationSection("probe"),
+                        new java.util.ArrayList<>());
+                unknownFailsClosed = true;
+                for (int seed = 0; seed < 64; seed++) {
+                    var unknownHits = loot.rollPlan(unknownTable, 0, new java.util.Random(seed), origin,
+                            killer, 0, dropper);
+                    var neutralHits = loot.rollPlan(neutralTable, 0, new java.util.Random(seed), origin,
+                            killer, 0, dropper);
+                    if (unknownHits.size() != neutralHits.size()
+                            || (unknownHits.size() == 1 && !unknownHits.get(0).entry().itemId()
+                            .equals(neutralHits.get(0).entry().itemId()))) {
+                        unknownFailsClosed = false;
+                        break;
+                    }
+                }
+
+            } catch (Throwable error) {
+                failure = error;
+            } finally {
+                try {
+                    if (originalKillerOverride == null) stats.clearEntityStat(killer, "LOOT_BIAS");
+                    else stats.setEntityStat(killer, "LOOT_BIAS", originalKillerOverride);
+                    if (dropper != null) {
+                        if (originalDropperOverride == null) stats.clearEntityStat(dropper, "LOOT_BIAS");
+                        else stats.setEntityStat(dropper, "LOOT_BIAS", originalDropperOverride);
+                    }
+                    restored = java.util.Objects.equals(originalKillerOverride,
+                            stats.entityStatOverride(killer, "LOOT_BIAS"))
+                            && (dropper == null || java.util.Objects.equals(originalDropperOverride,
+                            stats.entityStatOverride(dropper, "LOOT_BIAS")));
+                } catch (Throwable restoreFailure) {
+                    if (failure == null) failure = restoreFailure;
+                } finally {
+                    if (dropper != null) {
+                        dropper.remove();
+                        dropperRemoved = !dropper.isValid();
+                    } else {
+                        dropperRemoved = true;
+                    }
+                }
+            }
+            boolean passed = failure == null && defaultValue && unknownRejected && disabledRejected
+                    && attribution && positiveWeighted && negativeWeighted && unknownFailsClosed
+                    && restored && dropperRemoved;
+            if (failure != null) getLogger().warning("[自检] mythic-stats error=" + failure);
+            getLogger().info("[自检] mythic-stats result=" + passed
+                    + " default=" + defaultValue + " base=" + base
+                    + " killer-priority=" + attribution + " unknown-rejected=" + unknownRejected
+                    + " disabled-rejected=" + disabledRejected
+                    + " positive-weighted=" + positiveWeighted + " positive-rare=" + positiveRare
+                    + " negative-weighted=" + negativeWeighted
+                    + " unknown-fail-closed=" + unknownFailsClosed
+                    + " restored=" + restored + " dropper-removed=" + dropperRemoved);
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 50L);
+    }
+
     private void runDropTableCountSelfTest() {
         getServer().getScheduler().runTaskLater(this, () -> {
             var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
@@ -21420,6 +21601,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     public boolean reloadLootAndSpawners() {
         boolean success = true;
+        if (mythicStatsService != null) {
+            try {
+                mythicStatsService.loadFile(new java.io.File(getDataFolder(), "stats.yml").toPath());
+                for (String warning : mythicStatsService.warnings()) {
+                    getLogger().warning("[Stats] " + warning);
+                }
+            } catch (java.io.IOException ex) {
+                success = false;
+                getLogger().warning("stats.yml 重载失败，已回退到默认 LOOT_BIAS=0: " + ex.getMessage());
+            }
+        }
         if (loot() != null) {
             try {
                 loot().loadFile(new java.io.File(getDataFolder(), "loot.yml").toPath());

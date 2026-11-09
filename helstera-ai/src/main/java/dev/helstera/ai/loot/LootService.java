@@ -87,7 +87,10 @@ public final class LootService {
     private volatile ConditionEvaluator conditionEvaluator;
     private volatile DropperConditionEvaluator dropperConditionEvaluator;
     private volatile DynamicChanceEvaluator dynamicChanceEvaluator;
+    /** Explicit integration resolver. It takes precedence while installed. */
     private volatile LootBiasResolver lootBiasResolver;
+    /** Native resolver used when no external integration resolver is installed. */
+    private volatile LootBiasResolver defaultLootBiasResolver;
     private final Set<String> warnedLootBias = ConcurrentHashMap.newKeySet();
 
     public LootService(Logger log) {
@@ -207,9 +210,17 @@ public final class LootService {
         this.dynamicChanceEvaluator = evaluator;
     }
 
-    /** Injects the stat source used by weighted DropTable BiasStat options. */
+    /**
+     * Installs an explicit integration resolver. It takes precedence over the
+     * built-in resolver while present; passing {@code null} restores fallback.
+     */
     public void setLootBiasResolver(LootBiasResolver resolver) {
         this.lootBiasResolver = resolver;
+    }
+
+    /** Sets the built-in stat source used when no explicit integration is installed. */
+    public void setDefaultLootBiasResolver(LootBiasResolver resolver) {
+        this.defaultLootBiasResolver = resolver;
     }
 
     /**
@@ -580,7 +591,7 @@ public final class LootService {
 
     private double resolveLootBias(DropTable table, org.bukkit.Location location,
                                    Player killer, org.bukkit.entity.Entity dropper) {
-        LootBiasResolver resolver = lootBiasResolver;
+        LootBiasResolver resolver = lootBiasResolver != null ? lootBiasResolver : defaultLootBiasResolver;
         if (resolver == null) {
             if (table.hasExplicitBiasStat()) {
                 warnLootBias(table, table.biasStat() + " has no stat resolver; using bias 0");

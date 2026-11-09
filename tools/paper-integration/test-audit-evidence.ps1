@@ -294,6 +294,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'mythicSpawnerRandomPoolDropTables'; status = 'passed'; observations = @('mythic-spawner-drop-table imported=true references=true weighted=true tables-loaded=true spawned=32 variants=true assigned=true common-table-reloaded=true rare-table-reloaded=true common-alive=true rare-alive=true common-natural=true rare-natural=true common-bread=1 common-diamond=0 rare-bread=0 rare-diamond=1 restored=true passed=true')
     }
+    $fullReport.expectedProbeIds += 'mythicStatsBias'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mythicStatsBias'; status = 'passed'; observations = @('mythic-stats result=true default=true base=0.0 killer-priority=true unknown-rejected=true disabled-rejected=true positive-weighted=true positive-rare=684 negative-weighted=true unknown-fail-closed=true restored=true dropper-removed=true')
+    }
     $fullReport.expectedProbeIds += 'importedEntityTypeVariantCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedEntityTypeVariantCondition'; status = 'passed'; observations = @('imported-entity-type-variant-condition primary-mapped=true alias-mapped=true mobtype-mapped=true positive=true alias-positive=true mobtype-positive=true variant-alternative=true wrong-variant-rejected=true wrong-type-rejected=true invalid-preserved=true cat=CAT variant=TABBY')
@@ -570,6 +574,16 @@ try {
     if ($LASTEXITCODE -eq 0 -or $missingDropTableOutput -notmatch 'mythicSpawnerRandomPoolDropTables' -or
             $missingDropTableOutput -notmatch 'restored=true') {
         throw "Release gate accepted Mythic random-pool drops without restoration evidence: $missingDropTableOutput"
+    }
+    [System.IO.File]::WriteAllText($archivePath, ($fullReport | ConvertTo-Json -Depth 20))
+    $missingStatsEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
+    $missingStatsProbe = @($missingStatsEvidence.probes | Where-Object id -eq 'mythicStatsBias')
+    $missingStatsProbe[0].observations = @('mythic-stats result=true default=true base=0.0 killer-priority=true unknown-rejected=true disabled-rejected=true positive-weighted=true positive-rare=684 negative-weighted=true unknown-fail-closed=true restored=false dropper-removed=true')
+    [System.IO.File]::WriteAllText($archivePath, ($missingStatsEvidence | ConvertTo-Json -Depth 20))
+    $missingStatsOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $missingStatsOutput -notmatch 'mythicStatsBias' -or
+            $missingStatsOutput -notmatch 'restored=true') {
+        throw "Release gate accepted incomplete native Mythic stats evidence: $missingStatsOutput"
     }
     [System.IO.File]::WriteAllText($archivePath, ($fullReport | ConvertTo-Json -Depth 20))
     [System.IO.File]::WriteAllText($testLogPath, 'modified log')

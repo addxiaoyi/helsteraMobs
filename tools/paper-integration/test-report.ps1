@@ -468,7 +468,7 @@ try {
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
             'importedItemSimilarityConditions',
-            'importedPlayerKillsCondition', 'contextTargeterRelations', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite')) {
+            'importedPlayerKillsCondition', 'contextTargeterRelations', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -679,6 +679,8 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'deathLootImportedDropTable').status -eq 'passed') 'imported Mythic DropTable natural death probe'
     Assert-True (($report.probes | Where-Object id -eq 'deathLootImportedDropTable').observations[0] -match 'nested-mapped=true') 'cross-file nested DropTable reference reaches the death probe'
     Assert-True (($report.probes | Where-Object id -eq 'deathLootImportedDropTable').observations[0] -match 'gold-range-amount=[12]') 'imported exclusive amount range reaches natural death drops'
+    $mythicStatsProbe = @($report.probes | Where-Object id -eq 'mythicStatsBias')
+    Assert-True ($mythicStatsProbe.Count -eq 1 -and $report.expectedProbeIds -contains 'mythicStatsBias') 'native Mythic stats probe is registered as required evidence'
     Assert-True (($report.probes | Where-Object id -eq 'deathLootTriggerConditions').status -eq 'passed') 'killer trigger conditions probe'
     Assert-True (($report.probes | Where-Object id -eq 'deathLootTriggerConditions').observations[0] -match 'effective-luck=1(?:\.0+)? luck-scaled-drop=true') 'Luck attribute drives a chance-scaled natural drop'
     Assert-True (($report.probes | Where-Object id -eq 'skillTeleport').status -eq 'passed') 'teleport mechanic probe'
@@ -884,7 +886,7 @@ try {
     $syntheticDeathLootReport = Get-Content -LiteralPath $syntheticDeathLootReportPath -Raw -Encoding utf8 | ConvertFrom-Json
     foreach ($deathLootProbeId in @('deathLootItems', 'deathLootExperience', 'deathLootConditions',
             'deathLootDynamicChance', 'deathLootTriggerConditions', 'deathLootGeneratedLines',
-            'deathLootBonuses', 'deathLootImportedDropTable')) {
+            'deathLootBonuses', 'deathLootImportedDropTable', 'mythicStatsBias')) {
         $deathLootProbe = @($syntheticDeathLootReport.probes | Where-Object id -eq $deathLootProbeId)
         Assert-True ($deathLootProbe.Count -eq 1 -and $deathLootProbe[0].status -eq 'not-observed') "synthetic death-loot does not satisfy $deathLootProbeId"
         Assert-True ($syntheticDeathLootReport.expectedProbeIds -contains $deathLootProbeId) "synthetic death-loot keeps $deathLootProbeId in the required catalog"
@@ -904,6 +906,24 @@ try {
             $_.Exception.Message -match 'deathLootImportedDropTable=not-observed'
     }
     Assert-True $syntheticDeathLootRejected 'strict gate rejects synthetic-only death-loot evidence'
+
+    $syntheticStatsLogPath = Join-Path $syntheticDeathLootTemp 'logs/latest.log'
+    $syntheticStatsLine = '[Server thread/INFO]: [helsteraMobs] [自检] mythic-stats result=true default=true base=0.0 killer-priority=true unknown-rejected=true disabled-rejected=true positive-weighted=true positive-rare=684 negative-weighted=true unknown-fail-closed=true restored=true dropper-removed=true'
+    Add-Content -LiteralPath $syntheticStatsLogPath -Encoding utf8 -Value $syntheticStatsLine
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $syntheticDeathLootTemp | Out-Null
+    $syntheticStatsReport = Get-Content -LiteralPath $syntheticDeathLootReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $syntheticStatsProbe = @($syntheticStatsReport.probes | Where-Object id -eq 'mythicStatsBias')
+    Assert-True ($syntheticStatsProbe.Count -eq 1 -and $syntheticStatsProbe[0].status -eq 'passed') 'complete native Mythic stats observation passes report generation'
+    Assert-True ($syntheticStatsReport.expectedProbeIds -contains 'mythicStatsBias') 'native Mythic stats remains required in the release catalog'
+
+    $syntheticStatsLine = $syntheticStatsLine.Replace('restored=true', 'restored=false')
+    $syntheticStatsLog = @(Get-Content -LiteralPath $syntheticStatsLogPath -Encoding utf8)
+    $syntheticStatsLog[-1] = "[Server thread/INFO]: [helsteraMobs] [自检] $($syntheticStatsLine -replace '^\[Server thread/INFO\]: \[helsteraMobs\] \[自检\] ', '')"
+    Set-Content -LiteralPath $syntheticStatsLogPath -Encoding utf8 -Value $syntheticStatsLog
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $syntheticDeathLootTemp | Out-Null
+    $syntheticStatsReport = Get-Content -LiteralPath $syntheticDeathLootReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $syntheticStatsProbe = @($syntheticStatsReport.probes | Where-Object id -eq 'mythicStatsBias')
+    Assert-True ($syntheticStatsProbe.Count -eq 1 -and $syntheticStatsProbe[0].status -eq 'not-observed') 'stats cleanup failure is rejected by report generation'
 
     $strictReportPath = Join-Path $temp 'strict-report.json'
     @{ probes = @(
@@ -1013,6 +1033,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'itemAttributesComposite'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'itemAttributesComposite'; status = 'passed'; observations = @('item-attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true modifiers=3')
+    }
+    $fullCatalogReport.expectedProbeIds += 'mythicStatsBias'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mythicStatsBias'; status = 'passed'; observations = @('mythic-stats result=true default=true base=0.0 killer-priority=true unknown-rejected=true disabled-rejected=true positive-weighted=true positive-rare=684 negative-weighted=true unknown-fail-closed=true restored=true dropper-removed=true')
     }
     $fullCatalogAudienceFilter = @($fullCatalogReport.probes | Where-Object id -eq 'audience-filter-delivery')
     if ($fullCatalogAudienceFilter.Count -ne 1) {
