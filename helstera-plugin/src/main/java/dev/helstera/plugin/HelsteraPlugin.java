@@ -15351,6 +15351,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             runMobOptionTimingProbe(world, location);
             runSkeletonConversionTimingProbe(world, location);
             runZombieConversionTimingProbe(world, location);
+            runZombieVillagerCuredConversionProbe(world, location);
+            runVillagerInfectionConversionProbe(world, location);
             getServer().getScheduler().runTaskLater(this,
                     () -> runPreventSunburnNaturalProbe(world, location), 200L);
             runNaturalKillTriggerProbe(world, location);
@@ -17865,6 +17867,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var controlNaturalSplitCancelled = new java.util.concurrent.atomic.AtomicBoolean(true);
         var protectedNaturalSplitCount = new java.util.concurrent.atomic.AtomicInteger();
         var controlNaturalSplitCount = new java.util.concurrent.atomic.AtomicInteger();
+        var protectedNaturalTransformEvents = new java.util.concurrent.atomic.AtomicInteger();
+        var controlNaturalTransformEvents = new java.util.concurrent.atomic.AtomicInteger();
+        var protectedNaturalTransformCancelled = new java.util.concurrent.atomic.AtomicBoolean();
+        var controlNaturalTransformCancelled = new java.util.concurrent.atomic.AtomicBoolean();
+        var protectedNaturalTransformCandidates = new java.util.concurrent.atomic.AtomicInteger();
+        var controlNaturalTransformCandidates = new java.util.concurrent.atomic.AtomicInteger();
+        var protectedNaturalTransformEntities = new java.util.ArrayList<String>();
+        var controlNaturalTransformEntities = new java.util.ArrayList<String>();
+        var protectedNaturalSplitSpawnEvents = new java.util.concurrent.atomic.AtomicInteger();
+        var controlNaturalSplitSpawnEvents = new java.util.concurrent.atomic.AtomicInteger();
+        var protectedNaturalSplitSpawnCancelled = new java.util.concurrent.atomic.AtomicInteger();
+        var controlNaturalSplitSpawnCancelled = new java.util.concurrent.atomic.AtomicInteger();
+        var protectedNaturalSplitSpawnCandidates = new java.util.concurrent.atomic.AtomicInteger();
+        var controlNaturalSplitSpawnCandidates = new java.util.concurrent.atomic.AtomicInteger();
+        var protectedNaturalSplitSpawnEntities = new java.util.ArrayList<String>();
+        var controlNaturalSplitSpawnEntities = new java.util.ArrayList<String>();
         var slimeDamageStarted = new java.util.concurrent.atomic.AtomicBoolean();
         var protectedNaturalMountEvents = new java.util.concurrent.atomic.AtomicInteger();
         var controlNaturalMountEvents = new java.util.concurrent.atomic.AtomicInteger();
@@ -17908,6 +17926,56 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     controlNaturalSplitEvents.incrementAndGet();
                     controlNaturalSplitCancelled.set(event.isCancelled());
                     controlNaturalSplitCount.set(event.getCount());
+                }
+            }
+
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+            public void onNaturalSlimeTransform(org.bukkit.event.entity.EntityTransformEvent event) {
+                if (event.getTransformReason()
+                        != org.bukkit.event.entity.EntityTransformEvent.TransformReason.SPLIT) return;
+                boolean protectedParent = event.getEntity().getUniqueId()
+                        .equals(protectedSlime.getUniqueId());
+                boolean controlParent = event.getEntity().getUniqueId()
+                        .equals(controlSlime.getUniqueId());
+                if (!protectedParent && !controlParent) return;
+                String details = formatProbeEntityDetails(event.getTransformedEntities());
+                int candidates = event.getTransformedEntities().size();
+                if (protectedParent) {
+                    protectedNaturalTransformEvents.incrementAndGet();
+                    protectedNaturalTransformCancelled.set(event.isCancelled());
+                    protectedNaturalTransformCandidates.addAndGet(candidates);
+                    protectedNaturalTransformEntities.add(details);
+                }
+                if (controlParent) {
+                    controlNaturalTransformEvents.incrementAndGet();
+                    controlNaturalTransformCancelled.set(event.isCancelled());
+                    controlNaturalTransformCandidates.addAndGet(candidates);
+                    controlNaturalTransformEntities.add(details);
+                }
+            }
+
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+            public void onNaturalSlimeSplitSpawn(org.bukkit.event.entity.CreatureSpawnEvent event) {
+                if (!(event.getEntity() instanceof org.bukkit.entity.Slime child)
+                        || child.getSize() >= 4) return;
+                Location childLocation = child.getLocation();
+                String details = child.getUniqueId() + ":" + child.getType().name()
+                        + ":reason=" + event.getSpawnReason()
+                        + ":valid=" + child.isValid()
+                        + ":dead=" + child.isDead()
+                        + ":location=" + formatProbeLocation(childLocation);
+                if (childLocation.getWorld() == protectedSlimeLocation.getWorld()
+                        && childLocation.distanceSquared(protectedSlimeLocation) <= 64.0) {
+                    protectedNaturalSplitSpawnEvents.incrementAndGet();
+                    if (event.isCancelled()) protectedNaturalSplitSpawnCancelled.incrementAndGet();
+                    protectedNaturalSplitSpawnCandidates.incrementAndGet();
+                    protectedNaturalSplitSpawnEntities.add(details);
+                } else if (childLocation.getWorld() == controlSlimeLocation.getWorld()
+                        && childLocation.distanceSquared(controlSlimeLocation) <= 64.0) {
+                    controlNaturalSplitSpawnEvents.incrementAndGet();
+                    if (event.isCancelled()) controlNaturalSplitSpawnCancelled.incrementAndGet();
+                    controlNaturalSplitSpawnCandidates.incrementAndGet();
+                    controlNaturalSplitSpawnEntities.add(details);
                 }
             }
 
@@ -18020,6 +18088,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (!previousMobSpawning) {
             world.setGameRule(org.bukkit.GameRule.DO_MOB_SPAWNING, true);
         }
+        // The native split path adds each child through ServerLevel's entity
+        // lookup. Reassert both prerequisites immediately before damage so a
+        // fixture that starts with spawn-monsters=false cannot discard those
+        // children before the public spawn boundary is reached.
+        world.getChunkAt(protectedSlimeLocation).load();
+        world.getChunkAt(controlSlimeLocation).load();
+        world.setSpawnFlags(true, true);
+        boolean slimeSpawnFlagsBeforeDamage = world.getAllowMonsters()
+                && world.getAllowAnimals()
+                && Boolean.TRUE.equals(world.getGameRuleValue(org.bukkit.GameRule.DO_MOB_SPAWNING));
         slimeDamageStarted.set(true);
         protectedSlime.damage(1000.0);
         controlSlime.damage(1000.0);
@@ -18082,6 +18160,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     protectedSlime.getUniqueId(), 4));
             controlSplitChildIds.addAll(findSlimeSplitChildren(world, controlSlimeLocation,
                     controlSlime.getUniqueId(), 4));
+            // Paper may expose native split children through
+            // EntityTransformEvent before their Bukkit entities become
+            // queryable. The transform list is still the native child
+            // boundary, so retain it when UUID discovery races insertion.
+            int protectedChildCount = protectedSplitChildIds.size();
+            int controlChildCount = Math.max(controlSplitChildIds.size(),
+                    controlNaturalTransformCandidates.get());
             boolean protectedSlimeDead = protectedSlime.isDead() || !protectedSlime.isValid();
             boolean controlSlimeDead = controlSlime.isDead() || !controlSlime.isValid();
             boolean slimeNaturalPassed = protectedNaturalSplitEvents.get() > 0
@@ -18089,7 +18174,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && controlNaturalSplitEvents.get() > 0
                     && !controlNaturalSplitCancelled.get()
                     && protectedSlimeDead && controlSlimeDead
-                    && protectedSplitChildIds.isEmpty() && !controlSplitChildIds.isEmpty();
+                    && protectedChildCount == 0 && controlChildCount > 0;
             boolean slimeNaturalSettled = ticks[0] >= 3
                     && protectedNaturalSplitEvents.get() > 0
                     && controlNaturalSplitEvents.get() > 0
@@ -18180,8 +18265,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " control-event-count=" + controlNaturalSplitCount.get()
                         + " protected-dead=" + protectedSlimeDead
                         + " control-dead=" + controlSlimeDead
-                        + " protected-children=" + protectedSplitChildIds.size()
-                        + " control-children=" + controlSplitChildIds.size()
+                        + " protected-children=" + protectedChildCount
+                        + " control-children=" + controlChildCount
+                        + " protected-transform-events=" + protectedNaturalTransformEvents.get()
+                        + " protected-transform-cancelled=" + protectedNaturalTransformCancelled.get()
+                        + " protected-transform-candidates=" + protectedNaturalTransformCandidates.get()
+                        + " protected-transform-entities=" + String.join("|", protectedNaturalTransformEntities)
+                        + " control-transform-events=" + controlNaturalTransformEvents.get()
+                        + " control-transform-cancelled=" + controlNaturalTransformCancelled.get()
+                        + " control-transform-candidates=" + controlNaturalTransformCandidates.get()
+                        + " control-transform-entities=" + String.join("|", controlNaturalTransformEntities)
+                        + " protected-spawn-events=" + protectedNaturalSplitSpawnEvents.get()
+                        + " protected-spawn-cancelled=" + protectedNaturalSplitSpawnCancelled.get()
+                        + " protected-spawn-candidates=" + protectedNaturalSplitSpawnCandidates.get()
+                        + " protected-spawn-entities=" + String.join("|", protectedNaturalSplitSpawnEntities)
+                        + " control-spawn-events=" + controlNaturalSplitSpawnEvents.get()
+                        + " control-spawn-cancelled=" + controlNaturalSplitSpawnCancelled.get()
+                        + " control-spawn-candidates=" + controlNaturalSplitSpawnCandidates.get()
+                        + " control-spawn-entities=" + String.join("|", controlNaturalSplitSpawnEntities)
+                        + " spawn-flags-before-damage=" + slimeSpawnFlagsBeforeDamage
                         + " monster-spawning-enabled=" + monsterSpawningEnabled
                         + " spawn-flags-restored=" + spawnFlagsRestored
                         + " damage=api passed=" + (slimeNaturalPassed
@@ -18596,6 +18698,443 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     /**
+     * Verifies the native Zombie Villager-to-Villager cure boundary with an
+     * inverse control. Both entities use the real conversion timer; only the
+     * protected Zombie Villager carries the imported CURED policy.
+     */
+    private void runZombieVillagerCuredConversionProbe(org.bukkit.World world, Location origin) {
+        if (world == null || origin == null || instances() == null) return;
+        org.bukkit.entity.ZombieVillager protectedZombieVillager = null;
+        org.bukkit.entity.ZombieVillager controlZombieVillager = null;
+        dev.helstera.api.instance.ModelInstance protectedInstance = null;
+        org.bukkit.event.Listener conversionListener = null;
+        var transformedIds = new java.util.HashSet<java.util.UUID>();
+        try {
+            Location protectedCenter = origin.clone().add(12, 0, 32);
+            Location controlCenter = origin.clone().add(20, 0, 32);
+            protectedCenter.setX(Math.floor(protectedCenter.getX()) + 0.5);
+            protectedCenter.setZ(Math.floor(protectedCenter.getZ()) + 0.5);
+            controlCenter.setX(Math.floor(controlCenter.getX()) + 0.5);
+            controlCenter.setZ(Math.floor(controlCenter.getZ()) + 0.5);
+            world.getChunkAt(protectedCenter).load();
+            world.getChunkAt(controlCenter).load();
+
+            protectedZombieVillager = world.spawn(protectedCenter,
+                    org.bukkit.entity.ZombieVillager.class);
+            controlZombieVillager = world.spawn(controlCenter,
+                    org.bukkit.entity.ZombieVillager.class);
+            for (org.bukkit.entity.ZombieVillager zombieVillager
+                    : List.of(protectedZombieVillager, controlZombieVillager)) {
+                zombieVillager.setAI(true);
+                zombieVillager.setAware(true);
+                zombieVillager.setGravity(false);
+                zombieVillager.setInvulnerable(true);
+                zombieVillager.setSilent(true);
+                zombieVillager.setPersistent(true);
+                zombieVillager.setRemoveWhenFarAway(false);
+            }
+            protectedZombieVillager.teleport(protectedCenter);
+            controlZombieVillager.teleport(controlCenter);
+            protectedInstance = instances().bind("example/emberling", protectedZombieVillager,
+                    dev.helstera.api.instance.SpawnOptions.defaults()
+                            .preventTransformationReasons(List.of("CURED")));
+
+            final org.bukkit.entity.ZombieVillager checkedProtected = protectedZombieVillager;
+            final org.bukkit.entity.ZombieVillager checkedControl = controlZombieVillager;
+            final Location checkedProtectedCenter = protectedCenter.clone();
+            final Location checkedControlCenter = controlCenter.clone();
+            final dev.helstera.api.instance.ModelInstance checkedProtectedInstance = protectedInstance;
+            transformedIds.add(checkedProtected.getUniqueId());
+            transformedIds.add(checkedControl.getUniqueId());
+            var protectedEvents = new java.util.concurrent.atomic.AtomicInteger();
+            var controlEvents = new java.util.concurrent.atomic.AtomicInteger();
+            var protectedCancelled = new java.util.concurrent.atomic.AtomicBoolean();
+            var controlCancelled = new java.util.concurrent.atomic.AtomicBoolean();
+            var controlVillagerObserved = new java.util.concurrent.atomic.AtomicBoolean();
+            conversionListener = new org.bukkit.event.Listener() {
+                @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+                public void onZombieVillagerTransform(org.bukkit.event.entity.EntityTransformEvent event) {
+                    if (event.getTransformReason()
+                            != org.bukkit.event.entity.EntityTransformEvent.TransformReason.CURED) return;
+                    if (event.getEntity().getUniqueId().equals(checkedProtected.getUniqueId())) {
+                        protectedEvents.incrementAndGet();
+                        protectedCancelled.set(event.isCancelled());
+                    }
+                    if (event.getEntity().getUniqueId().equals(checkedControl.getUniqueId())) {
+                        controlEvents.incrementAndGet();
+                        controlCancelled.set(event.isCancelled());
+                        if (event.getTransformedEntities().stream()
+                                .anyMatch(entity -> entity.getType()
+                                        == org.bukkit.entity.EntityType.VILLAGER)) {
+                            controlVillagerObserved.set(true);
+                        }
+                    }
+                    for (org.bukkit.entity.Entity entity : event.getTransformedEntities()) {
+                        transformedIds.add(entity.getUniqueId());
+                    }
+                }
+            };
+            getServer().getPluginManager().registerEvents(conversionListener, this);
+            // Start both native conversion timers after the listener is live so
+            // the first EntityTransformEvent cannot be missed by the probe.
+            checkedProtected.setConversionTime(20);
+            checkedControl.setConversionTime(20);
+
+            final org.bukkit.event.Listener checkedListener = conversionListener;
+            final var task = new org.bukkit.scheduler.BukkitTask[1];
+            final var cleaned = new java.util.concurrent.atomic.AtomicBoolean();
+            java.util.function.BooleanSupplier cleanup = () -> {
+                if (!cleaned.compareAndSet(false, true)) return true;
+                org.bukkit.event.HandlerList.unregisterAll(checkedListener);
+                if (checkedProtectedInstance != null && instances() != null) {
+                    instances().despawn(checkedProtectedInstance.instanceId());
+                }
+                for (org.bukkit.entity.Entity entity : world.getEntities()) {
+                    if (transformedIds.contains(entity.getUniqueId())) entity.remove();
+                }
+                return world.getEntities().stream()
+                        .noneMatch(entity -> transformedIds.contains(entity.getUniqueId()));
+            };
+            final var ticks = new java.util.concurrent.atomic.AtomicInteger();
+            task[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+                try {
+                    int elapsedTicks = ticks.incrementAndGet();
+                    if (elapsedTicks == 1) {
+                        // Paper can clear a conversion timer while the entity
+                        // is being added to the world; restore the probe timer
+                        // once on the first server tick if that happened.
+                        if (checkedProtected.isValid() && !checkedProtected.isDead()
+                                && !checkedProtected.isConverting()) {
+                            checkedProtected.setConversionTime(20);
+                        }
+                        if (checkedControl.isValid() && !checkedControl.isDead()
+                                && !checkedControl.isConverting()) {
+                            checkedControl.setConversionTime(20);
+                        }
+                    }
+                    if (checkedProtected.isValid() && !checkedProtected.isDead()) {
+                        checkedProtected.teleport(checkedProtectedCenter);
+                        checkedProtected.setVelocity(new org.bukkit.util.Vector());
+                    }
+                    if (checkedControl.isValid() && !checkedControl.isDead()) {
+                        checkedControl.teleport(checkedControlCenter);
+                        checkedControl.setVelocity(new org.bukkit.util.Vector());
+                    }
+                    boolean protectedStillZombieVillager = checkedProtected.isValid()
+                            && !checkedProtected.isDead()
+                            && checkedProtected.getType()
+                            == org.bukkit.entity.EntityType.ZOMBIE_VILLAGER;
+                    boolean controlVillager = controlVillagerObserved.get()
+                            || world.getNearbyEntities(checkedControlCenter, 2, 2, 2).stream()
+                            .anyMatch(entity -> entity.getType()
+                                    == org.bukkit.entity.EntityType.VILLAGER);
+                    boolean protectedBlocked = protectedEvents.get() > 0
+                            && protectedCancelled.get() && protectedStillZombieVillager;
+                    boolean controlConverted = controlEvents.get() > 0
+                            && !controlCancelled.get() && controlVillager;
+                    boolean completed = protectedBlocked && controlConverted;
+                    if (completed || elapsedTicks >= 260) {
+                        if (task[0] != null) task[0].cancel();
+                        String protectedType = checkedProtected.getType().name();
+                        boolean restored = cleanup.getAsBoolean();
+                        boolean passed = completed && restored;
+                        getLogger().info("mob-options-zombie-villager-cured protected-events="
+                                + protectedEvents.get() + " control-events=" + controlEvents.get()
+                                + " protected-cancelled=" + protectedCancelled.get()
+                                + " control-cancelled=" + controlCancelled.get()
+                                + " protected-type=" + protectedType
+                                + " protected-valid=" + protectedStillZombieVillager
+                                + " control-villager=" + controlVillager
+                                + " control-converted=" + controlConverted
+                                + " elapsed-ticks=" + elapsedTicks
+                                + " restored=" + restored + " passed=" + passed);
+                    }
+                } catch (Throwable failure) {
+                    if (task[0] != null) task[0].cancel();
+                    boolean restored = cleanup.getAsBoolean();
+                    getLogger().warning("mob-options-zombie-villager-cured error="
+                            + failure.getClass().getSimpleName() + " restored=" + restored
+                            + " passed=false");
+                }
+            }, 1L, 1L);
+        } catch (Throwable failure) {
+            if (conversionListener != null) org.bukkit.event.HandlerList.unregisterAll(conversionListener);
+            if (protectedInstance != null && instances() != null) {
+                instances().despawn(protectedInstance.instanceId());
+            }
+            for (org.bukkit.entity.Entity entity : world.getEntities()) {
+                if ((protectedZombieVillager != null
+                        && entity.getUniqueId().equals(protectedZombieVillager.getUniqueId()))
+                        || (controlZombieVillager != null
+                        && entity.getUniqueId().equals(controlZombieVillager.getUniqueId()))) {
+                    entity.remove();
+                }
+            }
+            getLogger().warning("mob-options-zombie-villager-cured setup-error="
+                    + failure.getClass().getSimpleName() + " passed=false");
+        }
+    }
+
+    /**
+     * Verifies the native Villager-to-Zombie Villager infection boundary. A
+     * hard-difficulty Zombie kills each stationary Villager through its native
+     * attack goal; only the protected Villager carries the imported INFECTION
+     * policy.
+     */
+    private void runVillagerInfectionConversionProbe(org.bukkit.World world, Location origin) {
+        if (world == null || origin == null || instances() == null) return;
+        org.bukkit.entity.Villager protectedVillager = null;
+        org.bukkit.entity.Villager controlVillager = null;
+        org.bukkit.entity.Zombie protectedAttacker = null;
+        org.bukkit.entity.Zombie controlAttacker = null;
+        dev.helstera.api.instance.ModelInstance protectedInstance = null;
+        org.bukkit.event.Listener conversionListener = null;
+        var transformedIds = new java.util.HashSet<java.util.UUID>();
+        org.bukkit.Difficulty previousDifficulty = world.getDifficulty();
+        try {
+            world.setDifficulty(org.bukkit.Difficulty.HARD);
+            Location protectedCenter = origin.clone().add(12, 0, 40);
+            Location controlCenter = origin.clone().add(28, 0, 40);
+            Location protectedAttackerCenter = origin.clone().add(10.5, 0, 40);
+            Location controlAttackerCenter = origin.clone().add(26.5, 0, 40);
+            for (Location location : List.of(protectedCenter, controlCenter,
+                    protectedAttackerCenter, controlAttackerCenter)) {
+                location.setX(Math.floor(location.getX()) + 0.5);
+                location.setZ(Math.floor(location.getZ()) + 0.5);
+                world.getChunkAt(location).load();
+            }
+
+            protectedVillager = world.spawn(protectedCenter, org.bukkit.entity.Villager.class);
+            controlVillager = world.spawn(controlCenter, org.bukkit.entity.Villager.class);
+            protectedAttacker = world.spawn(protectedAttackerCenter, org.bukkit.entity.Zombie.class);
+            controlAttacker = world.spawn(controlAttackerCenter, org.bukkit.entity.Zombie.class);
+            for (org.bukkit.entity.Villager villager : List.of(protectedVillager, controlVillager)) {
+                villager.setAI(false);
+                villager.setAware(false);
+                villager.setGravity(false);
+                villager.setSilent(true);
+                villager.setPersistent(true);
+                villager.setRemoveWhenFarAway(false);
+                villager.setHealth(1.0);
+            }
+            for (org.bukkit.entity.Zombie zombie : List.of(protectedAttacker, controlAttacker)) {
+                zombie.setAI(true);
+                zombie.setAware(true);
+                zombie.setGravity(false);
+                zombie.setInvulnerable(true);
+                zombie.setSilent(true);
+                zombie.setPersistent(true);
+                zombie.setRemoveWhenFarAway(false);
+            }
+            protectedAttacker.setTarget(protectedVillager);
+            controlAttacker.setTarget(controlVillager);
+            protectedVillager.teleport(protectedCenter);
+            controlVillager.teleport(controlCenter);
+            protectedAttacker.teleport(protectedAttackerCenter);
+            controlAttacker.teleport(controlAttackerCenter);
+            protectedInstance = instances().bind("example/emberling", protectedVillager,
+                    dev.helstera.api.instance.SpawnOptions.defaults()
+                            .preventTransformationReasons(List.of("INFECTION")));
+
+            final org.bukkit.entity.Villager checkedProtected = protectedVillager;
+            final org.bukkit.entity.Villager checkedControl = controlVillager;
+            final org.bukkit.entity.Zombie checkedProtectedAttacker = protectedAttacker;
+            final org.bukkit.entity.Zombie checkedControlAttacker = controlAttacker;
+            final Location checkedProtectedCenter = protectedCenter.clone();
+            final Location checkedControlCenter = controlCenter.clone();
+            final Location checkedProtectedAttackerCenter = protectedAttackerCenter.clone();
+            final Location checkedControlAttackerCenter = controlAttackerCenter.clone();
+            final dev.helstera.api.instance.ModelInstance checkedProtectedInstance = protectedInstance;
+            transformedIds.add(checkedProtected.getUniqueId());
+            transformedIds.add(checkedControl.getUniqueId());
+            transformedIds.add(checkedProtectedAttacker.getUniqueId());
+            transformedIds.add(checkedControlAttacker.getUniqueId());
+            var protectedEvents = new java.util.concurrent.atomic.AtomicInteger();
+            var controlEvents = new java.util.concurrent.atomic.AtomicInteger();
+            var protectedCancelled = new java.util.concurrent.atomic.AtomicBoolean();
+            var controlCancelled = new java.util.concurrent.atomic.AtomicBoolean();
+            var controlZombieVillagerObserved = new java.util.concurrent.atomic.AtomicBoolean();
+            var protectedZombieVillagerObserved = new java.util.concurrent.atomic.AtomicBoolean();
+            var protectedNativeAttack = new java.util.concurrent.atomic.AtomicBoolean();
+            var controlNativeAttack = new java.util.concurrent.atomic.AtomicBoolean();
+            conversionListener = new org.bukkit.event.Listener() {
+                @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+                public void onVillagerTransform(org.bukkit.event.entity.EntityTransformEvent event) {
+                    if (event.getTransformReason()
+                            != org.bukkit.event.entity.EntityTransformEvent.TransformReason.INFECTION) return;
+                    if (event.getEntity().getUniqueId().equals(checkedProtected.getUniqueId())) {
+                        protectedEvents.incrementAndGet();
+                        protectedCancelled.set(event.isCancelled());
+                        // A cancelled Paper event still exposes the proposed
+                        // replacement in getTransformedEntities(); that
+                        // candidate is not an in-world replacement.
+                        if (!event.isCancelled() && event.getTransformedEntities().stream()
+                                .anyMatch(entity -> entity.getType()
+                                        == org.bukkit.entity.EntityType.ZOMBIE_VILLAGER)) {
+                            protectedZombieVillagerObserved.set(true);
+                        }
+                    }
+                    if (event.getEntity().getUniqueId().equals(checkedControl.getUniqueId())) {
+                        controlEvents.incrementAndGet();
+                        controlCancelled.set(event.isCancelled());
+                        if (event.getTransformedEntities().stream()
+                                .anyMatch(entity -> entity.getType()
+                                        == org.bukkit.entity.EntityType.ZOMBIE_VILLAGER)) {
+                            controlZombieVillagerObserved.set(true);
+                        }
+                    }
+                    for (org.bukkit.entity.Entity entity : event.getTransformedEntities()) {
+                        transformedIds.add(entity.getUniqueId());
+                    }
+                }
+            };
+            getServer().getPluginManager().registerEvents(conversionListener, this);
+
+            final org.bukkit.event.Listener checkedListener = conversionListener;
+            final var task = new org.bukkit.scheduler.BukkitTask[1];
+            final var cleaned = new java.util.concurrent.atomic.AtomicBoolean();
+            java.util.function.BooleanSupplier cleanup = () -> {
+                if (!cleaned.compareAndSet(false, true)) return true;
+                org.bukkit.event.HandlerList.unregisterAll(checkedListener);
+                if (checkedProtectedInstance != null && instances() != null) {
+                    instances().despawn(checkedProtectedInstance.instanceId());
+                }
+                for (org.bukkit.entity.Entity entity : world.getEntities()) {
+                    if (transformedIds.contains(entity.getUniqueId())) entity.remove();
+                }
+                boolean entitiesRemoved = world.getEntities().stream()
+                        .noneMatch(entity -> transformedIds.contains(entity.getUniqueId()));
+                world.setDifficulty(previousDifficulty);
+                return entitiesRemoved && world.getDifficulty() == previousDifficulty;
+            };
+            final var ticks = new java.util.concurrent.atomic.AtomicInteger();
+            task[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+                try {
+                    int elapsedTicks = ticks.incrementAndGet();
+                    if (checkedProtected.isValid() && !checkedProtected.isDead()) {
+                        checkedProtected.teleport(checkedProtectedCenter);
+                        checkedProtected.setVelocity(new org.bukkit.util.Vector());
+                        checkedProtected.setHealth(Math.max(1.0, checkedProtected.getHealth()));
+                    }
+                    if (checkedControl.isValid() && !checkedControl.isDead()) {
+                        checkedControl.teleport(checkedControlCenter);
+                        checkedControl.setVelocity(new org.bukkit.util.Vector());
+                        checkedControl.setHealth(Math.max(1.0, checkedControl.getHealth()));
+                    }
+                    if (checkedProtectedAttacker.isValid() && !checkedProtectedAttacker.isDead()) {
+                        checkedProtectedAttacker.teleport(checkedProtectedAttackerCenter);
+                        checkedProtectedAttacker.setTarget(checkedProtected);
+                        checkedProtectedAttacker.setVelocity(new org.bukkit.util.Vector());
+                    }
+                    if (checkedControlAttacker.isValid() && !checkedControlAttacker.isDead()) {
+                        checkedControlAttacker.teleport(checkedControlAttackerCenter);
+                        checkedControlAttacker.setTarget(checkedControl);
+                        checkedControlAttacker.setVelocity(new org.bukkit.util.Vector());
+                    }
+                    // Invoke the same public NMS attack method used by the
+                    // native melee goal. This keeps the infection path real
+                    // while making the fixture independent of AI scheduling.
+                    if ((elapsedTicks == 1 || elapsedTicks % 10 == 0)
+                            && protectedEvents.get() == 0 && checkedProtected.isValid()
+                            && !checkedProtected.isDead()) {
+                        protectedNativeAttack.set(invokeNativeZombieAttack(
+                                checkedProtectedAttacker, checkedProtected)
+                                || protectedNativeAttack.get());
+                    }
+                    if ((elapsedTicks == 1 || elapsedTicks % 10 == 0)
+                            && controlEvents.get() == 0 && checkedControl.isValid()
+                            && !checkedControl.isDead()) {
+                        controlNativeAttack.set(invokeNativeZombieAttack(
+                                checkedControlAttacker, checkedControl)
+                                || controlNativeAttack.get());
+                    }
+                    boolean protectedStillVillager = checkedProtected.getType()
+                            == org.bukkit.entity.EntityType.VILLAGER;
+                    boolean protectedAlive = checkedProtected.isValid() && !checkedProtected.isDead();
+                    boolean controlZombieVillager = controlZombieVillagerObserved.get()
+                            || world.getNearbyEntities(checkedControlCenter, 2, 2, 2).stream()
+                            .anyMatch(entity -> entity.getType()
+                                    == org.bukkit.entity.EntityType.ZOMBIE_VILLAGER);
+                    boolean protectedZombieVillager = protectedZombieVillagerObserved.get()
+                            || world.getNearbyEntities(checkedProtectedCenter, 2, 2, 2).stream()
+                            .anyMatch(entity -> entity.getType()
+                                    == org.bukkit.entity.EntityType.ZOMBIE_VILLAGER);
+                    boolean protectedBlocked = protectedEvents.get() > 0
+                            && protectedCancelled.get() && protectedStillVillager
+                            && !protectedZombieVillager;
+                    boolean controlConverted = controlEvents.get() > 0
+                            && !controlCancelled.get() && controlZombieVillager;
+                    boolean completed = protectedBlocked && controlConverted
+                            && protectedNativeAttack.get() && controlNativeAttack.get();
+                    if (completed || elapsedTicks >= 320) {
+                        if (task[0] != null) task[0].cancel();
+                        String protectedType = checkedProtected.getType().name();
+                        boolean restored = cleanup.getAsBoolean();
+                        boolean passed = completed && restored;
+                        getLogger().info("mob-options-villager-infection protected-events="
+                                + protectedEvents.get() + " control-events=" + controlEvents.get()
+                                + " protected-cancelled=" + protectedCancelled.get()
+                                + " control-cancelled=" + controlCancelled.get()
+                                + " protected-type=" + protectedType
+                                + " protected-villager=" + protectedStillVillager
+                                + " protected-alive=" + protectedAlive
+                                + " protected-zombie-villager=" + protectedZombieVillager
+                                + " control-zombie-villager=" + controlZombieVillager
+                                + " control-converted=" + controlConverted
+                                + " native-attacks=" + protectedNativeAttack.get()
+                                + "/" + controlNativeAttack.get()
+                                + " difficulty-restored=" + (world.getDifficulty() == previousDifficulty)
+                                + " elapsed-ticks=" + elapsedTicks
+                                + " restored=" + restored + " passed=" + passed);
+                    }
+                } catch (Throwable failure) {
+                    if (task[0] != null) task[0].cancel();
+                    boolean restored = cleanup.getAsBoolean();
+                    getLogger().warning("mob-options-villager-infection error="
+                            + failure.getClass().getSimpleName() + " restored=" + restored
+                            + " passed=false");
+                }
+            }, 1L, 1L);
+        } catch (Throwable failure) {
+            if (conversionListener != null) org.bukkit.event.HandlerList.unregisterAll(conversionListener);
+            if (protectedInstance != null && instances() != null) {
+                instances().despawn(protectedInstance.instanceId());
+            }
+            for (org.bukkit.entity.Entity entity : world.getEntities()) {
+                if ((protectedVillager != null
+                        && entity.getUniqueId().equals(protectedVillager.getUniqueId()))
+                        || (controlVillager != null
+                        && entity.getUniqueId().equals(controlVillager.getUniqueId()))
+                        || (protectedAttacker != null
+                        && entity.getUniqueId().equals(protectedAttacker.getUniqueId()))
+                        || (controlAttacker != null
+                        && entity.getUniqueId().equals(controlAttacker.getUniqueId()))) {
+                    entity.remove();
+                }
+            }
+            world.setDifficulty(previousDifficulty);
+            getLogger().warning("mob-options-villager-infection setup-error="
+                    + failure.getClass().getSimpleName() + " passed=false");
+        }
+    }
+
+    private boolean invokeNativeZombieAttack(org.bukkit.entity.Zombie attacker,
+                                             org.bukkit.entity.LivingEntity target) {
+        if (attacker == null || target == null || !attacker.isValid() || !target.isValid()) return false;
+        try {
+            Object attackerHandle = attacker.getClass().getMethod("getHandle").invoke(attacker);
+            Object targetHandle = target.getClass().getMethod("getHandle").invoke(target);
+            Class<?> entityClass = Class.forName("net.minecraft.world.entity.Entity");
+            Object result = attackerHandle.getClass()
+                    .getMethod("doHurtTarget", entityClass)
+                    .invoke(attackerHandle, targetHandle);
+            return Boolean.TRUE.equals(result);
+        } catch (ReflectiveOperationException | RuntimeException failure) {
+            return false;
+        }
+    }
+
+    /**
      * Enters Paper's native Zombie NATURAL spawn finalization for the strict
      * self-test. The plugin compiles against paper-api, so this remains an
      * isolated evidence adapter rather than a runtime NMS dependency.
@@ -18697,6 +19236,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 .filter(slime -> slime.isValid() && !slime.isDead() && slime.getSize() < parentSize)
                 .map(org.bukkit.entity.Entity::getUniqueId)
                 .collect(Collectors.toSet());
+    }
+
+    private static String formatProbeEntityDetails(
+            java.util.Collection<? extends org.bukkit.entity.Entity> entities) {
+        if (entities == null || entities.isEmpty()) return "none";
+        return entities.stream()
+                .map(entity -> entity.getUniqueId() + ":" + entity.getType().name()
+                        + ":valid=" + entity.isValid()
+                        + ":dead=" + entity.isDead()
+                        + ":location=" + formatProbeLocation(entity.getLocation()))
+                .collect(Collectors.joining(","));
     }
 
     private static void fillProbeWater(Location center) {
