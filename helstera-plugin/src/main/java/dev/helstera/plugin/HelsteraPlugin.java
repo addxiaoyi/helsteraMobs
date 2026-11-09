@@ -1746,6 +1746,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         == org.bukkit.attribute.AttributeModifier.Operation.ADD_SCALAR;
                 getLogger().info("item-attribute-options result=" + itemAttributes
                         + " modifiers=" + itemModifiers.size());
+                runAttributeCombinationSelfTest(world, origin.clone().add(15, 0, 0), entities);
                 runLegacyNumericItemSelfTest(world, origin.clone().add(20, 0, 0));
                 runInlineItemMetadataSelfTest();
             } catch (Throwable t) {
@@ -1756,6 +1757,125 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 20L);
+    }
+
+    private void runAttributeCombinationSelfTest(org.bukkit.World world, org.bukkit.Location origin,
+                                                 java.util.List<org.bukkit.entity.Entity> entities) {
+        var zombie = world.spawn(origin, org.bukkit.entity.Zombie.class);
+        entities.add(zombie);
+        var entityConfig = new org.bukkit.configuration.file.YamlConfiguration();
+        entityConfig.set("attributes.main-hand.damage.attribute", "DAMAGE");
+        entityConfig.set("attributes.main-hand.damage.amount", 2);
+        entityConfig.set("attributes.main-hand.damage.operation", "ADD");
+        entityConfig.set("attributes.main-hand.damage.slot", "HAND");
+        entityConfig.set("attributes.off-hand.speed.attribute", "MOVEMENT_SPEED");
+        entityConfig.set("attributes.off-hand.speed.amount", "25%");
+        entityConfig.set("attributes.off-hand.speed.operation", "ADD");
+        entityConfig.set("attributes.off-hand.speed.slot", "OFF_HAND");
+        entityConfig.set("attributes.any.armor.attribute", "ARMOR");
+        entityConfig.set("attributes.any.armor.amount", 1);
+        entityConfig.set("attributes.any.armor.operation", "MULTIPLY");
+        entityConfig.set("attributes.any.armor.slot", "ANY");
+        entityConfig.set("attributes.any.invalid.attribute", "NOT_A_REAL_ATTRIBUTE");
+        entityConfig.set("attributes.any.invalid.amount", "NaN");
+        entityConfig.set("attributes.any.invalid.operation", "ADD");
+        var entityAttributes = entityConfig.getConfigurationSection("attributes");
+        applyEntityAttributes(zombie, entityAttributes);
+        applyEntityAttributes(zombie, entityAttributes);
+
+        var attack = zombie.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ATTACK_DAMAGE);
+        var speed = zombie.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED);
+        var armor = zombie.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ARMOR);
+        boolean attackModifier = hasAttributeModifier(attack, 2.0,
+                org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER,
+                org.bukkit.inventory.EquipmentSlotGroup.HAND);
+        boolean speedModifier = hasAttributeModifier(speed, 0.25,
+                org.bukkit.attribute.AttributeModifier.Operation.ADD_SCALAR,
+                org.bukkit.inventory.EquipmentSlotGroup.OFFHAND);
+        boolean armorModifier = hasAttributeModifier(armor, 1.0,
+                org.bukkit.attribute.AttributeModifier.Operation.MULTIPLY_SCALAR_1,
+                org.bukkit.inventory.EquipmentSlotGroup.ANY);
+        boolean entityDeduplicated = modifierCount(attack) == 1
+                && modifierCount(speed) == 1 && modifierCount(armor) == 1;
+        boolean entityCombination = attackModifier && speedModifier && armorModifier
+                && entityDeduplicated;
+        getLogger().info("attribute-options-composite result=" + entityCombination
+                + " attack=" + attackModifier + " speed=" + speedModifier
+                + " armor=" + armorModifier + " dedup=" + entityDeduplicated
+                + " invalid-rejected=" + (modifierCount(attack) == 1
+                && modifierCount(speed) == 1 && modifierCount(armor) == 1));
+
+        var item = new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_SWORD);
+        var itemConfig = new org.bukkit.configuration.file.YamlConfiguration();
+        itemConfig.set("attributes.mainhand.damage.attribute", "DAMAGE");
+        itemConfig.set("attributes.mainhand.damage.amount", 2);
+        itemConfig.set("attributes.mainhand.damage.operation", "ADD");
+        itemConfig.set("attributes.mainhand.damage.slot", "HAND");
+        itemConfig.set("attributes.offhand.speed.attribute", "MOVEMENT_SPEED");
+        itemConfig.set("attributes.offhand.speed.amount", "25%");
+        itemConfig.set("attributes.offhand.speed.operation", "ADD");
+        itemConfig.set("attributes.offhand.speed.slot", "OFF_HAND");
+        itemConfig.set("attributes.any.armor.attribute", "ARMOR");
+        itemConfig.set("attributes.any.armor.amount", 1);
+        itemConfig.set("attributes.any.armor.operation", "MULTIPLY");
+        itemConfig.set("attributes.any.armor.slot", "ANY");
+        itemConfig.set("attributes.any.invalid.attribute", "NOT_A_REAL_ATTRIBUTE");
+        itemConfig.set("attributes.any.invalid.amount", "NaN");
+        var itemAttributes = itemConfig.getConfigurationSection("attributes");
+        for (String slot : itemAttributes.getKeys(false)) {
+            applyItemAttributes(item, itemAttributes.getConfigurationSection(slot));
+            applyItemAttributes(item, itemAttributes.getConfigurationSection(slot));
+        }
+        var itemMeta = item.getItemMeta();
+        var itemAttack = itemAttributeModifiers(itemMeta,
+                org.bukkit.attribute.Attribute.GENERIC_ATTACK_DAMAGE);
+        var itemSpeed = itemAttributeModifiers(itemMeta,
+                org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED);
+        var itemArmor = itemAttributeModifiers(itemMeta,
+                org.bukkit.attribute.Attribute.GENERIC_ARMOR);
+        boolean itemAttackModifier = hasAttributeModifier(itemAttack, 2.0,
+                org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER,
+                org.bukkit.inventory.EquipmentSlotGroup.HAND);
+        boolean itemSpeedModifier = hasAttributeModifier(itemSpeed, 0.25,
+                org.bukkit.attribute.AttributeModifier.Operation.ADD_SCALAR,
+                org.bukkit.inventory.EquipmentSlotGroup.OFFHAND);
+        boolean itemArmorModifier = hasAttributeModifier(itemArmor, 1.0,
+                org.bukkit.attribute.AttributeModifier.Operation.MULTIPLY_SCALAR_1,
+                org.bukkit.inventory.EquipmentSlotGroup.ANY);
+        boolean itemDeduplicated = itemAttack.size() == 1 && itemSpeed.size() == 1 && itemArmor.size() == 1;
+        getLogger().info("item-attribute-options-composite result="
+                + (itemAttackModifier && itemSpeedModifier && itemArmorModifier && itemDeduplicated)
+                + " attack=" + itemAttackModifier + " speed=" + itemSpeedModifier
+                + " armor=" + itemArmorModifier + " dedup=" + itemDeduplicated
+                + " invalid-rejected=" + itemDeduplicated + " modifiers="
+                + (itemAttack.size() + itemSpeed.size() + itemArmor.size()));
+    }
+
+    private static int modifierCount(org.bukkit.attribute.AttributeInstance instance) {
+        return instance == null ? 0 : instance.getModifiers().size();
+    }
+
+    private static boolean hasAttributeModifier(org.bukkit.attribute.AttributeInstance instance, double amount,
+                                                org.bukkit.attribute.AttributeModifier.Operation operation,
+                                                org.bukkit.inventory.EquipmentSlotGroup slotGroup) {
+        return instance != null && hasAttributeModifier(instance.getModifiers(), amount, operation, slotGroup);
+    }
+
+    private static boolean hasAttributeModifier(
+            java.util.Collection<org.bukkit.attribute.AttributeModifier> modifiers, double amount,
+            org.bukkit.attribute.AttributeModifier.Operation operation,
+            org.bukkit.inventory.EquipmentSlotGroup slotGroup) {
+        return modifiers != null && modifiers.stream().anyMatch(modifier ->
+                modifier.getOperation() == operation
+                        && Math.abs(modifier.getAmount() - amount) < 1.0e-9
+                        && modifier.getSlotGroup() == slotGroup);
+    }
+
+    private static java.util.List<org.bukkit.attribute.AttributeModifier> itemAttributeModifiers(
+            org.bukkit.inventory.meta.ItemMeta meta, org.bukkit.attribute.Attribute attribute) {
+        if (meta == null) return java.util.List.of();
+        var modifiers = meta.getAttributeModifiers(attribute);
+        return modifiers == null ? java.util.List.of() : java.util.List.copyOf(modifiers);
     }
 
     private void runLegacyNumericItemSelfTest(org.bukkit.World world, Location origin) {
@@ -20310,79 +20430,99 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (entity == null || attributes == null) return;
         for (String slotKey : attributes.getKeys(false)) {
             Object rawSlot = attributes.get(slotKey);
-            if (rawSlot instanceof Number number) {
-                applyBaseAttribute(entity, slotKey, number.doubleValue());
+            if (!(rawSlot instanceof org.bukkit.configuration.ConfigurationSection slot)) {
+                double base = parseAttributeAmount(rawSlot == null ? null : String.valueOf(rawSlot));
+                if (Double.isFinite(base) && !String.valueOf(rawSlot).trim().endsWith("%")) {
+                    applyBaseAttribute(entity, slotKey, base);
+                } else if (rawSlot != null) {
+                    getLogger().warning("[Attributes] invalid base value for " + slotKey + ": " + rawSlot);
+                }
                 continue;
             }
-            org.bukkit.configuration.ConfigurationSection slot = attributes.getConfigurationSection(slotKey);
-            if (slot == null) continue;
             for (String id : slot.getKeys(false)) {
                 org.bukkit.configuration.ConfigurationSection node = slot.getConfigurationSection(id);
-                if (node == null) continue;
-                String attributeName = node.getString("attribute", id);
-                String rawAmount = node.getString("amount");
-                if (rawAmount == null) rawAmount = String.valueOf(node.getDouble("amount", Double.NaN));
+                Object rawNode = slot.get(id);
+                String attributeName = node == null ? id
+                        : configurationString(node, id, "attribute", "Attribute");
+                Object rawAmountValue = node == null ? rawNode
+                        : firstConfigurationValue(node, "amount", "Amount", "value", "Value");
+                String rawAmount = rawAmountValue == null ? null : String.valueOf(rawAmountValue);
                 double amount = parseAttributeAmount(rawAmount);
                 if (!Double.isFinite(amount)) {
                     getLogger().warning("[Attributes] invalid amount for " + slotKey + "." + id + ": " + rawAmount);
                     continue;
                 }
-                String operationName = normalizeAttributeOperation(node.getString("operation", "ADD_NUMBER"));
+                String operationName = node == null ? "ADD_NUMBER"
+                        : configurationString(node, "ADD_NUMBER", "operation", "Operation");
+                operationName = normalizeAttributeOperation(operationName);
+                if (operationName == null) {
+                    getLogger().warning("[Attributes] invalid operation for " + slotKey + "." + id);
+                    continue;
+                }
                 if (rawAmount.trim().endsWith("%") && operationName.equals("ADD_NUMBER")) {
                     operationName = "ADD_SCALAR";
                 }
-                String modifierSlot = node.getString("slot", slotKey);
-                try {
-                    var attribute = resolveAttribute(attributeName);
-                    var operation = org.bukkit.attribute.AttributeModifier.Operation.valueOf(operationName);
-                    var slotGroup = resolveEquipmentSlotGroup(modifierSlot);
-                    var modifierId = java.util.UUID.nameUUIDFromBytes(
-                            (entity.getUniqueId() + "|" + slotKey + "|" + id)
-                                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                    var instance = entity.getAttribute(attribute);
-                    if (instance == null) {
-                        if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
-                            getLogger().info("attribute-probe missing-instance slot=" + slotKey
-                                    + " id=" + id + " attribute=" + attributeName);
-                        }
-                        continue;
-                    }
-                    if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
-                        getLogger().info("attribute-probe resolved slot=" + slotKey
-                                + " id=" + id + " attribute=" + attribute
-                                + " operation=" + operation + " modifier-slot=" + modifierSlot);
-                    }
-                    instance.getModifiers().stream()
-                            .filter(existing -> modifierId.equals(existing.getUniqueId()))
-                            .toList()
-                            .forEach(instance::removeModifier);
-                    instance.addModifier(new org.bukkit.attribute.AttributeModifier(
-                            modifierId, id, amount, operation, slotGroup));
-                    boolean retained = instance.getModifiers().stream()
-                            .anyMatch(existing -> modifierId.equals(existing.getUniqueId()));
-                    if (!retained) {
-                        // Some Paper entity implementations reject an equipment
-                        // group on a native attribute while accepting the same
-                        // modifier without an item slot. Preserve the modifier
-                        // rather than silently losing the imported value.
-                        instance.addModifier(new org.bukkit.attribute.AttributeModifier(
-                                modifierId, id, amount, operation));
-                    }
-                } catch (IllegalArgumentException ex) {
-                    getLogger().warning("[Attributes] cannot apply " + slotKey + "." + id + ": " + ex.getMessage());
-                }
+                String modifierSlot = node == null ? slotKey
+                        : configurationString(node, slotKey, "slot", "Slot");
+                applyEntityAttributeModifier(entity, slotKey, id, attributeName, amount,
+                        operationName, modifierSlot);
             }
         }
     }
 
-    private static double parseAttributeAmount(String raw) {
+    private void applyEntityAttributeModifier(org.bukkit.entity.LivingEntity entity, String slotKey, String id,
+                                               String attributeName, double amount, String operationName,
+                                               String modifierSlot) {
+        try {
+            var attribute = resolveAttribute(attributeName);
+            var operation = org.bukkit.attribute.AttributeModifier.Operation.valueOf(operationName);
+            var slotGroup = resolveEquipmentSlotGroup(modifierSlot);
+            var modifierId = java.util.UUID.nameUUIDFromBytes(
+                    (entity.getUniqueId() + "|" + slotKey + "|" + id)
+                            .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            var instance = entity.getAttribute(attribute);
+            if (instance == null) {
+                if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
+                    getLogger().info("attribute-probe missing-instance slot=" + slotKey
+                            + " id=" + id + " attribute=" + attributeName);
+                }
+                return;
+            }
+            if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
+                getLogger().info("attribute-probe resolved slot=" + slotKey
+                        + " id=" + id + " attribute=" + attribute
+                        + " operation=" + operation + " modifier-slot=" + modifierSlot);
+            }
+            instance.getModifiers().stream()
+                    .filter(existing -> modifierId.equals(existing.getUniqueId()))
+                    .toList()
+                    .forEach(instance::removeModifier);
+            instance.addModifier(new org.bukkit.attribute.AttributeModifier(
+                    modifierId, id, amount, operation, slotGroup));
+            boolean retained = instance.getModifiers().stream()
+                    .anyMatch(existing -> modifierId.equals(existing.getUniqueId()));
+            if (!retained) {
+                // Some Paper entity implementations reject an equipment group
+                // on a native attribute while accepting the same modifier
+                // without an item slot. Preserve the modifier rather than
+                // silently losing the imported value.
+                instance.addModifier(new org.bukkit.attribute.AttributeModifier(
+                        modifierId, id, amount, operation));
+            }
+        } catch (IllegalArgumentException ex) {
+            getLogger().warning("[Attributes] cannot apply " + slotKey + "." + id + ": " + ex.getMessage());
+        }
+    }
+
+    static double parseAttributeAmount(String raw) {
         if (raw == null || raw.isBlank()) return Double.NaN;
         String value = raw.trim();
         boolean percent = value.endsWith("%");
         if (percent) value = value.substring(0, value.length() - 1).trim();
         try {
             double amount = Double.parseDouble(value);
-            return percent ? amount / 100.0 : amount;
+            double normalized = percent ? amount / 100.0 : amount;
+            return Double.isFinite(normalized) ? normalized : Double.NaN;
         } catch (NumberFormatException ignored) {
             return Double.NaN;
         }
@@ -20405,26 +20545,33 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (meta == null) return;
         for (String key : section.getKeys(false)) {
             var node = section.getConfigurationSection(key);
-            if (node == null) continue;
-            String attributeName = node.getString("attribute", key);
-            String rawAmount = node.getString("amount");
-            if (rawAmount == null) rawAmount = String.valueOf(node.getDouble("amount", 0));
-            String operationName = normalizeAttributeOperation(node.getString("operation", "ADD_NUMBER"));
-            String slotName = node.getString("slot", "ANY");
+            Object rawNode = section.get(key);
+            String attributeName = node == null ? key
+                    : configurationString(node, key, "attribute", "Attribute");
+            Object rawAmountValue = node == null ? rawNode
+                    : firstConfigurationValue(node, "amount", "Amount", "value", "Value");
+            String rawAmount = rawAmountValue == null ? null : String.valueOf(rawAmountValue);
+            String operationName = node == null ? "ADD_NUMBER"
+                    : configurationString(node, "ADD_NUMBER", "operation", "Operation");
+            operationName = normalizeAttributeOperation(operationName);
+            String slotName = node == null ? "ANY"
+                    : configurationString(node, "ANY", "slot", "Slot");
             try {
-                boolean percent = rawAmount.trim().endsWith("%");
-                double amount = Double.parseDouble(percent
-                        ? rawAmount.trim().substring(0, rawAmount.trim().length() - 1).trim()
-                        : rawAmount.trim());
-                if (percent) {
-                    amount /= 100.0;
-                    if (operationName.equals("ADD_NUMBER")) operationName = "ADD_SCALAR";
-                }
+                double amount = parseAttributeAmount(rawAmount);
+                if (!Double.isFinite(amount)) throw new IllegalArgumentException("invalid amount " + rawAmount);
+                if (operationName == null) throw new IllegalArgumentException("invalid operation");
+                if (rawAmount.trim().endsWith("%") && operationName.equals("ADD_NUMBER")) operationName = "ADD_SCALAR";
                 var attribute = resolveAttribute(attributeName);
                 var operation = org.bukkit.attribute.AttributeModifier.Operation.valueOf(operationName);
                 var slotGroup = resolveEquipmentSlotGroup(slotName);
+                var modifierId = java.util.UUID.nameUUIDFromBytes((key + "|" + slotGroup).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                var existing = meta.getAttributeModifiers(attribute);
+                if (existing != null) existing.stream()
+                        .filter(candidate -> modifierId.equals(candidate.getUniqueId()))
+                        .toList()
+                        .forEach(candidate -> meta.removeAttributeModifier(attribute, candidate));
                 var modifier = new org.bukkit.attribute.AttributeModifier(
-                        java.util.UUID.nameUUIDFromBytes((key + "|" + slotGroup).getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                        modifierId,
                         key, amount, operation, slotGroup);
                 meta.addAttributeModifier(attribute, modifier);
             } catch (IllegalArgumentException ex) {
@@ -20434,21 +20581,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         stack.setItemMeta(meta);
     }
 
-    private static String normalizeAttributeOperation(String raw) {
+    static String normalizeAttributeOperation(String raw) {
         String operation = raw == null ? "ADD_NUMBER" : raw.trim().toUpperCase(java.util.Locale.ROOT);
         return switch (operation) {
-            case "ADD", "0" -> "ADD_NUMBER";
+            case "ADD", "ADDITION", "0" -> "ADD_NUMBER";
             case "MULTIPLY_BASE", "ADD_SCALAR", "1" -> "ADD_SCALAR";
             case "MULTIPLY", "MULTIPLY_TOTAL", "MULTIPLY_SCALAR", "2" -> "MULTIPLY_SCALAR_1";
             default -> operation;
         };
     }
 
-    private static org.bukkit.inventory.EquipmentSlotGroup resolveEquipmentSlotGroup(String raw) {
+    static org.bukkit.inventory.EquipmentSlotGroup resolveEquipmentSlotGroup(String raw) {
         String slot = raw == null ? "any" : raw.trim().toLowerCase(java.util.Locale.ROOT);
         slot = switch (slot) {
             case "all" -> "any";
             case "main-hand", "main_hand" -> "mainhand";
+            case "weapon" -> "hand";
             case "off-hand", "off_hand" -> "offhand";
             case "helmet" -> "head";
             case "chestplate" -> "chest";
@@ -20461,8 +20609,26 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return group;
     }
 
-    private static org.bukkit.attribute.Attribute resolveAttribute(String raw) {
+    static org.bukkit.attribute.Attribute resolveAttribute(String raw) {
         String name = raw == null ? "" : raw.trim().toUpperCase(java.util.Locale.ROOT);
+        name = name.replace("MINECRAFT:", "").replace('-', '_').replace(' ', '_');
+        name = switch (name) {
+            case "DAMAGE", "ATTACKDAMAGE", "ATTACK_DAMAGE" -> "GENERIC_ATTACK_DAMAGE";
+            case "ATTACKSPEED", "ATTACK_SPEED" -> "GENERIC_ATTACK_SPEED";
+            case "HEALTH", "MAXHEALTH", "MAX_HEALTH" -> "GENERIC_MAX_HEALTH";
+            case "MOVEMENTSPEED", "MOVEMENT_SPEED" -> "GENERIC_MOVEMENT_SPEED";
+            case "FLYINGSPEED", "FLYING_SPEED" -> "GENERIC_FLYING_SPEED";
+            case "FOLLOWRANGE", "FOLLOW_RANGE", "SIGHTRADIUS", "SIGHT_RADIUS" -> "GENERIC_FOLLOW_RANGE";
+            case "KNOCKBACKRESISTANCE", "KNOCKBACK_RESISTANCE" -> "GENERIC_KNOCKBACK_RESISTANCE";
+            case "ARMOR" -> "GENERIC_ARMOR";
+            case "ARMORTOUGHNESS", "ARMOR_TOUGHNESS" -> "GENERIC_ARMOR_TOUGHNESS";
+            case "ATTACKKNOCKBACK", "ATTACK_KNOCKBACK" -> "GENERIC_ATTACK_KNOCKBACK";
+            case "LUCK" -> "GENERIC_LUCK";
+            case "JUMPSTRENGTH", "JUMP_STRENGTH" -> "GENERIC_JUMP_STRENGTH";
+            case "SCALE" -> "GENERIC_SCALE";
+            case "STEPHEIGHT", "STEP_HEIGHT" -> "GENERIC_STEP_HEIGHT";
+            default -> name;
+        };
         if (!name.startsWith("GENERIC_")) {
             try {
                 return org.bukkit.attribute.Attribute.valueOf("GENERIC_" + name);
@@ -20478,6 +20644,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             return org.bukkit.attribute.Attribute.valueOf("GENERIC_" + name);
         }
+    }
+
+    private static Object firstConfigurationValue(org.bukkit.configuration.ConfigurationSection section,
+                                                  String... names) {
+        if (section == null) return null;
+        for (String name : names) {
+            Object value = section.get(name);
+            if (value != null) return value;
+        }
+        for (String wanted : names) {
+            for (String actual : section.getKeys(false)) {
+                if (actual.equalsIgnoreCase(wanted)) return section.get(actual);
+            }
+        }
+        return null;
+    }
+
+    private static String configurationString(org.bukkit.configuration.ConfigurationSection section,
+                                              String fallback, String... names) {
+        Object value = firstConfigurationValue(section, names);
+        return value == null ? fallback : String.valueOf(value);
     }
     private void applyItemMeta(org.bukkit.inventory.ItemStack stack,
                                          org.bukkit.configuration.ConfigurationSection section) {

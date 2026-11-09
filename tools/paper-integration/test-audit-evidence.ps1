@@ -405,6 +405,14 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'itemMetadata'; status = 'passed'; observations = @('item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true flag-values=[HIDE_ENCHANTS] restrictions=true potion=true skull=true invalid-preserved=true result=true')
     }
+    $fullReport.expectedProbeIds += 'attributesComposite'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'attributesComposite'; status = 'passed'; observations = @('attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true')
+    }
+    $fullReport.expectedProbeIds += 'itemAttributesComposite'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'itemAttributesComposite'; status = 'passed'; observations = @('item-attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true modifiers=3')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

@@ -3688,6 +3688,84 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic standard attribute groups become Paper modifiers and invalid values stay visible")
+    void mythicMapsStandardAttributeGroupsAndPreservesInvalidValues(@TempDir Path root) throws Exception {
+        Path mobFile = write(root, "Mobs/standard-attributes.yml", """
+                mobs:
+                  Boss:
+                    Attributes:
+                      GENERIC_MAX_HEALTH: 40
+                      MainHand:
+                        Damage: 4
+                        MovementSpeed: 0.2
+                        Broken: not-a-number
+                """);
+        YamlConfiguration mob = converted(mobFile);
+        assertEquals(40.0, mob.getDouble("entity.attributes.GENERIC_MAX_HEALTH"), 1e-9);
+        assertEquals("GENERIC_ATTACK_DAMAGE",
+                mob.getString("entity.attributes.main-hand.damage.attribute"));
+        assertEquals(4.0, mob.getDouble("entity.attributes.main-hand.damage.amount"), 1e-9);
+        assertEquals("GENERIC_MOVEMENT_SPEED",
+                mob.getString("entity.attributes.main-hand.movementspeed.attribute"));
+        assertEquals("not-a-number",
+                mob.getString("entity.unsupported.Attributes.main-hand.broken"));
+
+        Path itemFile = write(root, "Items/standard-attributes.yml", """
+                items:
+                  sword:
+                    Id: DIAMOND_SWORD
+                    Attributes:
+                      MainHand:
+                        Damage: 3
+                        AttackSpeed:
+                          Amount: 10%
+                          Operation: ADD
+                          Slot: HAND
+                      OffHand:
+                        Broken: nope
+                """);
+        YamlConfiguration item = converted(itemFile);
+        assertEquals("GENERIC_ATTACK_DAMAGE",
+                item.getString("items.sword.attributes.mainhand.damage.attribute"));
+        assertEquals(3.0, item.getDouble("items.sword.attributes.mainhand.damage.amount"), 1e-9);
+        assertEquals("GENERIC_ATTACK_SPEED",
+                item.getString("items.sword.attributes.hand.attackspeed.attribute"));
+        assertEquals("10%", item.getString("items.sword.attributes.hand.attackspeed.amount"));
+        assertEquals("ADD", item.getString("items.sword.attributes.hand.attackspeed.operation"));
+        assertEquals("nope", item.getString("items.sword.unsupported.attributes.offhand.broken"));
+    }
+
+    @Test
+    @DisplayName("Unknown item attribute operations and slots are preserved instead of projected")
+    void mythicPreservesInvalidAttributeModifiers(@TempDir Path root) throws Exception {
+        Path file = write(root, "Items/invalid-attributes.yml", """
+                items:
+                  invalid:
+                    Id: DIAMOND_SWORD
+                    Attributes:
+                      MainHand:
+                        attack:
+                          Attribute: ATTACK_DAMAGE
+                          Amount: 2
+                          Operation: NO_SUCH_OPERATION
+                        speed:
+                          Attribute: ATTACK_SPEED
+                          Amount: 1
+                          Slot: NO_SUCH_SLOT
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = converted(file);
+        assertFalse(target.contains("items.invalid.attributes.mainhand.attack"));
+        assertFalse(target.contains("items.invalid.attributes.mainhand.speed"));
+        assertEquals("NO_SUCH_OPERATION",
+                target.getString("items.invalid.unsupported.attributes.mainhand.attack.Operation"));
+        assertEquals("NO_SUCH_SLOT",
+                target.getString("items.invalid.unsupported.attributes.mainhand.speed.Slot"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && String.valueOf(entry.get("note")).contains("attribute modifier")));
+    }
+
+    @Test
     @DisplayName("MythicMobs Options.AttackSpeed is preserved when Paper entities lack that attribute")
     void mythicPreservesAttackSpeedOption(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/attack-speed.yml", """
