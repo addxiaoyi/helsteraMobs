@@ -6521,6 +6521,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean importedInlineDynamic = false;
                 boolean importedInlineMissing = false;
                 boolean importedListDrop = false;
+                boolean importedOwnerDrop = false;
+                boolean importedTargetOwnerDrop = false;
                 boolean importedListInvalid = false;
                 Path dropImportRoot = null;
                 try {
@@ -6545,6 +6547,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     String invalidAmount = "dropitem{item=DIAMOND;amount=0}";
                     String unknownArgument = "dropitem{item=DIAMOND;unknown=true}";
                     String invalidNatural = "dropitem{item=DIAMOND;n=maybe}";
+                    String invalidOwner = "dropitem{item=DIAMOND;owner=not-a-uuid}";
                     String invalidInline = "dropitem{items=DIAMOND 0}";
                     String invalidList = "dropitem{items=DIAMOND 1,STONE 0}";
                     String invalidListNatural = "dropitem{items=DIAMOND,STONE,n=maybe}";
@@ -6557,13 +6560,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                   - dropitem{i=DIAMOND 4;n=false} @location{%s}
                                   - dropitem{i=DIAMOND <skill.var.drop-count>;n=false} @location{%s}
                                   - dropitem{items=DIAMOND 2,STONE 3,n=false} @location{%s}
+                                  - dropitem{item=DIAMOND;amount=1;owner=%s} @location{%s}
+                                  - dropitem{item=DIAMOND;amount=1;owner=<target.uuid>} @Self
                                   - %s
                                   - %s
                                   - %s
                                   - %s
                                   - %s
                                   - %s
-                            """.formatted(dropArgs, dropArgs, dropArgs, dropArgs, invalidAmount, unknownArgument, invalidNatural, invalidInline, invalidList, invalidListNatural));
+                                  - %s
+                            """.formatted(dropArgs, dropArgs, dropArgs, dropArgs,
+                            "123e4567-e89b-12d3-a456-426614174000", dropArgs,
+                            invalidAmount, unknownArgument, invalidNatural, invalidInline, invalidList,
+                            invalidListNatural, invalidOwner));
                     var dropEntries = new MythicMobsImporter().convert(dropSource);
                     var dropPlan = dropEntries.stream().filter(entry -> "skills.yml".equals(entry.get("target-file")))
                             .findFirst().orElseThrow();
@@ -6571,22 +6580,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             new java.io.StringReader(String.valueOf(dropPlan.get("content"))));
                     var importedActions = dropYaml.getStringList("skills.probe.on-decision");
                     var unsupportedDrops = dropYaml.getStringList("skills.probe.unsupported");
-                    importedDropInvalidPreserved = unsupportedDrops.containsAll(java.util.List.of(invalidAmount, unknownArgument))
+                    importedDropInvalidPreserved = unsupportedDrops.containsAll(java.util.List.of(
+                            invalidAmount, unknownArgument, invalidOwner))
                             && dropEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
                             && String.valueOf(entry.get("note")).contains("Invalid dropitem amount"))
                             && dropEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
-                            && String.valueOf(entry.get("note")).contains("Unsupported dropitem argument"));
+                            && String.valueOf(entry.get("note")).contains("Unsupported dropitem argument"))
+                            && dropEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                            && String.valueOf(entry.get("note")).contains("Invalid dropitem owner"));
                     importedNaturalInvalid = unsupportedDrops.contains(invalidNatural)
                             && dropEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
                             && String.valueOf(entry.get("note")).contains("Invalid dropitem naturally flag"));
                     importedInlineInvalid = unsupportedDrops.contains(invalidInline)
                             && dropEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
                             && String.valueOf(entry.get("note")).contains("Invalid dropitem item"));
-                    importedListInvalid = unsupportedDrops.size() == 6 && unsupportedDrops.contains(invalidList)
+                    importedListInvalid = unsupportedDrops.size() == 7 && unsupportedDrops.contains(invalidList)
                             && unsupportedDrops.contains(invalidListNatural)
                             && dropEntries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
                             && String.valueOf(entry.get("note")).contains("Invalid dropitem item"));
-                    if (importedActions.size() == 5) {
+                    if (importedActions.size() == 7) {
                         importedDrop = runIntegrationAction(skills, behaviors, importedActions.get(0), blockContext)
                                 && locationDrops.size() == 2
                                 && locationDrops.get(1).getItemStack().getType() == org.bukkit.Material.DIAMOND
@@ -6614,6 +6626,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 && locationDrops.get(5).getItemStack().getAmount() == 3
                                 && locationDrops.get(4).getLocation().distanceSquared(dropLocation) < 1.0e-8
                                 && locationDrops.get(5).getLocation().distanceSquared(dropLocation) < 1.0e-8;
+                        importedOwnerDrop = runIntegrationAction(skills, behaviors, importedActions.get(5), blockContext)
+                                && locationDrops.size() == 7
+                                && locationDrops.get(6).getItemStack().getType() == org.bukkit.Material.DIAMOND
+                                && locationDrops.get(6).getItemStack().getAmount() == 1
+                                && java.util.UUID.fromString("123e4567-e89b-12d3-a456-426614174000")
+                                .equals(locationDrops.get(6).getOwner());
+                        importedTargetOwnerDrop = runIntegrationAction(
+                                skills, behaviors, importedActions.get(6), blockContext)
+                                && locationDrops.size() == 8
+                                && locationDrops.get(7).getItemStack().getType() == org.bukkit.Material.DIAMOND
+                                && locationDrops.get(7).getItemStack().getAmount() == 1
+                                && zombie.getUniqueId().equals(locationDrops.get(7).getOwner());
                     }
                 } finally {
                     org.bukkit.event.HandlerList.unregisterAll(dropListener);
@@ -6627,7 +6651,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().info("drop-item-location valid=" + dropAtLocation
                         + " invalid-rejected=" + invalidDropRejected + " missing-rejected=" + missingDropRejected);
                 getLogger().info("drop-item-import valid=" + importedDrop + " missing-rejected="
-                        + importedMissingRejected + " invalid-preserved=" + importedDropInvalidPreserved);
+                        + importedMissingRejected + " invalid-preserved=" + importedDropInvalidPreserved
+                        + " owner=" + importedOwnerDrop + " target-owner=" + importedTargetOwnerDrop);
                 getLogger().info("drop-item-natural-import exact=" + importedExactDrop
                         + " invalid-preserved=" + importedNaturalInvalid);
                 getLogger().info("drop-item-inline-import valid=" + importedExactDrop

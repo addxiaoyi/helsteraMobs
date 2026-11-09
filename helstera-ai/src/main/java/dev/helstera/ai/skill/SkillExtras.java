@@ -6093,6 +6093,7 @@ public final class SkillExtras {
         String itemName = str(args, 0, "");
         var amount = dropItemAmount(args);
         boolean naturally = dropItemNaturally(args);
+        String ownerName = args != null && args.size() > 3 && !args.get(3).isEmpty() ? args.get(3) : null;
         return ctx -> {
             int count = dropItemCount(amount.applyAsDouble(ctx));
             if (count == 0) return;
@@ -6100,23 +6101,24 @@ public final class SkillExtras {
             ItemStack item = resolveItem(itemName, count);
             if (location == null || item == null) return;
             item.setAmount(count);
-            try {
-                if (naturally) location.getWorld().dropItemNaturally(location, item);
-                else location.getWorld().dropItem(location, item);
-            } catch (RuntimeException ignored) {
-                SkillFaults.swallow("SkillExtras#1384");
-            }
+            UUID owner = ownerName == null ? null : dropItemOwner(ownerName, ctx);
+            if (ownerName != null && owner == null) return;
+            dropItemAt(location, item, naturally, owner, "SkillExtras#1384");
         };
     }
 
     private static java.util.function.Consumer<BehaviorContext> dropItemsAction(List<String> args, boolean targeted) {
-        if (args == null || args.size() < 5 || args.size() % 2 == 0) {
+        boolean hasOwner = args != null && args.size() % 2 == 0;
+        int pairsEnd = hasOwner ? args.size() - 1 : args == null ? 0 : args.size();
+        if (args == null || pairsEnd < 5 || pairsEnd % 2 == 0) {
             throw new IllegalArgumentException("drop-items requires a natural flag and at least two item/count pairs");
         }
         String naturally = args.get(0);
+        String owner = hasOwner ? args.get(args.size() - 1) : null;
         var actions = new ArrayList<java.util.function.Consumer<BehaviorContext>>();
-        for (int i = 1; i < args.size(); i += 2) {
-            var itemArgs = List.of(args.get(i), args.get(i + 1), naturally);
+        for (int i = 1; i < pairsEnd; i += 2) {
+            var itemArgs = List.of(args.get(i), args.get(i + 1), naturally,
+                    owner == null ? "" : owner);
             actions.add(targeted ? dropItemTargetsAction(itemArgs) : dropItemAction(itemArgs));
         }
         return ctx -> actions.forEach(action -> action.accept(ctx));
@@ -6126,6 +6128,7 @@ public final class SkillExtras {
         String itemName = str(args, 0, "");
         var amount = dropItemAmount(args);
         boolean naturally = dropItemNaturally(args);
+        String ownerName = args != null && args.size() > 3 && !args.get(3).isEmpty() ? args.get(3) : null;
         return ctx -> {
             int count = dropItemCount(amount.applyAsDouble(ctx));
             if (count == 0) return;
@@ -6133,27 +6136,48 @@ public final class SkillExtras {
             if (template == null) return;
             Location locationTarget = ctx.targetLocation().orElse(null);
             if (locationTarget != null && locationTarget.getWorld() != null) {
+                UUID owner = ownerName == null ? null : dropItemOwner(ownerName, ctx);
+                if (ownerName != null && owner == null) return;
                 ItemStack item = template.clone();
                 item.setAmount(count);
-                try {
-                    if (naturally) locationTarget.getWorld().dropItemNaturally(locationTarget, item);
-                    else locationTarget.getWorld().dropItem(locationTarget, item);
-                }
-                catch (RuntimeException ignored) { SkillFaults.swallow("SkillExtras#dropItemTargets"); }
+                dropItemAt(locationTarget, item, naturally, owner, "SkillExtras#dropItemTargets");
                 return;
             }
             for (LivingEntity target : targetEntities(ctx)) {
                 Location location = target.getLocation();
                 if (location == null || location.getWorld() == null) continue;
+                BehaviorContext targetContext = ctx.withTargetEntity(target);
+                UUID owner = ownerName == null ? null : dropItemOwner(ownerName, targetContext);
+                if (ownerName != null && owner == null) continue;
                 ItemStack item = template.clone();
                 item.setAmount(count);
-                try {
-                    if (naturally) location.getWorld().dropItemNaturally(location, item);
-                    else location.getWorld().dropItem(location, item);
-                }
-                catch (RuntimeException ignored) { SkillFaults.swallow("SkillExtras#dropItemTargets"); }
+                dropItemAt(location, item, naturally, owner, "SkillExtras#dropItemTargets");
             }
         };
+    }
+
+    private static UUID dropItemOwner(String raw, BehaviorContext context) {
+        if (raw == null || raw.isBlank()) return null;
+        String resolved = Placeholders.resolve(raw, context);
+        if (resolved == null) return null;
+        try {
+            UUID owner = UUID.fromString(resolved.trim());
+            return owner.toString().equalsIgnoreCase(resolved.trim()) ? owner : null;
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    private static void dropItemAt(Location location, ItemStack item, boolean naturally,
+                                   UUID owner, String faultLocation) {
+        try {
+            org.bukkit.entity.Item dropped = naturally
+                    ? location.getWorld().dropItemNaturally(location, item)
+                    : location.getWorld().dropItem(location, item);
+            if (owner != null && dropped != null) dropped.setOwner(owner);
+        } catch (RuntimeException ignored) {
+            SkillFaults.swallow(faultLocation);
+        }
     }
 
     private static int dropItemCount(double amount) {

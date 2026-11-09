@@ -1413,7 +1413,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'dropItemImported'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'dropItemImported'; status = 'passed'; observations = @('drop-item-import valid=true missing-rejected=true invalid-preserved=true')
+        id = 'dropItemImported'; status = 'passed'; observations = @('drop-item-import valid=true missing-rejected=true invalid-preserved=true owner=true target-owner=true')
     }
     $fullCatalogReport.expectedProbeIds += 'dropItemNaturalImported'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -2617,7 +2617,7 @@ try {
     $fullCatalogReport.expectedProbeIds += 'dropItemLocation'
     $fullCatalogReport.probes += $dropLocationProbe
     $importedDropProbe = $fullCatalogReport.probes | Where-Object id -eq 'dropItemImported'
-    $importedDropProbe.observations = @('drop-item-import valid=true missing-rejected=true invalid-preserved=false')
+    $importedDropProbe.observations = @('drop-item-import valid=true missing-rejected=true invalid-preserved=false owner=true target-owner=true')
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $badImportedDropRejected = $false
     try {
@@ -2625,7 +2625,16 @@ try {
             -RequireTargetPaperVersion -RequireFullReleaseCatalog
     } catch { $badImportedDropRejected = $_.Exception.Message -match 'required observation for dropItemImported' }
     Assert-True $badImportedDropRejected 'full release gate rejects incomplete imported drop evidence'
-    $importedDropProbe.observations = @('drop-item-import valid=true missing-rejected=true invalid-preserved=true')
+    $importedDropProbe.observations = @('drop-item-import valid=true missing-rejected=true invalid-preserved=true owner=true target-owner=true')
+    $importedDropProbe.observations = @('drop-item-import valid=true missing-rejected=true invalid-preserved=true owner=true target-owner=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badTargetOwnerRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badTargetOwnerRejected = $_.Exception.Message -match 'required observation for dropItemImported' }
+    Assert-True $badTargetOwnerRejected 'full release gate rejects missing target-scoped dropped-item owner evidence'
+    $importedDropProbe.observations = @('drop-item-import valid=true missing-rejected=true invalid-preserved=true owner=true target-owner=true')
     $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'dropItemImported' })
     $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'dropItemImported' })
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8

@@ -417,6 +417,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'itemAttributesComposite'; status = 'passed'; observations = @('item-attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true modifiers=3')
     }
+    $dropItemOwnerProbe = @($fullReport.probes | Where-Object id -eq 'dropItemImported')
+    if ($dropItemOwnerProbe.Count -ne 1) { throw 'Synthetic release report must contain dropItemImported.' }
+    $dropItemOwnerProbe[0].observations = @(
+        'drop-item-import valid=true missing-rejected=true invalid-preserved=true owner=true target-owner=true')
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

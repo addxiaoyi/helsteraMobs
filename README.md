@@ -2,11 +2,31 @@
 
 ## MythicMobs Parity Development Status (2026-11-09)
 
-Latest strict fixture `srv-paper-mythic-stats-strict-20261109-r2`
-passes all 409 release probes (390 passed, 19 expected rejections, zero failed
-or incomplete) on Paper 1.21.1-133. It verifies the built-in `stats.yml`
-provider and weighted `BiasStat` loot path: default and configured base values,
-killer priority over dropper fallback, entity overrides, unknown/disabled stat
+Latest strict fixture `srv-paper-dropitem-owner-strict-20261109-r2` passes all
+409 release probes (390 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies imported fixed and `<target.uuid>`
+owners by reading them back from real dropped items; invalid owner input remains
+preserved with a migration warning. Report:
+`tools/paper-integration/reports/paper-1.21.1-dropitem-owner-strict-20261109-r2.json`
+(SHA-256 `4ceb8772a7f6d263a15f7d0d63ab534e69a6ae86196cb73073613339e33578e7`).
+Compressed server log SHA-256:
+`d5965346371cc7c280390c72a016b950937bdfc2194dd369f033d8ab665a506e`.
+Client log archive SHA-256:
+`a9761721def614375f9ac678d55d8edf566371fc0d377f00b78d51326657ff08`.
+Plugin SHA-256:
+`a1df42c4148f02c5cdadda085619aec9d225779f12c2d277e379a1efbaea7e04`.
+The archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-dropitem-owner-strict-20261109-r1` verified
+the fixed imported owner UUID and invalid-input preservation in the same
+409-probe release catalog. Its report and logs remain archived.
+
+Previous strict fixture `srv-paper-mythic-stats-strict-20261109-r2` passes all
+409 release probes (390 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies the built-in `stats.yml` provider
+and weighted `BiasStat` loot path: default and configured base values, killer
+priority over dropper fallback, entity overrides, unknown/disabled stat
 rejection, positive and negative weighting, fail-closed fallback, reload, and
 state restoration. Report:
 `tools/paper-integration/reports/paper-1.21.1-mythic-stats-strict-20261109-r2.json`
@@ -17,8 +37,6 @@ Client log archive SHA-256:
 `3fa1cd8199cbb00946a2c5e5fd830734c129300d597053686cb05630fd65516a`.
 Plugin SHA-256:
 `2c7a6c37935cf048b462ea2acad5cdc27383716f5900049f5589493444fe0d19`.
-The archived logs redact web token query values; the source fixture retains the
-original run logs.
 
 Previous strict fixture `srv-paper-attributes-composite-strict-20261109-r1`
 passes all 408 probes (389 passed, 19 expected rejections, zero failed or
@@ -904,7 +922,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-mythic-stats-strict-20261109-r2` has 409 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-dropitem-owner-strict-20261109-r2` has 409 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -920,8 +938,8 @@ This is a partial parity release. The matrix currently has `35`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 529 cited IDs; 437 report files; 4 directories
-   without reports; 88 missing directories; 207 archived release reports. The
+   Current fixture inventory: 531 cited IDs; 439 report files; 4 directories
+   without reports; 88 missing directories; 209 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

@@ -249,7 +249,7 @@
     {
       "id": "dropItemImported",
       "status": "passed",
-      "requiredObservation": "drop-item-import valid=true missing-rejected=true invalid-preserved=true"
+      "requiredObservation": "drop-item-import valid=true missing-rejected=true invalid-preserved=true owner=true target-owner=true"
     },
     {
       "id": "dropItemNaturalImported",

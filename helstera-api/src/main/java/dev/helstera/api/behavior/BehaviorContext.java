@@ -386,6 +386,28 @@ public final class BehaviorContext {
                 .withExecutionAudienceFrom(this);
     }
 
+    /** Returns a continuation scoped to one entity in the current target set. */
+    public BehaviorContext withTargetEntity(LivingEntity entity) {
+        if (entity == null) throw new IllegalArgumentException("entity target is required");
+        double scopedHealthRatio = healthRatio;
+        double maximum = entity.getMaxHealth();
+        if (Double.isFinite(maximum) && maximum > 0) {
+            double health = entity.getHealth();
+            if (Double.isFinite(health)) scopedHealthRatio = health / maximum;
+        }
+        double scopedDistance = distanceToTarget;
+        Location entityLocation = entity.getLocation();
+        if (origin != null && origin.getWorld() != null && entityLocation != null
+                && origin.getWorld().equals(entityLocation.getWorld())) {
+            scopedDistance = origin.distance(entityLocation);
+        }
+        Player player = entity instanceof Player p ? p : null;
+        return new BehaviorContext(instance, player, entity, scopedHealthRatio, scopedDistance,
+                decisionCount, state, payload, trigger, List.of(entity), origin, skillTree,
+                cancellableEvent, damageCause)
+                .withExecutionAudienceFrom(this);
+    }
+
     /** State shared by nested skills triggered from this context. */
     public Optional<SkillTreeContext> skillTree() {
         return Optional.ofNullable(skillTree);

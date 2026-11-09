@@ -1702,6 +1702,13 @@ public final class MythicMobsImporter implements MigrationImporter {
                         "unsupported", "Invalid dropitem naturally flag; original line preserved.", "WARN");
                 return;
             }
+            if (invalidDropItemOwner(raw)) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid dropitem owner; original line preserved.", "WARN");
+                return;
+            }
             String item = dropItemName(raw);
             if (invalidDropItemItemFields(raw) || item == null || item.isBlank()
                     || item.startsWith("@") || item.startsWith("~") || item.startsWith("?")
@@ -1864,10 +1871,18 @@ public final class MythicMobsImporter implements MigrationImporter {
             int equals = argument.indexOf('=');
             if (equals <= 0) return true;
             String name = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
-            if (!java.util.Set.of("item", "items", "i", "material", "amount", "a", "naturally", "natural", "n", "delay", "repeat",
+            if (!java.util.Set.of("item", "items", "i", "material", "amount", "a", "naturally", "natural", "n", "owner", "delay", "repeat",
                     "repeatinterval", "repeat-interval").contains(name)) return true;
         }
         return false;
+    }
+
+    private static boolean invalidDropItemOwner(String raw) {
+        if (invalidDropItemFields(raw, "owner")) return true;
+        String value = firstArg(raw, "owner");
+        if (value == null) return false;
+        return !value.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+                && !value.matches("<[^<>]+>");
     }
 
     private static boolean invalidDropItemNaturally(String raw) {
@@ -2941,6 +2956,7 @@ public final class MythicMobsImporter implements MigrationImporter {
 
     private static String dropItemTranslation(String raw) {
         String item = dropItemRawItem(raw);
+        String owner = firstArg(raw, "owner");
         if (item != null && item.indexOf(',') >= 0) {
             String naturally = firstArg(raw, "naturally", "natural", "n");
             var result = new StringBuilder("drop-items ").append(naturally == null ? "true" : naturally.toLowerCase(Locale.ROOT));
@@ -2948,10 +2964,13 @@ public final class MythicMobsImporter implements MigrationImporter {
                 String[] parts = entry.trim().split("\\s+");
                 result.append(' ').append(parts[0]).append(' ').append(parts.length == 2 ? parts[1] : "1");
             }
+            if (owner != null) result.append(' ').append(owner);
             return result.toString();
         }
+        String naturallyOption = dropItemNaturallyOption(raw);
         return "drop-item " + java.util.Objects.toString(dropItemName(raw), "") + " "
-                + dropItemAmount(raw) + dropItemNaturallyOption(raw);
+                + dropItemAmount(raw) + (owner == null ? naturallyOption
+                : (naturallyOption.isEmpty() ? " true" : naturallyOption) + " " + owner);
     }
 
     private static String escape(String value) {
