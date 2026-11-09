@@ -38,6 +38,23 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
+Latest strict fixture `srv-paper-route-patrol-strict-20261109-r2` passes all 409
+probes (390 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `aiRoute` probe verifies followpath movement, dynamic
+patrol rebind, speed/tolerance diagnostics, endpoint reversal, and continued
+patrol operation after the loop. Report:
+`reports/paper-1.21.1-route-patrol-strict-20261109-r2.json`;
+server log:
+`reports/paper-1.21.1-route-patrol-strict-20261109-r2.log.gz`;
+client logs:
+`reports/paper-1.21.1-route-patrol-strict-20261109-r2-client-logs.tar.gz`.
+Report SHA-256: `f90115c90dad9d8883a2b6a592008488c9a2c27693f09ec3adbd04da3d8c7f5a`;
+server log SHA-256: `0915ca648b08a2ff918c7eda2b419b8c417c0a7ee3398d1cc3faee29e683cf18`;
+client log SHA-256: `f5b1fb7b78b13ec58b4bc4a83f509c64943cfe5bbceedba6915727dcdb56f3c1`;
+plugin SHA-256: `7c999206379c7363639e92a8031d057cabd762bcc698b2df224dc26fd36e983e`.
+Native Pathfinder goal equivalence remains open. Archived logs redact web token
+query values; the source fixture retains the original run logs.
+
 Previous strict fixture `srv-paper-can-pickup-import-strict-20261109-r2` passes
 all 409 probes (390 passed, 19 expected rejections, zero failed or incomplete)
 on Paper 1.21.1-133. It verifies imported `CanPickupItems: true` and `false`
@@ -54,7 +71,7 @@ plugin SHA-256: `7bede98dce74336f9b5a9df6707273a7793180a3558ffa5fbdd086cab3cd41e
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
 
-Latest strict fixture `srv-paper-jockey-import-strict-20261109-r1` passes all
+Previous strict fixture `srv-paper-jockey-import-strict-20261109-r1` passes all
 409 probes (390 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. It verifies imported Zombie `Options.PreventJockeyMounts: true`
 cancels a Chicken `EntityMountEvent`, while the global-default Zombie allows it

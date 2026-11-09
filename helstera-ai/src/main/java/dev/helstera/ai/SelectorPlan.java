@@ -15,6 +15,8 @@ import java.util.Locale;
  */
 final class SelectorPlan {
 
+    private static final double DEFAULT_ROUTE_TOLERANCE = 0.75;
+
     enum TargetKind {
         NONE,
         PLAYERS,
@@ -49,17 +51,21 @@ final class SelectorPlan {
     record RoutePoint(int x, int y, int z) {
     }
 
-    record RouteSpec(String token, List<RoutePoint> points, String error) {
+    record RouteSpec(String token, List<RoutePoint> points, String error,
+                     double speed, double tolerance, boolean patrol) {
+        RouteSpec(String token, List<RoutePoint> points, String error) {
+            this(token, points, error, 1.0, defaultTolerance(token), isPatrolToken(token));
+        }
+
         boolean valid() {
             return error == null || error.isBlank();
         }
     }
 
     static final class RouteState {
-        private static final double REACH_RADIUS = 0.75;
-
         private final RouteSpec spec;
         private int index;
+        private int direction = 1;
 
         private RouteState(RouteSpec spec) {
             this.spec = spec;
@@ -73,23 +79,78 @@ final class SelectorPlan {
             return index < spec.points().size() ? spec.points().get(index) : null;
         }
 
+        double speed() {
+            return spec.speed();
+        }
+
+        double tolerance() {
+            return spec.tolerance();
+        }
+
+        boolean patrol() {
+            return spec.patrol();
+        }
+
+        String direction() {
+            return direction > 0 ? "forward" : "backward";
+        }
+
         boolean advanceIfReached(double x, double y, double z) {
             RoutePoint point = current();
             if (point == null) return false;
-            double dx = point.x() - x;
+            // Waypoints are block coordinates; movement targets the block
+            // center in AiController, so arrival must use the same origin.
+            double dx = point.x() + 0.5 - x;
             double dy = point.y() - y;
-            double dz = point.z() - z;
-            if (Math.sqrt(dx * dx + dy * dy + dz * dz) > REACH_RADIUS) return false;
-            index++;
+            double dz = point.z() + 0.5 - z;
+            if (Math.sqrt(dx * dx + dy * dy + dz * dz) > spec.tolerance()) return false;
+            if (!spec.patrol()) {
+                index++;
+                return true;
+            }
+            if (spec.points().size() <= 1) {
+                index = 0;
+                direction = 1;
+                return true;
+            }
+            if (direction > 0) {
+                if (index == spec.points().size() - 1) {
+                    direction = -1;
+                    index--;
+                } else {
+                    index++;
+                }
+            } else if (index == 0) {
+                direction = 1;
+                index++;
+            } else {
+                index--;
+            }
             return true;
         }
 
         boolean finished() {
-            return current() == null;
+            return !spec.patrol() && current() == null;
+        }
+
+        RouteState reconfigure(RouteState next) {
+            if (next == null) return null;
+            RouteState replacement = new RouteState(next.spec);
+            if (!spec.token().equals(next.spec.token())) return replacement;
+            RoutePoint previous = current();
+            if (previous == null) return replacement;
+            int nextIndex = next.spec.points().indexOf(previous);
+            if (nextIndex >= 0) {
+                replacement.index = nextIndex;
+                replacement.direction = direction;
+            }
+            return replacement;
         }
 
         String signature() {
-            return spec.token() + "|" + spec.points();
+            return spec.token() + "|" + spec.points()
+                    + "|speed=" + spec.speed() + "|tolerance=" + spec.tolerance()
+                    + "|patrol=" + spec.patrol();
         }
     }
 
@@ -176,6 +237,15 @@ final class SelectorPlan {
             return new RouteSpec(rule.token(), List.of(), "coordinates required");
         }
 
+        RouteArguments routeArguments = parseRouteArguments(argument);
+        if (!routeArguments.valid()) {
+            return new RouteSpec(rule.token(), List.of(), routeArguments.error());
+        }
+        argument = routeArguments.points();
+        if (argument.isEmpty()) {
+            return new RouteSpec(rule.token(), List.of(), "coordinates required");
+        }
+
         List<RoutePoint> points = new ArrayList<>();
         String[] segments = argument.split(";", -1);
         for (String segment : segments) {
@@ -201,7 +271,8 @@ final class SelectorPlan {
             }
             points.add(new RoutePoint(values[0], values[1], values[2]));
         }
-        return new RouteSpec(rule.token(), List.copyOf(points), "");
+        return new RouteSpec(rule.token(), List.copyOf(points), "", routeArguments.speed(),
+                routeArguments.tolerance(), isPatrolToken(rule.token()));
     }
 
     static RouteState routeState(List<String> source) {
@@ -227,7 +298,95 @@ final class SelectorPlan {
     }
 
     private static boolean isRouteToken(String token) {
-        return "followroute".equals(token) || "followpath".equals(token);
+        return "followroute".equals(token) || "followpath".equals(token)
+                || isPatrolToken(token);
+    }
+
+    private static boolean isPatrolToken(String token) {
+        return "patrol".equals(token) || "patrolroute".equals(token);
+    }
+
+    private static double defaultTolerance(String token) {
+        return DEFAULT_ROUTE_TOLERANCE;
+    }
+
+    private record RouteArguments(String points, double speed, double tolerance, String error) {
+        boolean valid() {
+            return error == null || error.isBlank();
+        }
+    }
+
+    /**
+     * Parses the route attributes without splitting the coordinate list at its
+     * own semicolons. Mythic's documented form is p=...;s=...;t=..., where p's
+     * value itself contains semicolon-separated points.
+     */
+    private static RouteArguments parseRouteArguments(String raw) {
+        String value = raw.trim();
+        double speed = 1.0;
+        double tolerance = 3.0;
+        int attributeStart = -1;
+        for (String key : List.of("speed", "s", "tolerance", "t")) {
+            int marker = findAttributeMarker(value, key);
+            if (marker >= 0 && (attributeStart < 0 || marker < attributeStart)) attributeStart = marker;
+        }
+
+        String points = attributeStart < 0 ? value : value.substring(0, attributeStart).trim();
+        String lowerPoints = points.toLowerCase(Locale.ROOT);
+        if (lowerPoints.startsWith("p=")) points = points.substring(2).trim();
+        else if (lowerPoints.startsWith("points=")) points = points.substring("points=".length()).trim();
+        else if (attributeStart >= 0 && (lowerPoints.startsWith("s=") || lowerPoints.startsWith("speed=")
+                || lowerPoints.startsWith("t=") || lowerPoints.startsWith("tolerance="))) {
+            return new RouteArguments("", speed, tolerance, "route points are required");
+        }
+
+        for (String key : List.of("speed", "s")) {
+            String valueForKey = attributeValue(value, key);
+            if (valueForKey == null) continue;
+            try {
+                speed = Double.parseDouble(valueForKey);
+            } catch (NumberFormatException ignored) {
+                return new RouteArguments(points, speed, tolerance, "speed must be a finite positive number");
+            }
+            if (!Double.isFinite(speed) || speed <= 0) {
+                return new RouteArguments(points, speed, tolerance, "speed must be a finite positive number");
+            }
+            break;
+        }
+        for (String key : List.of("tolerance", "t")) {
+            String valueForKey = attributeValue(value, key);
+            if (valueForKey == null) continue;
+            try {
+                tolerance = Double.parseDouble(valueForKey);
+            } catch (NumberFormatException ignored) {
+                return new RouteArguments(points, speed, tolerance, "tolerance must be a finite positive number");
+            }
+            if (!Double.isFinite(tolerance) || tolerance <= 0) {
+                return new RouteArguments(points, speed, tolerance, "tolerance must be a finite positive number");
+            }
+            break;
+        }
+        return new RouteArguments(points, speed, tolerance, "");
+    }
+
+    private static String attributeValue(String raw, String key) {
+        int marker = findAttributeMarker(raw, key);
+        if (marker < 0) return null;
+        int valueStart = marker + key.length() + 2;
+        int next = raw.length();
+        for (String candidate : List.of("speed", "s", "tolerance", "t")) {
+            int nextMarker = findAttributeMarker(raw, candidate);
+            if (nextMarker > marker) next = Math.min(next, nextMarker);
+        }
+        String result = raw.substring(valueStart, next).trim();
+        return result.isEmpty() ? null : result;
+    }
+
+    private static int findAttributeMarker(String raw, String key) {
+        String lower = raw.toLowerCase(Locale.ROOT);
+        String marker = ";" + key.toLowerCase(Locale.ROOT) + "=";
+        int index = lower.indexOf(marker);
+        return index;
     }
 
     private static Rule parse(String raw, int order) {
@@ -298,7 +457,7 @@ final class SelectorPlan {
                     "fleefaction", "flee_faction", "runfromfaction", "run_from_faction", "tempt",
                     "followowner", "follow_owner", "gotoowner", "goto_owner",
                     "gotoparent", "goto_parent", "clear", "reset",
-                    "followroute", "followpath",
+                    "followroute", "followpath", "patrol", "patrolroute",
                     // 原生 Pathfinder goal 别名：映射到既有 chase / 攀爬 / 破门位
                     "meleeattacktarget", "nearestattackabletarget", "targetofopportunity",
                     "spider", "climb", "closedoor", "closedoors", "close_door", "close_doors",

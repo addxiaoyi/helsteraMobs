@@ -176,6 +176,9 @@ public final class AiController {
         String waypoint = point == null ? "done"
                 : point.x() + "," + point.y() + "," + point.z();
         return "route=" + route.token() + " waypoint=" + waypoint
+                + " direction=" + route.direction()
+                + " speed=" + route.speed()
+                + " tolerance=" + route.tolerance()
                 + " finished=" + route.finished();
     }
 
@@ -388,7 +391,8 @@ public final class AiController {
         SelectorPlan.RouteState next = SelectorPlan.routeState(profile.goals);
         String signature = next == null ? "" : next.signature();
         if (!signature.equals(routeStateSignature)) {
-            routeState = next;
+            routeState = routeState != null && next != null
+                    ? routeState.reconfigure(next) : next;
             routeStateSignature = signature;
         }
     }
@@ -1317,7 +1321,7 @@ public final class AiController {
             if (point == null) return true;
         }
         Location target = new Location(loc.getWorld(), point.x() + 0.5, point.y(), point.z() + 0.5);
-        moveToward(loc, target);
+        moveToward(loc, target, route.speed());
         return true;
     }
 
@@ -1329,13 +1333,18 @@ public final class AiController {
      * 也更容易被诊断——{@code /helstera nav} 会显示对应的失败计数。</p>
      */
     private void moveToward(Location from, Location to) {
+        moveToward(from, to, 1.0);
+    }
+
+    private void moveToward(Location from, Location to, double speedMultiplier) {
         if (from == null || to == null) return;
         if (from.getWorld() == null || to.getWorld() == null) return;
         Location goal = followPath(from, to);
         Vector dir = goal.toVector().subtract(from.toVector());
         dir.setY(0);
         if (dir.lengthSquared() < 0.001) return;
-        dir.normalize().multiply(profile.moveSpeed);
+        double multiplier = Double.isFinite(speedMultiplier) && speedMultiplier > 0 ? speedMultiplier : 1.0;
+        dir.normalize().multiply(profile.moveSpeed * multiplier);
         moveBy(dir, from);
     }
 

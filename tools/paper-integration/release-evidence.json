@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-route-patrol-strict-20261109-r2",
+    "reportFixtureDirectory": "srv-paper-route-patrol-strict-20261109-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-route-patrol-strict-20261109-r2.json",
+    "reportSha256": "f90115c90dad9d8883a2b6a592008488c9a2c27693f09ec3adbd04da3d8c7f5a",
+    "log": "tools/paper-integration/reports/paper-1.21.1-route-patrol-strict-20261109-r2.log.gz",
+    "logSha256": "0915ca648b08a2ff918c7eda2b419b8c417c0a7ee3398d1cc3faee29e683cf18",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-route-patrol-strict-20261109-r2-client-logs.tar.gz",
+    "clientLogSha256": "f5b1fb7b78b13ec58b4bc4a83f509c64943cfe5bbceedba6915727dcdb56f3c1",
+    "pluginSha256": "7c999206379c7363639e92a8031d057cabd762bcc698b2df224dc26fd36e983e",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-jockey-import-strict-20261109-r1",
     "reportFixtureDirectory": "srv-paper-jockey-import-strict-20261109-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-jockey-import-strict-20261109-r1.json",

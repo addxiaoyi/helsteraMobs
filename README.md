@@ -2,7 +2,25 @@
 
 ## MythicMobs Parity Development Status (2026-11-09)
 
-Latest strict fixture `srv-paper-jockey-import-strict-20261109-r1` passes all
+Latest strict fixture `srv-paper-route-patrol-strict-20261109-r2` passes all
+409 release probes (390 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Its `aiRoute` evidence verifies the live
+`followpath` movement path, dynamic `patrol` rebind, configured speed and
+tolerance, endpoint reversal, and continued operation with `finished=false`.
+Report:
+`tools/paper-integration/reports/paper-1.21.1-route-patrol-strict-20261109-r2.json`
+(SHA-256 `f90115c90dad9d8883a2b6a592008488c9a2c27693f09ec3adbd04da3d8c7f5a`).
+Compressed server log SHA-256:
+`0915ca648b08a2ff918c7eda2b419b8c417c0a7ee3398d1cc3faee29e683cf18`.
+Client log archive SHA-256:
+`f5b1fb7b78b13ec58b4bc4a83f509c64943cfe5bbceedba6915727dcdb56f3c1`.
+Plugin SHA-256:
+`7c999206379c7363639e92a8031d057cabd762bcc698b2df224dc26fd36e983e`.
+Native Pathfinder goal equivalence remains an explicit open boundary.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-jockey-import-strict-20261109-r1` passes all
 409 release probes (390 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. It verifies imported Zombie
 `Options.PreventJockeyMounts: true` cancels a Chicken `EntityMountEvent`, while
@@ -960,7 +978,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-jockey-import-strict-20261109-r1` has 409 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-route-patrol-strict-20261109-r2` has 409 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -969,15 +987,15 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 ### Current Development Goals
 
-This is a partial parity release. The matrix currently has `35`
+This is a partial parity release. The matrix currently has `34`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-09). The full remaining work is:
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 534 cited IDs; 442 report files; 4 directories
-   without reports; 88 missing directories; 212 archived release reports. The
+   Current fixture inventory: 535 cited IDs; 443 report files; 4 directories
+   without reports; 88 missing directories; 213 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -989,7 +1007,9 @@ This is a partial parity release. The matrix currently has `35`
    importer-to-runtime consumers.
 4. **Targeters and AI**: complete names, filters, ordering, limits, chaining,
    and boundaries; verify Bukkit-expressible behavior and preserve warnings
-   for Pathfinder operations unavailable through public APIs.
+   for Pathfinder operations unavailable through public APIs. The route slice
+   now has strict Paper evidence for followpath movement and patrol mutation;
+   native Pathfinder goal equivalence is still open.
 5. **Triggers and natural events**: verify event context, priority,
    cancellation, timing, and cleanup; distinguish natural server/client
    evidence from synthetic event dispatch.

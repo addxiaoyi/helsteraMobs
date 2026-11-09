@@ -378,6 +378,9 @@ try {
     if ($aiSelectorCore.Count -ne 1) { throw 'Synthetic release report must contain aiSelectorCore.' }
     $aiSelectorCore[0].observations = @($aiSelectorCore[0].observations) +
         @('ai-selector-core targeter-syntax=true')
+    $aiRoute = @($fullReport.probes | Where-Object id -eq 'aiRoute')
+    if ($aiRoute.Count -ne 1) { throw 'Synthetic release report must contain aiRoute.' }
+    $aiRoute[0].observations = @('ai-route-probe token=followpath active-before=true moving=true advanced=true waypoint-before=route=followpath waypoint=103,64,0 direction=forward speed=1.0 tolerance=3.0 finished=false waypoint-after=route=followpath waypoint=105,64,0 direction=forward speed=1.0 tolerance=3.0 finished=false patrol-mutation=true patrol-before=route=patrol waypoint=103,64,0 direction=forward speed=1.0 tolerance=0.5 finished=false patrol-after=route=patrol waypoint=105,64,0 direction=forward speed=1.0 tolerance=0.5 finished=false patrol-loop=route=patrol waypoint=103,64,0 direction=backward speed=1.0 tolerance=0.5 finished=false passed=true')
     $targeterArgumentValidation = @($fullReport.probes | Where-Object id -eq 'targeterArgumentValidation')
     if ($targeterArgumentValidation.Count -ne 1) {
         throw 'Synthetic release report must contain targeterArgumentValidation.'
