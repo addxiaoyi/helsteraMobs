@@ -1223,10 +1223,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapEntityScopedOption(options, srcFile, entries, target, "Tamed",
                     "entity.tamed", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.Tameable.class);
-            mapEntityScopedOption(options, srcFile, entries, target, "Angry",
-                    "entity.angry", normalizedType, MythicMobsImporter::isBooleanOptionValue,
-                    org.bukkit.entity.Wolf.class,
-                    org.bukkit.entity.PigZombie.class);
+            mapRabbitKillerBunnyOptions(options, srcFile, entries, target, normalizedType);
             mapEntityScopedOption(options, srcFile, entries, target, "HeldBlock",
                     "entity.held-block", normalizedType, MythicMobsImporter::isNonBlankStringOption,
                     org.bukkit.entity.Enderman.class);
@@ -1388,7 +1385,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "UseThreatTable", "SpawningDistance",
                     "Scale", "ShowHealth", "Silent", "NoAI",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "Gravity", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
-                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Angry", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop")) {
+                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop")) {
                 removeIgnoreCase(leftover, mapped);
             }
             if (preventConversionMapped) removeIgnoreCase(leftover, "PreventConversion");
@@ -4412,6 +4409,48 @@ public final class MythicMobsImporter implements MigrationImporter {
         target.set("mob.despawn", "PERSISTENT");
         note(entries, srcFile, "Options.Persistent", "mob.despawn", "PERSISTENT", "mapped",
                 "Persistent mobs are restored from their serialized Bukkit entity.");
+    }
+
+    private void mapRabbitKillerBunnyOptions(ConfigurationSection options, String srcFile,
+                                             List<Map<String, Object>> entries,
+                                             YamlConfiguration target, String normalizedType) {
+        String entityTypeName = normalizedType == null ? "ZOMBIE" : normalizedType;
+        Class<? extends org.bukkit.entity.Entity> entityClass = resolveEntityClass(entityTypeName);
+        boolean rabbit = entityClass != null && org.bukkit.entity.Rabbit.class.isAssignableFrom(entityClass);
+        String angryKey = findKeyIgnoreCase(options, "Angry");
+        String killerBunnyKey = findKeyIgnoreCase(options, "IsKillerBunny");
+
+        if (rabbit && angryKey != null && killerBunnyKey != null) {
+            preserveConflictingRabbitOption(options, srcFile, entries, target, angryKey);
+            preserveConflictingRabbitOption(options, srcFile, entries, target, killerBunnyKey);
+            return;
+        }
+
+        if (rabbit) {
+            String optionName = angryKey != null ? "Angry" : "IsKillerBunny";
+            mapEntityScopedOption(options, srcFile, entries, target, optionName,
+                    "entity.rabbit-killer-bunny", normalizedType,
+                    MythicMobsImporter::isBooleanOptionValue, org.bukkit.entity.Rabbit.class);
+            return;
+        }
+
+        mapEntityScopedOption(options, srcFile, entries, target, "Angry",
+                "entity.angry", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                org.bukkit.entity.Wolf.class, org.bukkit.entity.PigZombie.class);
+        mapEntityScopedOption(options, srcFile, entries, target, "IsKillerBunny",
+                "entity.rabbit-killer-bunny", normalizedType,
+                MythicMobsImporter::isBooleanOptionValue, org.bukkit.entity.Rabbit.class);
+    }
+
+    private void preserveConflictingRabbitOption(ConfigurationSection options, String srcFile,
+                                                 List<Map<String, Object>> entries,
+                                                 YamlConfiguration target, String optionName) {
+        Object raw = options.get(optionName);
+        String unsupportedPath = "entity.unsupported.Options." + optionName;
+        target.set(unsupportedPath, raw);
+        note(entries, srcFile, "Options." + optionName, unsupportedPath, raw,
+                "unsupported", "Angry and IsKillerBunny are aliases for Rabbit; both were preserved because they conflict.",
+                "WARN");
     }
 
     private void mapDefaultedMobOption(ConfigurationSection options,

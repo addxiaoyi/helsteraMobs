@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-rabbit-killer-bunny-strict-20261109-r1",
+    "reportFixtureDirectory": "srv-paper-rabbit-killer-bunny-strict-20261109-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1.json",
+    "reportSha256": "346f7d364eb108394e69f195a47f0b801895b6699c126de7409d2572a8c7ebec",
+    "log": "tools/paper-integration/reports/paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1.log.gz",
+    "logSha256": "6d2aeb1ae10c4cf3231e5a4d9983e84368274968f3af0f0a145a71a37b0c87b9",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1-client-logs.tar.gz",
+    "clientLogSha256": "5281e2ed2243c2b5bcff39c5126ec49485052b3eabac6d42e5e83d4df6a1aa24",
+    "pluginSha256": "99262abb3521e19b57b160e10715641e3ca43c84c6e6d9ee9ca2ca5f8c33f008",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-dropitem-owner-strict-20261109-r2",
     "reportFixtureDirectory": "srv-paper-dropitem-owner-strict-20261109-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-dropitem-owner-strict-20261109-r2.json",

@@ -1,21 +1,25 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-dropitem-owner-strict-20261109-r2` passed the full
-strict gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19
-expected rejections, and zero failed or incomplete. The imported Mythic
-`dropitem` fixed and `<target.uuid>` owners are read back from real Paper
-dropped items; invalid owner input remains preserved with a migration warning.
-Report:
-[paper-1.21.1-dropitem-owner-strict-20261109-r2.json](reports/paper-1.21.1-dropitem-owner-strict-20261109-r2.json), SHA-256:
-`4ceb8772a7f6d263a15f7d0d63ab534e69a6ae86196cb73073613339e33578e7`.
+Latest fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` passed the
+full strict gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19
+expected rejections, and zero failed or incomplete. It verifies imported Rabbit
+`IsKillerBunny`/`Angry` aliases, false and RabbitType controls, and preservation
+of invalid, wrong-entity, and conflicting alias inputs through production
+spawning. Report:
+[paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1.json](reports/paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1.json), SHA-256:
+`346f7d364eb108394e69f195a47f0b801895b6699c126de7409d2572a8c7ebec`.
 Compressed server log SHA-256:
-`d5965346371cc7c280390c72a016b950937bdfc2194dd369f033d8ab665a506e`.
+`6d2aeb1ae10c4cf3231e5a4d9983e84368274968f3af0f0a145a71a37b0c87b9`.
 Client log archive SHA-256:
-`a9761721def614375f9ac678d55d8edf566371fc0d377f00b78d51326657ff08`.
+`5281e2ed2243c2b5bcff39c5126ec49485052b3eabac6d42e5e83d4df6a1aa24`.
 Plugin SHA-256:
-`a1df42c4148f02c5cdadda085619aec9d225779f12c2d277e379a1efbaea7e04`.
+`99262abb3521e19b57b160e10715641e3ca43c84c6e6d9ee9ca2ca5f8c33f008`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
+
+Previous strict fixture `srv-paper-dropitem-owner-strict-20261109-r2` verified
+fixed and `<target.uuid>` imported owners on real dropped items and remains
+archived.
 
 Previous strict fixture `srv-paper-dropitem-owner-strict-20261109-r1` verified
 the fixed imported owner UUID and invalid-input preservation in the same 409

@@ -3430,6 +3430,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             String controlMobId = "ImportedRabbitControl_" + suffix;
             String wrongTypeMobId = "ImportedRabbitWrongType_" + suffix;
             String invalidMobId = "ImportedRabbitInvalid_" + suffix;
+            String killerBunnyMobId = "ImportedRabbitKillerBunny_" + suffix;
+            String angryAliasMobId = "ImportedRabbitAngryAlias_" + suffix;
+            String falseKillerBunnyMobId = "ImportedRabbitFalseKillerBunny_" + suffix;
+            String conflictingAliasesMobId = "ImportedRabbitConflictingAliases_" + suffix;
             Files.writeString(source, """
                     mobs:
                       %1$s:
@@ -3444,11 +3448,32 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         Type: ZOMBIE
                         Options:
                           RabbitType: BLACK
+                          IsKillerBunny: true
                       %4$s:
                         Type: RABBIT
                         Options:
                           RabbitType: NOT_A_RABBIT
-                    """.formatted(configuredMobId, controlMobId, wrongTypeMobId, invalidMobId));
+                          IsKillerBunny: maybe
+                      %5$s:
+                        Type: RABBIT
+                        Options:
+                          IsKillerBunny: true
+                      %6$s:
+                        Type: RABBIT
+                        Options:
+                          Angry: true
+                      %7$s:
+                        Type: RABBIT
+                        Options:
+                          RabbitType: SALT_AND_PEPPER
+                          IsKillerBunny: false
+                      %8$s:
+                        Type: RABBIT
+                        Options:
+                          Angry: true
+                          IsKillerBunny: false
+                    """.formatted(configuredMobId, controlMobId, wrongTypeMobId, invalidMobId,
+                    killerBunnyMobId, angryAliasMobId, falseKillerBunnyMobId, conflictingAliasesMobId));
 
             var converted = new MythicMobsImporter().convert(source, sourceRoot);
             var targetIds = new java.util.LinkedHashMap<String, String>();
@@ -3470,12 +3495,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         String.valueOf(entry.get("target-mob-id")));
             }
 
-            var sourceIds = java.util.List.of(configuredMobId, controlMobId, wrongTypeMobId, invalidMobId);
+            var sourceIds = java.util.List.of(configuredMobId, controlMobId, wrongTypeMobId, invalidMobId,
+                    killerBunnyMobId, angryAliasMobId, falseKillerBunnyMobId, conflictingAliasesMobId);
             if (!targetIds.keySet().containsAll(sourceIds)) {
                 throw new IllegalStateException("Mythic RabbitType probe mobs were not all imported");
             }
-            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0),
-                    origin.clone().add(6, 0, 0), origin.clone().add(9, 0, 0));
+            var locations = java.util.stream.IntStream.range(0, sourceIds.size())
+                    .mapToObj(index -> origin.clone().add(index * 3.0, 0, 0)).toList();
             var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
             for (int i = 0; i < sourceIds.size(); i++) {
                 MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
@@ -3489,6 +3515,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var controlInstance = instances().impl(spawnedIds.get(controlMobId));
             var wrongTypeInstance = instances().impl(spawnedIds.get(wrongTypeMobId));
             var invalidInstance = instances().impl(spawnedIds.get(invalidMobId));
+            var killerBunnyInstance = instances().impl(spawnedIds.get(killerBunnyMobId));
+            var angryAliasInstance = instances().impl(spawnedIds.get(angryAliasMobId));
+            var falseKillerBunnyInstance = instances().impl(spawnedIds.get(falseKillerBunnyMobId));
             var configuredRabbit = configuredInstance == null ? null : configuredInstance.baseEntity()
                     .filter(org.bukkit.entity.Rabbit.class::isInstance)
                     .map(org.bukkit.entity.Rabbit.class::cast).orElse(null);
@@ -3499,11 +3528,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var invalidRabbit = invalidInstance == null ? null : invalidInstance.baseEntity()
                     .filter(org.bukkit.entity.Rabbit.class::isInstance)
                     .map(org.bukkit.entity.Rabbit.class::cast).orElse(null);
+            var killerBunnyRabbit = killerBunnyInstance == null ? null : killerBunnyInstance.baseEntity()
+                    .filter(org.bukkit.entity.Rabbit.class::isInstance)
+                    .map(org.bukkit.entity.Rabbit.class::cast).orElse(null);
+            var angryAliasRabbit = angryAliasInstance == null ? null : angryAliasInstance.baseEntity()
+                    .filter(org.bukkit.entity.Rabbit.class::isInstance)
+                    .map(org.bukkit.entity.Rabbit.class::cast).orElse(null);
+            var falseKillerBunnyRabbit = falseKillerBunnyInstance == null ? null
+                    : falseKillerBunnyInstance.baseEntity()
+                    .filter(org.bukkit.entity.Rabbit.class::isInstance)
+                    .map(org.bukkit.entity.Rabbit.class::cast).orElse(null);
 
             var configuredOptions = mobConfig(targetIds.get(configuredMobId));
             var controlOptions = mobConfig(targetIds.get(controlMobId));
             var wrongTypeOptions = mobConfig(targetIds.get(wrongTypeMobId));
             var invalidOptions = mobConfig(targetIds.get(invalidMobId));
+            var killerBunnyOptions = mobConfig(targetIds.get(killerBunnyMobId));
+            var angryAliasOptions = mobConfig(targetIds.get(angryAliasMobId));
+            var falseKillerBunnyOptions = mobConfig(targetIds.get(falseKillerBunnyMobId));
+            var conflictingAliasesOptions = mobConfig(targetIds.get(conflictingAliasesMobId));
             var configuredEntityOptions = configuredOptions == null ? null
                     : configuredOptions.getConfigurationSection("entity");
             var controlEntityOptions = controlOptions == null ? null
@@ -3512,14 +3555,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     : wrongTypeOptions.getConfigurationSection("entity");
             var invalidEntityOptions = invalidOptions == null ? null
                     : invalidOptions.getConfigurationSection("entity");
+            var killerBunnyEntityOptions = killerBunnyOptions == null ? null
+                    : killerBunnyOptions.getConfigurationSection("entity");
+            var angryAliasEntityOptions = angryAliasOptions == null ? null
+                    : angryAliasOptions.getConfigurationSection("entity");
+            var falseKillerBunnyEntityOptions = falseKillerBunnyOptions == null ? null
+                    : falseKillerBunnyOptions.getConfigurationSection("entity");
+            var conflictingAliasesEntityOptions = conflictingAliasesOptions == null ? null
+                    : conflictingAliasesOptions.getConfigurationSection("entity");
             var wrongTypeUnsupported = wrongTypeEntityOptions == null ? null
                     : wrongTypeEntityOptions.getConfigurationSection("unsupported.Options");
             var invalidUnsupported = invalidEntityOptions == null ? null
                     : invalidEntityOptions.getConfigurationSection("unsupported.Options");
+            var conflictingAliasesUnsupported = conflictingAliasesEntityOptions == null ? null
+                    : conflictingAliasesEntityOptions.getConfigurationSection("unsupported.Options");
 
             boolean imported = configuredRabbit != null && controlRabbit != null && invalidRabbit != null
+                    && killerBunnyRabbit != null && angryAliasRabbit != null && falseKillerBunnyRabbit != null
                     && configuredEntityOptions != null && controlEntityOptions != null
                     && wrongTypeUnsupported != null && invalidUnsupported != null
+                    && killerBunnyEntityOptions != null && angryAliasEntityOptions != null
+                    && falseKillerBunnyEntityOptions != null && conflictingAliasesUnsupported != null
                     && "SALT_AND_PEPPER".equalsIgnoreCase(
                             configuredEntityOptions.getString("rabbit-type"))
                     && "BROWN".equalsIgnoreCase(controlEntityOptions.getString("rabbit-type"))
@@ -3527,11 +3583,24 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             wrongTypeUnsupported.getString("RabbitType"))
                     && "NOT_A_RABBIT".equalsIgnoreCase(
                             invalidUnsupported.getString("RabbitType"))
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("IsKillerBunny"))
+                    && wrongTypeUnsupported.getBoolean("IsKillerBunny")
+                    && killerBunnyEntityOptions.getBoolean("rabbit-killer-bunny")
+                    && angryAliasEntityOptions.getBoolean("rabbit-killer-bunny")
+                    && !falseKillerBunnyEntityOptions.getBoolean("rabbit-killer-bunny")
+                    && "SALT_AND_PEPPER".equalsIgnoreCase(
+                            falseKillerBunnyEntityOptions.getString("rabbit-type"))
+                    && conflictingAliasesUnsupported.getBoolean("Angry")
+                    && !conflictingAliasesUnsupported.getBoolean("IsKillerBunny")
                     && !wrongTypeEntityOptions.contains("rabbit-type")
                     && !invalidEntityOptions.contains("rabbit-type");
             boolean applied = imported
                     && configuredRabbit.getRabbitType() == org.bukkit.entity.Rabbit.Type.SALT_AND_PEPPER
                     && controlRabbit.getRabbitType() == org.bukkit.entity.Rabbit.Type.BROWN
+                    && killerBunnyRabbit.getRabbitType() == org.bukkit.entity.Rabbit.Type.THE_KILLER_BUNNY
+                    && angryAliasRabbit.getRabbitType() == org.bukkit.entity.Rabbit.Type.THE_KILLER_BUNNY
+                    && falseKillerBunnyRabbit.getRabbitType()
+                            == org.bukkit.entity.Rabbit.Type.SALT_AND_PEPPER
                     && invalidRabbit.getRabbitType() != null;
             boolean wrongTypePreserved = wrongTypeEntity instanceof org.bukkit.entity.Zombie;
             boolean invalidPreserved = invalidRabbit != null
@@ -3539,14 +3608,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && !invalidEntityOptions.contains("rabbit-type")
                     && invalidUnsupported != null
                     && "NOT_A_RABBIT".equalsIgnoreCase(
-                            invalidUnsupported.getString("RabbitType"));
-            boolean passed = imported && applied && wrongTypePreserved && invalidPreserved;
+                            invalidUnsupported.getString("RabbitType"))
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("IsKillerBunny"));
+            boolean conflictPreserved = conflictingAliasesUnsupported != null
+                    && conflictingAliasesUnsupported.getBoolean("Angry")
+                    && !conflictingAliasesUnsupported.getBoolean("IsKillerBunny")
+                    && !conflictingAliasesEntityOptions.contains("rabbit-killer-bunny");
+            boolean passed = imported && applied && wrongTypePreserved && invalidPreserved
+                    && conflictPreserved;
             getLogger().info("[自检] rabbit-options result=" + passed
                     + " imported=" + imported
                     + " type=" + (configuredRabbit == null ? "missing" : configuredRabbit.getRabbitType().name())
                     + " control-type=" + (controlRabbit == null ? "missing" : controlRabbit.getRabbitType().name())
+                    + " killer-type=" + (killerBunnyRabbit == null ? "missing" : killerBunnyRabbit.getRabbitType().name())
+                    + " angry-type=" + (angryAliasRabbit == null ? "missing" : angryAliasRabbit.getRabbitType().name())
+                    + " false-killer-type=" + (falseKillerBunnyRabbit == null
+                            ? "missing" : falseKillerBunnyRabbit.getRabbitType().name())
                     + " wrong-type-preserved=" + wrongTypePreserved
-                    + " invalid-preserved=" + invalidPreserved);
+                    + " invalid-preserved=" + invalidPreserved
+                    + " conflict-preserved=" + conflictPreserved);
         } catch (Throwable failure) {
             getLogger().warning("[自检] rabbit-options result=false error=" + failure);
         } finally {
@@ -22065,14 +22145,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     private static void applyRabbitOptions(org.bukkit.entity.Rabbit rabbit,
                                            org.bukkit.configuration.ConfigurationSection options) {
-        if (!options.contains("rabbit-type")) return;
-        try {
+        if (options.contains("rabbit-type")) {
             String value = options.getString("rabbit-type", "");
-            if (value == null || value.isBlank()) return;
-            rabbit.setRabbitType(org.bukkit.entity.Rabbit.Type.valueOf(
-                    value.trim().toUpperCase(java.util.Locale.ROOT)));
-        } catch (IllegalArgumentException | LinkageError ignored) {
-            // Invalid imported values remain visible under entity.unsupported.Options.RabbitType.
+            if (value != null && !value.isBlank()) {
+                try {
+                    rabbit.setRabbitType(org.bukkit.entity.Rabbit.Type.valueOf(
+                            value.trim().toUpperCase(java.util.Locale.ROOT)));
+                } catch (IllegalArgumentException | LinkageError ignored) {
+                    // Invalid imported values remain visible under entity.unsupported.Options.RabbitType.
+                }
+            }
+        }
+        if (options.getBoolean("rabbit-killer-bunny", false)) {
+            try {
+                rabbit.setRabbitType(org.bukkit.entity.Rabbit.Type.THE_KILLER_BUNNY);
+            } catch (IllegalArgumentException | LinkageError ignored) {
+                // Older Paper versions may not expose the Killer Bunny type.
+            }
         }
     }
 

@@ -4732,6 +4732,71 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic IsKillerBunny and Rabbit Angry alias map safely")
+    void mythicMapsKillerBunnyAliasesAndPreservesAmbiguity(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/killer-bunny-options.yml", """
+                mobs:
+                  explicit:
+                    Type: RABBIT
+                    Options:
+                      IsKillerBunny: true
+                  angry_alias:
+                    Type: RABBIT
+                    Options:
+                      Angry: true
+                  regular:
+                    Type: RABBIT
+                    Options:
+                      RabbitType: SALT_AND_PEPPER
+                      IsKillerBunny: false
+                  wolf:
+                    Type: WOLF
+                    Options:
+                      Angry: true
+                  wrong_type:
+                    Type: ZOMBIE
+                    Options:
+                      IsKillerBunny: true
+                  invalid:
+                    Type: RABBIT
+                    Options:
+                      IsKillerBunny: maybe
+                  ambiguous:
+                    Type: RABBIT
+                    Options:
+                      Angry: true
+                      IsKillerBunny: false
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        assertTrue(convertedMob(entries, "explicit").getBoolean("entity.rabbit-killer-bunny"));
+        assertTrue(convertedMob(entries, "angry_alias").getBoolean("entity.rabbit-killer-bunny"));
+        var regular = convertedMob(entries, "regular");
+        assertFalse(regular.getBoolean("entity.rabbit-killer-bunny"));
+        assertEquals("SALT_AND_PEPPER", regular.getString("entity.rabbit-type"));
+        assertTrue(convertedMob(entries, "wolf").getBoolean("entity.angry"));
+
+        var wrongType = convertedMob(entries, "wrong_type");
+        assertTrue(wrongType.getBoolean("entity.unsupported.Options.IsKillerBunny"));
+        assertFalse(wrongType.contains("entity.rabbit-killer-bunny"));
+        var invalid = convertedMob(entries, "invalid");
+        assertEquals("maybe", invalid.getString("entity.unsupported.Options.IsKillerBunny"));
+        assertFalse(invalid.contains("entity.rabbit-killer-bunny"));
+        var ambiguous = convertedMob(entries, "ambiguous");
+        assertTrue(ambiguous.getBoolean("entity.unsupported.Options.Angry"));
+        assertFalse(ambiguous.getBoolean("entity.unsupported.Options.IsKillerBunny"));
+        assertFalse(ambiguous.contains("entity.rabbit-killer-bunny"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "Options.Angry".equals(entry.get("source-key"))
+                && "entity.unsupported.Options.Angry".equals(entry.get("target-key"))
+                && "true".equals(entry.get("value"))));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "Options.IsKillerBunny".equals(entry.get("source-key"))
+                && "entity.unsupported.Options.IsKillerBunny".equals(entry.get("target-key"))
+                && "false".equals(entry.get("value"))));
+    }
+
+    @Test
     @DisplayName("Mythic FoxType maps only to foxes and preserves invalid values")
     void mythicMapsFoxTypeWithEntityBoundary(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/fox-options.yml", """
