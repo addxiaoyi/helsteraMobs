@@ -4241,6 +4241,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         PreventLeashing: true
                         PreventTransformation: false
                         CanPickupItems: true
+                    ExplicitPickupDisabled_%1$s:
+                      Type: ZOMBIE
+                      Options:
+                        CanPickupItems: false
+                    WrongPickupType_%1$s:
+                      Type: ARMOR_STAND
+                      Options:
+                        CanPickupItems: true
+                    InvalidPickup_%1$s:
+                      Type: ZOMBIE
+                      Options:
+                        CanPickupItems: maybe
                     """.formatted(suffix));
 
             var importer = new MythicMobsImporter();
@@ -4269,16 +4281,34 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var builtInId = configurations.get("BuiltIn_" + suffix);
             var globalId = configurations.get("Global_" + suffix);
             var explicitId = configurations.get("Explicit_" + suffix);
+            var pickupDisabledId = configurations.get("ExplicitPickupDisabled_" + suffix);
+            var wrongPickupTypeId = configurations.get("WrongPickupType_" + suffix);
+            var invalidPickupId = configurations.get("InvalidPickup_" + suffix);
             int builtInInstanceId = spawnImportedMobDefaultsProbe(builtInId, origin.clone());
             int globalInstanceId = spawnImportedMobDefaultsProbe(globalId, origin.clone().add(3, 0, 0));
             int explicitInstanceId = spawnImportedMobDefaultsProbe(explicitId, origin.clone().add(6, 0, 0));
+            int pickupDisabledInstanceId = spawnImportedMobDefaultsProbe(
+                    pickupDisabledId, origin.clone().add(9, 0, 0));
+            int wrongPickupTypeInstanceId = spawnImportedMobDefaultsProbe(
+                    wrongPickupTypeId, origin.clone().add(12, 0, 0));
+            int invalidPickupInstanceId = spawnImportedMobDefaultsProbe(
+                    invalidPickupId, origin.clone().add(15, 0, 0));
             if (builtInInstanceId > 0) instanceIds.add(builtInInstanceId);
             if (globalInstanceId > 0) instanceIds.add(globalInstanceId);
             if (explicitInstanceId > 0) instanceIds.add(explicitInstanceId);
+            if (pickupDisabledInstanceId > 0) instanceIds.add(pickupDisabledInstanceId);
+            if (wrongPickupTypeInstanceId > 0) instanceIds.add(wrongPickupTypeInstanceId);
+            if (invalidPickupInstanceId > 0) instanceIds.add(invalidPickupInstanceId);
 
             var builtIn = builtInInstanceId > 0 ? instances().impl(builtInInstanceId) : null;
             var global = globalInstanceId > 0 ? instances().impl(globalInstanceId) : null;
             var explicit = explicitInstanceId > 0 ? instances().impl(explicitInstanceId) : null;
+            var pickupDisabled = pickupDisabledInstanceId > 0
+                    ? instances().impl(pickupDisabledInstanceId) : null;
+            var wrongPickupType = wrongPickupTypeInstanceId > 0
+                    ? instances().impl(wrongPickupTypeInstanceId) : null;
+            var invalidPickup = invalidPickupInstanceId > 0
+                    ? instances().impl(invalidPickupInstanceId) : null;
             var globalDefaultsConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                     configuredRoot.resolve("config-mobs.yml").toFile());
             boolean globalTransformationDefault = globalDefaultsConfig.getBoolean(
@@ -4297,6 +4327,24 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var explicitMob = explicit == null ? null
                     : explicit.baseEntity().filter(org.bukkit.entity.Mob.class::isInstance)
                     .map(org.bukkit.entity.Mob.class::cast).orElse(null);
+            var pickupDisabledMob = pickupDisabled == null ? null
+                    : pickupDisabled.baseEntity().filter(org.bukkit.entity.Mob.class::isInstance)
+                    .map(org.bukkit.entity.Mob.class::cast).orElse(null);
+            var wrongPickupEntity = wrongPickupType == null ? null
+                    : wrongPickupType.baseEntity().orElse(null);
+            var invalidPickupMob = invalidPickup == null ? null
+                    : invalidPickup.baseEntity().filter(org.bukkit.entity.Mob.class::isInstance)
+                    .map(org.bukkit.entity.Mob.class::cast).orElse(null);
+            var wrongPickupOptions = wrongPickupTypeId == null ? null : mobConfig(wrongPickupTypeId);
+            var invalidPickupOptions = invalidPickupId == null ? null : mobConfig(invalidPickupId);
+            var wrongPickupEntityOptions = wrongPickupOptions == null ? null
+                    : wrongPickupOptions.getConfigurationSection("entity");
+            var invalidPickupEntityOptions = invalidPickupOptions == null ? null
+                    : invalidPickupOptions.getConfigurationSection("entity");
+            var wrongPickupUnsupported = wrongPickupEntityOptions == null ? null
+                    : wrongPickupEntityOptions.getConfigurationSection("unsupported.Options");
+            var invalidPickupUnsupported = invalidPickupEntityOptions == null ? null
+                    : invalidPickupEntityOptions.getConfigurationSection("unsupported.Options");
 
             boolean builtInDefaults = builtInMob != null && !builtInMob.getCanPickupItems()
                     && builtInMob.getNoDamageTicks() == 10
@@ -4312,13 +4360,29 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && explicitMob.getNoDamageTicks() == 27
                     && explicit.options().preventLeashing()
                     && !explicit.options().preventTransformation();
-            boolean importedMappings = configurations.size() == 3
-                    && builtInId != null && globalId != null && explicitId != null;
+            boolean pickupDisabledOverrides = pickupDisabledMob != null
+                    && !pickupDisabledMob.getCanPickupItems();
+            boolean wrongPickupTypePreserved = wrongPickupEntity instanceof org.bukkit.entity.ArmorStand
+                    && wrongPickupEntityOptions != null
+                    && !wrongPickupEntityOptions.contains("can-pickup-items")
+                    && wrongPickupUnsupported != null
+                    && wrongPickupUnsupported.getBoolean("CanPickupItems");
+            boolean invalidPickupPreserved = invalidPickupMob != null
+                    && globalMob != null
+                    && invalidPickupEntityOptions != null
+                    && !invalidPickupEntityOptions.contains("can-pickup-items")
+                    && invalidPickupUnsupported != null
+                    && "maybe".equalsIgnoreCase(invalidPickupUnsupported.getString("CanPickupItems"))
+                    && invalidPickupMob.getCanPickupItems() == globalMob.getCanPickupItems();
+            boolean importedMappings = configurations.size() == 6
+                    && builtInId != null && globalId != null && explicitId != null
+                    && pickupDisabledId != null && wrongPickupTypeId != null && invalidPickupId != null;
             boolean builtInTransformationCancelled = isTransformationCancelled(builtInMob);
             boolean globalTransformationCancelled = isTransformationCancelled(globalMob);
             boolean explicitTransformationAllowed = isTransformationAllowed(explicitMob);
             getLogger().info("[自检] imported-mob-defaults result="
                     + (importedMappings && builtInDefaults && globalDefaults && explicitOverrides
+                    && pickupDisabledOverrides && wrongPickupTypePreserved && invalidPickupPreserved
                     && builtInTransformationCancelled && globalTransformationCancelled
                     && explicitTransformationAllowed)
                     + " imported=" + importedMappings
@@ -4333,6 +4397,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " global-default-ignored=" + globalTransformationDefaultIgnored
                     + " global-prevent-transformation=" + (global != null && global.options().preventTransformation())
                     + " explicit-pickup-enabled=" + (explicitMob != null && explicitMob.getCanPickupItems())
+                    + " explicit-pickup-disabled=" + (pickupDisabledMob != null
+                            && !pickupDisabledMob.getCanPickupItems())
+                    + " pickup-wrong-type-preserved=" + wrongPickupTypePreserved
+                    + " pickup-invalid-preserved=" + invalidPickupPreserved
                     + " explicit-no-damage-ticks=" + (explicitMob != null && explicitMob.getNoDamageTicks() == 27)
                     + " explicit-prevent-leashing=" + (explicit != null && explicit.options().preventLeashing())
                     + " explicit-prevent-transformation-disabled="

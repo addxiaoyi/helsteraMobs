@@ -132,6 +132,13 @@ class MythicAgeOptionsTest {
 
         calls.clear();
         HelsteraPlugin.applyMobPickupOption(mob,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("can-pickup-items: false")),
+                SpawnOptions.defaults().preventItemPickup(false));
+        assertEquals(false, calls.get("setCanPickupItems"),
+                "explicit false overrides a pickup-enabled policy fallback");
+
+        calls.clear();
+        HelsteraPlugin.applyMobPickupOption(mob,
                 YamlConfiguration.loadConfiguration(new java.io.StringReader("")),
                 SpawnOptions.defaults().preventItemPickup(true));
         assertEquals(false, calls.get("setCanPickupItems"),
