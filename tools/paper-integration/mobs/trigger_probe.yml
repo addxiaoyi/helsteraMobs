@@ -18,6 +18,9 @@ ai:
     on-attacked:
       do:
         - set-name &bATTACKED_TRIGGER_OK
+    on-attack:
+      do:
+        - set-name &aATTACK_TRIGGER_OK
     on-teleport:
       do:
         - set-name &dTELEPORT_TRIGGER_OK

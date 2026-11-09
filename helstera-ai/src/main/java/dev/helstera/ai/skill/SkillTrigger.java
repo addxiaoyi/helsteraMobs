@@ -20,6 +20,9 @@ public enum SkillTrigger {
     SPAWN("on-spawn", true),
     TIMER("on-timer", true),
     DAMAGE("on-damage", true),
+    // Mythic ~onAttack is dispatched on the managed attacker, with the victim
+    // available as the trigger/target entity.
+    ATTACK("on-attack", true),
     ATTACKED("on-attacked", true),
     DEATH("on-death", true),
     REMOVE("on-remove", true),

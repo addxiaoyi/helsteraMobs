@@ -136,9 +136,9 @@ try {
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true caster-permission=true food-level=true food-saturation=true free-inventory-slot=true has-item=true air-level=true custom-item=true target-state-conditions=true state-blocking=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true spyglass-condition=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true name-condition=true',
-        '[Server thread/INFO]: [自检] skill-trigger damage=true attacked=false teleport=true teleport-before=false bukkit-damage=true damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true bow-tension-condition=true bukkit-attacked=true cancelled-condition=true cancelled-before=false cancelled-after=true entity-valid=true',
+        '[Server thread/INFO]: [自检] skill-trigger damage=true attack=true attacked=false teleport=true teleport-before=false bukkit-damage=true damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true bow-tension-condition=true bukkit-attacked=true cancelled-condition=true cancelled-before=false cancelled-after=true entity-valid=true',
         '[Server thread/INFO]: block-events break=true place=true player=HelsteraTester',
-        '[Server thread/INFO]: skill-trigger damage=true attacked=false teleport=true potion-effect-end=true teleport-before=false bukkit-damage=true bukkit-attacked=true cancelled-before=false cancelled-after=false entity-valid=true',
+        '[Server thread/INFO]: skill-trigger damage=true attack=true attacked=false teleport=true potion-effect-end=true teleport-before=false bukkit-damage=true bukkit-attacked=true cancelled-before=false cancelled-after=false entity-valid=true',
         '[Server thread/INFO]: potion-natural-expiry=true expired=true event-observed=false action-observed=true item-marker-observed=false',
         '[Server thread/INFO]: kill-trigger natural=true victim-dead=true action-observed=true passed=true',
         '[Server thread/INFO]: player-kill-trigger natural=true victim-player=true victim-death-observed=true action-observed=true player-kills-positive=true player-kills-negative=true passed=true',
@@ -1015,6 +1015,11 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogSkillTrigger = @($fullCatalogReport.probes | Where-Object id -eq 'skillTrigger')
+    Assert-True ($fullCatalogSkillTrigger.Count -eq 1) 'synthetic full catalog contains the skill trigger probe'
+    $fullCatalogSkillTrigger[0].observations = @($fullCatalogSkillTrigger[0].observations | ForEach-Object {
+        if ($_ -match 'attack=true') { $_ } else { "$_ attack=true" }
+    })
     $fullCatalogReport.expectedProbeIds += 'absorptionPlayerCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'absorptionPlayerCondition'; status = 'passed'; observations = @('absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true')

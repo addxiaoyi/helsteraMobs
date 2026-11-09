@@ -25,6 +25,7 @@ class SkillTriggerTest {
         assertSame(SkillTrigger.SPAWN, SkillTrigger.of("on-spawn"));
         assertSame(SkillTrigger.TIMER, SkillTrigger.of("on-timer"));
         assertSame(SkillTrigger.DAMAGE, SkillTrigger.of("on-damage"));
+        assertSame(SkillTrigger.ATTACK, SkillTrigger.of("on-attack"));
         assertSame(SkillTrigger.DEATH, SkillTrigger.of("on-death"));
         assertSame(SkillTrigger.KILL_PLAYER, SkillTrigger.of("on-kill-player"));
         assertSame(SkillTrigger.TELEPORT, SkillTrigger.of("on-teleport"));
@@ -44,6 +45,7 @@ class SkillTriggerTest {
         assertSame(SkillTrigger.SPAWN, SkillTrigger.of("onSpawn"));
         assertSame(SkillTrigger.SPAWN, SkillTrigger.of("ON_SPAWN"));
         assertSame(SkillTrigger.SPAWN, SkillTrigger.of("~onSpawn"));
+        assertSame(SkillTrigger.ATTACK, SkillTrigger.of("~onAttack"));
         assertSame(SkillTrigger.SPAWN, SkillTrigger.of("  on-spawn  "));
         assertSame(SkillTrigger.KILL_PLAYER, SkillTrigger.of("onKillPlayer"));
         assertSame(SkillTrigger.ENTITY_SHOOT, SkillTrigger.of("on_entity_shoot"));
@@ -81,6 +83,7 @@ class SkillTriggerTest {
         assertSame(SkillTrigger.SPAWN, SkillTrigger.of("spawn"));
         assertSame(SkillTrigger.TIMER, SkillTrigger.of("timer"));
         assertSame(SkillTrigger.DEATH, SkillTrigger.of("death"));
+        assertSame(SkillTrigger.ATTACK, SkillTrigger.of("attack"));
         assertSame(SkillTrigger.KILL, SkillTrigger.of("kill"));
     }
 
@@ -115,6 +118,7 @@ class SkillTriggerTest {
     void distinguishesWiredFromDeclared() {
         assertTrue(SkillTrigger.SPAWN.wired());
         assertTrue(SkillTrigger.TIMER.wired());
+        assertTrue(SkillTrigger.ATTACK.wired());
         assertNotNull(SkillTrigger.of("on-interact"));
         assertTrue(SkillTrigger.INTERACT.wired(),
                 "on-interact 已接到 PlayerInteractEntityEvent");

@@ -775,6 +775,7 @@ class ImportersTest {
                     Skills:
                       - damage{amount=4} @Target ~onSpawn
                       - damage{amount=5} @Target ~ONSPAWN
+                      - damage{amount=6} @Target ~onAttack
                       - skill{s=Child;delay=2} @Target ~onDeath
                       - damage{amount=3} @Trigger ~onDamaged
                       - damage{amount=2} @Trigger ~onHurt
@@ -790,6 +791,7 @@ class ImportersTest {
                 new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
         assertEquals(4, target.getStringList("mob.triggers.on-spawn.do").size());
         assertEquals(List.of("skill{s=Child;delay=2} @Target"), target.getStringList("mob.triggers.on-death.do"));
+        assertEquals(List.of("damage-target 6 @target"), target.getStringList("mob.triggers.on-attack.do"));
         assertEquals(List.of("damage-target 3 @trigger", "damage-target 2 @trigger"),
                 target.getStringList("mob.triggers.on-damage.do"));
         assertTrue(target.getStringList("mob.on-decision").isEmpty());

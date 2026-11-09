@@ -753,14 +753,17 @@ public final class SkillTriggers implements Listener {
     public void onDamage(EntityDamageByEntityEvent e) {
         var damageInstance = find(e.getEntity(), SkillTrigger.DAMAGE);
         var attackedInstance = find(e.getEntity(), SkillTrigger.ATTACKED);
+        Entity damageSource = DamageSourceResolver.resolve(e.getDamager());
+        var attackInstance = damageSource == null ? null : find(damageSource, SkillTrigger.ATTACK);
         if (plugin.getConfig().getBoolean("debug.trace-triggers", false)) {
             log.info("[trigger-debug] damage-route entity=" + e.getEntity().getUniqueId()
                     + " cause=" + e.getCause()
                     + " tags=" + SkillCatalog.currentDamageTags(e.getEntity())
                     + " damage-instance=" + (damageInstance == null ? null : damageInstance.instanceId())
-                    + " attacked-instance=" + (attackedInstance == null ? null : attackedInstance.instanceId()));
+                    + " attacked-instance=" + (attackedInstance == null ? null : attackedInstance.instanceId())
+                    + " attack-instance=" + (attackInstance == null ? null : attackInstance.instanceId()));
         }
-        if (damageInstance == null && attackedInstance == null
+        if (damageInstance == null && attackedInstance == null && attackInstance == null
                 && plugin.getConfig().getBoolean("debug.trace-triggers", false)) {
             log.info("[trigger-debug] damage entity=" + e.getEntity().getUniqueId()
                     + " candidates=" + ai.allInstances().stream()
@@ -768,9 +771,17 @@ public final class SkillTriggers implements Listener {
                             + candidate.boundEntityId().map(Object::toString).orElse("null"))
                     .toList());
         }
-        if (damageInstance == null && attackedInstance == null) return;
-        Entity damageSource = DamageSourceResolver.resolve(e.getDamager());
+        if (damageInstance == null && attackedInstance == null && attackInstance == null) return;
         LivingEntity attacker = damageSource instanceof LivingEntity living ? living : null;
+        // Mythic's onAttack belongs to the caster that caused the damage. Keep
+        // the victim as both trigger and target; the two victim-side triggers
+        // below retain their existing context contract.
+        if (attackInstance != null) {
+            LivingEntity victim = e.getEntity() instanceof LivingEntity living ? living : null;
+            dispatch(SkillTrigger.ATTACK, attackInstance, victim, attacker == null
+                            ? e.getDamager().getLocation() : attacker.getLocation(),
+                    e.getEntity(), livingTargets(e.getEntity()), e, e.getCause());
+        }
         if (damageInstance != null) {
             dispatch(SkillTrigger.DAMAGE, damageInstance, attacker, e.getEntity().getLocation(), damageSource,
                     livingTargets(e.getEntity()), e, e.getCause());
@@ -1437,7 +1448,11 @@ public final class SkillTriggers implements Listener {
         dev.helstera.runtime.instance.ModelInstanceImpl fallback = null;
         for (var inst : ai.allInstances()) {
             Entity base = inst.baseEntity().orElse(null);
-            if (base != e && !e.getUniqueId().equals(inst.boundEntityId().orElse(null))) continue;
+            if (base != e) {
+                java.util.UUID entityId = e.getUniqueId();
+                java.util.UUID boundId = inst.boundEntityId().orElse(null);
+                if (entityId == null || boundId == null || !entityId.equals(boundId)) continue;
+            }
             if (fallback == null) fallback = inst;
             if (trigger != null) {
                 AiProfile profile = ai.profileOf(inst.instanceId());

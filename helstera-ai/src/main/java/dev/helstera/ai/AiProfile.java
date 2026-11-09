@@ -146,7 +146,7 @@ public final class AiProfile {
      * 单个事件触发器：{@code require} 全部满足时才执行 {@code actions}。
      *
      * <p>事件名取值见 {@link dev.helstera.ai.skill.SkillTrigger}：on-spawn / on-timer /
-     * on-damage / on-attacked / on-death / on-remove / on-state 等。</p>
+     * on-damage / on-attack / on-attacked / on-death / on-remove / on-state 等。</p>
      */
     public static final class TriggerSpec {
         public final List<String> require = new ArrayList<>();

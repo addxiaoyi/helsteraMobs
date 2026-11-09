@@ -1352,7 +1352,8 @@
     },
     {
       "id": "skillTrigger",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationContains": "attack=true"
     },
     {
       "id": "spatialTargeters",

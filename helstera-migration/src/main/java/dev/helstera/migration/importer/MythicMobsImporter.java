@@ -1747,6 +1747,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             String event = raw.substring(pos, end);
             String trigger = event.equalsIgnoreCase("~onSpawn") ? "on-spawn"
                     : event.equalsIgnoreCase("~onDeath") ? "on-death"
+                    : event.equalsIgnoreCase("~onAttack") ? "on-attack"
                     : event.equalsIgnoreCase("~onDamaged") || event.equalsIgnoreCase("~onHurt")
                     ? "on-damage" : null;
             String action = (raw.substring(0, pos) + raw.substring(end)).trim();
