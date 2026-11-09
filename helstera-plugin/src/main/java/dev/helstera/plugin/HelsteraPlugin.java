@@ -17081,6 +17081,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         org.bukkit.entity.Zombie killer = null;
         org.bukkit.entity.Zombie victim = null;
         dev.helstera.runtime.instance.ModelInstanceImpl killerInstance = null;
+        Path importRoot = null;
+        boolean imported = false;
+        boolean mapped = false;
         try {
             killer = world.spawn(origin.clone().add(50, 0, 0), org.bukkit.entity.Zombie.class);
             victim = world.spawn(origin.clone().add(51, 0, 0), org.bukkit.entity.Zombie.class);
@@ -17093,27 +17096,49 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     "example/emberling", killer,
                     dev.helstera.api.instance.SpawnOptions.defaults());
 
-            var profile = new dev.helstera.ai.AiProfile("paper-kill-trigger");
-            var trigger = new dev.helstera.ai.AiProfile.TriggerSpec();
-            String action = skills.bindAction("set-name &aKILL_TRIGGER_OK");
-            if (action == null) throw new IllegalStateException("on-kill probe action did not bind");
-            trigger.actions.add(action);
-            profile.triggers.put("on-kill", trigger);
+            importRoot = Files.createTempDirectory("helstera-kill-trigger-import-");
+            Path mobDir = Files.createDirectory(importRoot.resolve("Mobs"));
+            Path source = mobDir.resolve("probe.yml");
+            Files.writeString(source, """
+                    mobs:
+                      ImportedKillProbe:
+                        Type: ZOMBIE
+                        Skills:
+                          - setname{name=&aIMPORTED_KILL_TRIGGER_OK} ~onKill
+                    """);
+            var conversion = new MythicMobsImporter().convert(source);
+            var plan = conversion.stream().filter(entry -> entry.containsKey("target-file"))
+                    .findFirst().orElseThrow();
+            var importedConfig = YamlConfiguration.loadConfiguration(
+                    new java.io.StringReader(String.valueOf(plan.get("content"))));
+            var importedMob = importedConfig.getConfigurationSection("mob");
+            if (importedMob == null) throw new IllegalStateException("missing imported kill mob");
+            var profile = dev.helstera.ai.AiProfile.fromSection("paper-kill-trigger", importedMob);
+            skills.expandTriggers(profile);
+            var importedTrigger = profile.triggers.get("on-kill");
+            mapped = importedTrigger != null && importedTrigger.actions.size() == 1;
+            imported = mapped && conversion.stream().anyMatch(entry -> "mapped".equals(entry.get("status")));
+            if (!mapped) throw new IllegalStateException("on-kill importer mapping was not bound");
             manager.attach(killerInstance, profile);
+            deleteTriggerImportRoot(importRoot);
+            importRoot = null;
 
             // Use the real Bukkit damage path and a managed entity as damager;
             // the trigger resolver must recover that entity from lastDamageCause.
             killer.attack(victim);
             if (victim.isValid() && !victim.isDead()) victim.damage(100.0, killer);
+            boolean importedProbe = imported;
+            boolean mappedProbe = mapped;
             org.bukkit.entity.Zombie checkedKiller = killer;
             org.bukkit.entity.Zombie checkedVictim = victim;
             dev.helstera.runtime.instance.ModelInstanceImpl checkedInstance = killerInstance;
             getServer().getScheduler().runTaskLater(this, () -> {
                 boolean dead = !checkedVictim.isValid() || checkedVictim.isDead();
-                boolean actionObserved = "§aKILL_TRIGGER_OK".equals(checkedKiller.getCustomName());
-                getLogger().info("kill-trigger natural=" + (dead && actionObserved)
+                boolean actionObserved = "§aIMPORTED_KILL_TRIGGER_OK".equals(checkedKiller.getCustomName());
+                getLogger().info("kill-trigger imported=" + importedProbe + " mapped=" + mappedProbe
+                        + " natural=" + (dead && actionObserved)
                         + " victim-dead=" + dead + " action-observed=" + actionObserved
-                        + " passed=" + (dead && actionObserved));
+                        + " passed=" + (importedProbe && mappedProbe && dead && actionObserved));
                 if (checkedInstance != null && instances() != null) {
                     instances().despawn(checkedInstance.instanceId());
                 }
@@ -17128,6 +17153,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             if (victim != null && victim.isValid()) victim.remove();
             if (killer != null && killer.isValid()) killer.remove();
+            deleteTriggerImportRoot(importRoot);
+        }
+    }
+
+    private static void deleteTriggerImportRoot(Path root) {
+        if (root == null) return;
+        try {
+            Files.deleteIfExists(root.resolve("Mobs/probe.yml"));
+            Files.deleteIfExists(root.resolve("Mobs"));
+            Files.deleteIfExists(root);
+        } catch (IOException ignored) {
         }
     }
 
@@ -17157,6 +17193,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean oldAllowFlight = victim.getAllowFlight();
         boolean oldFlying = victim.isFlying();
         double oldHealth = victim.getHealth();
+        Path importRoot = null;
+        boolean imported = false;
+        boolean mapped = false;
         try {
             killer = world.spawn(origin.clone().add(52, 0, 0), org.bukkit.entity.Zombie.class);
             killer.setAI(false);
@@ -17166,13 +17205,32 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     "example/emberling", killer,
                     dev.helstera.api.instance.SpawnOptions.defaults());
 
-            var profile = new dev.helstera.ai.AiProfile("paper-player-kill-trigger");
-            var trigger = new dev.helstera.ai.AiProfile.TriggerSpec();
-            String action = skills.bindAction("set-name &bPLAYER_KILL_TRIGGER_OK");
-            if (action == null) throw new IllegalStateException("on-kill-player probe action did not bind");
-            trigger.actions.add(action);
-            profile.triggers.put("on-kill-player", trigger);
+            importRoot = Files.createTempDirectory("helstera-player-kill-trigger-import-");
+            Path mobDir = Files.createDirectory(importRoot.resolve("Mobs"));
+            Path source = mobDir.resolve("probe.yml");
+            Files.writeString(source, """
+                    mobs:
+                      ImportedPlayerKillProbe:
+                        Type: ZOMBIE
+                        Skills:
+                          - setname{name=&bIMPORTED_PLAYER_KILL_TRIGGER_OK} ~onKillPlayer
+                    """);
+            var conversion = new MythicMobsImporter().convert(source);
+            var plan = conversion.stream().filter(entry -> entry.containsKey("target-file"))
+                    .findFirst().orElseThrow();
+            var importedConfig = YamlConfiguration.loadConfiguration(
+                    new java.io.StringReader(String.valueOf(plan.get("content"))));
+            var importedMob = importedConfig.getConfigurationSection("mob");
+            if (importedMob == null) throw new IllegalStateException("missing imported player kill mob");
+            var profile = dev.helstera.ai.AiProfile.fromSection("paper-player-kill-trigger", importedMob);
+            skills.expandTriggers(profile);
+            var importedTrigger = profile.triggers.get("on-kill-player");
+            mapped = importedTrigger != null && importedTrigger.actions.size() == 1;
+            imported = mapped && conversion.stream().anyMatch(entry -> "mapped".equals(entry.get("status")));
+            if (!mapped) throw new IllegalStateException("on-kill-player importer mapping was not bound");
             manager.attach(killerInstance, profile);
+            deleteTriggerImportRoot(importRoot);
+            importRoot = null;
 
             victim.setGameMode(org.bukkit.GameMode.SURVIVAL);
             victim.setInvulnerable(false);
@@ -17189,11 +17247,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             victim.setHealth(0.0);
             boolean deathObserved = victim.isDead();
 
+            boolean importedProbe = imported;
+            boolean mappedProbe = mapped;
             org.bukkit.entity.Zombie checkedKiller = killer;
             org.bukkit.entity.Player checkedVictim = victim;
             dev.helstera.runtime.instance.ModelInstanceImpl checkedInstance = killerInstance;
             getServer().getScheduler().runTaskLater(this, () -> {
-                boolean actionObserved = "§bPLAYER_KILL_TRIGGER_OK".equals(checkedKiller.getCustomName());
+                boolean actionObserved = "§bIMPORTED_PLAYER_KILL_TRIGGER_OK".equals(checkedKiller.getCustomName());
                 boolean playerKillsPositive = false;
                 boolean playerKillsNegative = false;
                 if (behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors) {
@@ -17241,9 +17301,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + importedPlayerKillsNegative + " invalid-preserved="
                             + importedPlayerKillsInvalidPreserved);
                 }
-                boolean passed = deathObserved && actionObserved
+                boolean passed = importedProbe && mappedProbe && deathObserved && actionObserved
                         && playerKillsPositive && playerKillsNegative;
-                getLogger().info("player-kill-trigger natural=" + passed
+                getLogger().info("player-kill-trigger imported=" + importedProbe + " mapped=" + mappedProbe
+                        + " natural=" + passed
                         + " victim-player=true victim-death-observed=" + deathObserved
                         + " action-observed=" + actionObserved
                         + " player-kills-positive=" + playerKillsPositive
@@ -17275,6 +17336,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 instances().despawn(killerInstance.instanceId());
             }
             if (killer != null && killer.isValid()) killer.remove();
+            deleteTriggerImportRoot(importRoot);
             try {
                 if (victim.isDead()) victim.spigot().respawn();
                 if (!victim.isDead()) {
