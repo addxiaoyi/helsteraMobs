@@ -2,11 +2,28 @@
 
 ## MythicMobs Parity Development Status (2026-11-09)
 
-Latest strict fixture `srv-paper-attributes-composite-strict-20261109-r1`
-passes all 408 release probes (389 passed, 19 expected rejections, zero failed
-or incomplete) on Paper 1.21.1-133. It verifies imported entity and item
-attribute combinations through the production importer and runtime: Mythic
-attribute aliases, percentage amounts, `ADD_NUMBER`, `ADD_SCALAR`, and
+Latest strict fixture `srv-paper-mythic-stats-strict-20261109-r2`
+passes all 409 release probes (390 passed, 19 expected rejections, zero failed
+or incomplete) on Paper 1.21.1-133. It verifies the built-in `stats.yml`
+provider and weighted `BiasStat` loot path: default and configured base values,
+killer priority over dropper fallback, entity overrides, unknown/disabled stat
+rejection, positive and negative weighting, fail-closed fallback, reload, and
+state restoration. Report:
+`tools/paper-integration/reports/paper-1.21.1-mythic-stats-strict-20261109-r2.json`
+(SHA-256 `fdf9057a4b8740e89791fc182b4c0c00b75833c9dbbed90de02e01c7f53f45ab`).
+Compressed server log SHA-256:
+`6f0b3e142bd955b0999b0cd0bead600a983f3f91abcd3aaf7119e287dec511b5`.
+Client log archive SHA-256:
+`3fa1cd8199cbb00946a2c5e5fd830734c129300d597053686cb05630fd65516a`.
+Plugin SHA-256:
+`2c7a6c37935cf048b462ea2acad5cdc27383716f5900049f5589493444fe0d19`.
+The archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-attributes-composite-strict-20261109-r1`
+passes all 408 probes (389 passed, 19 expected rejections, zero failed or
+incomplete). It verifies imported entity and item attribute combinations:
+Mythic aliases, percentage amounts, `ADD_NUMBER`, `ADD_SCALAR`,
 `MULTIPLY_SCALAR_1`, `HAND`/`OFF_HAND`/`ANY` slot groups, stable modifier
 deduplication, and invalid-input rejection. Report:
 `tools/paper-integration/reports/paper-1.21.1-attributes-composite-strict-20261109-r1.json`
@@ -17,8 +34,6 @@ Client log archive SHA-256:
 `adf9d205b30aaeadedbbfd85c71219d3fbbfbddcf98079684712652ca1458927`.
 Plugin SHA-256:
 `a7dd486ce46dfcc442cf33e3645a3f5812a7dda0d3ad1b7326532e7e89b16ef0`.
-The archived logs redact web token query values; the source fixture retains the
-original run logs.
 
 Previous strict fixture `srv-paper-item-similarity-import-strict-20261109-r2`
 verifies imported `EntityItemIsSimilar` and `ItemIsSimilar` aliases,
@@ -29,16 +44,16 @@ Previous strict fixture `srv-paper-item-metadata-strict-20261108-r1` verifies
 imported ItemStack metadata, legacy numeric `Items` and Mob `Equipment` data,
 and invalid-value preservation; it remains archived as historical evidence.
 
-BiasStat parity slice (2026-11-09): standalone Mythic `BiasStat` values now
-project to `loot.yml` and native tables accept `BiasStat`, `biasStat`, and
-`bias-stat`. Weighted selection resolves the configured stat through
-`LootService.setLootBiasResolver`; zero bias keeps the original weights, `-100`
-removes non-common eligible entries, and positive values increase their weight
-using the public MythicMobs anchors. A missing or non-finite provider result
-fails closed to zero and emits one warning per table. Unit and importer tests
-cover the mapping and weighted behavior. No strict Paper fixture or built-in
-Mythic stats provider has been added yet, so the parity row remains
-`mapped-unverified`.
+BiasStat parity slice (2026-11-09): standalone Mythic `BiasStat` values project
+to `loot.yml`; native tables accept `BiasStat`, `biasStat`, and `bias-stat`.
+The built-in `MythicStatsService` loads stat definitions from `stats.yml`, uses
+entity PDC values as overrides, resolves the killer first and the dropper only
+when no killer is available, and rejects unknown or disabled stats. Weighted
+selection preserves baseline weights at zero bias, applies the public Mythic
+anchors, and fails closed to zero for an unavailable or invalid value. Unit,
+importer, and the latest strict Paper fixture cover these paths. This is the
+plugin's native stats provider, not an installed MythicMobs API integration;
+the broader DropTables row remains `mapped-unverified`.
 
 Previous strict fixture `srv-paper-legacy-numeric-items-strict-20261108-r1`
 isolates the same legacy numeric Item and Equipment behavior and remains
@@ -78,7 +93,7 @@ Client log archive SHA-256:
 `5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`.
 Plugin SHA-256:
 `d824761cdb575b50c5061706c7fde362b80f521aa9d4c46d68c296b7c64c343f`.
-Latest strict report has 408 probes, zero incomplete. Archived logs redact web
+Latest strict report has 409 probes, zero incomplete. Archived logs redact web
 token query values; the source fixture retains the original run logs.
 
 Previous strict fixture `srv-paper-context-relations-strict-20261108-r2`
@@ -864,9 +879,9 @@ its configured 7 XP. The archived report is
 Strict fixture `srv-paper-exp-lines-strict-20261102-r2` verifies an independent
 5 XP `exp` entry during natural managed-Zombie death. Its archived report has
 268 probes (256 passed, 12 expected negative controls, zero incomplete).
-`BiasStat` parsing, migration projection, and the injected weighted-table
-resolver are implemented, but strict Paper behavior and a built-in Mythic
-stats provider remain open. Mythic custom Luck enchantment/curses inputs and
+`BiasStat` parsing, migration projection, the built-in `stats.yml` provider,
+and strict Paper weighted-loot behavior are implemented. Mythic custom Luck
+enchantment/curses inputs and
 the full catalog remain incomplete. The official DropTables catalog does not
 define a separate `Looting` table option. Fractional bonus multipliers now use the documented
 per-level extra chance, and either Bonus option enables weighted selection.
@@ -889,7 +904,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-attributes-composite-strict-20261109-r1` has 408 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-mythic-stats-strict-20261109-r2` has 409 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -905,8 +920,8 @@ This is a partial parity release. The matrix currently has `35`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 528 cited IDs; 436 report files; 4 directories
-   without reports; 88 missing directories; 206 archived release reports. The
+   Current fixture inventory: 529 cited IDs; 437 report files; 4 directories
+   without reports; 88 missing directories; 207 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1079,7 +1094,7 @@ the entire MythicMobs feature catalog.
 - Reload lifecycle: plugin shutdown clears static SkillExtras/SkillCatalog hooks, state maps, delayed scheduler references, and the projectile bridge so a reload cannot retain the old plugin classloader.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies quit, bed enter/leave, item drop/break/damage, fishing, shearing, leash/unleash, and villager trade trigger dispatch on Paper. Natural disconnect and client-driven event timing remain open.
 - Drops: amount ranges, conditions, nested tables, cycle protection, dynamic chance, experience, and external drop classification.
-- Mythic DropTable `BiasStat` now projects into runtime `bias-stat`; weighted selection applies an injected stat resolver with documented `-100`/`100`/`1000` anchors and fails closed when the resolver is absent or invalid. Strict Paper evidence and a built-in Mythic stats provider remain open.
+- Mythic DropTable `BiasStat` projects into runtime `bias-stat`; the built-in `stats.yml` provider supports base values and entity PDC overrides, killer-first resolution, and fail-closed handling for unavailable stats. Strict Paper fixture `srv-paper-mythic-stats-strict-20261109-r2` verifies positive and negative weighted behavior, reload, and cleanup; custom Mythic Luck enchantment/curses inputs remain open.
 - Migration: legacy numeric IDs now cover common base blocks including `0 -> AIR`, classic water/lava and piston IDs, stable item IDs through 452, colored Shulker/Glazed Terracotta blocks, music discs `2256–2267`, common `383:DATA` spawn eggs, `ID:DATA` shorthand, and safe data variants/durability (including flowers, leaves, fish, banners, infested blocks, quartz, prismarine, double plants, fishing rods, shears, shields, and elytra); Mythic metaskill, standalone `skill{s=...}` references, DropTable, and spawner conditions are translated through the shared condition mapping, with unknown leaves preserved for manual review; unknown or unsafe data remains visible as an explicit warning.
 - Structured Mythic Drops with any unmapped condition are preserved under `mob.unsupported.Drops.entries` and warned about; they are excluded from generated runtime loot tables so an unknown condition cannot silently turn a conditional drop into an unconditional one.
 - Mythic inline drop ranges now honor the official exclusive upper bound: `1-3` and `1to3` project to 1..2, fixed amounts remain fixed, and empty/reversed ranges are preserved as unsupported. Migration tests cover the projection; strict Paper fixture `srv-paper-drops-imported-range-strict-20261102-r5` verifies an imported standalone DropTable through runtime loading and natural mob death. Broader importer range combinations remain open.
@@ -1155,7 +1170,7 @@ the entire MythicMobs feature catalog.
 Many rows remain `mapped-unverified`; the project is not complete:
 
 1. Complete official Conditions, Mechanics, placeholders, comparator edge cases, and grammar coverage.
-2. Drops: `TotalItems`, paired `MinItems`/`MaxItems`, or either Bonus option enable weighted entry selection; single bounds without bonuses retain ordered selection. Fractional Bonus multipliers add the integer part plus one line probabilistically at the fractional remainder. Strict natural-death evidence covers level/Luck combinations and dropper conditions; the earlier single-bound ordering assertion is invalid and is being replaced. Standalone `DropTables/` files project supported settings with an importer-to-runtime contract, and `exp`/`xp`/`experience` rows have natural-death coverage. `BiasStat` now has native parsing, migration projection, and an injected runtime resolver; strict Paper behavior and a built-in Mythic stats provider remain open, along with Mythic custom Luck enchantment/curses inputs, broader placeholders and the complete official catalog.
+2. Drops: `TotalItems`, paired `MinItems`/`MaxItems`, or either Bonus option enable weighted entry selection; single bounds without bonuses retain ordered selection. Fractional Bonus multipliers add the integer part plus one line probabilistically at the fractional remainder. Strict natural-death evidence covers level/Luck combinations, dropper conditions, and the built-in `stats.yml` `BiasStat` provider. The earlier single-bound ordering assertion is invalid and is being replaced. Standalone `DropTables/` files project supported settings with an importer-to-runtime contract, and `exp`/`xp`/`experience` rows have natural-death coverage. Mythic custom Luck enchantment/curses inputs, broader placeholders, condition combinations, and the complete official catalog remain open.
 3. Pin conditions resolve through the plugin's own `pins.yml`; location-valued `@Pin` resolves every configured point or one random point, `@BlocksInPinRegion` enumerates inclusive cuboids up to 16,384 blocks, and `MovePin` updates single-point pins in memory. Strict Paper fixture `srv-paper-pin-targeters-strict-20261102-r2` passes the required `pinTargeters` probe on Paper 1.21.1-133: multi-point/random dispatch, single-point movement, multi-point movement rejection, real cuboid `set-block`/`break-block` with block restoration, and fail-closed rejection of a 16,385-block region before action dispatch. Compatibility with Mythic pack pin-file formats remains unverified; in-memory movement resets when the plugin reloads its own `pins.yml`.
 4. Complete the official targeter/filter catalog: ground, water, flying, player, Creative, Spectator, invulnerability, ArmorStand, animal, creature, villager, and Helstera-managed mob identity filters now have API and strict Paper coverage. External MythicMobs/Citizens identity, non-living targets, premium selectors, and native Pathfinder Goal mutation remain open or outside the public Paper API boundary.
 5. Expand the remaining legacy numeric ID/data families; the common Items and Equipment subset now has strict Paper evidence, while `ItemModel` and `DamageType` are explicitly preserved because Paper 1.21.1 `ItemMeta` has no public component API for them.

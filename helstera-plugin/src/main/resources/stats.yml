@@ -1,0 +1,10 @@
+# MythicMobs-style custom stats used by native Helstera systems.
+#
+# Players and entities inherit base-value. Runtime overrides are stored on the
+# entity PDC and can be changed by the Paper self-test or an integration.
+stats:
+  LOOT_BIAS:
+    enabled: true
+    base-value: 0
+    min-value: -100
+    max-value: 1000

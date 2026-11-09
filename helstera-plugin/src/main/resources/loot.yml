@@ -8,7 +8,8 @@
 #     设为 0 则完全不吃幸运加成。
 #  tables.<表名>.BiasStat / bias-stat
 #     weighted 表的 Loot Bias stat 名称，省略时默认 LOOT_BIAS。
-#     需要通过 LootService.setLootBiasResolver 注入 stat 来源；来源不可用时
+#     默认读取 stats.yml 的 LOOT_BIAS（击杀者优先，无击杀者时读取 dropper）；
+#     外部集成可通过 LootService.setLootBiasResolver 覆盖。来源不可用时
 #     显式 BiasStat 回退为 0 并告警，不会伪造 stat 数值。
 #     -100 只保留最常见项，100 让较稀有项约加倍，1000 约提高十倍。
 #

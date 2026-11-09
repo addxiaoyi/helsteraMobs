@@ -1473,6 +1473,41 @@ class LootServiceTest {
     }
 
     @Test
+    @DisplayName("explicit BiasStat resolver takes precedence and built-in resolver is fallback")
+    void defaultBiasResolverIsFallbackForExplicitResolver() {
+        LootService s = service("""
+                tables:
+                  t:
+                    total-items: 1
+                    BiasStat: LOOT_BIAS
+                    entries:
+                      - {item: BREAD, chance: 1}
+                      - {item: DIAMOND, chance: 0.1}
+                """);
+        s.setDefaultLootBiasResolver((stat, location, killer, dropper) -> -100d);
+        for (int seed = 0; seed < 100; seed++) {
+            assertEquals("BREAD", s.rollPlan(s.table("t"), 0, new Random(seed))
+                    .get(0).entry().itemId());
+        }
+
+        s.setLootBiasResolver((stat, location, killer, dropper) -> 100d);
+        Random explicitRandom = new Random(20261109L);
+        int explicitRare = 0;
+        for (int seed = 0; seed < 4096; seed++) {
+            if ("DIAMOND".equals(s.rollPlan(s.table("t"), 0, explicitRandom)
+                    .get(0).entry().itemId())) explicitRare++;
+        }
+        assertTrue(explicitRare >= 560 && explicitRare <= 820,
+                "explicit +100 resolver must override the built-in -100 resolver, got " + explicitRare);
+
+        s.setLootBiasResolver(null);
+        for (int seed = 0; seed < 100; seed++) {
+            assertEquals("BREAD", s.rollPlan(s.table("t"), 0, new Random(seed))
+                    .get(0).entry().itemId());
+        }
+    }
+
+    @Test
     @DisplayName("BiasStat rejects blank and non-string values")
     void invalidBiasStatIsIgnoredWithAWarning() {
         LootService s = service("""

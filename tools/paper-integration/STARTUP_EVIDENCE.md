@@ -1,11 +1,31 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-attributes-composite-strict-20261109-r1` passed the
-full strict gate on Paper 1.21.1-133: 408 registered probes, 389 passed, 19
-expected rejections, and zero failed or incomplete. It verifies imported entity
-and item attribute combinations through the production importer and runtime:
-Mythic aliases, percentage amounts, `ADD_NUMBER`, `ADD_SCALAR`,
-`MULTIPLY_SCALAR_1`, `HAND`/`OFF_HAND`/`ANY` slot groups, stable modifier
+Latest fixture `srv-paper-mythic-stats-strict-20261109-r2` passed the full
+strict gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19
+expected rejections, and zero failed or incomplete. It verifies the native
+`stats.yml` provider and weighted `BiasStat` loot path, including default and
+configured base values, killer priority, dropper fallback, entity overrides,
+unknown/disabled stat rejection, positive and negative weighting,
+fail-closed fallback, reload, and state restoration.
+Report:
+[paper-1.21.1-mythic-stats-strict-20261109-r2.json](reports/paper-1.21.1-mythic-stats-strict-20261109-r2.json), SHA-256:
+`fdf9057a4b8740e89791fc182b4c0c00b75833c9dbbed90de02e01c7f53f45ab`.
+Compressed server log SHA-256:
+`6f0b3e142bd955b0999b0cd0bead600a983f3f91abcd3aaf7119e287dec511b5`.
+Client log archive SHA-256:
+`3fa1cd8199cbb00946a2c5e5fd830734c129300d597053686cb05630fd65516a`.
+Plugin SHA-256:
+`2c7a6c37935cf048b462ea2acad5cdc27383716f5900049f5589493444fe0d19`.
+This is the native Helstera stats provider; MythicMobs itself was not installed
+for this fixture.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-attributes-composite-strict-20261109-r1`
+passed the full strict gate with 408 registered probes, 389 passed, 19
+expected rejections, and zero failed or incomplete. It verifies imported
+entity/item attribute combinations, aliases, percentage amounts,
+`ADD_NUMBER`/`ADD_SCALAR`/`MULTIPLY_SCALAR_1`, slot groups, modifier
 deduplication, and invalid-input rejection.
 Report:
 [paper-1.21.1-attributes-composite-strict-20261109-r1.json](reports/paper-1.21.1-attributes-composite-strict-20261109-r1.json), SHA-256:
@@ -16,8 +36,6 @@ Client log archive SHA-256:
 `adf9d205b30aaeadedbbfd85c71219d3fbbfbddcf98079684712652ca1458927`.
 Plugin SHA-256:
 `a7dd486ce46dfcc442cf33e3645a3f5812a7dda0d3ad1b7326532e7e89b16ef0`.
-Archived logs redact web token query values; the source fixture retains the
-original run logs.
 
 Previous strict fixture `srv-paper-item-similarity-import-strict-20261109-r2`
 verifies imported `EntityItemIsSimilar` and `ItemIsSimilar` aliases,
@@ -67,7 +85,7 @@ Client log archive SHA-256:
 `5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`.
 Plugin SHA-256:
 `d824761cdb575b50c5061706c7fde362b80f521aa9d4c46d68c296b7c64c343f`.
-Latest strict report has 408 probes, zero incomplete. Archived logs redact web
+Latest strict report has 409 probes, zero incomplete. Archived logs redact web
 token query values; the source fixture retains the original run logs.
 
 Previous fixture `srv-paper-context-relations-strict-20261108-r2` passed

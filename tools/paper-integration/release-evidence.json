@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-mythic-stats-strict-20261109-r2",
+    "reportFixtureDirectory": "srv-paper-mythic-stats-strict-20261109-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-mythic-stats-strict-20261109-r2.json",
+    "reportSha256": "fdf9057a4b8740e89791fc182b4c0c00b75833c9dbbed90de02e01c7f53f45ab",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mythic-stats-strict-20261109-r2.log.gz",
+    "logSha256": "6f0b3e142bd955b0999b0cd0bead600a983f3f91abcd3aaf7119e287dec511b5",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-mythic-stats-strict-20261109-r2-client-logs.tar.gz",
+    "clientLogSha256": "3fa1cd8199cbb00946a2c5e5fd830734c129300d597053686cb05630fd65516a",
+    "pluginSha256": "2c7a6c37935cf048b462ea2acad5cdc27383716f5900049f5589493444fe0d19",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-attributes-composite-strict-20261109-r1",
     "reportFixtureDirectory": "srv-paper-attributes-composite-strict-20261109-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-attributes-composite-strict-20261109-r1.json",
