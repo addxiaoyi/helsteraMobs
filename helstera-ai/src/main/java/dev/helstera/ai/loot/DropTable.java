@@ -90,18 +90,21 @@ public final class DropTable {
     private final double bonusLevelItemsMax;
     private final double bonusLuckItemsMin;
     private final double bonusLuckItemsMax;
+    /** Optional stat name used to resolve MythicMobs-style loot bias. */
+    private final String biasStat;
 
     private DropTable(String name, double luckFactor, List<Entry> entries,
                       int experienceMin, int experienceMax) {
         this(name, luckFactor, entries, experienceMin, experienceMax, 0, 0, 0,
-                0, 0, 0, 0, List.of(), List.of());
+                0, 0, 0, 0, List.of(), List.of(), null);
     }
 
     private DropTable(String name, double luckFactor, List<Entry> entries,
                       int experienceMin, int experienceMax, int totalItems, int minItems, int maxItems,
                       double bonusLevelItemsMin, double bonusLevelItemsMax,
                       double bonusLuckItemsMin, double bonusLuckItemsMax,
-                      List<String> triggerConditions, List<String> conditions) {
+                      List<String> triggerConditions, List<String> conditions,
+                      String biasStat) {
         this.name = name;
         this.luckFactor = luckFactor;
         this.entries = List.copyOf(entries);
@@ -116,6 +119,7 @@ public final class DropTable {
         this.bonusLevelItemsMax = bonusLevelItemsMax;
         this.bonusLuckItemsMin = bonusLuckItemsMin;
         this.bonusLuckItemsMax = bonusLuckItemsMax;
+        this.biasStat = biasStat;
     }
 
     public String name() {
@@ -156,6 +160,15 @@ public final class DropTable {
     public double bonusLuckItemsMin() { return bonusLuckItemsMin; }
 
     public double bonusLuckItemsMax() { return bonusLuckItemsMax; }
+
+    /**
+     * Stat name used for weighted-table loot bias. MythicMobs defaults this to
+     * {@code LOOT_BIAS} when the option is omitted.
+     */
+    public String biasStat() { return biasStat == null ? "LOOT_BIAS" : biasStat; }
+
+    /** Whether the source explicitly configured a BiasStat value. */
+    public boolean hasExplicitBiasStat() { return biasStat != null; }
 
     public boolean hasBonusLevelItems() { return bonusLevelItemsMax > 0; }
 
@@ -381,6 +394,8 @@ public final class DropTable {
                 "bonus-level-items", "bonusLevelItems", "BonusLevelItems");
         double[] bonusLuckItems = readMultiplier(sec, problems, name,
                 "bonus-luck-items", "bonusLuckItems", "BonusLuckItems");
+        String biasStat = readBiasStat(sec, problems, name,
+                "bias-stat", "biasStat", "BiasStat");
         if (totalItems > 0 && maxItems == 0) maxItems = totalItems;
         if (minItems > 0 && maxItems > 0 && minItems > maxItems) {
             problems.add("掉落表 " + name + " min-items (" + minItems + ") > max-items ("
@@ -399,7 +414,21 @@ public final class DropTable {
                 totalItems, minItems, maxItems, bonusLevelItems[0], bonusLevelItems[1],
                 bonusLuckItems[0], bonusLuckItems[1],
                 readConditions(sec, "trigger-conditions", problems, "掉落表 " + name),
-                readConditions(sec, "conditions", problems, "掉落表 " + name));
+                readConditions(sec, "conditions", problems, "掉落表 " + name), biasStat);
+    }
+
+    private static String readBiasStat(ConfigurationSection sec, List<String> problems,
+                                       String tableName, String... keys) {
+        if (sec == null) return null;
+        String key = configuredKey(sec, keys);
+        if (key == null) return null;
+        Object raw = sec.get(key);
+        if (!(raw instanceof String value) || value.isBlank()) {
+            problems.add("掉落表 " + tableName + " " + key
+                    + " 必须是非空字符串，已忽略 BiasStat");
+            return null;
+        }
+        return value.trim();
     }
 
     private static double[] readMultiplier(ConfigurationSection sec, List<String> problems,

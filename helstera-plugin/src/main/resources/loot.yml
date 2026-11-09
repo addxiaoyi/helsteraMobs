@@ -6,6 +6,11 @@
 #  tables.<表名>.luck-factor
 #     幸运加成系数：击杀者的幸运值（默认 0.05）乘以此值，加到 chance 上。
 #     设为 0 则完全不吃幸运加成。
+#  tables.<表名>.BiasStat / bias-stat
+#     weighted 表的 Loot Bias stat 名称，省略时默认 LOOT_BIAS。
+#     需要通过 LootService.setLootBiasResolver 注入 stat 来源；来源不可用时
+#     显式 BiasStat 回退为 0 并告警，不会伪造 stat 数值。
+#     -100 只保留最常见项，100 让较稀有项约加倍，1000 约提高十倍。
 #
 #  entries[] 每一条可写字段：
 #     item               物品 ID。

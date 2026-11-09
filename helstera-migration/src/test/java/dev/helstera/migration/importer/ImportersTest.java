@@ -246,6 +246,7 @@ class ImportersTest {
                 boss_reward:
                   TotalItems: 2
                   BonusLevelItems: 0.5
+                  BiasStat: LOOT_BIAS
                   Conditions:
                     - is-monster
                   TriggerConditions:
@@ -274,6 +275,11 @@ class ImportersTest {
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
         assertEquals(2, loot.getInt("tables.boss_reward.total-items"));
         assertEquals(0.5, loot.getDouble("tables.boss_reward.bonus-level-items"), 1e-9);
+        assertEquals("LOOT_BIAS", loot.getString("tables.boss_reward.bias-stat"));
+        assertTrue(converted.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "boss_reward.BiasStat".equals(entry.get("source-key"))));
+        assertTrue(converted.stream().noneMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "boss_reward.BiasStat".equals(entry.get("source-key"))));
         assertEquals(List.of("is-monster"), loot.getStringList("tables.boss_reward.conditions"));
         assertEquals("is-player", loot.getStringList("tables.boss_reward.trigger-conditions").get(0));
         assertEquals("DIAMOND", loot.getString("tables.boss_reward.entries.0.item"));
@@ -5079,7 +5085,35 @@ class ImportersTest {
         assertEquals("&aBlade", target.getString("items.example_item.display-name"));
         assertEquals(42, target.getInt("items.example_item.custom-model-data"));
         assertTrue(target.getBoolean("items.example_item.unbreakable"));
-    }    @Test
+    }
+
+    @Test
+    @DisplayName("Mythic item names and skull metadata map separately and invalid model data is preserved")
+    void mythicMapsItemNameAndSkullMetadata(@TempDir Path root) throws Exception {
+        Path file = write(root, "Items/metadata.yml", """
+                named_head:
+                  Id: PLAYER_HEAD
+                  Display: "&aDisplay"
+                  ItemName: "&bExact name"
+                  SkullOwner: Notch
+                  CustomModelData: 42
+                invalid_model:
+                  Id: DIAMOND
+                  CustomModelData: not-a-number
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = converted(file);
+
+        assertEquals("&aDisplay", target.getString("items.named_head.display-name"));
+        assertEquals("&bExact name", target.getString("items.named_head.item-name"));
+        assertEquals("Notch", target.getString("items.named_head.skull-owner"));
+        assertEquals(42, target.getInt("items.named_head.custom-model-data"));
+        assertEquals("not-a-number", target.getString("items.invalid_model.unsupported.custom-model-data"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "items.invalid_model.unsupported.custom-model-data".equals(entry.get("target-key"))));
+    }
+
+    @Test
     @DisplayName("MythicMobs item options preserve durability and adventure restrictions")
     void mythicMapsItemOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Items/options.yml", """

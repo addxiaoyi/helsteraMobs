@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.io.StringReader;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1375,5 +1376,115 @@ class LootServiceTest {
                 """);
         assertEquals(0, s.table("t").minItems());
         assertTrue(s.warnings().stream().anyMatch(w -> w.contains("为负数")));
+    }
+
+    @Test
+    @DisplayName("BiasStat is resolved only for weighted tables")
+    void biasStatUsesInjectedResolverOnlyForWeightedTables() {
+        LootService s = service("""
+                tables:
+                  weighted:
+                    total-items: 1
+                    BiasStat: CUSTOM_LOOT_BIAS
+                    entries:
+                      - {item: BREAD, chance: 1}
+                      - {item: DIAMOND, chance: 0.1}
+                  ordered:
+                    BiasStat: CUSTOM_LOOT_BIAS
+                    entries:
+                      - {item: BREAD, chance: 1}
+                      - {item: DIAMOND, chance: 1}
+                """);
+        assertEquals("CUSTOM_LOOT_BIAS", s.table("weighted").biasStat());
+        AtomicInteger calls = new AtomicInteger();
+        s.setLootBiasResolver((stat, location, killer, dropper) -> {
+            assertEquals("CUSTOM_LOOT_BIAS", stat);
+            calls.incrementAndGet();
+            return -100d;
+        });
+
+        for (int seed = 0; seed < 100; seed++) {
+            assertEquals("BREAD", s.rollPlan(s.table("weighted"), 0, new Random(seed))
+                    .get(0).entry().itemId());
+        }
+        assertEquals(100, calls.get());
+        assertEquals("BREAD", s.rollPlan(s.table("ordered"), 0, new Random(1))
+                .get(0).entry().itemId());
+        assertEquals(100, calls.get(), "BiasStat must not affect ordered tables");
+    }
+
+    @Test
+    @DisplayName("BiasStat positive values increase rare weighted entries")
+    void positiveBiasIncreasesRareWeightedEntry() {
+        LootService s = service("""
+                tables:
+                  t:
+                    total-items: 1
+                    bias-stat: LOOT_BIAS
+                    entries:
+                      - {item: BREAD, chance: 1, luck-scaling: false}
+                      - {item: DIAMOND, chance: 0.1, luck-scaling: false}
+                """);
+        s.setLootBiasResolver((stat, location, killer, dropper) -> 100d);
+        Random random = new Random(20261109L);
+        int diamonds = 0;
+        for (int i = 0; i < 20_000; i++) {
+            if (s.rollPlan(s.table("t"), 0, random).get(0).entry().itemId().equals("DIAMOND")) {
+                diamonds++;
+            }
+        }
+        assertTrue(diamonds > 2_800 && diamonds < 3_900,
+                "100 loot bias should make the rare weight 0.2, got " + diamonds);
+    }
+
+    @Test
+    @DisplayName("BiasStat missing or invalid providers fail closed to normal weights")
+    void unavailableBiasDoesNotInventAWeightedResult() {
+        LootService missing = service("""
+                tables:
+                  t:
+                    total-items: 1
+                    BiasStat: LOOT_BIAS
+                    entries:
+                      - {item: BREAD, chance: 1}
+                      - {item: DIAMOND, chance: 0.1}
+                """);
+        for (int seed = 0; seed < 100; seed++) {
+            var hits = missing.rollPlan(missing.table("t"), 0, new Random(seed));
+            assertEquals(1, hits.size());
+            assertTrue(List.of("BREAD", "DIAMOND").contains(hits.get(0).entry().itemId()));
+        }
+
+        LootService invalid = service("""
+                tables:
+                  t:
+                    total-items: 1
+                    BiasStat: LOOT_BIAS
+                    entries:
+                      - {item: BREAD, chance: 1}
+                      - {item: DIAMOND, chance: 0.1}
+                """);
+        invalid.setLootBiasResolver((stat, location, killer, dropper) -> Double.NaN);
+        for (int seed = 0; seed < 100; seed++) {
+            var hits = invalid.rollPlan(invalid.table("t"), 0, new Random(seed));
+            assertEquals(1, hits.size());
+            assertTrue(List.of("BREAD", "DIAMOND").contains(hits.get(0).entry().itemId()));
+        }
+    }
+
+    @Test
+    @DisplayName("BiasStat rejects blank and non-string values")
+    void invalidBiasStatIsIgnoredWithAWarning() {
+        LootService s = service("""
+                tables:
+                  t:
+                    total-items: 1
+                    bias-stat: 42
+                    entries:
+                      - {item: BREAD, chance: 1}
+                """);
+        assertEquals("LOOT_BIAS", s.table("t").biasStat());
+        assertFalse(s.table("t").hasExplicitBiasStat());
+        assertTrue(s.warnings().stream().anyMatch(w -> w.contains("bias-stat")));
     }
 }

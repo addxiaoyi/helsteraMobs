@@ -127,6 +127,19 @@ class MythicDropTableProjectionTest {
     }
 
     @Test
+    void projectsBiasStatToTheRuntimeTableOption() {
+        YamlConfiguration source = new YamlConfiguration();
+        source.set("Drops", List.of("BREAD 1 1", "DIAMOND 1 0.1"));
+        source.set("TotalItems", 1);
+        source.set("BiasStat", "CUSTOM_LOOT_BIAS");
+
+        var projected = MythicDropTableProjection.project("rewards", source);
+
+        assertEquals("CUSTOM_LOOT_BIAS", projected.getString("tables.rewards.bias-stat"));
+        assertEquals(1, projected.getInt("tables.rewards.total-items"));
+    }
+
+    @Test
     void rejectsBlankAndNonStringTableConditions() {
         for (String key : List.of("Conditions", "TriggerConditions")) {
             for (Object invalid : List.of("", " ", ";", "|", 42)) {
