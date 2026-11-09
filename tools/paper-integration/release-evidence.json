@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-conversion-boundaries-strict-20261109-r2",
+    "reportFixtureDirectory": "srv-paper-conversion-boundaries-strict-20261109-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-conversion-boundaries-strict-20261109-r2.json",
+    "reportSha256": "449fdf8f258f44bcdd280a9d04e673573df72257df584eeec42bb0b5e225108b",
+    "log": "tools/paper-integration/reports/paper-1.21.1-conversion-boundaries-strict-20261109-r2.log.gz",
+    "logSha256": "fbadfb80ef8bbf08add0729e5f19b08f6bc697d027df31825b5bcec2abd0be8b",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-conversion-boundaries-strict-20261109-r2-client-logs.tar.gz",
+    "clientLogSha256": "0442f3be5b4ba7d1b8c075c64361423c90d80d9c7cd081022d968729172283fd",
+    "pluginSha256": "1c0c42e5a93210d9721eaecb061a6d5b02efa2529f8747fd66c0677369028ecf",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-zombie-conversion-strict-20261109-r4",
     "reportFixtureDirectory": "srv-paper-zombie-conversion-strict-20261109-r4",
     "report": "tools/paper-integration/reports/paper-1.21.1-zombie-conversion-strict-20261109-r4.json",

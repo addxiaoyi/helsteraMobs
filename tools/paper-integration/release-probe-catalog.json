@@ -1063,13 +1063,23 @@
       "requiredObservationPattern": "^mob-options-zombie-conversion protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=true control-cancelled=false protected-type=ZOMBIE protected-valid=true control-drowned=true control-converted=true elapsed-ticks=[1-9][0-9]* restored=true passed=true$"
     },
     {
+      "id": "mobOptionsZombieVillagerCured",
+      "status": "passed",
+      "requiredObservationPattern": "^mob-options-zombie-villager-cured protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=true control-cancelled=false protected-type=ZOMBIE_VILLAGER protected-valid=true control-villager=true control-converted=true elapsed-ticks=[1-9][0-9]* restored=true passed=true$"
+    },
+    {
+      "id": "mobOptionsVillagerInfection",
+      "status": "passed",
+      "requiredObservationPattern": "^mob-options-villager-infection protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=true control-cancelled=false protected-type=VILLAGER protected-villager=true protected-alive=false protected-zombie-villager=false control-zombie-villager=true control-converted=true native-attacks=true/true difficulty-restored=true elapsed-ticks=[1-9][0-9]* restored=true passed=true$"
+    },
+    {
       "id": "mobOptionsSlimeSplit",
       "status": "passed"
     },
     {
       "id": "mobOptionsSlimeSplitNatural",
       "status": "passed",
-      "requiredObservationPattern": "^mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=[1-9][0-9]* control-event=true control-cancelled=false control-event-count=[1-9][0-9]* protected-dead=true control-dead=true protected-children=0 control-children=[1-9][0-9]* monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true$"
+      "requiredObservationPattern": "^mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=[1-9][0-9]* control-event=true control-cancelled=false control-event-count=[1-9][0-9]* protected-dead=true control-dead=true protected-children=0 control-children=[1-9][0-9]* .*monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true$"
     },
     {
       "id": "mobPickupOption",

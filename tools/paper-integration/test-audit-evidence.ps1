@@ -60,6 +60,14 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'mobOptionsZombieConversion'; status = 'passed'; observations = @('mob-options-zombie-conversion protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=ZOMBIE protected-valid=true control-drowned=true control-converted=true elapsed-ticks=21 restored=true passed=true')
     }
+    $fullReport.expectedProbeIds += 'mobOptionsZombieVillagerCured'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mobOptionsZombieVillagerCured'; status = 'passed'; observations = @('mob-options-zombie-villager-cured protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=ZOMBIE_VILLAGER protected-valid=true control-villager=true control-converted=true elapsed-ticks=21 restored=true passed=true')
+    }
+    $fullReport.expectedProbeIds += 'mobOptionsVillagerInfection'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mobOptionsVillagerInfection'; status = 'passed'; observations = @('mob-options-villager-infection protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=VILLAGER protected-villager=true protected-alive=false protected-zombie-villager=false control-zombie-villager=true control-converted=true native-attacks=true/true difficulty-restored=true elapsed-ticks=21 restored=true passed=true')
+    }
     $entityFlagOptionsProbe = @($fullReport.probes | Where-Object id -eq 'entityFlagOptions')
     if ($entityFlagOptionsProbe.Count -ne 1) { throw 'Synthetic release report must contain entityFlagOptions.' }
     $entityFlagOptionsProbe[0].observations = @('entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true')
