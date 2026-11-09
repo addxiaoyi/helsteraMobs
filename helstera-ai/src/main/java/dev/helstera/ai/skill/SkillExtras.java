@@ -3201,7 +3201,11 @@ public final class SkillExtras {
                             x = y = z = Double.NaN;
                         }
                     }
-                    boolean exact = keyedBoolean(a, 3, false, "exact", "e");
+                    int exactIndex = locationRaw == null ? 3 : 1;
+                    boolean exact = keyedBoolean(a, exactIndex, false, "exact", "e");
+                    if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
+                        throw new IllegalArgumentException("origin-location coordinates must be finite");
+                    }
                     final double expectedX = x;
                     final double expectedY = y;
                     final double expectedZ = z;
@@ -3730,8 +3734,16 @@ public final class SkillExtras {
                 Map.entry("player-kills", (SkillCatalog.ConditionFactory) a -> {
                     NumberRange range = a == null || a.isEmpty()
                             ? new NumberRange(0, 0, true, true) : numberRange(a, 0);
+                    if (range == null || Double.isNaN(range.min()) || Double.isNaN(range.max())
+                            || range.min() > range.max()
+                            || (range.min() == Double.POSITIVE_INFINITY
+                            && range.max() == Double.POSITIVE_INFINITY)
+                            || (range.min() == Double.NEGATIVE_INFINITY
+                            && range.max() == Double.NEGATIVE_INFINITY)) {
+                        throw new IllegalArgumentException("player-kills requires a valid number range");
+                    }
                     return ctx -> hasInstance(ctx) && playerKillCount != null
-                            && range != null && range.contains(playerKillCount.count(id(ctx)));
+                            && range.contains(playerKillCount.count(id(ctx)));
                 }),
                 // ---- 仇恨 ----
                 // 未接线或档案未启用 threat 时一律判 false：那两种情况下

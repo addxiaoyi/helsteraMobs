@@ -116,6 +116,7 @@ $probeSpecs = [ordered]@{
     importedMobDefaults = 'imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true'
     attributes = 'attribute-options result=true modifiers=1'
     itemAttributes = 'item-attribute-options result=true modifiers=1'
+    itemMetadata = 'item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true(?: flag-values=\[[^]]*\])? restrictions=true potion=true skull=true invalid-preserved=true result=true'
     legacyNumericItems = 'legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true'
     skillEquipment = 'skill-actions equipment=true'
     playerExperienceMechanics = 'skill-actions .*player-experience-mechanics=true'

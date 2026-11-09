@@ -209,6 +209,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true',
         '[Server thread/INFO]: item-attribute-options result=true modifiers=1',
         '[Server thread/INFO]: [helsteraMobs] [自检] legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true restrictions=true potion=true skull=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true prevent-transformation-reasons=true prevent-skeleton-conversion=true prevent-block-infection=true prevent-snow-formation=true tame-breed-tame=true tame-breed-breed=true leash-unleash-leash=true leash-unleash-unleash=true prevent-leash=true prevent-rename=true prevent-target=true prevent-vanilla-damage=true prevent-projectiles=true prevent-entity-explosions=true prevent-block-explosion-damage=true prevent-drowning=true prevent-fall-damage=true prevent-fire=true prevent-fire-causes=true prevent-pickup=true prevent-item-use=true interactable=true interactable-armor-stand=true prevent-teleport=true prevent-sunburn=true prevent-other-drops=true prevent-mob-kill-drops=true prevent-mob-kill-custom-loot=true shear-trigger=true bed-enter-leave-enter=true bed-enter-leave-leave=true trade-trigger=true quit-trigger=true item-drop-break-damage=true player-actions-interact=true world-change=true jump=true swing=true fish-trigger=true',
         '[Server thread/INFO]: mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true',
         '[Server thread/INFO]: mob-options-natural bee-stinger=true bee-event=synthetic bee-attacks=1/1 zombie-conversion=true zombie-control=true zombie-protected=true passed=true',
@@ -463,7 +464,7 @@ try {
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
-            'importedPlayerKillsCondition', 'contextTargeterRelations', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'legacyNumericItems')) {
+            'importedPlayerKillsCondition', 'contextTargeterRelations', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'itemMetadata', 'legacyNumericItems')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -553,6 +554,22 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'damageAttribution').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'damageAttribution').observations[0] -match
         '^damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true$') 'real Player damage attribution probe'
+    Assert-True (($report.probes | Where-Object id -eq 'itemMetadata').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'itemMetadata').observations[0] -match
+        '^item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true(?: flag-values=\[[^]]*\])? restrictions=true potion=true skull=true invalid-preserved=true result=true$') 'imported item metadata probe'
+    $dynamicMetadataTemp = Join-Path $temp 'dynamic-item-metadata'
+    New-Item -ItemType Directory -Path (Join-Path $dynamicMetadataTemp 'logs') -Force | Out-Null
+    @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
+        '[Server thread/INFO]: [helsteraMobs] [自检] item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true flag-values=[HIDE_ENCHANTS, HIDE_UNBREAKABLE] restrictions=true potion=true skull=true invalid-preserved=true result=true'
+    ) | Set-Content -LiteralPath (Join-Path $dynamicMetadataTemp 'logs/latest.log') -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $dynamicMetadataTemp | Out-Null
+    $dynamicMetadataReport = Get-Content -LiteralPath (Join-Path $dynamicMetadataTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($dynamicMetadataReport.probes | Where-Object id -eq 'itemMetadata').status -eq 'passed' -and
+        ($dynamicMetadataReport.probes | Where-Object id -eq 'itemMetadata').observations[0] -match
+        'flags=true flag-values=\[HIDE_ENCHANTS, HIDE_UNBREAKABLE\] restrictions=true') 'dynamic imported item metadata probe'
     Assert-True (($report.probes | Where-Object id -eq 'absorptionPlayerCondition').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'absorptionPlayerCondition').observations[0] -ceq
         'absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true') 'real Player absorption condition probe'
@@ -979,6 +996,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'legacyNumericItems'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'legacyNumericItems'; status = 'passed'; observations = @('legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'itemMetadata'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'itemMetadata'; status = 'passed'; observations = @('item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true restrictions=true potion=true skull=true invalid-preserved=true result=true')
     }
     $fullCatalogAudienceFilter = @($fullCatalogReport.probes | Where-Object id -eq 'audience-filter-delivery')
     if ($fullCatalogAudienceFilter.Count -ne 1) {

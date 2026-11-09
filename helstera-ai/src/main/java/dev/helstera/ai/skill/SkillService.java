@@ -304,9 +304,15 @@ public final class SkillService {
     /** 绑定一条条件定义，返回可写入 profile 的键；失败返回 null。 */
     public String bindCondition(String spec) {
         if (spec == null || spec.isBlank()) return null;
-        String composite = bindCompositeCondition(spec.trim());
+        String conditionSpec = spec.trim();
+        if (conditionSpec.startsWith("?")) {
+            conditionSpec = conditionSpec.substring(1).trim();
+            if (conditionSpec.isEmpty()) return null;
+        }
+        String composite = bindCompositeCondition(conditionSpec);
         if (composite != null) return composite;
-        String normalized = spec.indexOf('{') >= 0 ? SpecSyntax.normalize(spec) : spec.trim();
+        String normalized = conditionSpec.indexOf('{') >= 0
+                ? SpecSyntax.normalize(conditionSpec) : conditionSpec;
         List<String> parts = split(normalized);
         String name = canonicalConditionName(parts.get(0).toLowerCase(Locale.ROOT));
         List<String> args = new ArrayList<>(parts.subList(1, parts.size()));
@@ -317,7 +323,7 @@ public final class SkillService {
             return null;
         }
         if ("skill-on-cooldown".equals(name)) {
-            String skillName = skillOnCooldownName(spec);
+            String skillName = skillOnCooldownName(conditionSpec);
             if (skillName == null) {
                 warn("技能冷却条件参数无效 \"" + spec + "\"");
                 return null;
@@ -331,12 +337,13 @@ public final class SkillService {
         }
         if (Set.of("world-is", "weather-is", "time-is").contains(name)) {
             if (args.size() != 1 || args.get(0).isBlank()) return null;
-            int open = spec.indexOf('{');
+            int open = conditionSpec.indexOf('{');
             if (open >= 0) {
-                int close = spec.lastIndexOf('}');
-                if (close != spec.length() - 1 || close <= open
-                        || spec.indexOf('{', open + 1) >= 0 || spec.indexOf('}', open + 1) != close) return null;
-                String body = spec.substring(open + 1, close).trim();
+                int close = conditionSpec.lastIndexOf('}');
+                if (close != conditionSpec.length() - 1 || close <= open
+                        || conditionSpec.indexOf('{', open + 1) >= 0
+                        || conditionSpec.indexOf('}', open + 1) != close) return null;
+                String body = conditionSpec.substring(open + 1, close).trim();
                 if (body.indexOf(';') >= 0 || body.indexOf(',') >= 0) return null;
                 int equals = body.indexOf('=');
                 if (equals >= 0) {
@@ -367,13 +374,13 @@ public final class SkillService {
                 "target-has-ai", "target-has-gravity", "target-is-silent", "target-dead", "target-is-alive",
                 "target-is-valid", "is-in-audience")
                 .contains(name)) return null;
-        if ("last-signal".equals(name) && spec.indexOf('{') >= 0) {
+        if ("last-signal".equals(name) && conditionSpec.indexOf('{') >= 0) {
             try {
-                int open = spec.indexOf('{');
-                int close = spec.lastIndexOf('}');
-                if (close < open || spec.substring(open + 1, close).indexOf(';') >= 0
-                        || spec.substring(open + 1, close).indexOf(',') >= 0) return null;
-                MythicSkillSpec parsed = MythicSkillSpec.parse(spec);
+                int open = conditionSpec.indexOf('{');
+                int close = conditionSpec.lastIndexOf('}');
+                if (close < open || conditionSpec.substring(open + 1, close).indexOf(';') >= 0
+                        || conditionSpec.substring(open + 1, close).indexOf(',') >= 0) return null;
+                MythicSkillSpec parsed = MythicSkillSpec.parse(conditionSpec);
                 if (parsed.arguments().size() + parsed.positional().size() > 1
                         || parsed.arguments().keySet().stream().anyMatch(key -> !key.equals("signal") && !key.equals("s"))
                         || parsed.arguments().values().stream().anyMatch(String::isBlank)) return null;
@@ -381,9 +388,9 @@ public final class SkillService {
                 return null;
             }
         }
-        if (isVariableCondition(name) && spec.indexOf('{') >= 0) {
+        if (isVariableCondition(name) && conditionSpec.indexOf('{') >= 0) {
             try {
-                MythicSkillSpec parsed = MythicSkillSpec.parse(spec);
+                MythicSkillSpec parsed = MythicSkillSpec.parse(conditionSpec);
                 List<String> encoded = new ArrayList<>(parsed.positional());
                 parsed.arguments().forEach((key, value) -> encoded.add(key + "=" + value));
                 args = encoded;

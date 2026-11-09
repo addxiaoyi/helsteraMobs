@@ -519,6 +519,9 @@ class MigrationRuntimeConditionContractTest {
         var service = new SkillService(registry, null);
 
         for (String source : List.of("?hasFreeInventorySlot", "?hasFreeSlot")) {
+            String directKey = service.bindCondition(source);
+            assertNotNull(directKey, service.warnings().toString());
+            assertTrue(registry.testCondition(directKey, context), source);
             var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
             assertTrue(mapped.translated(), source);
             assertEquals("has-free-inventory-slot", mapped.condition());

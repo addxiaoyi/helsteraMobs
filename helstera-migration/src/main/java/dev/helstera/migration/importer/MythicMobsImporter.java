@@ -547,10 +547,16 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "status", "mapped", "note", "Safe standalone Mythic DropTable projected."));
             note(entries, file.toString(), sourceName, "loot.yml.tables." + targetName,
                     targetName, "mapped", "Standalone Mythic DropTable projected to loot.yml.");
+            boolean hasBiasStat = table.getKeys(false).stream()
+                    .anyMatch(key -> key.equalsIgnoreCase("BiasStat"));
             Object biasStat = firstIgnoreCase(table, "BiasStat");
-            if (biasStat != null) {
+            if (hasBiasStat && biasStat instanceof String value && !value.isBlank()) {
+                note(entries, file.toString(), sourceName + ".BiasStat",
+                        "loot.yml.tables." + targetName + ".bias-stat", value.trim(),
+                        "mapped", "BiasStat projected; runtime stat resolution is injected through LootService.");
+            } else if (hasBiasStat) {
                 note(entries, file.toString(), sourceName + ".BiasStat", "loot.yml", biasStat,
-                        "unsupported", "BiasStat has no runtime loot-bias input and was preserved in the migration report.", "WARN");
+                        "unsupported", "BiasStat must be a non-blank string; the original value was preserved in the migration report.", "WARN");
             }
             List<Object> unsafeDrops = new ArrayList<>();
             for (int i = 0; i < rawEntries.size(); i++) {
@@ -669,10 +675,13 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
             String legacyBlockStates = legacyBlockStates(legacyIdText, legacyDataText);
             if (legacyBlockStates != null) target.set(path + ".block-states", legacyBlockStates);
-            copyFirst(item, target, path + ".display-name", "Display", "display", "ItemName");
+            copyFirst(item, target, path + ".display-name", "Display", "display");
+            copyFirst(item, target, path + ".item-name", "ItemName", "item-name");
             Object lore = ciGet(item, "Lore", "lore");
             if (lore != null) target.set(path + ".lore", lore);
-            copyFirst(item, target, path + ".custom-model-data", "CustomModelData", "Model");
+            copyNonNegativeInteger(item, target, path + ".custom-model-data",
+                    file.toString(), entries, "Items." + key + ".CustomModelData",
+                    "CustomModelData", "custom-model-data", "Model");
             copyFirst(item, target, path + ".amount", "Amount", "amount");
             copyFirst(item, target, path + ".durability", "Durability", "durability");
             copyFirst(item, target, path + ".max-durability", "MaxDurability", "max-durability");
@@ -683,6 +692,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (enchantments != null) target.set(path + ".enchantments", enchantments);
             Object attributes = ciGet(item, "Attributes", "attributes", "AttributeModifiers", "attribute-modifiers");
             if (attributes != null) target.set(path + ".attributes", attributes);
+            copyFirst(item, target, path + ".skull-owner", "SkullOwner", "skull-owner");
+            copyFirst(item, target, path + ".skull-texture", "SkullTexture", "skull-texture");
             Object hide = ciGet(item, "Hide", "hide", "HideFlags", "hide-flags");
             if (hide != null) target.set(path + ".item-flags", hide);
             Object options = ciGet(item, "Options", "options");
@@ -694,6 +705,12 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (optionSection != null) {
                 copyFirst(optionSection, target, path + ".unbreakable", "Unbreakable", "unbreakable");
                 copyFirst(optionSection, target, path + ".color", "Color", "color");
+                copyFirst(optionSection, target, path + ".item-name", "ItemName", "item-name");
+                copyFirst(optionSection, target, path + ".skull-owner", "SkullOwner", "skull-owner");
+                copyFirst(optionSection, target, path + ".skull-texture", "SkullTexture", "skull-texture");
+                copyNonNegativeInteger(optionSection, target, path + ".custom-model-data",
+                        file.toString(), entries, "Items." + key + ".Options.CustomModelData",
+                        "CustomModelData", "custom-model-data", "Model");
                 copyFirst(optionSection, target, path + ".repairable", "Repairable", "repairable");
                 copyFirst(optionSection, target, path + ".repair-cost", "RepairCost", "repair-cost");
                 copyFirst(optionSection, target, path + ".glint", "Glint", "glint");
@@ -732,7 +749,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                 copyFirst(optionSection, target, path + ".clear-can-place-on", "ClearCanPlaceOn", "clear-can-place-on");
                 copyFirst(optionSection, target, path + ".clear-can-break", "ClearCanBreak", "clear-can-break");
                 Map<String, Object> unsupportedOptions = new LinkedHashMap<>(optionSection.getValues(false));
-                for (String mapped : List.of("Unbreakable", "Color", "Repairable", "RepairCost", "Glint",
+                for (String mapped : List.of("Unbreakable", "Color", "ItemName", "SkullOwner", "SkullTexture",
+                        "CustomModelData", "custom-model-data", "Model", "Repairable", "RepairCost", "Glint",
                         "PreventStacking", "StackSize", "GenerateUUID", "GenerateTimestamp", "FireResistant",
                         "Power", "ClearPotionEffects", "RemovePotionEffects", "PotionEffectsMode",
                         "ClearBannerLayers", "BannerLayersMode", "ClearFireworkEffects", "FireworkEffectsMode",
@@ -985,6 +1003,47 @@ public final class MythicMobsImporter implements MigrationImporter {
                 return;
             }
         }
+    }
+
+    private void copyNonNegativeInteger(ConfigurationSection source, YamlConfiguration target,
+                                        String targetPath, String srcFile,
+                                        List<Map<String, Object>> entries, String sourceKey,
+                                        String... keys) {
+        for (String key : keys) {
+            Object raw = ciGet(source, key);
+            if (raw == null) continue;
+            Integer value = nonNegativeInteger(raw);
+            if (value != null) {
+                target.set(targetPath, value);
+                return;
+            }
+            int separator = targetPath.lastIndexOf('.');
+            String unsupportedPath = separator < 0
+                    ? "unsupported." + targetPath
+                    : targetPath.substring(0, separator) + ".unsupported." + targetPath.substring(separator + 1);
+            target.set(unsupportedPath, raw);
+            note(entries, srcFile, sourceKey, unsupportedPath, raw,
+                    "unsupported", "CustomModelData must be a finite non-negative integer.", "WARN");
+            return;
+        }
+    }
+
+    private static Integer nonNegativeInteger(Object raw) {
+        if (raw instanceof Number number) {
+            double value = number.doubleValue();
+            if (Double.isFinite(value) && value >= 0 && value <= Integer.MAX_VALUE
+                    && value == Math.rint(value)) return (int) value;
+            return null;
+        }
+        if (raw instanceof String text) {
+            try {
+                int value = Integer.parseInt(text.trim());
+                return value >= 0 ? value : null;
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private void convertMob(String mobKey, ConfigurationSection mob, String srcFile,

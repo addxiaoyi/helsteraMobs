@@ -1,23 +1,26 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-legacy-numeric-items-strict-20261108-r1` passed
-the full strict gate on Paper 1.21.1-133: 404 registered probes, 385 passed,
-19 expected rejections, and zero failed or incomplete. It verifies legacy
-numeric `Items` and Mob `Equipment` through the production importer and
-ItemStack path, including material, durability, PotionType, BlockData, amount,
-and invalid-data preservation. Report:
-[paper-1.21.1-legacy-numeric-items-strict-20261108-r1.json](reports/paper-1.21.1-legacy-numeric-items-strict-20261108-r1.json), SHA-256:
-`77895f7159fa09c975edc4b8dab8c61f8713b5b0fdf91c6228f34066759f1902`.
+Latest fixture `srv-paper-item-metadata-strict-20261108-r1` passed the full
+strict gate on Paper 1.21.1-133: 405 registered probes, 386 passed, 19
+expected rejections, and zero failed or incomplete. It verifies imported
+ItemStack display name, item name, lore, enchantments, custom model data,
+flags, restrictions, PotionMeta, SkullMeta, and invalid-value preservation.
+The same catalog verifies legacy numeric `Items` and Mob `Equipment` material,
+durability, PotionType, BlockData, and amount paths. Report:
+[paper-1.21.1-item-metadata-strict-20261108-r1.json](reports/paper-1.21.1-item-metadata-strict-20261108-r1.json), SHA-256:
+`54f4609bc9ccdfcf9a1f267e5734b1e4cbab728a4e0d3ea6e83961076fe56693`.
 Compressed server log SHA-256:
-`6664b875c5e3e934b6733f0555d844e57d62c213c6095fc8b2c0e1b06bc84daa`.
+`12c72f52cf376d03031caaf3b895ca3e35d5a556174e55d92bcd589dd14d7501`.
 Client log archive SHA-256:
-`4b33d91842231f069e2151aced2706725aebeca3e6b2e89e6416ca765013fece`.
+`c2bc3d41a9d55b8ca8b17ca2daea780b6334106d04fb93e576c3f60959e7c33c`.
 Plugin SHA-256:
-`bce3b592d25b24e3155ad9e88951c56f318ba7c1acf7f49db65366241842e709`.
-The strict probe covers both configured Items and inline Equipment, including
-durability bounds and preservation of invalid source values.
+`1bb9f52a2b2352c1a7a598f1f6293b95ff2e9f47587fa28478f8cc2becba1072`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
+
+Previous strict fixture `srv-paper-legacy-numeric-items-strict-20261108-r1`
+isolates the legacy numeric Item and Equipment paths and remains archived as
+historical evidence.
 
 Previous fixture `srv-paper-population-conditions-strict-20261108-r2` passed
 the full strict gate on Paper 1.21.1-133: 403 registered probes, 384 passed,
@@ -54,7 +57,7 @@ Client log archive SHA-256:
 `5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`.
 Plugin SHA-256:
 `d824761cdb575b50c5061706c7fde362b80f521aa9d4c46d68c296b7c64c343f`.
-Latest strict report has 404 probes, zero incomplete. Archived logs redact web
+Latest strict report has 405 probes, zero incomplete. Archived logs redact web
 token query values; the source fixture retains the original run logs.
 
 Previous fixture `srv-paper-context-relations-strict-20261108-r2` passed
@@ -4134,9 +4137,9 @@ Mythic inline entry `GOLD_INGOT 1-3 1`, whose exclusive upper bound yields
 runtime amounts 1-2. The same run records the independent root experience
 probe at 13 XP. The report is archived at
 `tools/paper-integration/reports/paper-1.21.1-drops-exclusive-range-20261102.json`.
-This verifies the tested amount-range path only; weighted line counts, Luck
-and level bonuses, `BiasStat`, and the full official DropTable catalog remain
-open.
+This verifies the tested amount-range path only; weighted line counts and Luck
+and level bonuses have separate evidence, while strict Paper `BiasStat`
+behavior and the full official DropTable catalog remain open.
 
 Strict Paper 1.21.1-133 fixture
 `srv-paper-drops-luck-attribute-strict-20261102-r2` passed all 266 registered
@@ -4151,7 +4154,9 @@ value is read. The JSON report is archived at
 This verifies the current Luck input path. Separate strict fixture
 `srv-paper-drops-bonus-semantics-strict-20261102-r1` verifies `BonusLuckItems`
 with Bukkit Luck; neither fixture covers Mythic custom Luck enchantment/curses
-inputs or `BiasStat`.
+inputs or strict Paper `BiasStat` behavior. The native parser, migration
+projection, and injected runtime resolver are covered by unit and importer
+tests.
 
 Strict Paper 1.21.1-133 fixture
 `srv-paper-drops-total-items-strict-20261102-r1` passed all 266 registered
@@ -4171,8 +4176,9 @@ natural-death evidence is in fixture
 two Gold Ingots from the imported exclusive range, and 5 XP. Its report is
 archived at
 `tools/paper-integration/reports/paper-1.21.1-drops-imported-range-20261102.json`.
-`BiasStat`, Mythic custom Luck
-enchantment/curses inputs, and broader drop catalog semantics remain open; the
+`BiasStat` parsing, migration projection, and the injected weighted-table
+resolver are implemented; strict Paper behavior, Mythic custom Luck
+enchantment/curses inputs, and broader drop catalog semantics remain open. The
 official DropTables catalog does not define a separate `Looting` table option.
 
 Strict Paper 1.21.1-133 fixture
@@ -4188,9 +4194,10 @@ bonus probability has focused unit coverage. Follow-up
 128 natural managed-Zombie deaths using a level-one 0.5 bonus. Its archived
 273-probe report has 261 passed and 12 expected negative controls; raw Potion
 consumption and natural expiry were not requested in this run. Imported
-range/placeholder combinations, `BiasStat`,
-Mythic custom Luck enchantment/curses inputs, and the broader official drop
-catalog remain open. The
+range/placeholder combinations, strict Paper `BiasStat` behavior, Mythic
+custom Luck enchantment/curses inputs, and the broader official drop catalog
+remain open. Native `BiasStat` parsing, migration projection, and the injected
+runtime resolver are covered separately. The
 importer-to-runtime parser contract is covered separately. The official
 DropTables catalog does not define a separate `Looting` table option.
 The bonus report is archived at

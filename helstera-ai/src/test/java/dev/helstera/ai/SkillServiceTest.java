@@ -2450,6 +2450,8 @@ class SkillServiceTest {
         assertTrue(registry.testCondition(svc.bindCondition("variableequals{var=global.answer;value=42}"), ctx));
         assertTrue(registry.testCondition(svc.bindCondition("variable-in-range{var=global.answer;min=40;max=45}"), ctx));
         assertTrue(registry.testCondition(svc.bindCondition(
+                "?variableinrange{var=global.answer;min=40;max=45}"), ctx));
+        assertTrue(registry.testCondition(svc.bindCondition(
                 "variable-in-range{var=global.answer;value=40to45}"), ctx));
         assertTrue(registry.testCondition(svc.bindCondition(
                 "variable-in-range{var=global.answer;range=>=42}"), ctx));

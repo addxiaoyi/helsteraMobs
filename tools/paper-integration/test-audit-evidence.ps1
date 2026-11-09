@@ -397,6 +397,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'legacyNumericItems'; status = 'passed'; observations = @('legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true')
     }
+    $fullReport.expectedProbeIds += 'itemMetadata'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'itemMetadata'; status = 'passed'; observations = @('item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true flag-values=[HIDE_ENCHANTS] restrictions=true potion=true skull=true invalid-preserved=true result=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

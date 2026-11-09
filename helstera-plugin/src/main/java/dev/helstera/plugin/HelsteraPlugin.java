@@ -1747,6 +1747,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().info("item-attribute-options result=" + itemAttributes
                         + " modifiers=" + itemModifiers.size());
                 runLegacyNumericItemSelfTest(world, origin.clone().add(20, 0, 0));
+                runInlineItemMetadataSelfTest();
             } catch (Throwable t) {
                 getLogger().warning("[自检] entity-options 异常: " + t);
             } finally {
@@ -1898,6 +1899,139 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " equipment-potion=" + equipmentPotion
                 + " equipment-block-data=" + equipmentBlockData
                 + " equipment-amount=" + equipmentAmount
+                + " invalid-preserved=" + invalidPreserved
+                + " result=" + result);
+    }
+
+    private void runInlineItemMetadataSelfTest() {
+        Path sourceRoot = null;
+        ConfigurationSection previousItems = customItems;
+        boolean imported = false;
+        boolean displayName = false;
+        boolean itemName = false;
+        boolean lore = false;
+        boolean enchantment = false;
+        boolean model = false;
+        boolean flags = false;
+        boolean restrictions = false;
+        boolean potion = false;
+        boolean skull = false;
+        boolean invalidPreserved = false;
+        String flagValues = "[]";
+        try {
+            sourceRoot = Files.createTempDirectory("helstera-item-metadata-import-");
+            Path itemSource = Files.createDirectories(sourceRoot.resolve("Items"))
+                    .resolve("metadata.yml");
+            Files.writeString(itemSource, """
+                    items:
+                      metadata_probe:
+                        Id: DIAMOND_SWORD
+                        Display: "&aDisplay"
+                        ItemName: "&bExact name"
+                        Lore:
+                          - "&7Sharp"
+                          - "&8Heavy"
+                        Enchantments:
+                          SHARPNESS: 3
+                        CustomModelData: 42
+                        CanPlaceOn: [STONE]
+                        CanBreak: [DIRT]
+                        Options:
+                          Unbreakable: true
+                          Glint: true
+                          HideFlags: true
+                          RepairCost: 7
+                          FireResistant: true
+                      potion_probe:
+                        Id: POTION
+                        PotionEffects:
+                          - type: SPEED
+                            duration: 40
+                            amplifier: 1
+                            ambient: true
+                            particles: false
+                            icon: true
+                      head_probe:
+                        Id: PLAYER_HEAD
+                        SkullOwner: Notch
+                      invalid_probe:
+                        Id: DIAMOND
+                        CustomModelData: not-a-number
+                    """);
+
+            var importer = new dev.helstera.migration.importer.MythicMobsImporter();
+            var converted = importer.convert(itemSource);
+            var itemPlan = converted.stream()
+                    .filter(entry -> "items.yml".equals(entry.get("target-file"))
+                            && "mapped".equals(entry.get("status")))
+                    .findFirst().orElseThrow(() -> new IllegalStateException("item metadata plan missing"));
+            var itemConfig = YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                    String.valueOf(itemPlan.get("content"))));
+            var importedItems = itemConfig.getConfigurationSection("items");
+            if (importedItems == null) throw new IllegalStateException("item metadata section missing");
+            customItems = importedItems;
+
+            var stack = resolveConfiguredItem("metadata_probe");
+            var meta = stack == null ? null : stack.getItemMeta();
+            flagValues = meta == null ? "[]" : meta.getItemFlags().toString();
+            displayName = meta != null && "§aDisplay".equals(meta.getDisplayName());
+            itemName = meta != null && "§bExact name".equals(meta.getItemName());
+            lore = meta != null && java.util.List.of("§7Sharp", "§8Heavy").equals(meta.getLore());
+            enchantment = stack != null
+                    && stack.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.SHARPNESS) == 3;
+            model = meta != null && meta.hasCustomModelData() && meta.getCustomModelData() == 42;
+            flags = meta != null
+                    && meta.getItemFlags().contains(org.bukkit.inventory.ItemFlag.HIDE_ENCHANTS)
+                    && meta.getItemFlags().contains(org.bukkit.inventory.ItemFlag.HIDE_UNBREAKABLE)
+                    && Boolean.TRUE.equals(meta.getEnchantmentGlintOverride());
+            restrictions = meta != null && meta.isUnbreakable()
+                    && meta.isFireResistant()
+                    && meta instanceof org.bukkit.inventory.meta.Repairable repairable
+                    && repairable.getRepairCost() == 7
+                    && meta.getCanPlaceOn().contains(org.bukkit.Material.STONE)
+                    && meta.getCanDestroy().contains(org.bukkit.Material.DIRT);
+
+            var potionStack = resolveConfiguredItem("potion_probe");
+            var potionMeta = potionStack == null ? null : potionStack.getItemMeta();
+            potion = potionMeta instanceof org.bukkit.inventory.meta.PotionMeta potionData
+                    && potionData.getCustomEffects().stream().anyMatch(effect ->
+                    effect.getType() == org.bukkit.potion.PotionEffectType.SPEED
+                            && effect.getDuration() == 40 && effect.getAmplifier() == 1
+                            && effect.isAmbient() && !effect.hasParticles() && effect.hasIcon());
+
+            var headStack = resolveConfiguredItem("head_probe");
+            skull = headStack != null && headStack.getItemMeta() instanceof org.bukkit.inventory.meta.SkullMeta skullMeta
+                    && "Notch".equals(skullMeta.getOwner());
+            invalidPreserved = "not-a-number".equals(itemConfig.getString(
+                    "items.invalid_probe.unsupported.custom-model-data"));
+            imported = stack != null && potionStack != null && headStack != null;
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] item-metadata exception: " + failure);
+        } finally {
+            customItems = previousItems;
+            if (sourceRoot != null) {
+                try (var paths = Files.walk(sourceRoot)) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("[自检] item-metadata cleanup failed: " + cleanupFailure);
+                }
+            }
+        }
+        boolean result = imported && displayName && itemName && lore && enchantment && model
+                && flags && restrictions && potion && skull && invalidPreserved;
+        getLogger().info("[自检] item-metadata imported=" + imported
+                + " display-name=" + displayName
+                + " item-name=" + itemName
+                + " lore=" + lore
+                + " enchantment=" + enchantment
+                + " custom-model-data=" + model
+                + " flags=" + flags
+                + " flag-values=" + flagValues
+                + " restrictions=" + restrictions
+                + " potion=" + potion
+                + " skull=" + skull
                 + " invalid-preserved=" + invalidPreserved
                 + " result=" + result);
     }
@@ -19555,6 +19689,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 if (inheritedAttributes != null) for (String slot : inheritedAttributes.getKeys(false)) {
                     applyItemAttributes(inherited, inheritedAttributes.getConfigurationSection(slot));
                 }
+                reapplyItemFlags(inherited, section);
                 inherited.setAmount(Math.max(1, section.getInt("amount", inherited.getAmount())));
                 resolving.remove(identity);
                 return inherited;
@@ -19571,6 +19706,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (attributes != null) for (String slot : attributes.getKeys(false)) {
             applyItemAttributes(stack, attributes.getConfigurationSection(slot));
         }
+        reapplyItemFlags(stack, section);
         stack.setAmount(Math.max(1, section.getInt("amount", stack.getAmount())));
         resolving.remove(identity);
         return stack;
@@ -19651,6 +19787,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                     + " must be between 0 and 1: " + dropChance);
                         }
                         applyItemAttributes(stack, sec.getConfigurationSection("attributes." + slotKey));
+                        reapplyItemFlags(stack, itemNode);
                     }
                 } catch (Exception e) {
                     // 这里对 stack 的判空在 SpotBugs 看来是冗余（上面已判过），
@@ -20292,12 +20429,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         applyBannerPatterns(meta, section);
         applyFireworkEffects(meta, section);
         applyBlockData(stack, meta, section);
-        for (String flag : section.getStringList("item-flags")) {
-            try {
-                meta.addItemFlags(org.bukkit.inventory.ItemFlag.valueOf(flag.toUpperCase(java.util.Locale.ROOT)));
-            } catch (IllegalArgumentException ignored) {
-            }
-        }
+        applyItemFlags(meta, section);
         var container = meta.getPersistentDataContainer();
         if (section.getBoolean("clear-persistent-data", false)) {
             for (var key : new java.util.ArrayList<>(container.getKeys())) container.remove(key);
@@ -20318,6 +20450,61 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         applyMythicItemOptions(meta, section, container,
                 message -> getLogger().warning("[ItemMeta] " + message));
         stack.setItemMeta(meta);
+    }
+
+    private void applyItemFlags(org.bukkit.inventory.meta.ItemMeta meta,
+                                org.bukkit.configuration.ConfigurationSection section) {
+        if (meta == null || section == null) return;
+        java.util.LinkedHashSet<String> flags = new java.util.LinkedHashSet<>();
+        flags.addAll(section.getStringList("item-flags"));
+
+        // MythicMobs accepts HideFlags as a boolean shorthand. Imported files
+        // may contain that value under item-flags, while hand-authored files
+        // commonly keep the original hide-flags key.
+        Object legacyHideFlags = section.get("hide-flags");
+        if (legacyHideFlags == null) legacyHideFlags = section.get("HideFlags");
+        if (legacyHideFlags != null && isTruthy(legacyHideFlags)) {
+            addAllItemFlags(flags);
+        }
+        Object scalarFlags = section.get("item-flags");
+        if (scalarFlags instanceof Boolean enabled && enabled) {
+            addAllItemFlags(flags);
+        } else if (scalarFlags instanceof String text && !text.isBlank()) {
+            for (String raw : text.split("[,;]")) {
+                if (!raw.isBlank()) flags.add(raw.trim());
+            }
+        }
+        for (String flag : flags) {
+            try {
+                meta.addItemFlags(org.bukkit.inventory.ItemFlag.valueOf(
+                        flag.trim().toUpperCase(java.util.Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+                getLogger().fine("[ItemMeta] unknown item flag " + flag);
+            }
+        }
+    }
+
+    private void reapplyItemFlags(org.bukkit.inventory.ItemStack stack,
+                                  org.bukkit.configuration.ConfigurationSection section) {
+        if (stack == null || section == null) return;
+        org.bukkit.inventory.meta.ItemMeta meta = stack.getItemMeta();
+        if (meta == null) return;
+        applyItemFlags(meta, section);
+        stack.setItemMeta(meta);
+    }
+
+    private static boolean isTruthy(Object value) {
+        if (value instanceof Boolean bool) return bool;
+        if (value instanceof Number number) return number.doubleValue() != 0.0d;
+        return Boolean.parseBoolean(String.valueOf(value).trim());
+    }
+
+    private static void addAllItemFlags(java.util.Set<String> flags) {
+        flags.addAll(java.util.List.of(
+                "HIDE_ENCHANTS", "HIDE_ATTRIBUTES", "HIDE_UNBREAKABLE",
+                "HIDE_DESTROYS", "HIDE_PLACED_ON", "HIDE_ADDITIONAL_TOOLTIP",
+                "HIDE_DYE", "HIDE_ARMOR_TRIM", "HIDE_STORED_ENCHANTS",
+                "HIDE_ITEM_SPECIFICS"));
     }
 
     static void applyMythicItemOptions(org.bukkit.inventory.meta.ItemMeta meta,

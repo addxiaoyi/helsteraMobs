@@ -56,6 +56,7 @@ public final class MythicDropTableProjection {
         copy(source, out, root, "MaxItems", "max-items");
         copy(source, out, root, "BonusLevelItems", "bonus-level-items");
         copy(source, out, root, "BonusLuckItems", "bonus-luck-items");
+        copyString(source, out, root, "BiasStat", "bias-stat");
         if (!translatedTriggers.isEmpty()) out.set(root + ".trigger-conditions", translatedTriggers);
         if (!translatedConditions.isEmpty()) out.set(root + ".conditions", translatedConditions);
         return out;
@@ -96,6 +97,14 @@ public final class MythicDropTableProjection {
                              String root, String sourceKey, String targetKey) {
         Object value = valueIgnoreCase(source, sourceKey);
         if (value != null) target.set(root + "." + targetKey, value);
+    }
+
+    private static void copyString(ConfigurationSection source, YamlConfiguration target,
+                                   String root, String sourceKey, String targetKey) {
+        Object value = valueIgnoreCase(source, sourceKey);
+        if (value instanceof String text && !text.isBlank()) {
+            target.set(root + "." + targetKey, text.trim());
+        }
     }
 
     private static Object valueIgnoreCase(ConfigurationSection section, String key) {

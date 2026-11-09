@@ -61,6 +61,20 @@ public final class LootService {
         double evaluate(String expression, org.bukkit.Location location, Player killer, double luck);
     }
 
+    /**
+     * Resolves a MythicMobs-style stat used by a weighted table's {@code BiasStat}.
+     *
+     * <p>The resolver is deliberately injected: Helstera does not own an external
+     * stat system, and treating an unavailable stat as a made-up value would change
+     * loot without an auditable source. Returning {@code null} means the stat is
+     * unavailable and the table rolls with zero bias.</p>
+     */
+    @FunctionalInterface
+    public interface LootBiasResolver {
+        Double resolve(String stat, org.bukkit.Location location, Player killer,
+                       org.bukkit.entity.Entity dropper);
+    }
+
     private final Map<String, DropTable> tables = new ConcurrentHashMap<>();
     private final Logger log;
     private final Random random = new Random();
@@ -73,6 +87,8 @@ public final class LootService {
     private volatile ConditionEvaluator conditionEvaluator;
     private volatile DropperConditionEvaluator dropperConditionEvaluator;
     private volatile DynamicChanceEvaluator dynamicChanceEvaluator;
+    private volatile LootBiasResolver lootBiasResolver;
+    private final Set<String> warnedLootBias = ConcurrentHashMap.newKeySet();
 
     public LootService(Logger log) {
         this.log = log;
@@ -189,6 +205,11 @@ public final class LootService {
 
     public void setDynamicChanceEvaluator(DynamicChanceEvaluator evaluator) {
         this.dynamicChanceEvaluator = evaluator;
+    }
+
+    /** Injects the stat source used by weighted DropTable BiasStat options. */
+    public void setLootBiasResolver(LootBiasResolver resolver) {
+        this.lootBiasResolver = resolver;
     }
 
     /**
@@ -463,7 +484,7 @@ public final class LootService {
                 }
                 long requestedLines = Math.max(0L, (long) baseLines + bonusLines);
                 int lines = (int) Math.min(Integer.MAX_VALUE, requestedLines);
-                List<WeightedEntry> pool = weightedPool(t, luck, killerTier, location, killer);
+                List<WeightedEntry> pool = weightedPool(t, luck, killerTier, location, killer, dropper);
                 if (pool.isEmpty()) return List.of();
                 double scale = pool.stream().mapToDouble(WeightedEntry::weight).max().orElseThrow();
                 double totalWeight = pool.stream().mapToDouble(e -> e.weight() / scale).sum();
@@ -506,7 +527,8 @@ public final class LootService {
     private record WeightedEntry(DropTable.Entry entry, double weight) { }
 
     private List<WeightedEntry> weightedPool(DropTable table, double luck, int killerTier,
-                                              org.bukkit.Location location, Player killer) {
+                                              org.bukkit.Location location, Player killer,
+                                              org.bukkit.entity.Entity dropper) {
         List<WeightedEntry> pool = new ArrayList<>();
         for (DropTable.Entry entry : table.entries()) {
             if (entry.isExperienceDrop()) continue;
@@ -524,7 +546,66 @@ public final class LootService {
             }
             if (Double.isFinite(weight) && weight > 0) pool.add(new WeightedEntry(entry, weight));
         }
-        return pool;
+        if (pool.isEmpty()) return pool;
+
+        double bias = resolveLootBias(table, location, killer, dropper);
+        if (bias == 0) return pool;
+        double maxWeight = pool.stream().mapToDouble(WeightedEntry::weight).max().orElse(0);
+        if (!(maxWeight > 0) || !Double.isFinite(maxWeight)) return pool;
+
+        List<WeightedEntry> biased = new ArrayList<>(pool.size());
+        for (WeightedEntry candidate : pool) {
+            double weight = applyLootBias(candidate.weight(), maxWeight, bias);
+            if (Double.isFinite(weight) && weight > 0) {
+                biased.add(new WeightedEntry(candidate.entry(), weight));
+            }
+        }
+        return biased.isEmpty() ? pool : biased;
+    }
+
+    /**
+     * Applies the public MythicMobs BiasStat anchors to non-common entries.
+     * The highest eligible chance is the common baseline; lower chances are
+     * multiplied by {@code 1 + bias / 100}. Thus -100 removes rarer entries,
+     * while +100 and +1000 make them about 2x and 10x more likely respectively.
+     */
+    private static double applyLootBias(double weight, double maxWeight, double bias) {
+        if (bias == 0 || weight >= maxWeight) return weight;
+        double multiplier = 1d + bias / 100d;
+        if (multiplier <= 0) return 0;
+        if (!Double.isFinite(multiplier)) return Double.MAX_VALUE;
+        double adjusted = weight * multiplier;
+        return Double.isFinite(adjusted) ? adjusted : Double.MAX_VALUE;
+    }
+
+    private double resolveLootBias(DropTable table, org.bukkit.Location location,
+                                   Player killer, org.bukkit.entity.Entity dropper) {
+        LootBiasResolver resolver = lootBiasResolver;
+        if (resolver == null) {
+            if (table.hasExplicitBiasStat()) {
+                warnLootBias(table, table.biasStat() + " has no stat resolver; using bias 0");
+            }
+            return 0;
+        }
+        Double value;
+        try {
+            value = resolver.resolve(table.biasStat(), location, killer, dropper);
+        } catch (RuntimeException ex) {
+            warnLootBias(table, table.biasStat() + " resolver failed; using bias 0");
+            return 0;
+        }
+        if (value == null || !Double.isFinite(value)) {
+            warnLootBias(table, table.biasStat() + " is unavailable or non-finite; using bias 0");
+            return 0;
+        }
+        return Math.max(-100d, value);
+    }
+
+    private void warnLootBias(DropTable table, String message) {
+        String key = table.name() + "|" + message;
+        if (warnedLootBias.add(key) && log != null) {
+            log.warning("[掉落] 表 " + table.name() + " 的 BiasStat " + message);
+        }
     }
 
     private static DropTable.Entry pickWeighted(List<WeightedEntry> pool, double totalWeight,
