@@ -1,6 +1,23 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-jockey-import-strict-20261109-r1` passed the
+Latest fixture `srv-paper-route-patrol-strict-20261109-r2` passed the full strict
+gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19 expected
+rejections, and zero failed or incomplete. The `aiRoute` observation proves
+followpath movement, dynamic patrol mutation, configured speed and tolerance,
+endpoint reversal, and `finished=false` after the patrol loop. Report:
+[paper-1.21.1-route-patrol-strict-20261109-r2.json](reports/paper-1.21.1-route-patrol-strict-20261109-r2.json), SHA-256:
+`f90115c90dad9d8883a2b6a592008488c9a2c27693f09ec3adbd04da3d8c7f5a`.
+Compressed server log SHA-256:
+`05d87c11f3a35addb63bd4402cf738b60bb2e957c2e2b2c6a0a4abf842d9721f`.
+Client log archive SHA-256:
+`f5b1fb7b78b13ec58b4bc4a83f509c64943cfe5bbceedba6915727dcdb56f3c1`.
+Plugin SHA-256:
+`7c999206379c7363639e92a8031d057cabd762bcc698b2df224dc26fd36e983e`.
+Native Pathfinder goal equivalence remains an explicit open boundary. Archived
+logs redact web token query values; the source fixture retains the original run
+logs.
+
+Previous fixture `srv-paper-jockey-import-strict-20261109-r1` passed the
 full strict gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19
 expected rejections, and zero failed or incomplete. It verifies imported
 Zombie `Options.PreventJockeyMounts: true` cancels a Chicken

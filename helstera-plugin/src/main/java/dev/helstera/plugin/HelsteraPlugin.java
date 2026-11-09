@@ -18673,9 +18673,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
                 Location routeOrigin = base.getLocation().clone();
                 int routeY = routeOrigin.getBlockY();
-                int firstX = routeOrigin.getBlockX() + 3;
+                int firstX = routeOrigin.getBlockX() + 5;
                 int firstZ = routeOrigin.getBlockZ();
-                int secondX = firstX + 2;
+                int secondX = firstX + 3;
                 int secondZ = firstZ;
                 AiProfile routeProfile = new AiProfile("paper-selector-route");
                 routeProfile.canChase = false;
@@ -18697,10 +18697,40 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean routeActive = routeBefore.contains("route=followpath")
                         && routeBefore.contains("waypoint=" + firstX + "," + routeY + "," + firstZ);
                 boolean routeAdvanced = routeAfter.contains("waypoint=" + secondX + "," + routeY + "," + secondZ);
-                boolean routePassed = routeActive && routeMoving && routeAdvanced;
+
+                dev.helstera.ai.AiProfile patrolProfile = new dev.helstera.ai.AiProfile(routeProfile);
+                patrolProfile.goals.clear();
+                patrolProfile.goals.add("0 patrol{p=" + firstX + "," + routeY + "," + firstZ
+                        + ";" + secondX + "," + routeY + "," + secondZ + ";s=1.0;t=0.5}");
+                patrolProfile.targets.clear();
+                patrolProfile.targets.add("0 clear");
+                controller.rebindProfile(patrolProfile);
+                controller.clearCombatTarget();
+                String patrolBefore = null;
+                String patrolAfter = null;
+                String patrolLoop = null;
+                mob.teleport(new Location(base.getWorld(), secondX + 0.5, routeY, secondZ + 0.5));
+                controller.tick();
+                patrolBefore = controller.routeDiagnostic();
+                mob.teleport(new Location(base.getWorld(), firstX + 0.5, routeY, firstZ + 0.5));
+                controller.tick();
+                patrolAfter = controller.routeDiagnostic();
+                mob.teleport(new Location(base.getWorld(), secondX + 0.5, routeY, secondZ + 0.5));
+                controller.tick();
+                patrolLoop = controller.routeDiagnostic();
+                boolean patrolMutation = patrolBefore.contains("route=patrol")
+                        && patrolBefore.contains("waypoint=" + firstX + "," + routeY + "," + firstZ)
+                        && patrolAfter.contains("waypoint=" + secondX + "," + routeY + "," + secondZ)
+                        && patrolLoop.contains("waypoint=" + firstX + "," + routeY + "," + firstZ)
+                        && patrolLoop.contains("direction=backward")
+                        && patrolLoop.contains("finished=false");
+                boolean routePassed = routeActive && routeMoving && routeAdvanced && patrolMutation;
                 getLogger().info("ai-route-probe token=followpath active-before=" + routeActive
                         + " moving=" + routeMoving + " advanced=" + routeAdvanced
                         + " waypoint-before=" + routeBefore + " waypoint-after=" + routeAfter
+                        + " patrol-mutation=" + patrolMutation
+                        + " patrol-before=" + patrolBefore + " patrol-after=" + patrolAfter
+                        + " patrol-loop=" + patrolLoop
                         + " passed=" + routePassed);
             } catch (Throwable failure) {
                 getLogger().warning("ai-selector-core error=" + failure.getClass().getSimpleName()

@@ -84,6 +84,20 @@ class SelectorPlanTest {
     }
 
     @Test
+    @DisplayName("patrol aliases parse documented points, speed, and tolerance attributes")
+    void patrolAttributesAreParsed() {
+        SelectorPlan.RouteSpec route = SelectorPlan.parseRoute(
+                "0 patrol{p=1,64,2;4,64,2;s=1.5;t=0.5}");
+
+        assertTrue(route.valid(), route.error());
+        assertTrue(route.patrol());
+        assertEquals(1.5, route.speed());
+        assertEquals(0.5, route.tolerance());
+        assertEquals(List.of(new SelectorPlan.RoutePoint(1, 64, 2),
+                new SelectorPlan.RoutePoint(4, 64, 2)), route.points());
+    }
+
+    @Test
     @DisplayName("route coordinates reject empty endpoints, non-numbers, decimals, and wrong dimensions")
     void routeCoordinatesRejectMalformedSegments() {
         List<String> malformed = List.of(
@@ -92,7 +106,8 @@ class SelectorPlanTest {
                 "0 followroute 1,64,2;",
                 "0 followroute one,64,2",
                 "0 followroute 1.5,64,2",
-                "0 followroute 1,64");
+                "0 followroute 1,64",
+                "0 patrol{p=1,64,2;t=invalid}");
 
         for (String raw : malformed) {
             SelectorPlan.RouteSpec route = SelectorPlan.parseRoute(raw);
@@ -114,6 +129,45 @@ class SelectorPlanTest {
         assertEquals(new SelectorPlan.RoutePoint(22, 70, 5), state.current());
         assertTrue(state.advanceIfReached(22, 70, 5));
         assertTrue(state.finished());
+    }
+
+    @Test
+    @DisplayName("patrol routes reverse at endpoints and never finish")
+    void patrolRoutesReverseAtEndpoints() {
+        SelectorPlan.RouteState state = SelectorPlan.routeState(List.of(
+                "0 patrol{p=10,64,0;12,64,0;t=0.5}"));
+
+        assertTrue(state.patrol());
+        assertEquals(new SelectorPlan.RoutePoint(10, 64, 0), state.current());
+        assertTrue(state.advanceIfReached(10.5, 64, 0.5));
+        assertEquals(new SelectorPlan.RoutePoint(12, 64, 0), state.current());
+        assertEquals("forward", state.direction());
+        assertTrue(state.advanceIfReached(12.5, 64, 0.5));
+        assertEquals(new SelectorPlan.RoutePoint(10, 64, 0), state.current());
+        assertEquals("backward", state.direction());
+        assertTrue(state.advanceIfReached(10.5, 64, 0.5));
+        assertEquals(new SelectorPlan.RoutePoint(12, 64, 0), state.current());
+        assertFalse(state.finished());
+    }
+
+    @Test
+    @DisplayName("route reconfiguration preserves a waypoint that still exists")
+    void routeReconfigurationPreservesCurrentWaypoint() {
+        SelectorPlan.RouteState state = SelectorPlan.routeState(List.of(
+                "0 followpath 10,64,0;12,64,0"));
+        assertTrue(state.advanceIfReached(10, 64, 0));
+
+        SelectorPlan.RouteState changed = SelectorPlan.routeState(List.of(
+                "0 followpath 8,64,0;12,64,0;16,64,0"));
+        SelectorPlan.RouteState preserved = state.reconfigure(changed);
+
+        assertEquals(new SelectorPlan.RoutePoint(12, 64, 0), preserved.current());
+        assertTrue(preserved.advanceIfReached(12, 64, 0));
+        assertEquals(new SelectorPlan.RoutePoint(16, 64, 0), preserved.current());
+
+        SelectorPlan.RouteState reset = state.reconfigure(SelectorPlan.routeState(List.of(
+                "0 followpath 20,64,0;22,64,0")));
+        assertEquals(new SelectorPlan.RoutePoint(20, 64, 0), reset.current());
     }
 
     @Test

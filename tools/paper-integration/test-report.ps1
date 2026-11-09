@@ -224,7 +224,7 @@ try {
         '[Server thread/INFO]: ai-priority-probe attack-first=true flee-first=true attack-state=ATTACK flee-state=FLEE',
         '[Server thread/INFO]: ai-priority-detail probe=priority_attack_probe target-assigned=true target-valid=true health-ratio=0.5 attack-priority=0 flee-priority=1 selector=mode=PLAYERS can-attack=true can-chase=true can-flee=true target-matches=true',
         '[Server thread/INFO]: ai-selector-core goals=true player-target=true monster-target=true clear-no-fallback=true owner-target=true faction-target=true conditional-target=true players-in-world=true players-on-server=true player-aliases=true mobs-in-world=true world-caster-excluded=true world-chain-filtered=true nearest-living=true nearest-mob=true targeter-syntax=true set-target-mechanic=true clear-target-mechanic=true context-chain-action=true native-target=true selector=mode=PLAYERS can-attack=true can-chase=false conditional=is-player=>is-player entity=PLAYER passed=true passed=true',
-        '[Server thread/INFO]: ai-route-probe token=followpath active-before=true moving=true advanced=true waypoint-before=route=followpath waypoint=103,64,0 finished=false waypoint-after=route=followpath waypoint=105,64,0 finished=false passed=true',
+        '[Server thread/INFO]: ai-route-probe token=followpath active-before=true moving=true advanced=true waypoint-before=route=followpath waypoint=103,64,0 direction=forward speed=1.0 tolerance=3.0 finished=false waypoint-after=route=followpath waypoint=105,64,0 direction=forward speed=1.0 tolerance=3.0 finished=false patrol-mutation=true patrol-before=route=patrol waypoint=103,64,0 direction=forward speed=1.0 tolerance=0.5 finished=false patrol-after=route=patrol waypoint=105,64,0 direction=forward speed=1.0 tolerance=0.5 finished=false patrol-loop=route=patrol waypoint=103,64,0 direction=backward speed=1.0 tolerance=0.5 finished=false passed=true',
         '[Server thread/INFO]: spatial-targeter-details targeter-controls=true targeter-sorts=true targeter-skip-index=true targeter-limit-zero=true targeter-negative-filter=true targeter-invalid-limits=true',
         '[Server thread/INFO]: context-targeter-controls order=true radius=true invalid-rejected=true',
         '[Server thread/INFO]: context-targeter-chain targets=true trigger=true excluded=true condition=true',
@@ -1043,6 +1043,11 @@ try {
         throw 'Synthetic full catalog report must contain audience-filter-delivery.'
     }
     $fullCatalogAudienceFilter[0].observations = @('{"permissionNegativeTesterOmitted":true,"permissionNegativeGuestIncluded":true,"factionNegativeTesterIncluded":true,"factionNegativeGuestExcluded":true}')
+    $fullCatalogAiRoute = @($fullCatalogReport.probes | Where-Object id -eq 'aiRoute')
+    if ($fullCatalogAiRoute.Count -ne 1) {
+        throw 'Synthetic full catalog report must contain aiRoute.'
+    }
+    $fullCatalogAiRoute[0].observations = @('ai-route-probe token=followpath active-before=true moving=true advanced=true waypoint-before=route=followpath waypoint=103,64,0 direction=forward speed=1.0 tolerance=3.0 finished=false waypoint-after=route=followpath waypoint=105,64,0 direction=forward speed=1.0 tolerance=3.0 finished=false patrol-mutation=true patrol-before=route=patrol waypoint=103,64,0 direction=forward speed=1.0 tolerance=0.5 finished=false patrol-after=route=patrol waypoint=105,64,0 direction=forward speed=1.0 tolerance=0.5 finished=false patrol-loop=route=patrol waypoint=103,64,0 direction=backward speed=1.0 tolerance=0.5 finished=false passed=true')
     $fullCatalogNaturalMobOptions = @($fullCatalogReport.probes | Where-Object id -eq 'mobOptionsNatural')
     if ($fullCatalogNaturalMobOptions.Count -ne 1) {
         throw 'Synthetic full catalog report must contain mobOptionsNatural.'

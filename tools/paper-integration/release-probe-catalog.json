@@ -31,7 +31,8 @@
     },
     {
       "id": "aiRoute",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "ai-route-probe token=followpath .*active-before=true .*moving=true .*advanced=true .*patrol-mutation=true .*patrol-loop=route=patrol .*direction=backward .*finished=false .*passed=true"
     },
     {
       "id": "aiSelectorCore",
