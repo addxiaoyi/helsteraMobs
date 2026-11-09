@@ -2084,6 +2084,102 @@ class SkillServiceTest {
     }
 
     @Test
+    void dropItemSetsOwnerAndRejectsInvalidOwner() {
+        var svc = service();
+        var template = mock(org.bukkit.inventory.ItemStack.class);
+        var dropped = mock(org.bukkit.entity.Item.class);
+        var world = mock(World.class);
+        var location = new Location(world, 0, 64, 0);
+        var owner = java.util.UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        when(world.dropItemNaturally(location, template)).thenReturn(dropped);
+        dev.helstera.ai.skill.SkillExtras.itemResolver(name -> template);
+        var context = BehaviorContext.execution(null, null, 1, -1, 0, "skill", null,
+                null, List.of(), location);
+        try {
+            String valid = svc.bindAction("drop-item DIAMOND 1 true " + owner);
+            assertNotNull(valid);
+            assertTrue(svc.runAction(valid, context));
+            verify(dropped).setOwner(owner);
+
+            String invalid = svc.bindAction("drop-item DIAMOND 1 true not-a-uuid");
+            assertNotNull(invalid);
+            assertTrue(svc.runAction(invalid, context));
+            verify(world, org.mockito.Mockito.times(1)).dropItemNaturally(location, template);
+        } finally {
+            dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    void dropItemOwnerPlaceholderResolvesForEachTarget() {
+        var svc = service();
+        var template = mock(org.bukkit.inventory.ItemStack.class);
+        var firstStack = mock(org.bukkit.inventory.ItemStack.class);
+        var secondStack = mock(org.bukkit.inventory.ItemStack.class);
+        var firstDrop = mock(org.bukkit.entity.Item.class);
+        var secondDrop = mock(org.bukkit.entity.Item.class);
+        var world = mock(World.class);
+        var firstLocation = new Location(world, 1, 64, 1);
+        var secondLocation = new Location(world, 2, 64, 2);
+        var firstOwner = java.util.UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        var secondOwner = java.util.UUID.fromString("123e4567-e89b-12d3-a456-426614174001");
+        LivingEntity firstTarget = mock(LivingEntity.class);
+        LivingEntity secondTarget = mock(LivingEntity.class);
+        when(firstTarget.getUniqueId()).thenReturn(firstOwner);
+        when(secondTarget.getUniqueId()).thenReturn(secondOwner);
+        when(firstTarget.getLocation()).thenReturn(firstLocation);
+        when(secondTarget.getLocation()).thenReturn(secondLocation);
+        when(template.clone()).thenReturn(firstStack, secondStack);
+        when(world.dropItemNaturally(firstLocation, firstStack)).thenReturn(firstDrop);
+        when(world.dropItemNaturally(secondLocation, secondStack)).thenReturn(secondDrop);
+        dev.helstera.ai.skill.SkillExtras.itemResolver(name -> template);
+        var context = BehaviorContext.execution(null, null, 1, -1, 0, "skill", null,
+                null, List.of(firstTarget, secondTarget), new Location(world, 0, 64, 0));
+        try {
+            String action = svc.bindAction("drop-item-targets DIAMOND 1 true <target.uuid>");
+            assertNotNull(action);
+            assertTrue(svc.runAction(action, context));
+            verify(firstDrop).setOwner(firstOwner);
+            verify(secondDrop).setOwner(secondOwner);
+        } finally {
+            dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    void dropItemsListAppliesConfiguredOwnerToEveryStack() {
+        var svc = service();
+        var template = mock(org.bukkit.inventory.ItemStack.class);
+        var firstStack = mock(org.bukkit.inventory.ItemStack.class);
+        var secondStack = mock(org.bukkit.inventory.ItemStack.class);
+        var firstDrop = mock(org.bukkit.entity.Item.class);
+        var secondDrop = mock(org.bukkit.entity.Item.class);
+        var world = mock(World.class);
+        var location = new Location(world, 0, 64, 0);
+        var owner = java.util.UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        when(template.clone()).thenReturn(firstStack, secondStack);
+        when(world.dropItem(location, firstStack)).thenReturn(firstDrop);
+        when(world.dropItem(location, secondStack)).thenReturn(secondDrop);
+        dev.helstera.ai.skill.SkillExtras.itemResolver(name -> template.clone());
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(location);
+        var context = BehaviorContext.execution(instance, null, 1, -1, 0, "skill", null,
+                null, List.of(), location);
+        try {
+            String action = svc.bindAction("drop-items false DIAMOND 1 STONE 2 " + owner);
+            assertNotNull(action);
+            assertTrue(svc.runAction(action, context));
+            verify(firstStack).setAmount(1);
+            verify(secondStack).setAmount(2);
+            verify(firstDrop).setOwner(owner);
+            verify(secondDrop).setOwner(owner);
+        } finally {
+            dev.helstera.ai.skill.SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
     void dropItemRejectsInvalidNaturallyFlag() {
         var svc = service();
         assertNull(svc.bindAction("drop-item DIAMOND 1 maybe @location{x=4;y=5;z=6}"));

@@ -308,7 +308,7 @@ $probeSpecs = [ordered]@{
     variableLocationDispatch = 'variable-location-dispatch valid=true invalid-rejected=true import-preserved=true'
     explosionLocationDispatch = 'explosion-location-dispatch valid=true missing-rejected=true'
     dropItemLocation = 'drop-item-location valid=true invalid-rejected=true missing-rejected=true'
-    dropItemImported = 'drop-item-import valid=true missing-rejected=true invalid-preserved=true'
+    dropItemImported = 'drop-item-import valid=true missing-rejected=true invalid-preserved=true owner=true target-owner=true'
     dropItemNaturalImported = 'drop-item-natural-import exact=true invalid-preserved=true'
     dropItemInlineImported = 'drop-item-inline-import valid=true invalid-preserved=true dynamic=true missing-rejected=true'
     dropItemListImported = 'drop-item-list-import valid=true invalid-preserved=true'

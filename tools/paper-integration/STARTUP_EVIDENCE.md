@@ -1,13 +1,33 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-mythic-stats-strict-20261109-r2` passed the full
+Latest fixture `srv-paper-dropitem-owner-strict-20261109-r2` passed the full
 strict gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19
+expected rejections, and zero failed or incomplete. The imported Mythic
+`dropitem` fixed and `<target.uuid>` owners are read back from real Paper
+dropped items; invalid owner input remains preserved with a migration warning.
+Report:
+[paper-1.21.1-dropitem-owner-strict-20261109-r2.json](reports/paper-1.21.1-dropitem-owner-strict-20261109-r2.json), SHA-256:
+`4ceb8772a7f6d263a15f7d0d63ab534e69a6ae86196cb73073613339e33578e7`.
+Compressed server log SHA-256:
+`d5965346371cc7c280390c72a016b950937bdfc2194dd369f033d8ab665a506e`.
+Client log archive SHA-256:
+`a9761721def614375f9ac678d55d8edf566371fc0d377f00b78d51326657ff08`.
+Plugin SHA-256:
+`a1df42c4148f02c5cdadda085619aec9d225779f12c2d277e379a1efbaea7e04`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-dropitem-owner-strict-20261109-r1` verified
+the fixed imported owner UUID and invalid-input preservation in the same 409
+probe catalog. Its report and logs remain archived.
+
+Previous strict fixture `srv-paper-mythic-stats-strict-20261109-r2` passed the
+full strict gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19
 expected rejections, and zero failed or incomplete. It verifies the native
 `stats.yml` provider and weighted `BiasStat` loot path, including default and
 configured base values, killer priority, dropper fallback, entity overrides,
 unknown/disabled stat rejection, positive and negative weighting,
-fail-closed fallback, reload, and state restoration.
-Report:
+fail-closed fallback, reload, and state restoration. Report:
 [paper-1.21.1-mythic-stats-strict-20261109-r2.json](reports/paper-1.21.1-mythic-stats-strict-20261109-r2.json), SHA-256:
 `fdf9057a4b8740e89791fc182b4c0c00b75833c9dbbed90de02e01c7f53f45ab`.
 Compressed server log SHA-256:
@@ -18,8 +38,6 @@ Plugin SHA-256:
 `2c7a6c37935cf048b462ea2acad5cdc27383716f5900049f5589493444fe0d19`.
 This is the native Helstera stats provider; MythicMobs itself was not installed
 for this fixture.
-Archived logs redact web token query values; the source fixture retains the
-original run logs.
 
 Previous strict fixture `srv-paper-attributes-composite-strict-20261109-r1`
 passed the full strict gate with 408 registered probes, 389 passed, 19

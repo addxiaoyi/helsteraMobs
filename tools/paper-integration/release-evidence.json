@@ -1,5 +1,29 @@
 [
   {
+    "fixtureId": "srv-paper-dropitem-owner-strict-20261109-r2",
+    "reportFixtureDirectory": "srv-paper-dropitem-owner-strict-20261109-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-dropitem-owner-strict-20261109-r2.json",
+    "reportSha256": "4ceb8772a7f6d263a15f7d0d63ab534e69a6ae86196cb73073613339e33578e7",
+    "log": "tools/paper-integration/reports/paper-1.21.1-dropitem-owner-strict-20261109-r2.log.gz",
+    "logSha256": "d5965346371cc7c280390c72a016b950937bdfc2194dd369f033d8ab665a506e",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-dropitem-owner-strict-20261109-r2-client-logs.tar.gz",
+    "clientLogSha256": "a9761721def614375f9ac678d55d8edf566371fc0d377f00b78d51326657ff08",
+    "pluginSha256": "a1df42c4148f02c5cdadda085619aec9d225779f12c2d277e379a1efbaea7e04",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-dropitem-owner-strict-20261109-r1",
+    "reportFixtureDirectory": "srv-paper-dropitem-owner-strict-20261109-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-dropitem-owner-strict-20261109-r1.json",
+    "reportSha256": "2349481d61195033cfe532c36e869258854c285b64ed1ab518fbf9dbc0d9440c",
+    "log": "tools/paper-integration/reports/paper-1.21.1-dropitem-owner-strict-20261109-r1.log.gz",
+    "logSha256": "c64768ae4ae219ec5bda0f29f69f538697fbbbaa85a7e42e562a196a9248a67d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-dropitem-owner-strict-20261109-r1-client-logs.tar.gz",
+    "clientLogSha256": "0c1a3c165c17e421d58602f35d61e2530a5ab7eafcb7b37d9a7fc2e1e11a2a6f",
+    "pluginSha256": "455df3a2200c12c8c47e69fa9abd538463a34a2aef4bddb5bbda2d8032a97f82",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-mythic-stats-strict-20261109-r2",
     "reportFixtureDirectory": "srv-paper-mythic-stats-strict-20261109-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-mythic-stats-strict-20261109-r2.json",

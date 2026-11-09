@@ -38,7 +38,27 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-mythic-stats-strict-20261109-r2` passes all
+Latest strict fixture `srv-paper-dropitem-owner-strict-20261109-r2` passes all
+409 probes (390 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. It reads imported fixed and `<target.uuid>` owner values back
+from real dropped items; invalid input remains preserved with a migration
+warning.
+Report: `reports/paper-1.21.1-dropitem-owner-strict-20261109-r2.json`;
+server log: `reports/paper-1.21.1-dropitem-owner-strict-20261109-r2.log.gz`;
+client logs:
+`reports/paper-1.21.1-dropitem-owner-strict-20261109-r2-client-logs.tar.gz`.
+Report SHA-256: `4ceb8772a7f6d263a15f7d0d63ab534e69a6ae86196cb73073613339e33578e7`;
+server log SHA-256: `d5965346371cc7c280390c72a016b950937bdfc2194dd369f033d8ab665a506e`;
+client log SHA-256: `a9761721def614375f9ac678d55d8edf566371fc0d377f00b78d51326657ff08`;
+plugin SHA-256: `a1df42c4148f02c5cdadda085619aec9d225779f12c2d277e379a1efbaea7e04`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-dropitem-owner-strict-20261109-r1` verified
+the fixed imported owner UUID and invalid-input preservation in all 409 probes;
+its report and logs remain archived.
+
+Previous strict fixture `srv-paper-mythic-stats-strict-20261109-r2` passes all
 409 probes (390 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. It verifies the built-in `stats.yml` provider and weighted
 `BiasStat` loot path: default and configured base values, killer priority and

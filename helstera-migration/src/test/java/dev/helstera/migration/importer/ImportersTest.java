@@ -1505,6 +1505,31 @@ class ImportersTest {
     }
 
     @Test
+    void mythicDropItemOwnerMapsAndInvalidOwnersArePreserved(@TempDir Path root) throws Exception {
+        String owner = "123e4567-e89b-12d3-a456-426614174000";
+        Path file = write(root, "Skills/drop-owner.yml", """
+                skills:
+                  reward:
+                    Skills:
+                      - dropitem{item=DIAMOND;owner=%s}
+                      - dropitem{items=DIAMOND 2,STONE 3;n=false;owner=<target.uuid>}
+                      - dropitem{item=STONE;owner=not-a-uuid}
+                      - dropitem{item=STONE;owner=}
+                      - dropitem{item=STONE;owner=%s;OWNER=%s}
+                """.formatted(owner, owner, owner));
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+
+        assertEquals(List.of("drop-item DIAMOND 1 true " + owner,
+                        "drop-items false DIAMOND 2 STONE 3 <target.uuid>"),
+                target.getStringList("skills.reward.on-decision"));
+        assertEquals(3, target.getStringList("skills.reward.unsupported").size());
+        assertEquals(3, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid dropitem owner")).count());
+    }
+
+    @Test
     void invalidDropItemCountsArePreservedForSkillsAndMobEvents(@TempDir Path root) throws Exception {
         Path skill = write(root, "Skills/drop-invalid.yml", """
                 skills:
