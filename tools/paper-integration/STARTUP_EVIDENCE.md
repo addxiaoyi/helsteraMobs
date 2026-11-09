@@ -1,6 +1,25 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-can-pickup-import-strict-20261109-r2` passed the
+Latest fixture `srv-paper-jockey-import-strict-20261109-r1` passed the
+full strict gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19
+expected rejections, and zero failed or incomplete. It verifies imported
+Zombie `Options.PreventJockeyMounts: true` cancels a Chicken
+`EntityMountEvent`, while the global-default Zombie allows it through
+production mob configuration. The earlier native Zombie `NATURAL` spawn
+fixture separately verifies actual protected/control jockey mount outcomes.
+Report:
+[paper-1.21.1-jockey-import-strict-20261109-r1.json](reports/paper-1.21.1-jockey-import-strict-20261109-r1.json), SHA-256:
+`7c7a72ed0ff4388cc3b7bcd72e3f400d99d2daa8f1861c9d8c2f68edb57f5686`.
+Compressed server log SHA-256:
+`07602eedd66936e65ccde4d4350dec1b0e28f0983b647da13f825bd3b58b0a36`.
+Client log archive SHA-256:
+`1149e4c748f8b4cbe43b2866d8c6de1fc41000f9970b8b778ce2dd4350375f48`.
+Plugin SHA-256:
+`e848974e273020001199a559e675dcb54a631a4ca909841738676351521e06af`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous fixture `srv-paper-can-pickup-import-strict-20261109-r2` passed the
 full strict gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19
 expected rejections, and zero failed or incomplete. It verifies imported
 `CanPickupItems: true` and `false` override the global fallback, while

@@ -2,11 +2,28 @@
 
 ## MythicMobs Parity Development Status (2026-11-09)
 
-Latest strict fixture `srv-paper-can-pickup-import-strict-20261109-r2` passes
-all 409 release probes (390 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. It verifies imported `CanPickupItems: true`
-and `false` override the global fallback, while wrong-entity and malformed
-values remain preserved through production mob configuration. Report:
+Latest strict fixture `srv-paper-jockey-import-strict-20261109-r1` passes all
+409 release probes (390 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies imported Zombie
+`Options.PreventJockeyMounts: true` cancels a Chicken `EntityMountEvent`, while
+the global-default Zombie allows it, through production mob configuration.
+Report:
+`tools/paper-integration/reports/paper-1.21.1-jockey-import-strict-20261109-r1.json`
+(SHA-256 `7c7a72ed0ff4388cc3b7bcd72e3f400d99d2daa8f1861c9d8c2f68edb57f5686`).
+Compressed server log SHA-256:
+`07602eedd66936e65ccde4d4350dec1b0e28f0983b647da13f825bd3b58b0a36`.
+Client log archive SHA-256:
+`1149e4c748f8b4cbe43b2866d8c6de1fc41000f9970b8b778ce2dd4350375f48`.
+Plugin SHA-256:
+`e848974e273020001199a559e675dcb54a631a4ca909841738676351521e06af`.
+The archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-can-pickup-import-strict-20261109-r2`
+passes all 409 release probes (390 passed, 19 expected rejections, zero failed
+or incomplete). It verifies imported `CanPickupItems: true` and `false`
+override the global fallback, while wrong-entity and malformed values remain
+preserved through production mob configuration. Report:
 `tools/paper-integration/reports/paper-1.21.1-can-pickup-import-strict-20261109-r2.json`
 (SHA-256 `2a46d23de86aeed5ba958bbdf846bc0933d6f1e3a294e60c364d2e300552ece6`).
 Compressed server log SHA-256:
@@ -15,7 +32,7 @@ Client log archive SHA-256:
 `05495f7b0553102158c18f188024888ce3025fe15cc350516f83dda929258dad`.
 Plugin SHA-256:
 `7bede98dce74336f9b5a9df6707273a7793180a3558ffa5fbdd086cab3cd41ee`.
-The archived logs redact web token query values; the source fixture retains the
+Archived logs redact web token query values; the source fixture retains the
 original run logs.
 
 Previous strict fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1`
@@ -943,7 +960,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-can-pickup-import-strict-20261109-r2` has 409 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-jockey-import-strict-20261109-r1` has 409 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -959,8 +976,8 @@ This is a partial parity release. The matrix currently has `35`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 533 cited IDs; 441 report files; 4 directories
-   without reports; 88 missing directories; 211 archived release reports. The
+   Current fixture inventory: 534 cited IDs; 442 report files; 4 directories
+   without reports; 88 missing directories; 212 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1018,6 +1035,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
+- Strict Paper fixture `srv-paper-jockey-import-strict-20261109-r1` closes the imported `PreventJockeyMounts` path through managed Zombie configuration and Bukkit mount-event cancellation/allowance; the native Zombie `NATURAL` spawn evidence remains in `srv-paper-full-strict-20261107-r4`.
 - The full strict Paper 1.21.1-133 fixture `srv-paper-full-strict-20261107-r4` records 391 probes with zero incomplete results. Its imported entity-flag probe reads `CanJoinRaid=false` on the protected Pillager and `true` on the inverse control, the native-AI Bee probe verifies imported `PreventStingerLoss`, and the native Zombie `NATURAL` spawn path observes protected jockey cancellation with control allowance.
 - Mythic FallingBlock options now have strict importer-to-runtime evidence. Paper fixture `srv-paper-falling-block-options-strict-20261108-r3` imports block data and drop, hurt-entity, and cancel-drop flags through production FallingBlock spawning; the configured and inverse controls are read back, and wrong-entity or malformed values remain preserved. The fixture completes all 394 registered release probes.
 - The same release fixture stabilizes the imported Bee `PreventStingerLoss` native-AI probe by scheduling its assertion on the next tick and placing the stationary Zombie two blocks from each Bee. Both protected/control attacks are observed as uncancelled damage events; the protected Bee restores its stinger while the control remains stung.
@@ -1173,7 +1191,7 @@ the entire MythicMobs feature catalog.
 - Mythic `Options.Adult` and `Baby` use Bukkit age setters, including Zombie/Piglin-specific baby APIs. Exact tick `Age` and `AgeLock` apply to `Animals`; for ageable non-animal types such as Zombies/Husks, those two values are preserved under `entity.unsupported.Options.*` with migration warnings while `Adult`/`Baby` remain mapped. Non-Ageable values are also preserved with warnings. Importer/runtime tests cover animal, Husk, and Allay cases; strict Paper 1.21.1-133 fixture `srv-paper-age-options-strict-20261105-r3` records `age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true` on real Sheep and Zombie entities. Other Mob Options remain incomplete.
 - Mythic Bee `Options.Anger` maps non-negative integer tick values to `entity.bee-anger` and Paper `Bee#setAnger`. Other entity types and invalid values remain preserved with migration warnings; importer/runtime tests cover both paths. Strict Paper fixture `srv-paper-bee-anger-strict-20261107-r1` verifies 1200 ticks against a zero-anger Bee control through production spawning.
 - Entity-scoped Mob Options now enforce their Bukkit type boundary during import: Creeper, Bee, Horse, Cat, Sheep, ArmorStand, Enderman, Slime/MagmaCube/Phantom, and FallingBlock fields map only for compatible entities. Wrong-type and malformed values remain under `entity.unsupported.Options.*` with WARN entries, while valid Horse and ArmorStand paths remain mapped; `ImportersTest.mythicPreservesEntityScopedOptionBoundaries` and `MythicAgeOptionsTest.ignoresEntitySpecificOptionsOnIncompatibleRuntimeTypes` cover the contract. Paper production evidence for the individual options remains tracked in the matrix and the full Mob Options catalog is still open.
-- Interaction guard options now follow the same import boundary: `CanPickupItems` requires a Bukkit `Mob`, `PreventJockeyMounts` a Zombie-family entity, `PreventSlimeSplit` a Slime-family entity, `PreventBlockInfection` a Silverfish, and `PreventSnowFormation` a Snowman. Wrong-type and malformed values are preserved under `entity.unsupported.Options.*`; importer tests cover valid, incompatible, and malformed cases. Strict Paper 1.21.1-133 fixture `srv-paper-can-pickup-import-strict-20261109-r2` verifies imported `CanPickupItems: true` and `false` override the global fallback and confirms wrong-type/malformed values remain preserved through production mob configs. The rest of the guard options retain their existing runtime evidence; full Mythic option ordering and cross-version semantics remain open.
+- Interaction guard options now follow the same import boundary: `CanPickupItems` requires a Bukkit `Mob`, `PreventJockeyMounts` a Zombie-family entity, `PreventSlimeSplit` a Slime-family entity, `PreventBlockInfection` a Silverfish, and `PreventSnowFormation` a Snowman. Wrong-type and malformed values are preserved under `entity.unsupported.Options.*`; importer tests cover valid, incompatible, and malformed cases. Strict fixture `srv-paper-can-pickup-import-strict-20261109-r2` verifies `CanPickupItems` true/false overrides and preservation paths. Latest strict fixture `srv-paper-jockey-import-strict-20261109-r1` verifies imported `PreventJockeyMounts: true` cancels a Chicken `EntityMountEvent` and the global default allows it through managed Zombie configuration; the earlier native `NATURAL` jockey fixture verifies actual protected/control mount outcomes. Full Mythic option ordering and cross-version semantics remain open.
 - Official Armor Stand options `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` now map through the migration/runtime path; strict Paper 1.21.1 fixture `srv-paper-integration-armor-options-20261031-r3` reads back the production can-move/can-tick state.
 - Official Armor Stand item options `ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`, `ItemHead`, and `ItemLegs` now resolve through the existing ItemStack/custom-item path; strict fixture `srv-paper-integration-armor-options-20261031-r3` reads back all six equipment slots.
 - Mythic `Options.Saddled` now applies through Paper `Steerable` and `AbstractHorse` APIs; strict fixture `srv-paper-integration-saddled-20261031-r2` reads back a real Horse saddle.
@@ -1213,7 +1231,7 @@ Many rows remain `mapped-unverified`; the project is not complete:
 3. Pin conditions resolve through the plugin's own `pins.yml`; location-valued `@Pin` resolves every configured point or one random point, `@BlocksInPinRegion` enumerates inclusive cuboids up to 16,384 blocks, and `MovePin` updates single-point pins in memory. Strict Paper fixture `srv-paper-pin-targeters-strict-20261102-r2` passes the required `pinTargeters` probe on Paper 1.21.1-133: multi-point/random dispatch, single-point movement, multi-point movement rejection, real cuboid `set-block`/`break-block` with block restoration, and fail-closed rejection of a 16,385-block region before action dispatch. Compatibility with Mythic pack pin-file formats remains unverified; in-memory movement resets when the plugin reloads its own `pins.yml`.
 4. Complete the official targeter/filter catalog: ground, water, flying, player, Creative, Spectator, invulnerability, ArmorStand, animal, creature, villager, and Helstera-managed mob identity filters now have API and strict Paper coverage. External MythicMobs/Citizens identity, non-living targets, premium selectors, and native Pathfinder Goal mutation remain open or outside the public Paper API boundary.
 5. Expand the remaining legacy numeric ID/data families; the common Items and Equipment subset now has strict Paper evidence, while `ItemModel` and `DamageType` are explicitly preserved because Paper 1.21.1 `ItemMeta` has no public component API for them.
-6. Strict Paper 1.21.1-133 now records the registered Creeper/Bee/Zombie and native jockey mount-event probes; finish universal Mob Option ordering and the remaining conversion/mount combinations.
+6. Strict Paper 1.21.1-133 verifies imported Zombie `PreventJockeyMounts` event cancellation/default allowance and native Zombie `NATURAL` jockey mounting; finish Zombie/Skeleton conversion timing, universal Mob Option ordering, and remaining mount-policy combinations.
 7. Add remaining Bukkit event, Audience version, and SkillTree lifecycle/restart evidence.
 8. Keep the Maven quality gate and strict Paper 1.21.1-133 release gate passing; the latest archived targeter follow-up `srv-paper-targeter-sorting-strict-20261102-r1` has 272 probes, while parity breadth and cross-version evidence remain open.
 

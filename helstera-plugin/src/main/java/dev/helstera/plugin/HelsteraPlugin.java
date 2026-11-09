@@ -4205,6 +4205,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
         var mobFiles = new java.util.ArrayList<Path>();
         java.util.List<Integer> instanceIds = new java.util.ArrayList<>();
+        org.bukkit.entity.Chicken jockeyMount = null;
         try {
             if (world == null || origin == null || origin.getWorld() != world) {
                 throw new IllegalArgumentException("Invalid Paper probe world or origin");
@@ -4240,6 +4241,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         NoDamageTicks: 27
                         PreventLeashing: true
                         PreventTransformation: false
+                        PreventJockeyMounts: true
                         CanPickupItems: true
                     ExplicitPickupDisabled_%1$s:
                       Type: ZOMBIE
@@ -4335,6 +4337,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var invalidPickupMob = invalidPickup == null ? null
                     : invalidPickup.baseEntity().filter(org.bukkit.entity.Mob.class::isInstance)
                     .map(org.bukkit.entity.Mob.class::cast).orElse(null);
+            jockeyMount = world.spawn(origin.clone().add(18, 0, 0), org.bukkit.entity.Chicken.class);
+            boolean explicitJockeyPrevented = false;
+            boolean globalJockeyAllowed = false;
+            if (jockeyMount != null && explicitMob != null && globalMob != null) {
+                var explicitMountEvent = new org.bukkit.event.entity.EntityMountEvent(explicitMob, jockeyMount);
+                var globalMountEvent = new org.bukkit.event.entity.EntityMountEvent(globalMob, jockeyMount);
+                getServer().getPluginManager().callEvent(explicitMountEvent);
+                getServer().getPluginManager().callEvent(globalMountEvent);
+                explicitJockeyPrevented = explicit.options().preventJockeyMounts()
+                        && explicitMountEvent.isCancelled();
+                globalJockeyAllowed = !global.options().preventJockeyMounts()
+                        && !globalMountEvent.isCancelled();
+            }
             var wrongPickupOptions = wrongPickupTypeId == null ? null : mobConfig(wrongPickupTypeId);
             var invalidPickupOptions = invalidPickupId == null ? null : mobConfig(invalidPickupId);
             var wrongPickupEntityOptions = wrongPickupOptions == null ? null
@@ -4353,12 +4368,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean globalDefaults = globalMob != null && globalMob.getCanPickupItems()
                     && globalMob.getNoDamageTicks() == 19
                     && !global.options().preventLeashing()
+                    && !global.options().preventJockeyMounts()
                     && !globalTransformationDefault
                     && globalTransformationDefaultIgnored
                     && global.options().preventTransformation();
             boolean explicitOverrides = explicitMob != null && explicitMob.getCanPickupItems()
                     && explicitMob.getNoDamageTicks() == 27
                     && explicit.options().preventLeashing()
+                    && explicit.options().preventJockeyMounts()
                     && !explicit.options().preventTransformation();
             boolean pickupDisabledOverrides = pickupDisabledMob != null
                     && !pickupDisabledMob.getCanPickupItems();
@@ -4383,6 +4400,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             getLogger().info("[自检] imported-mob-defaults result="
                     + (importedMappings && builtInDefaults && globalDefaults && explicitOverrides
                     && pickupDisabledOverrides && wrongPickupTypePreserved && invalidPickupPreserved
+                    && explicitJockeyPrevented && globalJockeyAllowed
                     && builtInTransformationCancelled && globalTransformationCancelled
                     && explicitTransformationAllowed)
                     + " imported=" + importedMappings
@@ -4401,6 +4419,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             && !pickupDisabledMob.getCanPickupItems())
                     + " pickup-wrong-type-preserved=" + wrongPickupTypePreserved
                     + " pickup-invalid-preserved=" + invalidPickupPreserved
+                    + " explicit-jockey-prevented=" + explicitJockeyPrevented
+                    + " global-jockey-allowed=" + globalJockeyAllowed
                     + " explicit-no-damage-ticks=" + (explicitMob != null && explicitMob.getNoDamageTicks() == 27)
                     + " explicit-prevent-leashing=" + (explicit != null && explicit.options().preventLeashing())
                     + " explicit-prevent-transformation-disabled="
@@ -4411,6 +4431,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } catch (Throwable failure) {
             getLogger().warning("[自检] imported-mob-defaults result=false error=" + failure);
         } finally {
+            if (jockeyMount != null) jockeyMount.remove();
             for (int instanceId : instanceIds) {
                 try { instances().despawn(instanceId); } catch (RuntimeException ignored) { }
             }

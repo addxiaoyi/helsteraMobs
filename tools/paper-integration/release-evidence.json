@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-jockey-import-strict-20261109-r1",
+    "reportFixtureDirectory": "srv-paper-jockey-import-strict-20261109-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-jockey-import-strict-20261109-r1.json",
+    "reportSha256": "7c7a72ed0ff4388cc3b7bcd72e3f400d99d2daa8f1861c9d8c2f68edb57f5686",
+    "log": "tools/paper-integration/reports/paper-1.21.1-jockey-import-strict-20261109-r1.log.gz",
+    "logSha256": "07602eedd66936e65ccde4d4350dec1b0e28f0983b647da13f825bd3b58b0a36",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-jockey-import-strict-20261109-r1-client-logs.tar.gz",
+    "clientLogSha256": "1149e4c748f8b4cbe43b2866d8c6de1fc41000f9970b8b778ce2dd4350375f48",
+    "pluginSha256": "e848974e273020001199a559e675dcb54a631a4ca909841738676351521e06af",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-can-pickup-import-strict-20261109-r2",
     "reportFixtureDirectory": "srv-paper-can-pickup-import-strict-20261109-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-can-pickup-import-strict-20261109-r2.json",
