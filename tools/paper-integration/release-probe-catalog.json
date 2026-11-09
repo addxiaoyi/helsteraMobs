@@ -64,6 +64,11 @@
       "status": "passed"
     },
     {
+      "id": "attributesComposite",
+      "status": "passed",
+      "requiredObservation": "attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true"
+    },
+    {
       "id": "audience-filter-delivery",
       "status": "passed",
       "requiredObservationPattern": "\"permissionNegativeTesterOmitted\":true.*\"permissionNegativeGuestIncluded\":true.*\"factionNegativeTesterIncluded\":true.*\"factionNegativeGuestExcluded\":true"
@@ -907,6 +912,11 @@
     {
       "id": "itemAttributes",
       "status": "passed"
+    },
+    {
+      "id": "itemAttributesComposite",
+      "status": "passed",
+      "requiredObservation": "item-attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true modifiers=3"
     },
     {
       "id": "itemMetadata",

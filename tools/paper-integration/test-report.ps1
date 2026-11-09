@@ -205,10 +205,12 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
         '[Server thread/INFO]: attribute-options result=true modifiers=1',
+        '[Server thread/INFO]: attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] mob-pickup-option result=true disabled=true explicit-overrides-default=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] spawn-option-runtime result=true pickup-disabled=true explicit-pickup-overrides-fallback=true random-equipment-cleared=true explicit-equipment-preserved=true no-damage-ticks=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true',
         '[Server thread/INFO]: item-attribute-options result=true modifiers=1',
+        '[Server thread/INFO]: item-attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true modifiers=3',
         '[Server thread/INFO]: [helsteraMobs] [自检] legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true restrictions=true potion=true skull=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true prevent-transformation-reasons=true prevent-skeleton-conversion=true prevent-block-infection=true prevent-snow-formation=true tame-breed-tame=true tame-breed-breed=true leash-unleash-leash=true leash-unleash-unleash=true prevent-leash=true prevent-rename=true prevent-target=true prevent-vanilla-damage=true prevent-projectiles=true prevent-entity-explosions=true prevent-block-explosion-damage=true prevent-drowning=true prevent-fall-damage=true prevent-fire=true prevent-fire-causes=true prevent-pickup=true prevent-item-use=true interactable=true interactable-armor-stand=true prevent-teleport=true prevent-sunburn=true prevent-other-drops=true prevent-mob-kill-drops=true prevent-mob-kill-custom-loot=true shear-trigger=true bed-enter-leave-enter=true bed-enter-leave-leave=true trade-trigger=true quit-trigger=true item-drop-break-damage=true player-actions-interact=true world-change=true jump=true swing=true fish-trigger=true',
@@ -466,7 +468,7 @@ try {
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
             'importedItemSimilarityConditions',
-            'importedPlayerKillsCondition', 'contextTargeterRelations', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'itemMetadata', 'legacyNumericItems')) {
+            'importedPlayerKillsCondition', 'contextTargeterRelations', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -1003,6 +1005,14 @@ try {
     $fullCatalogReport.expectedProbeIds += 'itemMetadata'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'itemMetadata'; status = 'passed'; observations = @('item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true restrictions=true potion=true skull=true invalid-preserved=true result=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'attributesComposite'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'attributesComposite'; status = 'passed'; observations = @('attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'itemAttributesComposite'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'itemAttributesComposite'; status = 'passed'; observations = @('item-attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true modifiers=3')
     }
     $fullCatalogAudienceFilter = @($fullCatalogReport.probes | Where-Object id -eq 'audience-filter-delivery')
     if ($fullCatalogAudienceFilter.Count -ne 1) {

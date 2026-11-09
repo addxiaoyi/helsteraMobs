@@ -1,23 +1,28 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-item-similarity-import-strict-20261109-r2` passed the
-full strict gate on Paper 1.21.1-133: 406 registered probes, 387 passed, 19
-expected rejections, and zero failed or incomplete. It verifies imported
-`EntityItemIsSimilar` and `ItemIsSimilar` aliases, strict positive and negative
-matching, and invalid-argument preservation through the production importer and
-`SkillService`. The same catalog reruns imported `HasFreeInventorySlot` /
-`HasFreeSlot` with full-inventory rejection and invalid-argument preservation.
+Latest fixture `srv-paper-attributes-composite-strict-20261109-r1` passed the
+full strict gate on Paper 1.21.1-133: 408 registered probes, 389 passed, 19
+expected rejections, and zero failed or incomplete. It verifies imported entity
+and item attribute combinations through the production importer and runtime:
+Mythic aliases, percentage amounts, `ADD_NUMBER`, `ADD_SCALAR`,
+`MULTIPLY_SCALAR_1`, `HAND`/`OFF_HAND`/`ANY` slot groups, stable modifier
+deduplication, and invalid-input rejection.
 Report:
-[paper-1.21.1-item-similarity-import-strict-20261109-r2.json](reports/paper-1.21.1-item-similarity-import-strict-20261109-r2.json), SHA-256:
-`a3d25e88e567aa9a26e21000acaf2a8a938a856d9e6b8c04a9f3446410045712`.
+[paper-1.21.1-attributes-composite-strict-20261109-r1.json](reports/paper-1.21.1-attributes-composite-strict-20261109-r1.json), SHA-256:
+`0067e5b18a36b60805879a8146b1d61f12965263d9e223e24b566df1c280d16e`.
 Compressed server log SHA-256:
-`1624548a3f2e59799e0f54623791bb208eda96d680f52c38cb2dfee634aa1262`.
+`a6b7696df5c650452a4a5a9691bed3797f5a3f4b22385f3b22ccd71aa4799c25`.
 Client log archive SHA-256:
-`1dd4421ac3ee10e8725ee0cfc72b65591ddd67b8d056233ccabb1cf5d6a3b820`.
+`adf9d205b30aaeadedbbfd85c71219d3fbbfbddcf98079684712652ca1458927`.
 Plugin SHA-256:
-`f1d5eaaa9c7ddaa874748160fde8f1525981352d1c25071ca97271c348935d90`.
+`a7dd486ce46dfcc442cf33e3645a3f5812a7dda0d3ad1b7326532e7e89b16ef0`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
+
+Previous strict fixture `srv-paper-item-similarity-import-strict-20261109-r2`
+verifies imported `EntityItemIsSimilar` and `ItemIsSimilar` aliases,
+full-inventory rejection, and invalid-argument preservation; its archived
+report remains historical evidence.
 
 Previous strict fixture `srv-paper-item-metadata-strict-20261108-r1` verifies
 imported ItemStack metadata and legacy numeric item data and remains archived as
@@ -62,7 +67,7 @@ Client log archive SHA-256:
 `5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`.
 Plugin SHA-256:
 `d824761cdb575b50c5061706c7fde362b80f521aa9d4c46d68c296b7c64c343f`.
-Latest strict report has 406 probes, zero incomplete. Archived logs redact web
+Latest strict report has 408 probes, zero incomplete. Archived logs redact web
 token query values; the source fixture retains the original run logs.
 
 Previous fixture `srv-paper-context-relations-strict-20261108-r2` passed

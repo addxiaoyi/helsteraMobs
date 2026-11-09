@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-attributes-composite-strict-20261109-r1",
+    "reportFixtureDirectory": "srv-paper-attributes-composite-strict-20261109-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-attributes-composite-strict-20261109-r1.json",
+    "reportSha256": "0067e5b18a36b60805879a8146b1d61f12965263d9e223e24b566df1c280d16e",
+    "log": "tools/paper-integration/reports/paper-1.21.1-attributes-composite-strict-20261109-r1.log.gz",
+    "logSha256": "a6b7696df5c650452a4a5a9691bed3797f5a3f4b22385f3b22ccd71aa4799c25",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-attributes-composite-strict-20261109-r1-client-logs.tar.gz",
+    "clientLogSha256": "adf9d205b30aaeadedbbfd85c71219d3fbbfbddcf98079684712652ca1458927",
+    "pluginSha256": "a7dd486ce46dfcc442cf33e3645a3f5812a7dda0d3ad1b7326532e7e89b16ef0",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-item-similarity-import-strict-20261109-r2",
     "reportFixtureDirectory": "srv-paper-item-similarity-import-strict-20261109-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-item-similarity-import-strict-20261109-r2.json",

@@ -2,6 +2,7 @@ package dev.helstera.migration.importer;
 
 import dev.helstera.api.util.ConditionListParser;
 import dev.helstera.api.migration.MigrationImporter;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -41,6 +42,11 @@ import java.util.Set;
  * 避免破坏既有消费者对 {@code status} 的判断。</p>
  */
 public final class MythicMobsImporter implements MigrationImporter {
+
+    private static final Set<String> ATTRIBUTE_OPERATIONS = Set.of(
+            "ADD_NUMBER", "ADD_SCALAR", "MULTIPLY_SCALAR_1");
+    private static final Set<String> ATTRIBUTE_SLOTS = Set.of(
+            "any", "mainhand", "offhand", "hand", "head", "chest", "legs", "feet", "armor", "body");
 
     private static final Map<Integer, String> LEGACY_EQUIPMENT_IDS = Map.ofEntries(
             Map.entry(256, "IRON_SHOVEL"), Map.entry(257, "IRON_PICKAXE"),
@@ -691,7 +697,9 @@ public final class MythicMobsImporter implements MigrationImporter {
             Object enchantments = ciGet(item, "Enchantments", "enchantments");
             if (enchantments != null) target.set(path + ".enchantments", enchantments);
             Object attributes = ciGet(item, "Attributes", "attributes", "AttributeModifiers", "attribute-modifiers");
-            if (attributes != null) target.set(path + ".attributes", attributes);
+            if (attributes != null) {
+                mapItemAttributes(attributes, file.toString(), entries, target, key, path);
+            }
             copyFirst(item, target, path + ".skull-owner", "SkullOwner", "skull-owner");
             copyFirst(item, target, path + ".skull-texture", "SkullTexture", "skull-texture");
             Object hide = ciGet(item, "Hide", "hide", "HideFlags", "hide-flags");
@@ -3955,24 +3963,286 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (section == null) {
                 Object raw = attributes.get(key);
                 if (raw != null) {
-                    String path = "entity.attributes." + key;
-                    target.set(path, raw);
-                    note(entries, srcFile, mobKey + ".Attributes." + key, path,
-                            raw, "mapped", "Scalar attribute copied to entity.attributes.");
+                    String attribute = normalizeAttributeName(key);
+                    Double amount = parseAttributeAmount(raw);
+                    if (attribute != null && amount != null) {
+                        String path = "entity.attributes." + attribute;
+                        target.set(path, raw);
+                        note(entries, srcFile, mobKey + ".Attributes." + key, path,
+                                raw, "mapped", "Scalar attribute copied to entity.attributes.");
+                    } else {
+                        String path = "entity.unsupported.Attributes." + normalizeId(key);
+                        target.set(path, raw);
+                        note(entries, srcFile, mobKey + ".Attributes." + key, path,
+                                raw, "unsupported", "Attribute name or scalar value was not a finite Paper attribute.", "WARN");
+                    }
                 }
                 continue;
             }
-            String targetSlot = section.getString("slot", slot);
-            String attribute = section.getString("attribute", key);
-            Object rawAmount = section.get("amount");
-            if (rawAmount == null) rawAmount = section.get("value", 0);
-            String operation = section.getString("operation", "ADD_NUMBER");
-            String path = "entity.attributes." + targetSlot + "." + key;
-            target.set(path + ".attribute", attribute);
-            target.set(path + ".amount", rawAmount);
-            target.set(path + ".operation", operation);
+            if (looksLikeAttributeModifier(section)) {
+                mapEntityAttributeModifier(key, section, slot, srcFile, entries, target, mobKey);
+                continue;
+            }
+            String groupSlot = normalizeEntityAttributeSlot(key);
+            if (groupSlot != null) {
+                for (String child : section.getKeys(false)) {
+                    Object rawChild = section.get(child);
+                    ConfigurationSection childSection = section.getConfigurationSection(child);
+                    if (childSection != null) {
+                        mapEntityAttributeModifier(child, childSection, groupSlot, srcFile, entries, target, mobKey);
+                    } else if (rawChild != null) {
+                        mapEntityAttributeScalarModifier(child, rawChild, groupSlot, srcFile, entries, target, mobKey);
+                    }
+                }
+                continue;
+            }
+            String path = "entity.unsupported.Attributes." + normalizeId(key);
+            target.set(path, section.getValues(true));
             note(entries, srcFile, mobKey + ".Attributes." + key, path,
-                    section.getValues(true), "mapped", "Attribute modifier copied to entity.attributes.");
+                    section.getValues(true), "unsupported", "Nested attribute group has no recognized slot or modifier schema.", "WARN");
+        }
+    }
+
+    private void mapEntityAttributeScalarModifier(String key, Object rawAmount, String slot,
+                                                  String srcFile, List<Map<String, Object>> entries,
+                                                  YamlConfiguration target, String mobKey) {
+        String attribute = normalizeAttributeName(key);
+        if (attribute == null || parseAttributeAmount(rawAmount) == null) {
+            String path = "entity.unsupported.Attributes." + entityAttributeSlotId(slot) + "." + normalizeId(key);
+            target.set(path, rawAmount);
+            note(entries, srcFile, mobKey + ".Attributes." + slot + "." + key, path,
+                    rawAmount, "unsupported", "Attribute name or modifier amount was not valid.", "WARN");
+            return;
+        }
+        String path = "entity.attributes." + slot + "." + normalizeId(key);
+        target.set(path + ".attribute", attribute);
+        target.set(path + ".amount", rawAmount);
+        target.set(path + ".operation", "ADD_NUMBER");
+        target.set(path + ".slot", slot);
+        note(entries, srcFile, mobKey + ".Attributes." + slot + "." + key, path,
+                rawAmount, "mapped", "Mythic attribute shorthand converted to an entity modifier.");
+    }
+
+    private void mapEntityAttributeModifier(String key, ConfigurationSection section, String defaultSlot,
+                                             String srcFile, List<Map<String, Object>> entries,
+                                             YamlConfiguration target, String mobKey) {
+        String rawAttribute = stringValue(section, "attribute", "Attribute");
+        String attribute = normalizeAttributeName(rawAttribute);
+        if (attribute == null) attribute = normalizeAttributeName(key);
+        Object rawAmount = firstValue(section, "amount", "Amount", "value", "Value");
+        String rawOperation = stringValue(section, "operation", "Operation");
+        String operation = normalizeAttributeOperation(rawOperation);
+        String rawSlot = stringValue(section, "slot", "Slot");
+        String modifierSlot = normalizeEntityAttributeSlot(rawSlot);
+        if (rawSlot == null) modifierSlot = normalizeEntityAttributeSlot(defaultSlot);
+        if (modifierSlot == null) modifierSlot = defaultSlot;
+        if (attribute == null || rawAmount == null || parseAttributeAmount(rawAmount) == null
+                || operation == null || modifierSlot == null) {
+            String path = "entity.unsupported.Attributes." + entityAttributeSlotId(defaultSlot) + "." + normalizeId(key);
+            target.set(path, section.getValues(true));
+            note(entries, srcFile, mobKey + ".Attributes." + key, path,
+                    section.getValues(true), "unsupported", "Attribute modifier contains an unknown attribute, slot, operation, or amount.", "WARN");
+            return;
+        }
+        String path = "entity.attributes." + modifierSlot + "." + normalizeId(key);
+        target.set(path + ".attribute", rawAttribute == null ? attribute : rawAttribute.trim());
+        target.set(path + ".amount", rawAmount);
+        target.set(path + ".operation", rawOperation == null ? operation : rawOperation.trim());
+        target.set(path + ".slot", rawSlot == null ? modifierSlot : rawSlot.trim());
+        note(entries, srcFile, mobKey + ".Attributes." + key, path,
+                section.getValues(true), "mapped", "Attribute modifier copied to entity.attributes.");
+    }
+
+    private void mapItemAttributes(Object raw, String srcFile, List<Map<String, Object>> entries,
+                                   YamlConfiguration target, String itemKey, String itemPath) {
+        if (!(raw instanceof ConfigurationSection attributes)) {
+            target.set(itemPath + ".unsupported.attributes", raw);
+            note(entries, srcFile, "Items." + itemKey + ".Attributes",
+                    itemPath + ".unsupported.attributes", raw, "unsupported",
+                    "Item attributes must be a slot-to-modifier section.", "WARN");
+            return;
+        }
+        for (String key : attributes.getKeys(false)) {
+            Object rawValue = attributes.get(key);
+            ConfigurationSection section = attributes.getConfigurationSection(key);
+            if (section != null) {
+                if (looksLikeAttributeModifier(section)) {
+                    mapItemAttributeModifier(key, section, "any", srcFile, entries, target, itemKey, itemPath);
+                    continue;
+                }
+                String slot = normalizeAttributeSlot(key);
+                if (slot != null) {
+                    for (String child : section.getKeys(false)) {
+                        Object childValue = section.get(child);
+                        ConfigurationSection childSection = section.getConfigurationSection(child);
+                        if (childSection != null) {
+                            mapItemAttributeModifier(child, childSection, slot, srcFile, entries, target, itemKey, itemPath);
+                        } else if (childValue != null) {
+                            mapItemAttributeScalarModifier(child, childValue, slot, srcFile, entries, target, itemKey, itemPath);
+                        }
+                    }
+                } else {
+                    String path = itemPath + ".unsupported.attributes." + normalizeId(key);
+                    target.set(path, section.getValues(true));
+                    note(entries, srcFile, "Items." + itemKey + ".Attributes." + key, path,
+                            section.getValues(true), "unsupported", "Nested item attribute group has no recognized slot or modifier schema.", "WARN");
+                }
+            } else if (rawValue != null) {
+                mapItemAttributeScalarModifier(key, rawValue, "any", srcFile, entries, target, itemKey, itemPath);
+            }
+        }
+    }
+
+    private void mapItemAttributeScalarModifier(String key, Object rawAmount, String slot,
+                                                String srcFile, List<Map<String, Object>> entries,
+                                                YamlConfiguration target, String itemKey, String itemPath) {
+        String attribute = normalizeAttributeName(key);
+        if (attribute == null || parseAttributeAmount(rawAmount) == null) {
+            String path = itemPath + ".unsupported.attributes." + normalizeId(slot) + "." + normalizeId(key);
+            target.set(path, rawAmount);
+            note(entries, srcFile, "Items." + itemKey + ".Attributes." + slot + "." + key, path,
+                    rawAmount, "unsupported", "Attribute name or modifier amount was not valid.", "WARN");
+            return;
+        }
+        String path = itemPath + ".attributes." + slot + "." + normalizeId(key);
+        target.set(path + ".attribute", attribute);
+        target.set(path + ".amount", rawAmount);
+        target.set(path + ".operation", "ADD_NUMBER");
+        target.set(path + ".slot", slot);
+        note(entries, srcFile, "Items." + itemKey + ".Attributes." + slot + "." + key, path,
+                rawAmount, "mapped", "Mythic item attribute shorthand converted to a Paper modifier.");
+    }
+
+    private void mapItemAttributeModifier(String key, ConfigurationSection section, String defaultSlot,
+                                           String srcFile, List<Map<String, Object>> entries,
+                                           YamlConfiguration target, String itemKey, String itemPath) {
+        String rawAttribute = stringValue(section, "attribute", "Attribute");
+        String attribute = normalizeAttributeName(rawAttribute);
+        if (attribute == null) attribute = normalizeAttributeName(key);
+        Object rawAmount = firstValue(section, "amount", "Amount", "value", "Value");
+        String rawOperation = stringValue(section, "operation", "Operation");
+        String operation = normalizeAttributeOperation(rawOperation);
+        String rawSlot = stringValue(section, "slot", "Slot");
+        String slot = normalizeAttributeSlot(rawSlot);
+        if (rawSlot == null) slot = defaultSlot;
+        if (attribute == null || rawAmount == null || parseAttributeAmount(rawAmount) == null
+                || operation == null || slot == null) {
+            String path = itemPath + ".unsupported.attributes." + normalizeId(defaultSlot) + "." + normalizeId(key);
+            target.set(path, section.getValues(true));
+            note(entries, srcFile, "Items." + itemKey + ".Attributes." + key, path,
+                    section.getValues(true), "unsupported", "Item attribute modifier contains an unknown attribute, operation, or amount.", "WARN");
+            return;
+        }
+        String path = itemPath + ".attributes." + slot + "." + normalizeId(key);
+        target.set(path + ".attribute", rawAttribute == null ? attribute : rawAttribute.trim());
+        target.set(path + ".amount", rawAmount);
+        target.set(path + ".operation", rawOperation == null ? operation : rawOperation.trim());
+        target.set(path + ".slot", rawSlot == null ? slot : rawSlot.trim());
+        note(entries, srcFile, "Items." + itemKey + ".Attributes." + key, path,
+                section.getValues(true), "mapped", "Item attribute modifier copied to structured item attributes.");
+    }
+
+    private static boolean looksLikeAttributeModifier(ConfigurationSection section) {
+        return firstValue(section, "attribute", "Attribute", "amount", "Amount", "value", "Value",
+                "operation", "Operation", "slot", "Slot") != null;
+    }
+
+    private static Object firstValue(ConfigurationSection section, String... names) {
+        if (section == null) return null;
+        return ciGet(section, names);
+    }
+
+    private static String stringValue(ConfigurationSection section, String... names) {
+        Object value = firstValue(section, names);
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private static String normalizeAttributeName(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String name = raw.trim().toUpperCase(Locale.ROOT)
+                .replace("MINECRAFT:", "").replace('-', '_').replace(' ', '_');
+        name = switch (name) {
+            case "DAMAGE", "ATTACKDAMAGE", "ATTACK_DAMAGE" -> "GENERIC_ATTACK_DAMAGE";
+            case "ATTACKSPEED", "ATTACK_SPEED" -> "GENERIC_ATTACK_SPEED";
+            case "HEALTH", "MAXHEALTH", "MAX_HEALTH" -> "GENERIC_MAX_HEALTH";
+            case "MOVEMENTSPEED", "MOVEMENT_SPEED" -> "GENERIC_MOVEMENT_SPEED";
+            case "FLYINGSPEED", "FLYING_SPEED" -> "GENERIC_FLYING_SPEED";
+            case "FOLLOWRANGE", "FOLLOW_RANGE", "SIGHTRADIUS", "SIGHT_RADIUS" -> "GENERIC_FOLLOW_RANGE";
+            case "KNOCKBACKRESISTANCE", "KNOCKBACK_RESISTANCE" -> "GENERIC_KNOCKBACK_RESISTANCE";
+            case "ARMOR" -> "GENERIC_ARMOR";
+            case "ARMORTOUGHNESS", "ARMOR_TOUGHNESS" -> "GENERIC_ARMOR_TOUGHNESS";
+            case "ATTACKKNOCKBACK", "ATTACK_KNOCKBACK" -> "GENERIC_ATTACK_KNOCKBACK";
+            case "LUCK" -> "GENERIC_LUCK";
+            case "JUMPSTRENGTH", "JUMP_STRENGTH" -> "GENERIC_JUMP_STRENGTH";
+            case "SCALE" -> "GENERIC_SCALE";
+            case "STEPHEIGHT", "STEP_HEIGHT" -> "GENERIC_STEP_HEIGHT";
+            default -> name;
+        };
+        try {
+            Attribute.valueOf(name);
+            return name;
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    private static String normalizeAttributeOperation(String raw) {
+        String operation = raw == null || raw.isBlank() ? "ADD_NUMBER"
+                : raw.trim().toUpperCase(Locale.ROOT);
+        operation = switch (operation) {
+            case "ADD", "ADDITION", "0" -> "ADD_NUMBER";
+            case "MULTIPLY_BASE", "ADD_SCALAR", "1" -> "ADD_SCALAR";
+            case "MULTIPLY", "MULTIPLY_TOTAL", "MULTIPLY_SCALAR", "2" -> "MULTIPLY_SCALAR_1";
+            default -> operation;
+        };
+        return ATTRIBUTE_OPERATIONS.contains(operation) ? operation : null;
+    }
+
+    private static String normalizeAttributeSlot(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String slot = raw.trim().toLowerCase(Locale.ROOT).replace('_', '-');
+        slot = switch (slot) {
+            case "main-hand" -> "mainhand";
+            case "off-hand" -> "offhand";
+            case "helmet" -> "head";
+            case "chestplate" -> "chest";
+            case "leggings" -> "legs";
+            case "boots" -> "feet";
+            case "all" -> "any";
+            default -> slot;
+        };
+        return ATTRIBUTE_SLOTS.contains(slot) ? slot : null;
+    }
+
+    private static String normalizeEntityAttributeSlot(String raw) {
+        String slot = normalizeAttributeSlot(raw);
+        if (slot == null) return null;
+        return switch (slot) {
+            case "mainhand" -> "main-hand";
+            case "offhand" -> "off-hand";
+            default -> slot;
+        };
+    }
+
+    private static String entityAttributeSlotId(String raw) {
+        String slot = normalizeEntityAttributeSlot(raw);
+        return slot == null ? normalizeId(raw) : slot;
+    }
+
+    private static Double parseAttributeAmount(Object raw) {
+        if (raw instanceof Number number) {
+            double value = number.doubleValue();
+            return Double.isFinite(value) ? value : null;
+        }
+        if (!(raw instanceof String text) || text.isBlank()) return null;
+        String value = text.trim();
+        boolean percentage = value.endsWith("%");
+        if (percentage) value = value.substring(0, value.length() - 1).trim();
+        try {
+            double amount = Double.parseDouble(value);
+            return Double.isFinite(amount) ? (percentage ? amount / 100.0 : amount) : null;
+        } catch (NumberFormatException ignored) {
+            return null;
         }
     }
 
