@@ -1,7 +1,24 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-route-patrol-strict-20261109-r2` passed the full strict
-gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19 expected
+Latest fixture `srv-paper-heal-on-reload-strict-20261109-r1` passed the full
+strict gate on Paper 1.21.1-133: 410 registered probes, 391 passed, 19
+expected rejections, and zero failed or incomplete. The `healOnReloadOptions`
+observation proves imported `Options.HealOnReload: true` restores a damaged
+managed mob from 15.0 to 20.0 after reload, while the explicit `false` control
+stays at 15.0. Report:
+[paper-1.21.1-heal-on-reload-strict-20261109-r1.json](reports/paper-1.21.1-heal-on-reload-strict-20261109-r1.json), SHA-256:
+`ec25b44318e0ee3dd3d7002d659b2a9f2915bf0a491f17a494c44d8e9528c3e8`.
+Compressed server log SHA-256:
+`ded968354af59cab94c6ded506c7338c38fdcb210ae37197c106f54079265d31`.
+Client log archive SHA-256:
+`9f9e40323b062037dc43bf896ffef225f4fb70344c5d69b255d483944204600f`.
+Plugin SHA-256:
+`afd244a304e9744f76d5de829737a78ac0c7b35059c063ef9a012abd6f3304e7`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous fixture `srv-paper-route-patrol-strict-20261109-r2` passed the full
+strict gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19 expected
 rejections, and zero failed or incomplete. The `aiRoute` observation proves
 followpath movement, dynamic patrol mutation, configured speed and tolerance,
 endpoint reversal, and `finished=false` after the patrol loop. Report:

@@ -242,6 +242,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-pickup-disabled=true pickup-wrong-type-preserved=true pickup-invalid-preserved=true explicit-jockey-prevented=true global-jockey-allowed=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
     }
+    $fullReport.expectedProbeIds += 'healOnReloadOptions'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'healOnReloadOptions'; status = 'passed'; observations = @('heal-on-reload-options result=true mapped=true reload=true protected-option=true control-option=false protected-before=15.0 protected-after=20.0 control-before=15.0 control-after=15.0')
+    }
     $fullReport.expectedProbeIds += 'interactableClient'
     $fullReport.probes += [pscustomobject]@{
         id = 'interactableClient'; status = 'passed'; observations = @('interactable-client result=true false-event=true false-cancelled=true true-event=true true-cancelled=false interactions=2')

@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-heal-on-reload-strict-20261109-r1",
+    "reportFixtureDirectory": "srv-paper-heal-on-reload-strict-20261109-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-heal-on-reload-strict-20261109-r1.json",
+    "reportSha256": "ec25b44318e0ee3dd3d7002d659b2a9f2915bf0a491f17a494c44d8e9528c3e8",
+    "log": "tools/paper-integration/reports/paper-1.21.1-heal-on-reload-strict-20261109-r1.log.gz",
+    "logSha256": "ded968354af59cab94c6ded506c7338c38fdcb210ae37197c106f54079265d31",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-heal-on-reload-strict-20261109-r1-client-logs.tar.gz",
+    "clientLogSha256": "9f9e40323b062037dc43bf896ffef225f4fb70344c5d69b255d483944204600f",
+    "pluginSha256": "afd244a304e9744f76d5de829737a78ac0c7b35059c063ef9a012abd6f3304e7",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-route-patrol-strict-20261109-r2",
     "reportFixtureDirectory": "srv-paper-route-patrol-strict-20261109-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-route-patrol-strict-20261109-r2.json",

@@ -1,0 +1,10 @@
+name: HealOnReload Probe
+model: example/emberling
+mob:
+  heal-on-reload: true
+  despawn: NEVER
+entity:
+  type: ZOMBIE
+  health: 20
+  no-ai: true
+  silent: true

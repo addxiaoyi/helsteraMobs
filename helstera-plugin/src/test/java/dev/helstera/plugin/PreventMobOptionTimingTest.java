@@ -138,6 +138,55 @@ class PreventMobOptionTimingTest {
     }
 
     @Test
+    void healOnReloadRestoresOnlyEnabledValidLivingEntities() {
+        double[] health = {7.0};
+        double[] maxHealth = {20.0};
+        boolean[] valid = {true};
+        boolean[] dead = {false};
+        var entity = (org.bukkit.entity.LivingEntity) Proxy.newProxyInstance(
+                org.bukkit.entity.LivingEntity.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.LivingEntity.class}, (proxy, method, args) -> {
+                    return switch (method.getName()) {
+                        case "getHealth" -> health[0];
+                        case "getMaxHealth" -> maxHealth[0];
+                        case "setHealth" -> {
+                            health[0] = ((Number) args[0]).doubleValue();
+                            yield null;
+                        }
+                        case "isValid" -> valid[0];
+                        case "isDead" -> dead[0];
+                        default -> {
+                            Class<?> type = method.getReturnType();
+                            if (type == boolean.class) yield false;
+                            if (type == int.class) yield 0;
+                            if (type == long.class) yield 0L;
+                            if (type == float.class) yield 0f;
+                            if (type == double.class) yield 0d;
+                            yield null;
+                        }
+                    };
+                });
+
+        assertTrue(HelsteraPlugin.applyHealOnReloadPolicy(
+                entity, SpawnOptions.defaults().healOnReload(true)));
+        assertEquals(20.0, health[0]);
+
+        health[0] = 7.0;
+        assertFalse(HelsteraPlugin.applyHealOnReloadPolicy(entity, SpawnOptions.defaults()));
+        assertEquals(7.0, health[0]);
+
+        valid[0] = false;
+        assertFalse(HelsteraPlugin.applyHealOnReloadPolicy(
+                entity, SpawnOptions.defaults().healOnReload(true)));
+        valid[0] = true;
+        maxHealth[0] = Double.NaN;
+        assertFalse(HelsteraPlugin.applyHealOnReloadPolicy(
+                entity, SpawnOptions.defaults().healOnReload(true)));
+        assertFalse(HelsteraPlugin.applyHealOnReloadPolicy(null,
+                SpawnOptions.defaults().healOnReload(true)));
+    }
+
+    @Test
     void preventSunburnOnlyClassifiesTheBaseCombustEventAsSunlight() {
         var entity = (org.bukkit.entity.Entity) Proxy.newProxyInstance(
                 org.bukkit.entity.Entity.class.getClassLoader(),

@@ -68,6 +68,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] bee-stinger-loss-imported result=true imported=true target-entity=ZOMBIE target-ai=false target-invulnerable=false target-resistance-amplifier=3 protected-option=true control-option=false protected-attacks=1 control-attacks=1 protected-events=1 control-events=1 protected-cancelled=0 control-cancelled=0 protected-restored=true control-retained=true protected-near=true control-near=true trigger=entity-target-api event=native-ai',
+        '[Server thread/INFO]: [helsteraMobs] [自检] heal-on-reload-options result=true mapped=true reload=true protected-option=true control-option=false protected-before=15.0 protected-after=20.0 control-before=15.0 control-after=15.0',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-scheduler result=true delay=2 repeat=3 interval=2 executions=4 pre-delay-count=0',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-tree-branches result=true condition-denied=true condition-unlock=true prerequisite-blocked=true prerequisite-unlock=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] pin-targeters result=true multi-dispatch=true random-single=true move-single=true reject-multi-move=true region-set-break=true region-cap-rejected=true',
@@ -460,7 +461,7 @@ try {
             'importedSpyglassCondition', 'importedSurvivalModeCondition', 'importedVariableConditions',
             'importedFreeInventorySlotCondition',
             'importedNameCondition',
-            'importedMobDefaults',
+            'importedMobDefaults', 'healOnReloadOptions',
             'importedServerConditions',
             'importedCoordinateDifferenceCondition',
             'importedPopulationConditions',
@@ -544,6 +545,9 @@ try {
         ($report.probes | Where-Object id -eq 'fallingBlockOptionsImported').observations[0] -ceq
         'falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true') 'imported FallingBlock options require production Paper evidence'
     Assert-True (($report.probes | Where-Object id -eq 'entitySizeRange').status -eq 'passed') 'imported entity size ranges across supported families'
+    Assert-True (($report.probes | Where-Object id -eq 'healOnReloadOptions').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'healOnReloadOptions').observations[0] -match
+        '^heal-on-reload-options result=true mapped=true reload=true protected-option=true control-option=false protected-before=15(?:\.0+)? protected-after=20(?:\.0+)? control-before=15(?:\.0+)? control-after=15(?:\.0+)?$') 'HealOnReload runtime reload probe'
     Assert-True (($report.probes | Where-Object id -eq 'reinforcementsChanceOptions').status -eq 'passed') 'imported Zombie reinforcement chance and invalid-input evidence'
     Assert-True ($report.expectedProbeIds -contains 'reinforcementsChanceOptions') 'reinforcement chance probe is part of every report catalog'
     Assert-True (($report.probes | Where-Object id -eq 'ageOptions').status -eq 'passed') 'age options probe'
@@ -1071,6 +1075,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedMobDefaults'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-pickup-disabled=true pickup-wrong-type-preserved=true pickup-invalid-preserved=true explicit-jockey-prevented=true global-jockey-allowed=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'healOnReloadOptions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'healOnReloadOptions'; status = 'passed'; observations = @('heal-on-reload-options result=true mapped=true reload=true protected-option=true control-option=false protected-before=15.0 protected-after=20.0 control-before=15.0 control-after=15.0')
     }
     $fullCatalogReport.expectedProbeIds += 'interactableClient'
     $fullCatalogReport.probes += [pscustomobject]@{

@@ -1267,7 +1267,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     org.bukkit.entity.Creeper.class);
             mapOption(options, srcFile, entries, target, "PreventBlockExplosions", "mob.prevent-block-explosions");
             mapOption(options, srcFile, entries, target, "PreventEntityExplosions", "mob.prevent-entity-explosions");
-            mapOption(options, srcFile, entries, target, "HealOnReload", "mob.heal-on-reload");
+            mapBooleanOption(options, srcFile, entries, target, "HealOnReload", "mob.heal-on-reload");
             mapOption(options, srcFile, entries, target, "DigOutOfGround", "mob.dig-out-of-ground");
             mapOption(options, srcFile, entries, target, "PreventMobKillDrops", "mob.prevent-mob-kill-drops");
             mapEntityScopedOption(options, srcFile, entries, target, "HorseColor",
@@ -4558,6 +4558,24 @@ public final class MythicMobsImporter implements MigrationImporter {
                 v instanceof ConfigurationSection ? "该 Options 项是嵌套节，helstera 侧结构不同，需人工确认" : null);
     }
 
+    private void mapBooleanOption(ConfigurationSection options, String srcFile,
+                                  List<Map<String, Object>> entries, YamlConfiguration target,
+                                  String optionName, String path) {
+        Object raw = ciGet(options, optionName);
+        if (raw == null) return;
+        Boolean value = parseBooleanOption(raw);
+        if (value == null) {
+            String unsupportedPath = "mob.unsupported.Options." + optionName;
+            target.set(unsupportedPath, raw);
+            note(entries, srcFile, "Options." + optionName, unsupportedPath, raw,
+                    "unsupported", "Invalid boolean option value was preserved instead of being applied.", "WARN");
+            return;
+        }
+        target.set(path, value);
+        note(entries, srcFile, "Options." + optionName, path, value, "mapped",
+                "Boolean Mythic option was normalized into the runtime boolean field.");
+    }
+
     private void mapEntityScopedOption(ConfigurationSection options, String srcFile,
                                        List<Map<String, Object>> entries, YamlConfiguration target,
                                        String optionName, String path, String normalizedType,
@@ -4608,11 +4626,16 @@ public final class MythicMobsImporter implements MigrationImporter {
     }
 
     private static boolean isBooleanOptionValue(Object raw) {
-        if (raw instanceof Boolean) return true;
-        if (!(raw instanceof String text)) return false;
+        return parseBooleanOption(raw) != null;
+    }
+
+    private static Boolean parseBooleanOption(Object raw) {
+        if (raw instanceof Boolean value) return value;
+        if (!(raw instanceof String text)) return null;
         return switch (text.trim().toLowerCase(Locale.ROOT)) {
-            case "true", "false", "yes", "no", "1", "0" -> true;
-            default -> false;
+            case "true", "yes", "1" -> true;
+            case "false", "no", "0" -> false;
+            default -> null;
         };
     }
 

@@ -620,6 +620,11 @@
       "requiredObservationPattern": "entity-size-range result=true samples=64 configured=2\\.\\.5 slime=[2-5]\\.\\.[2-5] magma-cube=[2-5]\\.\\.[2-5] phantom=[2-5]\\.\\.[2-5] imported=true"
     },
     {
+      "id": "healOnReloadOptions",
+      "status": "passed",
+      "requiredObservationPattern": "^heal-on-reload-options result=true mapped=true reload=true protected-option=true control-option=false protected-before=15(?:\\.0+)? protected-after=20(?:\\.0+)? control-before=15(?:\\.0+)? control-after=15(?:\\.0+)?$"
+    },
+    {
       "id": "reinforcementsChanceOptions",
       "status": "passed",
       "requiredObservation": "reinforcements-chance-options result=true imported=true applied=true base=0.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true"
