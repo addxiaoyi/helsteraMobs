@@ -38,22 +38,29 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-heal-on-reload-strict-20261109-r1` passes all 410
+Latest strict fixture `srv-paper-skeleton-conversion-strict-20261109-r3` passes all 411
+probes (392 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `mobOptionsSkeletonConversion` probe verifies an
+imported Skeleton with `PreventConversion: true` cancels native `FROZEN`
+conversion while an inverse control becomes a Stray. Report:
+`reports/paper-1.21.1-skeleton-conversion-strict-20261109-r3.json`;
+server log:
+`reports/paper-1.21.1-skeleton-conversion-strict-20261109-r3.log.gz`;
+client logs:
+`reports/paper-1.21.1-skeleton-conversion-strict-20261109-r3-client-logs.tar.gz`.
+Report SHA-256: `e05d3572b7e677920c6a96ae2205980110966f3135e0f887e11a4bc965202481`;
+server log SHA-256: `99268a4cefaf8ce85d657978d39a8aa7f6e9436c70dd6f006f254c1fa49b8aa9`;
+client log SHA-256: `d776bea38518b3b622511dbcbdae0ef2bd59d6f354f582c55d1b11aa44d7aac5`;
+plugin SHA-256: `ed3b871cad80efe4d6ff75747d11f4672f4d05cc4bdbda6abca2570a49b31737`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-heal-on-reload-strict-20261109-r1` passes all 410
 probes (391 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. Its `healOnReloadOptions` probe verifies imported
 `Options.HealOnReload: true` restores a damaged managed mob to max health after
 reload, while the explicit `false` control remains damaged. Report:
-`reports/paper-1.21.1-heal-on-reload-strict-20261109-r1.json`;
-server log:
-`reports/paper-1.21.1-heal-on-reload-strict-20261109-r1.log.gz`;
-client logs:
-`reports/paper-1.21.1-heal-on-reload-strict-20261109-r1-client-logs.tar.gz`.
-Report SHA-256: `ec25b44318e0ee3dd3d7002d659b2a9f2915bf0a491f17a494c44d8e9528c3e8`;
-server log SHA-256: `ded968354af59cab94c6ded506c7338c38fdcb210ae37197c106f54079265d31`;
-client log SHA-256: `9f9e40323b062037dc43bf896ffef225f4fb70344c5d69b255d483944204600f`;
-plugin SHA-256: `afd244a304e9744f76d5de829737a78ac0c7b35059c063ef9a012abd6f3304e7`.
-Archived logs redact web token query values; the source fixture retains the
-original run logs.
+`reports/paper-1.21.1-heal-on-reload-strict-20261109-r1.json`.
 
 Previous strict fixture `srv-paper-route-patrol-strict-20261109-r2` passes all
 409 probes (390 passed, 19 expected rejections, zero failed or incomplete) on

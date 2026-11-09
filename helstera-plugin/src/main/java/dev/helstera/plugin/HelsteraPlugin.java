@@ -15349,6 +15349,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             Location location = world.getSpawnLocation().clone().add(0, 3, 0);
             runNaturalCreeperFuseProbe(world, location);
             runMobOptionTimingProbe(world, location);
+            runSkeletonConversionTimingProbe(world, location);
             getServer().getScheduler().runTaskLater(this,
                     () -> runPreventSunburnNaturalProbe(world, location), 200L);
             runNaturalKillTriggerProbe(world, location);
@@ -18236,6 +18237,189 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     /**
+     * Verifies the native Skeleton-to-Stray conversion boundary with an inverse
+     * control. The protected Skeleton is configured with the imported
+     * FROZEN-only transformation policy; both entities otherwise use the same
+     * Paper conversion timer and powder-snow fixture.
+     */
+    private void runSkeletonConversionTimingProbe(org.bukkit.World world, Location origin) {
+        if (world == null || origin == null || instances() == null) return;
+        org.bukkit.entity.Skeleton protectedSkeleton = null;
+        org.bukkit.entity.Skeleton controlSkeleton = null;
+        dev.helstera.api.instance.ModelInstance protectedInstance = null;
+        dev.helstera.api.instance.ModelInstance controlInstance = null;
+        org.bukkit.event.Listener conversionListener = null;
+        var protectedPowder = new java.util.ArrayList<org.bukkit.block.BlockState>();
+        var controlPowder = new java.util.ArrayList<org.bukkit.block.BlockState>();
+        var transformedIds = new java.util.HashSet<java.util.UUID>();
+        try {
+            Location protectedCenter = origin.clone().add(12, 0, 16);
+            Location controlCenter = origin.clone().add(20, 0, 16);
+            protectedCenter.setX(Math.floor(protectedCenter.getX()) + 0.5);
+            protectedCenter.setZ(Math.floor(protectedCenter.getZ()) + 0.5);
+            controlCenter.setX(Math.floor(controlCenter.getX()) + 0.5);
+            controlCenter.setZ(Math.floor(controlCenter.getZ()) + 0.5);
+            world.getChunkAt(protectedCenter).load();
+            world.getChunkAt(controlCenter).load();
+
+            protectedSkeleton = world.spawn(protectedCenter, org.bukkit.entity.Skeleton.class);
+            controlSkeleton = world.spawn(controlCenter, org.bukkit.entity.Skeleton.class);
+            for (org.bukkit.entity.Skeleton skeleton : List.of(protectedSkeleton, controlSkeleton)) {
+                skeleton.setAI(true);
+                skeleton.setAware(true);
+                skeleton.setGravity(false);
+                skeleton.setInvulnerable(true);
+                skeleton.setSilent(true);
+                skeleton.setPersistent(true);
+                skeleton.setRemoveWhenFarAway(false);
+            }
+            fillProbePowderSnow(protectedCenter, protectedPowder);
+            fillProbePowderSnow(controlCenter, controlPowder);
+            protectedSkeleton.teleport(protectedCenter);
+            controlSkeleton.teleport(controlCenter);
+            protectedInstance = instances().bind("example/emberling", protectedSkeleton,
+                    dev.helstera.api.instance.SpawnOptions.defaults()
+                            .preventTransformationReasons(List.of("FROZEN")));
+            controlInstance = instances().bind("example/emberling", controlSkeleton,
+                    dev.helstera.api.instance.SpawnOptions.defaults());
+
+            final org.bukkit.entity.Skeleton checkedProtected = protectedSkeleton;
+            final org.bukkit.entity.Skeleton checkedControl = controlSkeleton;
+            final Location checkedProtectedCenter = protectedCenter.clone();
+            final Location checkedControlCenter = controlCenter.clone();
+            final dev.helstera.api.instance.ModelInstance checkedProtectedInstance = protectedInstance;
+            final dev.helstera.api.instance.ModelInstance checkedControlInstance = controlInstance;
+            var protectedEvents = new java.util.concurrent.atomic.AtomicInteger();
+            var controlEvents = new java.util.concurrent.atomic.AtomicInteger();
+            var protectedCancelled = new java.util.concurrent.atomic.AtomicBoolean();
+            var controlCancelled = new java.util.concurrent.atomic.AtomicBoolean();
+            var controlStrayObserved = new java.util.concurrent.atomic.AtomicBoolean();
+            var protectedConversionArmed = new java.util.concurrent.atomic.AtomicBoolean();
+            var controlConversionArmed = new java.util.concurrent.atomic.AtomicBoolean();
+            conversionListener = new org.bukkit.event.Listener() {
+                @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+                public void onSkeletonTransform(org.bukkit.event.entity.EntityTransformEvent event) {
+                    if (event.getTransformReason()
+                            != org.bukkit.event.entity.EntityTransformEvent.TransformReason.FROZEN) return;
+                    if (event.getEntity().getUniqueId().equals(checkedProtected.getUniqueId())) {
+                        protectedEvents.incrementAndGet();
+                        protectedCancelled.set(event.isCancelled());
+                    }
+                    if (event.getEntity().getUniqueId().equals(checkedControl.getUniqueId())) {
+                        controlEvents.incrementAndGet();
+                        controlCancelled.set(event.isCancelled());
+                        if (event.getTransformedEntities().stream()
+                                .anyMatch(entity -> entity.getType()
+                                        == org.bukkit.entity.EntityType.STRAY)) {
+                            controlStrayObserved.set(true);
+                        }
+                    }
+                    for (org.bukkit.entity.Entity entity : event.getTransformedEntities()) {
+                        transformedIds.add(entity.getUniqueId());
+                    }
+                }
+            };
+            getServer().getPluginManager().registerEvents(conversionListener, this);
+
+            final org.bukkit.event.Listener checkedListener = conversionListener;
+            final var task = new org.bukkit.scheduler.BukkitTask[1];
+            final var cleaned = new java.util.concurrent.atomic.AtomicBoolean();
+            java.util.function.BooleanSupplier cleanup = () -> {
+                if (!cleaned.compareAndSet(false, true)) return true;
+                boolean restored = true;
+                org.bukkit.event.HandlerList.unregisterAll(checkedListener);
+                if (checkedProtectedInstance != null && instances() != null) {
+                    instances().despawn(checkedProtectedInstance.instanceId());
+                }
+                if (checkedControlInstance != null && instances() != null) {
+                    instances().despawn(checkedControlInstance.instanceId());
+                }
+                for (var state : protectedPowder) restored = state.update(true, false) && restored;
+                for (var state : controlPowder) restored = state.update(true, false) && restored;
+                for (org.bukkit.entity.Entity entity : world.getEntities()) {
+                    if (entity.getUniqueId().equals(checkedProtected.getUniqueId())
+                            || entity.getUniqueId().equals(checkedControl.getUniqueId())
+                            || transformedIds.contains(entity.getUniqueId())) {
+                        entity.remove();
+                    }
+                }
+                if (checkedProtected.isValid()) checkedProtected.remove();
+                if (checkedControl.isValid()) checkedControl.remove();
+                return restored;
+            };
+            final var ticks = new java.util.concurrent.atomic.AtomicInteger();
+            task[0] = getServer().getScheduler().runTaskTimer(this, () -> {
+                try {
+                    int elapsedTicks = ticks.incrementAndGet();
+                    if (checkedProtected.isValid() && !checkedProtected.isDead()) {
+                        checkedProtected.teleport(checkedProtectedCenter);
+                        checkedProtected.setVelocity(new org.bukkit.util.Vector());
+                    }
+                    if (checkedControl.isValid() && !checkedControl.isDead()) {
+                        checkedControl.teleport(checkedControlCenter);
+                        checkedControl.setVelocity(new org.bukkit.util.Vector());
+                    }
+                    // Paper starts the native Skeleton conversion only after
+                    // 140 ticks inside Powder Snow. Shorten that native timer
+                    // after it starts so the probe remains bounded.
+                    if (checkedProtected.isConverting()
+                            && protectedConversionArmed.compareAndSet(false, true)) {
+                        checkedProtected.setConversionTime(20);
+                    }
+                    if (checkedControl.isConverting()
+                            && controlConversionArmed.compareAndSet(false, true)) {
+                        checkedControl.setConversionTime(20);
+                    }
+                    boolean protectedStillSkeleton = checkedProtected.isValid()
+                            && !checkedProtected.isDead()
+                            && checkedProtected.getType() == org.bukkit.entity.EntityType.SKELETON;
+                    boolean controlStray = controlStrayObserved.get();
+                    boolean protectedBlocked = protectedEvents.get() > 0
+                            && protectedCancelled.get() && protectedStillSkeleton;
+                    boolean controlConverted = controlEvents.get() > 0
+                            && !controlCancelled.get() && controlStray;
+                    boolean completed = protectedBlocked && controlConverted;
+                    if (completed || elapsedTicks >= 260) {
+                        if (task[0] != null) task[0].cancel();
+                        boolean restored = cleanup.getAsBoolean();
+                        boolean passed = completed && restored;
+                        getLogger().info("mob-options-skeleton-conversion protected-events="
+                                + protectedEvents.get() + " control-events=" + controlEvents.get()
+                                + " protected-cancelled=" + protectedCancelled.get()
+                                + " control-cancelled=" + controlCancelled.get()
+                                + " protected-type=" + checkedProtected.getType()
+                                + " protected-valid=" + protectedStillSkeleton
+                                + " control-stray=" + controlStray
+                                + " control-converted=" + controlConverted
+                                + " elapsed-ticks=" + elapsedTicks
+                                + " restored=" + restored + " passed=" + passed);
+                    }
+                } catch (Throwable failure) {
+                    if (task[0] != null) task[0].cancel();
+                    boolean restored = cleanup.getAsBoolean();
+                    getLogger().warning("mob-options-skeleton-conversion error="
+                            + failure.getClass().getSimpleName() + " restored=" + restored
+                            + " passed=false");
+                }
+            }, 1L, 1L);
+        } catch (Throwable failure) {
+            if (conversionListener != null) org.bukkit.event.HandlerList.unregisterAll(conversionListener);
+            if (protectedInstance != null && instances() != null) {
+                instances().despawn(protectedInstance.instanceId());
+            }
+            if (controlInstance != null && instances() != null) {
+                instances().despawn(controlInstance.instanceId());
+            }
+            for (var state : protectedPowder) state.update(true, false);
+            for (var state : controlPowder) state.update(true, false);
+            if (protectedSkeleton != null && protectedSkeleton.isValid()) protectedSkeleton.remove();
+            if (controlSkeleton != null && controlSkeleton.isValid()) controlSkeleton.remove();
+            getLogger().warning("mob-options-skeleton-conversion setup-error="
+                    + failure.getClass().getSimpleName() + " passed=false");
+        }
+    }
+
+    /**
      * Enters Paper's native Zombie NATURAL spawn finalization for the strict
      * self-test. The plugin compiles against paper-api, so this remains an
      * isolated evidence adapter rather than a runtime NMS dependency.
@@ -18346,6 +18530,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 for (int dz = -1; dz <= 1; dz++) {
                     center.clone().add(dx, dy, dz).getBlock()
                             .setType(org.bukkit.Material.WATER, false);
+                }
+            }
+        }
+    }
+
+    private static void fillProbePowderSnow(Location center,
+                                             java.util.List<org.bukkit.block.BlockState> states) {
+        if (center == null || center.getWorld() == null) return;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = 0; dy <= 1; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    var block = center.clone().add(dx, dy, dz).getBlock();
+                    if (states != null) states.add(block.getState());
+                    block.setType(org.bukkit.Material.POWDER_SNOW, false);
                 }
             }
         }

@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-skeleton-conversion-strict-20261109-r3",
+    "reportFixtureDirectory": "srv-paper-skeleton-conversion-strict-20261109-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-skeleton-conversion-strict-20261109-r3.json",
+    "reportSha256": "e05d3572b7e677920c6a96ae2205980110966f3135e0f887e11a4bc965202481",
+    "log": "tools/paper-integration/reports/paper-1.21.1-skeleton-conversion-strict-20261109-r3.log.gz",
+    "logSha256": "99268a4cefaf8ce85d657978d39a8aa7f6e9436c70dd6f006f254c1fa49b8aa9",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-skeleton-conversion-strict-20261109-r3-client-logs.tar.gz",
+    "clientLogSha256": "d776bea38518b3b622511dbcbdae0ef2bd59d6f354f582c55d1b11aa44d7aac5",
+    "pluginSha256": "ed3b871cad80efe4d6ff75747d11f4672f4d05cc4bdbda6abca2570a49b31737",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-heal-on-reload-strict-20261109-r1",
     "reportFixtureDirectory": "srv-paper-heal-on-reload-strict-20261109-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-heal-on-reload-strict-20261109-r1.json",

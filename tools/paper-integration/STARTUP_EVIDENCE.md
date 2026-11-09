@@ -1,21 +1,25 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-heal-on-reload-strict-20261109-r1` passed the full
-strict gate on Paper 1.21.1-133: 410 registered probes, 391 passed, 19
-expected rejections, and zero failed or incomplete. The `healOnReloadOptions`
-observation proves imported `Options.HealOnReload: true` restores a damaged
-managed mob from 15.0 to 20.0 after reload, while the explicit `false` control
-stays at 15.0. Report:
-[paper-1.21.1-heal-on-reload-strict-20261109-r1.json](reports/paper-1.21.1-heal-on-reload-strict-20261109-r1.json), SHA-256:
-`ec25b44318e0ee3dd3d7002d659b2a9f2915bf0a491f17a494c44d8e9528c3e8`.
+Latest fixture `srv-paper-skeleton-conversion-strict-20261109-r3` passed the full
+strict gate on Paper 1.21.1-133: 411 registered probes, 392 passed, 19
+expected rejections, and zero failed or incomplete. The
+`mobOptionsSkeletonConversion` observation proves an imported Skeleton with
+`PreventConversion: true` cancels native `FROZEN` conversion while an inverse
+control becomes a Stray. Report:
+[paper-1.21.1-skeleton-conversion-strict-20261109-r3.json](reports/paper-1.21.1-skeleton-conversion-strict-20261109-r3.json), SHA-256:
+`e05d3572b7e677920c6a96ae2205980110966f3135e0f887e11a4bc965202481`.
 Compressed server log SHA-256:
-`ded968354af59cab94c6ded506c7338c38fdcb210ae37197c106f54079265d31`.
+`99268a4cefaf8ce85d657978d39a8aa7f6e9436c70dd6f006f254c1fa49b8aa9`.
 Client log archive SHA-256:
-`9f9e40323b062037dc43bf896ffef225f4fb70344c5d69b255d483944204600f`.
+`d776bea38518b3b622511dbcbdae0ef2bd59d6f354f582c55d1b11aa44d7aac5`.
 Plugin SHA-256:
-`afd244a304e9744f76d5de829737a78ac0c7b35059c063ef9a012abd6f3304e7`.
+`ed3b871cad80efe4d6ff75747d11f4672f4d05cc4bdbda6abca2570a49b31737`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
+
+Previous fixture `srv-paper-heal-on-reload-strict-20261109-r1` passed the full
+strict gate with 410 registered probes; its report and hashes remain archived
+below.
 
 Previous fixture `srv-paper-route-patrol-strict-20261109-r2` passed the full
 strict gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19 expected

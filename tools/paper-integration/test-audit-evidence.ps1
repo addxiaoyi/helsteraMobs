@@ -52,6 +52,10 @@ try {
     $naturalMobOptions[0].observations = @($naturalMobOptions[0].observations | ForEach-Object {
         $_ -replace 'bee-stinger=true ', 'bee-stinger=true bee-event=synthetic '
     })
+    $fullReport.expectedProbeIds += 'mobOptionsSkeletonConversion'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mobOptionsSkeletonConversion'; status = 'passed'; observations = @('mob-options-skeleton-conversion protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=SKELETON protected-valid=true control-stray=true control-converted=true elapsed-ticks=21 restored=true passed=true')
+    }
     $entityFlagOptionsProbe = @($fullReport.probes | Where-Object id -eq 'entityFlagOptions')
     if ($entityFlagOptionsProbe.Count -ne 1) { throw 'Synthetic release report must contain entityFlagOptions.' }
     $entityFlagOptionsProbe[0].observations = @('entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true')
