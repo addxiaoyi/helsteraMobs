@@ -1,22 +1,27 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-item-metadata-strict-20261108-r1` passed the full
-strict gate on Paper 1.21.1-133: 405 registered probes, 386 passed, 19
+Latest fixture `srv-paper-item-similarity-import-strict-20261109-r2` passed the
+full strict gate on Paper 1.21.1-133: 406 registered probes, 387 passed, 19
 expected rejections, and zero failed or incomplete. It verifies imported
-ItemStack display name, item name, lore, enchantments, custom model data,
-flags, restrictions, PotionMeta, SkullMeta, and invalid-value preservation.
-The same catalog verifies legacy numeric `Items` and Mob `Equipment` material,
-durability, PotionType, BlockData, and amount paths. Report:
-[paper-1.21.1-item-metadata-strict-20261108-r1.json](reports/paper-1.21.1-item-metadata-strict-20261108-r1.json), SHA-256:
-`54f4609bc9ccdfcf9a1f267e5734b1e4cbab728a4e0d3ea6e83961076fe56693`.
+`EntityItemIsSimilar` and `ItemIsSimilar` aliases, strict positive and negative
+matching, and invalid-argument preservation through the production importer and
+`SkillService`. The same catalog reruns imported `HasFreeInventorySlot` /
+`HasFreeSlot` with full-inventory rejection and invalid-argument preservation.
+Report:
+[paper-1.21.1-item-similarity-import-strict-20261109-r2.json](reports/paper-1.21.1-item-similarity-import-strict-20261109-r2.json), SHA-256:
+`a3d25e88e567aa9a26e21000acaf2a8a938a856d9e6b8c04a9f3446410045712`.
 Compressed server log SHA-256:
-`12c72f52cf376d03031caaf3b895ca3e35d5a556174e55d92bcd589dd14d7501`.
+`1624548a3f2e59799e0f54623791bb208eda96d680f52c38cb2dfee634aa1262`.
 Client log archive SHA-256:
-`c2bc3d41a9d55b8ca8b17ca2daea780b6334106d04fb93e576c3f60959e7c33c`.
+`1dd4421ac3ee10e8725ee0cfc72b65591ddd67b8d056233ccabb1cf5d6a3b820`.
 Plugin SHA-256:
-`1bb9f52a2b2352c1a7a598f1f6293b95ff2e9f47587fa28478f8cc2becba1072`.
+`f1d5eaaa9c7ddaa874748160fde8f1525981352d1c25071ca97271c348935d90`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
+
+Previous strict fixture `srv-paper-item-metadata-strict-20261108-r1` verifies
+imported ItemStack metadata and legacy numeric item data and remains archived as
+historical evidence.
 
 Previous strict fixture `srv-paper-legacy-numeric-items-strict-20261108-r1`
 isolates the legacy numeric Item and Equipment paths and remains archived as
@@ -57,7 +62,7 @@ Client log archive SHA-256:
 `5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`.
 Plugin SHA-256:
 `d824761cdb575b50c5061706c7fde362b80f521aa9d4c46d68c296b7c64c343f`.
-Latest strict report has 405 probes, zero incomplete. Archived logs redact web
+Latest strict report has 406 probes, zero incomplete. Archived logs redact web
 token query values; the source fixture retains the original run logs.
 
 Previous fixture `srv-paper-context-relations-strict-20261108-r2` passed
@@ -439,8 +444,9 @@ full strict gate on Paper 1.21.1-133: 368 registered probes, 349 passed, 19
 expected rejections, and zero incomplete. `importedFreeInventorySlotCondition`
 runs `HasFreeInventorySlot` and `HasFreeSlot` through the Mythic importer and
 `SkillService`; it verifies empty/full inventory results on a real player and
-preserves invalid arguments. Its report and compressed logs remain listed in
-`release-evidence.json`.
+preserves invalid arguments. The latest strict item-similarity fixture reruns
+both aliases through the current binding path. Its report and compressed logs
+remain listed in `release-evidence.json`.
 
 Previous fixture `srv-paper-variable-conditions-strict-20261106-r1` passed the
 full strict gate on Paper 1.21.1-133: 367 registered probes, 348 passed, 19
@@ -2733,8 +2739,10 @@ pending.
 
 The same dropped STONE Item probe compares resolved STONE and DIAMOND templates
 through `EntityItemIsSimilar`. Exploratory fixture r2 records
-`entityItemSimilarCondition=passed`; strict Paper 1.21.1 evidence remains
-pending.
+`entityItemSimilarCondition=passed`; strict fixture
+`srv-paper-item-similarity-import-strict-20261109-r2` records the imported
+primary and alias mappings, positive/negative behavior, and invalid-argument
+preservation in `importedItemSimilarityConditions`.
 
 The same fixture records independent `itemSimilarCondition=passed` and
 `targetsCondition=passed` for the live player's SHIELD slot and inherited
@@ -2862,7 +2870,9 @@ for a real online player's temporary main-hand Shield and rejects an invalid
 numeric inventory slot. It records `targets-condition=true` for the inherited
 one-target skill tree and the `@targets` selection path. Exploratory fixture r2
 records the independent `itemSimilarCondition=passed` and
-`targetsCondition=passed` probes; strict Paper 1.21.1 evidence remains pending.
+`targetsCondition=passed` probes; strict fixture
+`srv-paper-item-similarity-import-strict-20261109-r2` records the imported
+`ItemIsSimilar` aliases and invalid-argument preservation.
 
 The condition catalog also records `bounds-condition=true` after checking a
 real target inside an inclusive Cuboid and sphere and outside a second Cuboid.

@@ -2878,6 +2878,89 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    private boolean runImportedItemSimilarityProbe(SkillService skills,
+            BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext triggerItemContext,
+            dev.helstera.api.behavior.BehaviorContext inventoryContext,
+            Player player) {
+        var entityPrimary = dev.helstera.migration.importer.MmConditions.translate(
+                "?entityItemIsSimilar{i=STONE}");
+        var entityAlias = dev.helstera.migration.importer.MmConditions.translate(
+                "?entityItemIsSimilar{m=STONE}");
+        var entityNegative = dev.helstera.migration.importer.MmConditions.translate(
+                "?entityItemIsSimilar{item=DIAMOND}");
+        var entityInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                "?entityItemIsSimilar{unknown=STONE}");
+        boolean entityPrimaryMapped = entityPrimary.translated()
+                && "entity-item-is-similar STONE".equals(entityPrimary.condition());
+        boolean entityAliasMapped = entityAlias.translated()
+                && "entity-item-is-similar STONE".equals(entityAlias.condition());
+        boolean entityNegativeMapped = entityNegative.translated()
+                && "entity-item-is-similar DIAMOND".equals(entityNegative.condition());
+        String entityPrimaryKey = entityPrimaryMapped ? skills.bindCondition(entityPrimary.condition()) : null;
+        String entityAliasKey = entityAliasMapped ? skills.bindCondition(entityAlias.condition()) : null;
+        String entityNegativeKey = entityNegativeMapped ? skills.bindCondition(entityNegative.condition()) : null;
+        boolean entityPositive = entityPrimaryKey != null
+                && behaviors.testCondition(entityPrimaryKey, triggerItemContext);
+        boolean entityAliasPositive = entityAliasKey != null
+                && behaviors.testCondition(entityAliasKey, triggerItemContext);
+        boolean entityNegativeResult = entityNegativeKey != null
+                && !behaviors.testCondition(entityNegativeKey, triggerItemContext);
+        boolean entityInvalidPreserved = !entityInvalid.translated()
+                && "?entityItemIsSimilar{unknown=STONE}".equals(entityInvalid.condition());
+
+        var inventoryPrimary = dev.helstera.migration.importer.MmConditions.translate(
+                "?itemIsSimilar{i=SHIELD;slot=HAND}");
+        var inventoryAlias = dev.helstera.migration.importer.MmConditions.translate(
+                "?similarTo{item=SHIELD;s=HAND}");
+        var inventoryNegative = dev.helstera.migration.importer.MmConditions.translate(
+                "?itemIsSimilar{i=SHIELD;slot=OFF_HAND}");
+        var inventoryInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                "?itemIsSimilar{i=SHIELD;unknown=true}");
+        boolean inventoryPrimaryMapped = inventoryPrimary.translated()
+                && "item-is-similar SHIELD HAND".equals(inventoryPrimary.condition());
+        boolean inventoryAliasMapped = inventoryAlias.translated()
+                && "item-is-similar SHIELD HAND".equals(inventoryAlias.condition());
+        boolean inventoryNegativeMapped = inventoryNegative.translated()
+                && "item-is-similar SHIELD OFF_HAND".equals(inventoryNegative.condition());
+        String inventoryPrimaryKey = inventoryPrimaryMapped ? skills.bindCondition(inventoryPrimary.condition()) : null;
+        String inventoryAliasKey = inventoryAliasMapped ? skills.bindCondition(inventoryAlias.condition()) : null;
+        String inventoryNegativeKey = inventoryNegativeMapped ? skills.bindCondition(inventoryNegative.condition()) : null;
+        boolean inventoryPositive;
+        boolean inventoryAliasPositive;
+        boolean inventoryNegativeResult;
+        org.bukkit.inventory.ItemStack previousOffHand = player.getInventory().getItemInOffHand();
+        if (previousOffHand != null) previousOffHand = previousOffHand.clone();
+        try {
+            player.getInventory().setItemInOffHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.AIR));
+            inventoryPositive = inventoryPrimaryKey != null
+                    && behaviors.testCondition(inventoryPrimaryKey, inventoryContext);
+            inventoryAliasPositive = inventoryAliasKey != null
+                    && behaviors.testCondition(inventoryAliasKey, inventoryContext);
+            inventoryNegativeResult = inventoryNegativeKey != null
+                    && !behaviors.testCondition(inventoryNegativeKey, inventoryContext);
+        } finally {
+            player.getInventory().setItemInOffHand(previousOffHand);
+        }
+        boolean inventoryInvalidPreserved = !inventoryInvalid.translated()
+                && "?itemIsSimilar{i=SHIELD;unknown=true}".equals(inventoryInvalid.condition());
+        boolean result = entityPrimaryMapped && entityAliasMapped && entityNegativeMapped
+                && entityPositive && entityAliasPositive && entityNegativeResult && entityInvalidPreserved
+                && inventoryPrimaryMapped && inventoryAliasMapped && inventoryNegativeMapped
+                && inventoryPositive && inventoryAliasPositive && inventoryNegativeResult
+                && inventoryInvalidPreserved;
+        getLogger().info("[自检] imported-item-similarity-conditions entity-primary-mapped="
+                + entityPrimaryMapped + " entity-alias-mapped=" + entityAliasMapped
+                + " entity-positive=" + entityPositive + " entity-alias-positive=" + entityAliasPositive
+                + " entity-negative=" + entityNegativeResult + " entity-invalid-preserved="
+                + entityInvalidPreserved + " inventory-primary-mapped=" + inventoryPrimaryMapped
+                + " inventory-alias-mapped=" + inventoryAliasMapped + " inventory-positive="
+                + inventoryPositive + " inventory-alias-positive=" + inventoryAliasPositive
+                + " inventory-negative=" + inventoryNegativeResult + " inventory-invalid-preserved="
+                + inventoryInvalidPreserved + " result=" + result);
+        return result;
+    }
+
     private void maintainBeeProbeTarget(org.bukkit.entity.Bee bee,
             org.bukkit.entity.LivingEntity target, double horizontalOffset) {
         var targetLocation = target.getLocation();
@@ -4451,7 +4534,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean triggerItemTypeCondition = false;
             boolean entityItemTypeCondition = false;
             boolean entityItemSimilarCondition = false;
-                boolean itemSimilarCondition = false;
+            boolean importedItemSimilarityConditions = false;
+            boolean itemSimilarCondition = false;
                 boolean targetsCondition = false;
             boolean itemTypeCondition = false;
             boolean structureCondition = false;
@@ -9538,6 +9622,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean itemSimilarNegative = !behaviors.testCondition(
                             skills.bindCondition("item-is-similar SHIELD 99"), stateContext);
                     itemSimilarCondition = itemSimilarPositive && itemSimilarNegative;
+                    importedItemSimilarityConditions = runImportedItemSimilarityProbe(
+                            skills, behaviors, triggerItemContext, stateContext, permissionProbe);
                     boolean hasItemBefore = behaviors.testCondition(
                             skills.bindCondition("has-item SHIELD >=1"), stateContext);
                     permissionProbe.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(

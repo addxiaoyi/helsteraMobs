@@ -59,6 +59,12 @@ public final class MmConditions {
     private static final Map<String, String> ENTITY_ITEM_TYPE_ARGUMENTS = Map.of(
             "material", "types", "mat", "types", "m", "types", "type", "types",
             "types", "types", "t", "types");
+    private static final Map<String, String> ENTITY_ITEM_SIMILAR_ARGUMENTS = Map.of(
+            "item", "item", "i", "item", "material", "item", "m", "item",
+            "mm", "item", "mythicitem", "item");
+    private static final Map<String, String> ITEM_SIMILAR_ARGUMENTS = Map.of(
+            "item", "item", "i", "item", "material", "item", "m", "item",
+            "mm", "item", "mythicitem", "item", "slot", "slot", "s", "slot");
     private static final Map<String, String> TRIGGER_BLOCK_TYPE_ARGUMENTS = Map.of(
             "types", "types", "type", "types", "t", "types", "material", "types",
             "mat", "types", "m", "types", "block", "types", "b", "types");
@@ -1143,23 +1149,15 @@ public final class MmConditions {
                     + types.toUpperCase(Locale.ROOT), true);
         }
         if ("entityitemissimilar".equals(name)) {
-            String item = firstArgument(body, "item", "i", "material", "m", "mm", "mythicitem");
-            if (item == null) item = normalizeScalar(body);
+            Map<String, String> arguments = strictValueArguments(body, ENTITY_ITEM_SIMILAR_ARGUMENTS, "item");
+            if (arguments == null) return new Mapped(s, false);
+            String item = arguments.get("item");
             return item == null || item.isBlank() ? new Mapped(s, false)
                     : new Mapped("entity-item-is-similar " + item, true);
         }
         if ("itemissimilar".equals(name) || "issimilar".equals(name)
                 || "similarto".equals(name)) {
-            String item = firstArgument(body, "item", "i", "material", "m", "mm", "mythicitem");
-            boolean keyedItem = keyedArgument(body, "item", "i", "material", "m", "mm", "mythicitem") != null;
-            if (item == null) item = positionalArgument(body, 0);
-            if (item == null || item.isBlank()) item = "DIRT";
-            String slot = keyedArgument(body, "slot", "s");
-            if (slot == null) slot = positionalArgument(body, keyedItem ? 0 : 1);
-            if (slot == null || slot.isBlank()) slot = "HAND";
-            return validInventorySlot(slot)
-                    ? new Mapped("item-is-similar " + item + " " + slot, true)
-                    : new Mapped(s, false);
+            return itemSimilarityCondition(body, s);
         }
         if ("itemrecharging".equals(name) || "recharging".equals(name)) {
             return new Mapped("item-recharging", true);
@@ -1715,6 +1713,41 @@ public final class MmConditions {
             if (!value.isBlank()) args.add(value);
         }
         return String.join(" ", args);
+    }
+
+    private static Mapped itemSimilarityCondition(String body, String original) {
+        String item = null;
+        String slot = null;
+        if (body != null && !body.isBlank()) {
+            for (String rawPart : body.split("[;,]", -1)) {
+                String part = rawPart.trim();
+                if (part.isEmpty()) return new Mapped(original, false);
+                int equals = part.indexOf('=');
+                if (equals < 0) {
+                    if (item == null) item = part;
+                    else if (slot == null) slot = part;
+                    else return new Mapped(original, false);
+                    continue;
+                }
+                if (equals == 0 || equals == part.length() - 1) return new Mapped(original, false);
+                String key = part.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                String value = part.substring(equals + 1).trim();
+                String canonical = ITEM_SIMILAR_ARGUMENTS.get(key);
+                if (canonical == null || value.isEmpty()) return new Mapped(original, false);
+                if ("item".equals(canonical)) {
+                    if (item != null) return new Mapped(original, false);
+                    item = value;
+                } else {
+                    if (slot != null) return new Mapped(original, false);
+                    slot = value;
+                }
+            }
+        }
+        if (item == null || item.isBlank()) item = "DIRT";
+        if (slot == null || slot.isBlank()) slot = "HAND";
+        return validInventorySlot(slot)
+                ? new Mapped("item-is-similar " + item + " " + slot, true)
+                : new Mapped(original, false);
     }
 
     private static String normalizeTargetType(String body) {

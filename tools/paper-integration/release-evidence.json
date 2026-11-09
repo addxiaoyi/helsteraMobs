@@ -1,4 +1,17 @@
-[{
+[
+  {
+    "fixtureId": "srv-paper-item-similarity-import-strict-20261109-r2",
+    "reportFixtureDirectory": "srv-paper-item-similarity-import-strict-20261109-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-item-similarity-import-strict-20261109-r2.json",
+    "reportSha256": "a3d25e88e567aa9a26e21000acaf2a8a938a856d9e6b8c04a9f3446410045712",
+    "log": "tools/paper-integration/reports/paper-1.21.1-item-similarity-import-strict-20261109-r2.log.gz",
+    "logSha256": "1624548a3f2e59799e0f54623791bb208eda96d680f52c38cb2dfee634aa1262",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-item-similarity-import-strict-20261109-r2-client-logs.tar.gz",
+    "clientLogSha256": "1dd4421ac3ee10e8725ee0cfc72b65591ddd67b8d056233ccabb1cf5d6a3b820",
+    "pluginSha256": "f1d5eaaa9c7ddaa874748160fde8f1525981352d1c25071ca97271c348935d90",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-item-metadata-strict-20261108-r1",
     "reportFixtureDirectory": "srv-paper-item-metadata-strict-20261108-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-item-metadata-strict-20261108-r1.json",

@@ -299,6 +299,21 @@ class SkillServiceTest {
     }
 
     @Test
+    void freeInventorySlotConditionRejectsArguments() {
+        var svc = service();
+
+        assertNotNull(svc.bindCondition("has-free-inventory-slot"));
+        assertNotNull(svc.bindCondition("hasFreeSlot"));
+        for (String spec : List.of(
+                "has-free-inventory-slot unexpected",
+                "has-free-inventory-slot{unknown=true}",
+                "hasFreeSlot{slot=0}",
+                "!has-free-inventory-slot{unknown=true}")) {
+            assertNull(svc.bindCondition(spec), spec);
+        }
+    }
+
+    @Test
     void rejectedActionFactoryIsRetriedWithoutCreatingPhantomBinding() {
         var attempts = new AtomicInteger();
         SkillCatalog.ActionFactory factory = args -> {

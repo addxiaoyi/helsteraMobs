@@ -282,6 +282,7 @@ $probeSpecs = [ordered]@{
     airLevelCondition = 'skill-actions .*air-level=true'
     lookingAtCondition = 'imported-looking-at-condition primary-mapped=true alias-mapped=true entity-mapped=true positive=true alias-positive=true wrong-block-rejected=true short-block-distance-rejected=true negative=true entity-positive=true wrong-entity-rejected=true short-entity-distance-rejected=true invalid-rejected=true restored=true'
     itemRechargingCondition = 'skill-actions .*item-recharging-condition=true'
+    importedItemSimilarityConditions = 'imported-item-similarity-conditions entity-primary-mapped=true entity-alias-mapped=true entity-positive=true entity-alias-positive=true entity-negative=true entity-invalid-preserved=true inventory-primary-mapped=true inventory-alias-mapped=true inventory-positive=true inventory-alias-positive=true inventory-negative=true inventory-invalid-preserved=true result=true'
     playerPotionEvents = 'skill-actions .*player-potion-events=true'
     stateConditions = 'skill-actions .*state-conditions=true .*state-flying=true .*state-sneaking=true .*state-gliding=true'
     entityStateConditions = 'skill-actions .*entity-state-conditions=true'

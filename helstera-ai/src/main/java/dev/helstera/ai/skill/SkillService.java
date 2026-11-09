@@ -372,7 +372,7 @@ public final class SkillService {
                 "target-is-monster", "target-is-animal", "target-is-villager", "target-is-tameable",
                 "target-is-raider", "has-ai", "has-gravity", "is-silent", "is-dead", "is-alive", "is-valid",
                 "target-has-ai", "target-has-gravity", "target-is-silent", "target-dead", "target-is-alive",
-                "target-is-valid", "is-in-audience")
+                "target-is-valid", "is-in-audience", "has-free-inventory-slot")
                 .contains(name)) return null;
         if ("last-signal".equals(name) && conditionSpec.indexOf('{') >= 0) {
             try {
