@@ -38,7 +38,25 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-skeleton-conversion-strict-20261109-r3` passes all 411
+Latest strict fixture `srv-paper-zombie-conversion-strict-20261109-r4` passes all 412
+probes (393 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Latest strict report has 412 probes, zero incomplete. Its
+`mobOptionsZombieConversion` probe verifies an imported Zombie with
+`PreventConversion: true` cancels native `DROWNED` conversion while an inverse
+control becomes a Drowned; the protected entity remains a Zombie. Report:
+`reports/paper-1.21.1-zombie-conversion-strict-20261109-r4.json`;
+server log:
+`reports/paper-1.21.1-zombie-conversion-strict-20261109-r4.log.gz`;
+client logs:
+`reports/paper-1.21.1-zombie-conversion-strict-20261109-r4-client-logs.tar.gz`.
+Report SHA-256: `294e6f2fc25167f16c7e6b59549f5c88c6f7495084d7b12d9ae892a42420ae4d`;
+server log SHA-256: `87983c5695df0d3e5cbefcc6cc1f6c8e09cb3e5371cca6001b2629b13d48a825`;
+client log SHA-256: `c0ae9e8dcf437906889f79c7a25473a3a2c5ca1c0a3105c943d3c4c30c5d4090`;
+plugin SHA-256: `d55c2bf5c518a826878d8331caae45f64ca3c3ae1bbc051a94dcd0031db7588f`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-skeleton-conversion-strict-20261109-r3` passes all 411
 probes (392 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. Its `mobOptionsSkeletonConversion` probe verifies an
 imported Skeleton with `PreventConversion: true` cancels native `FROZEN`
