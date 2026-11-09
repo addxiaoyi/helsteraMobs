@@ -1,11 +1,28 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` passed the
+Latest fixture `srv-paper-can-pickup-import-strict-20261109-r2` passed the
 full strict gate on Paper 1.21.1-133: 409 registered probes, 390 passed, 19
-expected rejections, and zero failed or incomplete. It verifies imported Rabbit
-`IsKillerBunny`/`Angry` aliases, false and RabbitType controls, and preservation
-of invalid, wrong-entity, and conflicting alias inputs through production
-spawning. Report:
+expected rejections, and zero failed or incomplete. It verifies imported
+`CanPickupItems: true` and `false` override the global fallback, while
+wrong-entity and malformed values remain preserved through production mob
+configuration. Report:
+[paper-1.21.1-can-pickup-import-strict-20261109-r2.json](reports/paper-1.21.1-can-pickup-import-strict-20261109-r2.json), SHA-256:
+`2a46d23de86aeed5ba958bbdf846bc0933d6f1e3a294e60c364d2e300552ece6`.
+Compressed server log SHA-256:
+`b85e3cea086191813496ec18623240b9855dff3144a28c3b7893f79f3b5b1753`.
+Client log archive SHA-256:
+`05495f7b0553102158c18f188024888ce3025fe15cc350516f83dda929258dad`.
+Plugin SHA-256:
+`7bede98dce74336f9b5a9df6707273a7793180a3558ffa5fbdd086cab3cd41ee`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1`
+passed the full strict gate on Paper 1.21.1-133: 409 registered probes, 390
+passed, 19 expected rejections, and zero failed or incomplete. It verifies
+imported Rabbit `IsKillerBunny`/`Angry` aliases, false and RabbitType controls,
+and preservation of invalid, wrong-entity, and conflicting alias inputs through
+production spawning. Report:
 [paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1.json](reports/paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1.json), SHA-256:
 `346f7d364eb108394e69f195a47f0b801895b6699c126de7409d2572a8c7ebec`.
 Compressed server log SHA-256:

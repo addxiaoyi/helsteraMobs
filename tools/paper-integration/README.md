@@ -38,12 +38,28 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` passes
+Latest strict fixture `srv-paper-can-pickup-import-strict-20261109-r2` passes
 all 409 probes (390 passed, 19 expected rejections, zero failed or incomplete)
-on Paper 1.21.1-133. It verifies imported Rabbit `IsKillerBunny` and its
-`Angry` alias, explicit false behavior, RabbitType precedence, and preservation
-of conflicting aliases, invalid values, and wrong-entity options through real
-Paper spawns.
+on Paper 1.21.1-133. It verifies imported `CanPickupItems: true` and `false`
+override the global fallback, while wrong-entity and malformed values remain
+preserved through production mob configuration.
+Report: `reports/paper-1.21.1-can-pickup-import-strict-20261109-r2.json`;
+server log: `reports/paper-1.21.1-can-pickup-import-strict-20261109-r2.log.gz`;
+client logs:
+`reports/paper-1.21.1-can-pickup-import-strict-20261109-r2-client-logs.tar.gz`.
+Report SHA-256: `2a46d23de86aeed5ba958bbdf846bc0933d6f1e3a294e60c364d2e300552ece6`;
+server log SHA-256: `b85e3cea086191813496ec18623240b9855dff3144a28c3b7893f79f3b5b1753`;
+client log SHA-256: `05495f7b0553102158c18f188024888ce3025fe15cc350516f83dda929258dad`;
+plugin SHA-256: `7bede98dce74336f9b5a9df6707273a7793180a3558ffa5fbdd086cab3cd41ee`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1`
+passes all 409 probes (390 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. It verifies imported Rabbit `IsKillerBunny`
+and its `Angry` alias, explicit false behavior, RabbitType precedence, and
+preservation of conflicting aliases, invalid values, and wrong-entity options
+through real Paper spawns.
 Report: `reports/paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1.json`;
 server log: `reports/paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1.log.gz`;
 client logs:

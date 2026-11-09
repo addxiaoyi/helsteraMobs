@@ -2,9 +2,25 @@
 
 ## MythicMobs Parity Development Status (2026-11-09)
 
-Latest strict fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` passes
+Latest strict fixture `srv-paper-can-pickup-import-strict-20261109-r2` passes
 all 409 release probes (390 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. It verifies imported Rabbit
+incomplete) on Paper 1.21.1-133. It verifies imported `CanPickupItems: true`
+and `false` override the global fallback, while wrong-entity and malformed
+values remain preserved through production mob configuration. Report:
+`tools/paper-integration/reports/paper-1.21.1-can-pickup-import-strict-20261109-r2.json`
+(SHA-256 `2a46d23de86aeed5ba958bbdf846bc0933d6f1e3a294e60c364d2e300552ece6`).
+Compressed server log SHA-256:
+`b85e3cea086191813496ec18623240b9855dff3144a28c3b7893f79f3b5b1753`.
+Client log archive SHA-256:
+`05495f7b0553102158c18f188024888ce3025fe15cc350516f83dda929258dad`.
+Plugin SHA-256:
+`7bede98dce74336f9b5a9df6707273a7793180a3558ffa5fbdd086cab3cd41ee`.
+The archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1`
+passes all 409 release probes (390 passed, 19 expected rejections, zero failed
+or incomplete) on Paper 1.21.1-133. It verifies imported Rabbit
 `IsKillerBunny`/`Angry` aliases, explicit false behavior, RabbitType precedence,
 and preservation of conflicting aliases, invalid values, and wrong-entity
 options through real Paper spawns. Report:
@@ -927,7 +943,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` has 409 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-can-pickup-import-strict-20261109-r2` has 409 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -943,8 +959,8 @@ This is a partial parity release. The matrix currently has `35`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 532 cited IDs; 440 report files; 4 directories
-   without reports; 88 missing directories; 210 archived release reports. The
+   Current fixture inventory: 533 cited IDs; 441 report files; 4 directories
+   without reports; 88 missing directories; 211 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1157,7 +1173,7 @@ the entire MythicMobs feature catalog.
 - Mythic `Options.Adult` and `Baby` use Bukkit age setters, including Zombie/Piglin-specific baby APIs. Exact tick `Age` and `AgeLock` apply to `Animals`; for ageable non-animal types such as Zombies/Husks, those two values are preserved under `entity.unsupported.Options.*` with migration warnings while `Adult`/`Baby` remain mapped. Non-Ageable values are also preserved with warnings. Importer/runtime tests cover animal, Husk, and Allay cases; strict Paper 1.21.1-133 fixture `srv-paper-age-options-strict-20261105-r3` records `age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true` on real Sheep and Zombie entities. Other Mob Options remain incomplete.
 - Mythic Bee `Options.Anger` maps non-negative integer tick values to `entity.bee-anger` and Paper `Bee#setAnger`. Other entity types and invalid values remain preserved with migration warnings; importer/runtime tests cover both paths. Strict Paper fixture `srv-paper-bee-anger-strict-20261107-r1` verifies 1200 ticks against a zero-anger Bee control through production spawning.
 - Entity-scoped Mob Options now enforce their Bukkit type boundary during import: Creeper, Bee, Horse, Cat, Sheep, ArmorStand, Enderman, Slime/MagmaCube/Phantom, and FallingBlock fields map only for compatible entities. Wrong-type and malformed values remain under `entity.unsupported.Options.*` with WARN entries, while valid Horse and ArmorStand paths remain mapped; `ImportersTest.mythicPreservesEntityScopedOptionBoundaries` and `MythicAgeOptionsTest.ignoresEntitySpecificOptionsOnIncompatibleRuntimeTypes` cover the contract. Paper production evidence for the individual options remains tracked in the matrix and the full Mob Options catalog is still open.
-- Interaction guard options now follow the same import boundary: `CanPickupItems` requires a Bukkit `Mob`, `PreventJockeyMounts` a Zombie-family entity, `PreventSlimeSplit` a Slime-family entity, `PreventBlockInfection` a Silverfish, and `PreventSnowFormation` a Snowman. Wrong-type and malformed values are preserved under `entity.unsupported.Options.*`; importer tests cover valid, incompatible, and malformed cases. Existing Paper evidence covers the runtime guard paths, while their full Mythic option ordering and cross-version semantics remain open.
+- Interaction guard options now follow the same import boundary: `CanPickupItems` requires a Bukkit `Mob`, `PreventJockeyMounts` a Zombie-family entity, `PreventSlimeSplit` a Slime-family entity, `PreventBlockInfection` a Silverfish, and `PreventSnowFormation` a Snowman. Wrong-type and malformed values are preserved under `entity.unsupported.Options.*`; importer tests cover valid, incompatible, and malformed cases. Strict Paper 1.21.1-133 fixture `srv-paper-can-pickup-import-strict-20261109-r2` verifies imported `CanPickupItems: true` and `false` override the global fallback and confirms wrong-type/malformed values remain preserved through production mob configs. The rest of the guard options retain their existing runtime evidence; full Mythic option ordering and cross-version semantics remain open.
 - Official Armor Stand options `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` now map through the migration/runtime path; strict Paper 1.21.1 fixture `srv-paper-integration-armor-options-20261031-r3` reads back the production can-move/can-tick state.
 - Official Armor Stand item options `ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`, `ItemHead`, and `ItemLegs` now resolve through the existing ItemStack/custom-item path; strict fixture `srv-paper-integration-armor-options-20261031-r3` reads back all six equipment slots.
 - Mythic `Options.Saddled` now applies through Paper `Steerable` and `AbstractHorse` APIs; strict fixture `srv-paper-integration-saddled-20261031-r2` reads back a real Horse saddle.

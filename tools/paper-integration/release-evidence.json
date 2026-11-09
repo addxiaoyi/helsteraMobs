@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-can-pickup-import-strict-20261109-r2",
+    "reportFixtureDirectory": "srv-paper-can-pickup-import-strict-20261109-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-can-pickup-import-strict-20261109-r2.json",
+    "reportSha256": "2a46d23de86aeed5ba958bbdf846bc0933d6f1e3a294e60c364d2e300552ece6",
+    "log": "tools/paper-integration/reports/paper-1.21.1-can-pickup-import-strict-20261109-r2.log.gz",
+    "logSha256": "b85e3cea086191813496ec18623240b9855dff3144a28c3b7893f79f3b5b1753",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-can-pickup-import-strict-20261109-r2-client-logs.tar.gz",
+    "clientLogSha256": "05495f7b0553102158c18f188024888ce3025fe15cc350516f83dda929258dad",
+    "pluginSha256": "7bede98dce74336f9b5a9df6707273a7793180a3558ffa5fbdd086cab3cd41ee",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-rabbit-killer-bunny-strict-20261109-r1",
     "reportFixtureDirectory": "srv-paper-rabbit-killer-bunny-strict-20261109-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1.json",
