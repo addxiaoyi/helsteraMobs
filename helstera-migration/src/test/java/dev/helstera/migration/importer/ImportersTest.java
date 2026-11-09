@@ -229,6 +229,53 @@ class ImportersTest {
     }
 
     @Test
+    void mapsHealOnReloadBooleanAndPreservesMalformedValues(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/heal-options.yml", """
+                mobs:
+                  Protected:
+                    Type: ZOMBIE
+                    Options:
+                      HealOnReload: yes
+                  Control:
+                    Type: ZOMBIE
+                    Options:
+                      HealOnReload: false
+                  Invalid:
+                    Type: ZOMBIE
+                    Options:
+                      HealOnReload: maybe
+                  Missing:
+                    Type: ZOMBIE
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var protectedMob = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(entries.stream()
+                .filter(e -> "mobs/mythic_protected.yml".equals(e.get("target-file")))
+                .findFirst().orElseThrow().get("content"))));
+        var controlMob = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(entries.stream()
+                .filter(e -> "mobs/mythic_control.yml".equals(e.get("target-file")))
+                .findFirst().orElseThrow().get("content"))));
+        var invalidMob = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(entries.stream()
+                .filter(e -> "mobs/mythic_invalid.yml".equals(e.get("target-file")))
+                .findFirst().orElseThrow().get("content"))));
+        var missingMob = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(entries.stream()
+                .filter(e -> "mobs/mythic_missing.yml".equals(e.get("target-file")))
+                .findFirst().orElseThrow().get("content"))));
+
+        assertTrue(protectedMob.getBoolean("mob.heal-on-reload"));
+        assertFalse(controlMob.getBoolean("mob.heal-on-reload"));
+        assertEquals("maybe", invalidMob.getString("mob.unsupported.Options.HealOnReload"));
+        assertFalse(invalidMob.contains("mob.heal-on-reload"));
+        assertFalse(missingMob.getBoolean("mob.heal-on-reload", false));
+        assertFalse(missingMob.contains("mob.heal-on-reload"));
+        assertTrue(entries.stream().anyMatch(e -> "mapped".equals(e.get("status"))
+                && "Options.HealOnReload".equals(e.get("source-key"))
+                && "true".equals(String.valueOf(e.get("value")))));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "Options.HealOnReload".equals(e.get("source-key"))
+                && "WARN".equals(e.get("severity"))));
+    }
+
+    @Test
     void convertsContentInScannedSubdirectories(@TempDir Path root) throws Exception {
         var importer = new MythicMobsImporter();
         Path item = write(root, "Items/area/items.yml", "blade:\n  Id: DIAMOND_SWORD\n");

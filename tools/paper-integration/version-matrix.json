@@ -13,8 +13,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-route-patrol-strict-20261109-r2",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-route-patrol-strict-20261109-r2.json"
+      "releaseFixtureId": "srv-paper-heal-on-reload-strict-20261109-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-heal-on-reload-strict-20261109-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

@@ -1015,6 +1015,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (ai instanceof AiManager manager) {
             manager.loadProfiles(getConfig().getConfigurationSection("ai.profiles"));
         }
+        int healed = applyHealOnReloadToManagedMobs();
+        if (healed > 0) {
+            getLogger().info("[Mob Options] HealOnReload restored " + healed
+                    + " managed mob(s) during runtime config reload.");
+        }
         return true;
     }
 
@@ -1184,6 +1189,51 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     getLogger().info("[自检] health-options result=" + healthOptions
                             + " health=" + observedHealth + " max-health=" + observedMaxHealth);
                     if (healthProbeId > 0) instances().despawn(healthProbeId);
+                }
+
+                if (mobConfig("heal_on_reload_probe") != null) {
+                    int protectedId = spawnMobAt("heal_on_reload_probe", origin.clone().add(7, 1, 0), null);
+                    int controlId = spawnMobAt("heal_on_reload_control", origin.clone().add(9, 1, 0), null);
+                    var protectedInstance = protectedId > 0 ? instances().impl(protectedId) : null;
+                    var controlInstance = controlId > 0 ? instances().impl(controlId) : null;
+                    var protectedEntity = protectedInstance == null ? null
+                            : protectedInstance.baseEntity().orElse(null);
+                    var controlEntity = controlInstance == null ? null
+                            : controlInstance.baseEntity().orElse(null);
+                    boolean protectedOption = protectedInstance != null
+                            && protectedInstance.options().healOnReload();
+                    boolean controlOption = controlInstance != null
+                            && controlInstance.options().healOnReload();
+                    double protectedBefore = Double.NaN;
+                    double controlBefore = Double.NaN;
+                    if (protectedEntity instanceof org.bukkit.entity.LivingEntity protectedLiving
+                            && controlEntity instanceof org.bukkit.entity.LivingEntity controlLiving) {
+                        protectedBefore = Math.max(0.1, protectedLiving.getMaxHealth() - 5.0);
+                        controlBefore = Math.max(0.1, controlLiving.getMaxHealth() - 5.0);
+                        protectedLiving.setHealth(protectedBefore);
+                        controlLiving.setHealth(controlBefore);
+                        boolean reload = reloadRuntimeConfig();
+                        double protectedAfter = protectedLiving.getHealth();
+                        double controlAfter = controlLiving.getHealth();
+                        boolean healed = Math.abs(protectedAfter - protectedLiving.getMaxHealth()) < 1.0e-9;
+                        boolean retained = Math.abs(controlAfter - controlBefore) < 1.0e-9;
+                        boolean result = reload && protectedOption && !controlOption && healed && retained;
+                        getLogger().info("[自检] heal-on-reload-options result=" + result
+                                + " mapped=" + protectedOption + " reload=" + reload
+                                + " protected-option=" + protectedOption
+                                + " control-option=" + controlOption
+                                + " protected-before=" + protectedBefore
+                                + " protected-after=" + protectedAfter
+                                + " control-before=" + controlBefore
+                                + " control-after=" + controlAfter);
+                    } else {
+                        getLogger().info("[自检] heal-on-reload-options result=false mapped="
+                                + protectedOption + " reload=false protected-option=" + protectedOption
+                                + " control-option=" + controlOption
+                                + " protected-before=NaN protected-after=NaN control-before=NaN control-after=NaN");
+                    }
+                    if (protectedId > 0 && instances().impl(protectedId) != null) instances().despawn(protectedId);
+                    if (controlId > 0 && instances().impl(controlId) != null) instances().despawn(controlId);
                 }
 
                 if (mobConfig("movement_speed_probe") != null) {
@@ -19978,6 +20028,34 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return options != null && (!options.interactable() || options.preventItemUse());
     }
 
+    /** Applies MythicMobs' HealOnReload semantics to one managed living entity. */
+    static boolean applyHealOnReloadPolicy(org.bukkit.entity.LivingEntity entity,
+                                           SpawnOptions options) {
+        if (entity == null || options == null || !options.healOnReload()) return false;
+        try {
+            if (!entity.isValid() || entity.isDead()) return false;
+            double max = entity.getMaxHealth();
+            if (!Double.isFinite(max) || max <= 0) return false;
+            entity.setHealth(max);
+            return true;
+        } catch (IllegalArgumentException | IllegalStateException | LinkageError ignored) {
+            return false;
+        }
+    }
+
+    private int applyHealOnReloadToManagedMobs() {
+        if (instances == null) return 0;
+        int healed = 0;
+        for (var instance : instances().allImpl()) {
+            var entity = instance.baseEntity().orElse(null);
+            if (entity instanceof org.bukkit.entity.LivingEntity living
+                    && applyHealOnReloadPolicy(living, instance.options())) {
+                healed++;
+            }
+        }
+        return healed;
+    }
+
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
     public void onChunkLoad(org.bukkit.event.world.ChunkLoadEvent event) {
         if (instances == null) return;
@@ -19991,8 +20069,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     || !entity.getWorld().equals(event.getWorld())
                     || entity.getLocation().getChunk().getX() != event.getChunk().getX()
                     || entity.getLocation().getChunk().getZ() != event.getChunk().getZ()) continue;
-            double max = living.getMaxHealth();
-            if (max > 0) living.setHealth(max);
+            applyHealOnReloadPolicy(living, instance.options());
         }
     }
 

@@ -106,6 +106,7 @@ $probeSpecs = [ordered]@{
     beeOptionsImported = 'bee-options-imported result=true imported=true nectar=true stung=false control-nectar=false control-stung=true'
     beeAngerImported = 'bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0'
     beeStingerLossImported = 'bee-stinger-loss-imported result=true imported=true target-entity=ZOMBIE target-ai=false target-invulnerable=false target-resistance-amplifier=3 protected-option=true control-option=false protected-attacks=[1-9][0-9]* control-attacks=[1-9][0-9]* protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=0 control-cancelled=0 protected-restored=true control-retained=true protected-near=true control-near=true trigger=entity-target-api event=native-ai'
+    healOnReloadOptions = 'heal-on-reload-options result=true mapped=true reload=true protected-option=true control-option=false protected-before=15(?:\.0+)? protected-after=20(?:\.0+)? control-before=15(?:\.0+)? control-after=15(?:\.0+)?'
     entitySizeRange = 'entity-size-range result=true samples=64 configured=2\.\.5 slime=[2-5]\.\.[2-5] magma-cube=[2-5]\.\.[2-5] phantom=[2-5]\.\.[2-5] imported=true'
     reinforcementsChanceOptions = 'reinforcements-chance-options result=true imported=true applied=true base=0\.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true'
     ageOptions = 'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true'
