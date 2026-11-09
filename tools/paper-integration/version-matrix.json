@@ -13,8 +13,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-skeleton-conversion-strict-20261109-r3",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-skeleton-conversion-strict-20261109-r3.json"
+      "releaseFixtureId": "srv-paper-zombie-conversion-strict-20261109-r4",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-zombie-conversion-strict-20261109-r4.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

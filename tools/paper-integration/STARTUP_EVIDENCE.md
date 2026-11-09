@@ -1,6 +1,23 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-skeleton-conversion-strict-20261109-r3` passed the full
+Latest fixture `srv-paper-zombie-conversion-strict-20261109-r4` passed the full
+strict gate on Paper 1.21.1-133: 412 registered probes, 393 passed, 19
+expected rejections, and zero failed or incomplete. The
+`mobOptionsZombieConversion` observation proves an imported Zombie with
+`PreventConversion: true` cancels native `DROWNED` conversion while an inverse
+control becomes a Drowned; the protected entity remains a Zombie. Report:
+[paper-1.21.1-zombie-conversion-strict-20261109-r4.json](reports/paper-1.21.1-zombie-conversion-strict-20261109-r4.json), SHA-256:
+`294e6f2fc25167f16c7e6b59549f5c88c6f7495084d7b12d9ae892a42420ae4d`.
+Compressed server log SHA-256:
+`4172b933b8fe3c475b12e076e29dde3962915894f2d37e57405ca84a48221665`.
+Client log archive SHA-256:
+`c0ae9e8dcf437906889f79c7a25473a3a2c5ca1c0a3105c943d3c4c30c5d4090`.
+Plugin SHA-256:
+`d55c2bf5c518a826878d8331caae45f64ca3c3ae1bbc051a94dcd0031db7588f`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous fixture `srv-paper-skeleton-conversion-strict-20261109-r3` passed the full
 strict gate on Paper 1.21.1-133: 411 registered probes, 392 passed, 19
 expected rejections, and zero failed or incomplete. The
 `mobOptionsSkeletonConversion` observation proves an imported Skeleton with

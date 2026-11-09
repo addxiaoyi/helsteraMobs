@@ -218,6 +218,7 @@ try {
         '[Server thread/INFO]: mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true',
         '[Server thread/INFO]: mob-options-natural bee-stinger=true bee-event=synthetic bee-attacks=1/1 zombie-conversion=true zombie-control=true zombie-protected=true passed=true',
         '[Server thread/INFO]: mob-options-skeleton-conversion protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=SKELETON protected-valid=true control-stray=true control-converted=true elapsed-ticks=21 restored=true passed=true',
+        '[Server thread/INFO]: mob-options-zombie-conversion protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=ZOMBIE protected-valid=true control-drowned=true control-converted=true elapsed-ticks=21 restored=true passed=true',
         '[Server thread/INFO]: prevent-sunburn-natural imported=true mapped=true protected-option=true control-option=false daylight=true weather-clear=true observer-present=true protected-player-distance=7 control-player-distance=15 sky-exposed=true protected-ai=true control-ai=true protected-age-ticks=90 control-age-ticks=110 protected-events=2 protected-cancelled=2 protected-fire-ticks=0 control-events=1 control-cancelled=0 control-fire-ticks=154 elapsed-ticks=40 restored=true passed=true',
         '[Server thread/INFO]: mob-options-mount-event prevented=true allowed=true natural-prevented=true natural-allowed=true natural-events=1/1 natural-cancelled=true/false native-finalize=true/true generic-prevented=true generic-allowed=true jockey-instance=true jockey-type=ZOMBIE jockey-valid=true jockey-dead=false jockey-health=20.0 jockey-vehicle=none jockey-found=true jockey-found-prevent=true jockey-ticks=240 jockey-passenger-types= passed=true',
         '[Server thread/INFO]: mob-options-slime-split prevented=true allowed=true passed=true',
@@ -462,7 +463,7 @@ try {
             'importedSpyglassCondition', 'importedSurvivalModeCondition', 'importedVariableConditions',
             'importedFreeInventorySlotCondition',
             'importedNameCondition',
-            'importedMobDefaults', 'healOnReloadOptions', 'mobOptionsSkeletonConversion',
+            'importedMobDefaults', 'healOnReloadOptions', 'mobOptionsSkeletonConversion', 'mobOptionsZombieConversion',
             'importedServerConditions',
             'importedCoordinateDifferenceCondition',
             'importedPopulationConditions',
@@ -657,6 +658,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsSkeletonConversion').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'mobOptionsSkeletonConversion').observations[0] -match
         '^mob-options-skeleton-conversion protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=true control-cancelled=false protected-type=SKELETON protected-valid=true control-stray=true control-converted=true elapsed-ticks=[1-9][0-9]* restored=true passed=true$') 'native Skeleton conversion timing probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mobOptionsZombieConversion').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'mobOptionsZombieConversion').observations[0] -match
+        '^mob-options-zombie-conversion protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=true control-cancelled=false protected-type=ZOMBIE protected-valid=true control-drowned=true control-converted=true elapsed-ticks=[1-9][0-9]* restored=true passed=true$') 'native Zombie conversion timing probe'
     Assert-True (($report.probes | Where-Object id -eq 'beeAngerImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'beeAngerImported').observations[0] -match
         '^bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0$') 'Bee anger probe requires imported values and inverse control'
@@ -1067,6 +1071,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'mobOptionsSkeletonConversion'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'mobOptionsSkeletonConversion'; status = 'passed'; observations = @('mob-options-skeleton-conversion protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=SKELETON protected-valid=true control-stray=true control-converted=true elapsed-ticks=21 restored=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'mobOptionsZombieConversion'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mobOptionsZombieConversion'; status = 'passed'; observations = @('mob-options-zombie-conversion protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=ZOMBIE protected-valid=true control-drowned=true control-converted=true elapsed-ticks=21 restored=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds += 'preventSunburnNatural'
     $fullCatalogReport.probes += [pscustomobject]@{

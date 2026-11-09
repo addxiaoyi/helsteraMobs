@@ -2,7 +2,24 @@
 
 ## MythicMobs Parity Development Status (2026-11-09)
 
-Latest strict fixture `srv-paper-skeleton-conversion-strict-20261109-r3` passes all
+Latest strict fixture `srv-paper-zombie-conversion-strict-20261109-r4` passes all
+412 release probes (393 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Latest strict report has 412 probes, zero incomplete.
+Its `mobOptionsZombieConversion` evidence verifies an imported
+Zombie with `PreventConversion: true` cancels the native `DROWNED` conversion
+while an inverse control becomes a Drowned; the protected entity remains a
+Zombie and all fixture state is restored.
+Report:
+`tools/paper-integration/reports/paper-1.21.1-zombie-conversion-strict-20261109-r4.json`
+(SHA-256 `294e6f2fc25167f16c7e6b59549f5c88c6f7495084d7b12d9ae892a42420ae4d`).
+Compressed server log SHA-256:
+`4172b933b8fe3c475b12e076e29dde3962915894f2d37e57405ca84a48221665`.
+Client log archive SHA-256:
+`c0ae9e8dcf437906889f79c7a25473a3a2c5ca1c0a3105c943d3c4c30c5d4090`.
+Plugin SHA-256:
+`d55c2bf5c518a826878d8331caae45f64ca3c3ae1bbc051a94dcd0031db7588f`.
+
+Previous strict fixture `srv-paper-skeleton-conversion-strict-20261109-r3` passes all
 411 release probes (392 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. Its `mobOptionsSkeletonConversion` evidence
 verifies an imported Skeleton with `PreventConversion: true` cancels the native
@@ -1009,7 +1026,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-skeleton-conversion-strict-20261109-r3` has 411 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-zombie-conversion-strict-20261109-r4` has 412 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1025,8 +1042,8 @@ This is a partial parity release. The matrix currently has `34`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 536 cited IDs; 444 report files; 4 directories
-   without reports; 88 missing directories; 214 archived release reports. The
+   Current fixture inventory: 538 cited IDs; 446 report files; 4 directories
+   without reports; 88 missing directories; 216 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1052,8 +1069,8 @@ This is a partial parity release. The matrix currently has `34`
    `MaxCombatDistance` and the `SpawningDistance` near/far removal lifecycle
    now have strict evidence. Skeleton `PreventConversion` timing also has
    native Paper evidence: protected `FROZEN` conversion is cancelled while the
-   inverse control reaches Stray; Zombie conversion and universal option order
-   remain open.
+   inverse control reaches Stray. Zombie `DROWNED` conversion timing is also
+   verified; `CURED`, `INFECTION`, and universal option order remain open.
 7. **Spawner and Random Spawn**: extend natural location, combined conditions,
    cooldowns, limits, player range, world border, restart, and random-pool / loot
    coupling coverage.
@@ -1219,7 +1236,7 @@ the entire MythicMobs feature catalog.
 - Mythic `Options.Size` migrates positive integer ranges such as `2-5`/`2to5` to spawn-time randomized Slime/MagmaCube/Phantom sizes; fixed sizes remain unchanged and invalid ranges stay visible with migration warnings. Official Paper 1.21.1-133 strict evidence sampled the production Slime option path 64 times within inclusive bounds `2..5`.
 - Migration runtime contract audit now binds the canonical conditions and mechanics asserted by the importer tests through the real `SkillService`; missing runtime registrations fail `MigrationRuntimeConditionContractTest` instead of remaining a report-only mapping.
 - Mob Options, Spawners, Random Spawn, Audience, Custom Menu, SkillTree, and AI have focused Paper or unit evidence recorded in the parity matrix.
-- Exploratory Paper r55 records Creeper fuse, synthetic Bee attack-event stinger restoration, and Zombie conversion prevention. Strict Paper r6 verifies imported `PreventStingerLoss` against inverse controls through native Bee AI attacks on a stationary Zombie. Strict full fixture r4 additionally invokes Paper's native Zombie `NATURAL` spawn finalization and observes protected/control jockey mount events, with cancellation and allowance preserved respectively. The separate `mobOptionsNatural` Bee event remains explicitly synthetic; broader Mob Option ordering and conversion coverage remain open.
+- Exploratory Paper r55 records Creeper fuse and synthetic Bee attack-event stinger restoration. Strict Paper r6 verifies imported `PreventStingerLoss` against inverse controls through native Bee AI attacks on a stationary Zombie. Strict full fixture r4 additionally invokes Paper's native Zombie `NATURAL` spawn finalization and observes protected/control jockey mount events, with cancellation and allowance preserved respectively. The latest strict conversion fixture verifies native Zombie `DROWNED` timing; the separate `mobOptionsNatural` Bee event remains explicitly synthetic, while `CURED`, `INFECTION`, and broader Mob Option ordering remain open.
 - AI selector core is represented by a typed priority/`clear` plan with core goal/target aliases, relation/faction target resolution, conditional selectors, native `Mob#setTarget` synchronization, and an exploratory Paper `ai-selector-core` probe. Paper 1.21.1 release evidence is still required.
 - Exploratory Paper 1.21.11 r126 records `aiPriority=passed` and `aiPriorityTargets=passed` after the self-test revives and protects the online player before arbitration; `stateConditions=passed` covers real flying/sneaking/gliding state. The historical client Shield-use gap is closed by strict Paper r27, which records `stateBlocking=passed` from a real Mineflayer Shield-use window.
 - Exploratory Paper 1.21.11 r127 records independent `itemPickup=passed` and `environmentalDamage=passed` probes after isolating the managed player from earlier natural damage and binding a dedicated no-attacker damage profile.
@@ -1285,7 +1302,7 @@ Many rows remain `mapped-unverified`; the project is not complete:
 3. Pin conditions resolve through the plugin's own `pins.yml`; location-valued `@Pin` resolves every configured point or one random point, `@BlocksInPinRegion` enumerates inclusive cuboids up to 16,384 blocks, and `MovePin` updates single-point pins in memory. Strict Paper fixture `srv-paper-pin-targeters-strict-20261102-r2` passes the required `pinTargeters` probe on Paper 1.21.1-133: multi-point/random dispatch, single-point movement, multi-point movement rejection, real cuboid `set-block`/`break-block` with block restoration, and fail-closed rejection of a 16,385-block region before action dispatch. Compatibility with Mythic pack pin-file formats remains unverified; in-memory movement resets when the plugin reloads its own `pins.yml`.
 4. Complete the official targeter/filter catalog: ground, water, flying, player, Creative, Spectator, invulnerability, ArmorStand, animal, creature, villager, and Helstera-managed mob identity filters now have API and strict Paper coverage. External MythicMobs/Citizens identity, non-living targets, premium selectors, and native Pathfinder Goal mutation remain open or outside the public Paper API boundary.
 5. Expand the remaining legacy numeric ID/data families; the common Items and Equipment subset now has strict Paper evidence, while `ItemModel` and `DamageType` are explicitly preserved because Paper 1.21.1 `ItemMeta` has no public component API for them.
-6. Strict Paper 1.21.1-133 verifies imported Zombie `PreventJockeyMounts` event cancellation/default allowance and native Zombie `NATURAL` jockey mounting, plus native Skeleton `FROZEN` conversion timing; finish Zombie conversion timing, universal Mob Option ordering, and remaining mount-policy combinations.
+6. Strict Paper 1.21.1-133 verifies imported Zombie `PreventJockeyMounts` event cancellation/default allowance and native Zombie `NATURAL` jockey mounting, plus native Skeleton `FROZEN` and Zombie `DROWNED` conversion timing; finish `CURED`/`INFECTION` conversion timing, universal Mob Option ordering, and remaining mount-policy combinations.
 7. Add remaining Bukkit event, Audience version, and SkillTree lifecycle/restart evidence.
 8. Keep the Maven quality gate and strict Paper 1.21.1-133 release gate passing; the latest archived targeter follow-up `srv-paper-targeter-sorting-strict-20261102-r1` has 272 probes, while parity breadth and cross-version evidence remain open.
 
