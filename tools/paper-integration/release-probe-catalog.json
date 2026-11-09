@@ -1053,6 +1053,11 @@
       "requiredObservationContains": "bee-event=synthetic"
     },
     {
+      "id": "mobOptionsSkeletonConversion",
+      "status": "passed",
+      "requiredObservationPattern": "^mob-options-skeleton-conversion protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=true control-cancelled=false protected-type=SKELETON protected-valid=true control-stray=true control-converted=true elapsed-ticks=[1-9][0-9]* restored=true passed=true$"
+    },
+    {
       "id": "mobOptionsSlimeSplit",
       "status": "passed"
     },

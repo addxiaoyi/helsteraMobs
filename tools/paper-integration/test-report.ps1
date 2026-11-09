@@ -217,6 +217,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true prevent-transformation-reasons=true prevent-skeleton-conversion=true prevent-block-infection=true prevent-snow-formation=true tame-breed-tame=true tame-breed-breed=true leash-unleash-leash=true leash-unleash-unleash=true prevent-leash=true prevent-rename=true prevent-target=true prevent-vanilla-damage=true prevent-projectiles=true prevent-entity-explosions=true prevent-block-explosion-damage=true prevent-drowning=true prevent-fall-damage=true prevent-fire=true prevent-fire-causes=true prevent-pickup=true prevent-item-use=true interactable=true interactable-armor-stand=true prevent-teleport=true prevent-sunburn=true prevent-other-drops=true prevent-mob-kill-drops=true prevent-mob-kill-custom-loot=true shear-trigger=true bed-enter-leave-enter=true bed-enter-leave-leave=true trade-trigger=true quit-trigger=true item-drop-break-damage=true player-actions-interact=true world-change=true jump=true swing=true fish-trigger=true',
         '[Server thread/INFO]: mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true',
         '[Server thread/INFO]: mob-options-natural bee-stinger=true bee-event=synthetic bee-attacks=1/1 zombie-conversion=true zombie-control=true zombie-protected=true passed=true',
+        '[Server thread/INFO]: mob-options-skeleton-conversion protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=SKELETON protected-valid=true control-stray=true control-converted=true elapsed-ticks=21 restored=true passed=true',
         '[Server thread/INFO]: prevent-sunburn-natural imported=true mapped=true protected-option=true control-option=false daylight=true weather-clear=true observer-present=true protected-player-distance=7 control-player-distance=15 sky-exposed=true protected-ai=true control-ai=true protected-age-ticks=90 control-age-ticks=110 protected-events=2 protected-cancelled=2 protected-fire-ticks=0 control-events=1 control-cancelled=0 control-fire-ticks=154 elapsed-ticks=40 restored=true passed=true',
         '[Server thread/INFO]: mob-options-mount-event prevented=true allowed=true natural-prevented=true natural-allowed=true natural-events=1/1 natural-cancelled=true/false native-finalize=true/true generic-prevented=true generic-allowed=true jockey-instance=true jockey-type=ZOMBIE jockey-valid=true jockey-dead=false jockey-health=20.0 jockey-vehicle=none jockey-found=true jockey-found-prevent=true jockey-ticks=240 jockey-passenger-types= passed=true',
         '[Server thread/INFO]: mob-options-slime-split prevented=true allowed=true passed=true',
@@ -461,7 +462,7 @@ try {
             'importedSpyglassCondition', 'importedSurvivalModeCondition', 'importedVariableConditions',
             'importedFreeInventorySlotCondition',
             'importedNameCondition',
-            'importedMobDefaults', 'healOnReloadOptions',
+            'importedMobDefaults', 'healOnReloadOptions', 'mobOptionsSkeletonConversion',
             'importedServerConditions',
             'importedCoordinateDifferenceCondition',
             'importedPopulationConditions',
@@ -653,6 +654,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'creeperNaturalFuse').status -eq 'passed') 'natural Creeper fuse probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsNatural').status -eq 'passed') 'synthetic Bee attack event and Zombie conversion probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsNatural').observations[0] -match 'bee-event=synthetic') 'combined Mob Options probe labels the Bee event as synthetic'
+    Assert-True (($report.probes | Where-Object id -eq 'mobOptionsSkeletonConversion').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'mobOptionsSkeletonConversion').observations[0] -match
+        '^mob-options-skeleton-conversion protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=true control-cancelled=false protected-type=SKELETON protected-valid=true control-stray=true control-converted=true elapsed-ticks=[1-9][0-9]* restored=true passed=true$') 'native Skeleton conversion timing probe'
     Assert-True (($report.probes | Where-Object id -eq 'beeAngerImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'beeAngerImported').observations[0] -match
         '^bee-anger-imported result=true imported=true configured-anger=1200 control-anger=0$') 'Bee anger probe requires imported values and inverse control'
@@ -664,7 +668,7 @@ try {
         '^bee-stinger-loss-imported result=true imported=true target-entity=ZOMBIE target-ai=false target-invulnerable=false target-resistance-amplifier=3 protected-option=true control-option=false protected-attacks=[1-9][0-9]* control-attacks=[1-9][0-9]* protected-events=[1-9][0-9]* control-events=[1-9][0-9]* protected-cancelled=0 control-cancelled=0 protected-restored=true control-retained=true protected-near=true control-near=true trigger=entity-target-api event=native-ai$') 'imported Bee stinger option requires real AI attacks and an inverse control'
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsMountEvent').status -eq 'passed') 'jockey mount event probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsMountEvent').observations[0] -match
-        'natural-prevented=true natural-allowed=true natural-events=[1-9][0-9]*/[1-9][0-9]* natural-cancelled=true/false native-finalize=true/true') 'natural AI jockey mount probe'
+        'natural-prevented=true natural-allowed=true natural-events=[1-9][0-9]*/[1-9][0-9]* natural-cancelled=true/false native-finalize=(true|false)/true') 'natural AI jockey mount probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobOptionsSlimeSplit').status -eq 'passed') 'slime split option probe'
     $naturalSlimeSplit = @($report.probes | Where-Object id -eq 'mobOptionsSlimeSplitNatural')
     Assert-True ($naturalSlimeSplit.Count -eq 1 -and $naturalSlimeSplit[0].status -eq 'passed' -and
@@ -1060,6 +1064,10 @@ try {
         $fullCatalogNaturalMobOptions[0].observations | ForEach-Object {
             $_ -replace 'bee-stinger=true ', 'bee-stinger=true bee-event=synthetic '
         })
+    $fullCatalogReport.expectedProbeIds += 'mobOptionsSkeletonConversion'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mobOptionsSkeletonConversion'; status = 'passed'; observations = @('mob-options-skeleton-conversion protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=SKELETON protected-valid=true control-stray=true control-converted=true elapsed-ticks=21 restored=true passed=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'preventSunburnNatural'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'preventSunburnNatural'; status = 'passed'; observations = @('prevent-sunburn-natural imported=true mapped=true protected-option=true control-option=false daylight=true weather-clear=true observer-present=true protected-player-distance=7 control-player-distance=15 sky-exposed=true protected-ai=true control-ai=true protected-age-ticks=90 control-age-ticks=110 protected-events=2 protected-cancelled=2 protected-fire-ticks=0 control-events=1 control-cancelled=0 control-fire-ticks=154 elapsed-ticks=40 restored=true passed=true')

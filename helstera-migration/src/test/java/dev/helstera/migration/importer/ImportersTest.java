@@ -4374,6 +4374,22 @@ class ImportersTest {
         assertTrue(new MythicMobsImporter().convert(pigFile).stream().anyMatch(entry ->
                 "unsupported".equals(entry.get("status"))
                         && "mob.unsupported.Options".equals(entry.get("target-key"))));
+
+        Path invalidFile = write(root, "Mobs/invalid-conversion.yml", """
+                mobs:
+                  MaybeFrozen:
+                    Type: SKELETON
+                    Options:
+                      PreventConversion: maybe
+                """);
+        var invalidEntries = new MythicMobsImporter().convert(invalidFile);
+        YamlConfiguration invalid = converted(invalidFile);
+        assertEquals("maybe", invalid.getString("mob.unsupported.Options.PreventConversion"));
+        assertFalse(invalid.contains("mob.prevent-transformation-reasons"));
+        assertTrue(invalidEntries.stream().anyMatch(entry ->
+                "unsupported".equals(entry.get("status"))
+                        && "WARN".equals(entry.get("severity"))
+                        && "mob.unsupported.Options.PreventConversion".equals(entry.get("target-key"))));
     }
 
     @Test

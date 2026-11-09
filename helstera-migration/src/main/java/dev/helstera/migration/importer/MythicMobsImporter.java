@@ -4872,7 +4872,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                                          String rawEntityType) {
         Object raw = ciGet(options, "PreventConversion");
         if (raw == null) return true;
-        boolean enabled = parseBoolean(String.valueOf(raw));
+        Boolean enabled = parseBooleanOption(raw);
         String entityType = rawEntityType == null ? ""
                 : rawEntityType.trim().toUpperCase(Locale.ROOT).replace("MINECRAFT:", "");
         List<String> mappedReasons;
@@ -4885,6 +4885,13 @@ public final class MythicMobsImporter implements MigrationImporter {
             mappedReasons = List.of("FROZEN");
             family = "Skeleton";
         } else {
+            return false;
+        }
+        if (enabled == null) {
+            String unsupportedPath = "mob.unsupported.Options.PreventConversion";
+            target.set(unsupportedPath, raw);
+            note(entries, srcFile, "Options.PreventConversion", unsupportedPath, raw,
+                    "unsupported", "Invalid boolean option value was preserved instead of being applied.", "WARN");
             return false;
         }
         if (enabled) {
