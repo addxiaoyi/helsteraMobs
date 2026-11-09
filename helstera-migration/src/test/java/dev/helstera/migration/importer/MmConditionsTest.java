@@ -1157,7 +1157,14 @@ class MmConditionsTest {
     void officialEntityItemIsSimilarConditionMapsItemAliases() {
         assertEquals("entity-item-is-similar MyCustomItem",
                 t("?entityItemIsSimilar{i=MyCustomItem}"));
-        assertFalse(translated("?entityItemIsSimilar"));
+        assertEquals("entity-item-is-similar MyCustomItem",
+                t("?entityItemIsSimilar{m=MyCustomItem}"));
+        for (String invalid : List.of("?entityItemIsSimilar", "?entityItemIsSimilar{}",
+                "?entityItemIsSimilar{unknown=MyCustomItem}",
+                "?entityItemIsSimilar{i=MyCustomItem;m=OtherItem}",
+                "?entityItemIsSimilar{i=}")) {
+            assertUntranslatedPreserved(invalid);
+        }
     }
 
     @Test
@@ -1167,7 +1174,17 @@ class MmConditionsTest {
         assertEquals("item-is-similar DIRT HAND", t("?itemIsSimilar"));
         assertEquals("item-is-similar MyCustomItem OFF_HAND",
                 t("?similarTo{i=MyCustomItem;s=OFF_HAND}"));
-        assertFalse(translated("?itemIsSimilar{i=MyCustomItem;slot=99}"));
+        assertEquals("item-is-similar MyCustomItem OFF_HAND",
+                t("?itemIsSimilar{MyCustomItem;OFF_HAND}"));
+        assertEquals("item-is-similar MyCustomItem OFF_HAND",
+                t("?itemIsSimilar{slot=OFF_HAND;item=MyCustomItem}"));
+        for (String invalid : List.of("?itemIsSimilar{i=MyCustomItem;slot=99}",
+                "?itemIsSimilar{i=MyCustomItem;unknown=true}",
+                "?itemIsSimilar{i=MyCustomItem;m=OtherItem}",
+                "?itemIsSimilar{MyCustomItem;OFF_HAND;HEAD}",
+                "?itemIsSimilar{item=}")) {
+            assertUntranslatedPreserved(invalid);
+        }
     }
 
     @Test

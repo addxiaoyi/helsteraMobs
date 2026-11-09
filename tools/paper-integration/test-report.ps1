@@ -197,6 +197,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-aerial-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true ground=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-color-condition red-mapped=true blue-alias-mapped=true positive=true negative=true entity-color=RED',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-item-similarity-conditions entity-primary-mapped=true entity-alias-mapped=true entity-positive=true entity-alias-positive=true entity-negative=true entity-invalid-preserved=true inventory-primary-mapped=true inventory-alias-mapped=true inventory-positive=true inventory-alias-positive=true inventory-negative=true inventory-invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
@@ -464,6 +465,7 @@ try {
             'importedHasEnchantmentCondition', 'importedTriggerItemTypeCondition',
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
+            'importedItemSimilarityConditions',
             'importedPlayerKillsCondition', 'contextTargeterRelations', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'itemMetadata', 'legacyNumericItems')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
@@ -500,6 +502,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'importedOriginLocationCondition').status -eq 'passed') 'imported OriginLocation requires strict Paper mapping, exact, negative, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedMaterialCooldownCondition').status -eq 'passed') 'imported MaterialIsOnCooldown aliases require strict Paper positive and negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedItemRechargingCondition').status -eq 'passed') 'imported ItemRecharging aliases require strict Paper positive and non-HumanEntity rejection evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedItemSimilarityConditions').status -eq 'passed') 'imported ItemIsSimilar and EntityItemIsSimilar require strict Paper mapping, positive/negative, and preservation evidence'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriority').status -eq 'passed') 'AI selector priority arbitration probe'
     Assert-True (($report.probes | Where-Object id -eq 'aiPriorityTargets').status -eq 'passed') 'AI priority probe target setup'
     Assert-True (($report.probes | Where-Object id -eq 'aiSelectorCore').status -eq 'passed') 'AI selector core Paper probe'
@@ -1174,6 +1177,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedItemRechargingCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedItemRechargingCondition'; status = 'passed'; observations = @('imported-item-recharging-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true non-human-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedItemSimilarityConditions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedItemSimilarityConditions'; status = 'passed'; observations = @('imported-item-similarity-conditions entity-primary-mapped=true entity-alias-mapped=true entity-positive=true entity-alias-positive=true entity-negative=true entity-invalid-preserved=true inventory-primary-mapped=true inventory-alias-mapped=true inventory-positive=true inventory-alias-positive=true inventory-negative=true inventory-invalid-preserved=true result=true')
     }
     $fullCatalogReport.expectedProbeIds += 'importedIsFrozenCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

@@ -190,6 +190,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedItemRechargingCondition'; status = 'passed'; observations = @('imported-item-recharging-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true non-human-rejected=true')
     }
+    $fullReport.expectedProbeIds += 'importedItemSimilarityConditions'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedItemSimilarityConditions'; status = 'passed'; observations = @('imported-item-similarity-conditions entity-primary-mapped=true entity-alias-mapped=true entity-positive=true entity-alias-positive=true entity-negative=true entity-invalid-preserved=true inventory-primary-mapped=true inventory-alias-mapped=true inventory-positive=true inventory-alias-positive=true inventory-negative=true inventory-invalid-preserved=true result=true')
+    }
     $fullReport.expectedProbeIds += 'importedIsFrozenCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedIsFrozenCondition'; status = 'passed'; observations = @('imported-frozen-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true thawed=true alias-thawed=true invalid-rejected=true')

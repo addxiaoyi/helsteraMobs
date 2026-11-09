@@ -11,7 +11,7 @@ Status values:
 - `missing`: no meaningful implementation exists.
 - `blocked-by-external-plugin`: behavior requires a Mythic add-on or another external plugin.
 
-Evidence baseline: 2026-11-08, Paper API 1.21.1-R0.1-SNAPSHOT.
+Evidence baseline: 2026-11-09, Paper API 1.21.1-R0.1-SNAPSHOT.
 
 BiasStat implementation update (2026-11-09): Mythic `BiasStat` now projects to
 runtime `bias-stat`, native tables accept the official option and its aliases,
@@ -1391,8 +1391,10 @@ the Item trigger's carried stack against the resolved item template using
 `ItemStack#isSimilar`, including custom resolver support and fail-closed
 non-Item contexts. Migration, runtime, and condition-catalog self-test coverage
 are included. Exploratory Paper 1.21.4 fixture r2 records
-`entityItemSimilarCondition=passed`; strict Paper 1.21.1 evidence remains
-pending.
+`entityItemSimilarCondition=passed`; strict fixture
+`srv-paper-item-similarity-import-strict-20261109-r2` records the imported
+primary and alias mappings, positive/negative behavior, and invalid-argument
+preservation in `importedItemSimilarityConditions`.
 
 Incremental inventory-condition update: official `ItemIsSimilar` now remains
 separate from `EntityItemIsSimilar` and compares a target player's explicit
@@ -1400,8 +1402,10 @@ inventory or equipment slot against the resolved item template. Numeric slots
 `0..35`, hand/armor slot aliases, custom item resolution, strict similarity,
 migration aliases, and fail-closed invalid/non-player paths are covered by
 runtime and migration tests. Exploratory Paper 1.21.4 fixture r2 records
-`itemSimilarCondition=passed` and `targetsCondition=passed`; strict Paper
-1.21.1 evidence remains pending.
+`itemSimilarCondition=passed` and `targetsCondition=passed`; strict fixture
+`srv-paper-item-similarity-import-strict-20261109-r2` records the imported
+primary and alias mappings, positive/negative behavior, and invalid-argument
+preservation in `importedItemSimilarityConditions`.
 
 Incremental cooldown-condition update: official `ItemRecharging` now reads
 Bukkit/Paper `HumanEntity#getAttackCooldown()` and treats values below `1.0` as
@@ -2069,8 +2073,11 @@ unit and Paper coverage include positive and full-inventory negative states.
 Strict Paper 1.21.1-133 fixture
 `srv-paper-free-inventory-slot-strict-20261106-r1` runs both imported aliases
 through `SkillService` against a real player, rejects non-player and
-invalid-argument cases, and restores inventory state. The exploratory Paper
-1.21.11 r53 report remains compatibility evidence for that server version.
+invalid-argument cases, and restores inventory state. Current strict fixture
+`srv-paper-item-similarity-import-strict-20261109-r2` reruns both aliases
+through the current binding path and confirms invalid-argument preservation.
+The exploratory Paper 1.21.11 r53 report remains compatibility evidence for
+that server version.
 
 Name condition parity update: official `Name`/`name{n=...}` now maps to
 `name-is`. Runtime matching is exact and prefers `Entity#getCustomName()`;
@@ -2684,7 +2691,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Skills importer | mapped-unverified | common mechanics normalized; standalone `skill{s=...}` references now become ordered `cast-skill` actions; `MigrationRuntimeConditionContractTest` binds importer-asserted canonical conditions and mechanics through `SkillService`; unsupported mechanics remain preserved |
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-item-metadata-strict-20261108-r1` completes 405 probes (386 passed, 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133, including imported ItemStack metadata and legacy numeric Items/Equipment material, durability, PotionType, BlockData, amount, and invalid-data preservation. It carries the preceding coordinate-difference and target-relationship evidence, context relation targeters (`@Passenger`, `@Passengers`, `@Mount`, `@Vehicle`, `@OwnerLocation`, `@ParentLocation`), real Player absorption comparisons, imported Players/Entities/Mobs/Living radius conditions, native-AI Bee PreventStingerLoss, real Player damage attribution, environmental no-trigger behavior, and restored Player state from the prior complete catalog. Previous strict fixtures verify imported entity options, natural spawner/drop behavior, real-client interactions and movement, skills and audience persistence, menus, targeters, conditions, and restart workflows. The separate `mobOptionsNatural` Bee event remains synthetic. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`. The complete Mythic catalog and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-item-similarity-import-strict-20261109-r2` completes 406 probes (387 passed, 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133, including imported `EntityItemIsSimilar`, `ItemIsSimilar`, and `HasFreeInventorySlot`/`HasFreeSlot` mapping, matching, full-inventory rejection, and invalid-data preservation. It carries the preceding item metadata, legacy numeric Items/Equipment, coordinate-difference and target-relationship evidence, context relation targeters (`@Passenger`, `@Passengers`, `@Mount`, `@Vehicle`, `@OwnerLocation`, `@ParentLocation`), real Player absorption comparisons, imported Players/Entities/Mobs/Living radius conditions, native-AI Bee PreventStingerLoss, real Player damage attribution, environmental no-trigger behavior, and restored Player state from the prior complete catalog. Previous strict fixtures verify imported entity options, natural spawner/drop behavior, real-client interactions and movement, skills and audience persistence, menus, targeters, conditions, and restart workflows. The separate `mobOptionsNatural` Bee event remains synthetic. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`. The complete Mythic catalog and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.

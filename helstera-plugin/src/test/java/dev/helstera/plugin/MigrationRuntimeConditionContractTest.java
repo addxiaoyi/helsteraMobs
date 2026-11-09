@@ -537,6 +537,8 @@ class MigrationRuntimeConditionContractTest {
                 null, mock(org.bukkit.entity.Zombie.class), 1.0, -1, 0, "IDLE");
         String key = service.bindCondition("has-free-inventory-slot");
         assertFalse(registry.testCondition(key, nonPlayer));
+        assertNull(service.bindCondition("has-free-inventory-slot{unknown=true}"));
+        assertNull(service.bindCondition("hasFreeSlot slot=0"));
         for (String source : List.of("?hasFreeInventorySlot{slot=0}", "?hasFreeSlot{unknown=true}")) {
             assertFalse(dev.helstera.migration.importer.MmConditions.translate(source).translated(), source);
         }
