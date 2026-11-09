@@ -1,19 +1,19 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-on-attack-strict-20261109-r3` passed the full
+Latest fixture `srv-paper-on-kill-import-strict-20261109-r4` passed the full
 strict gate on Paper 1.21.1-133: 414 registered probes, 395 passed, 19
-expected rejections, and zero failed or incomplete. Its `skillTrigger` probe
-records `attack=true`, `attacker-targeter=true`, and `bukkit-attacked=true`
-after a managed attacker damages a managed victim; environmental damage does
-not create `on-attack`. Report:
-[paper-1.21.1-on-attack-strict-20261109-r3.json](reports/paper-1.21.1-on-attack-strict-20261109-r3.json), SHA-256:
-`19bcbed6e5a67c5feae80a19abd04d6f78a436bc613488524b9c43cfac107333`.
+expected rejections, and zero failed or incomplete. Its imported `~onKill` and
+`~onKillPlayer` probes record `imported=true`, `mapped=true`, real killer-side
+dispatch, player-victim filtering, and `PlayerKills` positive/negative checks.
+Report:
+[paper-1.21.1-on-kill-import-strict-20261109-r4.json](reports/paper-1.21.1-on-kill-import-strict-20261109-r4.json), SHA-256:
+`c1062a32c3c1c8516e126318c0e9b4b27dda5726b2444a69e95ce6f8195edd98`.
 Compressed server log SHA-256:
-`75a46e31151d6329c4827ea24670c2bd9dc72019ac36fbab681f5f92a2fbe560`.
+`d6304548db012578e683271af0fbbbb47eca2cbac73e3d91b589899133301c95`.
 Client log archive SHA-256:
-`cb8d153a61f05e976cafb2c29d6091bc05061a77da5376c040421f6d084e7546`.
+`61ab0439730df8d99b7950b06de14e5c84c4ae4feba765d57debbea8e44b7c1b`.
 Plugin SHA-256:
-`a1e5d73d8158bc0c1abcaac638c2e0df7216479d4375f45da0f4290caf269363`.
+`c005602083b0cbe6db4bf513893995e8eb954adf81ffbe3204ffa80f1d42362e`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
 
@@ -4246,8 +4246,9 @@ eight-block radius is crossed. The JSON schema validator and strict release
 completeness gate pass. This standalone movement fixture is retained at
 `srv-paper-spawning-distance-client-walk-strict-20261102-r3/integration-report.json`.
 That aggregate report also passes `killTrigger`, `playerKillTrigger`, and
-`playerKillsCondition`. `killTrigger` uses a managed mob's real Bukkit attack
-and victim death path. `playerKillTrigger` sets a controlled
+`playerKillsCondition`. The current strict imported-kill fixture supersedes
+its trigger evidence: `killTrigger` uses an imported managed mob's real Bukkit
+attack and victim death path. `playerKillTrigger` sets a controlled
 `EntityDamageByEntityEvent` as the online player's `lastDamageCause`, then
 sets health to zero so Bukkit emits the real player death events; the action
 and per-instance `PlayerKills` positive/negative comparisons pass. This proves

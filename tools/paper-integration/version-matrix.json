@@ -13,8 +13,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-on-attack-strict-20261109-r3",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-on-attack-strict-20261109-r3.json"
+      "releaseFixtureId": "srv-paper-on-kill-import-strict-20261109-r4",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-on-kill-import-strict-20261109-r4.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

@@ -2283,6 +2283,64 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    void migratedKillTriggersReachTheKillerRuntime(@TempDir Path root) throws Exception {
+        Path source = Files.createDirectories(root.resolve("Mobs")).resolve("kill.yml");
+        Files.writeString(source, """
+                mobs:
+                  Boss:
+                    Skills:
+                      - damage{amount=4} @Target ~onKill
+                      - damage{amount=2} @Trigger ~onKillPlayer
+                """);
+        var entries = new dev.helstera.migration.importer.MythicMobsImporter().convert(source);
+        String yaml = String.valueOf(entries.stream().filter(e -> e.containsKey("target-file"))
+                .findFirst().orElseThrow().get("content"));
+        var mob = YamlConfiguration.loadConfiguration(new java.io.StringReader(yaml))
+                .getConfigurationSection("mob");
+        var profile = dev.helstera.ai.AiProfile.fromSection("boss", mob);
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+        skills.expandTriggers(profile);
+        assertEquals(1, profile.triggers.get("on-kill").actions.size());
+        assertEquals(1, profile.triggers.get("on-kill-player").actions.size());
+
+        var ai = mock(dev.helstera.ai.AiManager.class);
+        var instance = mock(dev.helstera.runtime.instance.ModelInstanceImpl.class);
+        var killer = mock(org.bukkit.entity.Zombie.class);
+        var victim = mock(org.bukkit.entity.LivingEntity.class);
+        var world = mock(org.bukkit.World.class);
+        var location = new org.bukkit.Location(world, 0, 64, 0);
+        when(instance.instanceId()).thenReturn(42);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(killer));
+        when(killer.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        when(killer.getLocation()).thenReturn(location);
+        when(killer.getWorld()).thenReturn(world);
+        when(victim.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        when(victim.getLocation()).thenReturn(location);
+        when(victim.getWorld()).thenReturn(world);
+        when(victim.getMaxHealth()).thenReturn(20.0);
+        when(victim.getHealth()).thenReturn(20.0);
+        var damage = mock(org.bukkit.event.entity.EntityDamageByEntityEvent.class);
+        when(damage.getDamager()).thenReturn(killer);
+        when(victim.getLastDamageCause()).thenReturn(damage);
+        when(ai.allInstances()).thenReturn(List.of(instance));
+        when(ai.profileOf(42)).thenReturn(profile);
+        var plugin = mock(org.bukkit.plugin.Plugin.class);
+        when(plugin.getConfig()).thenReturn(new YamlConfiguration());
+        var triggers = new dev.helstera.ai.skill.SkillTriggers(plugin, ai, registry,
+                new dev.helstera.api.event.HelsteraEventBus(),
+                java.util.logging.Logger.getAnonymousLogger(), skills);
+        var event = mock(org.bukkit.event.entity.EntityDeathEvent.class);
+        when(event.getEntity()).thenReturn(victim);
+
+        triggers.onConfirmedDeath(event);
+
+        verify(victim).damage(4.0, killer);
+        verify(victim, never()).damage(2.0, killer);
+    }
+
+    @Test
     void migratedDamagedTriggerTargetsAttacker(@TempDir Path root) throws Exception {
         Path source = Files.createDirectories(root.resolve("Mobs")).resolve("damaged.yml");
         Files.writeString(source, """

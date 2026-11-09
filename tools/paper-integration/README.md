@@ -38,22 +38,24 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-on-attack-strict-20261109-r3` passes all 414
-probes (395 passed, 19 expected rejections, zero failed or incomplete) on
+Latest strict fixture `srv-paper-on-kill-import-strict-20261109-r4` passes all
+414 probes (395 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. Latest strict report has 414 probes, zero incomplete. Its
-`~onAttack` probe verifies managed attacker-side dispatch, victim context,
-`@Attacker` resolution, and the absence of an attack trigger for environmental
-damage. Report:
-`reports/paper-1.21.1-on-attack-strict-20261109-r3.json`;
+imported `~onKill` and `~onKillPlayer` probes verify `imported=true`,
+`mapped=true`, managed killer-side dispatch, player-victim filtering, and
+`PlayerKills` positive/negative assertions. Report:
+`reports/paper-1.21.1-on-kill-import-strict-20261109-r4.json`;
 server log:
-`reports/paper-1.21.1-on-attack-strict-20261109-r3.log.gz`;
+`reports/paper-1.21.1-on-kill-import-strict-20261109-r4.log.gz`;
 client logs:
-`reports/paper-1.21.1-on-attack-strict-20261109-r3-client-logs.tar.gz`.
-Report SHA-256: `19bcbed6e5a67c5feae80a19abd04d6f78a436bc613488524b9c43cfac107333`;
-server log SHA-256: `75a46e31151d6329c4827ea24670c2bd9dc72019ac36fbab681f5f92a2fbe560`;
-client log SHA-256: `cb8d153a61f05e976cafb2c29d6091bc05061a77da5376c040421f6d084e7546`;
-plugin SHA-256: `a1e5d73d8158bc0c1abcaac638c2e0df7216479d4375f45da0f4290caf269363`.
-The previous strict `srv-paper-conversion-boundaries-strict-20261109-r2`
+`reports/paper-1.21.1-on-kill-import-strict-20261109-r4-client-logs.tar.gz`.
+Report SHA-256: `c1062a32c3c1c8516e126318c0e9b4b27dda5726b2444a69e95ce6f8195edd98`;
+server log SHA-256: `d6304548db012578e683271af0fbbbb47eca2cbac73e3d91b589899133301c95`;
+client log SHA-256: `61ab0439730df8d99b7950b06de14e5c84c4ae4feba765d57debbea8e44b7c1b`;
+plugin SHA-256: `c005602083b0cbe6db4bf513893995e8eb954adf81ffbe3204ffa80f1d42362e`.
+The previous strict `srv-paper-on-attack-strict-20261109-r3` fixture retains
+the managed attacker-side `~onAttack` and environmental-damage evidence. The
+previous strict `srv-paper-conversion-boundaries-strict-20261109-r2`
 fixture remains archived with its native Zombie, Zombie Villager, Villager,
 Skeleton, and Slime conversion evidence.
 Archived logs redact web token query values; the source fixture retains the
@@ -1811,10 +1813,10 @@ remains separate.
 
 The condition catalog also checks `PlayerKills` on a managed killer. A real
 online player is killed through a deterministic Bukkit health-zero path,
-`on-kill-player` observes the action, `player-kills >=1` passes, and
-`player-kills >1` rejects. Exploratory Paper 1.21.4 killprobe records
-`playerKillTrigger=passed` and `playerKillsCondition=passed`; strict Paper 1.21.1
-evidence remains pending.
+`on-kill-player` observes the imported action, `player-kills >=1` passes, and
+`player-kills >1` rejects. Strict fixture
+`srv-paper-on-kill-import-strict-20261109-r4` records the importer mapping and
+the real Paper dispatch; natural PvP damage attribution remains open.
 
 The condition catalog also checks official `Absorption` by temporarily setting
 the managed Zombie's Bukkit absorption amount to 4 through `SetAbsorption`:

@@ -2,23 +2,23 @@
 
 ## MythicMobs Parity Development Status (2026-11-09)
 
-Latest strict fixture `srv-paper-on-attack-strict-20261109-r3` passes all
+Latest strict fixture `srv-paper-on-kill-import-strict-20261109-r4` passes all
 414 release probes (395 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. Latest strict report has 414 probes, zero incomplete.
-Its `~onAttack` evidence runs the attacker-side `on-attack` trigger from a
-managed Bukkit damage source, resolves the victim for the attacker skill, and
-records `attack=true`, `attacker-targeter=true`, and `bukkit-attacked=true`.
-Environmental damage does not create an attack trigger. This verifies the
-attacker context path; natural projectile and client-version timing remain open.
+Its imported `~onKill` and `~onKillPlayer` evidence records
+`imported=true`, `mapped=true`, real killer-side death dispatch, player-victim
+filtering, and managed-instance `PlayerKills` positive/negative checks.
+The fixture also retains the `~onAttack` and environmental-damage boundaries;
+natural projectile and client-version timing remain open.
 Report:
-`tools/paper-integration/reports/paper-1.21.1-on-attack-strict-20261109-r3.json`
-(SHA-256 `19bcbed6e5a67c5feae80a19abd04d6f78a436bc613488524b9c43cfac107333`).
+`tools/paper-integration/reports/paper-1.21.1-on-kill-import-strict-20261109-r4.json`
+(SHA-256 `c1062a32c3c1c8516e126318c0e9b4b27dda5726b2444a69e95ce6f8195edd98`).
 Compressed server log SHA-256:
-`75a46e31151d6329c4827ea24670c2bd9dc72019ac36fbab681f5f92a2fbe560`.
+`d6304548db012578e683271af0fbbbb47eca2cbac73e3d91b589899133301c95`.
 Client log archive SHA-256:
-`cb8d153a61f05e976cafb2c29d6091bc05061a77da5376c040421f6d084e7546`.
+`61ab0439730df8d99b7950b06de14e5c84c4ae4feba765d57debbea8e44b7c1b`.
 Plugin SHA-256:
-`a1e5d73d8158bc0c1abcaac638c2e0df7216479d4375f45da0f4290caf269363`.
+`c005602083b0cbe6db4bf513893995e8eb954adf81ffbe3204ffa80f1d42362e`.
 
 Previous strict fixture `srv-paper-conversion-boundaries-strict-20261109-r2` passes all
 414 release probes (395 passed, 19 expected rejections, zero failed or
@@ -1037,7 +1037,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-on-attack-strict-20261109-r3` has 414 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-on-kill-import-strict-20261109-r4` has 414 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1053,8 +1053,8 @@ This is a partial parity release. The matrix currently has `33`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 539 cited IDs; 447 report files; 4 directories
-   without reports; 88 missing directories; 218 archived release reports. The
+   Current fixture inventory: 540 cited IDs; 448 report files; 4 directories
+   without reports; 88 missing directories; 219 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1226,7 +1226,7 @@ the entire MythicMobs feature catalog.
 - Strict fixture `srv-paper-runtime-alias-20261031-r2` verifies the live instance cooldown transition through `cooldownMechanics`.
 - Mythic `SetSkillCooldown` aliases dynamically update named-skill cooldowns per instance, with zero-duration clearing and teardown cleanup; exploratory r46 verifies the live transition.
 - Placeholders: caster/target health, location, state, permissions, entity flags, food/saturation/exhaustion, air, luck/armor attributes, main-hand/offhand item types; exploratory Paper r18 records `gameplay-placeholders=true`.
-- Kill triggers: strict fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` passes `killTrigger` through a real Bukkit mob-damage/death chain and `playerKillTrigger` through an online-player death event with controlled killer attribution, including PlayerKills positive/negative assertions.
+- Kill triggers: strict fixture `srv-paper-on-kill-import-strict-20261109-r4` verifies imported `~onKill` and `~onKillPlayer` mappings through real Bukkit mob/player death paths, including killer attribution, player-victim filtering, and `PlayerKills` positive/negative assertions.
 - Taming/breeding, leash, shear, bed, trade, quit, item lifecycle, player action, and fishing dispatch probes pass in the strict Paper `events` fixture; natural player/client timing remains a separate gap.
 - Potion effect end: strict fixture `srv-paper-potion-expiry-strict-20261101-r1` records `potionEffectEndTrigger`, managed-entity expiry, real-player `playerPotionConsume`, and real-player natural expiry as passed on Paper 1.21.1-133. A requested short raw-Potion workflow now keeps `playerPotionNaturalExpiry` in the strict report even when its event is missing, so the release gate cannot silently omit it.
 - Player event triggers: strict fixture `srv-paper-runtime-alias-20261031-r2` passes the registered interact, world-change, jump, swing, bed, quit, item, and fishing event probes; natural client timing remains open.

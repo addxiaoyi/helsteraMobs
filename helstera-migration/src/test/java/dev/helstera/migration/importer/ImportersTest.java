@@ -776,6 +776,9 @@ class ImportersTest {
                       - damage{amount=4} @Target ~onSpawn
                       - damage{amount=5} @Target ~ONSPAWN
                       - damage{amount=6} @Target ~onAttack
+                      - damage{amount=7} @Trigger ~onKill
+                      - ~onKill:KillReward
+                      - ~onKillPlayer:PlayerKillReward
                       - skill{s=Child;delay=2} @Target ~onDeath
                       - damage{amount=3} @Trigger ~onDamaged
                       - damage{amount=2} @Trigger ~onHurt
@@ -792,6 +795,10 @@ class ImportersTest {
         assertEquals(4, target.getStringList("mob.triggers.on-spawn.do").size());
         assertEquals(List.of("skill{s=Child;delay=2} @Target"), target.getStringList("mob.triggers.on-death.do"));
         assertEquals(List.of("damage-target 6 @target"), target.getStringList("mob.triggers.on-attack.do"));
+        assertEquals(List.of("damage-target 7 @trigger", "cast-skill KillReward"),
+                target.getStringList("mob.triggers.on-kill.do"));
+        assertEquals(List.of("cast-skill PlayerKillReward"),
+                target.getStringList("mob.triggers.on-kill-player.do"));
         assertEquals(List.of("damage-target 3 @trigger", "damage-target 2 @trigger"),
                 target.getStringList("mob.triggers.on-damage.do"));
         assertTrue(target.getStringList("mob.on-decision").isEmpty());

@@ -975,7 +975,8 @@
     },
     {
       "id": "killTrigger",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "kill-trigger imported=true mapped=true natural=true .*victim-dead=true .*action-observed=true passed=true"
     },
     {
       "id": "knockbackResistanceOptions",
@@ -1164,7 +1165,8 @@
     },
     {
       "id": "playerKillTrigger",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "player-kill-trigger imported=true mapped=true natural=true .*victim-player=true .*victim-death-observed=true .*action-observed=true .*player-kills-positive=true .*player-kills-negative=true passed=true"
     },
     {
       "id": "playerKillsCondition",

@@ -140,8 +140,8 @@ try {
         '[Server thread/INFO]: block-events break=true place=true player=HelsteraTester',
         '[Server thread/INFO]: skill-trigger damage=true attack=true attacked=false teleport=true potion-effect-end=true teleport-before=false bukkit-damage=true bukkit-attacked=true cancelled-before=false cancelled-after=false entity-valid=true',
         '[Server thread/INFO]: potion-natural-expiry=true expired=true event-observed=false action-observed=true item-marker-observed=false',
-        '[Server thread/INFO]: kill-trigger natural=true victim-dead=true action-observed=true passed=true',
-        '[Server thread/INFO]: player-kill-trigger natural=true victim-player=true victim-death-observed=true action-observed=true player-kills-positive=true player-kills-negative=true passed=true',
+        '[Server thread/INFO]: kill-trigger imported=true mapped=true natural=true victim-dead=true action-observed=true passed=true',
+        '[Server thread/INFO]: player-kill-trigger imported=true mapped=true natural=true victim-player=true victim-death-observed=true action-observed=true player-kills-positive=true player-kills-negative=true passed=true',
         '[Server thread/INFO]: imported-player-kills-condition primary-mapped=true range-mapped=true positive=true negative=true invalid-preserved=true',
         '[Server thread/INFO]: tempt-probe-delayed entity-target-trigger=true target-events=1 target-find-misses=0',
         '[Server thread/INFO]: item-pickup trigger=true player=HelsteraTester',
@@ -1020,6 +1020,20 @@ try {
     $fullCatalogSkillTrigger[0].observations = @($fullCatalogSkillTrigger[0].observations | ForEach-Object {
         if ($_ -match 'attack=true') { $_ } else { "$_ attack=true" }
     })
+    foreach ($requiredKillProbe in @('killTrigger', 'playerKillTrigger')) {
+        $fullCatalogKillProbe = @($fullCatalogReport.probes | Where-Object id -eq $requiredKillProbe)
+        Assert-True ($fullCatalogKillProbe.Count -eq 1) "synthetic full catalog contains the $requiredKillProbe probe"
+        $fullCatalogKillProbe[0].observations = @($fullCatalogKillProbe[0].observations | ForEach-Object {
+            if ($_ -match 'kill-trigger imported=true mapped=true natural=true' -or
+                    $_ -match 'player-kill-trigger imported=true mapped=true natural=true') {
+                $_
+            } elseif ($requiredKillProbe -eq 'killTrigger') {
+                $_ -replace 'kill-trigger natural=true', 'kill-trigger imported=true mapped=true natural=true'
+            } else {
+                $_ -replace 'player-kill-trigger natural=true', 'player-kill-trigger imported=true mapped=true natural=true'
+            }
+        })
+    }
     $fullCatalogReport.expectedProbeIds += 'absorptionPlayerCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'absorptionPlayerCondition'; status = 'passed'; observations = @('absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true')
