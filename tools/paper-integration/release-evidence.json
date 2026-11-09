@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-on-attack-strict-20261109-r3",
+    "reportFixtureDirectory": "srv-paper-on-attack-strict-20261109-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-on-attack-strict-20261109-r3.json",
+    "reportSha256": "19bcbed6e5a67c5feae80a19abd04d6f78a436bc613488524b9c43cfac107333",
+    "log": "tools/paper-integration/reports/paper-1.21.1-on-attack-strict-20261109-r3.log.gz",
+    "logSha256": "75a46e31151d6329c4827ea24670c2bd9dc72019ac36fbab681f5f92a2fbe560",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-on-attack-strict-20261109-r3-client-logs.tar.gz",
+    "clientLogSha256": "cb8d153a61f05e976cafb2c29d6091bc05061a77da5376c040421f6d084e7546",
+    "pluginSha256": "a1e5d73d8158bc0c1abcaac638c2e0df7216479d4375f45da0f4290caf269363",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-conversion-boundaries-strict-20261109-r2",
     "reportFixtureDirectory": "srv-paper-conversion-boundaries-strict-20261109-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-conversion-boundaries-strict-20261109-r2.json",

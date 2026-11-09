@@ -1,20 +1,27 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-conversion-boundaries-strict-20261109-r2` passed the full
+Latest fixture `srv-paper-on-attack-strict-20261109-r3` passed the full
 strict gate on Paper 1.21.1-133: 414 registered probes, 395 passed, 19
-expected rejections, and zero failed or incomplete. Its conversion probes
-cover native Zombie `DROWNED`, Zombie Villager `CURED`, Villager `INFECTION`,
-Skeleton `FROZEN`, and Slime split behavior. Report:
-[paper-1.21.1-conversion-boundaries-strict-20261109-r2.json](reports/paper-1.21.1-conversion-boundaries-strict-20261109-r2.json), SHA-256:
-`449fdf8f258f44bcdd280a9d04e673573df72257df584eeec42bb0b5e225108b`.
+expected rejections, and zero failed or incomplete. Its `skillTrigger` probe
+records `attack=true`, `attacker-targeter=true`, and `bukkit-attacked=true`
+after a managed attacker damages a managed victim; environmental damage does
+not create `on-attack`. Report:
+[paper-1.21.1-on-attack-strict-20261109-r3.json](reports/paper-1.21.1-on-attack-strict-20261109-r3.json), SHA-256:
+`19bcbed6e5a67c5feae80a19abd04d6f78a436bc613488524b9c43cfac107333`.
 Compressed server log SHA-256:
-`fbadfb80ef8bbf08add0729e5f19b08f6bc697d027df31825b5bcec2abd0be8b`.
+`75a46e31151d6329c4827ea24670c2bd9dc72019ac36fbab681f5f92a2fbe560`.
 Client log archive SHA-256:
-`0442f3be5b4ba7d1b8c075c64361423c90d80d9c7cd081022d968729172283fd`.
+`cb8d153a61f05e976cafb2c29d6091bc05061a77da5376c040421f6d084e7546`.
 Plugin SHA-256:
-`1c0c42e5a93210d9721eaecb061a6d5b02efa2529f8747fd66c0677369028ecf`.
+`a1e5d73d8158bc0c1abcaac638c2e0df7216479d4375f45da0f4290caf269363`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
+
+Previous fixture `srv-paper-conversion-boundaries-strict-20261109-r2` passed the
+same full strict catalog and remains archived with native Zombie `DROWNED`,
+Zombie Villager `CURED`, Villager `INFECTION`, Skeleton `FROZEN`, and Slime
+split evidence. Its report is
+[paper-1.21.1-conversion-boundaries-strict-20261109-r2.json](reports/paper-1.21.1-conversion-boundaries-strict-20261109-r2.json).
 
 Previous fixture `srv-paper-skeleton-conversion-strict-20261109-r3` passed the full
 strict gate on Paper 1.21.1-133: 411 registered probes, 392 passed, 19

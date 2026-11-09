@@ -2,22 +2,33 @@
 
 ## MythicMobs Parity Development Status (2026-11-09)
 
-Latest strict fixture `srv-paper-conversion-boundaries-strict-20261109-r2` passes all
+Latest strict fixture `srv-paper-on-attack-strict-20261109-r3` passes all
 414 release probes (395 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. Latest strict report has 414 probes, zero incomplete.
-Its native conversion evidence covers Zombie `DROWNED`, Zombie Villager
-`CURED`, Villager `INFECTION`, Skeleton `FROZEN`, and Slime's native split
-boundary. Protected entities keep their original state while inverse controls
-complete the native conversion; fixture state is restored.
+Its `~onAttack` evidence runs the attacker-side `on-attack` trigger from a
+managed Bukkit damage source, resolves the victim for the attacker skill, and
+records `attack=true`, `attacker-targeter=true`, and `bukkit-attacked=true`.
+Environmental damage does not create an attack trigger. This verifies the
+attacker context path; natural projectile and client-version timing remain open.
+Report:
+`tools/paper-integration/reports/paper-1.21.1-on-attack-strict-20261109-r3.json`
+(SHA-256 `19bcbed6e5a67c5feae80a19abd04d6f78a436bc613488524b9c43cfac107333`).
+Compressed server log SHA-256:
+`75a46e31151d6329c4827ea24670c2bd9dc72019ac36fbab681f5f92a2fbe560`.
+Client log archive SHA-256:
+`cb8d153a61f05e976cafb2c29d6091bc05061a77da5376c040421f6d084e7546`.
+Plugin SHA-256:
+`a1e5d73d8158bc0c1abcaac638c2e0df7216479d4375f45da0f4290caf269363`.
+
+Previous strict fixture `srv-paper-conversion-boundaries-strict-20261109-r2` passes all
+414 release probes (395 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Its native conversion evidence covers Zombie
+`DROWNED`, Zombie Villager `CURED`, Villager `INFECTION`, Skeleton `FROZEN`,
+and Slime's native split boundary. Protected entities keep their original state
+while inverse controls complete the native conversion; fixture state is restored.
 Report:
 `tools/paper-integration/reports/paper-1.21.1-conversion-boundaries-strict-20261109-r2.json`
 (SHA-256 `449fdf8f258f44bcdd280a9d04e673573df72257df584eeec42bb0b5e225108b`).
-Compressed server log SHA-256:
-`fbadfb80ef8bbf08add0729e5f19b08f6bc697d027df31825b5bcec2abd0be8b`.
-Client log archive SHA-256:
-`0442f3be5b4ba7d1b8c075c64361423c90d80d9c7cd081022d968729172283fd`.
-Plugin SHA-256:
-`1c0c42e5a93210d9721eaecb061a6d5b02efa2529f8747fd66c0677369028ecf`.
 
 Previous strict fixture `srv-paper-skeleton-conversion-strict-20261109-r3` passes all
 411 release probes (392 passed, 19 expected rejections, zero failed or
@@ -1026,7 +1037,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-conversion-boundaries-strict-20261109-r2` has 414 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-on-attack-strict-20261109-r3` has 414 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1042,8 +1053,8 @@ This is a partial parity release. The matrix currently has `33`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 538 cited IDs; 446 report files; 4 directories
-   without reports; 88 missing directories; 217 archived release reports. The
+   Current fixture inventory: 539 cited IDs; 447 report files; 4 directories
+   without reports; 88 missing directories; 218 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

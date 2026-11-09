@@ -16029,9 +16029,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (!(probeEntity instanceof org.bukkit.entity.LivingEntity probeLiving)) {
                         throw new IllegalStateException("trigger probe entity is not living");
                     }
-                    var probeAttacker = java.util.Objects.requireNonNull(
-                            world.spawn(location.clone().add(6, 0, 1), org.bukkit.entity.Zombie.class),
-                            "trigger probe attacker was not created");
+                    int attackProbeId = spawnMobAt("trigger_probe", location.clone().add(6, 0, 1), null);
+                    var attackProbe = attackProbeId > 0 ? instances().impl(attackProbeId) : null;
+                    if (attackProbe != null) tracked.add(attackProbe);
+                    var probeAttackerEntity = attackProbe == null ? null
+                            : attackProbe.baseEntity().orElse(null);
+                    if (!(probeAttackerEntity instanceof org.bukkit.entity.LivingEntity probeAttacker)) {
+                        throw new IllegalStateException("trigger probe attacker was not created");
+                    }
+                    if (probeAttacker instanceof org.bukkit.entity.Mob managedAttacker) {
+                        managedAttacker.setAI(false);
+                        managedAttacker.setAware(false);
+                        managedAttacker.setRemoveWhenFarAway(false);
+                    }
                     var probeDamage = new org.bukkit.event.entity.EntityDamageByEntityEvent(
                             probeAttacker, probeEntity,
                             org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 2.0);
@@ -16042,6 +16052,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean bowTensionCondition = false;
                     boolean cancelledBefore = probeDamage.isCancelled();
                     getServer().getPluginManager().callEvent(probeDamage);
+                    boolean bukkitAttack = "§aATTACK_TRIGGER_OK".equals(probeAttacker.getCustomName());
                     boolean bukkitDamage = probeEntity instanceof org.bukkit.entity.LivingEntity living
                             && living.getEquipment() != null
                             && living.getEquipment().getItemInMainHand().getType()
@@ -16068,10 +16079,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     }
                     boolean bukkitAttacked = probeEntity != null
                             && "§bATTACKED_TRIGGER_OK".equals(probeEntity.getCustomName());
-                    if (!(bukkitDamage && bukkitAttacked)
+                    if (!(bukkitDamage && bukkitAttacked && bukkitAttack)
                             && skillTriggers instanceof dev.helstera.ai.skill.SkillTriggers skillTriggerListener) {
                         skillTriggerListener.onDamage(probeDamage);
                     }
+                    boolean attackTrigger = "§aATTACK_TRIGGER_OK".equals(probeAttacker.getCustomName());
                     long taggedDamageTriggerBefore = triggerFiredCount();
                     boolean taggedDamageAction = false;
                     var taggedDamageEvents = new java.util.concurrent.atomic.AtomicInteger();
@@ -16151,6 +16163,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean attackedTrigger = probeEntity != null
                             && "§bATTACKED_TRIGGER_OK".equals(probeEntity.getCustomName());
                     getLogger().info("[�Լ�] skill-trigger damage=" + damageTrigger
+                            + " attack=" + attackTrigger
                             + " attacked=" + attackedTrigger
                              + " teleport=" + teleportTrigger
                              + " potion-effect-end=" + potionEffectEndTrigger
