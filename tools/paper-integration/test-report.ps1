@@ -215,7 +215,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true can-join-raid=false patrol-leader=true patrol-spawn-point=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true',
-        '[Server thread/INFO]: [helsteraMobs] [自检] no-gravity-imported result=true imported=true configured=false control=true has-gravity-alias=false invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
         '[Server thread/INFO]: attribute-options result=true modifiers=1',
         '[Server thread/INFO]: attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true',
@@ -588,7 +588,7 @@ try {
         '^entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true$') 'imported entity flag options require production Paper evidence'
     Assert-True (($report.probes | Where-Object id -eq 'noGravityImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'noGravityImported').observations[0] -match
-        '^no-gravity-imported result=true imported=true configured=false control=true has-gravity-alias=false invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true$') 'imported NoGravity requires production readback and malformed-value preservation'
+        '^no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true$') 'imported NoGravity requires production readback and malformed-value preservation'
     Assert-True (($report.probes | Where-Object id -eq 'expOptions').status -eq 'passed') 'experience option probe'
     Assert-True (($report.probes | Where-Object id -eq 'expNaturalDeath').status -eq 'passed') 'natural experience death probe'
     Assert-True (($report.probes | Where-Object id -eq 'expTierDeath').status -eq 'passed') 'natural tiered experience death probe'
@@ -1262,7 +1262,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'noGravityImported'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'noGravityImported'; status = 'passed'; observations = @('no-gravity-imported result=true imported=true configured=false control=true has-gravity-alias=false invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true')
+        id = 'noGravityImported'; status = 'passed'; observations = @('no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true')
     }
     $fullCatalogReport.expectedProbeIds += 'healOnReloadOptions'
     $fullCatalogReport.probes += [pscustomobject]@{

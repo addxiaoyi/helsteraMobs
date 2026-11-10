@@ -51,22 +51,26 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-gravity-aliases-strict-20261110-r1` passes
+Latest strict fixture `srv-paper-gravity-scope-strict-20261110-r1` passes
 all 430 probes (411 passed, 19 expected rejections, zero failed or incomplete)
-on Paper 1.21.1-133. `noGravityImported` verifies both `NoGravity` states,
-`HasGravity: false`, malformed-value preservation for the three gravity aliases,
-and the wrong-type fallback; `playerCreatedImported` verifies both Iron Golem
-states and wrong-entity/malformed preservation through production mob spawning.
+on Paper 1.21.1-133. `noGravityImported` verifies both general `NoGravity`
+states, Armor Stand-only `HasGravity` true/false readback, wrong-entity
+handling, and malformed-value preservation; undocumented `Gravity` remains
+unsupported-preserved. `playerCreatedImported` verifies both Iron Golem states
+and wrong-entity/malformed preservation through production mob spawning.
 Report:
-[`paper-1.21.1-gravity-aliases-strict-20261110-r1.json`](reports/paper-1.21.1-gravity-aliases-strict-20261110-r1.json)
-(SHA-256 `87ffc203b818580ca1165a8f426f39627845691999db00d5527eae54ef06791d`);
+[`paper-1.21.1-gravity-scope-strict-20261110-r1.json`](reports/paper-1.21.1-gravity-scope-strict-20261110-r1.json)
+(SHA-256 `cfe39a77a327a0d33b8712328a66729dd94cffcbc908b32fadc317643146beff`);
 compressed server log SHA-256 is
-`80cdd5ff9906ed07512ba9d24e836fdca3925b59ac7c3e2aa69a1e268e07f302`, client
+`f18ffc2066f7a55f0fada3a17a431531ccf947768d32273f30bda3f34e4afd62`, client
 log archive SHA-256 is
-`31e4855172152e71a02968eb3df23bf7e4f082343a44ed8cbd71c6a0ac8b4c79`, and
+`d2bb78f4922aab53dc77e9b87ac9cc0cace8821ebdb1f7b5e07179b142c9c96f`, and
 plugin SHA-256 is
-`82848a23e358dced934fe8ce9307acec0b3c72d4953379e1afacd394f2dd3869`.
+`e18a30a8c72b6e79e23bb7ebbf5c25c547d276091222d60e420ecbe3b1a37c80`.
 Archived logs redact web-token query values.
+
+The previous `srv-paper-gravity-aliases-strict-20261110-r1` fixture remains
+archived as superseded because its gravity-option scopes were too broad.
 
 Previous strict fixture `srv-paper-no-gravity-strict-20261110-r2` passes all
 430 probes on Paper 1.21.1-133; its evidence remains indexed in

@@ -3255,11 +3255,11 @@ class ImportersTest {
     }
 
     @Test
-    @DisplayName("Mythic gravity aliases validate booleans and preserve invalid values")
-    void mythicGravityAliasesValidateAndPreserveInvalidValues(@TempDir Path root) throws Exception {
+    @DisplayName("Mythic gravity options preserve undocumented values and scope HasGravity to armor stands")
+    void mythicGravityOptionsPreserveUndocumentedValuesAndScopeHasGravity(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/no-gravity.yml", """
                 mobs:
-                  DirectGravity:
+                  UndocumentedGravity:
                     Type: HUSK
                     Options:
                       Gravity: true
@@ -3278,16 +3278,18 @@ class ImportersTest {
                   InvalidNoGravity:
                     Type: HUSK
                     Options:
-                      Gravity: false
                       NoGravity: maybe
                   InvalidGravity:
                     Type: HUSK
                     Options:
                       Gravity: maybe
+                  HasGravityWrongType:
+                    Type: HUSK
+                    Options:
+                      HasGravity: false
                   InvalidHasGravity:
                     Type: HUSK
                     Options:
-                      Gravity: false
                       HasGravity: maybe
                 """);
 
@@ -3299,31 +3301,36 @@ class ImportersTest {
                         entry -> YamlConfiguration.loadConfiguration(new StringReader(
                                 String.valueOf(entry.get("content"))))));
 
-        assertTrue(plans.get("DirectGravity").getBoolean("entity.gravity", false));
         assertFalse(plans.get("NoGravityEnabled").getBoolean("entity.gravity", true));
         assertTrue(plans.get("NoGravityControl").getBoolean("entity.gravity", false));
         assertFalse(plans.get("HasGravityControl").getBoolean("entity.gravity", true));
-        assertFalse(plans.get("InvalidNoGravity").getBoolean("entity.gravity", true),
-                "an invalid alias must leave the valid Gravity value intact");
+        assertEquals("true", plans.get("UndocumentedGravity").getString("mob.unsupported.Options.Gravity"));
+        assertFalse(plans.get("UndocumentedGravity").contains("entity.gravity"));
+        assertFalse(plans.get("InvalidNoGravity").contains("entity.gravity"));
         assertEquals("maybe", plans.get("InvalidNoGravity").getString("entity.unsupported.Options.NoGravity"));
-        assertFalse(plans.get("InvalidNoGravity").contains("entity.unsupported.Options.Gravity"));
         assertFalse(plans.get("InvalidGravity").contains("entity.gravity"));
-        assertEquals("maybe", plans.get("InvalidGravity").getString("entity.unsupported.Options.Gravity"));
-        assertFalse(plans.get("InvalidHasGravity").getBoolean("entity.gravity", true),
-                "an invalid alias must leave the valid Gravity value intact");
+        assertEquals("maybe", plans.get("InvalidGravity").getString("mob.unsupported.Options.Gravity"));
+        assertFalse(plans.get("HasGravityWrongType").contains("entity.gravity"));
+        assertFalse(plans.get("HasGravityWrongType").getBoolean("entity.unsupported.Options.HasGravity", true));
+        assertFalse(plans.get("InvalidHasGravity").contains("entity.gravity"));
         assertEquals("maybe", plans.get("InvalidHasGravity").getString("entity.unsupported.Options.HasGravity"));
         assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
                 && "WARN".equals(entry.get("severity"))
                 && "Options.NoGravity".equals(entry.get("source-key"))
                 && "entity.unsupported.Options.NoGravity".equals(entry.get("target-key"))
                 && "maybe".equals(entry.get("value"))));
-        for (String option : List.of("Gravity", "HasGravity")) {
+        for (String option : List.of("HasGravity")) {
             assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
                     && "WARN".equals(entry.get("severity"))
                     && ("Options." + option).equals(entry.get("source-key"))
                     && ("entity.unsupported.Options." + option).equals(entry.get("target-key"))
-                    && "maybe".equals(entry.get("value"))));
+                    && entry.get("value") != null));
         }
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("source-key")).endsWith("UndocumentedGravity.Options")
+                && "mob.unsupported.Options".equals(entry.get("target-key"))
+                && String.valueOf(entry.get("value")).contains("Gravity=true")));
     }
 
     @Test

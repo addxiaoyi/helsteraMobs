@@ -1,23 +1,28 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-gravity-aliases-strict-20261110-r1` passed the full
+Latest fixture `srv-paper-gravity-scope-strict-20261110-r1` passed the full
 strict gate on Paper 1.21.1-133: 430 registered probes, 411 passed, 19 expected
 rejections, and zero failed or incomplete. `noGravityImported` verifies both
-`NoGravity` states, `HasGravity: false`, malformed-value preservation for all
-three gravity aliases, and the wrong-type fallback. `playerCreatedImported`
+general `NoGravity` states, Armor Stand-only `HasGravity` true/false readback,
+wrong-entity handling, and malformed-value preservation. Undocumented
+`Gravity` remains unsupported-preserved. `playerCreatedImported`
 verifies true/false states on real Iron Golems spawned through production
 configuration, with wrong-entity and malformed values preserved. Plugin
-SHA-256: `82848a23e358dced934fe8ce9307acec0b3c72d4953379e1afacd394f2dd3869`.
+SHA-256: `e18a30a8c72b6e79e23bb7ebbf5c25c547d276091222d60e420ecbe3b1a37c80`.
 Full catalog report:
-[paper-1.21.1-gravity-aliases-strict-20261110-r1.json](reports/paper-1.21.1-gravity-aliases-strict-20261110-r1.json), SHA-256:
-`87ffc203b818580ca1165a8f426f39627845691999db00d5527eae54ef06791d`.
+[paper-1.21.1-gravity-scope-strict-20261110-r1.json](reports/paper-1.21.1-gravity-scope-strict-20261110-r1.json), SHA-256:
+`cfe39a77a327a0d33b8712328a66729dd94cffcbc908b32fadc317643146beff`.
 Compressed server log:
-[paper-1.21.1-gravity-aliases-strict-20261110-r1.log.gz](reports/paper-1.21.1-gravity-aliases-strict-20261110-r1.log.gz), SHA-256:
-`80cdd5ff9906ed07512ba9d24e836fdca3925b59ac7c3e2aa69a1e268e07f302`. Client
+[paper-1.21.1-gravity-scope-strict-20261110-r1.log.gz](reports/paper-1.21.1-gravity-scope-strict-20261110-r1.log.gz), SHA-256:
+`f18ffc2066f7a55f0fada3a17a431531ccf947768d32273f30bda3f34e4afd62`. Client
 log archive:
-[paper-1.21.1-gravity-aliases-strict-20261110-r1-client-logs.tar.gz](reports/paper-1.21.1-gravity-aliases-strict-20261110-r1-client-logs.tar.gz), SHA-256:
-`31e4855172152e71a02968eb3df23bf7e4f082343a44ed8cbd71c6a0ac8b4c79`.
+[paper-1.21.1-gravity-scope-strict-20261110-r1-client-logs.tar.gz](reports/paper-1.21.1-gravity-scope-strict-20261110-r1-client-logs.tar.gz), SHA-256:
+`d2bb78f4922aab53dc77e9b87ac9cc0cace8821ebdb1f7b5e07179b142c9c96f`.
 Archived logs redact web-token query values.
+
+The earlier `srv-paper-gravity-aliases-strict-20261110-r1` report remains
+archived as superseded; it treated undocumented `Gravity` as supported and
+applied `HasGravity` beyond Armor Stands.
 
 Previous fixture `srv-paper-no-gravity-strict-20261110-r2` also passed the
 430-probe strict gate. Its report and hashes remain indexed in

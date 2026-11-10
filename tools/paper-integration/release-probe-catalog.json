@@ -295,7 +295,7 @@
     {
       "id": "noGravityImported",
       "status": "passed",
-      "requiredObservation": "no-gravity-imported result=true imported=true configured=false control=true has-gravity-alias=false invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true"
+      "requiredObservation": "no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true"
     },
     {
       "id": "importedMessageClient",
