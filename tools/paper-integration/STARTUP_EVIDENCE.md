@@ -1,20 +1,24 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-boat-options-strict-20261110-r1` passed the full
-strict gate on Paper 1.21.1-133: 425 registered probes, 406 passed, 19
+Latest fixture `srv-paper-interaction-options-strict-20261110-r2` passed the
+full strict gate on Paper 1.21.1-133: 426 registered probes, 407 passed, 19
 expected rejections, and zero failed or incomplete. Its
-`boatOptionsImported` probe reads back SPRUCE for an imported Boat, OAK for the
-control, and BAMBOO for a ChestBoat; wrong-entity, invalid-variant, and
-conflicting-alias values remain preserved. Plugin SHA-256:
-`06698a7145d6cfa547eef3bffe4c53dc474b9d0f1ddb12eca7d9134b38d3ac3a`. Full
+`interactionOptionsImported` probe reads back configured dimensions and
+responsiveness, width fallback, Mythic 1x1/responsive defaults, and wrong-type
+and invalid-value preservation. Plugin SHA-256:
+`bfd459f340efed76aaf15f4ba60ccb0d80fb59391aa2453fe46791ff4cdb6fcd`. Full
 catalog report:
-[paper-1.21.1-boat-options-strict-20261110-r1.json](reports/paper-1.21.1-boat-options-strict-20261110-r1.json), SHA-256:
-`84d40706def0462014e2919d846a0feb1cd5a723d08ebe06b9b6290b411c7b4c`.
+[paper-1.21.1-interaction-options-strict-20261110-r2.json](reports/paper-1.21.1-interaction-options-strict-20261110-r2.json), SHA-256:
+`62a69624345299ecf73ae87470826d5b648e616770e2e71d4699aeae5867093a`.
 Compressed server log SHA-256:
-`5c6f18da998fdae14375019f996dad9311b8111835af6ca4729fa8a66e544601`.
+`169835545921f36c39b9058794577e816413284b355ba9ad0d5bdf9ea793c14c`.
 Client log archive SHA-256:
-`6da8c31d86769119b73177da7a14961085569ab5f4435ca60058af22b721eac1`.
+`343c65f276d5b08f4affc95fd683eee7226814bb6ba0f273ee2eed071a2dc12d`.
 Archived logs redact web-token query values.
+
+Previous fixture `srv-paper-boat-options-strict-20261110-r1` passed 425
+registered probes (406 passed, 19 expected rejections) and verified imported
+Boat and ChestBoat variants with wrong-type, invalid, and conflict controls.
 
 Focused exploratory fixture `paper-1.21.4-item-group-cooldown-exploratory-20261110`
 ran plugin `helsteraMobs` on Paper 1.21.4-232 with a real Mineflayer 1.21.4

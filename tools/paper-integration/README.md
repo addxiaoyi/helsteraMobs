@@ -51,20 +51,28 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-boat-options-strict-20261110-r1` passes all
-425 probes (406 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. Its `boatOptionsImported` probe reads back SPRUCE for an
-imported Boat, OAK for its control, and BAMBOO for a ChestBoat. Wrong-entity,
-invalid-variant, and conflicting-alias values remain preserved. Report:
-[`paper-1.21.1-boat-options-strict-20261110-r1.json`](reports/paper-1.21.1-boat-options-strict-20261110-r1.json)
-(SHA-256 `84d40706def0462014e2919d846a0feb1cd5a723d08ebe06b9b6290b411c7b4c`);
+Latest strict fixture `srv-paper-interaction-options-strict-20261110-r2` passes
+all 426 probes (407 passed, 19 expected rejections, zero failed or incomplete)
+on Paper 1.21.1-133. Its `interactionOptionsImported` probe reads back
+configured dimensions and `Responsive=false`, verifies width follows height,
+and confirms the documented 1x1/responsive defaults plus wrong-type and invalid
+option preservation. Report:
+[`paper-1.21.1-interaction-options-strict-20261110-r2.json`](reports/paper-1.21.1-interaction-options-strict-20261110-r2.json)
+(SHA-256 `62a69624345299ecf73ae87470826d5b648e616770e2e71d4699aeae5867093a`);
 compressed server log SHA-256 is
-`5c6f18da998fdae14375019f996dad9311b8111835af6ca4729fa8a66e544601`, client
+`169835545921f36c39b9058794577e816413284b355ba9ad0d5bdf9ea793c14c`, client
 log archive SHA-256 is
-`6da8c31d86769119b73177da7a14961085569ab5f4435ca60058af22b721eac1`, and
+`343c65f276d5b08f4affc95fd683eee7226814bb6ba0f273ee2eed071a2dc12d`, and
 plugin SHA-256 is
-`06698a7145d6cfa547eef3bffe4c53dc474b9d0f1ddb12eca7d9134b38d3ac3a`. Archived
-logs redact web-token query values. The preceding strict fixture
+`bfd459f340efed76aaf15f4ba60ccb0d80fb59391aa2453fe46791ff4cdb6fcd`. Archived
+logs redact web-token query values.
+
+Previous strict fixture `srv-paper-boat-options-strict-20261110-r1` passes all
+425 probes (406 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `boatOptionsImported` probe verifies production Boat and
+ChestBoat readback for SPRUCE/OAK/BAMBOO and preserves wrong-entity,
+invalid-variant, and conflicting-alias values. Report and hashes remain in the
+release evidence archive. The preceding strict fixture
 `srv-paper-template-inheritance-strict-20261110-r1` verified direct and
 transitive `TemplateType` matching and live inheritance of health and `NoAI`,
 including top-level `Exclude` behavior; its report and hashes remain in the

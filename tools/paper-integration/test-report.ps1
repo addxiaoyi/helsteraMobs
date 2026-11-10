@@ -667,6 +667,20 @@ try {
     Assert-True (($horseOptionsReport.probes | Where-Object id -eq 'horseOptionsImported').status -eq 'passed' -and
         ($horseOptionsReport.probes | Where-Object id -eq 'horseOptionsImported').observations[0] -match
         'imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0\.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0\.4') 'report writer requires imported Horse option evidence'
+    $interactionOptionsTemp = Join-Path $temp 'interaction-options-fixture'
+    $interactionOptionsLogDirectory = Join-Path $interactionOptionsTemp 'logs'
+    New-Item -ItemType Directory -Path $interactionOptionsLogDirectory -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $interactionOptionsLogDirectory 'latest.log') -Value @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
+        '[Server thread/INFO]: [helsteraMobs] [自检] interaction-options-imported result=true imported=true configured-height=2.5 configured-width=3.25 responsive=false height-only-width=1.75 defaults-applied=true wrong-type-preserved=true invalid-preserved=true'
+    ) -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $interactionOptionsTemp | Out-Null
+    $interactionOptionsReport = Get-Content -LiteralPath (Join-Path $interactionOptionsTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($interactionOptionsReport.probes | Where-Object id -eq 'interactionOptionsImported').status -eq 'passed' -and
+        ($interactionOptionsReport.probes | Where-Object id -eq 'interactionOptionsImported').observations[0] -match
+        '^interaction-options-imported result=true imported=true configured-height=2\.5 configured-width=3\.25 responsive=false height-only-width=1\.75 defaults-applied=true wrong-type-preserved=true invalid-preserved=true$') 'report writer requires imported Interaction option evidence'
     Assert-True (($report.probes | Where-Object id -eq 'spawner:reject').status -eq 'observed-rejected') 'rejected probe'
     Assert-True (($report.probes | Where-Object id -eq 'lootDynamicChance').status -eq 'passed') 'dynamic chance probe'
     $events = @($report.probes | Where-Object id -eq 'events')
@@ -1294,6 +1308,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'boatOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'boatOptionsImported'; status = 'passed'; observations = @('boat-options-imported result=true imported=true boat-type=SPRUCE control-type=OAK chest-type=BAMBOO wrong-type-preserved=true invalid-preserved=true conflict-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'interactionOptionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'interactionOptionsImported'; status = 'passed'; observations = @('interaction-options-imported result=true imported=true configured-height=2.5 configured-width=3.25 responsive=false height-only-width=1.75 defaults-applied=true wrong-type-preserved=true invalid-preserved=true')
     }
     $fullCatalogCreeperOptions = @($fullCatalogReport.probes | Where-Object id -eq 'creeper')
     if ($fullCatalogCreeperOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain creeper.' }
@@ -2199,6 +2217,19 @@ try {
     } catch { $incompleteBoatOptionsRejected = $_.Exception.Message -match 'required observation for boatOptionsImported' }
     Assert-True $incompleteBoatOptionsRejected 'full release gate rejects incomplete imported Boat option evidence'
     $fullCatalogBoatOptions[0].observations = $boatOptionsObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $fullCatalogInteractionOptions = @($fullCatalogReport.probes | Where-Object id -eq 'interactionOptionsImported')
+    if ($fullCatalogInteractionOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain interactionOptionsImported.' }
+    $interactionOptionsObservations = $fullCatalogInteractionOptions[0].observations
+    $fullCatalogInteractionOptions[0].observations = @('interaction-options-imported result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteInteractionOptionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteInteractionOptionsRejected = $_.Exception.Message -match 'required observation for interactionOptionsImported' }
+    Assert-True $incompleteInteractionOptionsRejected 'full release gate rejects incomplete imported Interaction option evidence'
+    $fullCatalogInteractionOptions[0].observations = $interactionOptionsObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $creeperOptionsObservations = $fullCatalogCreeperOptions[0].observations
     $fullCatalogCreeperOptions[0].observations = @('creeper-options result=true')

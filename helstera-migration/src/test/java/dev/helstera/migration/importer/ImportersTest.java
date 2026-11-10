@@ -5041,6 +5041,70 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Interaction dimensions and responsiveness map only to Interaction entities")
+    void mythicMapsInteractionOptionsAndPreservesInvalidValues(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/interaction-options.yml", """
+                mobs:
+                  configured:
+                    Type: INTERACTION
+                    Options:
+                      Height: 2.5
+                      Width: 3.25
+                      Responsive: false
+                  height_only:
+                    Type: INTERACTION
+                    Options:
+                      Height: 1.75
+                  width_only:
+                    Type: INTERACTION
+                    Options:
+                      Width: 2.25
+                  wrong_type:
+                    Type: ZOMBIE
+                    Options:
+                      Height: 4
+                      Width: 5
+                      Responsive: false
+                  invalid:
+                    Type: INTERACTION
+                    Options:
+                      Height: -1
+                      Width: 3.5e38
+                      Responsive: maybe
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        var configured = convertedMob(entries, "configured");
+        assertEquals(2.5, configured.getDouble("entity.interaction-height"));
+        assertEquals(3.25, configured.getDouble("entity.interaction-width"));
+        assertFalse(configured.getBoolean("entity.interaction-responsive"));
+        var heightOnly = convertedMob(entries, "height_only");
+        assertEquals(1.75, heightOnly.getDouble("entity.interaction-height"));
+        assertFalse(heightOnly.contains("entity.interaction-width"));
+        assertEquals(2.25, convertedMob(entries, "width_only").getDouble("entity.interaction-width"));
+
+        var wrongType = convertedMob(entries, "wrong_type");
+        assertEquals(4, wrongType.getInt("entity.unsupported.Options.Height"));
+        assertEquals(5, wrongType.getInt("entity.unsupported.Options.Width"));
+        assertFalse(wrongType.getBoolean("entity.unsupported.Options.Responsive", true));
+        assertFalse(wrongType.contains("entity.interaction-height"));
+        assertFalse(wrongType.contains("entity.interaction-width"));
+        assertFalse(wrongType.contains("entity.interaction-responsive"));
+
+        var invalid = convertedMob(entries, "invalid");
+        assertEquals(-1, invalid.getInt("entity.unsupported.Options.Height"));
+        assertEquals(3.5e38, invalid.getDouble("entity.unsupported.Options.Width"));
+        assertEquals("maybe", invalid.getString("entity.unsupported.Options.Responsive"));
+        assertFalse(invalid.contains("entity.interaction-height"));
+        assertFalse(invalid.contains("entity.interaction-width"));
+        assertFalse(invalid.contains("entity.interaction-responsive"));
+        assertFalse(invalid.contains("mob.unsupported.Options"));
+        assertTrue(entries.stream().filter(entry -> "unsupported".equals(entry.get("status")))
+                .anyMatch(entry -> "Options.Height".equals(entry.get("source-key"))
+                        && "WARN".equals(entry.get("severity"))));
+    }
+
+    @Test
     @DisplayName("Mythic Cat options map type, sitting, and collar color")
     void mythicMapsCatOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/cat-options.yml", """

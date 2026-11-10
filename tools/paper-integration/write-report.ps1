@@ -96,6 +96,7 @@ $probeSpecs = [ordered]@{
     visibilityOptions = 'visibility-options result=true visible-by-default=true invisible=true show-name=true'
     sheep = 'sheep-options result=true imported=true color=RED sheared=true control-color=WHITE control-sheared=false'
     horseOptionsImported = 'horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0\.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0\.4'
+    interactionOptionsImported = 'interaction-options-imported result=true imported=true configured-height=2\.5 configured-width=3\.25 responsive=false height-only-width=1\.75 defaults-applied=true wrong-type-preserved=true invalid-preserved=true'
     foxOptionsImported = 'fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true'
     rabbitOptionsImported = 'rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN killer-type=THE_KILLER_BUNNY angry-type=THE_KILLER_BUNNY false-killer-type=SALT_AND_PEPPER wrong-type-preserved=true invalid-preserved=true conflict-preserved=true'
     armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false .*items=true'

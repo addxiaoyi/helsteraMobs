@@ -1707,6 +1707,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedRabbitOptionsSelfTest(origin.clone().add(8, 0, 0));
                 runImportedHorseOptionsSelfTest(origin.clone().add(32, 0, 0));
                 runImportedBoatOptionsSelfTest(origin.clone().add(64, 0, 0));
+                runImportedInteractionOptionsSelfTest(origin.clone().add(80, 0, 0));
 
                 var falling = world.spawnFallingBlock(origin.clone().add(8, 0, 0),
                         org.bukkit.Material.SAND.createBlockData());
@@ -4423,6 +4424,153 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " conflict-preserved=" + conflictPreserved);
         } catch (Throwable failure) {
             getLogger().warning("[自检] boat-options-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedInteractionOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-interaction-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("interaction-options.yml");
+            String configuredId = "ImportedInteractionConfigured_" + suffix;
+            String heightOnlyId = "ImportedInteractionHeightOnly_" + suffix;
+            String controlId = "ImportedInteractionControl_" + suffix;
+            String wrongTypeId = "ImportedInteractionWrongType_" + suffix;
+            String invalidId = "ImportedInteractionInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: INTERACTION
+                        Options:
+                          Height: 2.5
+                          Width: 3.25
+                          Responsive: false
+                      %2$s:
+                        Type: INTERACTION
+                        Options:
+                          Height: 1.75
+                      %3$s:
+                        Type: INTERACTION
+                      %4$s:
+                        Type: ZOMBIE
+                        Options:
+                          Height: 4
+                          Width: 5
+                          Responsive: false
+                      %5$s:
+                        Type: INTERACTION
+                        Options:
+                          Height: -1
+                          Width: 3.5e38
+                          Responsive: maybe
+                    """.formatted(configuredId, heightOnlyId, controlId, wrongTypeId, invalidId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Interaction mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Interaction mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            var sourceIds = java.util.List.of(configuredId, heightOnlyId, controlId, wrongTypeId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic Interaction option probe mobs were not all imported");
+            }
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0),
+                    origin.clone().add(6, 0, 0), origin.clone().add(9, 0, 0),
+                    origin.clone().add(12, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        locations.get(i), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+            java.util.function.IntFunction<org.bukkit.entity.Entity> spawnedEntity = instanceId -> {
+                var instance = instanceId > 0 ? instances().impl(instanceId) : null;
+                return instance == null ? null : instance.baseEntity().orElse(null);
+            };
+
+            var configuredEntity = spawnedEntity.apply(spawnedIds.get(configuredId));
+            var heightOnlyEntity = spawnedEntity.apply(spawnedIds.get(heightOnlyId));
+            var controlEntity = spawnedEntity.apply(spawnedIds.get(controlId));
+            var wrongTypeEntity = spawnedEntity.apply(spawnedIds.get(wrongTypeId));
+            var invalidEntity = spawnedEntity.apply(spawnedIds.get(invalidId));
+            var configured = configuredEntity instanceof org.bukkit.entity.Interaction interaction
+                    ? interaction : null;
+            var heightOnly = heightOnlyEntity instanceof org.bukkit.entity.Interaction interaction
+                    ? interaction : null;
+            var control = controlEntity instanceof org.bukkit.entity.Interaction interaction
+                    ? interaction : null;
+            var invalid = invalidEntity instanceof org.bukkit.entity.Interaction interaction
+                    ? interaction : null;
+
+            var wrongOptions = mobConfig(targetIds.get(wrongTypeId));
+            var invalidOptions = mobConfig(targetIds.get(invalidId));
+            var wrongUnsupported = wrongOptions == null ? null
+                    : wrongOptions.getConfigurationSection("entity.unsupported.Options");
+            var invalidUnsupported = invalidOptions == null ? null
+                    : invalidOptions.getConfigurationSection("entity.unsupported.Options");
+            boolean imported = configured != null && heightOnly != null && control != null && invalid != null
+                    && wrongTypeEntity instanceof org.bukkit.entity.Zombie
+                    && wrongUnsupported != null && invalidUnsupported != null
+                    && wrongUnsupported.getDouble("Height", Double.NaN) == 4.0
+                    && wrongUnsupported.getDouble("Width", Double.NaN) == 5.0
+                    && !wrongUnsupported.getBoolean("Responsive", true)
+                    && invalidUnsupported.getDouble("Height", Double.NaN) == -1.0
+                    && invalidUnsupported.getDouble("Width", Double.NaN) > Float.MAX_VALUE
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("Responsive"));
+            boolean applied = imported
+                    && Math.abs(configured.getInteractionHeight() - 2.5f) < 0.0001f
+                    && Math.abs(configured.getInteractionWidth() - 3.25f) < 0.0001f
+                    && !configured.isResponsive()
+                    && Math.abs(heightOnly.getInteractionHeight() - 1.75f) < 0.0001f
+                    && Math.abs(heightOnly.getInteractionWidth() - 1.75f) < 0.0001f;
+            boolean defaultsApplied = control.getInteractionHeight() == 1.0f
+                    && control.getInteractionWidth() == 1.0f && control.isResponsive()
+                    && invalid.getInteractionHeight() == 1.0f
+                    && invalid.getInteractionWidth() == 1.0f && invalid.isResponsive();
+            boolean wrongTypePreserved = wrongTypeEntity instanceof org.bukkit.entity.Zombie
+                    && wrongUnsupported != null && wrongUnsupported.contains("Height")
+                    && wrongUnsupported.contains("Width") && wrongUnsupported.contains("Responsive");
+            boolean invalidPreserved = invalidUnsupported != null
+                    && invalidUnsupported.contains("Height") && invalidUnsupported.contains("Width")
+                    && invalidUnsupported.contains("Responsive");
+            boolean passed = imported && applied && defaultsApplied
+                    && wrongTypePreserved && invalidPreserved;
+            getLogger().info("[自检] interaction-options-imported result=" + passed
+                    + " imported=" + imported
+                    + " configured-height=" + (configured == null ? "missing" : configured.getInteractionHeight())
+                    + " configured-width=" + (configured == null ? "missing" : configured.getInteractionWidth())
+                    + " responsive=" + (configured != null && configured.isResponsive())
+                    + " height-only-width=" + (heightOnly == null ? "missing" : heightOnly.getInteractionWidth())
+                    + " defaults-applied=" + defaultsApplied
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] interaction-options-imported result=false imported=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
@@ -22296,6 +22444,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             entity.setCustomName(options.getString("display-name"));
             entity.setCustomNameVisible(options.getBoolean("show-name", true));
         }
+        if (entity instanceof org.bukkit.entity.Interaction interaction) {
+            applyInteractionEntityOptions(interaction, options);
+        }
         if (entity instanceof org.bukkit.entity.Boat boat) {
             String boatType = options.getString("boat-type");
             if (boatType != null && !boatType.isBlank()) {
@@ -22324,6 +22475,47 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (options.contains("falling-block-cancel-drop")) {
             falling.setCancelDrop(options.getBoolean("falling-block-cancel-drop"));
         }
+    }
+
+    static void applyInteractionEntityOptions(org.bukkit.entity.Interaction interaction,
+                                              org.bukkit.configuration.ConfigurationSection options) {
+        if (interaction == null || options == null) return;
+        Float height = configuredInteractionDimension(options, "interaction-height");
+        Float width = configuredInteractionDimension(options, "interaction-width");
+        // Match Mythic's defaults explicitly instead of relying on server-version defaults.
+        float resolvedHeight = height == null ? 1.0f : height;
+        interaction.setInteractionHeight(resolvedHeight);
+        interaction.setInteractionWidth(width == null ? resolvedHeight : width);
+        Boolean responsive = configuredInteractionBoolean(options.get("interaction-responsive"));
+        interaction.setResponsive(responsive == null ? true : responsive);
+    }
+
+    private static Float configuredInteractionDimension(
+            org.bukkit.configuration.ConfigurationSection options, String key) {
+        if (!options.contains(key)) return null;
+        Object raw = options.get(key);
+        Double value = null;
+        if (raw instanceof Number number) {
+            value = number.doubleValue();
+        } else if (raw instanceof String text) {
+            try {
+                value = Double.parseDouble(text.trim());
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return value != null && Double.isFinite(value) && value >= 0.0 && value <= Float.MAX_VALUE
+                ? value.floatValue() : null;
+    }
+
+    private static Boolean configuredInteractionBoolean(Object raw) {
+        if (raw instanceof Boolean value) return value;
+        if (!(raw instanceof String text)) return null;
+        return switch (text.trim().toLowerCase(java.util.Locale.ROOT)) {
+            case "true", "yes", "1" -> true;
+            case "false", "no", "0" -> false;
+            default -> null;
+        };
     }
 
     /**
