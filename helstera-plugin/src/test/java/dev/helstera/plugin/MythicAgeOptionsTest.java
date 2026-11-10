@@ -608,6 +608,19 @@ class MythicAgeOptionsTest {
     }
 
     @Test
+    void appliesPlayerCreatedOnlyToIronGolems() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var options = YamlConfiguration.loadConfiguration(new java.io.StringReader("player-created: true\n"));
+
+        HelsteraPlugin.applyEntitySpecificOptions(proxy(org.bukkit.entity.IronGolem.class, calls), options);
+        assertEquals(true, calls.get("setPlayerCreated"));
+
+        calls.clear();
+        HelsteraPlugin.applyEntitySpecificOptions(proxy(org.bukkit.entity.Zombie.class, calls), options);
+        assertFalse(calls.containsKey("setPlayerCreated"));
+    }
+
+    @Test
     void appliesDocumentedInteractionDefaultsAndConfiguredValues() {
         Map<String, Object> calls = new LinkedHashMap<>();
         var interaction = proxy(org.bukkit.entity.Interaction.class, calls);
