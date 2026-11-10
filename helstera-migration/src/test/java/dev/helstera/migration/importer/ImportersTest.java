@@ -4901,6 +4901,62 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Iron Golem PlayerCreated maps only for valid Iron Golem options")
+    void mythicMapsIronGolemPlayerCreatedOption(@TempDir Path root) throws Exception {
+        Path positive = write(root, "Mobs/player-created-positive.yml", """
+                mobs:
+                  Created:
+                    Type: IRON_GOLEM
+                    Options:
+                      PlayerCreated: true
+                """);
+        List<Map<String, Object>> positiveEntries = new MythicMobsImporter().convert(positive);
+        YamlConfiguration positiveTarget = converted(positive);
+        assertTrue(positiveTarget.getBoolean("entity.player-created"));
+        assertTrue(positiveEntries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "entity.player-created".equals(entry.get("target-key"))));
+
+        Path falseValue = write(root, "Mobs/player-created-false.yml", """
+                mobs:
+                  Natural:
+                    Type: IRON_GOLEM
+                    Options:
+                      PlayerCreated: false
+                """);
+        assertFalse(converted(falseValue).getBoolean("entity.player-created", true));
+
+        Path wrongEntity = write(root, "Mobs/player-created-wrong-entity.yml", """
+                mobs:
+                  Wrong:
+                    Type: ZOMBIE
+                    Options:
+                      PlayerCreated: true
+                """);
+        List<Map<String, Object>> wrongEntries = new MythicMobsImporter().convert(wrongEntity);
+        YamlConfiguration wrongTarget = converted(wrongEntity);
+        assertTrue(wrongTarget.getBoolean("entity.unsupported.Options.PlayerCreated"));
+        assertFalse(wrongTarget.contains("entity.player-created"));
+        assertTrue(wrongEntries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.PlayerCreated".equals(entry.get("source-key"))));
+
+        Path invalid = write(root, "Mobs/player-created-invalid.yml", """
+                mobs:
+                  Invalid:
+                    Type: IRON_GOLEM
+                    Options:
+                      PlayerCreated: maybe
+                """);
+        List<Map<String, Object>> invalidEntries = new MythicMobsImporter().convert(invalid);
+        YamlConfiguration invalidTarget = converted(invalid);
+        assertEquals("maybe", invalidTarget.getString("entity.unsupported.Options.PlayerCreated"));
+        assertFalse(invalidTarget.contains("entity.player-created"));
+        assertTrue(invalidEntries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.PlayerCreated".equals(entry.get("source-key"))));
+    }
+
+    @Test
     @DisplayName("entity-specific options preserve incompatible types and malformed values")
     void mythicPreservesEntityScopedOptionBoundaries(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/entity-option-boundaries.yml", """

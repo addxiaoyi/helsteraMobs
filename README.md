@@ -49,6 +49,13 @@ fixture `srv-paper-boat-options-strict-20261110-r1` verifies Spruce Boat and
 Bamboo ChestBoat readback plus negative controls in the preceding 425-probe
 release catalog. See its [strict report](tools/paper-integration/reports/paper-1.21.1-boat-options-strict-20261110-r1.json).
 
+Mythic `Options.PlayerCreated` now maps only for Iron Golems and applies through
+Paper's player-created state setter. Importer and runtime tests cover true/false,
+wrong-entity rejection, and malformed-value preservation. A fresh strict Paper
+fixture has not yet verified this option; it remains part of the open Mob
+Options catalog. See the [parity matrix](MYTHICMOBS_PARITY_MATRIX.md) and the
+[official Mob Options reference](https://wiki.mythiccraft.io/mythicmobs/Mobs/Options).
+
 MythicMobs 5.9 named item-group cooldowns now import with strict validation
 and run through Paper's named `UseCooldown` API on Paper 1.21.4+. A real player
 connected to Paper 1.21.4-232 and the focused self-test verified setting,

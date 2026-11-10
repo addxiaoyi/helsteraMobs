@@ -25306,6 +25306,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 chestedHorse.setCarryingChest(carryingChest);
             }
         }
+        if (entity instanceof org.bukkit.entity.IronGolem ironGolem && options.contains("player-created")) {
+            ironGolem.setPlayerCreated(options.getBoolean("player-created"));
+        }
         if (entity instanceof org.bukkit.entity.Bee bee) {
             int anger = options.getInt("bee-anger", -1);
             if (anger >= 0) bee.setAnger(anger);
