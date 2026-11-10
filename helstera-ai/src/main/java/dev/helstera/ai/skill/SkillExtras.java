@@ -32,6 +32,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 /**
  * 扩展 mechanic 目录：条件与动作的第二批实现。
@@ -85,6 +86,29 @@ public final class SkillExtras {
     private static volatile ThreatLookup threatLookup;
     private static volatile PinRegistry pinRegistry;
     private static volatile java.util.function.BiFunction<String, Location, Boolean> regionLookup;
+    private static final Map<String, String> KNOWN_NMS_VERSIONS = Map.ofEntries(
+            Map.entry("1.20.1", "v1_20_R1"),
+            Map.entry("1.20.2", "v1_20_R2"),
+            Map.entry("1.20.3", "v1_20_R3"),
+            Map.entry("1.20.4", "v1_20_R3"),
+            Map.entry("1.20.5", "v1_20_R4"),
+            Map.entry("1.20.6", "v1_20_R4"),
+            Map.entry("1.21", "v1_21_R1"),
+            Map.entry("1.21.1", "v1_21_R1"),
+            Map.entry("1.21.2", "v1_21_R2"),
+            Map.entry("1.21.3", "v1_21_R2"),
+            Map.entry("1.21.4", "v1_21_R3"),
+            Map.entry("1.21.5", "v1_21_R4"),
+            Map.entry("1.21.6", "v1_21_R5"),
+            Map.entry("1.21.7", "v1_21_R5"),
+            Map.entry("1.21.8", "v1_21_R6"),
+            Map.entry("1.21.9", "v1_21_R7"),
+            Map.entry("1.21.10", "v1_21_R7"),
+            Map.entry("1.21.11", "v1_21_R7"));
+    private static final Pattern NMS_VERSION_PATTERN =
+            Pattern.compile("(?i)^v?\\d+_\\d+_r\\d+(?:_\\d+)?$");
+    private static final Pattern CRAFTBUKKIT_VERSION_SEGMENT =
+            Pattern.compile("(?i)^v\\d+_\\d+_r\\d+(?:_\\d+)?$");
 
     public static void pinRegistry(PinRegistry registry) {
         pinRegistry = registry;
@@ -3104,6 +3128,16 @@ public final class SkillExtras {
                 }),
                 Map.entry("server-is-paper", (SkillCatalog.ConditionFactory) a ->
                         ctx -> isPaperServer()),
+                Map.entry("server-nms-version", (SkillCatalog.ConditionFactory) a -> {
+                    String expected = keyedArg(a, "version", "sv", "v");
+                    if (expected == null) expected = str(a, 0, "v1_19_R1_2");
+                    String normalized = normalizeNmsVersion(expected);
+                    if (normalized == null) {
+                        throw new IllegalArgumentException(
+                                "server-nms-version requires a value such as v1_21_R1");
+                    }
+                    return ctx -> serverNmsVersionMatches(normalized);
+                }),
                 Map.entry("plugin", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = str(a, 0, "MythicMobs");
                     return ctx -> pluginRunning(wanted);
@@ -3986,6 +4020,45 @@ public final class SkillExtras {
         } catch (Throwable ignored) {
             return false;
         }
+    }
+
+    private static boolean serverNmsVersionMatches(String expected) {
+        String actual = detectedNmsVersion();
+        return actual != null && actual.equalsIgnoreCase(expected);
+    }
+
+    private static String detectedNmsVersion() {
+        try {
+            String packageVersion = nmsVersionFromServerPackage(org.bukkit.Bukkit.getServer());
+            if (packageVersion != null) return packageVersion;
+        } catch (Throwable ignored) {
+            // Some forks do not expose a versioned CraftBukkit package.
+        }
+        try {
+            String minecraftVersion = org.bukkit.Bukkit.getMinecraftVersion();
+            return KNOWN_NMS_VERSIONS.get(minecraftVersion == null
+                    ? "" : minecraftVersion.trim());
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static String nmsVersionFromServerPackage(org.bukkit.Server server) {
+        if (server == null) return null;
+        for (String segment : server.getClass().getPackageName().split("\\.")) {
+            if (CRAFTBUKKIT_VERSION_SEGMENT.matcher(segment).matches()) {
+                return normalizeNmsVersion(segment);
+            }
+        }
+        return null;
+    }
+
+    private static String normalizeNmsVersion(String raw) {
+        if (raw == null) return null;
+        String value = raw.trim();
+        if (!NMS_VERSION_PATTERN.matcher(value).matches()) return null;
+        return value.regionMatches(true, 0, "v", 0, 1)
+                ? "v" + value.substring(1) : "v" + value;
     }
 
     private enum VersionCheck { EXACT, AFTER_OR_EQUAL }

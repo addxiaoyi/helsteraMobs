@@ -2147,6 +2147,8 @@ public final class SkillService {
             case "targetinvulnerable", "target-is-invulnerable", "targetinvulnerableis" -> "target-invulnerable";
             case "gamemode", "gamemodeis" -> "game-mode-is";
             case "serverispaper", "is-paper", "ispaper" -> "server-is-paper";
+            case "servernmsversion", "server-nms-version", "servernms", "nmsversion" ->
+                    "server-nms-version";
             case "plugin", "plugin-exists", "pluginexists", "hasplugin", "has-plugin" -> "plugin";
             case "serverversion", "server-version", "server", "version" -> "server-version";
             case "serveraftereq", "serverafter", "versionaftereq", "server-version-after-or-equal" ->
