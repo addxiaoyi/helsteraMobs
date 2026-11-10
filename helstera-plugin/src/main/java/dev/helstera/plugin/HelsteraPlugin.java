@@ -1706,6 +1706,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedFoxOptionsSelfTest(origin.clone().add(7, 0, 0));
                 runImportedRabbitOptionsSelfTest(origin.clone().add(8, 0, 0));
                 runImportedHorseOptionsSelfTest(origin.clone().add(32, 0, 0));
+                runImportedBoatOptionsSelfTest(origin.clone().add(64, 0, 0));
 
                 var falling = world.spawnFallingBlock(origin.clone().add(8, 0, 0),
                         org.bukkit.Material.SAND.createBlockData());
@@ -4273,6 +4274,155 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " invalid-preserved=" + invalidPreserved);
         } catch (Throwable failure) {
             getLogger().warning("[自检] falling-block-options-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedBoatOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-boat-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("boat-options.yml");
+            String configuredMobId = "ImportedBoatConfigured_" + suffix;
+            String controlMobId = "ImportedBoatControl_" + suffix;
+            String chestMobId = "ImportedChestBoatConfigured_" + suffix;
+            String wrongTypeMobId = "ImportedBoatWrongType_" + suffix;
+            String invalidMobId = "ImportedBoatInvalid_" + suffix;
+            String conflictMobId = "ImportedBoatConflict_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: BOAT
+                        Options:
+                          BoatType: SPRUCE
+                      %2$s:
+                        Type: BOAT
+                        Options:
+                          Type: OAK
+                      %3$s:
+                        Type: CHEST_BOAT
+                        Options:
+                          Type: BAMBOO
+                      %4$s:
+                        Type: ZOMBIE
+                        Options:
+                          BoatType: CHERRY
+                      %5$s:
+                        Type: BOAT
+                        Options:
+                          BoatType: NOT_A_BOAT
+                      %6$s:
+                        Type: BOAT
+                        Options:
+                          BoatType: SPRUCE
+                          Type: BAMBOO
+                    """.formatted(configuredMobId, controlMobId, chestMobId,
+                    wrongTypeMobId, invalidMobId, conflictMobId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Boat mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Boat mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            var sourceIds = java.util.List.of(configuredMobId, controlMobId, chestMobId,
+                    wrongTypeMobId, invalidMobId, conflictMobId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic Boat option probe mobs were not all imported");
+            }
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0),
+                    origin.clone().add(6, 0, 0), origin.clone().add(9, 0, 0),
+                    origin.clone().add(12, 0, 0), origin.clone().add(15, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        locations.get(i), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+            java.util.function.IntFunction<org.bukkit.entity.Entity> spawnedEntity = instanceId -> {
+                var instance = instanceId > 0 ? instances().impl(instanceId) : null;
+                return instance == null ? null : instance.baseEntity().orElse(null);
+            };
+
+            var configuredEntity = spawnedEntity.apply(spawnedIds.get(configuredMobId));
+            var controlEntity = spawnedEntity.apply(spawnedIds.get(controlMobId));
+            var chestEntity = spawnedEntity.apply(spawnedIds.get(chestMobId));
+            var wrongTypeEntity = spawnedEntity.apply(spawnedIds.get(wrongTypeMobId));
+            var invalidEntity = spawnedEntity.apply(spawnedIds.get(invalidMobId));
+            var conflictEntity = spawnedEntity.apply(spawnedIds.get(conflictMobId));
+            var configuredBoat = configuredEntity instanceof org.bukkit.entity.Boat boat ? boat : null;
+            var controlBoat = controlEntity instanceof org.bukkit.entity.Boat boat ? boat : null;
+            var chestBoat = chestEntity instanceof org.bukkit.entity.ChestBoat boat ? boat : null;
+
+            var wrongTypeOptions = mobConfig(targetIds.get(wrongTypeMobId));
+            var invalidOptions = mobConfig(targetIds.get(invalidMobId));
+            var conflictOptions = mobConfig(targetIds.get(conflictMobId));
+            var wrongTypeUnsupported = wrongTypeOptions == null ? null
+                    : wrongTypeOptions.getConfigurationSection("entity.unsupported.Options");
+            var invalidUnsupported = invalidOptions == null ? null
+                    : invalidOptions.getConfigurationSection("entity.unsupported.Options");
+            var conflictUnsupported = conflictOptions == null ? null
+                    : conflictOptions.getConfigurationSection("entity.unsupported.Options");
+
+            boolean imported = configuredBoat != null && controlBoat != null && chestBoat != null
+                    && invalidEntity instanceof org.bukkit.entity.Boat
+                    && conflictEntity instanceof org.bukkit.entity.Boat
+                    && wrongTypeEntity instanceof org.bukkit.entity.Zombie
+                    && wrongTypeUnsupported != null && invalidUnsupported != null
+                    && conflictUnsupported != null
+                    && "CHERRY".equalsIgnoreCase(wrongTypeUnsupported.getString("BoatType"))
+                    && "NOT_A_BOAT".equalsIgnoreCase(invalidUnsupported.getString("BoatType"))
+                    && "SPRUCE".equalsIgnoreCase(conflictUnsupported.getString("BoatType"))
+                    && "BAMBOO".equalsIgnoreCase(conflictUnsupported.getString("Type"));
+            boolean applied = imported
+                    && configuredBoat.getBoatType() == org.bukkit.entity.Boat.Type.SPRUCE
+                    && controlBoat.getBoatType() == org.bukkit.entity.Boat.Type.OAK
+                    && chestBoat.getBoatType() == org.bukkit.entity.Boat.Type.BAMBOO;
+            boolean wrongTypePreserved = wrongTypeEntity instanceof org.bukkit.entity.Zombie
+                    && wrongTypeUnsupported != null
+                    && "CHERRY".equalsIgnoreCase(wrongTypeUnsupported.getString("BoatType"));
+            boolean invalidPreserved = invalidUnsupported != null
+                    && "NOT_A_BOAT".equalsIgnoreCase(invalidUnsupported.getString("BoatType"))
+                    && ((org.bukkit.entity.Boat) invalidEntity).getBoatType() == org.bukkit.entity.Boat.Type.OAK;
+            boolean conflictPreserved = conflictUnsupported != null
+                    && "SPRUCE".equalsIgnoreCase(conflictUnsupported.getString("BoatType"))
+                    && "BAMBOO".equalsIgnoreCase(conflictUnsupported.getString("Type"))
+                    && ((org.bukkit.entity.Boat) conflictEntity).getBoatType() == org.bukkit.entity.Boat.Type.OAK;
+            boolean passed = imported && applied && wrongTypePreserved
+                    && invalidPreserved && conflictPreserved;
+            getLogger().info("[自检] boat-options-imported result=" + passed
+                    + " imported=" + imported
+                    + " boat-type=" + (configuredBoat == null ? "missing" : configuredBoat.getBoatType().name())
+                    + " control-type=" + (controlBoat == null ? "missing" : controlBoat.getBoatType().name())
+                    + " chest-type=" + (chestBoat == null ? "missing" : chestBoat.getBoatType().name())
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved
+                    + " conflict-preserved=" + conflictPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] boat-options-imported result=false imported=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
@@ -22145,6 +22295,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (options.contains("display-name")) {
             entity.setCustomName(options.getString("display-name"));
             entity.setCustomNameVisible(options.getBoolean("show-name", true));
+        }
+        if (entity instanceof org.bukkit.entity.Boat boat) {
+            String boatType = options.getString("boat-type");
+            if (boatType != null && !boatType.isBlank()) {
+                try {
+                    boat.setBoatType(org.bukkit.entity.Boat.Type.valueOf(
+                            boatType.trim().toUpperCase(java.util.Locale.ROOT)));
+                } catch (IllegalArgumentException ignored) {
+                    // Invalid hand-authored values are ignored; the importer preserves source values.
+                }
+            }
         }
         if (!(entity instanceof org.bukkit.entity.FallingBlock falling)) return;
         String blockData = options.getString("falling-block-data", options.getString("block-data"));
