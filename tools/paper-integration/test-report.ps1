@@ -165,6 +165,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] follow-range-options result=true base=40',
         '[Server thread/INFO]: [helsteraMobs] [自检] damage-options result=true base=12',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-options result=true base=8',
+        '[Server thread/INFO]: [helsteraMobs] [自检] armor-toughness-options result=true base=4',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false',
         '[Server thread/INFO]: [helsteraMobs] [自检] exp-options result=true experience=13 event=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] exp-natural-death result=true dead=true experience=13 cause=BukkitDamage',
@@ -1254,6 +1255,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'reinforcementsChanceOptions'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'reinforcementsChanceOptions'; status = 'passed'; observations = @('reinforcements-chance-options result=true imported=true applied=true base=0.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'armorToughnessOptions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'armorToughnessOptions'; status = 'passed'; observations = @('armor-toughness-options result=true base=4.0')
     }
     $fullCatalogReport.expectedProbeIds += 'inCombatCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

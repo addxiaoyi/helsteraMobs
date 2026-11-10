@@ -59,6 +59,7 @@ $probeSpecs = [ordered]@{
     followRangeOptions = 'follow-range-options result=true base=40(?:\.0+)?'
     damageOptions = 'damage-options result=true base=12(?:\.0+)?'
     armorOptions = 'armor-options result=true base=8(?:\.0+)?'
+    armorToughnessOptions = 'armor-toughness-options result=true base=4(?:\.0+)?'
     entityConfigFlags = 'entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false'
     expOptions = 'exp-options result=true experience=13 event=true'
     expNaturalDeath = 'exp-natural-death result=true dead=true experience=13 cause=BukkitDamage'
