@@ -1202,9 +1202,10 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "AlwaysShowName", "show-name");
             mapOption(options, srcFile, entries, target, "Persistent", "persistent");
             mapOption(options, srcFile, entries, target, "VisibleByDefault", "entity.visible-by-default");
-            mapEntityBooleanOption(options, srcFile, entries, target, "Gravity", "entity.gravity", false);
-            mapEntityBooleanOption(options, srcFile, entries, target, "NoGravity", "entity.gravity", true);
-            mapEntityBooleanOption(options, srcFile, entries, target, "HasGravity", "entity.gravity", false);
+            mapOptionInvertedBoolean(options, srcFile, entries, target, "NoGravity", "entity.gravity");
+            mapEntityScopedOption(options, srcFile, entries, target, "HasGravity",
+                    "entity.gravity", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.ArmorStand.class);
             mapOption(options, srcFile, entries, target, "Collidable", "entity.collidable");
             mapOption(options, srcFile, entries, target, "PreventSunburn", "entity.prevent-sunburn");
             mapOption(options, srcFile, entries, target, "PreventRandomEquipment", "entity.prevent-random-equipment");
@@ -1432,7 +1433,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "ProjectilePierce", "ProjectileTracking", "ProjectileTrackingTicks", "ThreatTable",
                     "UseThreatTable", "SpawningDistance",
                     "Scale", "ShowHealth", "Silent", "NoAI",
-                    "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "Gravity", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
+                    "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
                     "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop")) {
                 removeIgnoreCase(leftover, mapped);
             }
@@ -4760,9 +4761,9 @@ public final class MythicMobsImporter implements MigrationImporter {
         });
     }
 
-    private void mapEntityBooleanOption(ConfigurationSection options, String srcFile,
-                                        List<Map<String, Object>> entries, YamlConfiguration target,
-                                        String optionName, String path, boolean inverted) {
+    private void mapOptionInvertedBoolean(ConfigurationSection options, String srcFile,
+                                          List<Map<String, Object>> entries, YamlConfiguration target,
+                                          String optionName, String path) {
         Object raw = ciGet(options, optionName);
         if (raw == null) return;
         Boolean parsed = parseBooleanOption(raw);
@@ -4773,12 +4774,10 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "unsupported", "Invalid boolean option value was preserved instead of being applied.", "WARN");
             return;
         }
-        boolean value = inverted ? !parsed : parsed;
+        boolean value = !parsed;
         target.set(path, value);
         note(entries, srcFile, "Options." + optionName, path, value, "mapped",
-                inverted
-                        ? "Validated and inverted the MythicMobs boolean option into the runtime field."
-                        : "Validated the MythicMobs boolean option before mapping it into the runtime field.");
+                "Validated and inverted the MythicMobs boolean option into the runtime field.");
     }
 
     private void mapMythicDespawnOption(ConfigurationSection options,

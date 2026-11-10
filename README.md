@@ -2,13 +2,14 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-gravity-aliases-strict-20261110-r1` extends
-importer-to-runtime coverage to Mythic `Options.Gravity`, `NoGravity`, and
-`HasGravity`. Paper verifies both `NoGravity` states, the direct `HasGravity`
-alias, and preservation of malformed values for all three keys through
-production mob spawning. `Options.PlayerCreated` remains covered in the same
-full release catalog. Paper 1.21.1-133 passes all 430 probes (411 passed,
-19 expected rejections) with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-gravity-aliases-strict-20261110-r1.json),
+Latest strict fixture `srv-paper-gravity-scope-strict-20261110-r1` aligns
+Mythic gravity options with the official scopes: `NoGravity` is general,
+`HasGravity` is Armor Stand-specific, and undocumented `Gravity` remains
+preserved with a warning. Paper verifies both `NoGravity` states, both
+Armor Stand `HasGravity` states, wrong-entity handling, and malformed-value
+preservation through production mob spawning. The full 430-probe catalog
+(411 passed, 19 expected rejections) has zero failed or incomplete probes.
+See the [strict report](tools/paper-integration/reports/paper-1.21.1-gravity-scope-strict-20261110-r1.json),
 [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and
 [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
@@ -1344,7 +1345,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-gravity-aliases-strict-20261110-r1` has 430 probes (411 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-gravity-scope-strict-20261110-r1` has 430 probes (411 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1362,8 +1363,8 @@ Latest strict report has 430 probes, zero incomplete.
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 569 cited IDs; 477 report files; 4 directories
-   without reports; 88 missing directories; 248 archived release reports. The
+   Current fixture inventory: 570 cited IDs; 478 report files; 4 directories
+   without reports; 88 missing directories; 249 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1431,7 +1432,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
-- Mythic `Options.Gravity` and `HasGravity` map validated booleans directly to `entity.gravity`; `NoGravity` maps the inverse. Malformed values for any alias remain under `entity.unsupported.Options.*` with a migration warning and do not overwrite another valid alias. Importer tests and strict Paper fixture `srv-paper-gravity-aliases-strict-20261110-r1` verify production readback and invalid-value preservation in the complete 430-probe release catalog.
+- Official Mythic [`Options.NoGravity`](https://wiki.mythiccraft.io/mythicmobs/Mobs/Options) maps to the inverse `entity.gravity` value for supported entities. Armor Stand-only `Options.HasGravity` maps directly; wrong-entity and malformed values remain preserved with migration warnings. `Options.Gravity` is not listed in the official options reference and remains unsupported-preserved. Importer tests and strict Paper fixture `srv-paper-gravity-scope-strict-20261110-r1` verify production readback and preservation boundaries in the complete 430-probe release catalog.
 - Official Iron Golem `Options.PlayerCreated` now maps to `entity.player-created` and applies through the production mob-spawn path. Importer/runtime coverage and strict Paper 1.21.1-133 fixture `srv-paper-player-created-strict-20261110-r1` verify real true/false Iron Golem state plus wrong-entity and malformed-value preservation; the full 429-probe release catalog passes with zero failed or incomplete. The broader Mob Options catalog remains open.
 - Imported Mythic `?targetInWater` and `?targetInLava` conditions now map to the target-specific runtime evaluators. Importer and runtime contract tests cover aliases, positive/negative fluid states, missing targets, and malformed arguments; the strict Paper 1.21.1-133 fixture `srv-paper-target-fluids-import-strict-20261110-r2` verifies live water/lava evaluation and block restoration in the full 423-probe catalog. Same-tick fluid-state reads remain a Paper cache-timing boundary; the complete Conditions catalog remains `mapped-unverified`.
 - Official `IsInvulnerable` and `IsInvincible` condition aliases now import to the same `is-invulnerable` evaluator. Importer and cross-module tests cover both aliases, positive and negative states, missing targets, invalid-input preservation, and state restoration; strict Paper fixture `srv-paper-invincible-strict-20261110-r3` verifies imported aliases and target evaluation in the complete 423-probe release catalog. The individual condition is `implemented-runtime`; the wider Conditions catalog remains `mapped-unverified`.

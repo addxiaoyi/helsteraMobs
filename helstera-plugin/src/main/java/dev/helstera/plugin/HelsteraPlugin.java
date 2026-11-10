@@ -2374,6 +2374,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             String raiderId = "EntityFlagsRaider_" + suffix;
             String raiderControlId = "EntityFlagsRaiderControl_" + suffix;
             String wrongTypeId = "EntityFlagsWrongType_" + suffix;
+            String hasGravityId = "EntityFlagsHasGravity_" + suffix;
+            String hasGravityControlId = "EntityFlagsHasGravityControl_" + suffix;
             Files.writeString(source, """
                     mobs:
                       %1$s:
@@ -2429,8 +2431,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                           Gravity: maybe
                           NoGravity: maybe
                           HasGravity: maybe
+                      %8$s:
+                        Type: ARMOR_STAND
+                        Options:
+                          HasGravity: false
+                      %9$s:
+                        Type: ARMOR_STAND
+                        Options:
+                          HasGravity: true
                     """.formatted(wolfId, wolfControlId, pigZombieId, pigZombieControlId,
-                    raiderId, raiderControlId, wrongTypeId));
+                    raiderId, raiderControlId, wrongTypeId, hasGravityId, hasGravityControlId));
 
             var targetIds = new java.util.LinkedHashMap<String, String>();
             for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
@@ -2456,14 +2466,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
 
             var sourceIds = java.util.List.of(wolfId, wolfControlId, pigZombieId,
-                    pigZombieControlId, raiderId, raiderControlId, wrongTypeId);
+                    pigZombieControlId, raiderId, raiderControlId, wrongTypeId,
+                    hasGravityId, hasGravityControlId);
             if (!targetIds.keySet().containsAll(sourceIds)) {
                 throw new IllegalStateException("Mythic entity flag fixtures were not all imported");
             }
             var locations = java.util.List.of(origin, origin.clone().add(2, 0, 0),
                     origin.clone().add(4, 0, 0), origin.clone().add(6, 0, 0),
                     origin.clone().add(8, 0, 0), origin.clone().add(10, 0, 0),
-                    origin.clone().add(12, 0, 0));
+                    origin.clone().add(12, 0, 0), origin.clone().add(14, 0, 0),
+                    origin.clone().add(16, 0, 0));
             var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
             for (int i = 0; i < sourceIds.size(); i++) {
                 int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
@@ -2478,6 +2490,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var raiderInstance = instances().impl(spawnedIds.get(raiderId));
             var raiderControlInstance = instances().impl(spawnedIds.get(raiderControlId));
             var wrongTypeInstance = instances().impl(spawnedIds.get(wrongTypeId));
+            var hasGravityInstance = instances().impl(spawnedIds.get(hasGravityId));
+            var hasGravityControlInstance = instances().impl(spawnedIds.get(hasGravityControlId));
             var wolf = wolfInstance == null ? null : wolfInstance.baseEntity()
                     .filter(org.bukkit.entity.Wolf.class::isInstance)
                     .map(org.bukkit.entity.Wolf.class::cast).orElse(null);
@@ -2498,6 +2512,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     .map(org.bukkit.entity.Raider.class::cast).orElse(null);
             var wrongTypeEntity = wrongTypeInstance == null ? null
                     : wrongTypeInstance.baseEntity().orElse(null);
+            var hasGravityStand = hasGravityInstance == null ? null : hasGravityInstance.baseEntity()
+                    .filter(org.bukkit.entity.ArmorStand.class::isInstance)
+                    .map(org.bukkit.entity.ArmorStand.class::cast).orElse(null);
+            var hasGravityControlStand = hasGravityControlInstance == null ? null
+                    : hasGravityControlInstance.baseEntity()
+                    .filter(org.bukkit.entity.ArmorStand.class::isInstance)
+                    .map(org.bukkit.entity.ArmorStand.class::cast).orElse(null);
 
             var wolfOptions = mobConfig(targetIds.get(wolfId));
             var wolfControlOptions = mobConfig(targetIds.get(wolfControlId));
@@ -2506,6 +2527,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var raiderOptions = mobConfig(targetIds.get(raiderId));
             var raiderControlOptions = mobConfig(targetIds.get(raiderControlId));
             var wrongTypeOptions = mobConfig(targetIds.get(wrongTypeId));
+            var hasGravityOptions = mobConfig(targetIds.get(hasGravityId));
+            var hasGravityControlOptions = mobConfig(targetIds.get(hasGravityControlId));
             var wolfEntityOptions = wolfOptions == null ? null : wolfOptions.getConfigurationSection("entity");
             var wolfControlEntityOptions = wolfControlOptions == null ? null
                     : wolfControlOptions.getConfigurationSection("entity");
@@ -2517,10 +2540,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     : raiderOptions.getConfigurationSection("entity");
             var raiderControlEntityOptions = raiderControlOptions == null ? null
                     : raiderControlOptions.getConfigurationSection("entity");
+            var hasGravityEntityOptions = hasGravityOptions == null ? null
+                    : hasGravityOptions.getConfigurationSection("entity");
+            var hasGravityControlEntityOptions = hasGravityControlOptions == null ? null
+                    : hasGravityControlOptions.getConfigurationSection("entity");
             var wrongEntityOptions = wrongTypeOptions == null ? null
                     : wrongTypeOptions.getConfigurationSection("entity");
             var wrongUnsupported = wrongEntityOptions == null ? null
                     : wrongEntityOptions.getConfigurationSection("unsupported.Options");
+            var wrongMobUnsupported = wrongTypeOptions == null ? null
+                    : wrongTypeOptions.getConfigurationSection("mob.unsupported.Options");
 
             boolean imported = wolfEntityOptions != null && wolfEntityOptions.getBoolean("tamed")
                     && wolfEntityOptions.getBoolean("angry")
@@ -2532,7 +2561,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && raiderEntityOptions != null && !raiderEntityOptions.getBoolean("can-join-raid", true)
                     && raiderEntityOptions.getBoolean("patrol-leader")
                     && raiderEntityOptions.getBoolean("patrol-spawn-point")
-                    && !raiderEntityOptions.getBoolean("gravity", true)
+                    && !raiderEntityOptions.contains("gravity")
+                    && raiderEntityOptions.getBoolean("unsupported.Options.HasGravity", true) == false
                     && raiderControlEntityOptions != null
                     && raiderControlEntityOptions.getBoolean("can-join-raid", false)
                     && !raiderControlEntityOptions.getBoolean("patrol-leader", true)
@@ -2577,22 +2607,32 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean noGravityInvalidPreserved = wrongUnsupported != null
                     && "maybe".equalsIgnoreCase(wrongUnsupported.getString("NoGravity"))
                     && wrongEntityOptions != null && !wrongEntityOptions.contains("gravity");
-            boolean gravityInvalidPreserved = wrongUnsupported != null
-                    && "maybe".equalsIgnoreCase(wrongUnsupported.getString("Gravity"));
+            boolean gravityInvalidPreserved = wrongMobUnsupported != null
+                    && "maybe".equalsIgnoreCase(wrongMobUnsupported.getString("Gravity"));
             boolean hasGravityInvalidPreserved = wrongUnsupported != null
                     && "maybe".equalsIgnoreCase(wrongUnsupported.getString("HasGravity"));
+            boolean hasGravityApplied = hasGravityEntityOptions != null
+                    && !hasGravityEntityOptions.getBoolean("gravity", true)
+                    && hasGravityControlEntityOptions != null
+                    && hasGravityControlEntityOptions.getBoolean("gravity", false);
             boolean noGravityApplied = wolf != null && !wolf.hasGravity()
                     && wolfControl != null && wolfControl.hasGravity()
-                    && raider != null && !raider.hasGravity()
+                    && raider != null && raider.hasGravity()
+                    && hasGravityStand != null && !hasGravityStand.hasGravity()
+                    && hasGravityControlStand != null && hasGravityControlStand.hasGravity()
                     && wrongTypeEntity != null && wrongTypeEntity.hasGravity();
             boolean noGravityResult = imported && noGravityImported
                     && noGravityInvalidPreserved && gravityInvalidPreserved
-                    && hasGravityInvalidPreserved && noGravityApplied;
+                    && hasGravityInvalidPreserved && hasGravityApplied && noGravityApplied;
             getLogger().info("[自检] no-gravity-imported result=" + noGravityResult
                     + " imported=" + noGravityImported
                     + " configured=" + (wolf != null && wolf.hasGravity())
                     + " control=" + (wolfControl != null && wolfControl.hasGravity())
-                    + " has-gravity-alias=" + (raider != null && raider.hasGravity())
+                    + " has-gravity=" + (hasGravityStand != null && hasGravityStand.hasGravity())
+                    + " has-gravity-control=" + (hasGravityControlStand != null && hasGravityControlStand.hasGravity())
+                    + " has-gravity-wrong-type-preserved=" + (raiderEntityOptions != null
+                            && !raiderEntityOptions.contains("gravity")
+                            && Boolean.FALSE.equals(raiderEntityOptions.getBoolean("unsupported.Options.HasGravity")))
                     + " invalid-preserved=" + noGravityInvalidPreserved
                     + " gravity-invalid-preserved=" + gravityInvalidPreserved
                     + " has-gravity-invalid-preserved=" + hasGravityInvalidPreserved
