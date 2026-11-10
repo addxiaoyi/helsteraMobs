@@ -2,7 +2,26 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-armor-toughness-stats-strict-20261110-r1`
+Latest strict fixture `srv-paper-health-boundaries-strict-20261110-r2` passes
+all 421 release probes (402 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Its `healthImportedCondition` probe verifies
+absolute and percentage comparisons, positional health arguments with
+absorption, duplicate-argument rejection, and preservation of overflowing and
+invalid values. Report:
+`tools/paper-integration/reports/paper-1.21.1-health-import-boundaries-strict-20261110-r2.json`
+(SHA-256 `5df86825e46077bbb3edd8f8e9acb922f8dc20337ab52dea81ecb14792d8ceca`).
+Compressed server log SHA-256:
+`b1ecbf9d938c64cde0d42bce4fb22e03a9add37d00213e418d2f16c0801726b5`.
+Client log archive SHA-256:
+`b1949326d837b7ab81405e58d36219ad097112df09696519c4f2e0bc6f88802c`.
+Plugin SHA-256:
+`780d4172c98822cedbec1af8ae01f4d8982b08b90b82c52de164ed9454821087`.
+This verifies the listed health-import boundary cases; the full Conditions
+catalog remains `mapped-unverified`.
+
+Latest strict report has 421 probes, zero incomplete.
+
+Previous strict fixture `srv-paper-armor-toughness-stats-strict-20261110-r1`
 passes all 421 release probes (402 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. Its `armorToughnessStatsImported` evidence
 converts the documented Mythic `Stats: - ARMOR_TOUGHNESS 4` entry, spawns the
@@ -20,7 +39,6 @@ Plugin SHA-256:
 The earlier Armor Toughness fixture checked only an already-converted Helstera
 mob file; it is retained as historical runtime evidence and does not establish
 Mythic import parity. Archived logs redact test web-token values.
-
 Previous strict fixture `srv-paper-last-damager-strict-20261110-r1` passes all
 419 release probes (400 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. Its `lastDamagerTargeter` evidence verifies
@@ -1141,7 +1159,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-armor-toughness-stats-strict-20261110-r1` has 421 probes (402 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-health-boundaries-strict-20261110-r2` has 421 probes (402 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1157,8 +1175,8 @@ This is a partial parity release. The matrix currently has `34`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 548 cited IDs; 456 report files; 4 directories
-   without reports; 88 missing directories; 227 archived release reports. The
+   Current fixture inventory: 550 cited IDs; 458 report files; 4 directories
+   without reports; 88 missing directories; 229 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

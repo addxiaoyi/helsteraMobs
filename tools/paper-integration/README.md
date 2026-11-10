@@ -38,7 +38,24 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-armor-toughness-stats-strict-20261110-r1`
+Latest strict fixture `srv-paper-health-boundaries-strict-20261110-r2`
+passes all 421 probes (402 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Its `healthImportedCondition` probe verifies
+absolute and percentage comparisons, positional arguments with absorption,
+duplicate-argument rejection, and preservation of overflowing and invalid
+values. Report:
+`reports/paper-1.21.1-health-import-boundaries-strict-20261110-r2.json`
+(SHA-256 `5df86825e46077bbb3edd8f8e9acb922f8dc20337ab52dea81ecb14792d8ceca`).
+Compressed server log SHA-256:
+`b1ecbf9d938c64cde0d42bce4fb22e03a9add37d00213e418d2f16c0801726b5`.
+Client log archive SHA-256:
+`b1949326d837b7ab81405e58d36219ad097112df09696519c4f2e0bc6f88802c`.
+Plugin SHA-256:
+`780d4172c98822cedbec1af8ae01f4d8982b08b90b82c52de164ed9454821087`.
+The Conditions catalog remains `mapped-unverified` beyond the cases covered
+by this fixture.
+
+Previous strict fixture `srv-paper-armor-toughness-stats-strict-20261110-r1`
 passes all 421 probes (402 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. Its `armorToughnessStatsImported` probe runs
 the documented Mythic `Stats: - ARMOR_TOUGHNESS 4` through the production

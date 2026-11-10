@@ -1601,7 +1601,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'healthImportedCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'healthImportedCondition'; status = 'passed'; observations = @('health-imported result=true comparisons=true invalid-preserved=true')
+        id = 'healthImportedCondition'; status = 'passed'; observations = @('health-imported result=true comparisons=true duplicate-rejected=true overflow-preserved=true invalid-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'healthRangeImportedCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -1985,7 +1985,7 @@ try {
     Assert-True $missingHealthRejected 'full release gate rejects missing imported health evidence'
     $fullCatalogReport.expectedProbeIds += 'healthImportedCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'healthImportedCondition'; status = 'passed'; observations = @('health-imported result=true comparisons=true invalid-preserved=true')
+        id = 'healthImportedCondition'; status = 'passed'; observations = @('health-imported result=true comparisons=true duplicate-rejected=true overflow-preserved=true invalid-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'healthRangeImportedCondition' })
     $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'healthRangeImportedCondition' })
