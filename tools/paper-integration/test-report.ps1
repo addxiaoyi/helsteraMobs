@@ -1043,6 +1043,10 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'localDifficultyCondition'; status = 'passed'; observations = @('local-difficulty-condition imported=true positive=true range-positive=true high-rejected=true fallback-positive=true missing-context-rejected=true invalid-preserved=true passed=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'serverNmsVersionCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'serverNmsVersionCondition'; status = 'passed'; observations = @('server-nms-version-condition imported=true positive=true alias-positive=true scalar-positive=true wrong-rejected=true default-rejected=true invalid-preserved=true passed=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'absorptionPlayerCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'absorptionPlayerCondition'; status = 'passed'; observations = @('absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true')
