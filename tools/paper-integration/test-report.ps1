@@ -137,6 +137,7 @@ try {
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true spyglass-condition=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true name-condition=true',
         '[Server thread/INFO]: [自检] skill-trigger damage=true attack=true attacked=false teleport=true teleport-before=false bukkit-damage=true damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true bow-tension-condition=true bukkit-attacked=true cancelled-condition=true cancelled-before=false cancelled-after=true entity-valid=true',
+        '[Server thread/INFO]: [自检] skill-trigger damage=true attack=true last-damager-targeter=true last-damager-projectile=true last-damager-environmental-rejected=true last-damager-removed-rejected=true teleport=true teleport-before=false bukkit-damage=true bukkit-attacked=true cancelled-before=false cancelled-after=false entity-valid=true',
         '[Server thread/INFO]: block-events break=true place=true player=HelsteraTester',
         '[Server thread/INFO]: skill-trigger damage=true attack=true attacked=false teleport=true potion-effect-end=true teleport-before=false bukkit-damage=true bukkit-attacked=true cancelled-before=false cancelled-after=false entity-valid=true',
         '[Server thread/INFO]: potion-natural-expiry=true expired=true event-observed=false action-observed=true item-marker-observed=false',
@@ -475,7 +476,7 @@ try {
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
             'importedItemSimilarityConditions',
-            'importedPlayerKillsCondition', 'contextTargeterRelations', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
+            'importedPlayerKillsCondition', 'contextTargeterRelations', 'lastDamagerTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -518,6 +519,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'aiRoute').status -eq 'passed') 'AI route waypoint Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'contextTargeterControls').status -eq 'passed') 'context targeter controls probe'
     Assert-True (($report.probes | Where-Object id -eq 'contextTargeterChain').status -eq 'passed') 'context targeter chain probe'
+    Assert-True (($report.probes | Where-Object id -eq 'lastDamagerTargeter').status -eq 'passed') 'LastDamager targeter Paper probe'
 
     $releaseManifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'release-evidence.json') -Raw -Encoding utf8 |
         ConvertFrom-Json
@@ -1079,6 +1081,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'contextTargeterRelations'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'contextTargeterRelations'; status = 'passed'; observations = @('context-targeter-relations passenger=true passengers=true mount=true vehicle=true owner-location=true parent-location=true invalid-rejected=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'lastDamagerTargeter'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'lastDamagerTargeter'; status = 'passed'; observations = @('skill-trigger last-damager-targeter=true last-damager-projectile=true last-damager-environmental-rejected=true last-damager-removed-rejected=true')
     }
     $fullCatalogReport.expectedProbeIds += 'legacyNumericItems'
     $fullCatalogReport.probes += [pscustomobject]@{

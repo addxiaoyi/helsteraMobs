@@ -38,7 +38,25 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-moving-condition-strict-20261110-r1` passes all
+Latest strict fixture `srv-paper-last-damager-strict-20261110-r1` passes all
+419 probes (400 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `lastDamagerTargeter` probe verifies direct living
+attackers, projectile shooters, environmental-damage rejection, removed-attacker
+rejection, and imported `LastDamager` normalization. Report:
+`reports/paper-1.21.1-last-damager-targeter-strict-20261110-r1.json`;
+server log:
+`reports/paper-1.21.1-last-damager-targeter-strict-20261110-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-last-damager-targeter-strict-20261110-r1-client-logs.tar.gz`.
+Report SHA-256: `73f567709d918d7d5b6c5165c454f5678bf2d3b1a80dae8ddefc626f6c0b9115`;
+server log SHA-256: `7ba5b5a0897739edb3fbeb30f56fcc83c528c48e2937a666ae36c2c55eb58583`;
+client log SHA-256: `17c66043076f581a76726ec6bc39b5899522443ff5c0bace728fb41aa5975105`;
+plugin SHA-256: `4d1381f1492a5d1678b2bf369f6d1e73efe0f651916ac701d304e12c0ccbf88e`.
+The fixture is the Paper 1.21.1-133 release baseline; 1.21.4 and 1.21.11
+remain mapping-test coverage, and external-NMS package compatibility remains
+open.
+
+Previous strict fixture `srv-paper-moving-condition-strict-20261110-r1` passes all
 418 probes (399 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. Its `conditionMobility` probe verifies `moving`/`isMoving`,
 exact and approximate coordinate semantics, fractional movement, `exact`/`e`
@@ -53,9 +71,6 @@ Report SHA-256: `db1e07b1e29aea7a2d19d12f7717a4c29af85d60a24a1dfb8251f090bd41ec3
 server log SHA-256: `660693f4c3eba9473f63d262eb26e00a3182e9c8ad2b43e97b5184ff8d03a759`;
 client log SHA-256: `114a55e80e5c6932c4697115557ded8ee31f8e52b4de9f4f643108fd0ca526fa`;
 plugin SHA-256: `236f4647ad243eb96721814b92ebb24772b463fc6090fd6282db792f9a3c7a02`.
-The fixture is the Paper 1.21.1-133 release baseline; 1.21.4 and 1.21.11
-remain mapping-test coverage, and external-NMS package compatibility remains
-open.
 
 Previous strict fixture `srv-paper-spawn-reason-strict-20261110-r1` passes all
 418 probes (399 passed, 19 expected rejections, zero failed or incomplete).

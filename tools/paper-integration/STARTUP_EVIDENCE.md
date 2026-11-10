@@ -1,6 +1,23 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-moving-condition-strict-20261110-r1` passed the full
+Latest fixture `srv-paper-last-damager-strict-20261110-r1` passed the full
+strict gate on Paper 1.21.1-133: 419 registered probes, 400 passed, 19
+expected rejections, and zero failed or incomplete. Its `lastDamagerTargeter`
+probe verifies direct living attackers, projectile shooters, environmental
+damage rejection, removed-attacker rejection, and imported `LastDamager`
+normalization. Report:
+[paper-1.21.1-last-damager-targeter-strict-20261110-r1.json](reports/paper-1.21.1-last-damager-targeter-strict-20261110-r1.json), SHA-256:
+`73f567709d918d7d5b6c5165c454f5678bf2d3b1a80dae8ddefc626f6c0b9115`.
+Compressed server log SHA-256:
+`7ba5b5a0897739edb3fbeb30f56fcc83c528c48e2937a666ae36c2c55eb58583`.
+Client log archive SHA-256:
+`17c66043076f581a76726ec6bc39b5899522443ff5c0bace728fb41aa5975105`.
+Plugin SHA-256:
+`4d1381f1492a5d1678b2bf369f6d1e73efe0f651916ac701d304e12c0ccbf88e`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous fixture `srv-paper-moving-condition-strict-20261110-r1` passed the full
 strict gate on Paper 1.21.1-133: 418 registered probes, 399 passed, 19
 expected rejections, and zero failed or incomplete. Its `conditionMobility`
 probe verifies `moving`/`isMoving`, exact and approximate coordinate semantics,
@@ -24,7 +41,7 @@ expected rejections, and zero failed or incomplete. Its imported
 evaluation, and malformed-input preservation remain archived below and in
 `release-evidence.json`.
 
-Latest fixture `srv-paper-local-difficulty-strict-20261110-r1` passed the full
+Previous fixture `srv-paper-local-difficulty-strict-20261110-r1` passed the full
 strict gate on Paper 1.21.1-133: 416 registered probes, 397 passed, 19
 expected rejections, and zero failed or incomplete. Its `localDifficultyCondition`
 probe verifies imported `LocalDifficulty` aliases (`difficulty`, `diff`, and

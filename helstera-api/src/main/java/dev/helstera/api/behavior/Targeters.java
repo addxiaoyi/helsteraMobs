@@ -32,7 +32,7 @@ public final class Targeters {
             "playersonserver", "server", "everyone");
     private static final java.util.Set<String> DIRECT_CONTEXT_TARGETERS = java.util.Set.of(
             "self", "caster", "target", "targets", "trigger", "attacker", "owner", "parent",
-            "children", "child", "passengers", "passenger", "vehicle", "mount");
+            "children", "child", "passengers", "passenger", "vehicle", "mount", "lastdamager");
     private static final List<String> CONTEXT_TARGETERS = List.of(
             "nearestconditionaltarget", "nearestconditionalentity", "nearestconditionalplayer");
     private static final java.util.Set<String> LOCATION_TARGETERS = java.util.Set.of(
@@ -282,6 +282,10 @@ public final class Targeters {
         ParsedSpec parsed = ParsedSpec.parse(spec);
         if (!parsed.valid()) return List.of();
         if (CONTEXT_TARGETERS.contains(parsed.name())) return selectConditional(spec, context, candidates);
+        // LastDamager has no targeter-specific arguments. Generic filters such as
+        // limit/radius are still handled below, while an unknown named or
+        // positional argument must not silently broaden the targeter contract.
+        if (parsed.name().equals("lastdamager") && !parsed.args().isEmpty()) return List.of();
         if (!DIRECT_CONTEXT_TARGETERS.contains(parsed.name())) {
             if (isLocationName(parsed.name()) || isVariableLocationName(parsed.name())) {
                 List<LivingEntity> located = selectContextDirect(spec, context, candidates, fallbackArgs);
@@ -308,6 +312,7 @@ public final class Targeters {
         if (name.startsWith("@")) name = name.substring(1);
         int brace = name.indexOf('{');
         if (brace >= 0) name = name.substring(0, brace);
+        name = name.replace("_", "").replace("-", "");
         if (name.equals("self") || name.equals("caster")) {
             return context.instanceValid() && context.instance().baseEntity().orElse(null) instanceof LivingEntity living
                     ? List.of(living) : List.of();
@@ -388,6 +393,30 @@ public final class Targeters {
             return base != null && base.getVehicle() instanceof LivingEntity living
                     && isActiveLiving(living)
                     ? List.of(living) : List.of();
+        }
+        if (name.equals("lastdamager")) {
+            if (!context.instanceValid()) return List.of();
+            var base = context.instance().baseEntity().orElse(null);
+            if (!(base instanceof LivingEntity caster) || !isActiveLiving(caster)) return List.of();
+            org.bukkit.event.entity.EntityDamageEvent lastDamage;
+            try {
+                lastDamage = caster.getLastDamageCause();
+            } catch (RuntimeException ignored) {
+                return List.of();
+            }
+            if (!(lastDamage instanceof org.bukkit.event.entity.EntityDamageByEntityEvent damage)) {
+                return List.of();
+            }
+            var damager = damage.getDamager();
+            if (damager instanceof LivingEntity living && isActiveLiving(living)) {
+                return List.of(living);
+            }
+            if (damager instanceof org.bukkit.entity.Projectile projectile
+                    && projectile.getShooter() instanceof LivingEntity shooter
+                    && isActiveLiving(shooter)) {
+                return List.of(shooter);
+            }
+            return List.of();
         }
         if (name.equals("nearestconditionaltarget")
                 || name.equals("nearestconditionalentity")
@@ -1453,7 +1482,7 @@ public final class Targeters {
             return switch (compact) {
                 case "nearestentity", "nearestliving", "nearestlivingentity", "nearestmob",
                         "playersinworld", "mobsinworld", "entitiesinworld", "livingentitiesinworld",
-                        "playersonserver" -> compact;
+                        "playersonserver", "lastdamager" -> compact;
                 case "server", "everyone" -> "playersonserver";
                 default -> normalized;
             };

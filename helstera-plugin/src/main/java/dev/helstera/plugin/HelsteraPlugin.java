@@ -16551,6 +16551,48 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         attackerTargeter = attackerTargets.size() == 1
                                 && attackerTargets.get(0).equals(probeAttacker);
                     }
+                    boolean lastDamagerTargeter = false;
+                    boolean lastDamagerProjectile = false;
+                    boolean lastDamagerEnvironmentalRejected = false;
+                    boolean lastDamagerRemovedRejected = false;
+                    {
+                        var lastDamagerContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                                triggerProbe, probeLiving, 1.0, -1, 0, "integration", null,
+                                probeEntity, java.util.List.of(probeLiving), probeLiving.getLocation(), null);
+                        var directLastDamage = new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                                probeAttacker, probeEntity,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 0.0);
+                        probeLiving.setLastDamageCause(directLastDamage);
+                        var directLastDamager = dev.helstera.api.behavior.Targeters.select(
+                                "@LastDamager", lastDamagerContext, java.util.List.of(), java.util.List.of());
+                        lastDamagerTargeter = directLastDamager.size() == 1
+                                && directLastDamager.get(0).equals(probeAttacker);
+
+                        var projectile = world.spawn(probeLiving.getLocation().clone().add(0, 2, 0),
+                                org.bukkit.entity.Arrow.class);
+                        projectile.setGravity(false);
+                        projectile.setShooter(probeAttacker);
+                        var projectileLastDamage = new org.bukkit.event.entity.EntityDamageByEntityEvent(
+                                projectile, probeEntity,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.PROJECTILE, 0.0);
+                        probeLiving.setLastDamageCause(projectileLastDamage);
+                        var projectileLastDamager = dev.helstera.api.behavior.Targeters.select(
+                                "@last-damager", lastDamagerContext, java.util.List.of(), java.util.List.of());
+                        lastDamagerProjectile = projectileLastDamager.size() == 1
+                                && projectileLastDamager.get(0).equals(probeAttacker);
+
+                        probeLiving.setLastDamageCause(new org.bukkit.event.entity.EntityDamageEvent(
+                                probeEntity, org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE, 0.0));
+                        lastDamagerEnvironmentalRejected = dev.helstera.api.behavior.Targeters.select(
+                                "@LastDamager", lastDamagerContext, java.util.List.of(), java.util.List.of()).isEmpty();
+
+                        probeAttacker.remove();
+                        probeLiving.setLastDamageCause(directLastDamage);
+                        lastDamagerRemovedRejected = dev.helstera.api.behavior.Targeters.select(
+                                "@LastDamager", lastDamagerContext, java.util.List.of(), java.util.List.of()).isEmpty();
+                        probeLiving.setLastDamageCause(null);
+                        projectile.remove();
+                    }
                     var teleportEvent = new org.bukkit.event.entity.EntityTeleportEvent(
                             probeEntity, probeEntity.getLocation(), probeEntity.getLocation().clone().add(1, 0, 0));
                     getServer().getPluginManager().callEvent(teleportEvent);
@@ -16593,6 +16635,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                              + " potion-removed-by-mechanic=" + potionRemovedByMechanic
                              + " potion-events=" + (potionEventsAfter - potionEventsBefore)
                              + " attacker-targeter=" + attackerTargeter
+                            + " last-damager-targeter=" + lastDamagerTargeter
+                            + " last-damager-projectile=" + lastDamagerProjectile
+                            + " last-damager-environmental-rejected=" + lastDamagerEnvironmentalRejected
+                            + " last-damager-removed-rejected=" + lastDamagerRemovedRejected
                             + " teleport-before=" + teleportBefore
                             + " bukkit-damage=" + bukkitDamage
                             + " damage-cause-condition=" + damageCauseCondition

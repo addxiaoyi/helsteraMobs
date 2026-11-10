@@ -371,6 +371,7 @@ $probeSpecs = [ordered]@{
     damageTagCondition = 'skill-trigger .*damage-tag-condition=true'
     bowTensionCondition = 'skill-trigger .*bow-tension-condition=true'
     cancelledCondition = 'skill-trigger .*cancelled-condition=true .*cancelled-after=true'
+    lastDamagerTargeter = 'skill-trigger .*last-damager-targeter=true .*last-damager-projectile=true .*last-damager-environmental-rejected=true .*last-damager-removed-rejected=true'
     potionEffectEndTrigger = 'skill-trigger .*potion-effect-end=true'
     potionNaturalExpiry = 'potion-natural-expiry=true .*expired=true .*(?:action-observed=true|item-marker-observed=true)'
     killTrigger = 'kill-trigger imported=true mapped=true natural=true .*victim-dead=true .*action-observed=true passed=true'

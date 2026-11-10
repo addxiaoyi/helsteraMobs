@@ -2,9 +2,25 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-moving-condition-strict-20261110-r1` passes all
+Latest strict fixture `srv-paper-last-damager-strict-20261110-r1` passes all
+419 release probes (400 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Latest strict report has 419 probes, zero incomplete. Its `lastDamagerTargeter` evidence verifies
+direct living attackers, projectile shooters, environmental-damage rejection,
+removed-attacker rejection, and imported `LastDamager` normalization. Report:
+`tools/paper-integration/reports/paper-1.21.1-last-damager-targeter-strict-20261110-r1.json`
+(SHA-256 `73f567709d918d7d5b6c5165c454f5678bf2d3b1a80dae8ddefc626f6c0b9115`).
+Compressed server log SHA-256:
+`7ba5b5a0897739edb3fbeb30f56fcc83c528c48e2937a666ae36c2c55eb58583`.
+Client log archive SHA-256:
+`17c66043076f581a76726ec6bc39b5899522443ff5c0bace728fb41aa5975105`.
+Plugin SHA-256:
+`4d1381f1492a5d1678b2bf369f6d1e73efe0f651916ac701d304e12c0ccbf88e`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-moving-condition-strict-20261110-r1` passes all
 418 release probes (399 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. Latest strict report has 418 probes, zero incomplete. Its `conditionMobility` evidence verifies
+incomplete) on Paper 1.21.1-133. Its `conditionMobility` evidence verifies
 `moving`/`isMoving`, exact and approximate coordinate semantics, fractional
 movement, `exact`/`e` arguments, malformed-input rejection, imported mapping,
 and snapshot cleanup. Report:
@@ -1106,7 +1122,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-spawn-reason-strict-20261110-r1` has 418 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-last-damager-strict-20261110-r1` has 419 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1122,8 +1138,8 @@ This is a partial parity release. The matrix currently has `34`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 545 cited IDs; 453 report files; 4 directories
-   without reports; 88 missing directories; 223 archived release reports. The
+   Current fixture inventory: 546 cited IDs; 454 report files; 4 directories
+   without reports; 88 missing directories; 225 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1194,6 +1210,7 @@ the entire MythicMobs feature catalog.
 - Strict Paper 1.21.1-133 fixture `srv-paper-line-of-sight-condition-strict-20261108-r4` verifies direct and AI-target line-of-sight conditions, imported aliases, wall blocking, negative matching, cleanup restoration, and invalid-input preservation in 395 registered release probes.
 - Strict Paper 1.21.1-133 fixture `srv-paper-condition-mobility-states-strict-20261108-r7` verifies positive and negative falling, climbing, and charged conditions, imported aliases, cleanup restoration, and the complete 396-probe release catalog.
 - Strict Paper 1.21.1-133 fixture `srv-paper-moving-condition-strict-20261110-r1` verifies `moving`/`isMoving` on real managed entities: stationary, fractional-coordinate, same-block, cross-block, `exact=true`, `e=false`, imported, malformed, and snapshot-restoration paths all pass in the complete 418-probe release catalog. The individual moving condition now has strict runtime evidence; the broader Conditions catalog remains `mapped-unverified`.
+- Strict Paper 1.21.1-133 fixture `srv-paper-last-damager-strict-20261110-r1` verifies the imported `LastDamager` targeter on direct living attackers and projectile shooters, while environmental damage and removed attackers fail closed. The dedicated `lastDamagerTargeter` probe passes in the complete 419-probe release catalog; the individual targeter is `implemented-runtime`, while the broader Context Targeters catalog remains `mapped-unverified`.
 - Strict Paper 1.21.1-133 fixture `srv-paper-damage-attribution-strict-20261108-r1` verifies a real Player attack through imported damage triggers and AI context: the Player is retained as the attacker, environmental damage does not reuse that context, and the Player's temporary self-test state is restored. The full release catalog completes with 397 probes and zero failed or incomplete results.
 - Mythic Fox `Options.FoxType` now has strict importer-to-runtime evidence. Paper fixture `srv-paper-fox-options-strict-20261108-r1` imports `SNOW` and `RED` controls through production Fox spawning, applies the option only to Fox entities, and preserves wrong-entity and malformed values under `entity.unsupported.Options.FoxType` while completing all 393 registered release probes.
 - Mythic `teleport`/`tp` now imports into a dedicated runtime action with entity and location target support, safe landing checks, `unsafe` bypass, bounded `spreadh`/`spreadv`, preserved/target/numeric yaw and pitch, placeholder resolution, and fail-closed invalid-argument warnings. Strict Paper fixture `srv-paper-mythic-teleport-strict-20261107-r1` verifies the complete importer/runtime contract in 391 release probes.
