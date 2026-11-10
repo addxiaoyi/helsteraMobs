@@ -2938,6 +2938,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "nearestliving" -> "nearestliving";
             case "nearestlivingentity" -> "nearestlivingentity";
             case "nearestmob" -> "nearestmob";
+            case "targetoftarget" -> "targetoftarget";
             case "lastdamager" -> "lastdamager";
             case "playersinworld" -> "playersinworld";
             case "playersonserver", "server", "everyone" -> "playersonserver";
