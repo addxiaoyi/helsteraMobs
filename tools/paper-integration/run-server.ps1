@@ -85,15 +85,27 @@ function Get-PaperImplementationVersion([string]$JarPath) {
 }
 
 $paperImplementation = Get-PaperImplementationVersion $paper
+$versionMatrixPath = Join-Path $PSScriptRoot 'version-matrix.json'
+$versionMatrix = Get-Content -LiteralPath $versionMatrixPath -Raw -Encoding utf8 | ConvertFrom-Json
+$releaseCombinations = @($versionMatrix.combinations | Where-Object { $_.releaseValidated -eq $true })
+if ($versionMatrix.schemaVersion -ne 1 -or $releaseCombinations.Count -ne 1) {
+    throw 'Paper runner requires one exact release-validated server combination in version-matrix.json.'
+}
+$releaseCombination = $releaseCombinations[0]
+$expectedPaperVersion = [string]$releaseCombination.minecraftVersion
+$expectedPaperBuild = [string]$releaseCombination.serverVersion
+if ([string]::IsNullOrWhiteSpace($expectedPaperVersion) -or [string]::IsNullOrWhiteSpace($expectedPaperBuild)) {
+    throw 'Paper release matrix entry must specify minecraftVersion and serverVersion.'
+}
 if ($Strict -and [string]::IsNullOrWhiteSpace($paperImplementation)) {
     throw 'Paper jar has no recognizable version metadata; strict mode cannot prove the target server version'
 }
 if (-not [string]::IsNullOrWhiteSpace($paperImplementation) -and
-        $paperImplementation -notmatch '^1\.21\.1(?:-|$)') {
+        $paperImplementation -notmatch ('^' + [regex]::Escape($expectedPaperBuild) + '(?:-|$)')) {
     if (-not $Exploratory) {
-        throw "Paper version mismatch: $paperImplementation (expected 1.21.1; pass -Exploratory for non-release evidence)"
+        throw "Paper build mismatch: $paperImplementation (expected $expectedPaperBuild; pass -Exploratory for non-release evidence)"
     }
-    Write-Warning "Exploratory Paper run uses $paperImplementation; this run is not eligible for the 1.21.1 strict release gate."
+    Write-Warning "Exploratory Paper run uses $paperImplementation; this run is not eligible for the $expectedPaperBuild strict release gate."
 }
 $mineflayerVersion = $env:PAPER_MINEFLAYER_VERSION
 if ([string]::IsNullOrWhiteSpace($mineflayerVersion)) {
@@ -704,6 +716,7 @@ if ($Strict) {
     }
     & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') `
         -ReportPath $strictReportPath `
-        -RequireTargetPaperVersion -RequireFullReleaseCatalog -ExpectedPaperVersion '1.21.1' `
+        -RequireTargetPaperVersion -RequireFullReleaseCatalog -ExpectedPaperVersion $expectedPaperVersion `
+        -ExpectedPaperBuild $expectedPaperBuild `
         -ExpectedPluginSha256 $pluginSha256
 }

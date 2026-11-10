@@ -30,9 +30,33 @@ if ($manifestEntry.Count -ne 1) { throw "Release fixture is missing from release
 if ($manifestEntry[0].report -ne $entry.releaseReport) {
     throw 'Version matrix report does not match the release evidence manifest.'
 }
-if (-not (Test-Path (Join-Path $root $entry.releaseReport))) {
+$reportPath = Join-Path $root $entry.releaseReport
+if (-not (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
     throw "Version matrix report file does not exist: $($entry.releaseReport)"
 }
+$report = Get-Content -LiteralPath $reportPath -Raw -Encoding utf8 | ConvertFrom-Json
+$expectedBuildPattern = '^' + [regex]::Escape([string]$entry.serverVersion) + '(?:-|$)'
+$expectedMinecraftPattern = '^' + [regex]::Escape([string]$entry.minecraftVersion) + '(?:-|$)'
+$manifestPluginSha256 = [string]$manifestEntry[0].pluginSha256
+if ($manifestEntry[0].fullReleaseCatalog -isnot [bool] -or -not $manifestEntry[0].fullReleaseCatalog) {
+    throw 'Version matrix release report must be marked as a full release catalog in release-evidence.json.'
+}
+if ($manifestPluginSha256 -cnotmatch '^[0-9a-f]{64}$' -or
+        [string]$report.pluginSha256 -cne $manifestPluginSha256) {
+    throw 'Version matrix release report plugin SHA-256 does not match its release evidence manifest entry.'
+}
+if ($report.schemaVersion -ne 1 -or [string]$report.evidenceMode -cne 'release' -or
+        -not $report.pluginEnabled -or
+        [string]$report.paperVersion -notmatch $expectedBuildPattern -or
+        [string]$report.paperApiVersion -notmatch $expectedMinecraftPattern) {
+    throw ('Version matrix release report metadata mismatch: expected Paper build {0}, Minecraft API {1}, and release evidence.' -f
+        $entry.serverVersion, $entry.minecraftVersion)
+}
+& (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $reportPath `
+    -RequireTargetPaperVersion -RequireFullReleaseCatalog `
+    -ExpectedPaperVersion ([string]$entry.minecraftVersion) `
+    -ExpectedPaperBuild ([string]$entry.serverVersion) `
+    -ExpectedPluginSha256 $manifestPluginSha256
 
 $readme = Get-Content -Raw (Join-Path $root 'README.md')
 $parity = Get-Content -Raw (Join-Path $root 'MYTHICMOBS_PARITY_MATRIX.md')

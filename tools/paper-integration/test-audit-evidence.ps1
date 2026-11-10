@@ -542,6 +542,37 @@ try {
         fullReleaseCatalog = $true
         pluginSha256 = $testPluginHash
     }) | ConvertTo-Json -Depth 4))
+    $versionMatrixPath = Join-Path $temporaryRoot 'tools/paper-integration/version-matrix.json'
+    [System.IO.File]::WriteAllText($versionMatrixPath, (@{
+        schemaVersion = 1
+        releasePolicy = @{
+            requiresExactServerBuild = $true
+            requiresMatchingPluginSha256 = $true
+            unlistedCombinationsAreUnverified = $true
+        }
+        combinations = @(
+            @{
+                id = 'paper-1.21.1-133-minecraft-1.21.1'
+                serverFamily = 'Paper'
+                serverVersion = '1.21.1-133'
+                minecraftVersion = '1.21.1'
+                evidenceLevel = 'strict'
+                releaseValidated = $true
+                releaseFixtureId = 'srv-paper-current-release'
+                releaseReport = 'tools/paper-integration/reports/test-release.json'
+            },
+            @{
+                id = 'paper-1.21.4-minecraft-1.21.4'
+                serverFamily = 'Paper'
+                serverVersion = '1.21.4'
+                minecraftVersion = '1.21.4'
+                evidenceLevel = 'exploratory'
+                releaseValidated = $false
+                releaseFixtureId = $null
+                releaseReport = $null
+            }
+        )
+    } | ConvertTo-Json -Depth 6))
 
     $readmePath = Join-Path $temporaryRoot 'README.md'
     [System.IO.File]::WriteAllText($readmePath, [regex]::Replace(
@@ -635,6 +666,17 @@ try {
     if ($LASTEXITCODE -ne 0 -or $gateOutput -notmatch 'Release gate passed for the specified plugin JAR') {
         throw "Release gate rejected matching complete evidence: $gateOutput"
     }
+    $wrongBuildEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
+    $wrongBuildEvidence.paperVersion = '1.21.1-134-test'
+    [System.IO.File]::WriteAllText($archivePath, ($wrongBuildEvidence | ConvertTo-Json -Depth 20))
+    $wrongBuildManifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding utf8 | ConvertFrom-Json
+    [System.IO.File]::WriteAllText($manifestPath, ($wrongBuildManifest | ConvertTo-Json -Depth 4))
+    $wrongBuildAudit = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $wrongBuildAudit -notmatch 'Paper implementation build mismatch') {
+        throw "Release audit accepted a report with the wrong Paper build: $wrongBuildAudit"
+    }
+    [System.IO.File]::WriteAllText($archivePath, ($fullReport | ConvertTo-Json -Depth 20))
+    [System.IO.File]::WriteAllText($manifestPath, ($wrongBuildManifest | ConvertTo-Json -Depth 4))
     $missingTargeterEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
     $missingTargeterEvidenceProbe = @($missingTargeterEvidence.probes | Where-Object id -eq 'aiSelectorCore')
     $missingTargeterEvidenceProbe[0].observations = @($missingTargeterEvidenceProbe[0].observations |
