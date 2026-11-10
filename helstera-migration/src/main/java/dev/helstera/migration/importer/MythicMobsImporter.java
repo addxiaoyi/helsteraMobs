@@ -370,7 +370,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             });
             Object mobType = ciGet(mob, "Type", "MobType", "EntityType");
             if ("mobs".equals(mobKey) && ((nestedMobDefinitions && (mobType == null || mobType instanceof ConfigurationSection)) || ciGet(mob, "Type", "MobType", "EntityType", "Health", "Damage",
-                    "Display", "Options", "Skills", "Drops") == null)) {
+                    "Display", "Options", "Skills", "Drops", "Stats") == null)) {
                 for (String nestedKey : mob.getKeys(false)) {
                     ConfigurationSection nested = mob.getConfigurationSection(nestedKey);
                     if (nested != null) {
@@ -382,7 +382,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     }
                 }
             } else if (ciGet(mob, "Type", "MobType", "EntityType", "Health", "Damage", "Display",
-                    "Options", "Skills", "Drops", "Equipment", "Disguise", "Faction", "LevelModifiers") != null) {
+                    "Options", "Skills", "Drops", "Stats", "Equipment", "Disguise", "Faction", "LevelModifiers") != null) {
                 convertMob(mobKey, mob, sourceFile.toString(), entries, dropCatalog,
                         defaultMobOptions);
             } else {
@@ -1095,7 +1095,9 @@ public final class MythicMobsImporter implements MigrationImporter {
         mapScalar(mob, "display", srcFile, entries, target, "mob.display-name");
         mapScalar(mob, "speed", srcFile, entries, target, "mob.move-speed");
         mapScalar(mob, "armor", srcFile, entries, target, "mob.armor");
-        mapScalar(mob, "armortoughness", srcFile, entries, target, "mob.armor-toughness");
+        mapMythicStats(mob, mobKey, srcFile, entries, target);
+        preserveUnsupportedMobField(mob, "ArmorToughness", mobKey, srcFile, entries, target,
+                "ArmorToughness is not a documented Mythic Mob field; use the built-in Stats entry ARMOR_TOUGHNESS <value>.");
         mapScalar(mob, "followrange", srcFile, entries, target, "mob.sight-radius");
         mapScalar(mob, "exp", srcFile, entries, target, "mob.exp");
         mapScalar(mob, "level", srcFile, entries, target, "mob.level");
@@ -4395,6 +4397,88 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (v == null) return;
         target.set(path, v);
         note(entries, srcFile, name, path, v, "mapped", null);
+    }
+
+    /**
+     * Maps the documented scalar override form of Mythic's built-in
+     * ARMOR_TOUGHNESS stat. Other stat expressions stay visible because their
+     * modifier/formula semantics are not equivalent to a Bukkit base value.
+     */
+    private void mapMythicStats(ConfigurationSection mob, String mobKey, String srcFile,
+                                List<Map<String, Object>> entries, YamlConfiguration target) {
+        String statsKey = findKeyIgnoreCase(mob, "Stats");
+        if (statsKey == null) return;
+        Object raw = mob.get(statsKey);
+        if (!(raw instanceof List<?> lines)) {
+            preserveMythicStats(raw, statsKey, mobKey, srcFile, entries, target,
+                    "Mythic Stats must use its documented list form; the original value was preserved.");
+            return;
+        }
+
+        int armorStatCount = 0;
+        int mappedIndex = -1;
+        Double mappedValue = null;
+        for (int i = 0; i < lines.size(); i++) {
+            Object entry = lines.get(i);
+            if (!(entry instanceof String line)) continue;
+            String[] tokens = line.trim().split("\\s+");
+            if (tokens.length == 0 || !"ARMOR_TOUGHNESS".equalsIgnoreCase(tokens[0])) continue;
+            armorStatCount++;
+            if (tokens.length != 2) continue;
+            try {
+                double value = Double.parseDouble(tokens[1]);
+                if (Double.isFinite(value)) {
+                    mappedIndex = i;
+                    mappedValue = value;
+                }
+            } catch (NumberFormatException ignored) {
+                // Keep malformed ranges, placeholders, and values in unsupported Stats.
+            }
+        }
+
+        if (armorStatCount == 1 && mappedIndex >= 0 && mappedValue != null) {
+            target.set("mob.armor-toughness", mappedValue);
+            note(entries, srcFile, mobKey + "." + statsKey + "[" + mappedIndex + "]",
+                    "mob.armor-toughness", mappedValue, "mapped",
+                    "Mythic built-in ARMOR_TOUGHNESS scalar override maps to the Bukkit base attribute.");
+            List<Object> unsupported = new ArrayList<>(lines);
+            unsupported.remove(mappedIndex);
+            if (!unsupported.isEmpty()) {
+                target.set("mob.unsupported.Stats", unsupported);
+                note(entries, srcFile, mobKey + "." + statsKey, "mob.unsupported.Stats", unsupported,
+                        "unsupported", "Only scalar ARMOR_TOUGHNESS overrides are mapped; remaining stat entries were preserved.", "WARN");
+            }
+            return;
+        }
+
+        if (!lines.isEmpty()) {
+            String reason = armorStatCount > 1
+                    ? "Duplicate ARMOR_TOUGHNESS entries are ambiguous; all Mythic Stats were preserved."
+                    : "Only a single finite scalar ARMOR_TOUGHNESS override is mapped; Mythic Stats were preserved.";
+            preserveMythicStats(raw, statsKey, mobKey, srcFile, entries, target, reason);
+        }
+    }
+
+    private void preserveMythicStats(Object raw, String statsKey, String mobKey, String srcFile,
+                                     List<Map<String, Object>> entries, YamlConfiguration target,
+                                     String reason) {
+        target.set("mob.unsupported.Stats", raw);
+        note(entries, srcFile, mobKey + "." + statsKey, "mob.unsupported.Stats", raw,
+                "unsupported", reason, "WARN");
+    }
+
+    private void preserveUnsupportedMobField(ConfigurationSection mob, String field, String mobKey,
+                                             String srcFile, List<Map<String, Object>> entries,
+                                             YamlConfiguration target, String reason) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        for (String key : mob.getKeys(false)) {
+            if (key.equalsIgnoreCase(field)) values.put(key, mob.get(key));
+        }
+        if (values.isEmpty()) return;
+        Object preserved = values.size() == 1 ? values.values().iterator().next() : values;
+        target.set("mob.unsupported." + field, preserved);
+        note(entries, srcFile, mobKey + "." + field, "mob.unsupported." + field, preserved,
+                "unsupported", reason, "WARN");
     }
 
     /**

@@ -1,21 +1,25 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-armor-toughness-strict-20261110-r1` passed the full
-strict gate on Paper 1.21.1-133: 421 registered probes, 402 passed, 19
-expected rejections, and zero failed or incomplete. Its `armorToughnessOptions`
-probe verifies imported `Options.ArmorToughness` maps to `mob.armor-toughness`,
-applies to a real Zombie's Bukkit `ARMOR_TOUGHNESS` attribute, and reads back
-`armor-toughness-options result=true base=4.0`. Report:
-[paper-1.21.1-armor-toughness-strict-20261110-r1.json](reports/paper-1.21.1-armor-toughness-strict-20261110-r1.json), SHA-256:
-`647608055e860dee803ca183cbd5bd9ee646c2e26b094ad88a5a90d917ac0692`.
+Latest fixture `srv-paper-armor-toughness-stats-strict-20261110-r1` passed the
+full strict gate on Paper 1.21.1-133: 421 registered probes, 402 passed, 19
+expected rejections, and zero failed or incomplete. Its
+`armorToughnessStatsImported` probe runs the documented Mythic
+`Stats: - ARMOR_TOUGHNESS 4` through the production importer and generated mob
+configuration, then reads `4.0` from a real Zombie's Bukkit
+`ARMOR_TOUGHNESS` attribute. Modifier syntax and the undocumented root field
+are preserved; both controls read `0.0`. Report:
+[paper-1.21.1-armor-toughness-stats-imported-strict-20261110-r1.json](reports/paper-1.21.1-armor-toughness-stats-imported-strict-20261110-r1.json), SHA-256:
+`c5b90d9f0d0bfb9296ecad2c5ee21753c07fb052e46ebe6709dff4d865f2c3e1`.
 Compressed server log SHA-256:
-`d6a432e8061682a597c0dbd081cf9654c1d63b59118cc451fdca28f10d83baac`.
+`a516596c72afb53659bd3454fbe78e9f277d86e3926bd2570c6edab68bf88a0b`.
 Client log archive SHA-256:
-`9ea4ff119d797916c1a31df478422b6d52d552ebc43b8c843d4733850312e0b1`.
+`e8064ae881928a126f030c0f270fd0c4c046388497a2376dea9b08a7b8a60931`.
 Plugin SHA-256:
-`d9964898008c68a2e9a91dd33399c28e24a2ec3b53b8aeb0a6691cc3dcc28c44`.
-Archived logs redact web token query values; the source fixture retains the
-original run logs.
+`571e41dadf77c0105a2b12d616774ab21ea96b8533bd3d87d3dc4a9461e70d24`.
+The earlier `srv-paper-armor-toughness-strict-20261110-r1` fixture tested
+only an already-converted Helstera mob configuration, so it is historical
+runtime evidence rather than Mythic import evidence. Archived logs redact web
+token query values; the source fixture retains the original run logs.
 
 Previous strict fixture `srv-paper-target-of-target-strict-20261110-r1` passes all
 420 probes (401 passed, 19 expected rejections, zero failed or incomplete) on

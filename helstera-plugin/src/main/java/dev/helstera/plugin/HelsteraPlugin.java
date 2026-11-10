@@ -1320,8 +1320,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             ? living.getAttribute(resolveAttribute("ARMOR_TOUGHNESS")) : null;
                     double observedArmorToughness = armorToughnessAttribute == null
                             ? Double.NaN : armorToughnessAttribute.getBaseValue();
-                    boolean armorToughnessOptions = Math.abs(observedArmorToughness - 4.0) < 1.0e-9;
-                    getLogger().info("[自检] armor-toughness-options result=" + armorToughnessOptions
+                    boolean armorToughnessConfig = Math.abs(observedArmorToughness - 4.0) < 1.0e-9;
+                    getLogger().info("[自检] armor-toughness-config result=" + armorToughnessConfig
                             + " base=" + observedArmorToughness);
                     if (armorToughnessProbeId > 0) instances().despawn(armorToughnessProbeId);
                 }
@@ -2556,6 +2556,144 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    private void runImportedArmorToughnessStatsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-armor-toughness-stats-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("armor-toughness-stats.yml");
+            String configuredId = "ImportedArmorToughnessStats_" + suffix;
+            String modifierId = "PreservedArmorToughnessModifier_" + suffix;
+            String legacyId = "PreservedLegacyArmorToughness_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Stats:
+                          - ARMOR_TOUGHNESS 4
+                      %2$s:
+                        Type: ZOMBIE
+                        Stats:
+                          - ARMOR_TOUGHNESS 8 ADDITIVE
+                      %3$s:
+                        Type: ZOMBIE
+                        ArmorToughness: 9
+                    """.formatted(configuredId, modifierId, legacyId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe ArmorToughness mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite ArmorToughness mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            String configuredTargetId = targetIds.get(configuredId);
+            String modifierTargetId = targetIds.get(modifierId);
+            String legacyTargetId = targetIds.get(legacyId);
+            if (configuredTargetId == null || modifierTargetId == null || legacyTargetId == null) {
+                throw new IllegalStateException("Mythic ArmorToughness fixtures were not all imported");
+            }
+            var configuredConfig = mobConfig(configuredTargetId);
+            var modifierConfig = mobConfig(modifierTargetId);
+            var legacyConfig = mobConfig(legacyTargetId);
+            var unsupportedModifierStats = modifierConfig == null ? null
+                    : modifierConfig.getStringList("mob.unsupported.Stats");
+            boolean imported = configuredConfig != null
+                    && Math.abs(configuredConfig.getDouble("mob.armor-toughness", Double.NaN) - 4.0) < 1.0e-9
+                    && modifierConfig != null && !modifierConfig.contains("mob.armor-toughness")
+                    && unsupportedModifierStats != null
+                    && unsupportedModifierStats.contains("ARMOR_TOUGHNESS 8 ADDITIVE")
+                    && legacyConfig != null && !legacyConfig.contains("mob.armor-toughness")
+                    && legacyConfig.getInt("mob.unsupported.ArmorToughness", -1) == 9;
+
+            MobSpawn configuredSpawn = spawnMobCore(configuredTargetId, "example/emberling", origin,
+                    false, null);
+            MobSpawn modifierSpawn = spawnMobCore(modifierTargetId, "example/emberling",
+                    origin.clone().add(3, 0, 0), false, null);
+            MobSpawn legacySpawn = spawnMobCore(legacyTargetId, "example/emberling",
+                    origin.clone().add(6, 0, 0), false, null);
+            for (MobSpawn spawned : new MobSpawn[]{configuredSpawn, modifierSpawn, legacySpawn}) {
+                if (spawned != null && spawned.instanceId() > 0) instanceIds.add(spawned.instanceId());
+            }
+            var configuredInstance = configuredSpawn == null || configuredSpawn.instanceId() <= 0
+                    ? null : instances().impl(configuredSpawn.instanceId());
+            var modifierInstance = modifierSpawn == null || modifierSpawn.instanceId() <= 0
+                    ? null : instances().impl(modifierSpawn.instanceId());
+            var legacyInstance = legacySpawn == null || legacySpawn.instanceId() <= 0
+                    ? null : instances().impl(legacySpawn.instanceId());
+            var configuredEntity = configuredInstance == null ? null : configuredInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var modifierEntity = modifierInstance == null ? null : modifierInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var legacyEntity = legacyInstance == null ? null : legacyInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var configuredAttribute = configuredEntity == null ? null
+                    : configuredEntity.getAttribute(resolveAttribute("ARMOR_TOUGHNESS"));
+            var modifierAttribute = modifierEntity == null ? null
+                    : modifierEntity.getAttribute(resolveAttribute("ARMOR_TOUGHNESS"));
+            var legacyAttribute = legacyEntity == null ? null
+                    : legacyEntity.getAttribute(resolveAttribute("ARMOR_TOUGHNESS"));
+            double configuredBase = configuredAttribute == null ? Double.NaN : configuredAttribute.getBaseValue();
+            double modifierBase = modifierAttribute == null ? Double.NaN : modifierAttribute.getBaseValue();
+            double legacyBase = legacyAttribute == null ? Double.NaN : legacyAttribute.getBaseValue();
+            boolean applied = Math.abs(configuredBase - 4.0) < 1.0e-9
+                    && Math.abs(modifierBase) < 1.0e-9 && Math.abs(legacyBase) < 1.0e-9;
+            getLogger().info("[自检] armor-toughness-stats-imported result=" + (imported && applied)
+                    + " imported=" + imported + " base=" + configuredBase
+                    + " modifier-preserved=" + (unsupportedModifierStats != null
+                    && unsupportedModifierStats.contains("ARMOR_TOUGHNESS 8 ADDITIVE"))
+                    + " root-preserved=" + (legacyConfig != null
+                    && legacyConfig.getInt("mob.unsupported.ArmorToughness", -1) == 9)
+                    + " controls=" + modifierBase + "," + legacyBase);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] armor-toughness-stats-imported result=false imported=false error=" + failure);
+        } finally {
+            for (int instanceId : instanceIds) {
+                try { instances().despawn(instanceId); } catch (RuntimeException ignored) { }
+            }
+            if (sourceRoot != null) {
+                try (var paths = Files.walk(sourceRoot)) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("armor-toughness Stats source cleanup failed=" + cleanupFailure);
+                }
+            }
+            for (Path mobFile : mobFiles) {
+                try { Files.deleteIfExists(mobFile); }
+                catch (IOException cleanupFailure) {
+                    getLogger().warning("armor-toughness Stats target cleanup failed=" + cleanupFailure);
+                }
+            }
+            if (!outputDirectoryExisted) {
+                try { Files.deleteIfExists(outputDirectory); }
+                catch (IOException ignored) { }
+            }
+        }
+    }
+
     private void runImportedSheepOptionsSelfTest(Location origin) {
         Path sourceRoot = null;
         Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
@@ -2973,6 +3111,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 probeTicks[0]++;
                 boolean terminal = false;
                 try {
+                    if (observer.isValid() && !observer.isDead()
+                            && observer.getWorld().equals(target.getWorld())
+                            && observer.getLocation().distanceSquared(target.getLocation()) > 64.0) {
+                        Location activeOrigin = observer.getLocation().clone().add(4, 0, 0);
+                        target.teleport(activeOrigin);
+                        protectedBee.teleport(activeOrigin.clone().add(-2, 1, 0));
+                        controlBee.teleport(activeOrigin.clone().add(2, 1, 0));
+                        protectedBee.setTarget(target);
+                        controlBee.setTarget(target);
+                    }
                     if (target.isValid() && !target.isDead()) {
                         target.setInvulnerable(false);
                         target.setGravity(false);
@@ -8288,6 +8436,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " patrol-leader=" + raiderView.isPatrolLeader()
                         + " patrol-spawn-point=" + patrolSpawnPoint);
                 runImportedEntityFlagOptionsSelfTest(location.clone().add(25, 0, 0));
+                runImportedArmorToughnessStatsSelfTest(location.clone().add(26, 0, 0));
                 var wolfContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, wolf, 1.0, 5.0, 0, "integration");
                 var sheepContext = dev.helstera.api.behavior.BehaviorContext.of(
