@@ -38,7 +38,25 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-local-difficulty-strict-20261110-r1` passes all
+Latest strict fixture `srv-paper-server-nms-version-20261110-r4` passes all
+417 probes (398 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `serverNmsVersionCondition` probe verifies the official
+aliases, argument aliases, documented default, live Paper positive and negative
+evaluation, and malformed-input preservation. Report:
+`reports/paper-1.21.1-server-nms-version-strict-20261110-r4.json`;
+server log:
+`reports/paper-1.21.1-server-nms-version-strict-20261110-r4.log.gz`;
+client logs:
+`reports/paper-1.21.1-server-nms-version-strict-20261110-r4-client-logs.tar.gz`.
+Report SHA-256: `7e5bd19c8354e5e778c0e22a76e04eb7893dbe43a3b8a2a340e547892aa3a63a`;
+server log SHA-256: `086934e3284bb91e39bafb2bfb8fa3b3a4d148503db6a3f3afd6963dcc353b93`;
+client log SHA-256: `f2f67c04b14c7b01e57103d59b986ebf6558340ddd3ad9ffa522b32b9af54ba1`;
+plugin SHA-256: `f0b125e08173737471c3b85ee89f9d19bc9a03778230bf756556d2e4ec2135b3`.
+The fixture is the Paper 1.21.1-133 release baseline; 1.21.4 and 1.21.11
+remain mapping-test coverage, and external-NMS package compatibility remains
+open.
+
+Previous strict fixture `srv-paper-local-difficulty-strict-20261110-r1` passes all
 416 probes (397 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. Its `localDifficultyCondition` probe verifies imported
 `LocalDifficulty` aliases (`difficulty`, `diff`, and `d`), comparator and range

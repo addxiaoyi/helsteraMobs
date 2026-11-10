@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-server-nms-version-20261110-r4",
+    "reportFixtureDirectory": "srv-paper-server-nms-version-20261110-r4",
+    "report": "tools/paper-integration/reports/paper-1.21.1-server-nms-version-strict-20261110-r4.json",
+    "reportSha256": "7e5bd19c8354e5e778c0e22a76e04eb7893dbe43a3b8a2a340e547892aa3a63a",
+    "log": "tools/paper-integration/reports/paper-1.21.1-server-nms-version-strict-20261110-r4.log.gz",
+    "logSha256": "086934e3284bb91e39bafb2bfb8fa3b3a4d148503db6a3f3afd6963dcc353b93",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-server-nms-version-strict-20261110-r4-client-logs.tar.gz",
+    "clientLogSha256": "f2f67c04b14c7b01e57103d59b986ebf6558340ddd3ad9ffa522b32b9af54ba1",
+    "pluginSha256": "f0b125e08173737471c3b85ee89f9d19bc9a03778230bf756556d2e4ec2135b3",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-local-difficulty-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-local-difficulty-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-local-difficulty-strict-20261110-r1.json",

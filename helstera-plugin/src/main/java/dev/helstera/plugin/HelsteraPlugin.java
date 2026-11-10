@@ -4861,6 +4861,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean conditionUtilityAliases = false;
             boolean importedPopulationConditions = false;
             boolean localDifficultyCondition = false;
+            boolean serverNmsVersionCondition = false;
             boolean snowingCondition = false;
             boolean snowingTargetMoved = false;
             boolean snowingTargetPositive = false;
@@ -6935,6 +6936,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var conditionContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, conditionTarget, 1.0, 3.0, 0, "integration");
                 localDifficultyCondition = runLocalDifficultyConditionSelfTest(
+                        skills, behaviors, modelInstance, conditionContext);
+                serverNmsVersionCondition = runServerNmsVersionConditionSelfTest(
                         skills, behaviors, modelInstance, conditionContext);
                 var originalForcePullVelocity = conditionTarget.getVelocity().clone();
                 try {
@@ -10531,6 +10534,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " imported-coordinate-difference-condition=" + importedCoordinateDifferenceCondition
                         + " imported-population-conditions=" + importedPopulationConditions
                         + " local-difficulty-condition=" + localDifficultyCondition
+                        + " server-nms-version-condition=" + serverNmsVersionCondition
                         + " moisture-conditions=" + moistureConditions
                         + " mob-size-condition=" + mobSizeCondition
                         + " block-type-radius-condition=" + blockTypeRadiusCondition
@@ -10980,6 +10984,62 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " high-rejected=" + highRejected
                 + " fallback-positive=" + fallbackPositive
                 + " missing-context-rejected=" + missingContextRejected
+                + " invalid-preserved=" + invalidPreserved
+                + " passed=" + passed);
+        return passed;
+    }
+
+    private boolean runServerNmsVersionConditionSelfTest(
+            SkillService skills,
+            BehaviorRegistry behaviors,
+            dev.helstera.api.instance.ModelInstance modelInstance,
+            dev.helstera.api.behavior.BehaviorContext context) {
+        var importedPrimary = dev.helstera.migration.importer.MmConditions.translate(
+                "?ServerNmsVersion{version=v1_21_R1}");
+        var importedAlias = dev.helstera.migration.importer.MmConditions.translate(
+                "?servernms{sv=1_21_R1}");
+        var importedScalar = dev.helstera.migration.importer.MmConditions.translate(
+                "?nmsversion{v1_21_R1}");
+        var importedWrong = dev.helstera.migration.importer.MmConditions.translate(
+                "?servernms{v=v1_21_R3}");
+        var importedDefault = dev.helstera.migration.importer.MmConditions.translate(
+                "?servernms");
+        boolean imported = importedPrimary.translated()
+                && "server-nms-version v1_21_R1".equals(importedPrimary.condition())
+                && importedAlias.translated()
+                && "server-nms-version v1_21_R1".equals(importedAlias.condition())
+                && importedScalar.translated()
+                && "server-nms-version v1_21_R1".equals(importedScalar.condition())
+                && importedWrong.translated()
+                && "server-nms-version v1_21_R3".equals(importedWrong.condition())
+                && importedDefault.translated()
+                && "server-nms-version v1_19_R1_2".equals(importedDefault.condition());
+        String primaryKey = imported ? skills.bindCondition(importedPrimary.condition()) : null;
+        String aliasKey = imported ? skills.bindCondition(importedAlias.condition()) : null;
+        String scalarKey = imported ? skills.bindCondition(importedScalar.condition()) : null;
+        String wrongKey = imported ? skills.bindCondition(importedWrong.condition()) : null;
+        String defaultKey = imported ? skills.bindCondition(importedDefault.condition()) : null;
+        boolean positive = primaryKey != null && behaviors.testCondition(primaryKey, context);
+        boolean aliasPositive = aliasKey != null && behaviors.testCondition(aliasKey, context);
+        boolean scalarPositive = scalarKey != null && behaviors.testCondition(scalarKey, context);
+        boolean wrongRejected = wrongKey != null && !behaviors.testCondition(wrongKey, context);
+        boolean defaultRejected = defaultKey != null && !behaviors.testCondition(defaultKey, context);
+        boolean invalidPreserved = true;
+        for (String source : java.util.List.of(
+                "?ServerNmsVersion{v=1.21.1}",
+                "?ServerNmsVersion{v=v1_21_R1;unknown=true}",
+                "?ServerNmsVersion{v=v1_21_R1;version=v1_21_R3}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            invalidPreserved &= !mapped.translated() && source.equals(mapped.condition());
+        }
+        boolean passed = imported && positive && aliasPositive && scalarPositive
+                && wrongRejected && defaultRejected && invalidPreserved;
+        getLogger().info("[自检] server-nms-version-condition imported=" + imported
+                + " positive=" + positive
+                + " alias-positive=" + aliasPositive
+                + " scalar-positive=" + scalarPositive
+                + " wrong-rejected=" + wrongRejected
+                + " default-rejected=" + defaultRejected
                 + " invalid-preserved=" + invalidPreserved
                 + " passed=" + passed);
         return passed;

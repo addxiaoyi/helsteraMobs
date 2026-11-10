@@ -2,10 +2,27 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-local-difficulty-strict-20261110-r1` passes all
+Latest strict fixture `srv-paper-server-nms-version-20261110-r4` passes all
+417 release probes (398 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Latest strict report has 417 probes, zero incomplete.
+Its `serverNmsVersionCondition` evidence verifies the official aliases
+(`ServerNmsVersion`, `servernms`, and `nmsversion`), `version`/`sv`/`v`
+arguments, the documented default, positive Paper evaluation, wrong-version
+rejection, and malformed-input preservation. Report:
+`tools/paper-integration/reports/paper-1.21.1-server-nms-version-strict-20261110-r4.json`
+(SHA-256 `7e5bd19c8354e5e778c0e22a76e04eb7893dbe43a3b8a2a340e547892aa3a63a`).
+Compressed server log SHA-256:
+`086934e3284bb91e39bafb2bfb8fa3b3a4d148503db6a3f3afd6963dcc353b93`.
+Client log archive SHA-256:
+`f2f67c04b14c7b01e57103d59b986ebf6558340ddd3ad9ffa522b32b9af54ba1`.
+Plugin SHA-256:
+`f0b125e08173737471c3b85ee89f9d19bc9a03778230bf756556d2e4ec2135b3`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-local-difficulty-strict-20261110-r1` passes all
 416 release probes (397 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. Latest strict report has 416 probes, zero incomplete.
-Its `localDifficultyCondition` evidence
+incomplete) on Paper 1.21.1-133. Its `localDifficultyCondition` evidence
 verifies imported `LocalDifficulty` aliases (`difficulty`, `diff`, and `d`),
 comparator and range evaluation, target-to-caster location fallback,
 missing-context fail-closed behavior, and malformed-input preservation.
@@ -1085,7 +1102,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-local-difficulty-strict-20261110-r1` has 416 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-server-nms-version-20261110-r4` has 417 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1094,15 +1111,15 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 ### Current Development Goals
 
-This is a partial parity release. The matrix currently has `35`
+This is a partial parity release. The matrix currently has `34`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-10). The full remaining work is:
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 542 cited IDs; 450 report files; 4 directories
-   without reports; 88 missing directories; 221 archived release reports. The
+   Current fixture inventory: 543 cited IDs; 451 report files; 4 directories
+   without reports; 88 missing directories; 222 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1179,7 +1196,7 @@ the entire MythicMobs feature catalog.
 - Official `IsInSurvivalMode` and `InSurvivalMode` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player in Survival, reject Adventure, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-survival-mode-import-strict-20261106-r1` completes the 361-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.
 - Official `IsUsingSpyglass` and `IsScoping` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player actively using a Spyglass, then reject the inactive state, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-spyglass-import-strict-20261106-r1` completes the 360-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.
 - Official `IsFrozen` and `Frozen` aliases now have strict importer-to-runtime evidence: `?isFrozen` and `?frozen` both pass on a real frozen Zombie, fail after thawing, and reject malformed arguments through `SkillService`. Fixture `srv-paper-is-frozen-import-strict-20261106-r2` completes the full 359-probe release catalog on Paper 1.21.1-133; the broader Conditions catalog remains open.
-- Official `ServerNmsVersion`, `servernms`, and `nmsversion` now import `version`/`sv`/`v`, including the documented `v1_19_R1_2` default, and evaluate versioned CraftBukkit packages or the known Paper 1.20.x/1.21.x Minecraft-to-NMS mapping. Unit and migration tests cover aliases, defaults, malformed values, 1.21.1/1.21.4/1.21.11 mappings, and unknown-version fail-closed behavior; a dedicated external-NMS Paper fixture is still required, so the matrix row remains `mapped-unverified`.
+- Official `ServerNmsVersion`, `servernms`, and `nmsversion` now import `version`/`sv`/`v`, including the documented `v1_19_R1_2` default, and evaluate versioned CraftBukkit packages or the known Paper 1.20.x/1.21.x Minecraft-to-NMS mapping. Unit and migration tests cover aliases, defaults, malformed values, 1.21.1/1.21.4/1.21.11 mappings, and unknown-version fail-closed behavior. Strict Paper fixture `srv-paper-server-nms-version-20261110-r4` completes the 417-probe release catalog and verifies the imported aliases, live Paper positive and negative evaluation, default rejection, and invalid-input preservation. The individual condition is now `implemented-runtime`; external-NMS and other server-version compatibility remain open.
 - Official `LocalDifficulty` now imports `difficulty`/`diff`/`d` into `local-difficulty`, validates finite comparators and ordered ranges, and preserves unknown, duplicate, empty, and malformed source arguments. Runtime evaluation prefers the target location, falls back to the caster/instance location, and reads Paper's effective local difficulty through an injectable lookup or NMS reflection; unavailable locations, reflection failures, and non-finite values fail closed. Migration, runtime-boundary, SkillService, cross-module, and strict Paper tests cover aliases, boundaries, fallback, missing context, and invalid input. Fixture `srv-paper-local-difficulty-strict-20261110-r1` completes the 416-probe release catalog, so the individual matrix row is now `implemented-runtime` while the broader Conditions catalog remains `mapped-unverified`.
 - `@PlayersInWorld` now selects valid online players in the caster's world without implicit faction filtering; `@PlayersOnServer` and its `@server`/`@everyone` aliases select online players across worlds. `targetself=true` includes the caster. Unit/importer coverage and strict Paper fixture `srv-paper-targeter-players-strict-20261102-r1` verify filtering, server population and alias equivalence in a complete 272-probe report; full targeter-catalog and cross-world client coverage remain open.
 - Generic targeter `skipTargetsUpToIndex` (`stuti`) now skips entries after sorting and before applying `limit`; negative or malformed values fail closed. Focused API, importer, Paper self-test, and report-contract coverage are included. Strict Paper fixture `srv-paper-targeter-skip-index-strict-20261102-r3` verifies the selector behavior on Paper 1.21.1-133; its archived 271-probe report has 259 passed, 12 expected negative controls, and zero incomplete. The complete official targeter catalog remains open.

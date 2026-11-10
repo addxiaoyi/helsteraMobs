@@ -845,6 +845,11 @@
       "requiredObservation": "local-difficulty-condition imported=true positive=true range-positive=true high-rejected=true fallback-positive=true missing-context-rejected=true invalid-preserved=true passed=true"
     },
     {
+      "id": "serverNmsVersionCondition",
+      "status": "passed",
+      "requiredObservation": "server-nms-version-condition imported=true positive=true alias-positive=true scalar-positive=true wrong-rejected=true default-rejected=true invalid-preserved=true passed=true"
+    },
+    {
       "id": "importedVariableConditions",
       "status": "passed",
       "requiredObservation": "imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true"
