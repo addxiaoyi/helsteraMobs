@@ -387,6 +387,11 @@
       "status": "passed"
     },
     {
+      "id": "templateTypeImported",
+      "status": "passed",
+      "requiredObservation": "template-type-imported result=true imported=true primary-mapped=true alias-mapped=true direct-positive=true transitive-positive=true unrelated-rejected=true control-rejected=true missing-config-rejected=true unmanaged-rejected=true invalid-preserved=true passed=true"
+    },
+    {
       "id": "inCombatCondition",
       "status": "passed",
       "requiredObservation": "in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true"

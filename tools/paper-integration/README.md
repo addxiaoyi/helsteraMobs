@@ -51,20 +51,25 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-target-fluids-import-strict-20261110-r2` passes all 423
-probes (404 passed, 19 expected rejections, zero failed or incomplete) on Paper
-1.21.1-133. Its `targetFluidConditions` probe verifies imported water/lava
-condition aliases against live target states, invalid-input preservation, and
-block restoration. Report:
-[`paper-1.21.1-target-fluids-import-strict-20261110-r2.json`](reports/paper-1.21.1-target-fluids-import-strict-20261110-r2.json)
-(SHA-256 `1acc1bc8f127373babf65e8de4e5f1462caa94a81bd3d6ccbddad2979eb3ed1c`);
+Latest strict fixture `srv-paper-template-type-strict-20261110-r1` passes all
+424 probes (405 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `templateTypeImported` probe verifies Mythic
+`TemplateType`/`Template`/`instanceOf` import, direct and transitive matching,
+negative controls, missing-configuration and unmanaged-entity rejection, and
+invalid-input preservation. Report:
+[`paper-1.21.1-template-type-strict-20261110-r1.json`](reports/paper-1.21.1-template-type-strict-20261110-r1.json)
+(SHA-256 `ca7eb2e6faddf04a29d13c6923c6ab7091f9182933bfbe0b66cdf26a092e1b92`);
 server log SHA-256 is
-`1a17ee57f7e748b53ac97cb989e8852672e805d4e27cde6672c1d332ce23edc5`, client
+`23134b22e9532c227ff904478e46223944ec5b8cfff41eec75ae5672d3e263f9`, client
 log archive SHA-256 is
-`5af51dcd4c2ec750acf2cb964d2d2313fa8e0049e4a7df186ce9202fa22e192c`, and
+`4e6069976120209f7a0367604001fce5e6672764188676b784d63d4705375acd`, and
 plugin SHA-256 is
-`eb536ff2ed308e44893e0ecd2d13e730f39f8952aafc2b969b327add939ad0ea`. Archived
-logs replace web-token query values with `[REDACTED]`.
+`05dc6c3fc503b652057dda08b808db909e2c166cdcaedffed9ac96db71e10cfe`. Archived
+logs redact web-token query values.
+
+Previous strict fixture `srv-paper-target-fluids-import-strict-20261110-r2`
+passed all 423 probes; its report and logs remain indexed in
+`release-evidence.json`.
 
 Previous strict fixture `srv-paper-invincible-strict-20261110-r3` passes all 423
 probes (404 passed, 19 expected rejections, zero failed or incomplete) on Paper
@@ -2390,8 +2395,7 @@ Negative Spawner controls must also report the specific rejection reason in the
 catalog; a different failure cannot establish the condition being tested.
 Update this contract deliberately when release coverage changes; older archived
 reports retain their historical scope. It also rejects duplicate or unregistered
-probe IDs, so one log line cannot silently satisfy two catalog entries. Before startup it also requires the server jar
-manifest to contain `Implementation-Version` for the same version check. A green Maven report-contract test validates
+probe IDs, so one log line cannot silently satisfy two catalog entries. Before startup, the runner resolves the Paper build from `Implementation-Version` or `version.json`; for the known official Paperclip artifact whose metadata omits both, it accepts only the SHA-256 pinned in `version-matrix.json`. A green Maven report-contract test validates
 parsing and these version boundaries; it does not substitute for this live
 Paper run.
 Reports carry an `evidenceMode` field; strict validation accepts only

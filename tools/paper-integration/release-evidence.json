@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-template-type-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-template-type-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-template-type-strict-20261110-r1.json",
+    "reportSha256": "ca7eb2e6faddf04a29d13c6923c6ab7091f9182933bfbe0b66cdf26a092e1b92",
+    "log": "tools/paper-integration/reports/paper-1.21.1-template-type-strict-20261110-r1.log.gz",
+    "logSha256": "23134b22e9532c227ff904478e46223944ec5b8cfff41eec75ae5672d3e263f9",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-template-type-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "4e6069976120209f7a0367604001fce5e6672764188676b784d63d4705375acd",
+    "pluginSha256": "05dc6c3fc503b652057dda08b808db909e2c166cdcaedffed9ac96db71e10cfe",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-target-fluids-import-strict-20261110-r2",
     "reportFixtureDirectory": "srv-paper-target-fluids-import-strict-20261110-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-target-fluids-import-strict-20261110-r2.json",

@@ -979,6 +979,16 @@ class MmConditionsTest {
     }
 
     @Test
+    void officialTemplateTypeConditionMapsTemplateAliasesAndLists() {
+        assertEquals("template-type templates=mythic_undead",
+                t("?TemplateType{t=Undead}"));
+        assertEquals("template-type templates=mythic_undead,mythic_armored",
+                t("?Template{templates=Undead,Armored}"));
+        assertEquals("template-type templates=mythic_undead,mythic_armored",
+                t("?instanceOf{template=Undead,Armored}"));
+    }
+
+    @Test
     void structuredValueConditionsRejectUnknownDuplicateEmptyAndInvalidArguments() {
         for (String raw : List.of(
                 "?lunarPhase{phases=1;unknown=2}",
@@ -990,6 +1000,10 @@ class MmConditionsTest {
                 "?mythicMobType{type=Zombie;unknown=true}",
                 "?mythicMobType{type=Zombie;t=Husk}",
                 "?mythicMobType{types=Zombie,}",
+                "?TemplateType{template=Undead;t=Armored}",
+                "?TemplateType{templates=Undead,}",
+                "?TemplateType{templates=}",
+                "?TemplateType{unknown=Undead}",
                 "?mythicMobType{type=Zombie;exactmatch=maybe}",
                 "?triggerItemType{types=STONE;unknown=true}",
                 "?triggerItemType{type=STONE;mat=DIRT}",

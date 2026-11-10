@@ -92,6 +92,14 @@ public final class SkillExtras {
     }
 
     private static volatile LocalDifficultyLookup localDifficultyLookup;
+
+    /** Resolves the configured Mythic-style template lineage for a managed mob. */
+    @FunctionalInterface
+    public interface MobTemplateLookup {
+        Collection<String> templatesOf(Entity entity);
+    }
+
+    private static volatile MobTemplateLookup mobTemplateLookup;
     private static final Map<String, String> KNOWN_NMS_VERSIONS = Map.ofEntries(
             Map.entry("1.20.1", "v1_20_R1"),
             Map.entry("1.20.2", "v1_20_R2"),
@@ -129,6 +137,10 @@ public final class SkillExtras {
     /** Overrides Paper's local-difficulty lookup for integrations and unit tests. */
     public static void localDifficultyLookup(LocalDifficultyLookup lookup) {
         localDifficultyLookup = lookup;
+    }
+
+    public static void mobTemplateLookup(MobTemplateLookup lookup) {
+        mobTemplateLookup = lookup;
     }
 
     static PinRegistry pinRegistry() {
@@ -420,6 +432,7 @@ public final class SkillExtras {
         pinRegistry = null;
         regionLookup = null;
         localDifficultyLookup = null;
+        mobTemplateLookup = null;
         damagePolicy = null;
         damageCause = null;
         itemResolver = null;
@@ -709,6 +722,55 @@ public final class SkillExtras {
         if (!ctx.instanceValid()) return null;
         Entity entity = ctx.instance().baseEntity().orElse(null);
         return entity instanceof LivingEntity living ? living : null;
+    }
+
+    private static Set<String> templateTypeArguments(List<String> args) {
+        if (args == null || args.isEmpty()) {
+            throw new IllegalArgumentException("template-type requires at least one template");
+        }
+        LinkedHashSet<String> templates = new LinkedHashSet<>();
+        boolean supplied = false;
+        for (String argument : args) {
+            if (argument == null || argument.isBlank()) {
+                throw new IllegalArgumentException("template-type argument must not be empty");
+            }
+            int equals = argument.indexOf('=');
+            String value;
+            if (equals < 0) {
+                if (supplied) throw new IllegalArgumentException("duplicate template-type argument");
+                value = argument.trim();
+            } else {
+                String key = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT)
+                        .replace("-", "").replace("_", "");
+                if (!Set.of("template", "templates", "t").contains(key)) {
+                    throw new IllegalArgumentException("unknown template-type argument: " + key);
+                }
+                if (supplied) throw new IllegalArgumentException("duplicate template-type argument");
+                value = argument.substring(equals + 1).trim();
+            }
+            if (value.isBlank()) throw new IllegalArgumentException("template-type requires a template name");
+            for (String raw : value.split(",", -1)) {
+                String template = normalizeTemplateId(raw);
+                if (template == null) {
+                    throw new IllegalArgumentException("invalid template-type name");
+                }
+                templates.add(template);
+            }
+            supplied = true;
+        }
+        if (templates.isEmpty()) throw new IllegalArgumentException("template-type requires a template name");
+        return Set.copyOf(templates);
+    }
+
+    private static String normalizeTemplateId(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String value = raw.trim().toLowerCase(Locale.ROOT);
+        int dot = value.indexOf('.');
+        if (dot > 0) value = value.substring(dot + 1);
+        value = value.replaceAll("[^a-z0-9_]", "_").replaceAll("_+", "_")
+                .replaceAll("^_", "").replaceAll("_$", "");
+        if (value.isBlank()) return null;
+        return value.startsWith("mythic_") ? value : "mythic_" + value;
     }
 
     private static boolean inCombat(BehaviorContext ctx) {
@@ -3398,6 +3460,25 @@ public final class SkillExtras {
                                     : modelId.toLowerCase(Locale.ROOT).contains(value.toLowerCase(Locale.ROOT))) {
                                 return true;
                             }
+                        }
+                        return false;
+                    };
+                }),
+                Map.entry("template-type", (SkillCatalog.ConditionFactory) a -> {
+                    Set<String> expected = templateTypeArguments(a);
+                    return ctx -> {
+                        LivingEntity entity = conditionEntity(ctx);
+                        MobTemplateLookup lookup = mobTemplateLookup;
+                        if (entity == null || lookup == null) return false;
+                        try {
+                            Collection<String> templates = lookup.templatesOf(entity);
+                            if (templates == null || templates.isEmpty()) return false;
+                            for (String template : templates) {
+                                String normalized = normalizeTemplateId(template);
+                                if (normalized != null && expected.contains(normalized)) return true;
+                            }
+                        } catch (RuntimeException ignored) {
+                            return false;
                         }
                         return false;
                     };

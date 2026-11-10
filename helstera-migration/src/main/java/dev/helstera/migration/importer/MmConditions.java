@@ -58,6 +58,8 @@ public final class MmConditions {
             Map.entry("vanillaonly", "vanillaonly"), Map.entry("vanilla", "vanillaonly"));
     private static final Map<String, String> ITEM_GROUP_COOLDOWN_ARGUMENTS = Map.of(
             "group", "group", "g", "group");
+    private static final Map<String, String> TEMPLATE_TYPE_ARGUMENTS = Map.of(
+            "templates", "templates", "template", "templates", "t", "templates");
     private static final Map<String, String> ENTITY_ITEM_TYPE_ARGUMENTS = Map.of(
             "material", "types", "mat", "types", "m", "types", "type", "types",
             "types", "types", "t", "types");
@@ -1024,6 +1026,20 @@ public final class MmConditions {
             String exact = normalizedBoolean(arguments.getOrDefault("exactmatch", "true"));
             if (!validCommaList(types) || exact == null) return new Mapped(s, false);
             return new Mapped("mythic-mob-type " + types + " exactmatch=" + exact, true);
+        }
+        if ("templatetype".equals(name) || "template".equals(name)
+                || "instanceof".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(body, TEMPLATE_TYPE_ARGUMENTS, "templates");
+            if (arguments == null) return new Mapped(s, false);
+            String templates = arguments.get("templates");
+            if (!validCommaList(templates)) return new Mapped(s, false);
+            List<String> normalized = new ArrayList<>();
+            for (String template : templates.split(",", -1)) {
+                String value = normalizeMobTemplateId(template);
+                if (value == null) return new Mapped(s, false);
+                normalized.add(value);
+            }
+            return new Mapped("template-type templates=" + String.join(",", normalized), true);
         }
         if ("iscreeperprimed".equals(name)) {
             return new Mapped("is-creeper-primed", true);
@@ -2472,6 +2488,17 @@ public final class MmConditions {
             if (entry.isBlank()) return false;
         }
         return true;
+    }
+
+    private static String normalizeMobTemplateId(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String value = raw.trim().toLowerCase(Locale.ROOT);
+        int dot = value.indexOf('.');
+        if (dot > 0) value = value.substring(dot + 1);
+        value = value.replaceAll("[^a-z0-9_]", "_").replaceAll("_+", "_")
+                .replaceAll("^_", "").replaceAll("_$", "");
+        if (value.isBlank()) return null;
+        return value.startsWith("mythic_") ? value : "mythic_" + value;
     }
 
     private static boolean validNamespacedKey(String raw) {

@@ -102,10 +102,19 @@ if ($Strict -and [string]::IsNullOrWhiteSpace($paperImplementation)) {
 }
 if (-not [string]::IsNullOrWhiteSpace($paperImplementation) -and
         $paperImplementation -notmatch ('^' + [regex]::Escape($expectedPaperBuild) + '(?:-|$)')) {
-    if (-not $Exploratory) {
+    $paperSha256 = (Get-FileHash -LiteralPath $paper -Algorithm SHA256).Hash.ToLowerInvariant()
+    $pinnedPaperSha256 = [string]$releaseCombination.serverJarSha256
+    if ($paperImplementation -eq $expectedPaperVersion -and
+            $pinnedPaperSha256 -cmatch '^[0-9a-f]{64}$' -and $paperSha256 -ceq $pinnedPaperSha256) {
+        # Official Paperclip ZIPs expose the Minecraft version in version.json,
+        # not the build number. The exact official artifact digest is the
+        # build identity; the running server report is still checked afterward.
+        $paperImplementation = $expectedPaperBuild
+    } elseif (-not $Exploratory) {
         throw "Paper build mismatch: $paperImplementation (expected $expectedPaperBuild; pass -Exploratory for non-release evidence)"
+    } else {
+        Write-Warning "Exploratory Paper run uses $paperImplementation; this run is not eligible for the $expectedPaperBuild strict release gate."
     }
-    Write-Warning "Exploratory Paper run uses $paperImplementation; this run is not eligible for the $expectedPaperBuild strict release gate."
 }
 $mineflayerVersion = $env:PAPER_MINEFLAYER_VERSION
 if ([string]::IsNullOrWhiteSpace($mineflayerVersion)) {

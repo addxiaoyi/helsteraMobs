@@ -5771,4 +5771,39 @@ class ImportersTest {
         assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
                 && "Items.broken.Template".equals(e.get("source-key"))));
     }
+
+    @Test
+    @DisplayName("Mythic mob templates retain lineage for TemplateType and mark field inheritance unsupported")
+    void mythicMobTemplateLineageIsRetained(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/templates.yml", """
+                mobs:
+                  armored:
+                    Type: ZOMBIE
+                    Template: [Undead, Template.Armored]
+                  invalid:
+                    Type: SKELETON
+                    Template: [42]
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        Map<String, Object> plan = entries.stream()
+                .filter(entry -> "mobs/mythic_armored.yml".equals(entry.get("target-file")))
+                .findFirst().orElseThrow();
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new StringReader(String.valueOf(plan.get("content"))));
+
+        assertEquals(List.of("mythic_undead", "mythic_armored"), target.getStringList("mob.templates"));
+        assertEquals(List.of("Undead", "Template.Armored"),
+                target.getStringList("mob.unsupported.TemplateInheritance"));
+        Map<String, Object> invalidPlan = entries.stream()
+                .filter(entry -> "mobs/mythic_invalid.yml".equals(entry.get("target-file")))
+                .findFirst().orElseThrow();
+        YamlConfiguration invalid = YamlConfiguration.loadConfiguration(
+                new StringReader(String.valueOf(invalidPlan.get("content"))));
+        assertEquals(List.of(42), invalid.getIntegerList("mob.unsupported.Template"));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "mob.templates".equals(entry.get("target-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "mob.unsupported.TemplateInheritance"
+                .equals(entry.get("target-key"))));
+    }
 }

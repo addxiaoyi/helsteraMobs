@@ -1,5 +1,21 @@
 # Paper Startup Evidence
 
+Latest fixture `srv-paper-template-type-strict-20261110-r1` passed the full
+strict gate on Paper 1.21.1-133: 424 registered probes, 405 passed, 19
+expected rejections, and zero failed or incomplete. Its `templateTypeImported`
+probe verifies imported `TemplateType`/`Template`/`instanceOf` aliases, direct
+and transitive template matches, negative controls, missing-configuration and
+unmanaged-entity rejection, and invalid-input preservation. Plugin SHA-256:
+`05dc6c3fc503b652057dda08b808db909e2c166cdcaedffed9ac96db71e10cfe`. Full
+catalog report:
+[paper-1.21.1-template-type-strict-20261110-r1.json](reports/paper-1.21.1-template-type-strict-20261110-r1.json), SHA-256:
+`ca7eb2e6faddf04a29d13c6923c6ab7091f9182933bfbe0b66cdf26a092e1b92`.
+Compressed server log SHA-256:
+`23134b22e9532c227ff904478e46223944ec5b8cfff41eec75ae5672d3e263f9`.
+Client log archive SHA-256:
+`4e6069976120209f7a0367604001fce5e6672764188676b784d63d4705375acd`.
+Archived logs redact web-token query values.
+
 Focused exploratory fixture `paper-1.21.4-item-group-cooldown-exploratory-20261110`
 ran plugin `helsteraMobs` on Paper 1.21.4-232 with a real Mineflayer 1.21.4
 player. The production skill condition/action factories set and read the named
@@ -25,7 +41,7 @@ Sanitized focused log:
 [paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110.txt](reports/paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110.txt).
 Log SHA-256: `acb173de2a0bb1cfdd22a39507d3fe24ee7ca5e9b3495155e0801ea61b9ec178`.
 
-Latest fixture `srv-paper-target-fluids-import-strict-20261110-r2` passed the full strict
+Previous fixture `srv-paper-target-fluids-import-strict-20261110-r2` passed the full strict
 gate on Paper 1.21.1-133: 423 registered probes, 404 passed, 19 expected
 rejections, and zero failed or incomplete. Its `targetFluidConditions` probe
 verifies the imported `?targetInWater`/`?targetInLava` aliases against live
