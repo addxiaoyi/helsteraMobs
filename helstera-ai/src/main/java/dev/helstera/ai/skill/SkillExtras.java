@@ -469,6 +469,8 @@ public final class SkillExtras {
     private static final Map<String, Map<String, Object>> SCOPED_VALUES = new ConcurrentHashMap<>();
 
     private static final Map<Integer, Map<String, Integer>> SCORES = new ConcurrentHashMap<>();
+    /** Last observed entity position for Mythic's exact/approximate moving condition. */
+    private static final Map<UUID, MotionSnapshot> LAST_MOTION = new ConcurrentHashMap<>();
     /** Most recent signal delivered to each managed instance. */
     private static final Map<Integer, String> LAST_SIGNALS = new ConcurrentHashMap<>();
     /** Projectiles that have reached a Bukkit ProjectileHitEvent. */
@@ -478,6 +480,9 @@ public final class SkillExtras {
 
     /** 全局冷却：名称 -> 解除冷却的时刻。 */
     private static final Map<String, Long> GLOBAL_CD = new ConcurrentHashMap<>();
+
+    private record MotionSnapshot(UUID worldId, double x, double y, double z) {
+    }
 
     /** 实例销毁时回收其变量与分数。 */
     public static void forget(int instanceId) {
@@ -514,8 +519,14 @@ public final class SkillExtras {
     public static void forgetEntity(org.bukkit.entity.Entity entity) {
         if (entity == null) return;
         String identity;
-        try { identity = entity.getUniqueId().toString(); }
-        catch (RuntimeException ignored) { identity = Integer.toString(entity.getEntityId()); }
+        UUID uuid = null;
+        try {
+            uuid = entity.getUniqueId();
+            identity = uuid == null ? Integer.toString(entity.getEntityId()) : uuid.toString();
+        } catch (RuntimeException ignored) {
+            identity = Integer.toString(entity.getEntityId());
+        }
+        if (uuid != null) LAST_MOTION.remove(uuid);
         SCOPED_VALUES.remove("caster:" + identity);
         SCOPED_VALUES.remove("target:" + identity);
     }
@@ -1129,6 +1140,82 @@ public final class SkillExtras {
                                         String... names) {
         String raw = keyedArg(args, names);
         return raw == null ? bool(args, index, fallback) : bool(List.of(raw), 0, fallback);
+    }
+
+    private static boolean movingExact(List<String> args) {
+        boolean seen = false;
+        String value = null;
+        for (String raw : args == null ? List.<String>of() : args) {
+            if (raw == null || raw.isBlank()) {
+                throw new IllegalArgumentException("moving accepts exact/e=true|false");
+            }
+            int equals = raw.indexOf('=');
+            if (equals >= 0) {
+                String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                if (!Set.of("exact", "e").contains(key) || seen) {
+                    throw new IllegalArgumentException("moving accepts one exact/e argument");
+                }
+                value = raw.substring(equals + 1).trim();
+                if (value.isBlank()) {
+                    throw new IllegalArgumentException("moving exact/e cannot be blank");
+                }
+                seen = true;
+            } else {
+                if (seen || value != null) {
+                    throw new IllegalArgumentException("moving accepts one exact/e argument");
+                }
+                value = raw.trim();
+                seen = true;
+            }
+        }
+        return value == null ? true : bool(List.of(value), 0, true);
+    }
+
+    private static boolean moving(BehaviorContext ctx, boolean exact) {
+        LivingEntity entity = conditionEntity(ctx);
+        if (entity == null) return false;
+
+        org.bukkit.util.Vector velocity;
+        try {
+            velocity = entity.getVelocity();
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+        if (velocity == null) return false;
+        double vx = velocity.getX();
+        double vy = velocity.getY();
+        double vz = velocity.getZ();
+        if (!Double.isFinite(vx) || !Double.isFinite(vy) || !Double.isFinite(vz)) return false;
+
+        // A real Bukkit entity has a location snapshot. The NMS implementation used
+        // by Mythic compares the current position with the previous tick's position;
+        // exact=false compares their containing block coordinates. Keep the velocity
+        // fallback for synthetic contexts and entities whose location is unavailable.
+        try {
+            Location current = entity.getLocation();
+            UUID id = entity.getUniqueId();
+            if (current != null && current.getWorld() != null && id != null
+                    && Double.isFinite(current.getX())
+                    && Double.isFinite(current.getY())
+                    && Double.isFinite(current.getZ())) {
+                MotionSnapshot next = new MotionSnapshot(current.getWorld().getUID(),
+                        current.getX(), current.getY(), current.getZ());
+                MotionSnapshot previous = LAST_MOTION.put(id, next);
+                if (previous != null && previous.worldId().equals(next.worldId())) {
+                    if (exact) {
+                        return previous.x() != next.x()
+                                || previous.y() != next.y()
+                                || previous.z() != next.z();
+                    }
+                    return Math.floor(previous.x()) != Math.floor(next.x())
+                            || Math.floor(previous.y()) != Math.floor(next.y())
+                            || Math.floor(previous.z()) != Math.floor(next.z());
+                }
+            }
+        } catch (RuntimeException ignored) {
+            // Fall through to the portable velocity check below.
+        }
+        return vx * vx + vy * vy + vz * vz > 0.0;
     }
 
     private static java.util.UUID ownerId(Entity entity) {
@@ -2439,10 +2526,10 @@ public final class SkillExtras {
                         ctx -> targetAiLineOfSight(ctx).orElse(false)),
                 Map.entry("target-not-in-line-of-sight", (SkillCatalog.ConditionFactory) a ->
                         ctx -> targetAiLineOfSight(ctx).map(found -> !found).orElse(false)),
-                Map.entry("moving", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof LivingEntity living
-                                && Double.isFinite(living.getVelocity().lengthSquared())
-                                && living.getVelocity().lengthSquared() > 0.0),
+                Map.entry("moving", (SkillCatalog.ConditionFactory) a -> {
+                    boolean exact = movingExact(a);
+                    return ctx -> moving(ctx, exact);
+                }),
                 Map.entry("has-passenger", (SkillCatalog.ConditionFactory) a ->
                         ctx -> conditionEntity(ctx) instanceof LivingEntity living
                                 && !living.getPassengers().isEmpty()),

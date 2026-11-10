@@ -9264,10 +9264,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean hasPassengerNow = behaviors.testCondition(
                         skills.bindCondition("has-passenger"), conditionContext);
                 conditionTarget.removePassenger(passengerProbe);
-                var originalConditionVelocity = conditionTarget.getVelocity().clone();
-                conditionTarget.setVelocity(new org.bukkit.util.Vector(0.25, 0.0, 0.0));
-                boolean movingNow = behaviors.testCondition(skills.bindCondition("moving"), conditionContext);
-                conditionTarget.setVelocity(originalConditionVelocity);
+                MovingConditionProbe movingProbe = runMovingConditionProbe(
+                        world, skills, behaviors, conditionTarget, conditionContext);
+                boolean movingDefaultStationary = movingProbe.defaultStationary();
+                boolean movingExactFractional = movingProbe.exactFractional();
+                boolean movingAliasFractional = movingProbe.aliasFractional();
+                boolean movingApproximateSameBlock = movingProbe.approximateSameBlock();
+                boolean movingApproximateBlock = movingProbe.approximateBlock();
+                boolean movingExactArgument = movingProbe.exactArgument();
+                boolean movingShortApproximateArgument = movingProbe.shortApproximateArgument();
+                boolean movingInvalidArguments = movingProbe.invalidArguments();
+                boolean movingImported = movingProbe.imported();
+                boolean movingRestored = movingProbe.restored();
+                boolean movingNow = movingProbe.passed();
                 boolean conditionMobility = unmountedBefore && noPassengerBefore
                         && mountedNow && hasPassengerNow && movingNow;
                 int previousCasterAir = zombie.getRemainingAir();
@@ -10425,6 +10434,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " teleport=" + teleport
                         + " conditions=" + conditions
                         + " condition-mobility=" + conditionMobility
+                        + " moving-default-stationary=" + movingDefaultStationary
+                        + " moving-exact-fractional=" + movingExactFractional
+                        + " moving-alias-fractional=" + movingAliasFractional
+                        + " moving-approx-same-block=" + movingApproximateSameBlock
+                        + " moving-approx-block=" + movingApproximateBlock
+                        + " moving-exact-argument=" + movingExactArgument
+                        + " moving-e-argument=" + movingShortApproximateArgument
+                        + " moving-invalid-rejected=" + movingInvalidArguments
+                        + " moving-imported=" + movingImported
+                        + " moving-restored=" + movingRestored
                         + " drowning-condition=" + drowningCondition
                         + " leashed-condition=" + leashedCondition
                         + " has-owner-condition=" + hasOwnerCondition
@@ -11260,6 +11279,110 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " player-not-within-negative=" + playerNotWithinNegative
                 + " restored=" + (subjectRestored && peerRestored) + " passed=" + passed);
         return passed;
+    }
+
+    private record MovingConditionProbe(boolean defaultStationary,
+                                        boolean exactFractional,
+                                        boolean aliasFractional,
+                                        boolean approximateSameBlock,
+                                        boolean approximateBlock,
+                                        boolean exactArgument,
+                                        boolean shortApproximateArgument,
+                                        boolean invalidArguments,
+                                        boolean imported,
+                                        boolean restored) {
+        private boolean passed() {
+            return defaultStationary && exactFractional && aliasFractional
+                    && approximateSameBlock && approximateBlock && exactArgument
+                    && shortApproximateArgument && invalidArguments && imported && restored;
+        }
+    }
+
+    private static MovingConditionProbe runMovingConditionProbe(
+            org.bukkit.World world,
+            SkillService skills,
+            BehaviorRegistry behaviors,
+            LivingEntity entity,
+            dev.helstera.api.behavior.BehaviorContext context) {
+        Location originalLocation = entity.getLocation().clone();
+        Vector originalVelocity = entity.getVelocity().clone();
+        boolean defaultStationary = false;
+        boolean exactFractional = false;
+        boolean aliasFractional = false;
+        boolean approximateSameBlock = false;
+        boolean approximateBlock = false;
+        boolean exactArgument = false;
+        boolean shortApproximateArgument = false;
+        boolean invalidArguments = false;
+        boolean imported = false;
+        boolean restored = false;
+        try {
+            String movingKey = skills.bindCondition("moving");
+            String movingAliasKey = skills.bindCondition("isMoving");
+            String movingExactKey = skills.bindCondition("moving{exact=true}");
+            String movingApproximateKey = skills.bindCondition("moving{exact=false}");
+            String movingShortApproximateKey = skills.bindCondition("moving{e=false}");
+            var motionBase = new Location(world,
+                    entity.getLocation().getBlockX() + 0.2,
+                    entity.getLocation().getBlockY() + 0.2,
+                    entity.getLocation().getBlockZ() + 0.2);
+            entity.setVelocity(new Vector());
+            entity.teleport(motionBase);
+            if (movingKey != null) behaviors.testCondition(movingKey, context);
+            defaultStationary = movingKey != null
+                    && !behaviors.testCondition(movingKey, context);
+
+            entity.teleport(motionBase.clone().add(0.1, 0, 0));
+            exactFractional = movingKey != null
+                    && behaviors.testCondition(movingKey, context);
+            entity.teleport(motionBase.clone().add(0.2, 0, 0));
+            aliasFractional = movingAliasKey != null
+                    && behaviors.testCondition(movingAliasKey, context);
+
+            entity.teleport(motionBase.clone().add(0.6, 0, 0));
+            approximateSameBlock = movingApproximateKey != null
+                    && !behaviors.testCondition(movingApproximateKey, context);
+            entity.teleport(new Location(world,
+                    motionBase.getBlockX() + 1.2, motionBase.getY(), motionBase.getZ()));
+            approximateBlock = movingApproximateKey != null
+                    && behaviors.testCondition(movingApproximateKey, context);
+            entity.teleport(new Location(world,
+                    motionBase.getBlockX() + 2.2, motionBase.getY(), motionBase.getZ()));
+            shortApproximateArgument = movingShortApproximateKey != null
+                    && behaviors.testCondition(movingShortApproximateKey, context);
+            entity.teleport(new Location(world,
+                    motionBase.getBlockX() + 2.3, motionBase.getY(), motionBase.getZ()));
+            exactArgument = movingExactKey != null
+                    && behaviors.testCondition(movingExactKey, context);
+            invalidArguments = skills.bindCondition("moving{unknown=true}") == null
+                    && skills.bindCondition("moving{exact=true;exact=false}") == null
+                    && skills.bindCondition("moving{exact=maybe}") == null;
+
+            var importedMoving = dev.helstera.migration.importer.MmConditions.translate(
+                    "?moving{exact=true}");
+            var importedMovingAlias = dev.helstera.migration.importer.MmConditions.translate(
+                    "?isMoving{e=false}");
+            imported = importedMoving.translated()
+                    && "moving exact=true".equals(importedMoving.condition())
+                    && importedMovingAlias.translated()
+                    && "moving exact=false".equals(importedMovingAlias.condition());
+        } catch (Throwable ignored) {
+            // The main self-test reports the individual booleans and remains usable
+            // when a Paper implementation rejects a synthetic teleport.
+        } finally {
+            try {
+                restored = entity.teleport(originalLocation);
+                entity.setVelocity(originalVelocity);
+                restored = restored
+                        && entity.getLocation().distanceSquared(originalLocation) < 0.0001
+                        && entity.getVelocity().distanceSquared(originalVelocity) < 0.0001;
+            } catch (Throwable ignored) {
+                restored = false;
+            }
+        }
+        return new MovingConditionProbe(defaultStationary, exactFractional, aliasFractional,
+                approximateSameBlock, approximateBlock, exactArgument, shortApproximateArgument,
+                invalidArguments, imported, restored);
     }
 
     private void runConditionMobilityStateSelfTest(Location origin) {

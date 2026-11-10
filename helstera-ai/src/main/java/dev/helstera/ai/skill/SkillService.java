@@ -311,6 +311,12 @@ public final class SkillService {
         }
         String composite = bindCompositeCondition(conditionSpec);
         if (composite != null) return composite;
+        String rawConditionName = conditionNameBeforeArguments(conditionSpec);
+        String rawCanonicalName = canonicalConditionName(rawConditionName.toLowerCase(Locale.ROOT));
+        if ("moving".equals(rawCanonicalName) && !validMovingSyntax(conditionSpec)) {
+            warn("移动条件参数无效 \"" + spec + "\"");
+            return null;
+        }
         String normalized = conditionSpec.indexOf('{') >= 0
                 ? SpecSyntax.normalize(conditionSpec) : conditionSpec;
         List<String> parts = split(normalized);
@@ -450,6 +456,45 @@ public final class SkillService {
         } catch (IllegalArgumentException ignored) {
             return null;
         }
+    }
+
+    private static String conditionNameBeforeArguments(String spec) {
+        int brace = spec.indexOf('{');
+        int space = spec.indexOf(' ');
+        int end = spec.length();
+        if (brace >= 0) end = Math.min(end, brace);
+        if (space >= 0) end = Math.min(end, space);
+        return spec.substring(0, end).trim();
+    }
+
+    private static boolean validMovingSyntax(String spec) {
+        int open = spec.indexOf('{');
+        if (open < 0) return true;
+        int close = spec.lastIndexOf('}');
+        if (close != spec.length() - 1 || close <= open
+                || spec.indexOf('{', open + 1) >= 0
+                || spec.indexOf('}', open + 1) != close) return false;
+        String body = spec.substring(open + 1, close).trim();
+        if (body.isBlank()) return true;
+        boolean seenNamed = false;
+        boolean seenPositional = false;
+        for (String raw : body.split("[;,]", -1)) {
+            String part = raw.trim();
+            if (part.isBlank()) return false;
+            int equals = part.indexOf('=');
+            if (equals >= 0) {
+                String key = part.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                String value = part.substring(equals + 1).trim();
+                if (!Set.of("exact", "e").contains(key) || seenNamed || value.isBlank()) {
+                    return false;
+                }
+                seenNamed = true;
+            } else {
+                if (seenPositional) return false;
+                seenPositional = true;
+            }
+        }
+        return true;
     }
 
     private boolean skillOnCooldown(String skillName,
@@ -2119,6 +2164,7 @@ public final class SkillService {
             case "fallspeed", "fall-speed", "falling-speed" -> "fall-speed";
             case "motionz", "motion-z", "motz" -> "motion-z";
             case "velocity" -> "velocity";
+            case "moving", "ismoving", "is-moving" -> "moving";
             case "height", "height-is" -> "height";
             case "altitude", "height-from-surface" -> "altitude";
             case "heightabove", "height-above" -> "height-above";

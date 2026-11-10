@@ -81,6 +81,8 @@ public final class MmConditions {
     private static final Map<String, String> SERVER_VERSION_BOUND_ARGUMENTS = Map.of(
             "version", "version", "sv", "version", "v", "version",
             "inclusive", "inclusive", "i", "inclusive");
+    private static final Map<String, String> MOVING_ARGUMENTS = Map.of(
+            "exact", "exact", "e", "exact");
     private static final Map<String, String> REGION_ARGUMENTS = Map.of(
             "region", "region", "r", "region");
     private static final Map<String, String> LOOKING_AT_ARGUMENTS = Map.of(
@@ -200,6 +202,15 @@ public final class MmConditions {
             }
         }
         String name = head.toLowerCase(Locale.ROOT).replace("_", "").replace("-", "");
+        if ("moving".equals(name) || "ismoving".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(body, MOVING_ARGUMENTS, "exact");
+            if (arguments == null) return new Mapped(s, false);
+            String exact = normalizedBoolean(arguments.getOrDefault("exact", "true"));
+            if (exact == null) return new Mapped(s, false);
+            return body == null || body.isBlank()
+                    ? new Mapped("moving", true)
+                    : new Mapped("moving exact=" + exact, true);
+        }
         if (body != null && !body.isBlank() && NO_ARGUMENT_CONDITIONS.contains(name)) {
             return new Mapped(s, false);
         }
@@ -1279,9 +1290,6 @@ public final class MmConditions {
         if ("vehicleisdead".equals(name)) return new Mapped("vehicle-is-dead", true);
         if ("isvehicle".equals(name) || "vehicle".equals(name)) {
             return new Mapped("is-vehicle", true);
-        }
-        if ("moving".equals(name) || "ismoving".equals(name)) {
-            return new Mapped("moving", true);
         }
         if ("haspassenger".equals(name) || "haspassengers".equals(name)) {
             return new Mapped("has-passenger", true);

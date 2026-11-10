@@ -1520,6 +1520,12 @@ class MmConditionsTest {
         assertEquals("mounted", t("?mounted"));
         assertEquals("mounted", t("?isMounted"));
         assertEquals("moving", t("?isMoving"));
+        assertEquals("moving exact=false", t("?moving{exact=false}"));
+        assertEquals("moving exact=false", t("?isMoving{e=off}"));
+        assertEquals("moving exact=true", t("?moving true"));
+        assertFalse(translated("?moving{unknown=true}"));
+        assertFalse(translated("?moving{exact=true;exact=false}"));
+        assertFalse(translated("?moving{exact=maybe}"));
         assertEquals("has-passenger", t("?hasPassenger"));
         assertEquals("has-passenger", t("?hasPassengers"));
         assertEquals("is-leashed", t("?isLeashed"));

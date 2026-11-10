@@ -36,6 +36,11 @@ try {
     $archivePath = Join-Path $temporaryRoot 'tools/paper-integration/reports/test-release.json'
     [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($archivePath))
     $fullReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-drop-inline-20261104-r2.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $conditionMobilityProbe = @($fullReport.probes | Where-Object id -eq 'conditionMobility')
+    if ($conditionMobilityProbe.Count -ne 1) { throw 'Synthetic release report must contain conditionMobility.' }
+    $conditionMobilityProbe[0].observations = @($conditionMobilityProbe[0].observations | ForEach-Object {
+        $_ -replace 'condition-mobility=true', 'condition-mobility=true moving-default-stationary=true moving-exact-fractional=true moving-alias-fractional=true moving-approx-same-block=true moving-approx-block=true moving-exact-argument=true moving-e-argument=true moving-invalid-rejected=true moving-imported=true moving-restored=true'
+    })
     foreach ($requiredKillProbe in @('killTrigger', 'playerKillTrigger')) {
         $killProbe = @($fullReport.probes | Where-Object id -eq $requiredKillProbe)
         if ($killProbe.Count -ne 1) { throw "Synthetic release report must contain $requiredKillProbe." }
