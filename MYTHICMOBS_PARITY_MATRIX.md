@@ -11,6 +11,12 @@ Status values:
 - `missing`: no meaningful implementation exists.
 - `blocked-by-external-plugin`: behavior requires a Mythic add-on or another external plugin.
 
+Version-gated behavior:
+
+| Feature | Status | Compatibility boundary |
+| --- | --- | --- |
+| `ItemGroupOnCooldown` / `SetItemGroupCooldown` | unsupported-preserved | The official [MythicMobs 5.9 changelog](https://wiki.mythiccraft.io/mythicmobs/changelogs/5.9.x_changelogs) adds these namespaced item-group features, outside the declared Mythic adapter range of 5.3.x–5.7.x. The [Paper 1.21.1 HumanEntity API](https://jd.papermc.io/paper/1.21.1/org/bukkit/entity/HumanEntity.html) exposes material cooldown access, not public query/set access for arbitrary named groups. Import keeps source lines and emits warnings; focused importer regression tests enforce preservation. Revisit when the supported Mythic/Paper matrix expands. |
+
 Evidence baseline: 2026-11-10, Paper API 1.21.1-R0.1-SNAPSHOT.
 
 Latest strict release evidence: `srv-paper-target-fluids-import-strict-20261110-r2`
@@ -3701,8 +3707,11 @@ The complete Conditions catalog remains mapped-unverified.
 
 Material cooldown condition update: official `MaterialIsOnCooldown` now reads
 target-player Bukkit material cooldowns, defaults to `ENDER_PEARL`, and accepts
-`material/m` aliases. `ItemGroupOnCooldown` remains separate because its custom
-item-group state has no Bukkit equivalent. Exploratory Paper
+`material/m` aliases. `ItemGroupOnCooldown` and its paired mechanic remain
+preserved with warnings: Mythic added them in 5.9, beyond the declared 5.3.x–5.7.x
+adapter range, and Paper 1.21.1 exposes no public arbitrary item-group cooldown
+query/set API. Importer tests pin this version boundary; see the version-gated
+behavior table above. Exploratory Paper
 `srv-paper-integration-exploratory-1.21.11-r110` verifies positive, wrong-item,
 and cleared negative paths through `material-cooldown-condition=true`; both
 aggregate condition probes pass after correcting self-test ordering. Strict

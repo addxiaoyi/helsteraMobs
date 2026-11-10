@@ -2609,6 +2609,35 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic 5.9 item-group cooldown is preserved outside the declared adapter range")
+    void preservesVersionGatedItemGroupCooldown(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/item-group-cooldown.yml", """
+                skills:
+                  item_group_gate:
+                    TargetConditions:
+                      - '?ItemGroupOnCooldown{group=minecraft:teleportingitems}'
+                    Skills:
+                      - setItemGroupCooldown{group=minecraft:teleportingitems;ticks=20} @target
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        Map<String, Object> plan = entries.stream().filter(e -> e.containsKey("target-file"))
+                .findFirst().orElseThrow();
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan.get("content"))));
+
+        assertEquals(List.of("?ItemGroupOnCooldown{group=minecraft:teleportingitems}"),
+                target.getStringList("skills.item_group_gate.target-conditions"));
+        assertEquals(List.of("setItemGroupCooldown{group=minecraft:teleportingitems;ticks=20} @target"),
+                target.getStringList("skills.item_group_gate.unsupported"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("source-key")).contains("TargetConditions.unmapped")));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("value")).contains("setItemGroupCooldown")));
+    }
+
+    @Test
     @DisplayName("Mythic FallingBlock options map to non-living entity fields")
     void mythicMapsFallingBlockOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/falling.yml", """

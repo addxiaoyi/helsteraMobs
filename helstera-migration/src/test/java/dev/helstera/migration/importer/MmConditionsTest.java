@@ -1712,6 +1712,9 @@ class MmConditionsTest {
         var m = MmConditions.translate("?unsupportedCondition");
         assertFalse(m.translated(), "未知条件不能假装翻译成功");
         assertEquals("?unsupportedCondition", m.condition(), "必须原样保留，用户才能看出少了什么");
+
+        String itemGroupCooldown = "?ItemGroupOnCooldown{group=minecraft:teleportingitems}";
+        assertUntranslatedPreserved(itemGroupCooldown);
     }
 
     @Test
