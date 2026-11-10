@@ -43,6 +43,14 @@ class SpawnOptionsTest {
     }
 
     @Test
+    void tameablePolicyDistinguishesUnsetFromFalse() {
+        var options = SpawnOptions.defaults();
+        assertNull(options.tameable());
+        assertFalse(options.tameable(false).tameable());
+        assertTrue(options.tameable(true).tameable());
+    }
+
+    @Test
     void reasonListsNormalizeAndCombineWithGlobalFlags() {
         var options = SpawnOptions.defaults()
                 .preventTargetReasons(List.of(" closest_player "))

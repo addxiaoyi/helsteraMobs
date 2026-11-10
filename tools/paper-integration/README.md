@@ -51,19 +51,19 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-goat-screaming-strict-20261110-r2` passes all
-427 probes (408 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. Its `goatOptionsImported` probe reads back imported
-`Options.Screaming` for configured and control Goats, confirms the false
-default, and verifies wrong-type and malformed-value preservation. Report:
-[`paper-1.21.1-goat-screaming-strict-20261110-r2.json`](reports/paper-1.21.1-goat-screaming-strict-20261110-r2.json)
-(SHA-256 `6af88fe5691b20771913bd0d8d5d182490e275dec7928b151388c1db3b5aeaf0`);
+Latest strict fixture `srv-paper-tameable-strict-20261110-r2` passes all 428
+probes (409 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `tameableOptionsImported` probe verifies Mythic
+`Options.Tameable` allow/deny/default/fallback behavior, native behavior for
+unmanaged instances, and wrong-type/invalid preservation. Report:
+[`paper-1.21.1-tameable-strict-20261110-r2.json`](reports/paper-1.21.1-tameable-strict-20261110-r2.json)
+(SHA-256 `9fc4248829cfb80b19c3fa3ddef59536a74b4247c5d91bb027b00301116f3a7b`);
 compressed server log SHA-256 is
-`0b8c573a864daa12f07c6bb4aa4f714e59a4dcb446f11d3301e0ba366492fe25`, client
+`e2c1e723b29b2243c044faf6d8cb2ca1cae327b7ef7b68ac2ca33b96aa13f84d`, client
 log archive SHA-256 is
-`a4435e5c922615499cfcf955c81f0ab18d63625f4061746941564c6107c89487`, and
+`ced4d643c3da41e8b532c35324a9da2f92531721b29384f3d34006afd87576f7`, and
 plugin SHA-256 is
-`d7e1063e5e31d69b038011fd26e589d498b489c47ddcf3639ca42681a8154f8e`. Archived
+`eff1862db4f2254510cb26af88872d96deb3970a05b0c52d800b12e355952a50`. Archived
 logs redact web-token values.
 
 Previous strict fixture `srv-paper-interaction-options-strict-20261110-r2`

@@ -1709,6 +1709,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedBoatOptionsSelfTest(origin.clone().add(64, 0, 0));
                 runImportedInteractionOptionsSelfTest(origin.clone().add(80, 0, 0));
                 runImportedGoatOptionsSelfTest(origin.clone().add(96, 0, 0));
+                runImportedTameableOptionsSelfTest(origin.clone().add(120, 0, 0));
 
                 var falling = world.spawnFallingBlock(origin.clone().add(8, 0, 0),
                         org.bukkit.Material.SAND.createBlockData());
@@ -4689,6 +4690,143 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } catch (Throwable failure) {
             getLogger().warning("[自检] goat-options result=false imported=false error=" + failure);
         } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedTameableOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        org.bukkit.entity.Wolf unmanaged = null;
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-tameable-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("tameable-options.yml");
+            String allowedId = "ImportedTameableAllowed_" + suffix;
+            String deniedId = "ImportedTameableDenied_" + suffix;
+            String defaultId = "ImportedTameableDefault_" + suffix;
+            String invalidId = "ImportedTameableInvalid_" + suffix;
+            String wrongTypeId = "ImportedTameableWrongType_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: WOLF
+                        Options:
+                          Tameable: true
+                      %2$s:
+                        Type: WOLF
+                        Options:
+                          Tameable: false
+                      %3$s:
+                        Type: WOLF
+                      %4$s:
+                        Type: WOLF
+                        Options:
+                          Tameable: maybe
+                      %5$s:
+                        Type: ZOMBIE
+                        Options:
+                          Tameable: true
+                    """.formatted(allowedId, deniedId, defaultId, invalidId, wrongTypeId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Tameable mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Tameable mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            var sourceIds = java.util.List.of(allowedId, deniedId, defaultId, invalidId, wrongTypeId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic Tameable probe mobs were not all imported");
+            }
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        origin.clone().add(i * 3, 0, 0), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+            java.util.function.IntFunction<org.bukkit.entity.Entity> spawnedEntity = instanceId -> {
+                var instance = instanceId > 0 ? instances().impl(instanceId) : null;
+                return instance == null ? null : instance.baseEntity().orElse(null);
+            };
+
+            var allowed = spawnedEntity.apply(spawnedIds.get(allowedId)) instanceof org.bukkit.entity.Wolf wolf
+                    ? wolf : null;
+            var denied = spawnedEntity.apply(spawnedIds.get(deniedId)) instanceof org.bukkit.entity.Wolf wolf
+                    ? wolf : null;
+            var defaultWolf = spawnedEntity.apply(spawnedIds.get(defaultId)) instanceof org.bukkit.entity.Wolf wolf
+                    ? wolf : null;
+            var invalid = spawnedEntity.apply(spawnedIds.get(invalidId)) instanceof org.bukkit.entity.Wolf wolf
+                    ? wolf : null;
+            var wrongType = spawnedEntity.apply(spawnedIds.get(wrongTypeId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var wrongConfig = mobConfig(targetIds.get(wrongTypeId));
+            var invalidUnsupported = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("entity.unsupported.Options");
+            var wrongUnsupported = wrongConfig == null ? null
+                    : wrongConfig.getConfigurationSection("entity.unsupported.Options");
+
+            unmanaged = origin.getWorld().spawn(origin.clone().add(18, 0, 0), org.bukkit.entity.Wolf.class);
+            var allowedEvent = allowed == null ? null
+                    : new org.bukkit.event.entity.EntityTameEvent(allowed, null);
+            var deniedEvent = denied == null ? null
+                    : new org.bukkit.event.entity.EntityTameEvent(denied, null);
+            var defaultEvent = defaultWolf == null ? null
+                    : new org.bukkit.event.entity.EntityTameEvent(defaultWolf, null);
+            var invalidEvent = invalid == null ? null
+                    : new org.bukkit.event.entity.EntityTameEvent(invalid, null);
+            var unmanagedEvent = new org.bukkit.event.entity.EntityTameEvent(unmanaged, null);
+            if (allowedEvent != null) getServer().getPluginManager().callEvent(allowedEvent);
+            if (deniedEvent != null) getServer().getPluginManager().callEvent(deniedEvent);
+            if (defaultEvent != null) getServer().getPluginManager().callEvent(defaultEvent);
+            if (invalidEvent != null) getServer().getPluginManager().callEvent(invalidEvent);
+            getServer().getPluginManager().callEvent(unmanagedEvent);
+
+            boolean wrongTypePreserved = wrongType instanceof org.bukkit.entity.Zombie
+                    && wrongConfig != null && wrongUnsupported != null
+                    && wrongUnsupported.getBoolean("Tameable")
+                    && !wrongConfig.contains("entity.tameable");
+            boolean invalidPreserved = invalidUnsupported != null
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("Tameable"));
+            boolean observationsPassed = allowed != null && denied != null && defaultWolf != null && invalid != null
+                    && allowedEvent != null && !allowedEvent.isCancelled()
+                    && deniedEvent != null && deniedEvent.isCancelled()
+                    && defaultEvent != null && defaultEvent.isCancelled()
+                    && invalidEvent != null && invalidEvent.isCancelled()
+                    && !unmanagedEvent.isCancelled() && wrongTypePreserved && invalidPreserved;
+            getLogger().info("[自检] tameable-options result=" + observationsPassed
+                    + " imported=" + (allowed != null && denied != null && defaultWolf != null && invalid != null)
+                    + " allow-cancelled=" + (allowedEvent != null && allowedEvent.isCancelled())
+                    + " deny-cancelled=" + (deniedEvent != null && deniedEvent.isCancelled())
+                    + " default-cancelled=" + (defaultEvent != null && defaultEvent.isCancelled())
+                    + " invalid-cancelled=" + (invalidEvent != null && invalidEvent.isCancelled())
+                    + " unmanaged-cancelled=" + unmanagedEvent.isCancelled()
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] tameable-options result=false imported=false error=" + failure);
+        } finally {
+            if (unmanaged != null) unmanaged.remove();
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
     }
@@ -22660,6 +22798,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityTame(org.bukkit.event.entity.EntityTameEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        if (instance != null && shouldCancelTaming(instance.options())) event.setCancelled(true);
+    }
+
+    static boolean shouldCancelTaming(SpawnOptions options) {
+        return options != null && Boolean.FALSE.equals(options.tameable());
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
     public void onNameTagUse(org.bukkit.event.player.PlayerInteractEntityEvent event) {
         if (instances == null || event == null
                 || !isNameTagUse(event.getPlayer(), event.getHand())) return;
@@ -25015,6 +25164,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             org.bukkit.configuration.ConfigurationSection config, SpawnOptions options) {
         if (config == null || options == null) return options;
         var entity = config.getConfigurationSection("entity");
+        Boolean tameable = options.tameable();
+        if (entity != null && entity.contains("tameable")) {
+            tameable = Boolean.valueOf(entity.getBoolean("tameable"));
+        }
+        options.tameable(tameable);
         return options
                 .preventLeashing(config.getBoolean("mob.prevent-leashing",
                         config.getBoolean("prevent-leashing", false)))

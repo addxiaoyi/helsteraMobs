@@ -695,6 +695,20 @@ try {
     Assert-True (($goatOptionsReport.probes | Where-Object id -eq 'goatOptionsImported').status -eq 'passed' -and
         ($goatOptionsReport.probes | Where-Object id -eq 'goatOptionsImported').observations[0] -match
         '^goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true$') 'report writer requires imported Goat option evidence'
+    $tameableOptionsTemp = Join-Path $temp 'tameable-options-fixture'
+    $tameableOptionsLogDirectory = Join-Path $tameableOptionsTemp 'logs'
+    New-Item -ItemType Directory -Path $tameableOptionsLogDirectory -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $tameableOptionsLogDirectory 'latest.log') -Value @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
+        '[Server thread/INFO]: [helsteraMobs] [自检] tameable-options result=true imported=true allow-cancelled=false deny-cancelled=true default-cancelled=true invalid-cancelled=true unmanaged-cancelled=false wrong-type-preserved=true invalid-preserved=true'
+    ) -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $tameableOptionsTemp | Out-Null
+    $tameableOptionsReport = Get-Content -LiteralPath (Join-Path $tameableOptionsTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($tameableOptionsReport.probes | Where-Object id -eq 'tameableOptionsImported').status -eq 'passed' -and
+        ($tameableOptionsReport.probes | Where-Object id -eq 'tameableOptionsImported').observations[0] -match
+        '^tameable-options result=true imported=true allow-cancelled=false deny-cancelled=true default-cancelled=true invalid-cancelled=true unmanaged-cancelled=false wrong-type-preserved=true invalid-preserved=true$') 'report writer requires imported Tameable option evidence'
     Assert-True (($report.probes | Where-Object id -eq 'spawner:reject').status -eq 'observed-rejected') 'rejected probe'
     Assert-True (($report.probes | Where-Object id -eq 'lootDynamicChance').status -eq 'passed') 'dynamic chance probe'
     $events = @($report.probes | Where-Object id -eq 'events')
@@ -1330,6 +1344,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'goatOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'goatOptionsImported'; status = 'passed'; observations = @('goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'tameableOptionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'tameableOptionsImported'; status = 'passed'; observations = @('tameable-options result=true imported=true allow-cancelled=false deny-cancelled=true default-cancelled=true invalid-cancelled=true unmanaged-cancelled=false wrong-type-preserved=true invalid-preserved=true')
     }
     $fullCatalogCreeperOptions = @($fullCatalogReport.probes | Where-Object id -eq 'creeper')
     if ($fullCatalogCreeperOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain creeper.' }
@@ -2261,6 +2279,19 @@ try {
     } catch { $incompleteGoatOptionsRejected = $_.Exception.Message -match 'required observation for goatOptionsImported' }
     Assert-True $incompleteGoatOptionsRejected 'full release gate rejects incomplete imported Goat option evidence'
     $fullCatalogGoatOptions[0].observations = $goatOptionsObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $fullCatalogTameableOptions = @($fullCatalogReport.probes | Where-Object id -eq 'tameableOptionsImported')
+    if ($fullCatalogTameableOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain tameableOptionsImported.' }
+    $tameableOptionsObservations = $fullCatalogTameableOptions[0].observations
+    $fullCatalogTameableOptions[0].observations = @('tameable-options result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteTameableOptionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteTameableOptionsRejected = $_.Exception.Message -match 'required observation for tameableOptionsImported' }
+    Assert-True $incompleteTameableOptionsRejected 'full release gate rejects incomplete imported Tameable option evidence'
+    $fullCatalogTameableOptions[0].observations = $tameableOptionsObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $creeperOptionsObservations = $fullCatalogCreeperOptions[0].observations
     $fullCatalogCreeperOptions[0].observations = @('creeper-options result=true')

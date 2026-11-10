@@ -5150,6 +5150,68 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Tameable controls taming independently from Tamed")
+    void mythicMapsTameablePolicyAndDefaults(@TempDir Path root) throws Exception {
+        write(root, "config-mobs.yml", """
+                Configuration:
+                  DefaultMobOptions:
+                    Tameable: true
+                """);
+        Path file = write(root, "Mobs/tameable-options.yml", """
+                mobs:
+                  enabled_wolf:
+                    Type: WOLF
+                    Options:
+                      Tameable: true
+                      Tamed: false
+                  disabled_wolf:
+                    Type: WOLF
+                    Options:
+                      Tameable: false
+                  global_cat:
+                    Type: CAT
+                  invalid_horse:
+                    Type: HORSE
+                    Options:
+                      Tameable: maybe
+                  wrong_entity:
+                    Type: ZOMBIE
+                    Options:
+                      Tameable: true
+                """);
+
+        var entries = new MythicMobsImporter().convert(file, root);
+        Path builtinFile = write(root, "standalone/Mobs/builtin.yml", """
+                mobs:
+                  builtin_wolf:
+                    Type: WOLF
+                """);
+        var builtinEntries = new MythicMobsImporter().convert(builtinFile);
+        var enabled = convertedMob(entries, "enabled_wolf");
+        var disabled = convertedMob(entries, "disabled_wolf");
+        var global = convertedMob(entries, "global_cat");
+        var invalid = convertedMob(entries, "invalid_horse");
+        var wrong = convertedMob(entries, "wrong_entity");
+        var builtIn = convertedMob(builtinEntries, "builtin_wolf");
+
+        assertTrue(enabled.getBoolean("entity.tameable"));
+        assertFalse(enabled.getBoolean("entity.tamed"));
+        assertFalse(disabled.getBoolean("entity.tameable", true));
+        assertTrue(global.getBoolean("entity.tameable"));
+        assertFalse(invalid.getBoolean("entity.tameable", true));
+        assertEquals("maybe", invalid.getString("entity.unsupported.Options.Tameable"));
+        assertTrue(wrong.getBoolean("entity.unsupported.Options.Tameable"));
+        assertFalse(wrong.contains("entity.tameable"));
+        assertFalse(builtIn.getBoolean("entity.tameable", true));
+        assertTrue(entries.stream().anyMatch(entry -> "defaulted".equals(entry.get("status"))
+                && String.valueOf(entry.get("source-key")).contains("DefaultMobOptions.Tameable")
+                && "entity.tameable".equals(entry.get("target-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "Options.Tameable".equals(entry.get("source-key"))
+                && "WARN".equals(entry.get("severity"))));
+    }
+
+    @Test
     @DisplayName("Mythic Cat options map type, sitting, and collar color")
     void mythicMapsCatOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/cat-options.yml", """

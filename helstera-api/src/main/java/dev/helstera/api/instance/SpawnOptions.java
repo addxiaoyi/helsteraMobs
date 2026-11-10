@@ -58,6 +58,8 @@ public final class SpawnOptions {
     private boolean preventSnowFormation = false;
     private boolean healOnReload = false;
     private boolean digOutOfGround = false;
+    /** Null keeps native behavior for instances without a Mythic Tameable policy. */
+    private Boolean tameable = null;
 
     public static SpawnOptions defaults() {
         return new SpawnOptions();
@@ -92,6 +94,11 @@ public final class SpawnOptions {
     public boolean persistent() { return persistent; }
 
     public SpawnOptions persistent(boolean v) { this.persistent = v; return this; }
+
+    /** Null means that Helstera should not override the entity's native taming behavior. */
+    public Boolean tameable() { return tameable; }
+
+    public SpawnOptions tameable(Boolean v) { this.tameable = v; return this; }
 
     /** AI 配置名（helstera-ai 的行为档案），null 表示不启用 AI。 */
     public String aiProfile() { return aiProfile; }
