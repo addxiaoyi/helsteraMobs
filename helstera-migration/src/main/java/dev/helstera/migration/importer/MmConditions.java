@@ -119,7 +119,7 @@ public final class MmConditions {
             "clear", "sun", "sunny", "rain", "storm", "thunder", "thunderstorm",
             "isliving", "isplayer", "ismob", "ismonster", "isanimal", "isvillager", "istameable", "israider",
             "iswatermob", "watermob", "iszombie", "zombie", "aerial", "isaerial", "isenderman", "enderman",
-            "isundead", "iscreature", "child", "isop", "isoperator", "iscollidable", "onground",
+            "isundead", "iscreature", "child", "isop", "isoperator", "iscollidable", "onground", "grounded",
             "isinvulnerable", "iscancelled", "iscanceled", "cancelled", "canceled",
             "isbaby", "ischild", "isadult", "istamed", "issheared", "issaddled", "ispowered", "ischarged",
             "charged", "climbing", "isclimbing", "invisible", "isinvisible", "glowing", "isglowing",
@@ -855,7 +855,7 @@ public final class MmConditions {
         if ("isdead".equals(name)) return new Mapped("is-dead", true);
         if ("isalive".equals(name)) return new Mapped("is-alive", true);
         if ("isvalid".equals(name)) return new Mapped("is-valid", true);
-        if ("onground".equals(name)) return new Mapped("on-ground", true);
+        if ("onground".equals(name) || "grounded".equals(name)) return new Mapped("on-ground", true);
         if ("inwater".equals(name)) return new Mapped("in-water", true);
         if ("inlava".equals(name)) return new Mapped("in-lava", true);
         if ("onfire".equals(name) || "isburning".equals(name)) {

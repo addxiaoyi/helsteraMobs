@@ -5173,6 +5173,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     throw new IllegalStateException("SkillService/BehaviorRegistry unavailable");
                 }
                 runConditionMobilityStateSelfTest(location.clone().add(30, 0, 0));
+                runGroundedConditionSelfTest(location.clone().add(32, 0, 0));
                 try {
                     var pinConfig = new org.bukkit.configuration.file.YamlConfiguration();
                     String pinWorld = world.getName();
@@ -11232,6 +11233,198 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " invalid-preserved=" + invalidPreserved
                 + " passed=" + passed);
         return passed;
+    }
+
+    private void runGroundedConditionSelfTest(Location origin) {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            org.bukkit.entity.ArmorStand probe = null;
+            dev.helstera.api.instance.ModelInstance instance = null;
+            org.bukkit.block.BlockState originalFloor = null;
+            org.bukkit.block.Block floor = null;
+            boolean imported = false;
+            boolean primaryMapped = false;
+            boolean groundedAliasMapped = false;
+            boolean invalidPreserved = false;
+            String primaryKey = null;
+            String groundedAliasKey = null;
+            if (origin == null || origin.getWorld() == null) {
+                getLogger().info("[自检] grounded-condition imported=false primary-mapped=false"
+                        + " grounded-alias-mapped=false positive=false alias-positive=false"
+                        + " airborne=false negative=false alias-negative=false invalid-preserved=false"
+                        + " restored=true passed=false");
+                return;
+            }
+            try {
+                if (!(skillService instanceof dev.helstera.ai.skill.SkillService skills)
+                        || !(behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors)) {
+                    throw new IllegalStateException("SkillService/BehaviorRegistry unavailable");
+                }
+                var importedPrimary = dev.helstera.migration.importer.MmConditions.translate("?onGround");
+                var importedGrounded = dev.helstera.migration.importer.MmConditions.translate("?grounded");
+                var invalid = dev.helstera.migration.importer.MmConditions.translate(
+                        "?grounded{unknown=true}");
+                primaryMapped = importedPrimary.translated()
+                        && "on-ground".equals(importedPrimary.condition());
+                groundedAliasMapped = importedGrounded.translated()
+                        && "on-ground".equals(importedGrounded.condition());
+                invalidPreserved = !invalid.translated()
+                        && "?grounded{unknown=true}".equals(invalid.condition());
+                imported = primaryMapped && groundedAliasMapped;
+                primaryKey = primaryMapped ? skills.bindCondition(importedPrimary.condition()) : null;
+                groundedAliasKey = groundedAliasMapped ? skills.bindCondition(importedGrounded.condition()) : null;
+                if (!imported || primaryKey == null || groundedAliasKey == null || !invalidPreserved) {
+                    throw new IllegalStateException("Grounded alias mapping contract failed");
+                }
+
+                var world = origin.getWorld();
+                Location groundingAnchor = getServer().getOnlinePlayers().stream()
+                        .filter(player -> player.isValid() && !player.isDead()
+                                && player.getWorld().equals(world) && player.isOnGround())
+                        .min(java.util.Comparator.comparingDouble(player ->
+                                player.getLocation().distanceSquared(origin)))
+                        .map(player -> player.getLocation().clone().add(3, 0, 0))
+                        .orElseGet(() -> origin.clone());
+                // Keep the physics probe beside an active player so Paper ticks its
+                // chunk. The old fixed spawn-relative location could land in an
+                // inactive chunk, where gravity and isOnGround never updated.
+                groundingAnchor.getChunk().load();
+                floor = world.getBlockAt(groundingAnchor.getBlockX(),
+                        groundingAnchor.getBlockY(), groundingAnchor.getBlockZ());
+                originalFloor = floor.getState();
+                floor.setType(org.bukkit.Material.STONE, false);
+                Location groundedLocation = new Location(world,
+                        groundingAnchor.getBlockX() + 0.5,
+                        groundingAnchor.getBlockY() + 1.0,
+                        groundingAnchor.getBlockZ() + 0.5);
+                probe = world.spawn(groundedLocation, org.bukkit.entity.ArmorStand.class);
+                probe.setVisible(false);
+                probe.setGravity(true);
+                probe.setInvulnerable(true);
+                probe.setVelocity(new org.bukkit.util.Vector(0, -0.75, 0));
+                instance = instances().bind("example/emberling", probe,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+
+                final var finalProbe = probe;
+                final var finalInstance = instance;
+                final var finalFloor = floor;
+                final var finalOriginalFloor = originalFloor;
+                final var context = dev.helstera.api.behavior.BehaviorContext.of(
+                        finalInstance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0,
+                        "grounded-condition");
+                final String finalPrimaryKey = primaryKey;
+                final String finalGroundedAliasKey = groundedAliasKey;
+                final boolean finalImported = imported;
+                final boolean finalInvalidPreserved = invalidPreserved;
+                new org.bukkit.scheduler.BukkitRunnable() {
+                    private int phase;
+                    private int retries;
+                    private boolean positive;
+                    private boolean aliasPositive;
+                    private boolean airborne;
+                    private boolean negative;
+                    private boolean aliasNegative;
+                    private boolean lastNativeGround;
+                    private boolean lastPrimaryResult;
+                    private boolean lastAliasResult;
+
+                    private void finish() {
+                        cancel();
+                        lastNativeGround = finalProbe.isValid() && finalProbe.isOnGround();
+                        if (finalProbe.isValid() && !finalProbe.isDead()) {
+                            lastPrimaryResult = behaviors.testCondition(finalPrimaryKey, context);
+                            lastAliasResult = behaviors.testCondition(finalGroundedAliasKey, context);
+                        }
+                        String finalLocation = formatProbeLocation(finalProbe.getLocation());
+                        String finalSupport = finalProbe.getLocation().clone()
+                                .subtract(0, 0.1, 0).getBlock().getType().name();
+                        boolean restored = true;
+                        try {
+                            finalOriginalFloor.update(true, false);
+                            restored = finalFloor.getType() == finalOriginalFloor.getType()
+                                    && finalFloor.getBlockData().equals(finalOriginalFloor.getBlockData());
+                        } catch (Throwable failure) {
+                            restored = false;
+                        }
+                        try {
+                            if (instances() != null) instances().despawn(finalInstance.instanceId());
+                        } catch (Throwable ignored) {
+                            restored = false;
+                        }
+                        if (finalProbe.isValid()) finalProbe.remove();
+                        boolean passed = finalImported && positive && aliasPositive && airborne
+                                && negative && aliasNegative && finalInvalidPreserved && restored;
+                        getLogger().info("[自检] grounded-condition imported=" + finalImported
+                                + " primary-mapped=true grounded-alias-mapped=true"
+                                + " positive=" + positive + " alias-positive=" + aliasPositive
+                                + " airborne=" + airborne + " negative=" + negative
+                                + " alias-negative=" + aliasNegative
+                                + " invalid-preserved=" + finalInvalidPreserved
+                                + " restored=" + restored + " passed=" + passed
+                                + " native-ground=" + lastNativeGround
+                                + " primary-condition=" + lastPrimaryResult
+                                + " alias-condition=" + lastAliasResult
+                                + " location=" + finalLocation + " support=" + finalSupport);
+                    }
+
+                    @Override
+                    public void run() {
+                        try {
+                            if (!finalProbe.isValid() || finalProbe.isDead()) {
+                                finish();
+                                return;
+                            }
+                            if (phase == 0) {
+                                lastNativeGround = finalProbe.isOnGround();
+                                lastPrimaryResult = behaviors.testCondition(finalPrimaryKey, context);
+                                lastAliasResult = behaviors.testCondition(finalGroundedAliasKey, context);
+                                positive = lastNativeGround && lastPrimaryResult;
+                                aliasPositive = lastNativeGround && lastAliasResult;
+                                if (positive && aliasPositive) {
+                                    finalProbe.teleport(context.instance().location().clone().add(0, 8, 0));
+                                    finalProbe.setGravity(true);
+                                    phase = 1;
+                                    retries = 0;
+                                    return;
+                                }
+                                if (retries++ < 20) {
+                                    finalProbe.setVelocity(new org.bukkit.util.Vector(0, -0.75, 0));
+                                    return;
+                                }
+                            } else {
+                                airborne = !finalProbe.isOnGround();
+                                negative = airborne
+                                        && !behaviors.testCondition(finalPrimaryKey, context);
+                                aliasNegative = airborne
+                                        && !behaviors.testCondition(finalGroundedAliasKey, context);
+                                if (negative && aliasNegative) {
+                                    finish();
+                                    return;
+                                }
+                                if (retries++ < 10) return;
+                            }
+                            finish();
+                        } catch (Throwable failure) {
+                            getLogger().warning("[自检] grounded-condition failed: " + failure);
+                            finish();
+                        }
+                    }
+                }.runTaskTimer(HelsteraPlugin.this, 1L, 1L);
+            } catch (Throwable failure) {
+                getLogger().warning("[自检] grounded-condition failed: " + failure);
+                if (originalFloor != null) originalFloor.update(true, false);
+                if (instance != null && instances() != null) instances().despawn(instance.instanceId());
+                if (probe != null && probe.isValid()) probe.remove();
+                boolean restored = originalFloor == null || floor != null
+                        && floor.getType() == originalFloor.getType()
+                        && floor.getBlockData().equals(originalFloor.getBlockData());
+                getLogger().info("[自检] grounded-condition imported=" + imported
+                        + " primary-mapped=" + primaryMapped
+                        + " grounded-alias-mapped=" + groundedAliasMapped
+                        + " positive=false alias-positive=false airborne=false negative=false"
+                        + " alias-negative=false invalid-preserved=" + invalidPreserved
+                        + " restored=" + restored + " passed=false");
+            }
+        }, 1L);
     }
 
     private boolean runServerNmsVersionConditionSelfTest(

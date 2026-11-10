@@ -505,6 +505,7 @@ class MmConditionsTest {
         assertEquals("has-offhand", t("?hasOffhand"));
         assertEquals("has-offhand SHIELD", t("?hasOffhand{item=SHIELD}"));
         assertEquals("on-ground", t("?onGround"));
+        assertEquals("on-ground", t("?grounded"));
         assertEquals("in-water", t("?inWater"));
         assertEquals("in-lava", t("?inLava"));
         assertEquals("on-fire", t("?onFire"));
@@ -520,6 +521,8 @@ class MmConditionsTest {
         assertEquals("is-glowing", t("?isGlowing"));
         assertEquals("is-invulnerable", t("?isInvulnerable"));
         assertTrue(translated("?onGround"));
+        assertTrue(translated("?grounded"));
+        assertFalse(translated("?grounded{unknown=true}"));
         assertFalse(translated("?lightLevel{<50%}"));
     }
 

@@ -89,6 +89,7 @@ try {
         '[Server thread/INFO]: skill-actions mythic-aura-action=true mythic-has-aura-condition=true mythic-target-has-aura-condition=true mythic-has-aura-stacks-condition=true mythic-has-aura-type-condition=true mythic-aura-remove=true mythic-aura-invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] line-of-sight-condition result=true imported=true aliases=true direct-positive=true direct-blocked=true target-positive=true target-blocked=true target-negative=true restored-positive=true restored=true invalid-preserved=true warning=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] grounded-condition imported=true primary-mapped=true grounded-alias-mapped=true positive=true alias-positive=true airborne=true negative=true alias-negative=true invalid-preserved=true restored=true passed=true',
         '[Server thread/INFO]: raider-patrol-leader-condition positive=true negative=true entity=PILLAGER restored=true',
         '[Server thread/INFO]: creeper-primed-condition positive=true negative=true restored=true',
         '[Server thread/INFO]: ender-dragon-alive-condition positive=true negative=true removed=true',
@@ -824,6 +825,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'conditionMobility').status -eq 'passed') 'condition mobility probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionMobilityStates').status -eq 'passed') 'condition mobility states probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionMobilityStates').observations[0] -ceq 'condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true') 'condition mobility states require native state evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'groundedCondition').status -eq 'passed') 'imported Grounded condition Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionLeashed').status -eq 'passed') 'leashed condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionHasOwner').status -eq 'passed') 'has-owner condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionHasTag').status -eq 'passed') 'has-tag condition probe'
@@ -1073,6 +1075,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'localDifficultyCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'localDifficultyCondition'; status = 'passed'; observations = @('local-difficulty-condition imported=true positive=true range-positive=true high-rejected=true fallback-positive=true missing-context-rejected=true invalid-preserved=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'groundedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'groundedCondition'; status = 'passed'; observations = @('grounded-condition imported=true primary-mapped=true grounded-alias-mapped=true positive=true alias-positive=true airborne=true negative=true alias-negative=true invalid-preserved=true restored=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds += 'serverNmsVersionCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

@@ -76,6 +76,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'localDifficultyCondition'; status = 'passed'; observations = @('local-difficulty-condition imported=true positive=true range-positive=true high-rejected=true fallback-positive=true missing-context-rejected=true invalid-preserved=true passed=true')
     }
+    $fullReport.expectedProbeIds += 'groundedCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'groundedCondition'; status = 'passed'; observations = @('grounded-condition imported=true primary-mapped=true grounded-alias-mapped=true positive=true alias-positive=true airborne=true negative=true alias-negative=true invalid-preserved=true restored=true passed=true')
+    }
     $fullReport.expectedProbeIds += 'serverNmsVersionCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'serverNmsVersionCondition'; status = 'passed'; observations = @('server-nms-version-condition imported=true positive=true alias-positive=true scalar-positive=true wrong-rejected=true default-rejected=true invalid-preserved=true passed=true')
