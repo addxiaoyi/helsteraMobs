@@ -340,7 +340,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'noGravityImported'
     $fullReport.probes += [pscustomobject]@{
-        id = 'noGravityImported'; status = 'passed'; observations = @('no-gravity-imported result=true imported=true configured=false control=true invalid-preserved=true fallback=false')
+        id = 'noGravityImported'; status = 'passed'; observations = @('no-gravity-imported result=true imported=true configured=false control=true has-gravity-alias=false invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true')
     }
     $fullReport.expectedProbeIds += 'healOnReloadOptions'
     $fullReport.probes += [pscustomobject]@{

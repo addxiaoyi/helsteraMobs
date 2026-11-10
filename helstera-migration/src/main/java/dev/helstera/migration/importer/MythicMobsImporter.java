@@ -1202,9 +1202,9 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "AlwaysShowName", "show-name");
             mapOption(options, srcFile, entries, target, "Persistent", "persistent");
             mapOption(options, srcFile, entries, target, "VisibleByDefault", "entity.visible-by-default");
-            mapOption(options, srcFile, entries, target, "Gravity", "entity.gravity");
-            mapOptionInvertedBoolean(options, srcFile, entries, target, "NoGravity", "entity.gravity");
-            mapOption(options, srcFile, entries, target, "HasGravity", "entity.gravity");
+            mapEntityBooleanOption(options, srcFile, entries, target, "Gravity", "entity.gravity", false);
+            mapEntityBooleanOption(options, srcFile, entries, target, "NoGravity", "entity.gravity", true);
+            mapEntityBooleanOption(options, srcFile, entries, target, "HasGravity", "entity.gravity", false);
             mapOption(options, srcFile, entries, target, "Collidable", "entity.collidable");
             mapOption(options, srcFile, entries, target, "PreventSunburn", "entity.prevent-sunburn");
             mapOption(options, srcFile, entries, target, "PreventRandomEquipment", "entity.prevent-random-equipment");
@@ -4760,9 +4760,9 @@ public final class MythicMobsImporter implements MigrationImporter {
         });
     }
 
-    private void mapOptionInvertedBoolean(ConfigurationSection options, String srcFile,
-                                              List<Map<String, Object>> entries, YamlConfiguration target,
-                                              String optionName, String path) {
+    private void mapEntityBooleanOption(ConfigurationSection options, String srcFile,
+                                        List<Map<String, Object>> entries, YamlConfiguration target,
+                                        String optionName, String path, boolean inverted) {
         Object raw = ciGet(options, optionName);
         if (raw == null) return;
         Boolean parsed = parseBooleanOption(raw);
@@ -4773,10 +4773,12 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "unsupported", "Invalid boolean option value was preserved instead of being applied.", "WARN");
             return;
         }
-        boolean value = !parsed;
+        boolean value = inverted ? !parsed : parsed;
         target.set(path, value);
         note(entries, srcFile, "Options." + optionName, path, value, "mapped",
-                "Validated and inverted the MythicMobs boolean option into the runtime field.");
+                inverted
+                        ? "Validated and inverted the MythicMobs boolean option into the runtime field."
+                        : "Validated the MythicMobs boolean option before mapping it into the runtime field.");
     }
 
     private void mapMythicDespawnOption(ConfigurationSection options,

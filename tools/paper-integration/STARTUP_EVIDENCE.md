@@ -1,18 +1,27 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-no-gravity-strict-20261110-r2` passed the full strict gate on Paper 1.21.1-133:
-430 registered probes, 411 passed, 19 expected rejections, and zero failed or
-incomplete. `noGravityImported` verifies imported true/false gravity readback,
-malformed-value preservation, and the inverse control. `playerCreatedImported`
+Latest fixture `srv-paper-gravity-aliases-strict-20261110-r1` passed the full
+strict gate on Paper 1.21.1-133: 430 registered probes, 411 passed, 19 expected
+rejections, and zero failed or incomplete. `noGravityImported` verifies both
+`NoGravity` states, `HasGravity: false`, malformed-value preservation for all
+three gravity aliases, and the wrong-type fallback. `playerCreatedImported`
 verifies true/false states on real Iron Golems spawned through production
 configuration, with wrong-entity and malformed values preserved. Plugin
-SHA-256: `9c7980355113a00d754da1486c57dfd618e8b132fa8c06aacf8c2835a9b4c6fc`. Full catalog report:
-[paper-1.21.1-no-gravity-imported-strict-20261110-r2.json](reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2.json), SHA-256:
-`fae837ec0de566778fc75cda90b6a54bff547b0d49c731170dc75bc25119d480`. Compressed server log:
-[paper-1.21.1-no-gravity-imported-strict-20261110-r2.log.gz](reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2.log.gz), SHA-256:
-`39ee23a4cb6906877ba88c4d611d53da9604c79352717caaa78373bbe4a6ceef`. Client log archive:
-[paper-1.21.1-no-gravity-imported-strict-20261110-r2-client-logs.tar.gz](reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2-client-logs.tar.gz), SHA-256:
-`9e3bb8ab29bcd2565f7ba0235cde40f416a3fb87dfe456d2d75efdf87542130f`. Archived logs redact web-token query values.
+SHA-256: `82848a23e358dced934fe8ce9307acec0b3c72d4953379e1afacd394f2dd3869`.
+Full catalog report:
+[paper-1.21.1-gravity-aliases-strict-20261110-r1.json](reports/paper-1.21.1-gravity-aliases-strict-20261110-r1.json), SHA-256:
+`87ffc203b818580ca1165a8f426f39627845691999db00d5527eae54ef06791d`.
+Compressed server log:
+[paper-1.21.1-gravity-aliases-strict-20261110-r1.log.gz](reports/paper-1.21.1-gravity-aliases-strict-20261110-r1.log.gz), SHA-256:
+`30faf767ce95e4e3d3aa81f1fa0442b2364631ece77d98a82333afa2e203c242`. Client
+log archive:
+[paper-1.21.1-gravity-aliases-strict-20261110-r1-client-logs.tar.gz](reports/paper-1.21.1-gravity-aliases-strict-20261110-r1-client-logs.tar.gz), SHA-256:
+`31e4855172152e71a02968eb3df23bf7e4f082343a44ed8cbd71c6a0ac8b4c79`.
+Archived logs redact web-token query values.
+
+Previous fixture `srv-paper-no-gravity-strict-20261110-r2` also passed the
+430-probe strict gate. Its report and hashes remain indexed in
+`release-evidence.json`.
 
 Previous fixture `srv-paper-default-mob-options-strict-20261110-r1` passed the
 full strict gate on Paper 1.21.1-133: 428 registered probes, 409 passed, 19
