@@ -166,7 +166,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] follow-range-options result=true base=40',
         '[Server thread/INFO]: [helsteraMobs] [自检] damage-options result=true base=12',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-options result=true base=8',
-        '[Server thread/INFO]: [helsteraMobs] [自检] armor-toughness-stats-imported result=true imported=true base=4 modifier-preserved=true root-preserved=true controls=0,0',
+        '[Server thread/INFO]: [helsteraMobs] [自检] armor-toughness-stats-imported result=true imported=true base=4 attack-damage=12 movement-speed=0.4 armor=8 knockback-resistance=0.25 follow-range=36 unsupported-preserved=true modifier-preserved=true root-preserved=true controls=0,0',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false',
         '[Server thread/INFO]: [helsteraMobs] [自检] exp-options result=true experience=13 event=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] exp-natural-death result=true dead=true experience=13 cause=BukkitDamage',
@@ -406,6 +406,15 @@ try {
     $interactableReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 |
         ConvertFrom-Json
     Assert-True (($interactableReport.probes | Where-Object id -eq 'interactableClient').status -eq 'not-observed') 'Interactable requires Paper cancellation evidence as well as the client report'
+    $failedAttributeCompositeLines = @($lines | ForEach-Object {
+        $_ -replace 'attribute-options-composite result=true attack=true speed=true',
+            'attribute-options-composite result=false attack=false speed=false'
+    })
+    Set-Content -LiteralPath $logPath -Value $failedAttributeCompositeLines -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
+    $failedAttributeCompositeReport = Get-Content -LiteralPath (Join-Path $temp 'integration-report.json') -Raw -Encoding utf8 |
+        ConvertFrom-Json
+    Assert-True (($failedAttributeCompositeReport.probes | Where-Object id -eq 'attributesComposite').status -eq 'not-observed') 'attribute composite failure cannot be reported as passed'
     Set-Content -LiteralPath $logPath -Value $lines -Encoding utf8
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $temp -PluginSha256 $testPluginHash | Out-Null
     $env:PAPER_RAW_POTION_WORKFLOW = 'false'
@@ -1262,7 +1271,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'armorToughnessStatsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'armorToughnessStatsImported'; status = 'passed'; observations = @('armor-toughness-stats-imported result=true imported=true base=4.0 modifier-preserved=true root-preserved=true controls=0.0,0.0')
+        id = 'armorToughnessStatsImported'; status = 'passed'; observations = @('armor-toughness-stats-imported result=true imported=true base=4.0 attack-damage=12.0 movement-speed=0.4 armor=8.0 knockback-resistance=0.25 follow-range=36.0 unsupported-preserved=true modifier-preserved=true root-preserved=true controls=0.0,0.0')
     }
     $fullCatalogReport.expectedProbeIds += 'inCombatCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
