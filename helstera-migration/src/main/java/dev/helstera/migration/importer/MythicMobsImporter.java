@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -382,7 +383,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             });
             Object mobType = ciGet(mob, "Type", "MobType", "EntityType");
             if ("mobs".equals(mobKey) && ((nestedMobDefinitions && (mobType == null || mobType instanceof ConfigurationSection)) || ciGet(mob, "Type", "MobType", "EntityType", "Health", "Damage",
-                    "Display", "Options", "Skills", "Drops", "Stats") == null)) {
+                    "Display", "Options", "Skills", "Drops", "Stats", "Template") == null)) {
                 for (String nestedKey : mob.getKeys(false)) {
                     ConfigurationSection nested = mob.getConfigurationSection(nestedKey);
                     if (nested != null) {
@@ -394,7 +395,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                     }
                 }
             } else if (ciGet(mob, "Type", "MobType", "EntityType", "Health", "Damage", "Display",
-                    "Options", "Skills", "Drops", "Stats", "Equipment", "Disguise", "Faction", "LevelModifiers") != null) {
+                    "Options", "Skills", "Drops", "Stats", "Equipment", "Disguise", "Faction", "LevelModifiers",
+                    "Template") != null) {
                 convertMob(mobKey, mob, sourceFile.toString(), entries, dropCatalog,
                         defaultMobOptions);
             } else {
@@ -1096,6 +1098,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         YamlConfiguration target = new YamlConfiguration();
         target.set("schema-version", 1);
         target.set("id", targetId);
+        mapMobTemplates(mob, mobKey, srcFile, entries, target);
 
         // ---- 基础属性 ----
         if (normalizedType != null) {
@@ -1542,6 +1545,54 @@ public final class MythicMobsImporter implements MigrationImporter {
                 "target-mob-id", targetId,
                 "status", "mapped",
                 "note", "MythicMobs 生物 " + mobKey + " 已转换"));
+    }
+
+    /**
+     * Keeps Mythic mob-template lineage available to the official TemplateType
+     * condition. Applying the inherited fields themselves remains unsupported
+     * and is reported separately instead of being implied by this metadata map.
+     */
+    private void mapMobTemplates(ConfigurationSection mob, String mobKey, String srcFile,
+                                 List<Map<String, Object>> entries, YamlConfiguration target) {
+        String sourceKey = findKeyIgnoreCase(mob, "Template");
+        if (sourceKey == null) return;
+        Object raw = mob.get(sourceKey);
+        List<String> sourceTemplates = new ArrayList<>();
+        if (raw instanceof String text) {
+            sourceTemplates.addAll(List.of(text.split(",", -1)));
+        } else if (raw instanceof List<?> values) {
+            for (Object value : values) {
+                if (!(value instanceof String text)) {
+                    sourceTemplates.clear();
+                    break;
+                }
+                sourceTemplates.addAll(List.of(text.split(",", -1)));
+            }
+        }
+        if (sourceTemplates.isEmpty() || sourceTemplates.stream().anyMatch(value -> value.isBlank())) {
+            target.set("mob.unsupported.Template", raw);
+            note(entries, srcFile, mobKey + "." + sourceKey, "mob.unsupported.Template", raw,
+                    "unsupported", "Template references must be a non-empty name or list of names; original value preserved.", "WARN");
+            return;
+        }
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        for (String value : sourceTemplates) {
+            String id = normalizeId(value);
+            if ("unnamed".equals(id)) {
+                target.set("mob.unsupported.Template", raw);
+                note(entries, srcFile, mobKey + "." + sourceKey, "mob.unsupported.Template", raw,
+                        "unsupported", "Template references must contain a valid mob ID; original value preserved.", "WARN");
+                return;
+            }
+            normalized.add(id.startsWith("mythic_") ? id : "mythic_" + id);
+        }
+        List<String> mapped = List.copyOf(normalized);
+        target.set("mob.templates", mapped);
+        note(entries, srcFile, mobKey + "." + sourceKey, "mob.templates", mapped,
+                "mapped", "Template lineage is retained for TemplateType conditions; inherited mob fields are not merged.");
+        target.set("mob.unsupported.TemplateInheritance", raw);
+        note(entries, srcFile, mobKey + "." + sourceKey, "mob.unsupported.TemplateInheritance", raw,
+                "unsupported", "Mythic template field inheritance and Exclude semantics are not implemented; source references are retained.", "WARN");
     }
 
     private void mapDropExperience(ConfigurationSection mob, String srcFile,

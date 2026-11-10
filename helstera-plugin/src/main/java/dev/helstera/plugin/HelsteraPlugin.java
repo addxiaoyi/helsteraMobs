@@ -105,6 +105,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private Object skillService;                 // dev.helstera.ai.skill.SkillService
     private dev.helstera.ai.skill.PinRegistry pinRegistry;
     private dev.helstera.ai.skill.AuraRegistry auraRegistry;
+    private MobTemplateIndex mobTemplateIndex;
     private org.bukkit.scheduler.BukkitTask auraCleanupTask;
     private Object skillTriggers;                // dev.helstera.ai.skill.SkillTriggers
     /** 拉杆服务；未装载时为 null。 */
@@ -276,6 +277,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 dev.helstera.ai.skill.SkillExtras.pinRegistry(pinRegistry);
                 reloadPins("启动");
                 dev.helstera.ai.skill.SkillExtras.managedEntityLookup(this::findInstanceSafe);
+                this.mobTemplateIndex = new MobTemplateIndex(this::mobConfig);
+                dev.helstera.ai.skill.SkillExtras.mobTemplateLookup(mobTemplateIndex);
                 dev.helstera.ai.skill.SkillExtras.executionAudienceWriter((instance, players) -> {
                     instance.setExecutionAudience(players);
                     if (instance instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl
@@ -725,6 +728,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             runImportedTimerTriggerSelfTest();
             runImportedImmunitySelfTest();
             runImportedInvalidConditionsSelfTest();
+            runImportedTemplateTypeSelfTest();
             runImportedSkillReferenceSelfTest();
             runImportedSkillTimingSelfTest();
             runQueuedSkillTreeSelfTest();
@@ -1015,6 +1019,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     public boolean reloadRuntimeConfig() {
         reloadConfig();
         if (!restoreConfigImmunityConditions()) return false;
+        if (mobTemplateIndex != null) mobTemplateIndex.invalidate();
         if (ai instanceof AiManager manager) {
             manager.loadProfiles(getConfig().getConfigurationSection("ai.profiles"));
         }
@@ -3416,6 +3421,164 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             try { Files.deleteIfExists(outputDirectory); }
             catch (IOException ignored) { }
         }
+    }
+
+    private void runImportedTemplateTypeSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            Path sourceRoot = null;
+            Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+            boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+            var mobFiles = new java.util.ArrayList<Path>();
+            var instanceIds = new java.util.ArrayList<Integer>();
+            org.bukkit.entity.Entity missingConfigProbe = null;
+            org.bukkit.entity.Entity unmanagedProbe = null;
+            try {
+                if (!(skillService instanceof SkillService skills)
+                        || !(behaviorRegistry instanceof dev.helstera.ai.BehaviorRegistryImpl behavior)) {
+                    throw new IllegalStateException("skill runtime is unavailable");
+                }
+                org.bukkit.World world = getServer().getWorlds().isEmpty()
+                        ? null : getServer().getWorlds().get(0);
+                if (world == null || mobTemplateIndex == null) {
+                    throw new IllegalStateException("world or mob-template index is unavailable");
+                }
+                String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+                String ancestorSourceId = "TemplateTypeAncestor_" + suffix;
+                String parentSourceId = "TemplateTypeParent_" + suffix;
+                String childSourceId = "TemplateTypeChild_" + suffix;
+                String controlSourceId = "TemplateTypeControl_" + suffix;
+                sourceRoot = Files.createTempDirectory("helstera-template-type-import-");
+                Path source = Files.createDirectories(sourceRoot.resolve("Mobs"))
+                        .resolve("template-type.yml");
+                Files.writeString(source, """
+                        mobs:
+                          %1$s:
+                            Type: ZOMBIE
+                            Options:
+                              NoAI: true
+                          %2$s:
+                            Type: ZOMBIE
+                            Options:
+                              NoAI: true
+                            Template: %1$s
+                          %3$s:
+                            Type: ZOMBIE
+                            Options:
+                              NoAI: true
+                            Template: %2$s
+                          %4$s:
+                            Type: ZOMBIE
+                            Options:
+                              NoAI: true
+                        """.formatted(ancestorSourceId, parentSourceId, childSourceId, controlSourceId));
+
+                Map<String, String> targetIds = new LinkedHashMap<>();
+                for (Map<String, Object> entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                    if (!(entry.get("target-file") instanceof String targetFile)
+                            || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                            || !"mapped".equals(entry.get("status"))) continue;
+                    Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                    if (!destination.startsWith(outputDirectory)) {
+                        throw new IOException("unsafe imported template-type mob path: " + targetFile);
+                    }
+                    Files.createDirectories(destination.getParent());
+                    if (Files.exists(destination)) {
+                        throw new IOException("refusing to overwrite template-type probe config: " + destination);
+                    }
+                    mobFiles.add(destination);
+                    YamlConfiguration imported = YamlConfiguration.loadConfiguration(
+                            new java.io.StringReader(String.valueOf(entry.get("content"))));
+                    imported.set("model", "example/emberling");
+                    imported.set("entity.silent", true);
+                    Files.writeString(destination, imported.saveToString());
+                    targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                            String.valueOf(entry.get("target-mob-id")));
+                }
+
+                String childId = targetIds.get(childSourceId);
+                String controlId = targetIds.get(controlSourceId);
+                String parentId = targetIds.get(parentSourceId);
+                String ancestorId = targetIds.get(ancestorSourceId);
+                if (childId == null || controlId == null || parentId == null || ancestorId == null) {
+                    throw new IllegalStateException("one or more imported template-type mobs are missing");
+                }
+                mobTemplateIndex.invalidate();
+                Location origin = world.getSpawnLocation().clone().add(0, 2, 0);
+                int childInstanceId = spawnMobAt(childId, origin, null);
+                int controlInstanceId = spawnMobAt(controlId, origin.clone().add(3, 0, 0), null);
+                if (childInstanceId > 0) instanceIds.add(childInstanceId);
+                if (controlInstanceId > 0) instanceIds.add(controlInstanceId);
+                var childInstance = childInstanceId > 0 ? instances().impl(childInstanceId) : null;
+                var controlInstance = controlInstanceId > 0 ? instances().impl(controlInstanceId) : null;
+                org.bukkit.entity.LivingEntity child = childInstance == null ? null
+                        : childInstance.baseEntity().filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                                .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+                org.bukkit.entity.LivingEntity control = controlInstance == null ? null
+                        : controlInstance.baseEntity().filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                                .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+                if (child == null || control == null) {
+                    throw new IllegalStateException("managed child or control entity did not spawn");
+                }
+
+                var primary = dev.helstera.migration.importer.MmConditions.translate(
+                        "?TemplateType{t=" + parentSourceId + "}");
+                var alias = dev.helstera.migration.importer.MmConditions.translate(
+                        "?InstanceOf{template=" + ancestorSourceId + "}");
+                var negative = dev.helstera.migration.importer.MmConditions.translate(
+                        "?Template{template=unrelated}");
+                var invalid = dev.helstera.migration.importer.MmConditions.translate(
+                        "?TemplateType{unknown=" + parentSourceId + "}");
+                String primaryKey = primary.translated() ? skills.bindCondition(primary.condition()) : null;
+                String aliasKey = alias.translated() ? skills.bindCondition(alias.condition()) : null;
+                String negativeKey = negative.translated() ? skills.bindCondition(negative.condition()) : null;
+                var childContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        null, child, 1.0, -1, 0, "IDLE");
+                var controlContext = dev.helstera.api.behavior.BehaviorContext.of(
+                        null, control, 1.0, -1, 0, "IDLE");
+                boolean imported = mobConfig(childId).getStringList("mob.templates").contains(parentId)
+                        && mobConfig(parentId).getStringList("mob.templates").contains(ancestorId);
+                boolean primaryMapped = primary.translated() && primary.condition().startsWith("template-type ");
+                boolean aliasMapped = alias.translated() && alias.condition().startsWith("template-type ");
+                boolean directPositive = primaryKey != null && behavior.testCondition(primaryKey, childContext);
+                boolean transitivePositive = aliasKey != null && behavior.testCondition(aliasKey, childContext);
+                boolean unrelatedRejected = negativeKey != null
+                        && !behavior.testCondition(negativeKey, childContext);
+                boolean controlRejected = primaryKey != null
+                        && !behavior.testCondition(primaryKey, controlContext);
+                missingConfigProbe = world.spawnEntity(origin.clone().add(6, 0, 0),
+                        org.bukkit.entity.EntityType.ZOMBIE);
+                dev.helstera.api.behavior.ManagedMobIdentity.mark(missingConfigProbe, "mythic_missing_template_probe");
+                boolean missingConfigRejected = primaryKey != null && !behavior.testCondition(primaryKey,
+                        dev.helstera.api.behavior.BehaviorContext.of(null,
+                                (org.bukkit.entity.LivingEntity) missingConfigProbe, 1.0, -1, 0, "IDLE"));
+                unmanagedProbe = world.spawnEntity(origin.clone().add(9, 0, 0),
+                        org.bukkit.entity.EntityType.ZOMBIE);
+                boolean unmanagedRejected = primaryKey != null && !behavior.testCondition(primaryKey,
+                        dev.helstera.api.behavior.BehaviorContext.of(null,
+                                (org.bukkit.entity.LivingEntity) unmanagedProbe, 1.0, -1, 0, "IDLE"));
+                boolean invalidPreserved = !invalid.translated()
+                        && invalid.condition().contains("unknown=" + parentSourceId);
+                boolean passed = imported && primaryMapped && aliasMapped && directPositive
+                        && transitivePositive && unrelatedRejected && controlRejected
+                        && missingConfigRejected && unmanagedRejected && invalidPreserved;
+                getLogger().info("[自检] template-type-imported result=" + passed
+                        + " imported=" + imported + " primary-mapped=" + primaryMapped
+                        + " alias-mapped=" + aliasMapped + " direct-positive=" + directPositive
+                        + " transitive-positive=" + transitivePositive
+                        + " unrelated-rejected=" + unrelatedRejected + " control-rejected=" + controlRejected
+                        + " missing-config-rejected=" + missingConfigRejected
+                        + " unmanaged-rejected=" + unmanagedRejected
+                        + " invalid-preserved=" + invalidPreserved + " passed=" + passed);
+            } catch (Throwable failure) {
+                getLogger().warning("[自检] template-type-imported result=false error=" + failure);
+            } finally {
+                if (missingConfigProbe != null && missingConfigProbe.isValid()) missingConfigProbe.remove();
+                if (unmanagedProbe != null && unmanagedProbe.isValid()) unmanagedProbe.remove();
+                cleanupImportedMobProbe(sourceRoot, outputDirectory,
+                        outputDirectoryExisted, mobFiles, instanceIds);
+                if (mobTemplateIndex != null) mobTemplateIndex.invalidate();
+            }
+        }, 80L);
     }
 
     private void runImportedCatOptionsSelfTest(org.bukkit.World world, Location origin) {

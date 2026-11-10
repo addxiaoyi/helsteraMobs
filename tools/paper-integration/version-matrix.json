@@ -10,11 +10,12 @@
       "id": "paper-1.21.1-133-minecraft-1.21.1",
       "serverFamily": "Paper",
       "serverVersion": "1.21.1-133",
+      "serverJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-target-fluids-import-strict-20261110-r2",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-target-fluids-import-strict-20261110-r2.json"
+      "releaseFixtureId": "srv-paper-template-type-strict-20261110-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-template-type-strict-20261110-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

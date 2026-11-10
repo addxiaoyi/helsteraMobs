@@ -21,6 +21,10 @@ $baselineValid = $entry.serverFamily -eq 'Paper' -and $entry.serverVersion -eq '
 if (-not $baselineValid) {
     throw 'The release baseline must be Paper 1.21.1-133 / Minecraft 1.21.1 with strict evidence.'
 }
+if ([string]$entry.serverJarSha256 -cnotmatch '^[0-9a-f]{64}$' -or
+        [string]$entry.serverJarSha256 -cne '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9') {
+    throw 'Paper 1.21.1-133 release baseline must pin the verified official Paperclip SHA-256.'
+}
 if (@($evidence | Select-Object -First 1).fixtureId -ne $entry.releaseFixtureId) {
     throw 'Version matrix release baseline must match the newest release evidence manifest entry.'
 }

@@ -2203,6 +2203,8 @@ public final class SkillService {
             case "serverbefore", "versionbefore", "server-version-before" -> "server-version-before";
             case "ismythicmob", "is-mythic-mob", "ismm" -> "is-mythic-mob";
             case "mythicmobtype", "mythic-mob-type", "mmtype" -> "mythic-mob-type";
+            case "templatetype", "template-type", "template", "instanceof", "instance-of" ->
+                    "template-type";
             case "iscreeperprimed", "is-creeper-primed" -> "is-creeper-primed";
             case "boundingboxesoverlap", "bounding-boxes-overlap", "bbsoverlap" ->
                     "bounding-boxes-overlap";
