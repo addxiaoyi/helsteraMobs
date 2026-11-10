@@ -2,22 +2,27 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-spawn-reason-strict-20261110-r1` passes all
+Latest strict fixture `srv-paper-moving-condition-strict-20261110-r1` passes all
 418 release probes (399 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. Latest strict report has 418 probes, zero incomplete. Its `spawnReasonCondition` probe verifies
-`SpawnReason` and `spawnreason` aliases, `reason`/`r` arguments, live `CUSTOM`
-positive and alternate-reason negative evaluation, and malformed-input
-preservation. Report:
-`tools/paper-integration/reports/paper-1.21.1-spawn-reason-strict-20261110-r1.json`
-(SHA-256 `1779551596d6e8868e603ddf3edcd1101b17a472cd9f5a5cbba2144b87bf3b87`).
+incomplete) on Paper 1.21.1-133. Latest strict report has 418 probes, zero incomplete. Its `conditionMobility` evidence verifies
+`moving`/`isMoving`, exact and approximate coordinate semantics, fractional
+movement, `exact`/`e` arguments, malformed-input rejection, imported mapping,
+and snapshot cleanup. Report:
+`tools/paper-integration/reports/paper-1.21.1-moving-condition-strict-20261110-r1.json`
+(SHA-256 `db1e07b1e29aea7a2d19d12f7717a4c29af85d60a24a1dfb8251f090bd41ec33`).
 Compressed server log SHA-256:
-`16755c85d5813748b72529d589b3874b35020c8b18ab0d6210da7c9ca640cc75`.
+`660693f4c3eba9473f63d262eb26e00a3182e9c8ad2b43e97b5184ff8d03a759`.
 Client log archive SHA-256:
-`9df1117caf9aec720d6c9151848b04787bb0cd6f86d263eaf074e49f652ed88f`.
+`114a55e80e5c6932c4697115557ded8ee31f8e52b4de9f4f643108fd0ca526fa`.
 Plugin SHA-256:
-`291ada3873ab6813e9e4444b73a09bb7e7bf9fd4955314beb6dd0820a511f231`.
+`236f4647ad243eb96721814b92ebb24772b463fc6090fd6282db792f9a3c7a02`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
+
+Previous strict fixture `srv-paper-spawn-reason-strict-20261110-r1` passes all
+418 release probes (399 passed, 19 expected rejections, zero failed or
+incomplete). Its imported `SpawnReason` aliases and live `CUSTOM` evaluation
+remain archived in `release-evidence.json`.
 
 Previous strict fixture `srv-paper-local-difficulty-strict-20261110-r1` passes all
 416 release probes (397 passed, 19 expected rejections, zero failed or
@@ -1117,7 +1122,7 @@ This is a partial parity release. The matrix currently has `34`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 544 cited IDs; 452 report files; 4 directories
+   Current fixture inventory: 545 cited IDs; 453 report files; 4 directories
    without reports; 88 missing directories; 223 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
@@ -1188,6 +1193,7 @@ the entire MythicMobs feature catalog.
 - The same release fixture stabilizes the imported Bee `PreventStingerLoss` native-AI probe by scheduling its assertion on the next tick and placing the stationary Zombie two blocks from each Bee. Both protected/control attacks are observed as uncancelled damage events; the protected Bee restores its stinger while the control remains stung.
 - Strict Paper 1.21.1-133 fixture `srv-paper-line-of-sight-condition-strict-20261108-r4` verifies direct and AI-target line-of-sight conditions, imported aliases, wall blocking, negative matching, cleanup restoration, and invalid-input preservation in 395 registered release probes.
 - Strict Paper 1.21.1-133 fixture `srv-paper-condition-mobility-states-strict-20261108-r7` verifies positive and negative falling, climbing, and charged conditions, imported aliases, cleanup restoration, and the complete 396-probe release catalog.
+- Strict Paper 1.21.1-133 fixture `srv-paper-moving-condition-strict-20261110-r1` verifies `moving`/`isMoving` on real managed entities: stationary, fractional-coordinate, same-block, cross-block, `exact=true`, `e=false`, imported, malformed, and snapshot-restoration paths all pass in the complete 418-probe release catalog. The individual moving condition now has strict runtime evidence; the broader Conditions catalog remains `mapped-unverified`.
 - Strict Paper 1.21.1-133 fixture `srv-paper-damage-attribution-strict-20261108-r1` verifies a real Player attack through imported damage triggers and AI context: the Player is retained as the attacker, environmental damage does not reuse that context, and the Player's temporary self-test state is restored. The full release catalog completes with 397 probes and zero failed or incomplete results.
 - Mythic Fox `Options.FoxType` now has strict importer-to-runtime evidence. Paper fixture `srv-paper-fox-options-strict-20261108-r1` imports `SNOW` and `RED` controls through production Fox spawning, applies the option only to Fox entities, and preserves wrong-entity and malformed values under `entity.unsupported.Options.FoxType` while completing all 393 registered release probes.
 - Mythic `teleport`/`tp` now imports into a dedicated runtime action with entity and location target support, safe landing checks, `unsafe` bypass, bounded `spreadh`/`spreadv`, preserved/target/numeric yaw and pitch, placeholder resolution, and fail-closed invalid-argument warnings. Strict Paper fixture `srv-paper-mythic-teleport-strict-20261107-r1` verifies the complete importer/runtime contract in 391 release probes.

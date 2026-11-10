@@ -101,6 +101,50 @@ class EntityStateConditionTest {
     }
 
     @Test
+    void movingSupportsExactAndApproximatePositionChanges() {
+        World world = mock(World.class);
+        UUID exactId = UUID.randomUUID();
+        LivingEntity exactTarget = mock(LivingEntity.class);
+        when(world.getUID()).thenReturn(UUID.randomUUID());
+        when(exactTarget.getUniqueId()).thenReturn(exactId);
+        when(exactTarget.getVelocity()).thenReturn(new Vector());
+        when(exactTarget.getLocation()).thenReturn(
+                new Location(world, 4.10, 64, 8.10),
+                new Location(world, 4.11, 64, 8.10));
+
+        Predicate<BehaviorContext> exact = SkillExtras.conditions().get("moving")
+                .create(List.of("exact=true"));
+        assertFalse(exact.test(context(exactTarget)));
+        assertTrue(exact.test(context(exactTarget)));
+
+        UUID approximateId = UUID.randomUUID();
+        LivingEntity approximateTarget = mock(LivingEntity.class);
+        when(approximateTarget.getUniqueId()).thenReturn(approximateId);
+        when(approximateTarget.getVelocity()).thenReturn(new Vector());
+        when(approximateTarget.getLocation()).thenReturn(
+                new Location(world, 4.10, 64, 8.10),
+                new Location(world, 4.90, 64, 8.10),
+                new Location(world, 5.10, 64, 8.10));
+
+        Predicate<BehaviorContext> approximate = SkillExtras.conditions().get("moving")
+                .create(List.of("e=false"));
+        assertFalse(approximate.test(context(approximateTarget)));
+        assertFalse(approximate.test(context(approximateTarget)));
+        assertTrue(approximate.test(context(approximateTarget)));
+    }
+
+    @Test
+    void movingRejectsUnknownDuplicateAndInvalidArguments() {
+        var factory = SkillExtras.conditions().get("moving");
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.create(List.of("unknown=true")));
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.create(List.of("exact=true", "e=false")));
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.create(List.of("exact=maybe")));
+    }
+
+    @Test
     void hasPassengerChecksTheCurrentTarget() {
         LivingEntity target = mock(LivingEntity.class);
         when(target.getPassengers()).thenReturn(List.of(mock(Entity.class)));

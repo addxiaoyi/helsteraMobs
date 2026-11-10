@@ -1,5 +1,16 @@
 [
   {
+    "fixtureId": "srv-paper-moving-condition-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-moving-condition-strict-20261110-r1.json",
+    "log": "tools/paper-integration/reports/paper-1.21.1-moving-condition-strict-20261110-r1.log.gz",
+    "logSha256": "660693f4c3eba9473f63d262eb26e00a3182e9c8ad2b43e97b5184ff8d03a759",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-moving-condition-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "114a55e80e5c6932c4697115557ded8ee31f8e52b4de9f4f643108fd0ca526fa",
+    "pluginSha256": "236f4647ad243eb96721814b92ebb24772b463fc6090fd6282db792f9a3c7a02",
+    "fullReleaseCatalog": true,
+    "reportSha256": "db1e07b1e29aea7a2d19d12f7717a4c29af85d60a24a1dfb8251f090bd41ec33"
+  },
+  {
     "fixtureId": "srv-paper-spawn-reason-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-spawn-reason-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-spawn-reason-strict-20261110-r1.json",

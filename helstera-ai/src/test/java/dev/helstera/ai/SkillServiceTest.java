@@ -299,6 +299,19 @@ class SkillServiceTest {
     }
 
     @Test
+    void movingConditionAliasesAndArgumentsAreBoundStrictly() {
+        var svc = service();
+        assertNotNull(svc.bindCondition("moving"));
+        assertNotNull(svc.bindCondition("isMoving"));
+        assertNotNull(svc.bindCondition("moving{exact=false}"));
+        assertNotNull(svc.bindCondition("moving{e=false}"));
+        assertNotNull(svc.bindCondition("moving true"));
+        assertNull(svc.bindCondition("moving{unknown=true}"));
+        assertNull(svc.bindCondition("moving{exact=true;exact=false}"));
+        assertNull(svc.bindCondition("moving{exact=maybe}"));
+    }
+
+    @Test
     void freeInventorySlotConditionRejectsArguments() {
         var svc = service();
 

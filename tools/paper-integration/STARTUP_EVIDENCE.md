@@ -1,21 +1,28 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-spawn-reason-strict-20261110-r1` passed the full strict
-gate on Paper 1.21.1-133: 418 registered probes, 399 passed, 19 expected
-rejections, and zero failed or incomplete. Its `spawnReasonCondition` probe
-verifies imported `SpawnReason`/`spawnreason` aliases, `reason`/`r` argument
-aliases, live `CUSTOM` positive and alternate-reason negative evaluation, and
-malformed-input preservation. Report:
-[paper-1.21.1-spawn-reason-strict-20261110-r1.json](reports/paper-1.21.1-spawn-reason-strict-20261110-r1.json), SHA-256:
-`1779551596d6e8868e603ddf3edcd1101b17a472cd9f5a5cbba2144b87bf3b87`.
+Latest fixture `srv-paper-moving-condition-strict-20261110-r1` passed the full
+strict gate on Paper 1.21.1-133: 418 registered probes, 399 passed, 19
+expected rejections, and zero failed or incomplete. Its `conditionMobility`
+probe verifies `moving`/`isMoving`, exact and approximate coordinate semantics,
+fractional movement, `exact`/`e` argument aliases, malformed-input rejection,
+imported mapping, and entity-snapshot restoration. Report:
+[paper-1.21.1-moving-condition-strict-20261110-r1.json](reports/paper-1.21.1-moving-condition-strict-20261110-r1.json), SHA-256:
+`db1e07b1e29aea7a2d19d12f7717a4c29af85d60a24a1dfb8251f090bd41ec33`.
 Compressed server log SHA-256:
-`16755c85d5813748b72529d589b3874b35020c8b18ab0d6210da7c9ca640cc75`.
+`660693f4c3eba9473f63d262eb26e00a3182e9c8ad2b43e97b5184ff8d03a759`.
 Client log archive SHA-256:
-`9df1117caf9aec720d6c9151848b04787bb0cd6f86d263eaf074e49f652ed88f`.
+`114a55e80e5c6932c4697115557ded8ee31f8e52b4de9f4f643108fd0ca526fa`.
 Plugin SHA-256:
-`291ada3873ab6813e9e4444b73a09bb7e7bf9fd4955314beb6dd0820a511f231`.
+`236f4647ad243eb96721814b92ebb24772b463fc6090fd6282db792f9a3c7a02`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
+
+Previous fixture `srv-paper-spawn-reason-strict-20261110-r1` passed the full
+strict gate on Paper 1.21.1-133: 418 registered probes, 399 passed, 19
+expected rejections, and zero failed or incomplete. Its imported
+`SpawnReason`/`spawnreason` aliases, `reason`/`r` arguments, live `CUSTOM`
+evaluation, and malformed-input preservation remain archived below and in
+`release-evidence.json`.
 
 Latest fixture `srv-paper-local-difficulty-strict-20261110-r1` passed the full
 strict gate on Paper 1.21.1-133: 416 registered probes, 397 passed, 19
