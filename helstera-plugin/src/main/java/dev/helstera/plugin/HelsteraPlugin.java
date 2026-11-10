@@ -1708,6 +1708,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedHorseOptionsSelfTest(origin.clone().add(32, 0, 0));
                 runImportedBoatOptionsSelfTest(origin.clone().add(64, 0, 0));
                 runImportedInteractionOptionsSelfTest(origin.clone().add(80, 0, 0));
+                runImportedGoatOptionsSelfTest(origin.clone().add(96, 0, 0));
 
                 var falling = world.spawnFallingBlock(origin.clone().add(8, 0, 0),
                         org.bukkit.Material.SAND.createBlockData());
@@ -4571,6 +4572,122 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " invalid-preserved=" + invalidPreserved);
         } catch (Throwable failure) {
             getLogger().warning("[自检] interaction-options-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedGoatOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-goat-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("goat-options.yml");
+            String configuredId = "ImportedGoatScreaming_" + suffix;
+            String controlId = "ImportedGoatQuiet_" + suffix;
+            String defaultId = "ImportedGoatDefault_" + suffix;
+            String wrongTypeId = "ImportedGoatWrongType_" + suffix;
+            String invalidId = "ImportedGoatInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: GOAT
+                        Options:
+                          Screaming: true
+                      %2$s:
+                        Type: GOAT
+                        Options:
+                          Screaming: false
+                      %3$s:
+                        Type: GOAT
+                      %4$s:
+                        Type: ZOMBIE
+                        Options:
+                          Screaming: true
+                      %5$s:
+                        Type: GOAT
+                        Options:
+                          Screaming: maybe
+                    """.formatted(configuredId, controlId, defaultId, wrongTypeId, invalidId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Goat mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Goat mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            var sourceIds = java.util.List.of(configuredId, controlId, defaultId, wrongTypeId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic Goat Screaming probe mobs were not all imported");
+            }
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        origin.clone().add(i * 3, 0, 0), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+            java.util.function.IntFunction<org.bukkit.entity.Entity> spawnedEntity = instanceId -> {
+                var instance = instanceId > 0 ? instances().impl(instanceId) : null;
+                return instance == null ? null : instance.baseEntity().orElse(null);
+            };
+
+            var configuredEntity = spawnedEntity.apply(spawnedIds.get(configuredId));
+            var controlEntity = spawnedEntity.apply(spawnedIds.get(controlId));
+            var defaultEntity = spawnedEntity.apply(spawnedIds.get(defaultId));
+            var wrongTypeEntity = spawnedEntity.apply(spawnedIds.get(wrongTypeId));
+            var invalidEntity = spawnedEntity.apply(spawnedIds.get(invalidId));
+            var configured = configuredEntity instanceof org.bukkit.entity.Goat goat ? goat : null;
+            var control = controlEntity instanceof org.bukkit.entity.Goat goat ? goat : null;
+            var defaultGoat = defaultEntity instanceof org.bukkit.entity.Goat goat ? goat : null;
+            var invalidGoat = invalidEntity instanceof org.bukkit.entity.Goat goat ? goat : null;
+            var wrongOptions = mobConfig(targetIds.get(wrongTypeId));
+            var invalidOptions = mobConfig(targetIds.get(invalidId));
+            var wrongUnsupported = wrongOptions == null ? null
+                    : wrongOptions.getConfigurationSection("entity.unsupported.Options");
+            var invalidUnsupported = invalidOptions == null ? null
+                    : invalidOptions.getConfigurationSection("entity.unsupported.Options");
+            boolean imported = configured != null && control != null && defaultGoat != null && invalidGoat != null
+                    && wrongTypeEntity instanceof org.bukkit.entity.Zombie
+                    && configured.isScreaming() && !control.isScreaming() && !defaultGoat.isScreaming()
+                    && wrongUnsupported != null && wrongUnsupported.getBoolean("Screaming")
+                    && invalidUnsupported != null
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("Screaming"));
+            boolean wrongTypePreserved = wrongTypeEntity instanceof org.bukkit.entity.Zombie
+                    && wrongUnsupported != null && wrongUnsupported.getBoolean("Screaming");
+            boolean invalidPreserved = invalidUnsupported != null
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("Screaming"))
+                    && !invalidGoat.isScreaming();
+            boolean passed = imported && wrongTypePreserved && invalidPreserved;
+            getLogger().info("[自检] goat-options result=" + passed
+                    + " imported=" + imported
+                    + " screaming=" + (configured != null && configured.isScreaming())
+                    + " control-screaming=" + (control != null && control.isScreaming())
+                    + " default-screaming=" + (defaultGoat != null && defaultGoat.isScreaming())
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] goat-options result=false imported=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
@@ -24932,6 +25049,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     static void applyEntitySpecificOptions(org.bukkit.entity.LivingEntity entity,
                                            org.bukkit.configuration.ConfigurationSection options) {
         if (entity == null || options == null) return;
+        if (entity instanceof org.bukkit.entity.Goat goat && options.contains("goat-screaming")) {
+            goat.setScreaming(options.getBoolean("goat-screaming"));
+        }
         if (entity instanceof org.bukkit.entity.Enderman enderman && options.contains("held-block")) {
             String heldBlock = options.getString("held-block", "").trim();
             if (!heldBlock.isEmpty()) {

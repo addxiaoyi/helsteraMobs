@@ -581,6 +581,19 @@ class MythicAgeOptionsTest {
     }
 
     @Test
+    void appliesGoatScreamingOnlyToGoats() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var options = YamlConfiguration.loadConfiguration(new java.io.StringReader("goat-screaming: true\n"));
+
+        HelsteraPlugin.applyEntitySpecificOptions(proxy(org.bukkit.entity.Goat.class, calls), options);
+        assertEquals(true, calls.get("setScreaming"));
+
+        calls.clear();
+        HelsteraPlugin.applyEntitySpecificOptions(proxy(org.bukkit.entity.Zombie.class, calls), options);
+        assertFalse(calls.containsKey("setScreaming"));
+    }
+
+    @Test
     void appliesDocumentedInteractionDefaultsAndConfiguredValues() {
         Map<String, Object> calls = new LinkedHashMap<>();
         var interaction = proxy(org.bukkit.entity.Interaction.class, calls);

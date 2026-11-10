@@ -1,20 +1,27 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-interaction-options-strict-20261110-r2` passed the
-full strict gate on Paper 1.21.1-133: 426 registered probes, 407 passed, 19
-expected rejections, and zero failed or incomplete. Its
-`interactionOptionsImported` probe reads back configured dimensions and
-responsiveness, width fallback, Mythic 1x1/responsive defaults, and wrong-type
-and invalid-value preservation. Plugin SHA-256:
-`bfd459f340efed76aaf15f4ba60ccb0d80fb59391aa2453fe46791ff4cdb6fcd`. Full
+Latest fixture `srv-paper-goat-screaming-strict-20261110-r2` passed the full
+strict gate on Paper 1.21.1-133: 427 registered probes, 408 passed, 19
+expected rejections, and zero failed or incomplete. Its `goatOptionsImported`
+probe reads back imported Goat Screaming true/false states and verifies the
+default plus wrong-type and malformed-value preservation. Plugin SHA-256:
+`d7e1063e5e31d69b038011fd26e589d498b489c47ddcf3639ca42681a8154f8e`. Full
 catalog report:
-[paper-1.21.1-interaction-options-strict-20261110-r2.json](reports/paper-1.21.1-interaction-options-strict-20261110-r2.json), SHA-256:
-`62a69624345299ecf73ae87470826d5b648e616770e2e71d4699aeae5867093a`.
+[paper-1.21.1-goat-screaming-strict-20261110-r2.json](reports/paper-1.21.1-goat-screaming-strict-20261110-r2.json), SHA-256:
+`6af88fe5691b20771913bd0d8d5d182490e275dec7928b151388c1db3b5aeaf0`.
 Compressed server log SHA-256:
-`169835545921f36c39b9058794577e816413284b355ba9ad0d5bdf9ea793c14c`.
+`0b8c573a864daa12f07c6bb4aa4f714e59a4dcb446f11d3301e0ba366492fe25`.
 Client log archive SHA-256:
-`343c65f276d5b08f4affc95fd683eee7226814bb6ba0f273ee2eed071a2dc12d`.
-Archived logs redact web-token query values.
+`a4435e5c922615499cfcf955c81f0ab18d63625f4061746941564c6107c89487`.
+Archived logs redact web-token values.
+
+Previous fixture `srv-paper-interaction-options-strict-20261110-r2` passed
+the full strict gate on Paper 1.21.1-133: 426 probes, 407 passed, 19 expected
+rejections, zero failed or incomplete. Its `interactionOptionsImported` probe
+verifies configured dimensions and responsiveness, width fallback, Mythic
+defaults, and wrong-type/invalid-value preservation. Plugin SHA-256:
+`bfd459f340efed76aaf15f4ba60ccb0d80fb59391aa2453fe46791ff4cdb6fcd`. Report
+and log hashes remain indexed in `release-evidence.json`.
 
 Previous fixture `srv-paper-boat-options-strict-20261110-r1` passed 425
 registered probes (406 passed, 19 expected rejections) and verified imported
