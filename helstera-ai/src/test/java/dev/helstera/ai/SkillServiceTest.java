@@ -2905,6 +2905,11 @@ class SkillServiceTest {
         assertNotNull(svc.bindCondition("healthbelow 0.5"));
         assertNotNull(svc.bindCondition("distanceabove 4"));
         assertNotNull(svc.bindCondition("worldis integration-world"));
+        for (String alias : List.of(
+                "serverNmsVersion{v=v1_21_R1}", "servernms{sv=v1_21_R1}",
+                "nmsversion v1_21_R1", "server-nms-version")) {
+            assertNotNull(svc.bindCondition(alias), alias);
+        }
     }
 
     @Test

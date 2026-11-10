@@ -74,6 +74,8 @@ public final class MmConditions {
             "name", "name", "n", "name", "value", "name", "v", "name");
     private static final Map<String, String> SERVER_VERSION_ARGUMENTS = Map.of(
             "version", "version", "sv", "version", "v", "version");
+    private static final Map<String, String> SERVER_NMS_VERSION_ARGUMENTS = Map.of(
+            "version", "version", "sv", "version", "v", "version");
     private static final Map<String, String> SERVER_VERSION_BOUND_ARGUMENTS = Map.of(
             "version", "version", "sv", "version", "v", "version",
             "inclusive", "inclusive", "i", "inclusive");
@@ -942,6 +944,15 @@ public final class MmConditions {
         }
         if ("serverispaper".equals(name) || "ispaper".equals(name)) {
             return new Mapped("server-is-paper", true);
+        }
+        if ("servernmsversion".equals(name) || "servernms".equals(name)
+                || "nmsversion".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(
+                    body, SERVER_NMS_VERSION_ARGUMENTS, "version");
+            String value = arguments == null ? null : arguments.get("version");
+            if (value == null && arguments != null) value = "v1_19_R1_2";
+            return !validNmsVersion(value) ? new Mapped(s, false)
+                    : new Mapped("server-nms-version " + normalizeNmsVersion(value), true);
         }
         if ("plugin".equals(name) || "pluginexists".equals(name) || "hasplugin".equals(name)) {
             String value = firstArgument(body, "plugin", "pl", "p");
@@ -2505,6 +2516,16 @@ public final class MmConditions {
 
     private static boolean validServerVersion(String raw) {
         return raw != null && raw.trim().matches("(?i)v?\\d+(?:\\.\\d+)*(?:[-+][A-Za-z0-9][A-Za-z0-9._-]*)?");
+    }
+
+    private static boolean validNmsVersion(String raw) {
+        return raw != null && raw.trim().matches("(?i)v?\\d+_\\d+_r\\d+(?:_\\d+)?");
+    }
+
+    private static String normalizeNmsVersion(String raw) {
+        String value = raw.trim();
+        return value.regionMatches(true, 0, "v", 0, 1)
+                ? "v" + value.substring(1) : "v" + value;
     }
 
     private static String normalizedBoolean(String raw) {

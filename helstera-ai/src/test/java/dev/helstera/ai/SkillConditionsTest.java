@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -1505,6 +1506,31 @@ class SkillConditionsTest {
         assertNotNull(extraFactory("server-version").create(List.of("1.21.11")));
         assertNotNull(extraFactory("server-version-after-or-equal").create(List.of("1.21.1", "true")));
         assertNotNull(extraFactory("server-version-before").create(List.of("1.22", "true")));
+    }
+
+    @Test
+    @DisplayName("official NMS version condition maps supported Minecraft versions and fails closed")
+    void officialServerNmsVersionConditionMatchesKnownVersions() {
+        var server = mock(org.bukkit.Server.class);
+        try (var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getServer).thenReturn(server);
+            bukkit.when(org.bukkit.Bukkit::getMinecraftVersion).thenReturn("1.21.1");
+            assertTrue(extraFactory("server-nms-version").create(List.of("v1_21_R1")).test(ctx()));
+            assertTrue(extraFactory("server-nms-version").create(List.of("1_21_R1")).test(ctx()));
+            assertFalse(extraFactory("server-nms-version").create(List.of("v1_21_R3")).test(ctx()));
+
+            bukkit.when(org.bukkit.Bukkit::getMinecraftVersion).thenReturn("1.21.4");
+            assertTrue(extraFactory("server-nms-version").create(List.of("v1_21_R3")).test(ctx()));
+
+            bukkit.when(org.bukkit.Bukkit::getMinecraftVersion).thenReturn("1.21.11");
+            assertTrue(extraFactory("server-nms-version").create(List.of("v1_21_R7")).test(ctx()));
+
+            bukkit.when(org.bukkit.Bukkit::getMinecraftVersion).thenReturn("99.99");
+            assertFalse(extraFactory("server-nms-version").create(List.of("v1_21_R7")).test(ctx()));
+        }
+        assertNotNull(extraFactory("server-nms-version").create(List.of()));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("server-nms-version").create(List.of("1.21.1")));
     }
 
     @Test

@@ -1393,6 +1393,23 @@ class MmConditionsTest {
     }
 
     @Test
+    void officialServerNmsVersionConditionsMap() {
+        assertEquals("server-nms-version v1_19_R1", t("?serverNms{v=v1_19_R1}"));
+        assertEquals("server-nms-version v1_19_R1", t("?nmsversion{v1_19_R1}"));
+        assertEquals("server-nms-version v1_21_R3", t("?serverNmsVersion{sv=1_21_R3}"));
+        assertEquals("server-nms-version v1_21_R7", t("?servernms{version=v1_21_R7}"));
+        assertEquals("server-nms-version v1_19_R1_2", t("?servernms"));
+        assertEquals("server-nms-version v1_19_R1_2", t("?servernms{}"));
+        for (String invalid : List.of(
+                "?serverNms{v=1.21.1}",
+                "?serverNms{v=v1_21_R3;unknown=true}",
+                "?serverNms{v=v1_21_R3;version=v1_21_R4}",
+                "?serverNms{v=latest}")) {
+            assertUntranslatedPreserved(invalid);
+        }
+    }
+
+    @Test
     void officialRaiderPatrolLeaderConditionMaps() {
         assertEquals("is-raider-patrol-leader", t("?isRaiderPatrolLeader"));
         assertEquals("is-raider-patrol-leader", t("?isPatrolLeader"));
