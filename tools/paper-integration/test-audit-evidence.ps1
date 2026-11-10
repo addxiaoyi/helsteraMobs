@@ -36,6 +36,9 @@ try {
     $archivePath = Join-Path $temporaryRoot 'tools/paper-integration/reports/test-release.json'
     [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($archivePath))
     $fullReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-drop-inline-20261104-r2.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $armorStandProbe = @($fullReport.probes | Where-Object id -eq 'armorStand')
+    if ($armorStandProbe.Count -ne 1) { throw 'Synthetic release report must contain armorStand.' }
+    $armorStandProbe[0].observations = @('armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-hand=true wrong-type-preserved=true invalid-preserved=true')
     $gameplayPlaceholderProbe = @($fullReport.probes | Where-Object id -eq 'gameplayPlaceholders')
     if ($gameplayPlaceholderProbe.Count -ne 1) { throw 'Synthetic release report must contain gameplayPlaceholders.' }
     $gameplayPlaceholderProbe[0].observations = @($gameplayPlaceholderProbe[0].observations) + @(

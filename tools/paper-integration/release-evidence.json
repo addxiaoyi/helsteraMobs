@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-armor-stand-options-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-armor-stand-options-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-armor-stand-options-strict-20261110-r1.json",
+    "reportSha256": "690e45a7844c794197f76d7b56377335393a27a070acc7eb23c1b49357608e27",
+    "log": "tools/paper-integration/reports/paper-1.21.1-armor-stand-options-strict-20261110-r1.log.gz",
+    "logSha256": "5a335753b578d09355ccd1cdf6304786522f3b989b6e2dd51d96a71e33d385c2",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-armor-stand-options-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "6736e2a80ea58931a49c659a45266fdabad7351a6432646431aea5cb0ec0cc83",
+    "pluginSha256": "17551be8a9046434ee5e9d1c0a850ada8a36af58c6c528ac5ba7261ebd6a700f",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-gravity-scope-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-gravity-scope-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-gravity-scope-strict-20261110-r1.json",

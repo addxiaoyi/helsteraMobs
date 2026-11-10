@@ -51,7 +51,18 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-gravity-scope-strict-20261110-r1` passes
+Latest strict fixture `srv-paper-armor-stand-options-strict-20261110-r1` passes all 430 probes (411 passed,
+19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. The
+`armorStand` observation imports Mythic configuration, reads back all six Armor
+Stand flags plus body armor and hand equipment, checks default controls, and
+preserves wrong-type and malformed values. Report:
+[`paper-1.21.1-armor-stand-options-strict-20261110-r1.json`](reports/paper-1.21.1-armor-stand-options-strict-20261110-r1.json)
+(SHA-256 `690e45a7844c794197f76d7b56377335393a27a070acc7eb23c1b49357608e27`); compressed server log SHA-256 is
+`5a335753b578d09355ccd1cdf6304786522f3b989b6e2dd51d96a71e33d385c2`, client log archive SHA-256 is
+`6736e2a80ea58931a49c659a45266fdabad7351a6432646431aea5cb0ec0cc83`, and plugin SHA-256 is
+`17551be8a9046434ee5e9d1c0a850ada8a36af58c6c528ac5ba7261ebd6a700f`. Archived logs redact web-token query values.
+
+Previous strict fixture `srv-paper-gravity-scope-strict-20261110-r1` passes
 all 430 probes (411 passed, 19 expected rejections, zero failed or incomplete)
 on Paper 1.21.1-133. `noGravityImported` verifies both general `NoGravity`
 states, Armor Stand-only `HasGravity` true/false readback, wrong-entity
