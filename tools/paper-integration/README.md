@@ -38,20 +38,21 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-server-nms-version-20261110-r4` passes all
-417 probes (398 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. Its `serverNmsVersionCondition` probe verifies the official
-aliases, argument aliases, documented default, live Paper positive and negative
-evaluation, and malformed-input preservation. Report:
-`reports/paper-1.21.1-server-nms-version-strict-20261110-r4.json`;
+Latest strict fixture `srv-paper-spawn-reason-strict-20261110-r1` passes all
+418 probes (399 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `spawnReasonCondition` probe verifies imported
+`SpawnReason`/`spawnreason` aliases, `reason`/`r` argument aliases, live
+`CUSTOM` positive and alternate-reason negative evaluation, and malformed-input
+preservation. Report:
+`reports/paper-1.21.1-spawn-reason-strict-20261110-r1.json`;
 server log:
-`reports/paper-1.21.1-server-nms-version-strict-20261110-r4.log.gz`;
+`reports/paper-1.21.1-spawn-reason-strict-20261110-r1.log.gz`;
 client logs:
-`reports/paper-1.21.1-server-nms-version-strict-20261110-r4-client-logs.tar.gz`.
-Report SHA-256: `7e5bd19c8354e5e778c0e22a76e04eb7893dbe43a3b8a2a340e547892aa3a63a`;
-server log SHA-256: `dac746e56f9a4612847246affb0c68e15dd19239ddc4a142ffec5e8f751fee34`;
-client log SHA-256: `f2f67c04b14c7b01e57103d59b986ebf6558340ddd3ad9ffa522b32b9af54ba1`;
-plugin SHA-256: `f0b125e08173737471c3b85ee89f9d19bc9a03778230bf756556d2e4ec2135b3`.
+`reports/paper-1.21.1-spawn-reason-strict-20261110-r1-client-logs.tar.gz`.
+Report SHA-256: `1779551596d6e8868e603ddf3edcd1101b17a472cd9f5a5cbba2144b87bf3b87`;
+server log SHA-256: `582d4960c8dfb44e7c94779f5262710272e5d3cf57e1b7b2edaeb92e25e299b0`;
+client log SHA-256: `9df1117caf9aec720d6c9151848b04787bb0cd6f86d263eaf074e49f652ed88f`;
+plugin SHA-256: `291ada3873ab6813e9e4444b73a09bb7e7bf9fd4955314beb6dd0820a511f231`.
 The fixture is the Paper 1.21.1-133 release baseline; 1.21.4 and 1.21.11
 remain mapping-test coverage, and external-NMS package compatibility remains
 open.

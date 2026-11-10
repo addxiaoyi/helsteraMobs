@@ -67,6 +67,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'serverNmsVersionCondition'; status = 'passed'; observations = @('server-nms-version-condition imported=true positive=true alias-positive=true scalar-positive=true wrong-rejected=true default-rejected=true invalid-preserved=true passed=true')
     }
+    $fullReport.expectedProbeIds += 'spawnReasonCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'spawnReasonCondition'; status = 'passed'; observations = @('spawn-reason-condition-details actual=CUSTOM primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true invalid-preserved=true')
+    }
     $fullReport.expectedProbeIds += 'mobOptionsSlimeSplitNatural'
     $fullReport.probes += [pscustomobject]@{
         id = 'mobOptionsSlimeSplitNatural'; status = 'passed'; observations = @('mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=4 control-event=true control-cancelled=false control-event-count=3 protected-dead=true control-dead=true protected-children=0 control-children=3 monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true')
