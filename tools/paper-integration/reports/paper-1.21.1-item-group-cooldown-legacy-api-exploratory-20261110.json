@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-10T16:53:57Z",
+  "fixtureDirectory": "/tmp/helstera-item-group-paper-1.21.1",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "eb335851a7d87f2af00f53740a8c4df13edaf41754410b066b5285cd2a3ec5b3",
+  "log": "paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110.txt",
+  "expectedProbeIds": [
+    "item-group-cooldown-legacy-api"
+  ],
+  "probes": [
+    {
+      "id": "item-group-cooldown-legacy-api",
+      "status": "passed",
+      "sampleCount": 1,
+      "expected": "Without the Paper named cooldown API, the condition returns false, the set action is skipped, and one warning is logged without disabling the plugin.",
+      "observed": "Plugin enabled; joined player produced set-and-read=false clear=true result=false; one unsupported-API warning; no server exception.",
+      "observations": [
+        "Paper 1.21.1-133 (API 1.21.1-R0.1-SNAPSHOT); a real Mineflayer 1.21.1 player joined and triggered the production self-test.",
+        "The Mineflayer decoder emitted a PartialReadError after spawn; the server-side join and self-test logs are the basis for this API fallback observation.",
+        "This exploratory fallback probe does not replace or expand the strict Paper 1.21.1 release catalog."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+PAPER_VERSION=1.21.4-232-ver/1.21.4@12d8fe0
+PAPER_API_VERSION=1.21.4-R0.1-SNAPSHOT
+PAPER_JAR_SHA256=5ee4f542f628a14c644410b08c94ea42e772ef4d29fe92973636b6813d4eaffc
+PLUGIN_SHA256=eb335851a7d87f2af00f53740a8c4df13edaf41754410b066b5285cd2a3ec5b3
+MINEFLAYER_CLIENT_VERSION=1.21.4
+CLIENT_EVENT=PAPER_PLAYER_READY
+SERVER_EVENT=ItemGroupTester joined the game
+SELF_TEST=[自检] item-group-cooldown set-and-read=true clear=true result=true
+EVIDENCE_MODE=exploratory; this does not change the strict Paper 1.21.1 release baseline.

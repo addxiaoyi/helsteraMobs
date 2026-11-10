@@ -2922,6 +2922,13 @@ public final class SkillExtras {
                     return ctx -> targetOnlyEntity(ctx) instanceof Player player
                             && material != null && player.hasCooldown(material);
                 }),
+                Map.entry("item-group-on-cooldown", (SkillCatalog.ConditionFactory) a -> {
+                    String rawGroup = keyedArg(a, "group", "g");
+                    if (rawGroup == null) rawGroup = str(a, 0, "");
+                    final String group = ItemCooldownGroups.normalizeGroup(rawGroup);
+                    return ctx -> targetOnlyEntity(ctx) instanceof HumanEntity human
+                            && ItemCooldownGroups.has(human, group);
+                }),
                 Map.entry("trigger-item-type", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = keyedArg(a, "types", "type", "t", "material", "mat", "m",
                             "items", "item", "i");
@@ -4711,6 +4718,8 @@ public final class SkillExtras {
                 Map.entry("remove-held-item", (SkillCatalog.ActionFactory) SkillExtras::removeHeldItemAction),
                 Map.entry("set-material-cooldown", (SkillCatalog.ActionFactory)
                         SkillExtras::setMaterialCooldownAction),
+                Map.entry("set-item-group-cooldown", (SkillCatalog.ActionFactory)
+                        SkillExtras::setItemGroupCooldownAction),
                 Map.entry("set-game-mode", (SkillCatalog.ActionFactory) SkillExtras::setGameModeAction),
                 Map.entry("swing", (SkillCatalog.ActionFactory) SkillExtras::swingAction),
                 // Explicit aliases keep migrated hand-specific mechanics readable.
@@ -6686,6 +6695,21 @@ public final class SkillExtras {
                 } catch (RuntimeException ignored) {
                     SkillFaults.swallow("SkillExtras#setMaterialCooldown");
                 }
+            }
+        };
+    }
+
+    private static java.util.function.Consumer<BehaviorContext> setItemGroupCooldownAction(
+            List<String> args) {
+        String rawGroup = keyedArg(args, "key", "k", "group", "g");
+        if (rawGroup == null) rawGroup = str(args, 0, "minecraft:item_group");
+        String group = ItemCooldownGroups.normalizeGroup(rawGroup);
+        var ticks = dynamicKeyedNum(args, 1, 20, "ticks", "duration", "time", "t");
+        return ctx -> {
+            int value = cooldownTicks(ticks.applyAsDouble(ctx));
+            for (LivingEntity target : itemTargets(ctx)) {
+                if (!(target instanceof HumanEntity human)) continue;
+                ItemCooldownGroups.set(human, group, value);
             }
         };
     }

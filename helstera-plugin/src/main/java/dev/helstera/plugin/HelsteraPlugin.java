@@ -24678,6 +24678,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
+        if (getConfig().getBoolean("debug.self-test-item-group-cooldown", false)) {
+            Player player = e.getPlayer();
+            getServer().getScheduler().runTaskLater(this, () -> {
+                if (player.isOnline()) runItemGroupCooldownSelfTest(player);
+            }, 1L);
+        }
         if (getConfig().getBoolean("debug.self-test", false)
                 && getConfig().getBoolean("debug.self-test-item-effects", false)) {
             e.getPlayer().setGameMode(org.bukkit.GameMode.SURVIVAL);
@@ -24701,6 +24707,31 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             return;
         }
         ((ResourcePackServiceImpl) resourcePack).apply(e.getPlayer());
+    }
+
+    private void runItemGroupCooldownSelfTest(Player player) {
+        try {
+            var context = dev.helstera.api.behavior.BehaviorContext.of(
+                    null, player, 1.0, -1, 0, "PAPER_ITEM_GROUP_COOLDOWN_SELF_TEST");
+            var conditionFactory = dev.helstera.ai.skill.SkillExtras.conditions()
+                    .get("item-group-on-cooldown");
+            var actionFactory = dev.helstera.ai.skill.SkillExtras.actions()
+                    .get("set-item-group-cooldown");
+            if (conditionFactory == null || actionFactory == null) {
+                getLogger().warning("[自检] item-group-cooldown result=false reason=runtime-registration-missing");
+                return;
+            }
+            String group = "helstera:paper_probe";
+            var condition = conditionFactory.create(List.of("group=" + group));
+            actionFactory.create(List.of("group=" + group, "ticks=100")).accept(context);
+            boolean setAndRead = condition.test(context);
+            actionFactory.create(List.of("group=" + group, "ticks=0")).accept(context);
+            boolean cleared = !condition.test(context);
+            getLogger().info("[自检] item-group-cooldown set-and-read=" + setAndRead
+                    + " clear=" + cleared + " result=" + (setAndRead && cleared));
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] item-group-cooldown result=false error=" + failure);
+        }
     }
 
     /** 资源包下发结果回执：拒绝 / 下载失败在控制台直接可见，便于定位"用不了"。 */

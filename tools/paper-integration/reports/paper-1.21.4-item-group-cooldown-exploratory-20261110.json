@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-10T16:52:12Z",
+  "fixtureDirectory": "/tmp/helstera-item-group-paper-1.21.4",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.4-232-ver/1.21.4@12d8fe0 (2025-06-09T10:15:42Z)",
+  "paperApiVersion": "1.21.4-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "eb335851a7d87f2af00f53740a8c4df13edaf41754410b066b5285cd2a3ec5b3",
+  "log": "paper-1.21.4-item-group-cooldown-exploratory-20261110.txt",
+  "expectedProbeIds": [
+    "item-group-cooldown"
+  ],
+  "probes": [
+    {
+      "id": "item-group-cooldown",
+      "status": "passed",
+      "sampleCount": 1,
+      "expected": "Set a named cooldown for an online HumanEntity, read it as active, then clear it.",
+      "observed": "set-and-read=true clear=true result=true",
+      "observations": [
+        "Paper 1.21.4-232 (API 1.21.4-R0.1-SNAPSHOT).",
+        "A real Mineflayer 1.21.4 player joined the server and activated the production SkillExtras condition/action factories.",
+        "The probe is exploratory and does not qualify the Paper 1.21.1 strict release baseline."
+      ]
+    }
+  ]
+}

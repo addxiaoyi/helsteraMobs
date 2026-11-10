@@ -1,0 +1,11 @@
+PAPER_VERSION=1.21.1-133-ver/1.21.1@3cb8529
+PAPER_API_VERSION=1.21.1-R0.1-SNAPSHOT
+PAPER_JAR_SHA256=39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9
+PLUGIN_SHA256=eb335851a7d87f2af00f53740a8c4df13edaf41754410b066b5285cd2a3ec5b3
+MINEFLAYER_CLIENT_VERSION=1.21.1
+CLIENT_EVENT=PAPER_PLAYER_READY
+SERVER_EVENT=ItemGroupTester joined the game
+UNSUPPORTED_WARNING=Named item cooldown groups require Paper 1.21.4+; group cooldown conditions fail closed and set actions are skipped on this server.
+SELF_TEST=[自检] item-group-cooldown set-and-read=false clear=true result=false
+CLIENT_NOTE=Mineflayer emitted PartialReadError after spawn; server-side join and self-test logs establish the fallback observation.
+EVIDENCE_MODE=exploratory; this does not change the strict Paper 1.21.1 release catalog.

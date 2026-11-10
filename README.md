@@ -2,6 +2,17 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
+MythicMobs 5.9 named item-group cooldowns now import with strict validation
+and run through Paper's named `UseCooldown` API on Paper 1.21.4+. A real player
+connected to Paper 1.21.4-232 and the focused self-test verified setting,
+reading, and clearing a group cooldown. On older Paper APIs the condition fails
+closed and the action is skipped with a one-time warning. This is exploratory
+version-specific evidence; it does not change the strict Paper 1.21.1 release
+baseline or expand the declared overall Mythic adapter range. See the
+[focused Paper report](tools/paper-integration/reports/paper-1.21.4-item-group-cooldown-exploratory-20261110.json)
+and [Paper 1.21.1 fallback report](tools/paper-integration/reports/paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110.json)
+and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+
 Latest strict fixture `srv-paper-target-fluids-import-strict-20261110-r2`
 passes all 423 release probes (404 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133 with plugin SHA-256

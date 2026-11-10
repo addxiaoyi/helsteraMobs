@@ -2609,8 +2609,8 @@ class ImportersTest {
     }
 
     @Test
-    @DisplayName("Mythic 5.9 item-group cooldown is preserved outside the declared adapter range")
-    void preservesVersionGatedItemGroupCooldown(@TempDir Path root) throws Exception {
+    @DisplayName("Mythic item-group cooldown imports to the version-gated native runtime")
+    void mapsItemGroupCooldownAndPreservesMalformedGroups(@TempDir Path root) throws Exception {
         Path file = write(root, "Skills/item-group-cooldown.yml", """
                 skills:
                   item_group_gate:
@@ -2618,6 +2618,22 @@ class ImportersTest {
                       - '?ItemGroupOnCooldown{group=minecraft:teleportingitems}'
                     Skills:
                       - setItemGroupCooldown{group=minecraft:teleportingitems;ticks=20} @target
+                      - setItemGroupCooldown{k=TELEPORTINGITEMS;t=30} @target
+                      - setItemGroupCooldown{key=teleportingitems;ticks=25;delay=5}
+                      - setItemGroupCooldown @target
+                      - setItemGroupCooldown{ticks=10}
+                  malformed_item_group_gate:
+                    TargetConditions:
+                      - '?ItemGroupOnCooldown{group=minecraft:bad:key}'
+                    Skills:
+                      - setItemGroupCooldown{group=minecraft:bad:key;ticks=20}
+                      - setItemGroupCooldown{key=minecraft:valid;ticks=1.5}
+                      - setItemGroupCooldown{group=minecraft:valid;key=minecraft:other;ticks=20}
+                      - setItemGroupCooldown{group=minecraft:valid;ticks=-1}
+                      - setItemGroupCooldown{group=minecraft:valid;ticks=2147483648}
+                      - setItemGroupCooldown{group=minecraft:valid;ticks=20;unknown=true}
+                      - setItemGroupCooldown group=minecraft:valid
+                      - setItemGroupCooldown minecraft:valid 20
                 """);
         List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
         Map<String, Object> plan = entries.stream().filter(e -> e.containsKey("target-file"))
@@ -2625,13 +2641,31 @@ class ImportersTest {
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
 
-        assertEquals(List.of("?ItemGroupOnCooldown{group=minecraft:teleportingitems}"),
+        assertEquals(List.of("item-group-on-cooldown group=minecraft:teleportingitems"),
                 target.getStringList("skills.item_group_gate.target-conditions"));
-        assertEquals(List.of("setItemGroupCooldown{group=minecraft:teleportingitems;ticks=20} @target"),
-                target.getStringList("skills.item_group_gate.unsupported"));
+        assertEquals(List.of(
+                        "set-item-group-cooldown group=minecraft:teleportingitems ticks=20 @target",
+                        "set-item-group-cooldown group=minecraft:teleportingitems ticks=30 @target",
+                        "set-item-group-cooldown{delay=5} group=minecraft:teleportingitems ticks=25",
+                        "set-item-group-cooldown group=minecraft:item_group ticks=20 @target",
+                        "set-item-group-cooldown group=minecraft:item_group ticks=10"),
+                target.getStringList("skills.item_group_gate.on-decision"));
+        assertFalse(target.contains("skills.item_group_gate.unsupported"));
+        assertEquals(List.of("?ItemGroupOnCooldown{group=minecraft:bad:key}"),
+                target.getStringList("skills.malformed_item_group_gate.target-conditions"));
+        assertEquals(List.of(
+                        "setItemGroupCooldown{group=minecraft:bad:key;ticks=20}",
+                        "setItemGroupCooldown{key=minecraft:valid;ticks=1.5}",
+                        "setItemGroupCooldown{group=minecraft:valid;key=minecraft:other;ticks=20}",
+                        "setItemGroupCooldown{group=minecraft:valid;ticks=-1}",
+                        "setItemGroupCooldown{group=minecraft:valid;ticks=2147483648}",
+                        "setItemGroupCooldown{group=minecraft:valid;ticks=20;unknown=true}",
+                        "setItemGroupCooldown group=minecraft:valid",
+                        "setItemGroupCooldown minecraft:valid 20"),
+                target.getStringList("skills.malformed_item_group_gate.unsupported"));
         assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
                 && "WARN".equals(entry.get("severity"))
-                && String.valueOf(entry.get("source-key")).contains("TargetConditions.unmapped")));
+                && String.valueOf(entry.get("source-key")).contains("malformed_item_group_gate.TargetConditions.unmapped")));
         assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
                 && "WARN".equals(entry.get("severity"))
                 && String.valueOf(entry.get("value")).contains("setItemGroupCooldown")));

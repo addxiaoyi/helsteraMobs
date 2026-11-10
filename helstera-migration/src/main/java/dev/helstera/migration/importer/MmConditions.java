@@ -56,6 +56,8 @@ public final class MmConditions {
             Map.entry("item", "types"), Map.entry("i", "types"),
             Map.entry("strict", "strict"), Map.entry("exact", "strict"), Map.entry("e", "strict"),
             Map.entry("vanillaonly", "vanillaonly"), Map.entry("vanilla", "vanillaonly"));
+    private static final Map<String, String> ITEM_GROUP_COOLDOWN_ARGUMENTS = Map.of(
+            "group", "group", "g", "group");
     private static final Map<String, String> ENTITY_ITEM_TYPE_ARGUMENTS = Map.of(
             "material", "types", "mat", "types", "m", "types", "type", "types",
             "types", "types", "t", "types");
@@ -1157,6 +1159,14 @@ public final class MmConditions {
             if (material == null) material = normalizeScalar(body);
             if (material == null) material = "ENDER_PEARL";
             return new Mapped("material-on-cooldown " + material.toUpperCase(Locale.ROOT), true);
+        }
+        if ("itemgrouponcooldown".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(
+                    body, ITEM_GROUP_COOLDOWN_ARGUMENTS, "group");
+            if (arguments == null) return new Mapped(s, false);
+            String group = arguments.get("group");
+            if (!validNamespacedKey(group)) return new Mapped(s, false);
+            return new Mapped("item-group-on-cooldown group=" + normalizeNamespacedKey(group), true);
         }
         if ("triggeritemtype".equals(name) || "triggeringitemtype".equals(name)) {
             Map<String, String> arguments = strictValueArguments(body, TRIGGER_ITEM_TYPE_ARGUMENTS, "types");
@@ -2462,6 +2472,21 @@ public final class MmConditions {
             if (entry.isBlank()) return false;
         }
         return true;
+    }
+
+    private static boolean validNamespacedKey(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String value = raw.trim().toLowerCase(Locale.ROOT);
+        int separator = value.indexOf(':');
+        String namespace = separator < 0 ? "minecraft" : value.substring(0, separator);
+        String key = separator < 0 ? value : value.substring(separator + 1);
+        return namespace.matches("[a-z0-9._-]+") && key.matches("[a-z0-9/._-]+")
+                && value.indexOf(':', separator + 1) < 0;
+    }
+
+    private static String normalizeNamespacedKey(String raw) {
+        String value = raw.trim().toLowerCase(Locale.ROOT);
+        return value.indexOf(':') < 0 ? "minecraft:" + value : value;
     }
 
     private record BlockTypeArguments(String types, String radius, String amount) {}
