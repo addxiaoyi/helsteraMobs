@@ -51,7 +51,19 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-default-mob-options-strict-20261110-r1`
+Latest strict fixture `srv-paper-no-gravity-strict-20261110-r2` passes all
+430 probes (411 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. `noGravityImported` verifies imported true/false gravity
+readback and malformed-value preservation; `playerCreatedImported` verifies
+both Iron Golem states and wrong-entity/malformed preservation through
+production mob spawning. Report:
+[`paper-1.21.1-no-gravity-imported-strict-20261110-r2.json`](reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2.json)
+(SHA-256 `fae837ec0de566778fc75cda90b6a54bff547b0d49c731170dc75bc25119d480`); compressed server log SHA-256 is
+`70c3caa174a973b9ff67e10be5e24fbb04c1438c3c9a05274547347c62dc8b09`, client log archive SHA-256 is
+`9e3bb8ab29bcd2565f7ba0235cde40f416a3fb87dfe456d2d75efdf87542130f`, and plugin SHA-256 is
+`9c7980355113a00d754da1486c57dfd618e8b132fa8c06aacf8c2835a9b4c6fc`. Archived logs redact web-token query values.
+
+Previous strict fixture `srv-paper-default-mob-options-strict-20261110-r1`
 passes all 428 probes (409 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. `importedMobDefaults` verifies the documented
 `Despawn`, `PreventOtherDrops`, and `PreventVanillaDamage` global defaults,

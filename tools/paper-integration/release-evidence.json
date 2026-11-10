@@ -1,5 +1,29 @@
 [
   {
+    "fixtureId": "srv-paper-no-gravity-strict-20261110-r2",
+    "reportFixtureDirectory": "srv-paper-no-gravity-strict-20261110-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2.json",
+    "reportSha256": "fae837ec0de566778fc75cda90b6a54bff547b0d49c731170dc75bc25119d480",
+    "log": "tools/paper-integration/reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2.log.gz",
+    "logSha256": "70c3caa174a973b9ff67e10be5e24fbb04c1438c3c9a05274547347c62dc8b09",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2-client-logs.tar.gz",
+    "clientLogSha256": "9e3bb8ab29bcd2565f7ba0235cde40f416a3fb87dfe456d2d75efdf87542130f",
+    "pluginSha256": "9c7980355113a00d754da1486c57dfd618e8b132fa8c06aacf8c2835a9b4c6fc",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-player-created-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-player-created-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-player-created-imported-strict-20261110-r1.json",
+    "reportSha256": "0b3781594de240218af4a1b4cf16c3e8f99549134296e68cb7c0ab01dbeba86a",
+    "log": "tools/paper-integration/reports/paper-1.21.1-player-created-imported-strict-20261110-r1.log.gz",
+    "logSha256": "fc8f6b9db7d34e94676f7e5883c1ac6f544a976b79b6246749a91148e36b903a",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-player-created-imported-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "062aca8d0220cd4d69b354f83a511c2cc5a47284fe594a8cc1226d6fb5271aad",
+    "pluginSha256": "f6bc2250437dfdbcfa2df9a42b1b595a463f0f2ae39671e1bbd318a67bcab0de",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-default-mob-options-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-default-mob-options-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-default-mob-options-strict-20261110-r1.json",

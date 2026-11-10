@@ -215,6 +215,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true can-join-raid=false patrol-leader=true patrol-spawn-point=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] no-gravity-imported result=true imported=true configured=false control=true invalid-preserved=true fallback=false',
         '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
         '[Server thread/INFO]: attribute-options result=true modifiers=1',
         '[Server thread/INFO]: attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true',
@@ -585,6 +586,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'entityFlagOptions').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'entityFlagOptions').observations[0] -match
         '^entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true$') 'imported entity flag options require production Paper evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'noGravityImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'noGravityImported').observations[0] -match
+        '^no-gravity-imported result=true imported=true configured=false control=true invalid-preserved=true fallback=false$') 'imported NoGravity requires production readback and malformed-value preservation'
     Assert-True (($report.probes | Where-Object id -eq 'expOptions').status -eq 'passed') 'experience option probe'
     Assert-True (($report.probes | Where-Object id -eq 'expNaturalDeath').status -eq 'passed') 'natural experience death probe'
     Assert-True (($report.probes | Where-Object id -eq 'expTierDeath').status -eq 'passed') 'natural tiered experience death probe'
@@ -1251,6 +1255,14 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedMobDefaults'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-despawn-normal=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-disabled=true global-no-damage-ticks=true global-prevent-leashing=true global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true global-despawn-chunk=true global-prevent-other-drops=true global-prevent-vanilla-damage=true global-unsupported-preserved=true explicit-pickup-enabled=true explicit-pickup-disabled=true pickup-wrong-type-preserved=true pickup-invalid-preserved=true explicit-jockey-prevented=true global-jockey-allowed=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true explicit-despawn-never=true explicit-prevent-other-drops-disabled=true explicit-prevent-vanilla-damage-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'playerCreatedImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'playerCreatedImported'; status = 'passed'; observations = @('player-created-imported result=true imported=true created=true control-created=false wrong-entity-preserved=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'noGravityImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'noGravityImported'; status = 'passed'; observations = @('no-gravity-imported result=true imported=true configured=false control=true invalid-preserved=true fallback=false')
     }
     $fullCatalogReport.expectedProbeIds += 'healOnReloadOptions'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -2292,6 +2304,32 @@ try {
     } catch { $incompleteTameableOptionsRejected = $_.Exception.Message -match 'required observation for tameableOptionsImported' }
     Assert-True $incompleteTameableOptionsRejected 'full release gate rejects incomplete imported Tameable option evidence'
     $fullCatalogTameableOptions[0].observations = $tameableOptionsObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $fullCatalogPlayerCreated = @($fullCatalogReport.probes | Where-Object id -eq 'playerCreatedImported')
+    if ($fullCatalogPlayerCreated.Count -ne 1) { throw 'Synthetic full catalog report must contain playerCreatedImported.' }
+    $playerCreatedObservations = $fullCatalogPlayerCreated[0].observations
+    $fullCatalogPlayerCreated[0].observations = @('player-created-imported result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompletePlayerCreatedRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompletePlayerCreatedRejected = $_.Exception.Message -match 'required observation for playerCreatedImported' }
+    Assert-True $incompletePlayerCreatedRejected 'full release gate rejects incomplete imported Iron Golem PlayerCreated evidence'
+    $fullCatalogPlayerCreated[0].observations = $playerCreatedObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $fullCatalogNoGravity = @($fullCatalogReport.probes | Where-Object id -eq 'noGravityImported')
+    if ($fullCatalogNoGravity.Count -ne 1) { throw 'Synthetic full catalog report must contain noGravityImported.' }
+    $noGravityObservations = $fullCatalogNoGravity[0].observations
+    $fullCatalogNoGravity[0].observations = @('no-gravity-imported result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteNoGravityRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteNoGravityRejected = $_.Exception.Message -match 'required observation for noGravityImported' }
+    Assert-True $incompleteNoGravityRejected 'full release gate rejects incomplete imported NoGravity evidence'
+    $fullCatalogNoGravity[0].observations = $noGravityObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $creeperOptionsObservations = $fullCatalogCreeperOptions[0].observations
     $fullCatalogCreeperOptions[0].observations = @('creeper-options result=true')

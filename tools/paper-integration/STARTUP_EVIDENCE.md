@@ -1,6 +1,20 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-default-mob-options-strict-20261110-r1` passed the
+Latest fixture `srv-paper-no-gravity-strict-20261110-r2` passed the full strict gate on Paper 1.21.1-133:
+430 registered probes, 411 passed, 19 expected rejections, and zero failed or
+incomplete. `noGravityImported` verifies imported true/false gravity readback,
+malformed-value preservation, and the inverse control. `playerCreatedImported`
+verifies true/false states on real Iron Golems spawned through production
+configuration, with wrong-entity and malformed values preserved. Plugin
+SHA-256: `9c7980355113a00d754da1486c57dfd618e8b132fa8c06aacf8c2835a9b4c6fc`. Full catalog report:
+[paper-1.21.1-no-gravity-imported-strict-20261110-r2.json](reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2.json), SHA-256:
+`fae837ec0de566778fc75cda90b6a54bff547b0d49c731170dc75bc25119d480`. Compressed server log:
+[paper-1.21.1-no-gravity-imported-strict-20261110-r2.log.gz](reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2.log.gz), SHA-256:
+`70c3caa174a973b9ff67e10be5e24fbb04c1438c3c9a05274547347c62dc8b09`. Client log archive:
+[paper-1.21.1-no-gravity-imported-strict-20261110-r2-client-logs.tar.gz](reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2-client-logs.tar.gz), SHA-256:
+`9e3bb8ab29bcd2565f7ba0235cde40f416a3fb87dfe456d2d75efdf87542130f`. Archived logs redact web-token query values.
+
+Previous fixture `srv-paper-default-mob-options-strict-20261110-r1` passed the
 full strict gate on Paper 1.21.1-133: 428 registered probes, 409 passed, 19
 expected rejections, and zero failed or incomplete. `importedMobDefaults`
 verifies the three documented global defaults, explicit precedence, and
