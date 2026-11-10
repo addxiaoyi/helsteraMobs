@@ -372,6 +372,7 @@ $probeSpecs = [ordered]@{
     bowTensionCondition = 'skill-trigger .*bow-tension-condition=true'
     cancelledCondition = 'skill-trigger .*cancelled-condition=true .*cancelled-after=true'
     lastDamagerTargeter = 'skill-trigger .*last-damager-targeter=true .*last-damager-projectile=true .*last-damager-environmental-rejected=true .*last-damager-removed-rejected=true'
+    targetOfTargetTargeter = 'skill-trigger .*target-of-target=true .*target-of-target-aliases=true .*target-of-target-non-mob-rejected=true .*target-of-target-missing-rejected=true .*target-of-target-invalid-rejected=true'
     potionEffectEndTrigger = 'skill-trigger .*potion-effect-end=true'
     potionNaturalExpiry = 'potion-natural-expiry=true .*expired=true .*(?:action-observed=true|item-marker-observed=true)'
     killTrigger = 'kill-trigger imported=true mapped=true natural=true .*victim-dead=true .*action-observed=true passed=true'

@@ -16593,6 +16593,69 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         probeLiving.setLastDamageCause(null);
                         projectile.remove();
                     }
+                    boolean targetOfTargetTargeter = false;
+                    boolean targetOfTargetAliases = false;
+                    boolean targetOfTargetNonMobRejected = false;
+                    boolean targetOfTargetMissingRejected = false;
+                    boolean targetOfTargetInvalidRejected = false;
+                    {
+                        var targetOfTargetSource = world.spawn(
+                                probeLiving.getLocation().clone().add(0, 0, 4),
+                                org.bukkit.entity.Zombie.class);
+                        var targetOfTargetNested = world.spawn(
+                                probeLiving.getLocation().clone().add(0, 0, 6),
+                                org.bukkit.entity.Skeleton.class);
+                        var targetOfTargetNonMob = world.spawn(
+                                probeLiving.getLocation().clone().add(0, 0, 8),
+                                org.bukkit.entity.ArmorStand.class);
+                        targetOfTargetSource.setAI(false);
+                        targetOfTargetSource.setAware(false);
+                        targetOfTargetSource.setRemoveWhenFarAway(false);
+                        targetOfTargetNested.setAI(false);
+                        targetOfTargetNested.setAware(false);
+                        targetOfTargetNested.setRemoveWhenFarAway(false);
+                        targetOfTargetSource.setTarget(targetOfTargetNested);
+                        var targetOfTargetContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                                triggerProbe, targetOfTargetSource, 1.0, -1, 0, "integration", null,
+                                probeEntity, java.util.List.of(targetOfTargetSource),
+                                targetOfTargetSource.getLocation(), null);
+                        var targetOfTarget = dev.helstera.api.behavior.Targeters.select(
+                                "@TargetOfTarget", targetOfTargetContext,
+                                java.util.List.of(), java.util.List.of());
+                        var targetOfTargetHyphen = dev.helstera.api.behavior.Targeters.select(
+                                "@target-of-target", targetOfTargetContext,
+                                java.util.List.of(), java.util.List.of());
+                        var targetOfTargetUnderscore = dev.helstera.api.behavior.Targeters.select(
+                                "@target_of_target", targetOfTargetContext,
+                                java.util.List.of(), java.util.List.of());
+                        targetOfTargetTargeter = targetOfTarget.size() == 1
+                                && targetOfTarget.get(0).equals(targetOfTargetNested);
+                        targetOfTargetAliases = targetOfTargetHyphen.size() == 1
+                                && targetOfTargetHyphen.get(0).equals(targetOfTargetNested)
+                                && targetOfTargetUnderscore.size() == 1
+                                && targetOfTargetUnderscore.get(0).equals(targetOfTargetNested);
+
+                        targetOfTargetSource.setTarget(null);
+                        targetOfTargetMissingRejected = dev.helstera.api.behavior.Targeters.select(
+                                "@TargetOfTarget", targetOfTargetContext,
+                                java.util.List.of(), java.util.List.of()).isEmpty();
+
+                        targetOfTargetSource.setTarget(targetOfTargetNested);
+                        targetOfTargetNested.remove();
+                        targetOfTargetInvalidRejected = dev.helstera.api.behavior.Targeters.select(
+                                "@TargetOfTarget", targetOfTargetContext,
+                                java.util.List.of(), java.util.List.of()).isEmpty();
+
+                        var nonMobContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                                triggerProbe, targetOfTargetNonMob, 1.0, -1, 0, "integration", null,
+                                probeEntity, java.util.List.of(targetOfTargetNonMob),
+                                targetOfTargetNonMob.getLocation(), null);
+                        targetOfTargetNonMobRejected = dev.helstera.api.behavior.Targeters.select(
+                                "@TargetOfTarget", nonMobContext,
+                                java.util.List.of(), java.util.List.of()).isEmpty();
+                        targetOfTargetSource.remove();
+                        targetOfTargetNonMob.remove();
+                    }
                     var teleportEvent = new org.bukkit.event.entity.EntityTeleportEvent(
                             probeEntity, probeEntity.getLocation(), probeEntity.getLocation().clone().add(1, 0, 0));
                     getServer().getPluginManager().callEvent(teleportEvent);
@@ -16639,6 +16702,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " last-damager-projectile=" + lastDamagerProjectile
                             + " last-damager-environmental-rejected=" + lastDamagerEnvironmentalRejected
                             + " last-damager-removed-rejected=" + lastDamagerRemovedRejected
+                            + " target-of-target=" + targetOfTargetTargeter
+                            + " target-of-target-aliases=" + targetOfTargetAliases
+                            + " target-of-target-non-mob-rejected=" + targetOfTargetNonMobRejected
+                            + " target-of-target-missing-rejected=" + targetOfTargetMissingRejected
+                            + " target-of-target-invalid-rejected=" + targetOfTargetInvalidRejected
                             + " teleport-before=" + teleportBefore
                             + " bukkit-damage=" + bukkitDamage
                             + " damage-cause-condition=" + damageCauseCondition
