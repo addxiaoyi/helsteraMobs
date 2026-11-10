@@ -18539,41 +18539,66 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var head = target.getLocation().clone().add(0, 1, 0).getBlock();
         var feetState = feet.getState();
         var headState = head.getState();
+        var importedWater = dev.helstera.migration.importer.MmConditions.translate("?targetInWater");
+        var importedLava = dev.helstera.migration.importer.MmConditions.translate("?targetInLava");
+        var invalidWater = dev.helstera.migration.importer.MmConditions.translate(
+                "?targetInWater{unknown=true}");
+        var invalidLava = dev.helstera.migration.importer.MmConditions.translate(
+                "?targetInLava{unknown=true}");
+        boolean imported = importedWater.translated()
+                && "target-in-water".equals(importedWater.condition())
+                && importedLava.translated()
+                && "target-in-lava".equals(importedLava.condition());
+        boolean invalidPreserved = !invalidWater.translated()
+                && "?targetInWater{unknown=true}".equals(invalidWater.condition())
+                && !invalidLava.translated()
+                && "?targetInLava{unknown=true}".equals(invalidLava.condition());
+        String waterKey = imported ? skills.bindCondition(importedWater.condition()) : null;
+        String lavaKey = imported ? skills.bindCondition(importedLava.condition()) : null;
         feet.setType(org.bukkit.Material.WATER, false);
         head.setType(org.bukkit.Material.WATER, false);
         getServer().getScheduler().runTaskLater(this, () -> {
             boolean water = false;
             try {
-                water = behaviors.testCondition(
-                        skills.bindCondition("target-in-water"), context);
+                water = waterKey != null && behaviors.testCondition(waterKey, context);
                 feet.setType(org.bukkit.Material.LAVA, false);
                 head.setType(org.bukkit.Material.LAVA, false);
                 boolean waterObserved = water;
                 getServer().getScheduler().runTaskLater(this, () -> {
                     boolean lava = false;
                     try {
-                        lava = behaviors.testCondition(
-                                skills.bindCondition("target-in-lava"), context);
-                        getLogger().info("target-fluids-delayed water=" + waterObserved
-                                + " lava=" + lava + " passed=" + (waterObserved && lava));
+                        lava = lavaKey != null && behaviors.testCondition(lavaKey, context);
                     } finally {
-                        feetState.update(true, false);
-                        headState.update(true, false);
+                        boolean feetRestored = feetState.update(true, false);
+                        boolean headRestored = headState.update(true, false);
+                        boolean restored = feetRestored && headRestored
+                                && feet.getType() == feetState.getType()
+                                && head.getType() == headState.getType();
                         if (instance != null && instances() != null) {
                             instances().despawn(instance.instanceId());
                         }
                         if (target.isValid()) target.remove();
+                        getLogger().info("target-fluids-delayed imported=" + imported
+                                + " water=" + waterObserved + " lava=" + lava
+                                + " invalid-preserved=" + invalidPreserved
+                                + " restored=" + restored + " passed="
+                                + (imported && waterObserved && lava && invalidPreserved && restored));
                     }
                 }, 1L);
             } catch (Throwable failure) {
-                getLogger().warning("target-fluids-delayed error="
-                        + failure.getClass().getSimpleName() + " passed=false");
-                feetState.update(true, false);
-                headState.update(true, false);
+                boolean feetRestored = feetState.update(true, false);
+                boolean headRestored = headState.update(true, false);
+                boolean restored = feetRestored && headRestored
+                        && feet.getType() == feetState.getType()
+                        && head.getType() == headState.getType();
                 if (instance != null && instances() != null) {
                     instances().despawn(instance.instanceId());
                 }
                 if (target.isValid()) target.remove();
+                getLogger().warning("target-fluids-delayed imported=" + imported
+                        + " water=false lava=false invalid-preserved=" + invalidPreserved
+                        + " restored=" + restored + " error="
+                        + failure.getClass().getSimpleName() + " passed=false");
             }
         }, 1L);
     }

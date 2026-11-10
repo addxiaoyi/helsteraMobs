@@ -247,7 +247,7 @@ $probeSpecs = [ordered]@{
     dotMechanic = 'skill-dot damage-observed=true bounded=true expired=true'
     projectileHasEndedCondition = 'projectile-has-ended=true observed=true'
     targetEnvironmentalConditions = 'skill-actions .*target-environment=true'
-    targetFluidConditions = '(?:skill-actions .*target-fluids=true|target-fluids-delayed water=true lava=true passed=true)'
+    targetFluidConditions = 'target-fluids-delayed imported=true water=true lava=true invalid-preserved=true restored=true passed=true'
     targetBlockedCondition = 'skill-actions .*target-blocked=true'
     targetStateConditions = 'skill-actions .*target-state-conditions=true'
     conditionComposition = 'skill-actions .*condition-composition=true'

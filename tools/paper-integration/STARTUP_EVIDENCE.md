@@ -1,6 +1,22 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-invincible-strict-20261110-r3` passed the full strict
+Latest fixture `srv-paper-target-fluids-import-strict-20261110-r2` passed the full strict
+gate on Paper 1.21.1-133: 423 registered probes, 404 passed, 19 expected
+rejections, and zero failed or incomplete. Its `targetFluidConditions` probe
+verifies the imported `?targetInWater`/`?targetInLava` aliases against live
+target fluids, malformed-argument preservation, and restoration of the touched
+blocks. Plugin SHA-256:
+`eb536ff2ed308e44893e0ecd2d13e730f39f8952aafc2b969b327add939ad0ea`. Full
+catalog report:
+[paper-1.21.1-target-fluids-import-strict-20261110-r2.json](reports/paper-1.21.1-target-fluids-import-strict-20261110-r2.json), SHA-256:
+`1acc1bc8f127373babf65e8de4e5f1462caa94a81bd3d6ccbddad2979eb3ed1c`.
+Compressed server log SHA-256:
+`1a17ee57f7e748b53ac97cb989e8852672e805d4e27cde6672c1d332ce23edc5`.
+Client log archive SHA-256:
+`5af51dcd4c2ec750acf2cb964d2d2313fa8e0049e4a7df186ce9202fa22e192c`.
+Archived logs replace web-token query values with `[REDACTED]`.
+
+Previous fixture `srv-paper-invincible-strict-20261110-r3` passed the full strict
 gate on Paper 1.21.1-133: 423 registered probes, 404 passed, 19 expected
 rejections, and zero failed or incomplete. Its imported `invulnerableCondition`
 and `targetInvulnerable` probes verify `IsInvulnerable`/`IsInvincible` aliases,

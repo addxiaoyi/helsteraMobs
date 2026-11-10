@@ -84,6 +84,10 @@ try {
     if ($invulnerableProbe.Count -ne 1) { throw 'Synthetic release report must contain invulnerableCondition.' }
     $invulnerableProbe[0].observations = @(
         'skill-actions invulnerable-condition=true invulnerable-aliases=true')
+    $targetFluidProbe = @($fullReport.probes | Where-Object id -eq 'targetFluidConditions')
+    if ($targetFluidProbe.Count -ne 1) { throw 'Synthetic release report must contain targetFluidConditions.' }
+    $targetFluidProbe[0].observations = @(
+        'target-fluids-delayed imported=true water=true lava=true invalid-preserved=true restored=true passed=true')
     $fullReport.expectedProbeIds += 'serverNmsVersionCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'serverNmsVersionCondition'; status = 'passed'; observations = @('server-nms-version-condition imported=true positive=true alias-positive=true scalar-positive=true wrong-rejected=true default-rejected=true invalid-preserved=true passed=true')

@@ -51,7 +51,22 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-invincible-strict-20261110-r3` passes all 423
+Latest strict fixture `srv-paper-target-fluids-import-strict-20261110-r2` passes all 423
+probes (404 passed, 19 expected rejections, zero failed or incomplete) on Paper
+1.21.1-133. Its `targetFluidConditions` probe verifies imported water/lava
+condition aliases against live target states, invalid-input preservation, and
+block restoration. Report:
+[`paper-1.21.1-target-fluids-import-strict-20261110-r2.json`](reports/paper-1.21.1-target-fluids-import-strict-20261110-r2.json)
+(SHA-256 `1acc1bc8f127373babf65e8de4e5f1462caa94a81bd3d6ccbddad2979eb3ed1c`);
+server log SHA-256 is
+`1a17ee57f7e748b53ac97cb989e8852672e805d4e27cde6672c1d332ce23edc5`, client
+log archive SHA-256 is
+`5af51dcd4c2ec750acf2cb964d2d2313fa8e0049e4a7df186ce9202fa22e192c`, and
+plugin SHA-256 is
+`eb536ff2ed308e44893e0ecd2d13e730f39f8952aafc2b969b327add939ad0ea`. Archived
+logs replace web-token query values with `[REDACTED]`.
+
+Previous strict fixture `srv-paper-invincible-strict-20261110-r3` passes all 423
 probes (404 passed, 19 expected rejections, zero failed or incomplete) on Paper
 1.21.1-133. Its `invulnerableCondition` and `targetInvulnerable` probes verify
 imported `IsInvulnerable`/`IsInvincible` aliases, positive and negative states,

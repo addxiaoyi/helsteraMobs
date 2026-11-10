@@ -2,20 +2,24 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-invincible-strict-20261110-r3` passes all 423
-release probes (404 passed, 19 expected rejections, zero failed or incomplete)
-on Paper 1.21.1-133 with plugin SHA-256
-`0ae19ad0e0da1637f5b466a7df8eb132f62da7ad627e7b98088fe631c344c254`. Its
-`invulnerableCondition` and `targetInvulnerable` probes verify imported
-`IsInvulnerable`/`IsInvincible` aliases, positive and negative states, invalid
-argument preservation, target evaluation, and state restoration. Report:
-[`paper-1.21.1-invulnerable-condition-strict-20261110-r3.json`](tools/paper-integration/reports/paper-1.21.1-invulnerable-condition-strict-20261110-r3.json)
-(SHA-256 `36c6c1ba33c4cb32a572a08950b115f237fd8aeebb435d1f345275637511fe91`);
+Latest strict fixture `srv-paper-target-fluids-import-strict-20261110-r2`
+passes all 423 release probes (404 passed, 19 expected rejections, zero failed
+or incomplete) on Paper 1.21.1-133 with plugin SHA-256
+`eb536ff2ed308e44893e0ecd2d13e730f39f8952aafc2b969b327add939ad0ea`. Its
+`targetFluidConditions` probe verifies imported `?targetInWater` and
+`?targetInLava` mappings, live target fluid states, preservation of malformed
+arguments, and restoration of the touched blocks. Report:
+[`paper-1.21.1-target-fluids-import-strict-20261110-r2.json`](tools/paper-integration/reports/paper-1.21.1-target-fluids-import-strict-20261110-r2.json)
+(SHA-256 `1acc1bc8f127373babf65e8de4e5f1462caa94a81bd3d6ccbddad2979eb3ed1c`);
 compressed server log SHA-256
-`24ff14d79ab2d12124255eec3f6bd48bda1cae23354da82acd619d892e1ae6d9`, client
+`1a17ee57f7e748b53ac97cb989e8852672e805d4e27cde6672c1d332ce23edc5`, client
 log archive SHA-256
-`543fa484f9c9a82ed2926bf15cf950c4e9f36a69bfb5af1d24f0a024048e34df`.
+`5af51dcd4c2ec750acf2cb964d2d2313fa8e0049e4a7df186ce9202fa22e192c`.
 Latest strict report has 423 probes, zero incomplete.
+
+Previous strict fixture `srv-paper-invincible-strict-20261110-r3` also passed
+all 423 release probes on Paper 1.21.1-133; its imported invulnerability
+aliases and state-restoration evidence remain archived in the release manifest.
 
 Previous same-condition strict fixture `srv-paper-invincible-strict-20261110-r1`
 also passed all 423 release probes (404 passed, 19 expected rejections, zero
@@ -1262,7 +1266,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-invincible-strict-20261110-r3` has 423 probes (404 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-target-fluids-import-strict-20261110-r2` has 423 probes (404 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1278,8 +1282,8 @@ This is a partial parity release. The matrix currently has `32`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 559 cited IDs; 467 report files; 4 directories
-   without reports; 88 missing directories; 237 archived release reports. The
+   Current fixture inventory: 560 cited IDs; 468 report files; 4 directories
+   without reports; 88 missing directories; 238 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1343,7 +1347,8 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
-- Official `IsInvulnerable` and `IsInvincible` condition aliases now import to the same `is-invulnerable` evaluator. Importer and cross-module tests cover both aliases, positive and negative states, missing targets, invalid-input preservation, and state restoration; the latest strict Paper fixture `srv-paper-invincible-strict-20261110-r3` verifies imported aliases and target evaluation in all 423 release probes. The individual condition is `implemented-runtime`; the wider Conditions catalog remains `mapped-unverified`.
+- Imported Mythic `?targetInWater` and `?targetInLava` conditions now map to the target-specific runtime evaluators. Importer and runtime contract tests cover aliases, positive/negative fluid states, missing targets, and malformed arguments; the strict Paper 1.21.1-133 fixture `srv-paper-target-fluids-import-strict-20261110-r2` verifies live water/lava evaluation and block restoration in the full 423-probe catalog. Same-tick fluid-state reads remain a Paper cache-timing boundary; the complete Conditions catalog remains `mapped-unverified`.
+- Official `IsInvulnerable` and `IsInvincible` condition aliases now import to the same `is-invulnerable` evaluator. Importer and cross-module tests cover both aliases, positive and negative states, missing targets, invalid-input preservation, and state restoration; strict Paper fixture `srv-paper-invincible-strict-20261110-r3` verifies imported aliases and target evaluation in the complete 423-probe release catalog. The individual condition is `implemented-runtime`; the wider Conditions catalog remains `mapped-unverified`.
 - Official [Onground](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/onground) imports now accept `onGround` and `grounded` as aliases for the `on-ground` condition; unknown arguments remain preserved. Importer/runtime tests and strict Paper fixture `srv-paper-grounded-strict-20261110-r3` verify both aliases on real entities, grounded positives, airborne negatives, restoration, and malformed-input preservation in the complete 423-probe release catalog. The individual condition is `implemented-runtime`; the broader Conditions catalog remains `mapped-unverified`.
 - SkillTree YAML snapshots now use a same-directory temporary file, flush its contents, and atomically replace the destination. Unsupported variable types fail before the old snapshot changes, and failed writes clean up their temporary file. The API module's 97 tests pass. Clean Paper fixture `srv-paper-skilltree-atomic-restart-20261110-r2` verifies two-boot UUID state restoration and per-entity death cleanup on Paper 1.21.1-133; its evidence and redacted boot logs are archived above. Complete Mythic SkillTree semantics remain open.
 - MythicCrucible's documented mob `~onTimer:<ticks>` syntax now imports positive integer periods as independent global-clock branches. Same-period actions are grouped; distinct periods retain separate schedules; zero, negative, malformed, and overflowing intervals remain preserved with warnings. Strict Paper fixture `srv-paper-on-timer-import-strict-20261110-r1` verifies 2- and 5-tick alignment, independent execution, invalid-input preservation, and source dispatch in the complete 422-probe release catalog. The trigger has no `@trigger`; the broader Trigger catalog remains `mapped-unverified`.

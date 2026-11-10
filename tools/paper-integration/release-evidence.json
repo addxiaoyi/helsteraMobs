@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-target-fluids-import-strict-20261110-r2",
+    "reportFixtureDirectory": "srv-paper-target-fluids-import-strict-20261110-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-target-fluids-import-strict-20261110-r2.json",
+    "reportSha256": "1acc1bc8f127373babf65e8de4e5f1462caa94a81bd3d6ccbddad2979eb3ed1c",
+    "log": "tools/paper-integration/reports/paper-1.21.1-target-fluids-import-strict-20261110-r2.log.gz",
+    "logSha256": "1a17ee57f7e748b53ac97cb989e8852672e805d4e27cde6672c1d332ce23edc5",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-target-fluids-import-strict-20261110-r2-client-logs.tar.gz",
+    "clientLogSha256": "5af51dcd4c2ec750acf2cb964d2d2313fa8e0049e4a7df186ce9202fa22e192c",
+    "pluginSha256": "eb536ff2ed308e44893e0ecd2d13e730f39f8952aafc2b969b327add939ad0ea",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-invincible-strict-20261110-r3",
     "reportFixtureDirectory": "srv-paper-invincible-strict-20261110-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-invulnerable-condition-strict-20261110-r3.json",
