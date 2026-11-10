@@ -1,4 +1,17 @@
-[{
+[
+  {
+    "fixtureId": "srv-paper-local-difficulty-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-local-difficulty-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-local-difficulty-strict-20261110-r1.json",
+    "reportSha256": "b9f67d908b00da2c3bb9528d43a62001fe17223b35c317d531f108af7cbc4ccd",
+    "log": "tools/paper-integration/reports/paper-1.21.1-local-difficulty-strict-20261110-r1.log.gz",
+    "logSha256": "62cb3f5ed6f05bd847960d07c55bb7f7de39c86a7e6017b33101482ee3dad219",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-local-difficulty-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "86d9d29ccb72f3c2ed9b44affc34588003120b86b5810fb3206926bc7849a051",
+    "pluginSha256": "122fcee8f9eb9584d2ed0a7814d6122453b84fba050e52d006c389f4917b3473",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-imported-signal-strict-20261109-r3",
     "reportFixtureDirectory": "srv-paper-imported-signal-strict-20261109-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-imported-signal-strict-20261109-r3.json",

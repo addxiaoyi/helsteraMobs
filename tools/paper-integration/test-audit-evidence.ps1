@@ -59,6 +59,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedSignalTrigger'; status = 'passed'; observations = @('imported-signal-trigger imported=true mapped=true generic=true selector=true payload=true sender=true trigger=true invalid-preserved=true last-signal=true passed=true')
     }
+    $fullReport.expectedProbeIds += 'localDifficultyCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'localDifficultyCondition'; status = 'passed'; observations = @('local-difficulty-condition imported=true positive=true range-positive=true high-rejected=true fallback-positive=true missing-context-rejected=true invalid-preserved=true passed=true')
+    }
     $fullReport.expectedProbeIds += 'mobOptionsSlimeSplitNatural'
     $fullReport.probes += [pscustomobject]@{
         id = 'mobOptionsSlimeSplitNatural'; status = 'passed'; observations = @('mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=4 control-event=true control-cancelled=false control-event-count=3 protected-dead=true control-dead=true protected-children=0 control-children=3 monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true')

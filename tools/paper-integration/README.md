@@ -38,7 +38,25 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-imported-signal-strict-20261109-r3` passes all
+Latest strict fixture `srv-paper-local-difficulty-strict-20261110-r1` passes all
+416 probes (397 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `localDifficultyCondition` probe verifies imported
+`LocalDifficulty` aliases (`difficulty`, `diff`, and `d`), comparator and range
+evaluation, target-to-caster location fallback, missing-context fail-closed
+behavior, and malformed-input preservation. Report:
+`reports/paper-1.21.1-local-difficulty-strict-20261110-r1.json`;
+server log:
+`reports/paper-1.21.1-local-difficulty-strict-20261110-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-local-difficulty-strict-20261110-r1-client-logs.tar.gz`.
+Report SHA-256: `b9f67d908b00da2c3bb9528d43a62001fe17223b35c317d531f108af7cbc4ccd`;
+server log SHA-256: `62cb3f5ed6f05bd847960d07c55bb7f7de39c86a7e6017b33101482ee3dad219`;
+client log SHA-256: `86d9d29ccb72f3c2ed9b44affc34588003120b86b5810fb3206926bc7849a051`;
+plugin SHA-256: `122fcee8f9eb9584d2ed0a7814d6122453b84fba050e52d006c389f4917b3473`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-imported-signal-strict-20261109-r3` passes all
 415 probes (396 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. Its imported `~onSignal` probe verifies wildcard and named
 selectors, payload propagation, sender and `@trigger` context, payload
@@ -57,7 +75,7 @@ original run logs.
 
 Previous strict fixture `srv-paper-on-kill-import-strict-20261109-r4` passes all
 414 probes (395 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. Latest strict report has 414 probes, zero incomplete. Its
+Paper 1.21.1-133. That strict report has 414 probes, zero incomplete. Its
 imported `~onKill` and `~onKillPlayer` probes verify `imported=true`,
 `mapped=true`, managed killer-side dispatch, player-victim filtering, and
 `PlayerKills` positive/negative assertions. Report:
@@ -262,7 +280,7 @@ Report SHA-256: `feb7799cbbcb65ef558060b07e677545aae4e7e7c64c1be54a95604146c8599
 server log SHA-256: `affaeaf4b94b359a05e6f49aac3814eb62f02d4480f82e1f36e148eae2663326`;
 client log SHA-256: `5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`;
 plugin SHA-256: `d824761cdb575b50c5061706c7fde362b80f521aa9d4c46d68c296b7c64c343f`.
-Latest strict report has 409 probes, zero incomplete. Archived logs redact web
+That strict report has 409 probes, zero incomplete. Archived logs redact web
 token query values; the source fixture retains the original run logs.
 
 Previous strict fixture `srv-paper-context-relations-strict-20261108-r2`

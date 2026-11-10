@@ -2,9 +2,28 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-imported-signal-strict-20261109-r3` passes all
+Latest strict fixture `srv-paper-local-difficulty-strict-20261110-r1` passes all
+416 release probes (397 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Latest strict report has 416 probes, zero incomplete.
+Its `localDifficultyCondition` evidence
+verifies imported `LocalDifficulty` aliases (`difficulty`, `diff`, and `d`),
+comparator and range evaluation, target-to-caster location fallback,
+missing-context fail-closed behavior, and malformed-input preservation.
+Report:
+`tools/paper-integration/reports/paper-1.21.1-local-difficulty-strict-20261110-r1.json`
+(SHA-256 `b9f67d908b00da2c3bb9528d43a62001fe17223b35c317d531f108af7cbc4ccd`).
+Compressed server log SHA-256:
+`62cb3f5ed6f05bd847960d07c55bb7f7de39c86a7e6017b33101482ee3dad219`.
+Client log archive SHA-256:
+`86d9d29ccb72f3c2ed9b44affc34588003120b86b5810fb3206926bc7849a051`.
+Plugin SHA-256:
+`122fcee8f9eb9584d2ed0a7814d6122453b84fba050e52d006c389f4917b3473`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-imported-signal-strict-20261109-r3` passes all
 415 release probes (396 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. Latest strict report has 415 probes, zero incomplete.
+incomplete) on Paper 1.21.1-133. That strict report has 415 probes, zero incomplete.
 Its imported `~onSignal` evidence records
 wildcard and named selector dispatch, payload propagation, sender and
 `@trigger` context, `<ctx.payload>`/`<skill.payload>` placeholders,
@@ -23,7 +42,7 @@ Plugin SHA-256:
 
 Previous strict fixture `srv-paper-on-kill-import-strict-20261109-r4` passes all
 414 release probes (395 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. Latest strict report has 414 probes, zero incomplete.
+incomplete) on Paper 1.21.1-133. That strict report has 414 probes, zero incomplete.
 Its imported `~onKill` and `~onKillPlayer` evidence records
 `imported=true`, `mapped=true`, real killer-side death dispatch, player-victim
 filtering, and managed-instance `PlayerKills` positive/negative checks.
@@ -1066,7 +1085,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-imported-signal-strict-20261109-r3` has 415 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-local-difficulty-strict-20261110-r1` has 416 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1075,15 +1094,15 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 ### Current Development Goals
 
-This is a partial parity release. The matrix currently has `36`
+This is a partial parity release. The matrix currently has `35`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-10). The full remaining work is:
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 541 cited IDs; 449 report files; 4 directories
-   without reports; 88 missing directories; 220 archived release reports. The
+   Current fixture inventory: 542 cited IDs; 450 report files; 4 directories
+   without reports; 88 missing directories; 221 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1161,7 +1180,7 @@ the entire MythicMobs feature catalog.
 - Official `IsUsingSpyglass` and `IsScoping` now have strict importer-to-runtime evidence. Both aliases pass for a real online Player actively using a Spyglass, then reject the inactive state, a Zombie target, and malformed parameters through `SkillService`. Fixture `srv-paper-is-spyglass-import-strict-20261106-r1` completes the 360-probe release catalog on Paper 1.21.1-133; the Conditions catalog remains open.
 - Official `IsFrozen` and `Frozen` aliases now have strict importer-to-runtime evidence: `?isFrozen` and `?frozen` both pass on a real frozen Zombie, fail after thawing, and reject malformed arguments through `SkillService`. Fixture `srv-paper-is-frozen-import-strict-20261106-r2` completes the full 359-probe release catalog on Paper 1.21.1-133; the broader Conditions catalog remains open.
 - Official `ServerNmsVersion`, `servernms`, and `nmsversion` now import `version`/`sv`/`v`, including the documented `v1_19_R1_2` default, and evaluate versioned CraftBukkit packages or the known Paper 1.20.x/1.21.x Minecraft-to-NMS mapping. Unit and migration tests cover aliases, defaults, malformed values, 1.21.1/1.21.4/1.21.11 mappings, and unknown-version fail-closed behavior; a dedicated external-NMS Paper fixture is still required, so the matrix row remains `mapped-unverified`.
-- Official `LocalDifficulty` now imports `difficulty`/`diff`/`d` into `local-difficulty`, validates finite comparators and ordered ranges, and preserves unknown, duplicate, empty, and malformed source arguments. Runtime evaluation prefers the target location, falls back to the caster/instance location, and reads Paper's effective local difficulty through an injectable lookup or NMS reflection; unavailable locations, reflection failures, and non-finite values fail closed. Migration, runtime-boundary, SkillService, and cross-module tests cover aliases and boundaries, but a dedicated real-Paper fixture is still required, so the matrix row remains `mapped-unverified`.
+- Official `LocalDifficulty` now imports `difficulty`/`diff`/`d` into `local-difficulty`, validates finite comparators and ordered ranges, and preserves unknown, duplicate, empty, and malformed source arguments. Runtime evaluation prefers the target location, falls back to the caster/instance location, and reads Paper's effective local difficulty through an injectable lookup or NMS reflection; unavailable locations, reflection failures, and non-finite values fail closed. Migration, runtime-boundary, SkillService, cross-module, and strict Paper tests cover aliases, boundaries, fallback, missing context, and invalid input. Fixture `srv-paper-local-difficulty-strict-20261110-r1` completes the 416-probe release catalog, so the individual matrix row is now `implemented-runtime` while the broader Conditions catalog remains `mapped-unverified`.
 - `@PlayersInWorld` now selects valid online players in the caster's world without implicit faction filtering; `@PlayersOnServer` and its `@server`/`@everyone` aliases select online players across worlds. `targetself=true` includes the caster. Unit/importer coverage and strict Paper fixture `srv-paper-targeter-players-strict-20261102-r1` verify filtering, server population and alias equivalence in a complete 272-probe report; full targeter-catalog and cross-world client coverage remain open.
 - Generic targeter `skipTargetsUpToIndex` (`stuti`) now skips entries after sorting and before applying `limit`; negative or malformed values fail closed. Focused API, importer, Paper self-test, and report-contract coverage are included. Strict Paper fixture `srv-paper-targeter-skip-index-strict-20261102-r3` verifies the selector behavior on Paper 1.21.1-133; its archived 271-probe report has 259 passed, 12 expected negative controls, and zero incomplete. The complete official targeter catalog remains open.
 - Generic targeter sorting now implements `NONE`, `RANDOM`, `NEAREST`/`CLOSEST`, `FURTHEST`, health and threat orderings, plus `OLDEST`/`NEWEST`; unknown modes and unavailable or non-finite threat values fail closed. API tests cover health, age, threat-provider boundaries, unsupported modes, and conditional-target skip/limit ordering. Strict Paper fixture `srv-paper-targeter-sorting-strict-20261102-r1` verifies real health and age ordering; its archived 272-probe report has 260 passed, 12 expected negative controls, and zero incomplete. The full official targeter catalog remains open.
@@ -1174,7 +1193,7 @@ the entire MythicMobs feature catalog.
 - Mechanics: `remove`, `suicide`, target-aware `kill`, bounded `dot` damage-over-time, radial `damage-melee` with caster exclusion, `setnameplate`, `equip`, `set-name`, `set-item`/`set-offhand`/`set-armor`, `set-health`, `set-max-health`, `modify-max-health`, `feed`, `swing` (main/off-hand), `disarm`/`remove-held-item`, `clear-inventory`, `set-material-cooldown`, `set-game-mode`, `jump`, target-aware `force-pull`, `addtag`/`removetag` scoreboard tags (including targeters), `setscore`/`addscore` instance scores, Mythic `setvariable`/`variableunset`/`variableadd`/`variablemath`, `setvariablelocation`/`locationunset`, `signal`/`~onSignal`, Mythic `shoot`/`shootprojectile`, `setintent`, `command`/`commandself`/`commandtarget`, `set-stance`, `randomskill`, `leap`, `set-tick-speed`, `pull`, actionbar, full `title`/`subtitle`/timing delivery, target-aware `damage`/`damage-percent`/`message`/`explode` multi-target dispatch, caster movement `dash`/`blink` with direction modes and placeholder distances, target-aware entity state actions including `set-ai`/`set-gravity`/`set-silent`/`set-collidable`/`set-sneaking`/`set-gliding`/`set-swimming`/`set-fire`/`clear-fire`/`invisible`/`glowing`/`set-invulnerable`, player `set-sprinting`/`set-flying`/`set-walk-speed`, no-damage-tick controls, `look-at`, `set-rotation`, `give-item`, `take-item`, `set-block`, `break-block`, `drop-item`, potion effects, teleport, mount/dismount, `cancel-event`, and custom item resolver integration.
 - Scoreboard tag evidence: exploratory Paper 1.21.11 r22 passes real caster/targeter `addtag`/`removetag` mutations; the current strict Paper 1.21.1-133 aggregate also completes the registered tag probes.
 - DoT evidence: exploratory Paper self-test verifies bounded `dot` damage across multiple intervals and confirms no damage after `duration`; the current strict Paper 1.21.1-133 aggregate completes the registered DoT probe.
-- `LocalDifficulty` now evaluates finite comparator/range expressions against the target location, falling back to the caster/instance location; migration aliases are `difficulty`, `diff`, and `d`, while missing Paper/NMS context fails closed. The importer, runtime, SkillService, and cross-module contracts pass, but the condition remains `mapped-unverified` until a dedicated real-Paper fixture is archived.
+- `LocalDifficulty` now evaluates finite comparator/range expressions against the target location, falling back to the caster/instance location; migration aliases are `difficulty`, `diff`, and `d`, while missing Paper/NMS context fails closed. The importer, runtime, SkillService, cross-module contracts, and strict Paper fixture `srv-paper-local-difficulty-strict-20261110-r1` pass, including positive/range/high-value outcomes, caster fallback, missing-context rejection, and invalid-input preservation. The individual condition is `implemented-runtime`; the broader Conditions catalog remains `mapped-unverified`.
 - Conditions and Aura actions: world/biome/time/weather, `night`/`raining`/`thundering`, health/distance/permission/stance/entity state (including caster and target `on-ground`, `has-ai`, `has-gravity`, `is-silent`, `is-dead`, `is-alive`, `target-is-alive`, `is-valid`, `is-collidable`, and `has-offhand` from Bukkit entity state), `ownerIsPlayer`, exact faction conditions (`faction`, `targetfaction`, `samefaction`, `differentfaction`), Mythic `isChild`/`child` parent-relation semantics distinct from `isBaby` age checks (strict Paper fixture `srv-paper-is-child-import-strict-20261105-r1` verifies the importer-to-SkillService path), explicit `target-has-tag`/`targetHasScoreboardTag`, strict target-only permission/game-mode/food/air/item/potion/holding/wearing conditions, vehicle/passenger aliases (`hasPassenger`, `isVehicle`, `targetHasPassenger`, `targetIsVehicle`), `branch-unlocked`/`branch-locked` SkillTree gates, `falling`, `drowning`, `target-within`, equality/inequality comparators for health/target-health/distance/light-level, variables, composition, `food-level`, `has-item`, `air-level`, `damage-cause`, `damage-amount`, and `is-cancelled`. Mythic `HasAura`/`HasBuff`/`HasDebuff`, `targetHasAuras`, stack, and type conditions read named runtime Aura state; target Aura checks require an explicit target. `AuraRemove`, `RemoveAura`, `RemoveBuff`, and `RemoveDebuff` remove partial or all stacks by name; omitted names use `default`, and `ANY` clears all target auras. Strict Paper fixture `srv-paper-aura-target-strict-20261106-r1` verifies imported target Aura checks and removal paths. Aura visual/lifecycle features remain unsupported and are preserved with warnings.
 - Mythic `isInAudience` aliases bind to a runtime condition, and `?@condition` filters each selected entity after its targeter runs. Strict Paper fixture `srv-paper-execution-audience-strict-20261106-r1` verifies aliases, membership boundaries, and per-target filtering. Fixture `srv-paper-execution-audience-mutation-strict-20261106-r1` verifies imported skill audience configuration and `AddToAudience`/`RemoveFromAudience`/`UnsetAudience` against a managed model, including explicit-empty behavior, entity PDC writes, and two-client visibility changes. Strict fixture `srv-paper-execution-audience-mob-strict-20261106-r5` verifies imported Mob `Options.ExecutionAudience` through production mob spawn, `@PlayersInRadius` selection, PDC persistence, and two-client visibility; it verifies targeter-selected mob removal/addition with `@EntitiesInRadius`, persisted empty/restored audiences, visibility transitions, and imported summon audience inheritance with member-only model visuals. The two-boot Paper integration report confirms the same persistent entity UUID and restored PDC/runtime audience after restart. Post-restart client visibility remains unverified. The complete MythicMobs catalog remains in progress; see the [restart evidence report](tools/paper-integration/reports/paper-1.21.1-execution-audience-restart-20261106-r3.json).
 - Condition migration aliases now also cover Mythic `inCombat`, `playersInRadius`, `entitiesInRadius`, `mobsInRadius`, `randomChance`, `targetCount`, and `hungerBelow`; `mobsInRadius` uses a mob-only runtime evaluator.
