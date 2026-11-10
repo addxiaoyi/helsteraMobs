@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-health-boundaries-strict-20261110-r2",
+    "reportFixtureDirectory": "srv-paper-health-boundaries-strict-20261110-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-health-import-boundaries-strict-20261110-r2.json",
+    "reportSha256": "5df86825e46077bbb3edd8f8e9acb922f8dc20337ab52dea81ecb14792d8ceca",
+    "log": "tools/paper-integration/reports/paper-1.21.1-health-import-boundaries-strict-20261110-r2.log.gz",
+    "logSha256": "f4a6062e23bef1f0b136e452619a96ee0e5b3df529f8366a2898d09836fe2c9d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-health-import-boundaries-strict-20261110-r2-client-logs.tar.gz",
+    "clientLogSha256": "b1949326d837b7ab81405e58d36219ad097112df09696519c4f2e0bc6f88802c",
+    "pluginSha256": "780d4172c98822cedbec1af8ae01f4d8982b08b90b82c52de164ed9454821087",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-armor-toughness-stats-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-armor-toughness-stats-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-armor-toughness-stats-imported-strict-20261110-r1.json",

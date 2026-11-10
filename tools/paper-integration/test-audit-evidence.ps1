@@ -496,6 +496,10 @@ try {
     if ($dropItemOwnerProbe.Count -ne 1) { throw 'Synthetic release report must contain dropItemImported.' }
     $dropItemOwnerProbe[0].observations = @(
         'drop-item-import valid=true missing-rejected=true invalid-preserved=true owner=true target-owner=true')
+    $healthImportedProbe = @($fullReport.probes | Where-Object id -eq 'healthImportedCondition')
+    if ($healthImportedProbe.Count -ne 1) { throw 'Synthetic release report must contain healthImportedCondition.' }
+    $healthImportedProbe[0].observations = @(
+        'health-imported result=true comparisons=true duplicate-rejected=true overflow-preserved=true invalid-preserved=true')
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

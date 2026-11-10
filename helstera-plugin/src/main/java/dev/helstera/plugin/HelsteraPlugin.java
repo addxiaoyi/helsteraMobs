@@ -5779,22 +5779,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             "?health{h=" + currentHealth + "}",
                             "?health{h=<" + currentHealth + "}",
                             "?health{h=>" + currentHealth + ";ia=true}",
+                            "?health{>" + (currentHealth + 3.0) + ";ia=true}",
                             "?healthpercent{p=" + (currentHealth / maxHealth) + "}",
                             "?healthpercent{p=" + (currentHealth / maxHealth * 100.0) + "%}"
                     };
-                    boolean[] healthExpected = {true, false, true, true, true};
+                    boolean[] healthExpected = {true, false, true, true, true, true};
                     boolean importedHealth = true;
                     for (int i = 0; i < healthSources.length; i++) {
                         var mapped = dev.helstera.migration.importer.MmConditions.translate(healthSources[i]);
                         importedHealth &= mapped.translated() && behaviors.testCondition(
                                 skills.bindCondition(mapped.condition()), context) == healthExpected[i];
                     }
-                    String invalidHealth = "?health{h=10;ia=invalid}";
-                    var invalidMapped = dev.helstera.migration.importer.MmConditions.translate(invalidHealth);
-                    boolean invalidPreserved = !invalidMapped.translated()
-                            && invalidHealth.equals(invalidMapped.condition());
-                    getLogger().info("health-imported result=" + (importedHealth && invalidPreserved)
-                            + " comparisons=" + importedHealth + " invalid-preserved=" + invalidPreserved);
+                    logImportedHealthBoundarySelfTest(importedHealth);
                     String[] rangeSources = {
                             "?health{h=" + currentHealth + "to" + (currentHealth + 1) + "}",
                             "?health{h=" + (currentHealth - 1) + "to" + currentHealth + "}",
@@ -10949,6 +10945,31 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " passengers=" + passengers + " mount=" + mount + " vehicle=" + vehicle
                 + " owner-location=" + ownerLocation + " parent-location=" + parentLocation
                 + " invalid-rejected=" + invalidRejected + " passed=" + passed);
+    }
+
+    private void logImportedHealthBoundarySelfTest(boolean importedHealthComparisons) {
+        boolean duplicateHealthRejected = true;
+        for (String source : new String[]{"?health{h=10;amount=11}",
+                "?health{h=10;ia=true;includeabsorption=false}"}) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            duplicateHealthRejected &= !mapped.translated() && source.equals(mapped.condition());
+        }
+        boolean overflowPreserved = true;
+        for (String source : new String[]{"?health{h=1e309}",
+                "?healthpercent{p=1e308}", "?healthpercent{p=1e307to1e308}"}) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            overflowPreserved &= !mapped.translated() && source.equals(mapped.condition());
+        }
+        String invalidHealth = "?health{h=10;ia=invalid}";
+        var invalidMapped = dev.helstera.migration.importer.MmConditions.translate(invalidHealth);
+        boolean invalidPreserved = !invalidMapped.translated()
+                && invalidHealth.equals(invalidMapped.condition());
+        getLogger().info("health-imported result=" + (importedHealthComparisons && duplicateHealthRejected
+                && overflowPreserved && invalidPreserved)
+                + " comparisons=" + importedHealthComparisons
+                + " duplicate-rejected=" + duplicateHealthRejected
+                + " overflow-preserved=" + overflowPreserved
+                + " invalid-preserved=" + invalidPreserved);
     }
 
     private boolean runImportedPopulationConditionsSelfTest(

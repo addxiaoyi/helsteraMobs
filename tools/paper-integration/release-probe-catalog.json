@@ -897,7 +897,8 @@
     },
     {
       "id": "healthImportedCondition",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservation": "health-imported result=true comparisons=true duplicate-rejected=true overflow-preserved=true invalid-preserved=true"
     },
     {
       "id": "healthRangeImportedCondition",

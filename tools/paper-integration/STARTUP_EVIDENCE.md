@@ -1,6 +1,23 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-armor-toughness-stats-strict-20261110-r1` passed the
+Latest fixture `srv-paper-health-boundaries-strict-20261110-r2` passed the
+full strict gate on Paper 1.21.1-133: 421 registered probes, 402 passed, 19
+expected rejections, and zero failed or incomplete. Its
+`healthImportedCondition` probe verifies absolute and percentage comparisons,
+positional arguments with absorption, duplicate-argument rejection, and
+preservation of overflowing and invalid inputs. Report:
+[paper-1.21.1-health-import-boundaries-strict-20261110-r2.json](reports/paper-1.21.1-health-import-boundaries-strict-20261110-r2.json), SHA-256:
+`5df86825e46077bbb3edd8f8e9acb922f8dc20337ab52dea81ecb14792d8ceca`.
+Compressed server log SHA-256:
+`f4a6062e23bef1f0b136e452619a96ee0e5b3df529f8366a2898d09836fe2c9d`.
+Client log archive SHA-256:
+`b1949326d837b7ab81405e58d36219ad097112df09696519c4f2e0bc6f88802c`.
+Plugin SHA-256:
+`780d4172c98822cedbec1af8ae01f4d8982b08b90b82c52de164ed9454821087`.
+The Conditions catalog remains `mapped-unverified` beyond the cases tested
+here; archived logs redact web-token query values.
+
+Previous fixture `srv-paper-armor-toughness-stats-strict-20261110-r1` passed the
 full strict gate on Paper 1.21.1-133: 421 registered probes, 402 passed, 19
 expected rejections, and zero failed or incomplete. Its
 `armorToughnessStatsImported` probe runs the documented Mythic
