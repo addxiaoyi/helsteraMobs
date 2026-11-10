@@ -1,18 +1,20 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-tameable-strict-20261110-r2` passed the full strict
-gate on Paper 1.21.1-133: 428 registered probes, 409 passed, 19 expected
-rejections, and zero failed or incomplete. Its `tameableOptionsImported` probe
-verifies imported allow/deny/default/fallback behavior, native behavior for
-unmanaged instances, and wrong-type/invalid preservation. Plugin SHA-256:
-`eff1862db4f2254510cb26af88872d96deb3970a05b0c52d800b12e355952a50`. Full
+Latest fixture `srv-paper-default-mob-options-strict-20261110-r1` passed the
+full strict gate on Paper 1.21.1-133: 428 registered probes, 409 passed, 19
+expected rejections, and zero failed or incomplete. `importedMobDefaults`
+verifies the three documented global defaults, explicit precedence, and
+unsupported-key preservation through production mob spawning.
+`tameableOptionsImported` confirms that unsupported global `Tameable` does not
+override the built-in false policy. Plugin SHA-256:
+`118f05ec5b5179e394f21dfc9d9c26df80cdae92fa6747b42e176332f024befa`. Full
 catalog report:
-[paper-1.21.1-tameable-strict-20261110-r2.json](reports/paper-1.21.1-tameable-strict-20261110-r2.json), SHA-256:
-`9fc4248829cfb80b19c3fa3ddef59536a74b4247c5d91bb027b00301116f3a7b`.
+[paper-1.21.1-default-mob-options-strict-20261110-r1.json](reports/paper-1.21.1-default-mob-options-strict-20261110-r1.json), SHA-256:
+`1cc0ac63d3865f982ab1a9ab4f518bf66562cd81ab000f805813bd009fcae7c7`.
 Compressed server log SHA-256:
-`e2c1e723b29b2243c044faf6d8cb2ca1cae327b7ef7b68ac2ca33b96aa13f84d`.
+`f0c79ee1fe5e9d614b890476fcb566dda1875f82b41bb66ee4425fd84383c6a5`.
 Client log archive SHA-256:
-`ced4d643c3da41e8b532c35324a9da2f92531721b29384f3d34006afd87576f7`.
+`b39566c19812f32a3c226a848e9490a61588357fa07b15fede7c9d81527daeed`.
 Archived logs redact web-token values.
 
 Previous fixture `srv-paper-interaction-options-strict-20261110-r2` passed
@@ -830,12 +832,12 @@ Previous fixture `srv-paper-execution-audience-mob-strict-20261106-r3` passed
 the imported mob audience spawn and targeter-based audience mutation paths;
 summon inheritance was added to the release catalog and proven in r5.
 
-Previous fixture `srv-paper-imported-mob-defaults-strict-20261106-r4` passed
-the full strict gate on Paper 1.21.1-133: 373 registered probes, 354 passed, 19
-expected rejections, and zero incomplete. It verifies Mythic mob option defaults
-and explicit overrides through real Paper entities, natural Potion consumption
-and expiry, client movement beyond `SpawningDistance`, web reload, and dual-client
-menu actions. Its original evidence remains in `release-evidence.json`.
+Historical fixture `srv-paper-imported-mob-defaults-strict-20261106-r4` passed
+373 probes. Its `DefaultMobOptions` assertions predate the official source
+audit and incorrectly applied unsupported global keys; the latest fixture above
+is the valid evidence for those semantics. The run also recorded Potion
+consumption/expiry, movement beyond `SpawningDistance`, web reload, and
+dual-client menu actions. Its original report remains historical evidence.
 
 Previous fixture `srv-paper-imported-mob-defaults-strict-20261106-r2` passed
 the full strict gate on Paper 1.21.1-133: 372 registered probes, 353 passed,

@@ -4705,6 +4705,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
             sourceRoot = Files.createTempDirectory("helstera-tameable-options-import-");
             Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Files.writeString(sourceRoot.resolve("config-mobs.yml"), """
+                    Configuration:
+                      DefaultMobOptions:
+                        Tameable: true
+                    """);
             Path source = sourceDirectory.resolve("tameable-options.yml");
             String allowedId = "ImportedTameableAllowed_" + suffix;
             String deniedId = "ImportedTameableDenied_" + suffix;
@@ -4781,10 +4786,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var wrongType = spawnedEntity.apply(spawnedIds.get(wrongTypeId));
             var invalidConfig = mobConfig(targetIds.get(invalidId));
             var wrongConfig = mobConfig(targetIds.get(wrongTypeId));
+            var defaultConfig = mobConfig(targetIds.get(defaultId));
             var invalidUnsupported = invalidConfig == null ? null
                     : invalidConfig.getConfigurationSection("entity.unsupported.Options");
             var wrongUnsupported = wrongConfig == null ? null
                     : wrongConfig.getConfigurationSection("entity.unsupported.Options");
+            var defaultUnsupported = defaultConfig == null ? null
+                    : defaultConfig.getConfigurationSection("mob.unsupported.DefaultMobOptions");
 
             unmanaged = origin.getWorld().spawn(origin.clone().add(18, 0, 0), org.bukkit.entity.Wolf.class);
             var allowedEvent = allowed == null ? null
@@ -4808,12 +4816,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && !wrongConfig.contains("entity.tameable");
             boolean invalidPreserved = invalidUnsupported != null
                     && "maybe".equalsIgnoreCase(invalidUnsupported.getString("Tameable"));
+            boolean globalTameableIgnored = defaultConfig != null
+                    && !defaultConfig.getBoolean("entity.tameable", true)
+                    && defaultUnsupported != null && defaultUnsupported.getBoolean("Tameable");
             boolean observationsPassed = allowed != null && denied != null && defaultWolf != null && invalid != null
                     && allowedEvent != null && !allowedEvent.isCancelled()
                     && deniedEvent != null && deniedEvent.isCancelled()
                     && defaultEvent != null && defaultEvent.isCancelled()
                     && invalidEvent != null && invalidEvent.isCancelled()
-                    && !unmanagedEvent.isCancelled() && wrongTypePreserved && invalidPreserved;
+                    && !unmanagedEvent.isCancelled() && wrongTypePreserved && invalidPreserved
+                    && globalTameableIgnored;
             getLogger().info("[自检] tameable-options result=" + observationsPassed
                     + " imported=" + (allowed != null && denied != null && defaultWolf != null && invalid != null)
                     + " allow-cancelled=" + (allowedEvent != null && allowedEvent.isCancelled())
@@ -4822,7 +4834,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " invalid-cancelled=" + (invalidEvent != null && invalidEvent.isCancelled())
                     + " unmanaged-cancelled=" + unmanagedEvent.isCancelled()
                     + " wrong-type-preserved=" + wrongTypePreserved
-                    + " invalid-preserved=" + invalidPreserved);
+                    + " invalid-preserved=" + invalidPreserved
+                    + " global-default-ignored=" + globalTameableIgnored);
         } catch (Throwable failure) {
             getLogger().warning("[自检] tameable-options result=false imported=false error=" + failure);
         } finally {
@@ -5235,6 +5248,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             Files.writeString(configuredRoot.resolve("config-mobs.yml"), """
                     Configuration:
                       DefaultMobOptions:
+                        Despawn: CHUNK
+                        PreventOtherDrops: true
+                        PreventVanillaDamage: true
                         PreventItemPickup: false
                         NoDamageTicks: 19
                         PreventLeashing: false
@@ -5251,6 +5267,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     Explicit_%1$s:
                       Type: ZOMBIE
                       Options:
+                        Despawn: NEVER
+                        PreventOtherDrops: false
+                        PreventVanillaDamage: false
                         PreventItemPickup: true
                         NoDamageTicks: 27
                         PreventLeashing: true
@@ -5329,6 +5348,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     configuredRoot.resolve("config-mobs.yml").toFile());
             boolean globalTransformationDefault = globalDefaultsConfig.getBoolean(
                     "Configuration.DefaultMobOptions.PreventTransformation", true);
+            var globalConfig = globalId == null ? null : mobConfig(globalId);
+            var globalUnsupportedDefaults = globalConfig == null ? null
+                    : globalConfig.getConfigurationSection("mob.unsupported.DefaultMobOptions");
+            boolean globalUnsupportedPreserved = globalUnsupportedDefaults != null
+                    && globalUnsupportedDefaults.contains("PreventItemPickup")
+                    && globalUnsupportedDefaults.contains("NoDamageTicks")
+                    && globalUnsupportedDefaults.contains("PreventLeashing")
+                    && globalUnsupportedDefaults.contains("PreventTransformation");
             boolean globalTransformationDefaultIgnored = converted.stream().anyMatch(entry ->
                     configuredSource.toString().equals(entry.get("source-file"))
                             && "MythicMobs.Options.PreventTransformation.default".equals(entry.get("source-key"))
@@ -5378,19 +5405,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean builtInDefaults = builtInMob != null && !builtInMob.getCanPickupItems()
                     && builtInMob.getNoDamageTicks() == 10
                     && builtIn.options().preventLeashing()
-                    && builtIn.options().preventTransformation();
-            boolean globalDefaults = globalMob != null && globalMob.getCanPickupItems()
-                    && globalMob.getNoDamageTicks() == 19
-                    && !global.options().preventLeashing()
+                    && builtIn.options().preventTransformation()
+                    && "NORMAL".equals(builtIn.options().despawnMode());
+            boolean globalDefaults = globalMob != null && !globalMob.getCanPickupItems()
+                    && globalMob.getNoDamageTicks() == 10
+                    && global.options().preventLeashing()
                     && !global.options().preventJockeyMounts()
                     && !globalTransformationDefault
                     && globalTransformationDefaultIgnored
-                    && global.options().preventTransformation();
+                    && global.options().preventTransformation()
+                    && globalUnsupportedPreserved
+                    && "CHUNK".equals(global.options().despawnMode())
+                    && global.options().preventOtherDrops()
+                    && global.options().preventVanillaDamage();
             boolean explicitOverrides = explicitMob != null && explicitMob.getCanPickupItems()
                     && explicitMob.getNoDamageTicks() == 27
                     && explicit.options().preventLeashing()
                     && explicit.options().preventJockeyMounts()
-                    && !explicit.options().preventTransformation();
+                    && !explicit.options().preventTransformation()
+                    && "NEVER".equals(explicit.options().despawnMode())
+                    && !explicit.options().preventOtherDrops()
+                    && !explicit.options().preventVanillaDamage();
             boolean pickupDisabledOverrides = pickupDisabledMob != null
                     && !pickupDisabledMob.getCanPickupItems();
             boolean wrongPickupTypePreserved = wrongPickupEntity instanceof org.bukkit.entity.ArmorStand
@@ -5420,14 +5455,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " imported=" + importedMappings
                     + " builtin-pickup-disabled=" + (builtInMob != null && !builtInMob.getCanPickupItems())
                     + " builtin-no-damage-ticks=" + (builtInMob != null && builtInMob.getNoDamageTicks() == 10)
+                    + " builtin-despawn-normal=" + (builtIn != null
+                            && "NORMAL".equals(builtIn.options().despawnMode()))
                     + " builtin-prevent-leashing=" + (builtIn != null && builtIn.options().preventLeashing())
                     + " builtin-prevent-transformation=" + (builtIn != null && builtIn.options().preventTransformation())
-                    + " global-pickup-enabled=" + (globalMob != null && globalMob.getCanPickupItems())
-                    + " global-no-damage-ticks=" + (globalMob != null && globalMob.getNoDamageTicks() == 19)
+                    + " global-pickup-disabled=" + (globalMob != null && !globalMob.getCanPickupItems())
+                    + " global-no-damage-ticks=" + (globalMob != null && globalMob.getNoDamageTicks() == 10)
                     + " global-prevent-leashing=" + (global != null && global.options().preventLeashing())
                     + " global-default-prevent-transformation=" + globalTransformationDefault
                     + " global-default-ignored=" + globalTransformationDefaultIgnored
                     + " global-prevent-transformation=" + (global != null && global.options().preventTransformation())
+                    + " global-despawn-chunk=" + (global != null
+                            && "CHUNK".equals(global.options().despawnMode()))
+                    + " global-prevent-other-drops=" + (global != null && global.options().preventOtherDrops())
+                    + " global-prevent-vanilla-damage=" + (global != null
+                            && global.options().preventVanillaDamage())
+                    + " global-unsupported-preserved=" + globalUnsupportedPreserved
                     + " explicit-pickup-enabled=" + (explicitMob != null && explicitMob.getCanPickupItems())
                     + " explicit-pickup-disabled=" + (pickupDisabledMob != null
                             && !pickupDisabledMob.getCanPickupItems())
@@ -5439,6 +5482,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " explicit-prevent-leashing=" + (explicit != null && explicit.options().preventLeashing())
                     + " explicit-prevent-transformation-disabled="
                     + (explicit != null && !explicit.options().preventTransformation())
+                    + " explicit-despawn-never=" + (explicit != null
+                            && "NEVER".equals(explicit.options().despawnMode()))
+                    + " explicit-prevent-other-drops-disabled=" + (explicit != null
+                            && !explicit.options().preventOtherDrops())
+                    + " explicit-prevent-vanilla-damage-disabled=" + (explicit != null
+                            && !explicit.options().preventVanillaDamage())
                     + " builtin-transform-cancelled=" + builtInTransformationCancelled
                     + " global-transform-cancelled=" + globalTransformationCancelled
                     + " explicit-transform-allowed=" + explicitTransformationAllowed);

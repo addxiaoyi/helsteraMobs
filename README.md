@@ -13,15 +13,26 @@ release probes on Paper 1.21.1-133. See the [strict report](tools/paper-integrat
 
 Mythic `Options.Tameable` now controls player taming independently from
 `Options.Tamed`, which still sets the entity's current tamed state. Imported
-Wolves, Cats, and Horses honor explicit and global defaults; compatible types
-use Mythic's built-in `false` default, while wrong-type and malformed values
-remain visible in migration output. Paper cancels tame events only for managed
-mobs whose policy is false, preserving native behavior for unconfigured
-instances. Strict fixture `srv-paper-tameable-strict-20261110-r2` verifies
-allow/deny/default/fallback behavior and controls in the full release catalog.
-See the [strict report](tools/paper-integration/reports/paper-1.21.1-tameable-strict-20261110-r2.json),
+Wolves, Cats, and Horses honor explicit `Options.Tameable` values; compatible
+types use Mythic's built-in `false` default, while wrong-type and malformed values
+remain visible in migration output. `DefaultMobOptions.Tameable` is not an
+official global setting and is preserved without being applied. Paper cancels
+tame events only for managed mobs whose policy is false, preserving native
+behavior for unconfigured instances. Strict fixture
+`srv-paper-tameable-strict-20261110-r2` verifies allow/deny/default/fallback
+behavior and controls in the full release catalog. See the
+[strict report](tools/paper-integration/reports/paper-1.21.1-tameable-strict-20261110-r2.json),
 [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and
 [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+
+Mythic `config-mobs.yml` `DefaultMobOptions` now applies only the documented
+global keys `Despawn`, `PreventOtherDrops`, and `PreventVanillaDamage`; explicit
+mob values take precedence. Unsupported global keys are preserved with
+migration warnings and do not change built-in behavior. Strict fixture
+`srv-paper-default-mob-options-strict-20261110-r1` verifies these defaults,
+overrides, and preservation through Paper mob spawning. See the
+[strict report](tools/paper-integration/reports/paper-1.21.1-default-mob-options-strict-20261110-r1.json)
+and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
 Mythic Interaction `Height`, `Width`, and `Responsive` now import only for
 `INTERACTION` entities. The runtime applies Mythic's documented defaults
@@ -729,14 +740,13 @@ Report:
 Plugin SHA-256:
 `5aa37479c888f3e77aaef920ee0920a32b97d16cf7df6f6cd047d59334dc9e0f`.
 
-Previous strict fixture `srv-paper-imported-mob-defaults-strict-20261106-r4`
-passed all 373 probes (354 passed, 19 expected rejections, zero incomplete).
-It verifies Mythic mob option defaults through import, configuration, and real
-Paper entities, plus natural Potion consumption/expiry, client-driven
-SpawningDistance removal, web reload, and dual-client menu flows. The player
-moved 13.14 blocks and the managed entity was removed 2 ticks after crossing its
-configured radius. Its report and tested artifact hash remain in
-`release-evidence.json`.
+Historical fixture `srv-paper-imported-mob-defaults-strict-20261106-r4` passed
+373 probes. Its `DefaultMobOptions` assertions predate the source audit and
+incorrectly treated unsupported keys as global settings; use the newer
+`srv-paper-default-mob-options-strict-20261110-r1` report for those semantics.
+The historical run also covered Potion consumption/expiry, client-driven
+`SpawningDistance` removal, web reload, and dual-client menu flows. Its original
+report and artifact hash remain in `release-evidence.json`.
 
 Previous strict fixture `srv-paper-execution-audience-mob-strict-20261106-r3`
 passed all 376 probes (357 passed, 19 expected rejections, zero incomplete).
@@ -1315,7 +1325,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-tameable-strict-20261110-r2` has 428 probes (409 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-default-mob-options-strict-20261110-r1` has 428 probes (409 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1333,8 +1343,8 @@ Latest strict report has 428 probes, zero incomplete.
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 565 cited IDs; 473 report files; 4 directories
-   without reports; 88 missing directories; 244 archived release reports. The
+   Current fixture inventory: 566 cited IDs; 474 report files; 4 directories
+   without reports; 88 missing directories; 245 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

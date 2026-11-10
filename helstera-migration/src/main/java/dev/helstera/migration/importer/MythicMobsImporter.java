@@ -48,6 +48,9 @@ public final class MythicMobsImporter implements MigrationImporter {
             "ADD_NUMBER", "ADD_SCALAR", "MULTIPLY_SCALAR_1");
     private static final Set<String> ATTRIBUTE_SLOTS = Set.of(
             "any", "mainhand", "offhand", "hand", "head", "chest", "legs", "feet", "armor", "body");
+    /** Official config-mobs.yml DefaultMobOptions currently exposes only these keys. */
+    private static final Set<String> SUPPORTED_DEFAULT_MOB_OPTIONS = Set.of(
+            "despawn", "preventotherdrops", "preventvanilladamage");
     private static final Map<String, String> MYTHIC_NATIVE_SCALAR_STATS = Map.ofEntries(
             Map.entry("ATTACK_DAMAGE", "mob.attack-damage"),
             Map.entry("ATTACKDAMAGE", "mob.attack-damage"),
@@ -1170,7 +1173,6 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "MovementSpeed", "mob.move-speed");
             mapOption(options, srcFile, entries, target, "KnockbackResistance", "mob.knockback-resistance");
             mapOption(options, srcFile, entries, target, "MaxCombatDistance", "mob.max-combat-distance");
-            mapOption(options, srcFile, entries, target, "Despawn", "mob.despawn");
             mapOption(options, srcFile, entries, target, "Health", "mob.health");
             mapOption(options, srcFile, entries, target, "Damage", "mob.attack-damage");
             mapOption(options, srcFile, entries, target, "RangedAttack", "ai.ranged-attack");
@@ -1200,12 +1202,10 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "AlwaysShowName", "show-name");
             mapOption(options, srcFile, entries, target, "Persistent", "persistent");
             mapOption(options, srcFile, entries, target, "VisibleByDefault", "entity.visible-by-default");
-            mapPersistentDespawn(options, srcFile, entries, target);
             mapOption(options, srcFile, entries, target, "Gravity", "entity.gravity");
             mapOptionInvertedBoolean(options, srcFile, entries, target, "NoGravity", "entity.gravity");
             mapOption(options, srcFile, entries, target, "HasGravity", "entity.gravity");
             mapOption(options, srcFile, entries, target, "Collidable", "entity.collidable");
-            mapOption(options, srcFile, entries, target, "PreventOtherDrops", "entity.prevent-other-drops");
             mapOption(options, srcFile, entries, target, "PreventSunburn", "entity.prevent-sunburn");
             mapOption(options, srcFile, entries, target, "PreventRandomEquipment", "entity.prevent-random-equipment");
             mapEntityScopedOption(options, srcFile, entries, target, "CanPickupItems",
@@ -1222,7 +1222,6 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "PreventTarget", "mob.prevent-target");
             mapOption(options, srcFile, entries, target, "PreventTargetReasons", "mob.prevent-target-reasons");
             mapOption(options, srcFile, entries, target, "PreventAttack", "mob.prevent-attack");
-            mapOption(options, srcFile, entries, target, "PreventVanillaDamage", "mob.prevent-vanilla-damage");
             mapEntityScopedOption(options, srcFile, entries, target, "PreventSlimeSplit",
                     "mob.prevent-slime-split", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.Slime.class);
@@ -1452,16 +1451,23 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
         }
 
-        mapTameableOption(options, defaultMobOptions, srcFile, entries, target, normalizedType);
+        mapMythicDespawnOption(options, defaultMobOptions, srcFile, entries, target);
+        mapDefaultedGlobalBooleanOption(options, defaultMobOptions, srcFile, entries, target,
+                "PreventOtherDrops", "entity.prevent-other-drops", false);
+        mapDefaultedGlobalBooleanOption(options, defaultMobOptions, srcFile, entries, target,
+                "PreventVanillaDamage", "mob.prevent-vanilla-damage", false);
 
-        mapDefaultedMobOption(options, defaultMobOptions, srcFile, entries, target,
+        mapTameableOption(options, srcFile, entries, target, normalizedType);
+
+        mapDefaultedMobOption(options, srcFile, entries, target,
                 "PreventItemPickup", "entity.prevent-item-pickup", true, true);
-        mapDefaultedMobOption(options, defaultMobOptions, srcFile, entries, target,
+        mapDefaultedMobOption(options, srcFile, entries, target,
                 "NoDamageTicks", "entity.no-damage-ticks", 10, false);
-        mapDefaultedMobOption(options, defaultMobOptions, srcFile, entries, target,
+        mapDefaultedMobOption(options, srcFile, entries, target,
                 "PreventLeashing", "mob.prevent-leashing", true, true);
-        mapDefaultedMobOption(options, null, srcFile, entries, target,
+        mapDefaultedMobOption(options, srcFile, entries, target,
                 "PreventTransformation", "mob.prevent-transformation", true, true);
+        preserveUnsupportedDefaultMobOptions(defaultMobOptions, srcFile, entries, target);
 
         // Stats are explicit base-value overrides and therefore take precedence
         // over the equivalent root and Options fields mapped above.
@@ -4762,13 +4768,145 @@ public final class MythicMobsImporter implements MigrationImporter {
                 "Inverted MythicMobs boolean option into the runtime field.");
     }
 
-    private void mapPersistentDespawn(ConfigurationSection options, String srcFile,
-                                      List<Map<String, Object>> entries, YamlConfiguration target) {
-        Object raw = ciGet(options, "Persistent");
-        if (raw == null || !parseBoolean(String.valueOf(raw)) || target.contains("mob.despawn")) return;
-        target.set("mob.despawn", "PERSISTENT");
-        note(entries, srcFile, "Options.Persistent", "mob.despawn", "PERSISTENT", "mapped",
-                "Persistent mobs are restored from their serialized Bukkit entity.");
+    private void mapMythicDespawnOption(ConfigurationSection options,
+                                        ConfigurationSection defaultMobOptions,
+                                        String srcFile, List<Map<String, Object>> entries,
+                                        YamlConfiguration target) {
+        String explicitKey = findKeyIgnoreCase(options, "Despawn");
+        if (explicitKey != null) {
+            Object raw = options.get(explicitKey);
+            String mode = normalizeDespawnMode(raw);
+            if (mode == null) {
+                target.set("mob.unsupported.Options.Despawn", raw == null ? "null" : raw);
+                note(entries, srcFile, "Options.Despawn", "mob.unsupported.Options.Despawn",
+                        raw == null ? "null" : raw, "unsupported",
+                        "Invalid Mythic despawn mode was preserved; the built-in NORMAL mode is used.", "WARN");
+                target.set("mob.despawn", "NORMAL");
+                note(entries, srcFile, "MythicMobs.Options.Despawn.default", "mob.despawn", "NORMAL",
+                        "defaulted", "The built-in Mythic despawn mode applies after an invalid explicit value.");
+            } else {
+                target.set("mob.despawn", mode);
+                note(entries, srcFile, "Options.Despawn", "mob.despawn", mode, "mapped",
+                        "Mythic despawn aliases were normalized to a supported runtime mode.");
+            }
+            return;
+        }
+
+        Object persistent = ciGet(options, "Persistent");
+        if (persistent != null && parseBoolean(String.valueOf(persistent))) {
+            target.set("mob.despawn", "PERSISTENT");
+            note(entries, srcFile, "Options.Persistent", "mob.despawn", "PERSISTENT", "mapped",
+                    "Persistent mobs are restored from their serialized Bukkit entity.");
+            return;
+        }
+
+        String globalKey = findKeyIgnoreCase(defaultMobOptions, "Despawn");
+        if (globalKey != null) {
+            Object raw = defaultMobOptions.get(globalKey);
+            String mode = normalizeDespawnMode(raw);
+            if (mode != null) {
+                target.set("mob.despawn", mode);
+                note(entries, srcFile,
+                        "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
+                        "mob.despawn", mode, "defaulted",
+                        "Supported global Mythic Despawn default applied because no mob value overrides it.");
+                return;
+            }
+            target.set("mob.unsupported.DefaultMobOptions." + globalKey, raw == null ? "null" : raw);
+            note(entries, srcFile,
+                    "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
+                    "mob.unsupported.DefaultMobOptions." + globalKey, raw == null ? "null" : raw,
+                    "unsupported", "Invalid global Despawn mode was preserved; built-in NORMAL is used.", "WARN");
+        }
+        if (globalKey != null) {
+            target.set("mob.despawn", "NORMAL");
+            note(entries, srcFile, "MythicMobs.Options.Despawn.default", "mob.despawn", "NORMAL",
+                    "defaulted", "Mythic's built-in NORMAL despawn mode applies after an invalid global value.");
+        }
+    }
+
+    private static String normalizeDespawnMode(Object raw) {
+        if (raw instanceof Boolean value) return value ? "NORMAL" : "NEVER";
+        if (raw instanceof Number number) {
+            double value = number.doubleValue();
+            if (value == 1) return "NORMAL";
+            if (value == 0) return "NEVER";
+            return null;
+        }
+        if (!(raw instanceof String text)) return null;
+        return switch (text.trim().toUpperCase(Locale.ROOT)) {
+            case "TRUE", "YES", "1", "NORMAL" -> "NORMAL";
+            case "FALSE", "NO", "0", "NEVER" -> "NEVER";
+            case "CHUNK", "PERSISTENT", "NPC" -> text.trim().toUpperCase(Locale.ROOT);
+            default -> null;
+        };
+    }
+
+    private void mapDefaultedGlobalBooleanOption(ConfigurationSection options,
+                                                 ConfigurationSection defaultMobOptions,
+                                                 String srcFile, List<Map<String, Object>> entries,
+                                                 YamlConfiguration target, String optionName,
+                                                 String targetPath, boolean builtInDefault) {
+        String explicitKey = findKeyIgnoreCase(options, optionName);
+        if (explicitKey != null) {
+            Boolean value = parseBooleanOption(options.get(explicitKey));
+            if (value != null) {
+                target.set(targetPath, value);
+                note(entries, srcFile, "Options." + optionName, targetPath, value, "mapped",
+                        "Explicit mob option overrides the supported global and built-in defaults.");
+                return;
+            }
+            Object raw = options.get(explicitKey);
+            target.set("mob.unsupported.Options." + optionName, raw == null ? "null" : raw);
+            note(entries, srcFile, "Options." + optionName,
+                    "mob.unsupported.Options." + optionName, raw == null ? "null" : raw,
+                    "unsupported", "Invalid boolean value was preserved; the built-in default is used.", "WARN");
+            target.set(targetPath, builtInDefault);
+            note(entries, srcFile, "MythicMobs.Options." + optionName + ".default", targetPath,
+                    builtInDefault, "defaulted", "Built-in default applied after an invalid explicit value.");
+            return;
+        }
+
+        String globalKey = findKeyIgnoreCase(defaultMobOptions, optionName);
+        if (globalKey != null) {
+            Object raw = defaultMobOptions.get(globalKey);
+            Boolean value = parseBooleanOption(raw);
+            if (value != null) {
+                target.set(targetPath, value);
+                note(entries, srcFile,
+                        "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
+                        targetPath, value, "defaulted",
+                        "Supported global Mythic default applied because no mob value overrides it.");
+                return;
+            }
+            target.set("mob.unsupported.DefaultMobOptions." + globalKey, raw == null ? "null" : raw);
+            note(entries, srcFile,
+                    "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
+                    "mob.unsupported.DefaultMobOptions." + globalKey, raw == null ? "null" : raw,
+                    "unsupported", "Invalid global boolean was preserved; the built-in default is used.", "WARN");
+        }
+
+        if (globalKey != null) {
+            target.set(targetPath, builtInDefault);
+            note(entries, srcFile, "MythicMobs.Options." + optionName + ".default", targetPath,
+                    builtInDefault, "defaulted", "Built-in default applied after an invalid global value.");
+        }
+    }
+
+    private void preserveUnsupportedDefaultMobOptions(ConfigurationSection defaultMobOptions,
+                                                      String srcFile, List<Map<String, Object>> entries,
+                                                      YamlConfiguration target) {
+        if (defaultMobOptions == null) return;
+        for (String key : defaultMobOptions.getKeys(false)) {
+            if (SUPPORTED_DEFAULT_MOB_OPTIONS.contains(key.toLowerCase(Locale.ROOT))) continue;
+            Object raw = defaultMobOptions.get(key);
+            String path = "mob.unsupported.DefaultMobOptions." + key;
+            target.set(path, raw == null ? "null" : raw);
+            note(entries, srcFile, "config-mobs.yml.Configuration.DefaultMobOptions." + key,
+                    path, raw == null ? "null" : raw, "unsupported",
+                    "This key is not in MythicMobs' supported DefaultMobOptions list; preserved without applying it.",
+                    "WARN");
+        }
     }
 
     private void mapRabbitKillerBunnyOptions(ConfigurationSection options, String srcFile,
@@ -4814,7 +4952,6 @@ public final class MythicMobsImporter implements MigrationImporter {
     }
 
     private void mapDefaultedMobOption(ConfigurationSection options,
-                                       ConfigurationSection defaultMobOptions,
                                        String srcFile, List<Map<String, Object>> entries,
                                        YamlConfiguration target, String optionName,
                                        String targetPath, Object builtInDefault,
@@ -4827,40 +4964,20 @@ public final class MythicMobsImporter implements MigrationImporter {
                 Object raw = options.get(explicitKey);
                 target.set(preservedPath, raw);
                 note(entries, srcFile, "Options." + optionName, preservedPath, raw,
-                        "unsupported", "Invalid option value was preserved instead of being applied.", "WARN");
+                        "unsupported", "Invalid option value was preserved; the built-in default is used.", "WARN");
+                target.set(targetPath, builtInDefault);
+                note(entries, srcFile, "MythicMobs.Options." + optionName + ".default", targetPath,
+                        builtInDefault, "defaulted", "Built-in default applied after an invalid explicit value.");
             } else {
                 target.set(targetPath, explicit);
                 note(entries, srcFile, "Options." + optionName, targetPath, explicit,
-                        "mapped", "Explicit mob option overrides global and built-in defaults.");
+                        "mapped", "Explicit mob option overrides the built-in default.");
             }
             return;
         }
-
-        String globalKey = findKeyIgnoreCase(defaultMobOptions, optionName);
-        if (globalKey != null) {
-            Object raw = defaultMobOptions.get(globalKey);
-            Object configured = normalizeDefaultMobOption(raw, booleanOption);
-            if (configured != null) {
-                target.set(targetPath, configured);
-                note(entries, srcFile,
-                        "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
-                        targetPath, configured, "defaulted",
-                        "Global Mythic default applied because the mob has no explicit value.");
-                return;
-            }
-            String preservedPath = "mob.unsupported.DefaultMobOptions." + optionName;
-            target.set(preservedPath, raw);
-            note(entries, srcFile,
-                    "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
-                    preservedPath, raw, "unsupported",
-                    "Invalid global default was preserved; the documented built-in default is used.", "WARN");
-        }
-
         target.set(targetPath, builtInDefault);
         note(entries, srcFile, "MythicMobs.Options." + optionName + ".default", targetPath,
-                builtInDefault, "defaulted", globalKey == null
-                        ? "Documented MythicMobs built-in default applied."
-                        : "Documented MythicMobs built-in default applied after an invalid global value.");
+                builtInDefault, "defaulted", "MythicMobs built-in option default applied.");
     }
 
     private static Object normalizeDefaultMobOption(Object raw, boolean booleanOption) {
@@ -4977,7 +5094,6 @@ public final class MythicMobsImporter implements MigrationImporter {
     }
 
     private void mapTameableOption(ConfigurationSection options,
-                                   ConfigurationSection defaultMobOptions,
                                    String srcFile, List<Map<String, Object>> entries,
                                    YamlConfiguration target, String normalizedType) {
         String entityTypeName = normalizedType == null ? "ZOMBIE" : normalizedType;
@@ -5019,31 +5135,9 @@ public final class MythicMobsImporter implements MigrationImporter {
 
         if (!supportsTaming) return;
 
-        String globalKey = findKeyIgnoreCase(defaultMobOptions, "Tameable");
-        if (globalKey != null) {
-            Object raw = defaultMobOptions.get(globalKey);
-            Object configured = normalizeDefaultMobOption(raw, true);
-            if (configured != null) {
-                target.set("entity.tameable", configured);
-                note(entries, srcFile,
-                        "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
-                        "entity.tameable", configured, "defaulted",
-                        "Global Mythic default applied to a compatible Tameable entity.");
-                return;
-            }
-            String path = "mob.unsupported.DefaultMobOptions.Tameable";
-            target.set(path, raw == null ? "null" : raw);
-            note(entries, srcFile,
-                    "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
-                    path, raw == null ? "null" : raw, "unsupported",
-                    "Invalid global boolean was preserved; the documented built-in default is used.", "WARN");
-        }
-
         target.set("entity.tameable", false);
         note(entries, srcFile, "MythicMobs.Options.Tameable.default", "entity.tameable", false,
-                "defaulted", globalKey == null
-                        ? "Documented MythicMobs built-in default applied."
-                        : "Documented MythicMobs built-in default applied after an invalid global value.");
+                "defaulted", "MythicMobs built-in false default applied.");
     }
 
     private boolean mapBoatTypeOption(ConfigurationSection options, String srcFile,
