@@ -87,6 +87,31 @@ $manifestPath = Join-Path $Root 'tools/paper-integration/release-evidence.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
     throw 'Release evidence manifest not found: tools/paper-integration/release-evidence.json'
 }
+$versionMatrixPath = Join-Path $Root 'tools/paper-integration/version-matrix.json'
+if (-not (Test-Path -LiteralPath $versionMatrixPath -PathType Leaf)) {
+    throw 'Paper version matrix not found: tools/paper-integration/version-matrix.json'
+}
+$versionMatrix = Get-Content -LiteralPath $versionMatrixPath -Raw -Encoding utf8 | ConvertFrom-Json
+if ($versionMatrix.schemaVersion -ne 1 -or
+        $versionMatrix.releasePolicy.requiresExactServerBuild -ne $true -or
+        $versionMatrix.releasePolicy.requiresMatchingPluginSha256 -ne $true) {
+    throw 'Paper version matrix must require exact server builds and matching plugin SHA-256 for release evidence.'
+}
+$releaseCombinations = @($versionMatrix.combinations | Where-Object { $_.releaseValidated -eq $true })
+if ($releaseCombinations.Count -ne 1) {
+    throw "Evidence audit requires exactly one release-validated Paper combination, found $($releaseCombinations.Count)."
+}
+$releaseCombination = $releaseCombinations[0]
+$expectedPaperVersion = [string]$releaseCombination.minecraftVersion
+$expectedPaperBuild = [string]$releaseCombination.serverVersion
+if ([string]$releaseCombination.serverFamily -cne 'Paper' -or
+        [string]::IsNullOrWhiteSpace($expectedPaperVersion) -or
+        [string]::IsNullOrWhiteSpace($expectedPaperBuild) -or
+        [string]$releaseCombination.evidenceLevel -cne 'strict' -or
+        [string]::IsNullOrWhiteSpace([string]$releaseCombination.releaseFixtureId) -or
+        [string]::IsNullOrWhiteSpace([string]$releaseCombination.releaseReport)) {
+    throw 'Paper version matrix release entry must identify a strict Paper build, Minecraft version, fixture, and report.'
+}
 $releaseEvidence = @(Get-Content -LiteralPath $manifestPath -Raw -Encoding utf8 | ConvertFrom-Json)
 if ($releaseEvidence.Count -eq 0) {
     throw 'Release evidence manifest must contain at least one report.'
@@ -176,14 +201,18 @@ foreach ($item in $releaseEvidence) {
     }
     if ($report.schemaVersion -ne 1 -or [string]$report.fixtureDirectory -ne $reportFixtureDirectory -or
             [string]$report.evidenceMode -ne 'release' -or -not $report.pluginEnabled -or
-            [string]$report.paperVersion -notmatch '^1\.21\.1(?:-|$)' -or
-            [string]$report.paperApiVersion -notmatch '^1\.21\.1(?:-|$)') {
+            [string]$report.paperVersion -notmatch ('^' + [regex]::Escape($expectedPaperVersion) + '(?:-|$)') -or
+            [string]$report.paperApiVersion -notmatch ('^' + [regex]::Escape($expectedPaperVersion) + '(?:-|$)')) {
         throw "Release report metadata does not match its manifest entry: $fixtureId"
     }
     $expectedIds = @($report.expectedProbeIds | ForEach-Object { [string]$_ })
     $probes = @($report.probes)
     $requireCurrentCatalog = $item.fullReleaseCatalog -eq $true -and -not $latestFullReportChecked
     if ($requireCurrentCatalog) {
+        if ([string]$fixtureId -cne [string]$releaseCombination.releaseFixtureId -or
+                [string]$reportRelativePath -cne [string]$releaseCombination.releaseReport) {
+            throw 'Latest full release report does not match the release fixture and report declared by version-matrix.json.'
+        }
         if ([string]$item.pluginSha256 -cnotmatch '^[0-9a-f]{64}$' -or
                 [string]$report.pluginSha256 -cne [string]$item.pluginSha256) {
             throw "Latest full release report plugin SHA-256 is missing or mismatched: $fixtureId"
@@ -205,8 +234,10 @@ foreach ($item in $releaseEvidence) {
             @($probes | Where-Object { $_.status -in @('not-observed', 'insufficient-sample', 'failed') }).Count -gt 0) {
         throw "Release report has missing, duplicate, unexpected, or incomplete probes: $fixtureId"
     }
+    $expectedBuildForReport = if ($requireCurrentCatalog) { $expectedPaperBuild } else { '' }
     & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $reportPath `
         -RequireTargetPaperVersion -RequireFullReleaseCatalog:$requireCurrentCatalog `
+        -ExpectedPaperVersion $expectedPaperVersion -ExpectedPaperBuild $expectedBuildForReport `
         -ExpectedPluginSha256 ([string]$item.pluginSha256)
 }
 if ($releasePluginHash -and -not $latestFullReportChecked) {

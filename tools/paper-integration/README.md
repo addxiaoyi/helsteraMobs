@@ -2290,9 +2290,11 @@ the fixture's Mineflayer dependencies for player/menu/Audience evidence). The
 Interactable workflow uses the real client's offhand entity-interact packet and
 requires both the client report and Paper's final cancellation observations. It
 also rejects reports that
-do not pass the JSON Schema, prove plugin enablement, or prove Paper
-implementation/API version 1.21.1, or include every registered probe listed in the
-report's expected probe catalog. The independent `release-probe-catalog.json`
+do not pass the JSON Schema, prove plugin enablement, or prove the exact
+release-validated Paper implementation build and matching Minecraft API version
+declared in `version-matrix.json` (currently Paper 1.21.1-133 / API 1.21.1), or
+include every registered probe listed in the report's expected probe catalog.
+The independent `release-probe-catalog.json`
 also requires each baseline release probe and its expected `passed` or
 `observed-rejected` status, even if a report omits it from its own catalog.
 Negative Spawner controls must also report the specific rejection reason in the

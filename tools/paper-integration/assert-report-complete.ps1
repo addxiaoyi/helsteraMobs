@@ -4,7 +4,8 @@ param(
     [switch]$RequireTargetPaperVersion,
     [switch]$RequireFullReleaseCatalog,
     [string]$ExpectedPluginSha256 = '',
-    [string]$ExpectedPaperVersion = '1.21.1'
+    [string]$ExpectedPaperVersion = '1.21.1',
+    [string]$ExpectedPaperBuild = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -30,6 +31,11 @@ if ($RequireTargetPaperVersion -or $RequireFullReleaseCatalog) {
     if ([string]::IsNullOrWhiteSpace([string]$report.paperVersion) -or
             $report.paperVersion -notmatch ('^' + [regex]::Escape($ExpectedPaperVersion) + '(?:-|$)')) {
         throw "Paper implementation mismatch: $($report.paperVersion) (expected $ExpectedPaperVersion)"
+    }
+    if ($ExpectedPaperBuild -and
+            ([string]::IsNullOrWhiteSpace([string]$report.paperVersion) -or
+                $report.paperVersion -notmatch ('^' + [regex]::Escape($ExpectedPaperBuild) + '(?:-|$)'))) {
+        throw "Paper implementation build mismatch: $($report.paperVersion) (expected $ExpectedPaperBuild)"
     }
     if ([string]::IsNullOrWhiteSpace([string]$report.paperApiVersion) -or
             $report.paperApiVersion -notmatch ('^' + [regex]::Escape($ExpectedPaperVersion) + '(?:-|$)')) {

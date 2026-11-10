@@ -1209,7 +1209,7 @@ checkpoints.
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
 
-The machine-readable declaration is [tools/paper-integration/version-matrix.json](tools/paper-integration/version-matrix.json). Its contract is checked by `tools/paper-integration/test-version-matrix.ps1`: exactly Paper 1.21.1-133 / Minecraft 1.21.1 is release-validated, and every other combination remains exploratory or unverified until it has its own exact strict report and matching plugin SHA-256.
+The machine-readable declaration is [tools/paper-integration/version-matrix.json](tools/paper-integration/version-matrix.json). Its contract is checked by `tools/paper-integration/test-version-matrix.ps1`: the latest full-catalog report must match the exact Paper build, Minecraft API version, release mode, and plugin SHA-256; exactly Paper 1.21.1-133 / Minecraft 1.21.1 is release-validated, and every other combination remains exploratory or unverified until it has its own strict report and matching plugin SHA-256.
 
 ### Current Development Goals
 

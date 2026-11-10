@@ -993,8 +993,8 @@ try {
         generatedAtUtc = [DateTime]::UtcNow.ToString('o')
         fixtureDirectory = 'target-gate'
         evidenceMode = 'release'
-        paperVersion = '1.21.1-test'
-        paperApiVersion = '1.21.1-test-api'
+        paperVersion = '1.21.1-133-test'
+        paperApiVersion = '1.21.1-R0.1-SNAPSHOT'
         pluginEnabled = $true
         log = 'logs/latest.log'
         expectedProbeIds = @('positive')
@@ -1002,6 +1002,8 @@ try {
     } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $targetGateReportPath -Encoding utf8
     & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $targetGateReportPath `
         -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1'
+    & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $targetGateReportPath `
+        -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1' -ExpectedPaperBuild '1.21.1-133'
     foreach ($invalidStatus in @('unknown', '')) {
         $invalidStatusReport = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
         $invalidStatusReport.probes[0].status = $invalidStatus
@@ -3378,6 +3380,19 @@ try {
         $wrongTargetRejected = $_.Exception.Message -match 'Paper implementation mismatch'
     }
     Assert-True $wrongTargetRejected 'strict gate rejects a report from another Paper version'
+
+    $wrongBuildReportPath = Join-Path $temp 'wrong-build-report.json'
+    $wrongBuildReport = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $wrongBuildReport.paperVersion = '1.21.1-134-test'
+    $wrongBuildReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $wrongBuildReportPath -Encoding utf8
+    $wrongBuildRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $wrongBuildReportPath `
+            -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1' -ExpectedPaperBuild '1.21.1-133'
+    } catch {
+        $wrongBuildRejected = $_.Exception.Message -match 'Paper implementation build mismatch'
+    }
+    Assert-True $wrongBuildRejected 'strict gate rejects the wrong Paper build within the expected Minecraft version'
 
     $missingTargetProbePath = Join-Path $temp 'missing-target-probe-report.json'
     $missingTargetProbe = Get-Content -LiteralPath $targetGateReportPath -Raw -Encoding utf8 | ConvertFrom-Json
