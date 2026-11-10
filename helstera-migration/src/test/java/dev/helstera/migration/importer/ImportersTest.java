@@ -803,10 +803,45 @@ class ImportersTest {
                 target.getStringList("mob.triggers.on-damage.do"));
         assertTrue(target.getStringList("mob.on-decision").isEmpty());
         assertEquals(List.of("damage{amount=<skill.var.damage-amount>} @Trigger ~onDamaged",
-                        "damage{amount=1} ~onTimer:20", "damage{amount=1} ~unknown",
-                        "damage{amount=2} ~onSpawn ~onDeath"),
+                        "damage{amount=1} ~unknown", "damage{amount=2} ~onSpawn ~onDeath"),
                 target.getStringList("mob.unsupported.Skills"));
+        assertEquals(20, target.getInt("mob.triggers.on-timer.interval"));
+        assertEquals(true, target.getBoolean("mob.triggers.on-timer.global-clock"));
+        assertEquals(List.of("damage-target 1"), target.getStringList("mob.triggers.on-timer.do"));
         assertTrue(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))));
+    }
+
+    @Test
+    @DisplayName("Mythic onTimer：按全局周期映射，多个周期独立保留，非法周期原样告警")
+    void mythicTimerTriggersKeepIndependentIntervals(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/timers.yml", """
+                mobs:
+                  Clockwork:
+                    Skills:
+                      - skill{s=FastA} ~onTimer:20
+                      - skill{s=FastB} ~onTimer:20
+                      - skill{s=Slow} ~onTimer:40
+                      - skill{s=Zero} ~onTimer:0
+                      - skill{s=Negative} ~onTimer:-1
+                      - skill{s=Overflow} ~onTimer:2147483648
+                      - skill{s=Malformed} ~onTimer:nope
+                """);
+
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(f);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+        List<Map<?, ?>> timers = target.getMapList("mob.triggers.on-timer");
+
+        assertEquals(2, timers.size(), "不同 interval 必须保留为独立分支");
+        assertEquals(20, ((Number) timers.get(0).get("interval")).intValue());
+        assertEquals(true, timers.get(0).get("global-clock"));
+        assertEquals(List.of("skill{s=FastA}", "skill{s=FastB}"), timers.get(0).get("do"));
+        assertEquals(40, ((Number) timers.get(1).get("interval")).intValue());
+        assertEquals(List.of("skill{s=Slow}"), timers.get(1).get("do"));
+        assertEquals(List.of("skill{s=Zero} ~onTimer:0", "skill{s=Negative} ~onTimer:-1",
+                        "skill{s=Overflow} ~onTimer:2147483648", "skill{s=Malformed} ~onTimer:nope"),
+                target.getStringList("mob.unsupported.Skills"));
+        assertTrue(entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))));
     }
 
     @Test

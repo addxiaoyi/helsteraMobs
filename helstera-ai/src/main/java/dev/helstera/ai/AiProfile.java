@@ -168,6 +168,8 @@ public final class AiProfile {
         public int intervalTicks;
         /** 首次触发前的延迟（tick）。0 表示与 interval 同延。 */
         public int startDelayTicks;
+        /** Align this timer to the server-wide tick clock, as Mythic onTimer does. */
+        public boolean globalClock;
         /**
          * {@code on-lower-health} 的血量阈值（百分比 0..100）。
          *
@@ -255,6 +257,7 @@ public final class AiProfile {
             dst.signal = src.signal;
             dst.intervalTicks = src.intervalTicks;
             dst.startDelayTicks = src.startDelayTicks;
+            dst.globalClock = src.globalClock;
             dst.lowerHealthPercent = src.lowerHealthPercent;
             dst.sync = src.sync;
             this.triggers.put(e.getKey(), dst);
@@ -695,9 +698,9 @@ public final class AiProfile {
         String canonical = parsed == null
                 ? event.trim().toLowerCase(java.util.Locale.ROOT)
                 : parsed.configName();
-        // A list of on-signal variants needs independent action sets. The suffix is
-        // an internal key; SkillTrigger.of accepts it for diagnostics and routing.
-        String key = variant != null && parsed == SkillTrigger.ON_SIGNAL
+        // Signal and timer variants need independent action sets. The suffix is
+        // internal; SkillTrigger.of accepts it for diagnostics and routing.
+        String key = variant != null && (parsed == SkillTrigger.ON_SIGNAL || parsed == SkillTrigger.TIMER)
                 ? canonical + "#" + variant : canonical;
         this.triggers.put(key, spec);
     }
@@ -709,6 +712,7 @@ public final class AiProfile {
         spec.signal = trimToNull(evSec.getString("signal"));
         spec.intervalTicks = readTicks(evSec.get("interval"), 20);
         spec.startDelayTicks = readTicks(evSec.get("start-delay"), 0);
+        spec.globalClock = evSec.getBoolean("global-clock", false);
         spec.lowerHealthPercent = readPercent(evSec.get("health-below"), spec.lowerHealthPercent);
         spec.sync = evSec.getBoolean("sync", false);
         return spec;
@@ -722,6 +726,9 @@ public final class AiProfile {
         spec.signal = trimToNull(signal == null ? null : String.valueOf(signal));
         spec.intervalTicks = readTicks(values.get("interval"), 20);
         spec.startDelayTicks = readTicks(values.get("start-delay"), 0);
+        Object globalClock = values.get("global-clock");
+        spec.globalClock = globalClock instanceof Boolean b
+                ? b : globalClock != null && Boolean.parseBoolean(String.valueOf(globalClock));
         spec.lowerHealthPercent = readPercent(values.get("health-below"), spec.lowerHealthPercent);
         Object sync = values.get("sync");
         spec.sync = sync instanceof Boolean b ? b : sync != null && Boolean.parseBoolean(String.valueOf(sync));

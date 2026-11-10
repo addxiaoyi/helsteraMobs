@@ -379,6 +379,7 @@ $probeSpecs = [ordered]@{
     killTrigger = 'kill-trigger imported=true mapped=true natural=true .*victim-dead=true .*action-observed=true passed=true'
     playerKillTrigger = 'player-kill-trigger imported=true mapped=true natural=true .*victim-player=true .*victim-death-observed=true .*action-observed=true .*player-kills-positive=true .*player-kills-negative=true passed=true'
     importedSignalTrigger = 'imported-signal-trigger imported=true mapped=true generic=true selector=true payload=true sender=true trigger=true invalid-preserved=true last-signal=true passed=true'
+    importedTimerTrigger = 'imported-timer-trigger imported=true mapped=true aligned=true independent=true invalid-preserved=true source=true passed=true'
     importedPlayerKillsCondition = 'imported-player-kills-condition primary-mapped=true range-mapped=true positive=true negative=true invalid-preserved=true'
     playerKillsCondition = 'skill-actions .*player-kills-condition=true'
     mythicMobTypeCondition = 'skill-actions .*mythic-mob-type-condition=true'

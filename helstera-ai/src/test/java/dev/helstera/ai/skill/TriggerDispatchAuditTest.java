@@ -44,7 +44,7 @@ class TriggerDispatchAuditTest {
     /** SkillTriggers 里所有真实派发的触发器枚举名。 */
     private static Set<String> dispatched() throws IOException {
         String src = Files.readString(TRIGGERS, StandardCharsets.UTF_8);
-        Matcher m = Pattern.compile("dispatch\\(\\s*SkillTrigger\\.(\\w+)").matcher(src);
+        Matcher m = Pattern.compile("(?:dispatch|dispatchWithSpec)\\(\\s*SkillTrigger\\.(\\w+)").matcher(src);
         Set<String> out = new LinkedHashSet<>();
         while (m.find()) out.add(m.group(1));
         return out;
@@ -166,7 +166,8 @@ class TriggerDispatchAuditTest {
             SkillTrigger trigger = entry.getKey();
             SourceKind kind = entry.getValue();
             if (kind == SourceKind.DIRECT_DISPATCH) {
-                String marker = "dispatch(" + triggerToken(trigger);
+                String marker = trigger == SkillTrigger.TIMER
+                        ? "dispatchWithSpec(SkillTrigger.TIMER" : "dispatch(" + triggerToken(trigger);
                 if (!source.contains(marker)) {
                     problems.add(trigger.name() + " [DIRECT_DISPATCH]: missing " + marker);
                 }

@@ -1509,6 +1509,32 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("AiProfile 读取并复制独立的全局 on-timer 周期分支")
+    void parsesAndCopiesGlobalTimerTriggerVariants() {
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                triggers:
+                  on-timer:
+                    - interval: 20
+                      global-clock: true
+                      do: [play-animation fast true 5]
+                    - interval: 40
+                      global-clock: true
+                      do: [play-animation slow true 5]
+                """));
+
+        AiProfile profile = AiProfile.fromSection("timer-boss", yaml);
+        AiProfile copy = new AiProfile(profile);
+
+        assertEquals(List.of("on-timer#0", "on-timer#1"), List.copyOf(profile.triggers.keySet()));
+        assertEquals(20, copy.triggers.get("on-timer#0").intervalTicks);
+        assertTrue(copy.triggers.get("on-timer#0").globalClock);
+        assertEquals(40, copy.triggers.get("on-timer#1").intervalTicks);
+        assertTrue(copy.triggers.get("on-timer#1").globalClock);
+        assertEquals(List.of("play-animation fast true 5"), copy.triggers.get("on-timer#0").actions);
+        assertEquals(List.of("play-animation slow true 5"), copy.triggers.get("on-timer#1").actions);
+    }
+
+    @Test
     @DisplayName("expand 把命名技能同时挂到 require 与 onDecision")
     void expandsNamedSkillsOntoProfile() {
         var svc = service();

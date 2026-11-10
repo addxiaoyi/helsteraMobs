@@ -146,6 +146,7 @@ try {
         '[Server thread/INFO]: kill-trigger imported=true mapped=true natural=true victim-dead=true action-observed=true passed=true',
         '[Server thread/INFO]: player-kill-trigger imported=true mapped=true natural=true victim-player=true victim-death-observed=true action-observed=true player-kills-positive=true player-kills-negative=true passed=true',
         '[Server thread/INFO]: imported-signal-trigger imported=true mapped=true generic=true selector=true payload=true sender=true trigger=true invalid-preserved=true last-signal=true passed=true',
+        '[Server thread/INFO]: imported-timer-trigger imported=true mapped=true aligned=true independent=true invalid-preserved=true source=true passed=true',
         '[Server thread/INFO]: imported-player-kills-condition primary-mapped=true range-mapped=true positive=true negative=true invalid-preserved=true',
         '[Server thread/INFO]: tempt-probe-delayed entity-target-trigger=true target-events=1 target-find-misses=0',
         '[Server thread/INFO]: item-pickup trigger=true player=HelsteraTester',
@@ -488,7 +489,7 @@ try {
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
             'importedItemSimilarityConditions',
-            'importedPlayerKillsCondition', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
+            'importedPlayerKillsCondition', 'importedTimerTrigger', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -499,6 +500,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'spawningDistanceClientWalk').status -eq 'passed') 'real client movement despawn probe'
     Assert-True (($report.probes | Where-Object id -eq 'importedAerialCondition').status -eq 'passed') 'imported Aerial aliases require strict Paper positive and negative evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedIsFrozenCondition').status -eq 'passed') 'imported IsFrozen aliases require strict Paper frozen/thawed and malformed-input evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'importedTimerTrigger').status -eq 'passed') 'imported Mythic timers require global phase, independent intervals, and invalid-value preservation'
     Assert-True (($report.probes | Where-Object id -eq 'importedBurningCondition').status -eq 'passed') 'imported Burning requires target-priority, composed-negation, caster-fallback, and invalid-preservation evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedEntityCategoryCondition').status -eq 'passed') 'imported IsWaterMob/IsZombie aliases require strict Paper type and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedExecutionAudienceCondition').status -eq 'passed') 'imported execution audience requires strict Paper membership and per-target filter evidence'
@@ -1061,6 +1063,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedSignalTrigger'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedSignalTrigger'; status = 'passed'; observations = @('imported-signal-trigger imported=true mapped=true generic=true selector=true payload=true sender=true trigger=true invalid-preserved=true last-signal=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedTimerTrigger'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedTimerTrigger'; status = 'passed'; observations = @('imported-timer-trigger imported=true mapped=true aligned=true independent=true invalid-preserved=true source=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds += 'localDifficultyCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

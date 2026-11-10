@@ -1615,12 +1615,17 @@ public final class MythicMobsImporter implements MigrationImporter {
         final List<String> unsupported = new ArrayList<>();
 
         void add(String trigger, String action) {
-            add(trigger, null, action);
+            add(trigger, null, 0, false, action);
         }
 
         void add(String trigger, String signal, String action) {
+            add(trigger, signal, 0, false, action);
+        }
+
+        void add(String trigger, String signal, int intervalTicks, boolean globalClock, String action) {
             for (Trigger t : triggers) {
-                if (t.trigger.equals(trigger) && java.util.Objects.equals(t.signal, signal)) {
+                if (t.trigger.equals(trigger) && java.util.Objects.equals(t.signal, signal)
+                        && t.intervalTicks == intervalTicks && t.globalClock == globalClock) {
                     t.actions.add(action);
                     return;
                 }
@@ -1628,6 +1633,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             Trigger t = new Trigger();
             t.trigger = trigger;
             t.signal = signal;
+            t.intervalTicks = intervalTicks;
+            t.globalClock = globalClock;
             t.actions.add(action);
             triggers.add(t);
         }
@@ -1635,6 +1642,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         static final class Trigger {
             String trigger;
             String signal;
+            int intervalTicks;
+            boolean globalClock;
             final List<String> actions = new ArrayList<>();
         }
     }
@@ -1776,7 +1785,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (!standaloneSkill && eventPositions.size() == 1 && eventSpec != null
                     && !(eventSpec.trigger().equals("on-damage") && action.toLowerCase(Locale.ROOT).contains("<skill.var.damage-"))
                     && normalized != null && (MythicSpec.skillRef(action) != null || isSupportedAction(normalized))) {
-                scan.add(eventSpec.trigger(), eventSpec.signal(), normalized);
+                scan.add(eventSpec.trigger(), eventSpec.signal(), eventSpec.intervalTicks(),
+                        eventSpec.globalClock(), normalized);
             } else {
                 preserveEventLine(raw, scan, entries, srcFile, mobKey, standaloneSkill);
             }
@@ -1973,8 +1983,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                 raw, "unsupported", "Event trigger requires manual conversion; original line preserved.", "WARN");
     }
 
-    /** Parsed Mythic event suffix, including the optional onSignal selector. */
-    private record EventSpec(String trigger, String signal) { }
+    /** Parsed Mythic event suffix, including signal selectors and timer intervals. */
+    private record EventSpec(String trigger, String signal, int intervalTicks, boolean globalClock) { }
 
     private static EventSpec eventSpec(String raw) {
         if (raw == null || !raw.startsWith("~")) return null;
@@ -1982,6 +1992,15 @@ public final class MythicMobsImporter implements MigrationImporter {
         int colon = value.indexOf(':');
         String name = colon < 0 ? value : value.substring(0, colon).trim();
         String signal = colon < 0 ? null : value.substring(colon + 1).trim();
+        if (name.equalsIgnoreCase("onTimer")) {
+            if (colon < 0 || !signal.matches("[0-9]+")) return null;
+            try {
+                int interval = Integer.parseInt(signal);
+                return interval > 0 ? new EventSpec("on-timer", null, interval, true) : null;
+            } catch (NumberFormatException invalidInterval) {
+                return null;
+            }
+        }
         String trigger = name.equalsIgnoreCase("onSpawn") ? "on-spawn"
                 : name.equalsIgnoreCase("onDeath") ? "on-death"
                 : name.equalsIgnoreCase("onAttack") ? "on-attack"
@@ -1992,10 +2011,10 @@ public final class MythicMobsImporter implements MigrationImporter {
                 ? "on-damage" : null;
         if (trigger == null) return null;
         if (!trigger.equals("on-signal")) {
-            return colon < 0 ? new EventSpec(trigger, null) : null;
+            return colon < 0 ? new EventSpec(trigger, null, 0, false) : null;
         }
         if (signal != null && !signal.matches("[A-Za-z0-9]+")) return null;
-        return new EventSpec(trigger, signal == null || signal.isBlank() ? null : signal);
+        return new EventSpec(trigger, signal == null || signal.isBlank() ? null : signal, 0, false);
     }
 
     private static void writeTriggers(YamlConfiguration target, String base,
@@ -2007,6 +2026,22 @@ public final class MythicMobsImporter implements MigrationImporter {
         for (var entry : grouped.entrySet()) {
             String path = base + "." + entry.getKey();
             List<SkillScan.Trigger> variants = entry.getValue();
+            if (entry.getKey().equals("on-timer")) {
+                if (variants.size() == 1) {
+                    writeTimerTrigger(target, path, variants.get(0));
+                } else {
+                    List<Map<String, Object>> list = new ArrayList<>();
+                    for (SkillScan.Trigger trigger : variants) {
+                        Map<String, Object> item = new LinkedHashMap<>();
+                        item.put("interval", trigger.intervalTicks);
+                        item.put("global-clock", trigger.globalClock);
+                        item.put("do", List.copyOf(trigger.actions));
+                        list.add(item);
+                    }
+                    target.set(path, list);
+                }
+                continue;
+            }
             if (!entry.getKey().equals("on-signal") || variants.size() == 1) {
                 SkillScan.Trigger trigger = variants.get(0);
                 target.set(path + ".do", trigger.actions);
@@ -2022,6 +2057,12 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
             target.set(path, list);
         }
+    }
+
+    private static void writeTimerTrigger(YamlConfiguration target, String path, SkillScan.Trigger trigger) {
+        target.set(path + ".interval", trigger.intervalTicks);
+        target.set(path + ".global-clock", trigger.globalClock);
+        target.set(path + ".do", List.copyOf(trigger.actions));
     }
 
     private static String locationTargeter(String raw) {
