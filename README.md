@@ -2,7 +2,26 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-attack-cooldown-placeholder-strict-20261110-r1`
+Latest strict fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1`
+passes all 421 release probes (402 passed, 19 expected rejections, zero failed
+or incomplete) on Paper 1.21.1-133. Its imported Mythic Stats probe reads back
+`ATTACK_DAMAGE=12.0`, `MOVEMENT_SPEED=0.4`, `ARMOR=8.0`,
+`ARMOR_TOUGHNESS=4.0`, `KNOCKBACK_RESISTANCE=0.25`, and `FOLLOW_RANGE=36.0`
+from a production-spawned Zombie. It also verifies Stats override equivalent
+Options, unsupported and modifier entries remain preserved, and negative
+controls retain their defaults. Report:
+`tools/paper-integration/reports/paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1.json`
+(SHA-256 `adb22fdbb2d5a76e2459da0a2b3e2b6a2519b70900b97246b4c583376845b426`).
+Compressed server log SHA-256:
+`21d854a7b4962ffe31b1b97cf0fbf3748ba4cc30791f47c27d4fc8423a140238`.
+Client log archive SHA-256:
+`95c1ce7cbcd5d9939e50db95b04ef28b0d5f6b75bf6d1068d9ad5fe357af5747`.
+Plugin SHA-256:
+`31b9f1a360e8d31b0ed2b0ee74fb400085bf4e470c1bbce79bd93ead1b800905`.
+The broader Mythic Stats catalog remains open; modifiers, duplicate or invalid
+entries, and unsupported Stats are preserved with migration warnings.
+
+Previous strict fixture `srv-paper-attack-cooldown-placeholder-strict-20261110-r1`
 passes all 421 release probes (402 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. The `gameplayPlaceholders` probe verifies
 Mythic `<caster.attack_cooldown>` and `<target.attack_cooldown>` against a real
@@ -1166,7 +1185,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-attack-cooldown-placeholder-strict-20261110-r1` has 421 probes (402 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1` has 421 probes (402 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1182,8 +1201,8 @@ This is a partial parity release. The matrix currently has `34`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 551 cited IDs; 459 report files; 4 directories
-   without reports; 88 missing directories; 230 archived release reports. The
+   Current fixture inventory: 552 cited IDs; 460 report files; 4 directories
+   without reports; 88 missing directories; 231 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1422,7 +1441,7 @@ the entire MythicMobs feature catalog.
 - Mythic `Options.FollowRange` now applies the migrated `mob.sight-radius` value to Bukkit `FOLLOW_RANGE`; strict fixture `srv-paper-integration-follow-range-20261031-r9` reads back `base=40.0` from `mobs/follow_range_probe.yml`.
 - Mythic `Options.Damage` now applies the migrated `mob.attack-damage` value to Bukkit `ATTACK_DAMAGE`; strict fixture `srv-paper-integration-damage-20261031-r10` reads back `base=12.0` from `mobs/damage_probe.yml`.
 - Mythic root `Armor` now applies the migrated `mob.armor` value to Bukkit `ARMOR`; strict fixture `srv-paper-integration-armor-20261031-r11` reads back `base=8.0` from `mobs/armor_probe.yml`.
-- Mythic's built-in `Stats: - ARMOR_TOUGHNESS 4` scalar override maps to `mob.armor-toughness` and applies to Bukkit `ARMOR_TOUGHNESS`; strict fixture `srv-paper-armor-toughness-stats-strict-20261110-r1` verifies Mythic YAML → importer → generated mob config → real Zombie readback (`base=4.0`). Modifier forms and the undocumented root `ArmorToughness` field remain preserved. The official [Mythic Stats documentation](https://wiki.mythiccraft.io/mythicmobs/Stats) defines `ARMOR_TOUGHNESS` under built-in Stats, while the [Mob Options catalog](https://wiki.mythiccraft.io/mythicmobs/Mobs/Options) does not list `ArmorToughness`.
+- Six built-in Mythic scalar Stats (`ATTACK_DAMAGE`, `MOVEMENT_SPEED`, `ARMOR`, `ARMOR_TOUGHNESS`, `KNOCKBACK_RESISTANCE`, `FOLLOW_RANGE`) map through the importer to their existing Bukkit-backed mob attributes; `Stats` override equivalent Options. Strict fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1` verifies all six from Mythic YAML through production spawning to a real Zombie's attribute readback. Modifiers, duplicate or malformed entries, the undocumented root `ArmorToughness` field, `ATTACK_SPEED`, and other Stats remain preserved with warnings; the complete Stats catalog remains open.
 - Entity option configuration now has strict real-entity coverage for `NoAI`, `Invincible`, `Silent`, `Gravity`, and `Collidable`; fixture `srv-paper-integration-entity-flags-20261031-r12` reads back all five configured states.
 - Mythic root `Exp` now maps to an explicit mob death-experience override, including fixed and ranged `drops.experience*` values; strict fixture `srv-paper-integration-exp-20261031-r16` records `exp-options result=true experience=13 event=true`.
 - Natural Mythic mob death now has separate strict Paper evidence: `srv-paper-exp-natural-death-20261101-r3` applies real Bukkit damage to a managed Zombie, observes its death and 13 spawned experience points, and passes the complete 255-probe report with zero incomplete probes. The synthetic `EntityDeathEvent` probe remains separate.

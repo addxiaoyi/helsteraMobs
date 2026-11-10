@@ -448,7 +448,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'armorToughnessStatsImported'
     $fullReport.probes += [pscustomobject]@{
-        id = 'armorToughnessStatsImported'; status = 'passed'; observations = @('armor-toughness-stats-imported result=true imported=true base=4.0 modifier-preserved=true root-preserved=true controls=0.0,0.0')
+        id = 'armorToughnessStatsImported'; status = 'passed'; observations = @('armor-toughness-stats-imported result=true imported=true base=4.0 attack-damage=12.0 movement-speed=0.4 armor=8.0 knockback-resistance=0.25 follow-range=36.0 unsupported-preserved=true modifier-preserved=true root-preserved=true controls=0.0,0.0')
     }
     $aiSelectorCore = @($fullReport.probes | Where-Object id -eq 'aiSelectorCore')
     if ($aiSelectorCore.Count -ne 1) { throw 'Synthetic release report must contain aiSelectorCore.' }

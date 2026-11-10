@@ -47,6 +47,18 @@ public final class MythicMobsImporter implements MigrationImporter {
             "ADD_NUMBER", "ADD_SCALAR", "MULTIPLY_SCALAR_1");
     private static final Set<String> ATTRIBUTE_SLOTS = Set.of(
             "any", "mainhand", "offhand", "hand", "head", "chest", "legs", "feet", "armor", "body");
+    private static final Map<String, String> MYTHIC_NATIVE_SCALAR_STATS = Map.ofEntries(
+            Map.entry("ATTACK_DAMAGE", "mob.attack-damage"),
+            Map.entry("ATTACKDAMAGE", "mob.attack-damage"),
+            Map.entry("ARMOR", "mob.armor"),
+            Map.entry("ARMOR_TOUGHNESS", "mob.armor-toughness"),
+            Map.entry("ARMORTOUGHNESS", "mob.armor-toughness"),
+            Map.entry("FOLLOW_RANGE", "mob.sight-radius"),
+            Map.entry("FOLLOWRANGE", "mob.sight-radius"),
+            Map.entry("KNOCKBACK_RESISTANCE", "mob.knockback-resistance"),
+            Map.entry("KNOCKBACKRESISTANCE", "mob.knockback-resistance"),
+            Map.entry("MOVEMENT_SPEED", "mob.move-speed"),
+            Map.entry("MOVEMENTSPEED", "mob.move-speed"));
 
     private static final Map<Integer, String> LEGACY_EQUIPMENT_IDS = Map.ofEntries(
             Map.entry(256, "IRON_SHOVEL"), Map.entry(257, "IRON_PICKAXE"),
@@ -1095,7 +1107,6 @@ public final class MythicMobsImporter implements MigrationImporter {
         mapScalar(mob, "display", srcFile, entries, target, "mob.display-name");
         mapScalar(mob, "speed", srcFile, entries, target, "mob.move-speed");
         mapScalar(mob, "armor", srcFile, entries, target, "mob.armor");
-        mapMythicStats(mob, mobKey, srcFile, entries, target);
         preserveUnsupportedMobField(mob, "ArmorToughness", mobKey, srcFile, entries, target,
                 "ArmorToughness is not a documented Mythic Mob field; use the built-in Stats entry ARMOR_TOUGHNESS <value>.");
         mapScalar(mob, "followrange", srcFile, entries, target, "mob.sight-radius");
@@ -1410,6 +1421,10 @@ public final class MythicMobsImporter implements MigrationImporter {
                 "PreventLeashing", "mob.prevent-leashing", true, true);
         mapDefaultedMobOption(options, null, srcFile, entries, target,
                 "PreventTransformation", "mob.prevent-transformation", true, true);
+
+        // Stats are explicit base-value overrides and therefore take precedence
+        // over the equivalent root and Options fields mapped above.
+        mapMythicStats(mob, mobKey, srcFile, entries, target);
 
         // ---- Equipment / Attributes ----
         mapEquipment(mob, srcFile, entries, target, mobKey);
@@ -4400,9 +4415,9 @@ public final class MythicMobsImporter implements MigrationImporter {
     }
 
     /**
-     * Maps the documented scalar override form of Mythic's built-in
-     * ARMOR_TOUGHNESS stat. Other stat expressions stay visible because their
-     * modifier/formula semantics are not equivalent to a Bukkit base value.
+     * Maps unambiguous scalar overrides for Mythic built-in stats that already
+     * have a Bukkit base-attribute runtime path. Modifier expressions and stats
+     * without an equivalent runtime behavior remain visible to the user.
      */
     private void mapMythicStats(ConfigurationSection mob, String mobKey, String srcFile,
                                 List<Map<String, Object>> entries, YamlConfiguration target) {
@@ -4415,47 +4430,49 @@ public final class MythicMobsImporter implements MigrationImporter {
             return;
         }
 
-        int armorStatCount = 0;
-        int mappedIndex = -1;
-        Double mappedValue = null;
+        record Candidate(int index, Double value) { }
+        Map<String, List<Candidate>> candidates = new LinkedHashMap<>();
         for (int i = 0; i < lines.size(); i++) {
             Object entry = lines.get(i);
             if (!(entry instanceof String line)) continue;
             String[] tokens = line.trim().split("\\s+");
-            if (tokens.length == 0 || !"ARMOR_TOUGHNESS".equalsIgnoreCase(tokens[0])) continue;
-            armorStatCount++;
-            if (tokens.length != 2) continue;
-            try {
-                double value = Double.parseDouble(tokens[1]);
-                if (Double.isFinite(value)) {
-                    mappedIndex = i;
-                    mappedValue = value;
+            if (tokens.length == 0) continue;
+            String stat = tokens[0].trim().toUpperCase(Locale.ROOT).replace('-', '_');
+            if (!MYTHIC_NATIVE_SCALAR_STATS.containsKey(stat)) continue;
+            String targetPath = MYTHIC_NATIVE_SCALAR_STATS.get(stat);
+            Double value = null;
+            if (tokens.length == 2) {
+                try {
+                    double parsed = Double.parseDouble(tokens[1]);
+                    if (Double.isFinite(parsed)) value = parsed;
+                } catch (NumberFormatException ignored) {
+                    // Keep malformed ranges, placeholders, and values in unsupported Stats.
                 }
-            } catch (NumberFormatException ignored) {
-                // Keep malformed ranges, placeholders, and values in unsupported Stats.
             }
+            candidates.computeIfAbsent(targetPath, ignored -> new ArrayList<>()).add(new Candidate(i, value));
         }
 
-        if (armorStatCount == 1 && mappedIndex >= 0 && mappedValue != null) {
-            target.set("mob.armor-toughness", mappedValue);
-            note(entries, srcFile, mobKey + "." + statsKey + "[" + mappedIndex + "]",
-                    "mob.armor-toughness", mappedValue, "mapped",
-                    "Mythic built-in ARMOR_TOUGHNESS scalar override maps to the Bukkit base attribute.");
-            List<Object> unsupported = new ArrayList<>(lines);
-            unsupported.remove(mappedIndex);
-            if (!unsupported.isEmpty()) {
-                target.set("mob.unsupported.Stats", unsupported);
-                note(entries, srcFile, mobKey + "." + statsKey, "mob.unsupported.Stats", unsupported,
-                        "unsupported", "Only scalar ARMOR_TOUGHNESS overrides are mapped; remaining stat entries were preserved.", "WARN");
-            }
-            return;
+        boolean[] mapped = new boolean[lines.size()];
+        for (var statCandidates : candidates.entrySet()) {
+            List<Candidate> occurrences = statCandidates.getValue();
+            if (occurrences.size() != 1 || occurrences.get(0).value() == null) continue;
+            Candidate candidate = occurrences.get(0);
+            String targetPath = statCandidates.getKey();
+            target.set(targetPath, candidate.value());
+            mapped[candidate.index()] = true;
+            note(entries, srcFile, mobKey + "." + statsKey + "[" + candidate.index() + "]",
+                    targetPath, candidate.value(), "mapped",
+                    "A unique finite Mythic built-in scalar stat maps to the corresponding Bukkit-backed base value.");
         }
 
-        if (!lines.isEmpty()) {
-            String reason = armorStatCount > 1
-                    ? "Duplicate ARMOR_TOUGHNESS entries are ambiguous; all Mythic Stats were preserved."
-                    : "Only a single finite scalar ARMOR_TOUGHNESS override is mapped; Mythic Stats were preserved.";
-            preserveMythicStats(raw, statsKey, mobKey, srcFile, entries, target, reason);
+        List<Object> unsupported = new ArrayList<>();
+        for (int i = 0; i < lines.size(); i++) {
+            if (!mapped[i]) unsupported.add(lines.get(i));
+        }
+        if (!unsupported.isEmpty()) {
+            target.set("mob.unsupported.Stats", unsupported);
+            note(entries, srcFile, mobKey + "." + statsKey, "mob.unsupported.Stats", unsupported,
+                    "unsupported", "Only unique finite scalar overrides for supported Bukkit-backed Mythic Stats are mapped; modifiers, duplicate names, malformed values, and other stats were preserved.", "WARN");
         }
     }
 

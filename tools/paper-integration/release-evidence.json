@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-mythic-native-stats-release-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-mythic-native-stats-release-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1.json",
+    "reportSha256": "adb22fdbb2d5a76e2459da0a2b3e2b6a2519b70900b97246b4c583376845b426",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1.log.gz",
+    "logSha256": "21d854a7b4962ffe31b1b97cf0fbf3748ba4cc30791f47c27d4fc8423a140238",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "95c1ce7cbcd5d9939e50db95b04ef28b0d5f6b75bf6d1068d9ad5fe357af5747",
+    "pluginSha256": "31b9f1a360e8d31b0ed2b0ee74fb400085bf4e470c1bbce79bd93ead1b800905",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-attack-cooldown-placeholder-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-attack-cooldown-placeholder-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-attack-cooldown-placeholder-strict-20261110-r1.json",

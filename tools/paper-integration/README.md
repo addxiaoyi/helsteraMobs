@@ -38,7 +38,25 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-attack-cooldown-placeholder-strict-20261110-r1`
+Latest strict fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1`
+passes all 421 probes (402 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Its imported Mythic Stats observation reads
+back `ATTACK_DAMAGE=12.0`, `MOVEMENT_SPEED=0.4`, `ARMOR=8.0`,
+`ARMOR_TOUGHNESS=4.0`, `KNOCKBACK_RESISTANCE=0.25`, and `FOLLOW_RANGE=36.0`
+from a production-spawned Zombie; it also verifies Stats-over-Options
+precedence, unsupported/modifier preservation, and default-valued controls.
+Report: `reports/paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1.json`
+(SHA-256 `adb22fdbb2d5a76e2459da0a2b3e2b6a2519b70900b97246b4c583376845b426`);
+server log: `reports/paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1.log.gz`;
+client logs: `reports/paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1-client-logs.tar.gz`.
+Server log SHA-256: `21d854a7b4962ffe31b1b97cf0fbf3748ba4cc30791f47c27d4fc8423a140238`;
+client log SHA-256: `95c1ce7cbcd5d9939e50db95b04ef28b0d5f6b75bf6d1068d9ad5fe357af5747`;
+plugin SHA-256: `31b9f1a360e8d31b0ed2b0ee74fb400085bf4e470c1bbce79bd93ead1b800905`.
+Modifier syntax, duplicate or malformed entries, `ATTACK_SPEED`, and other
+unsupported Stats remain preserved. The complete Stats catalog remains open;
+archived logs redact web-token query values.
+
+Previous strict fixture `srv-paper-attack-cooldown-placeholder-strict-20261110-r1`
 passes all 421 probes (402 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. Its `gameplayPlaceholders` observation reads
 `0.1` from live Player caster/target scopes after an attack, verifies dash and

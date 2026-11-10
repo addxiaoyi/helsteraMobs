@@ -1855,15 +1855,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                                  java.util.List<org.bukkit.entity.Entity> entities) {
         var zombie = world.spawn(origin, org.bukkit.entity.Zombie.class);
         entities.add(zombie);
+        // Entity modifiers are entity-scoped on Paper; the item probe below verifies equipment slot groups.
         var entityConfig = new org.bukkit.configuration.file.YamlConfiguration();
         entityConfig.set("attributes.main-hand.damage.attribute", "DAMAGE");
         entityConfig.set("attributes.main-hand.damage.amount", 2);
         entityConfig.set("attributes.main-hand.damage.operation", "ADD");
-        entityConfig.set("attributes.main-hand.damage.slot", "HAND");
+        entityConfig.set("attributes.main-hand.damage.slot", "ANY");
         entityConfig.set("attributes.off-hand.speed.attribute", "MOVEMENT_SPEED");
         entityConfig.set("attributes.off-hand.speed.amount", "25%");
         entityConfig.set("attributes.off-hand.speed.operation", "ADD");
-        entityConfig.set("attributes.off-hand.speed.slot", "OFF_HAND");
+        entityConfig.set("attributes.off-hand.speed.slot", "ANY");
         entityConfig.set("attributes.any.armor.attribute", "ARMOR");
         entityConfig.set("attributes.any.armor.amount", 1);
         entityConfig.set("attributes.any.armor.operation", "MULTIPLY");
@@ -1880,10 +1881,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var armor = zombie.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ARMOR);
         boolean attackModifier = hasAttributeModifier(attack, 2.0,
                 org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER,
-                org.bukkit.inventory.EquipmentSlotGroup.HAND);
+                org.bukkit.inventory.EquipmentSlotGroup.ANY);
         boolean speedModifier = hasAttributeModifier(speed, 0.25,
                 org.bukkit.attribute.AttributeModifier.Operation.ADD_SCALAR,
-                org.bukkit.inventory.EquipmentSlotGroup.OFFHAND);
+                org.bukkit.inventory.EquipmentSlotGroup.ANY);
         boolean armorModifier = hasAttributeModifier(armor, 1.0,
                 org.bukkit.attribute.AttributeModifier.Operation.MULTIPLY_SCALAR_1,
                 org.bukkit.inventory.EquipmentSlotGroup.ANY);
@@ -1896,7 +1897,6 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " armor=" + armorModifier + " dedup=" + entityDeduplicated
                 + " invalid-rejected=" + (modifierCount(attack) == 1
                 && modifierCount(speed) == 1 && modifierCount(armor) == 1));
-
         var item = new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_SWORD);
         var itemConfig = new org.bukkit.configuration.file.YamlConfiguration();
         itemConfig.set("attributes.mainhand.damage.attribute", "DAMAGE");
@@ -1960,7 +1960,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return modifiers != null && modifiers.stream().anyMatch(modifier ->
                 modifier.getOperation() == operation
                         && Math.abs(modifier.getAmount() - amount) < 1.0e-9
-                        && modifier.getSlotGroup() == slotGroup);
+                        && modifier.getSlotGroup() != null
+                        && modifier.getSlotGroup().toString().equals(slotGroup.toString()));
     }
 
     private static java.util.List<org.bukkit.attribute.AttributeModifier> itemAttributeModifiers(
@@ -2567,15 +2568,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             sourceRoot = Files.createTempDirectory("helstera-armor-toughness-stats-import-");
             Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
             Path source = sourceDirectory.resolve("armor-toughness-stats.yml");
-            String configuredId = "ImportedArmorToughnessStats_" + suffix;
+            String configuredId = "ImportedNativeStats_" + suffix;
             String modifierId = "PreservedArmorToughnessModifier_" + suffix;
             String legacyId = "PreservedLegacyArmorToughness_" + suffix;
             Files.writeString(source, """
                     mobs:
                       %1$s:
                         Type: ZOMBIE
+                        Options:
+                          Damage: 3
+                          MovementSpeed: 0.2
                         Stats:
                           - ARMOR_TOUGHNESS 4
+                          - ATTACK_DAMAGE 12
+                          - MOVEMENT_SPEED 0.4
+                          - ARMOR 8
+                          - KNOCKBACK_RESISTANCE 0.25
+                          - FOLLOW_RANGE 36
+                          - ATTACK_SPEED 3
+                          - CUSTOM_DEFENSE 6
                       %2$s:
                         Type: ZOMBIE
                         Stats:
@@ -2616,8 +2627,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var legacyConfig = mobConfig(legacyTargetId);
             var unsupportedModifierStats = modifierConfig == null ? null
                     : modifierConfig.getStringList("mob.unsupported.Stats");
+            var unsupportedNativeStats = configuredConfig == null ? null
+                    : configuredConfig.getStringList("mob.unsupported.Stats");
             boolean imported = configuredConfig != null
                     && Math.abs(configuredConfig.getDouble("mob.armor-toughness", Double.NaN) - 4.0) < 1.0e-9
+                    && Math.abs(configuredConfig.getDouble("mob.attack-damage", Double.NaN) - 12.0) < 1.0e-9
+                    && Math.abs(configuredConfig.getDouble("mob.move-speed", Double.NaN) - 0.4) < 1.0e-9
+                    && Math.abs(configuredConfig.getDouble("mob.armor", Double.NaN) - 8.0) < 1.0e-9
+                    && Math.abs(configuredConfig.getDouble("mob.knockback-resistance", Double.NaN) - 0.25) < 1.0e-9
+                    && Math.abs(configuredConfig.getDouble("mob.sight-radius", Double.NaN) - 36.0) < 1.0e-9
+                    && unsupportedNativeStats != null
+                    && unsupportedNativeStats.contains("ATTACK_SPEED 3")
+                    && unsupportedNativeStats.contains("CUSTOM_DEFENSE 6")
                     && modifierConfig != null && !modifierConfig.contains("mob.armor-toughness")
                     && unsupportedModifierStats != null
                     && unsupportedModifierStats.contains("ARMOR_TOUGHNESS 8 ADDITIVE")
@@ -2650,17 +2671,42 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
             var configuredAttribute = configuredEntity == null ? null
                     : configuredEntity.getAttribute(resolveAttribute("ARMOR_TOUGHNESS"));
+            var attackDamageAttribute = configuredEntity == null ? null
+                    : configuredEntity.getAttribute(resolveAttribute("ATTACK_DAMAGE"));
+            var movementSpeedAttribute = configuredEntity == null ? null
+                    : configuredEntity.getAttribute(resolveAttribute("MOVEMENT_SPEED"));
+            var armorAttribute = configuredEntity == null ? null
+                    : configuredEntity.getAttribute(resolveAttribute("ARMOR"));
+            var knockbackAttribute = configuredEntity == null ? null
+                    : configuredEntity.getAttribute(resolveAttribute("KNOCKBACK_RESISTANCE"));
+            var followRangeAttribute = configuredEntity == null ? null
+                    : configuredEntity.getAttribute(resolveAttribute("FOLLOW_RANGE"));
             var modifierAttribute = modifierEntity == null ? null
                     : modifierEntity.getAttribute(resolveAttribute("ARMOR_TOUGHNESS"));
             var legacyAttribute = legacyEntity == null ? null
                     : legacyEntity.getAttribute(resolveAttribute("ARMOR_TOUGHNESS"));
             double configuredBase = configuredAttribute == null ? Double.NaN : configuredAttribute.getBaseValue();
+            double attackDamageBase = attackDamageAttribute == null ? Double.NaN : attackDamageAttribute.getBaseValue();
+            double movementSpeedBase = movementSpeedAttribute == null ? Double.NaN : movementSpeedAttribute.getBaseValue();
+            double armorBase = armorAttribute == null ? Double.NaN : armorAttribute.getBaseValue();
+            double knockbackBase = knockbackAttribute == null ? Double.NaN : knockbackAttribute.getBaseValue();
+            double followRangeBase = followRangeAttribute == null ? Double.NaN : followRangeAttribute.getBaseValue();
             double modifierBase = modifierAttribute == null ? Double.NaN : modifierAttribute.getBaseValue();
             double legacyBase = legacyAttribute == null ? Double.NaN : legacyAttribute.getBaseValue();
             boolean applied = Math.abs(configuredBase - 4.0) < 1.0e-9
+                    && Math.abs(attackDamageBase - 12.0) < 1.0e-9
+                    && Math.abs(movementSpeedBase - 0.4) < 1.0e-9
+                    && Math.abs(armorBase - 8.0) < 1.0e-9
+                    && Math.abs(knockbackBase - 0.25) < 1.0e-9
+                    && Math.abs(followRangeBase - 36.0) < 1.0e-9
                     && Math.abs(modifierBase) < 1.0e-9 && Math.abs(legacyBase) < 1.0e-9;
             getLogger().info("[自检] armor-toughness-stats-imported result=" + (imported && applied)
                     + " imported=" + imported + " base=" + configuredBase
+                    + " attack-damage=" + attackDamageBase + " movement-speed=" + movementSpeedBase
+                    + " armor=" + armorBase + " knockback-resistance=" + knockbackBase
+                    + " follow-range=" + followRangeBase
+                    + " unsupported-preserved=" + (unsupportedNativeStats != null
+                    && unsupportedNativeStats.containsAll(java.util.List.of("ATTACK_SPEED 3", "CUSTOM_DEFENSE 6")))
                     + " modifier-preserved=" + (unsupportedModifierStats != null
                     && unsupportedModifierStats.contains("ARMOR_TOUGHNESS 8 ADDITIVE"))
                     + " root-preserved=" + (legacyConfig != null

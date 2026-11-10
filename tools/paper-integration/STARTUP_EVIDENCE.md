@@ -1,6 +1,25 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-attack-cooldown-placeholder-strict-20261110-r1`
+Latest fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1`
+passed the full strict gate on Paper 1.21.1-133: 421 registered probes, 402
+passed, 19 expected rejections, and zero failed or incomplete. Its imported
+Mythic Stats probe reads `ATTACK_DAMAGE=12.0`, `MOVEMENT_SPEED=0.4`,
+`ARMOR=8.0`, `ARMOR_TOUGHNESS=4.0`, `KNOCKBACK_RESISTANCE=0.25`, and
+`FOLLOW_RANGE=36.0` from a production-spawned Zombie and confirms
+Stats-over-Options precedence, preservation, and default-valued controls.
+Report:
+[paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1.json](reports/paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1.json), SHA-256:
+`adb22fdbb2d5a76e2459da0a2b3e2b6a2519b70900b97246b4c583376845b426`.
+Compressed server log SHA-256:
+`21d854a7b4962ffe31b1b97cf0fbf3748ba4cc30791f47c27d4fc8423a140238`.
+Client log archive SHA-256:
+`95c1ce7cbcd5d9939e50db95b04ef28b0d5f6b75bf6d1068d9ad5fe357af5747`.
+Plugin SHA-256:
+`31b9f1a360e8d31b0ed2b0ee74fb400085bf4e470c1bbce79bd93ead1b800905`.
+Other Stats and modifier/duplicate/invalid entries remain preserved; the full
+Stats catalog remains open. Archived logs redact web-token query values.
+
+Previous fixture `srv-paper-attack-cooldown-placeholder-strict-20261110-r1`
 passed the full strict gate on Paper 1.21.1-133: 421 registered probes, 402
 passed, 19 expected rejections, and zero failed or incomplete. Its
 `gameplayPlaceholders` observation reads `0.1` from live Player caster/target

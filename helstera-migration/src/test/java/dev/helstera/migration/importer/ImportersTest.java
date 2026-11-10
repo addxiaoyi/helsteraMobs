@@ -3117,24 +3117,38 @@ class ImportersTest {
     }
 
     @Test
-    @DisplayName("Mythic built-in armor toughness stat maps only an unambiguous scalar override")
-    void mythicStatsMapArmorToughnessAndPreserveUnsupportedForms(@TempDir Path root) throws Exception {
+    @DisplayName("Mythic native scalar stats map while unsupported forms remain preserved")
+    void mythicStatsMapNativeScalarsAndPreserveUnsupportedForms(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/stats.yml", """
                 mobs:
-                  Scalar:
+                  Native:
                     Type: ZOMBIE
+                    Armor: 2
+                    Options:
+                      Damage: 3
+                      MovementSpeed: 0.2
                     Stats:
                       - ARMOR_TOUGHNESS 4
+                      - ATTACK_DAMAGE 12
+                      - MOVEMENT_SPEED 0.4
+                      - ARMOR 8
+                      - KNOCKBACK_RESISTANCE 0.25
+                      - FOLLOW_RANGE 36
+                      - ATTACK_SPEED 3
                       - CUSTOM_DEFENSE 6
                   Modifier:
                     Type: ZOMBIE
                     Stats:
                       - ARMOR_TOUGHNESS 8 ADDITIVE
-                  Duplicate:
+                  DuplicateAlias:
                     Type: ZOMBIE
                     Stats:
-                      - ARMOR_TOUGHNESS 2
-                      - ARMOR_TOUGHNESS 3
+                      - ATTACK_DAMAGE 2
+                      - ATTACKDAMAGE 3
+                  Malformed:
+                    Type: ZOMBIE
+                    Stats:
+                      - MOVEMENT_SPEED NaN
                   LegacyRoot:
                     Type: ZOMBIE
                     ArmorToughness: 9
@@ -3148,19 +3162,31 @@ class ImportersTest {
                         entry -> YamlConfiguration.loadConfiguration(new StringReader(
                                 String.valueOf(entry.get("content"))))));
 
-        assertEquals(4, plans.get("Scalar").getDouble("mob.armor-toughness"), 1e-9);
-        assertEquals(List.of("CUSTOM_DEFENSE 6"),
-                plans.get("Scalar").getStringList("mob.unsupported.Stats"));
+        var nativeStats = plans.get("Native");
+        assertEquals(4, nativeStats.getDouble("mob.armor-toughness"), 1e-9);
+        assertEquals(12, nativeStats.getDouble("mob.attack-damage"), 1e-9);
+        assertEquals(0.4, nativeStats.getDouble("mob.move-speed"), 1e-9);
+        assertEquals(8, nativeStats.getDouble("mob.armor"), 1e-9);
+        assertEquals(0.25, nativeStats.getDouble("mob.knockback-resistance"), 1e-9);
+        assertEquals(36, nativeStats.getDouble("mob.sight-radius"), 1e-9);
+        assertEquals(List.of("ATTACK_SPEED 3", "CUSTOM_DEFENSE 6"),
+                nativeStats.getStringList("mob.unsupported.Stats"));
         assertFalse(plans.get("Modifier").contains("mob.armor-toughness"));
         assertEquals(List.of("ARMOR_TOUGHNESS 8 ADDITIVE"),
                 plans.get("Modifier").getStringList("mob.unsupported.Stats"));
-        assertFalse(plans.get("Duplicate").contains("mob.armor-toughness"));
-        assertEquals(List.of("ARMOR_TOUGHNESS 2", "ARMOR_TOUGHNESS 3"),
-                plans.get("Duplicate").getStringList("mob.unsupported.Stats"));
+        assertFalse(plans.get("DuplicateAlias").contains("mob.attack-damage"));
+        assertEquals(List.of("ATTACK_DAMAGE 2", "ATTACKDAMAGE 3"),
+                plans.get("DuplicateAlias").getStringList("mob.unsupported.Stats"));
+        assertFalse(plans.get("Malformed").contains("mob.move-speed"));
+        assertEquals(List.of("MOVEMENT_SPEED NaN"),
+                plans.get("Malformed").getStringList("mob.unsupported.Stats"));
         assertFalse(plans.get("LegacyRoot").contains("mob.armor-toughness"));
         assertEquals(9, plans.get("LegacyRoot").getInt("mob.unsupported.ArmorToughness"));
         assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
                 && "LegacyRoot.ArmorToughness".equals(entry.get("source-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "mob.move-speed".equals(entry.get("target-key"))
+                && "Native.Stats[2]".equals(entry.get("source-key"))));
     }
 
 
