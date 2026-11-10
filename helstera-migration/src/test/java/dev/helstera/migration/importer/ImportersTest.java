@@ -5105,6 +5105,51 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Screaming maps only to goats and preserves invalid values")
+    void mythicMapsGoatScreamingWithEntityBoundary(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/goat-options.yml", """
+                mobs:
+                  screaming_goat:
+                    Type: GOAT
+                    Options:
+                      Screaming: true
+                  quiet_goat:
+                    Type: GOAT
+                    Options:
+                      Screaming: false
+                  wrong_entity:
+                    Type: ZOMBIE
+                    Options:
+                      Screaming: true
+                  invalid:
+                    Type: GOAT
+                    Options:
+                      Screaming: maybe
+                """);
+
+        var entries = new MythicMobsImporter().convert(file);
+
+        var screaming = convertedMob(entries, "screaming_goat");
+        assertTrue(screaming.getBoolean("entity.goat-screaming"));
+        assertFalse(screaming.contains("mob.unsupported.Options"));
+        var quiet = convertedMob(entries, "quiet_goat");
+        assertFalse(quiet.getBoolean("entity.goat-screaming", true));
+        var wrongEntity = convertedMob(entries, "wrong_entity");
+        assertTrue(wrongEntity.getBoolean("entity.unsupported.Options.Screaming"));
+        assertFalse(wrongEntity.contains("entity.goat-screaming"));
+        var invalid = convertedMob(entries, "invalid");
+        assertEquals("maybe", invalid.getString("entity.unsupported.Options.Screaming"));
+        assertFalse(invalid.contains("entity.goat-screaming"));
+        assertFalse(invalid.contains("mob.unsupported.Options"));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "Options.Screaming".equals(entry.get("source-key"))
+                && "entity.goat-screaming".equals(entry.get("target-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "Options.Screaming".equals(entry.get("source-key"))
+                && "WARN".equals(entry.get("severity"))));
+    }
+
+    @Test
     @DisplayName("Mythic Cat options map type, sitting, and collar color")
     void mythicMapsCatOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/cat-options.yml", """

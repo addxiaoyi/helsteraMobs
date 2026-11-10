@@ -2,13 +2,22 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
+Mythic Goat `Options.Screaming` now imports only for Goat entities and applies
+through `Goat#setScreaming`. Wrong-entity and malformed values remain preserved
+with migration warnings. Strict fixture
+`srv-paper-goat-screaming-strict-20261110-r2` verifies imported true/false
+states, default behavior, and preservation controls while completing all 427
+release probes on Paper 1.21.1-133. See the [strict report](tools/paper-integration/reports/paper-1.21.1-goat-screaming-strict-20261110-r2.json),
+[Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and
+[parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+
 Mythic Interaction `Height`, `Width`, and `Responsive` now import only for
 `INTERACTION` entities. The runtime applies Mythic's documented defaults
 (height 1, width follows height, responsive true), rejects malformed values,
-and preserves wrong-entity and invalid values with migration warnings. Latest
-strict fixture `srv-paper-interaction-options-strict-20261110-r2` verifies
-production readback and negative controls in all 426 release probes on Paper
-1.21.1-133. See the [strict report](tools/paper-integration/reports/paper-1.21.1-interaction-options-strict-20261110-r2.json)
+and preserves wrong-entity and invalid values with migration warnings. The
+preceding strict fixture `srv-paper-interaction-options-strict-20261110-r2`
+verified production readback and negative controls in all 426 release probes
+on Paper 1.21.1-133. See the [strict report](tools/paper-integration/reports/paper-1.21.1-interaction-options-strict-20261110-r2.json)
 and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
 Mythic Boat and ChestBoat variants import from `Options.BoatType` or the
@@ -1294,7 +1303,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-interaction-options-strict-20261110-r2` has 426 probes (407 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-goat-screaming-strict-20261110-r2` has 427 probes (408 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1307,13 +1316,13 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-10). The full remaining work is:
 
-Latest strict report has 426 probes, zero incomplete.
+Latest strict report has 427 probes, zero incomplete.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 563 cited IDs; 471 report files; 4 directories
-   without reports; 88 missing directories; 242 archived release reports. The
+   Current fixture inventory: 564 cited IDs; 472 report files; 4 directories
+   without reports; 88 missing directories; 243 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

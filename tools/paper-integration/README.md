@@ -51,12 +51,27 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-interaction-options-strict-20261110-r2` passes
-all 426 probes (407 passed, 19 expected rejections, zero failed or incomplete)
-on Paper 1.21.1-133. Its `interactionOptionsImported` probe reads back
-configured dimensions and `Responsive=false`, verifies width follows height,
-and confirms the documented 1x1/responsive defaults plus wrong-type and invalid
-option preservation. Report:
+Latest strict fixture `srv-paper-goat-screaming-strict-20261110-r2` passes all
+427 probes (408 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `goatOptionsImported` probe reads back imported
+`Options.Screaming` for configured and control Goats, confirms the false
+default, and verifies wrong-type and malformed-value preservation. Report:
+[`paper-1.21.1-goat-screaming-strict-20261110-r2.json`](reports/paper-1.21.1-goat-screaming-strict-20261110-r2.json)
+(SHA-256 `6af88fe5691b20771913bd0d8d5d182490e275dec7928b151388c1db3b5aeaf0`);
+compressed server log SHA-256 is
+`0b8c573a864daa12f07c6bb4aa4f714e59a4dcb446f11d3301e0ba366492fe25`, client
+log archive SHA-256 is
+`a4435e5c922615499cfcf955c81f0ab18d63625f4061746941564c6107c89487`, and
+plugin SHA-256 is
+`d7e1063e5e31d69b038011fd26e589d498b489c47ddcf3639ca42681a8154f8e`. Archived
+logs redact web-token values.
+
+Previous strict fixture `srv-paper-interaction-options-strict-20261110-r2`
+passes all 426 probes (407 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Its `interactionOptionsImported` probe reads
+back configured dimensions and `Responsive=false`, verifies width follows
+height, and confirms the documented 1x1/responsive defaults plus wrong-type
+and invalid-option preservation. Report:
 [`paper-1.21.1-interaction-options-strict-20261110-r2.json`](reports/paper-1.21.1-interaction-options-strict-20261110-r2.json)
 (SHA-256 `62a69624345299ecf73ae87470826d5b648e616770e2e71d4699aeae5867093a`);
 compressed server log SHA-256 is

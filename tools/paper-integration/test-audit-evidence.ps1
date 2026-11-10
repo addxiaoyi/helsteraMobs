@@ -350,6 +350,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'interactionOptionsImported'; status = 'passed'; observations = @('interaction-options-imported result=true imported=true configured-height=2.5 configured-width=3.25 responsive=false height-only-width=1.75 defaults-applied=true wrong-type-preserved=true invalid-preserved=true')
     }
+    $fullReport.expectedProbeIds += 'goatOptionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'goatOptionsImported'; status = 'passed'; observations = @('goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true')
+    }
     $fullReport.expectedProbeIds += 'foxOptionsImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'foxOptionsImported'; status = 'passed'; observations = @('fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true')

@@ -681,6 +681,20 @@ try {
     Assert-True (($interactionOptionsReport.probes | Where-Object id -eq 'interactionOptionsImported').status -eq 'passed' -and
         ($interactionOptionsReport.probes | Where-Object id -eq 'interactionOptionsImported').observations[0] -match
         '^interaction-options-imported result=true imported=true configured-height=2\.5 configured-width=3\.25 responsive=false height-only-width=1\.75 defaults-applied=true wrong-type-preserved=true invalid-preserved=true$') 'report writer requires imported Interaction option evidence'
+    $goatOptionsTemp = Join-Path $temp 'goat-options-fixture'
+    $goatOptionsLogDirectory = Join-Path $goatOptionsTemp 'logs'
+    New-Item -ItemType Directory -Path $goatOptionsLogDirectory -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $goatOptionsLogDirectory 'latest.log') -Value @(
+        'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
+        '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
+        '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
+        '[Server thread/INFO]: [helsteraMobs] [自检] goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true'
+    ) -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $goatOptionsTemp | Out-Null
+    $goatOptionsReport = Get-Content -LiteralPath (Join-Path $goatOptionsTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($goatOptionsReport.probes | Where-Object id -eq 'goatOptionsImported').status -eq 'passed' -and
+        ($goatOptionsReport.probes | Where-Object id -eq 'goatOptionsImported').observations[0] -match
+        '^goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true$') 'report writer requires imported Goat option evidence'
     Assert-True (($report.probes | Where-Object id -eq 'spawner:reject').status -eq 'observed-rejected') 'rejected probe'
     Assert-True (($report.probes | Where-Object id -eq 'lootDynamicChance').status -eq 'passed') 'dynamic chance probe'
     $events = @($report.probes | Where-Object id -eq 'events')
@@ -1312,6 +1326,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'interactionOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'interactionOptionsImported'; status = 'passed'; observations = @('interaction-options-imported result=true imported=true configured-height=2.5 configured-width=3.25 responsive=false height-only-width=1.75 defaults-applied=true wrong-type-preserved=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'goatOptionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'goatOptionsImported'; status = 'passed'; observations = @('goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true')
     }
     $fullCatalogCreeperOptions = @($fullCatalogReport.probes | Where-Object id -eq 'creeper')
     if ($fullCatalogCreeperOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain creeper.' }
@@ -2230,6 +2248,19 @@ try {
     } catch { $incompleteInteractionOptionsRejected = $_.Exception.Message -match 'required observation for interactionOptionsImported' }
     Assert-True $incompleteInteractionOptionsRejected 'full release gate rejects incomplete imported Interaction option evidence'
     $fullCatalogInteractionOptions[0].observations = $interactionOptionsObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $fullCatalogGoatOptions = @($fullCatalogReport.probes | Where-Object id -eq 'goatOptionsImported')
+    if ($fullCatalogGoatOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain goatOptionsImported.' }
+    $goatOptionsObservations = $fullCatalogGoatOptions[0].observations
+    $fullCatalogGoatOptions[0].observations = @('goat-options result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteGoatOptionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteGoatOptionsRejected = $_.Exception.Message -match 'required observation for goatOptionsImported' }
+    Assert-True $incompleteGoatOptionsRejected 'full release gate rejects incomplete imported Goat option evidence'
+    $fullCatalogGoatOptions[0].observations = $goatOptionsObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $creeperOptionsObservations = $fullCatalogCreeperOptions[0].observations
     $fullCatalogCreeperOptions[0].observations = @('creeper-options result=true')
