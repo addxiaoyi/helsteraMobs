@@ -116,6 +116,34 @@ class SkillTreeContextTest {
     }
 
     @Test
+    void snapshotStoreKeepsPreviousFileWhenNewSnapshotCannotBeSerialized() throws Exception {
+        var directory = Files.createTempDirectory("skill-tree-atomic");
+        var file = directory.resolve("persistent.yml").toFile();
+        try {
+            SkillTreeContext original = new SkillTreeContext(null, null);
+            original.setVariable("marker", "previous-valid-snapshot");
+            SkillTreeSnapshotStore.save(file, original.snapshot());
+
+            var invalid = new SkillTreeContext.Snapshot(
+                    java.util.Map.of("unsupported", new Object()),
+                    java.util.Map.of(), java.util.Map.of(), java.util.Set.of(),
+                    java.util.Set.of(), java.util.Optional.empty());
+            assertThrows(java.io.IOException.class, () -> SkillTreeSnapshotStore.save(file, invalid));
+
+            var restored = SkillTreeSnapshotStore.load(file);
+            assertEquals("previous-valid-snapshot", restored.variables().get("marker"));
+            try (var files = Files.list(directory)) {
+                assertEquals(java.util.List.of(file.toPath()), files.sorted().toList());
+            }
+        } finally {
+            try (var files = Files.list(directory)) {
+                for (var path : files.toList()) Files.deleteIfExists(path);
+            }
+            Files.deleteIfExists(directory);
+        }
+    }
+
+    @Test
     void branchesRequirePrerequisitesAndSurviveSnapshotRestore() {
         SkillTreeContext tree = new SkillTreeContext(null, null);
         tree.defineBranch("root", java.util.Set.of());

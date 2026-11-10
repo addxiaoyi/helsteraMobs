@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-skilltree-atomic-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-skilltree-atomic-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-skilltree-atomic-snapshot-strict-20261110-r1.json",
+    "reportSha256": "a55999e80d9ce52c33d80087890f2d02e69f524f3bff4a29e7793caddfbf1e30",
+    "log": "tools/paper-integration/reports/paper-1.21.1-skilltree-atomic-snapshot-strict-20261110-r1.log.gz",
+    "logSha256": "4f51b57ce1f686e3c171e1ea98e3d8728c34c85af9193d49ea733af739b34028",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-skilltree-atomic-snapshot-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "455b078ee0a04e2802db91207d98649e6b6cdc26cc3fb1daa6c74caa68fcbb20",
+    "pluginSha256": "09fbfe2c154e57d816bbf1893fd3d2124f5f2e9ca9d12a3122c212db7b6ca18e",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-on-timer-import-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-on-timer-import-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-on-timer-import-strict-20261110-r1.json",

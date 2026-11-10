@@ -22,6 +22,9 @@ $repoPath = [System.IO.Path]::GetFullPath($repo + [System.IO.Path]::DirectorySep
 if (-not $fixturePath.StartsWith($repoPath, [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "Fixture must be inside workspace: $fixturePath"
 }
+if (Test-Path -LiteralPath (Join-Path $fixturePath 'integration-world') -PathType Container) {
+    throw "Fixture already contains a persistent test world; choose a fresh FixtureName: $fixture"
+}
 
 try {
     $env:PAPER_INTEGRATION_DIR = $fixture
@@ -57,12 +60,16 @@ try {
     if (Test-Path -LiteralPath (Join-Path $snapshotDirectory 'mob-skilltree_probe.yml')) {
         throw 'New SkillTree snapshots must use entity UUIDs, not the legacy mob ID filename'
     }
+    $writeEvidenceLog = Join-Path $fixturePath 'skilltree-write.log'
+    Copy-Item -LiteralPath $writeLog -Destination $writeEvidenceLog -Force
 
     $env:PAPER_SKILLTREE_REUSE = 'true'
     $env:PAPER_SKILLTREE_STAGE = 'verify'
     & (Join-Path $PSScriptRoot 'run-server.ps1') @runParams
 
     $verifyLog = Join-Path $fixturePath 'logs/latest.log'
+    $verifyEvidenceLog = Join-Path $fixturePath 'skilltree-verify.log'
+    Copy-Item -LiteralPath $verifyLog -Destination $verifyEvidenceLog -Force
     if (-not (Select-String -LiteralPath $verifyLog -Pattern 'skilltree-restart stage=verify result=passed mob-id=skilltree_probe entities=2 uuid-markers=true foundation-restored=true prerequisite-restored=true advanced-unlocked=true' -Quiet)) {
         throw 'Second boot did not independently restore both UUID SkillTree snapshots'
     }
@@ -79,6 +86,45 @@ try {
     if ($remainingSnapshots.Count -ne 1) {
         throw "Expected only the surviving entity SkillTree snapshot after second shutdown; found $($remainingSnapshots.Count)"
     }
+
+    $paperMatch = [regex]::Match((Get-Content -LiteralPath $verifyLog -Raw),
+        'This server is running Paper version ([^ ]+)')
+    if (-not $paperMatch.Success) {
+        throw 'Could not identify the Paper build in the restart verification log'
+    }
+    $pluginJar = Join-Path $fixturePath 'plugins/helsteraMobs.jar'
+    $paperJar = Join-Path $fixturePath 'paper.jar'
+    $evidence = [ordered]@{
+        schemaVersion = 1
+        fixtureDirectory = $fixture
+        generatedAtUtc = [DateTime]::UtcNow.ToString('o')
+        paperVersion = $paperMatch.Groups[1].Value
+        paperJarSha256 = (Get-FileHash -LiteralPath $paperJar -Algorithm SHA256).Hash.ToLowerInvariant()
+        pluginSha256 = (Get-FileHash -LiteralPath $pluginJar -Algorithm SHA256).Hash.ToLowerInvariant()
+        firstBoot = [ordered]@{
+            result = 'passed'
+            entities = 2
+            snapshotsAfterShutdown = 2
+            branchStateSaved = $true
+            log = 'skilltree-write.log'
+        }
+        secondBoot = [ordered]@{
+            result = 'passed'
+            uuidMarkersRestored = $true
+            foundationRestored = $true
+            prerequisiteRestored = $true
+            advancedBranchUnlocked = $true
+            log = 'skilltree-verify.log'
+        }
+        entityDeath = [ordered]@{
+            result = 'passed'
+            deadEntitySnapshotRemoved = $true
+            survivorSnapshotRetained = $true
+            snapshotsAfterShutdown = 1
+        }
+    }
+    $evidencePath = Join-Path $fixturePath 'skilltree-restart-evidence.json'
+    $evidence | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $evidencePath -Encoding utf8
     Write-Host "SkillTree restart integration passed: $fixturePath"
 } finally {
     $env:PAPER_INTEGRATION_DIR = $previousFixture

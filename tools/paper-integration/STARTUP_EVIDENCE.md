@@ -1,22 +1,35 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-on-timer-import-strict-20261110-r1` passed the full
+Latest fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passed the full
 strict gate on Paper 1.21.1-133: 422 registered probes, 403 passed, 19 expected
-rejections, and zero failed or incomplete. Its imported Timer probe verifies
-2- and 5-tick branches aligned to the Paper global clock, independent dispatch,
-source context, and preservation of an invalid zero interval. Report:
-[paper-1.21.1-on-timer-import-strict-20261110-r1.json](reports/paper-1.21.1-on-timer-import-strict-20261110-r1.json), SHA-256:
-`bdeffdeeccb6a55d4de73ff0492a5060ce8b815f79eb7430880dbd3180e1350e`.
+rejections, and zero failed or incomplete. Its plugin SHA-256 is
+`09fbfe2c154e57d816bbf1893fd3d2124f5f2e9ca9d12a3122c212db7b6ca18e`. The
+API module passes all 97 tests, including a failed-serialization check that
+preserves the prior snapshot and removes the temporary file. A clean focused
+two-boot fixture `srv-paper-skilltree-atomic-restart-20261110-r2` verifies two
+same-ID mobs restore independent UUID branch state and that death removes only
+the victim snapshot. Focused evidence:
+[report](reports/paper-1.21.1-skilltree-atomic-restart-20261110-r2-evidence.json)
+(SHA-256 `ee6d3e2204ac5bc42ae87da954a73577c363541957555a0d63e3fd284af79945`),
+[redacted boot logs](reports/paper-1.21.1-skilltree-atomic-restart-20261110-r2-logs.tar.gz)
+(SHA-256 `52dfeb3890b214a9749f2af8995e4ac27412068a8fe6a0000372f9b078b859ee`).
+Full-catalog report:
+[paper-1.21.1-skilltree-atomic-snapshot-strict-20261110-r1.json](reports/paper-1.21.1-skilltree-atomic-snapshot-strict-20261110-r1.json), SHA-256:
+`a55999e80d9ce52c33d80087890f2d02e69f524f3bff4a29e7793caddfbf1e30`.
 Compressed server log SHA-256:
-`3a1c0e64287a6b52aecacf51b4922eb11b494d527173aa26133df41ab3b60300`.
+`4f51b57ce1f686e3c171e1ea98e3d8728c34c85af9193d49ea733af739b34028`.
 Client log archive SHA-256:
-`ec8932d584ee624c4206abc5bd276ca690deaa9465ee1b4610a49d75a0121663`.
-Plugin SHA-256:
-`5b5a07c5594bcc9d19eabbd4179d2890f0a72119eb12cf6d05599989ed8261ed`.
-Archived logs redact web-token query values. The official [onTimer trigger
+`455b078ee0a04e2802db91207d98649e6b6cdc26cc3fb1daa6c74caa68fcbb20`.
+Archived logs redact web-token query values. Complete Mythic SkillTree
+semantics remain open.
+
+Previous strict fixture `srv-paper-on-timer-import-strict-20261110-r1`
+verified imported 2- and 5-tick Timer branches aligned to the Paper global
+clock, independent dispatch, source context, and invalid zero-interval
+preservation in the full 422-probe catalog. The official [onTimer trigger
 reference](https://wiki.mythiccraft.io/mythicmobs/Skills/Triggers/onTimer)
 specifies global-clock scheduling and no `@trigger`, and lists MythicCrucible
-as the implementation; this evidence covers Helstera's imported mob-trigger
+as its implementation; this evidence covers Helstera's imported mob-trigger
 support, not the complete Mythic Trigger catalog.
 
 Latest fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1`

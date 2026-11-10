@@ -38,28 +38,34 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-on-timer-import-strict-20261110-r1` passes all
+Latest strict fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passes all
 422 probes (403 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. Its imported `~onTimer:2`/`:5` branches follow the global
-server tick, execute independently, preserve invalid zero-period input, and
-retain their source dispatch. Report:
-`reports/paper-1.21.1-on-timer-import-strict-20261110-r1.json`
-(SHA-256 `bdeffdeeccb6a55d4de73ff0492a5060ce8b815f79eb7430880dbd3180e1350e`);
-server log:
-`reports/paper-1.21.1-on-timer-import-strict-20261110-r1.log.gz`;
-client logs:
-`reports/paper-1.21.1-on-timer-import-strict-20261110-r1-client-logs.tar.gz`.
-Server log SHA-256:
-`3a1c0e64287a6b52aecacf51b4922eb11b494d527173aa26133df41ab3b60300`;
-client log SHA-256:
-`ec8932d584ee624c4206abc5bd276ca690deaa9465ee1b4610a49d75a0121663`;
-plugin SHA-256:
-`5b5a07c5594bcc9d19eabbd4179d2890f0a72119eb12cf6d05599989ed8261ed`.
-Archived logs redact web-token query values. The official [onTimer
-reference](https://wiki.mythiccraft.io/mythicmobs/Skills/Triggers/onTimer)
+Paper 1.21.1-133. The build includes atomic SkillTree snapshot replacement;
+all 97 API tests pass, including failure preservation and temporary-file
+cleanup. The clean two-boot Paper fixture
+`srv-paper-skilltree-atomic-restart-20261110-r2` verifies UUID-specific branch
+restoration and per-entity death cleanup. Its focused report is
+`reports/paper-1.21.1-skilltree-atomic-restart-20261110-r2-evidence.json`
+(SHA-256 `ee6d3e2204ac5bc42ae87da954a73577c363541957555a0d63e3fd284af79945`);
+redacted boot logs:
+`reports/paper-1.21.1-skilltree-atomic-restart-20261110-r2-logs.tar.gz`
+(SHA-256 `52dfeb3890b214a9749f2af8995e4ac27412068a8fe6a0000372f9b078b859ee`).
+The full strict report is
+`reports/paper-1.21.1-skilltree-atomic-snapshot-strict-20261110-r1.json`
+(SHA-256 `a55999e80d9ce52c33d80087890f2d02e69f524f3bff4a29e7793caddfbf1e30`);
+its compressed server log SHA-256 is
+`4f51b57ce1f686e3c171e1ea98e3d8728c34c85af9193d49ea733af739b34028`, client
+log archive SHA-256 is
+`455b078ee0a04e2802db91207d98649e6b6cdc26cc3fb1daa6c74caa68fcbb20`, and
+plugin SHA-256 is
+`09fbfe2c154e57d816bbf1893fd3d2124f5f2e9ca9d12a3122c212db7b6ca18e`.
+
+Previous strict fixture `srv-paper-on-timer-import-strict-20261110-r1`
+verified imported `~onTimer:2`/`:5` global-clock branches, independent
+execution, invalid zero-period preservation, and source dispatch in the same
+422-probe catalog. The [official onTimer reference](https://wiki.mythiccraft.io/mythicmobs/Skills/Triggers/onTimer)
 documents global-clock alignment and no `@trigger`, and lists MythicCrucible
-as its implementation. This report verifies Helstera's imported mob-trigger
-slice; the complete Trigger catalog remains open.
+as its implementation; the complete Trigger catalog remains open.
 
 Latest strict fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1`
 passes all 421 probes (402 passed, 19 expected rejections, zero failed or
