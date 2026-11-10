@@ -91,7 +91,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] line-of-sight-condition result=true imported=true aliases=true direct-positive=true direct-blocked=true target-positive=true target-blocked=true target-negative=true restored-positive=true restored=true invalid-preserved=true warning=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] grounded-condition imported=true primary-mapped=true grounded-alias-mapped=true positive=true alias-positive=true airborne=true negative=true alias-negative=true invalid-preserved=true restored=true passed=true',
-        '[Server thread/INFO]: [helsteraMobs] [自检] template-type-imported result=true imported=true primary-mapped=true alias-mapped=true direct-positive=true transitive-positive=true unrelated-rejected=true control-rejected=true missing-config-rejected=true unmanaged-rejected=true invalid-preserved=true passed=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] template-type-imported result=true imported=true primary-mapped=true alias-mapped=true direct-positive=true transitive-positive=true unrelated-rejected=true control-rejected=true field-inheritance=true exclude-inherited-removed=true exclude-own-values=true missing-config-rejected=true unmanaged-rejected=true invalid-preserved=true passed=true',
         '[Server thread/INFO]: raider-patrol-leader-condition positive=true negative=true entity=PILLAGER restored=true',
         '[Server thread/INFO]: creeper-primed-condition positive=true negative=true restored=true',
         '[Server thread/INFO]: ender-dragon-alive-condition positive=true negative=true removed=true',
@@ -1094,7 +1094,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'templateTypeImported'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'templateTypeImported'; status = 'passed'; observations = @('template-type-imported result=true imported=true primary-mapped=true alias-mapped=true direct-positive=true transitive-positive=true unrelated-rejected=true control-rejected=true missing-config-rejected=true unmanaged-rejected=true invalid-preserved=true passed=true')
+        id = 'templateTypeImported'; status = 'passed'; observations = @('template-type-imported result=true imported=true primary-mapped=true alias-mapped=true direct-positive=true transitive-positive=true unrelated-rejected=true control-rejected=true field-inheritance=true exclude-inherited-removed=true exclude-own-values=true missing-config-rejected=true unmanaged-rejected=true invalid-preserved=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds += 'serverNmsVersionCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

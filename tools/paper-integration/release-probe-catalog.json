@@ -389,7 +389,7 @@
     {
       "id": "templateTypeImported",
       "status": "passed",
-      "requiredObservation": "template-type-imported result=true imported=true primary-mapped=true alias-mapped=true direct-positive=true transitive-positive=true unrelated-rejected=true control-rejected=true missing-config-rejected=true unmanaged-rejected=true invalid-preserved=true passed=true"
+      "requiredObservation": "template-type-imported result=true imported=true primary-mapped=true alias-mapped=true direct-positive=true transitive-positive=true unrelated-rejected=true control-rejected=true field-inheritance=true exclude-inherited-removed=true exclude-own-values=true missing-config-rejected=true unmanaged-rejected=true invalid-preserved=true passed=true"
     },
     {
       "id": "inCombatCondition",

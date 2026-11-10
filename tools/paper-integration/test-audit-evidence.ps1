@@ -82,7 +82,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'templateTypeImported'
     $fullReport.probes += [pscustomobject]@{
-        id = 'templateTypeImported'; status = 'passed'; observations = @('template-type-imported result=true imported=true primary-mapped=true alias-mapped=true direct-positive=true transitive-positive=true unrelated-rejected=true control-rejected=true missing-config-rejected=true unmanaged-rejected=true invalid-preserved=true passed=true')
+        id = 'templateTypeImported'; status = 'passed'; observations = @('template-type-imported result=true imported=true primary-mapped=true alias-mapped=true direct-positive=true transitive-positive=true unrelated-rejected=true control-rejected=true field-inheritance=true exclude-inherited-removed=true exclude-own-values=true missing-config-rejected=true unmanaged-rejected=true invalid-preserved=true passed=true')
     }
     $invulnerableProbe = @($fullReport.probes | Where-Object id -eq 'invulnerableCondition')
     if ($invulnerableProbe.Count -ne 1) { throw 'Synthetic release report must contain invulnerableCondition.' }

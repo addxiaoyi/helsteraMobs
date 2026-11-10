@@ -3447,6 +3447,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 String parentSourceId = "TemplateTypeParent_" + suffix;
                 String childSourceId = "TemplateTypeChild_" + suffix;
                 String controlSourceId = "TemplateTypeControl_" + suffix;
+                String excludeSourceId = "TemplateTypeExclude_" + suffix;
                 sourceRoot = Files.createTempDirectory("helstera-template-type-import-");
                 Path source = Files.createDirectories(sourceRoot.resolve("Mobs"))
                         .resolve("template-type.yml");
@@ -3454,23 +3455,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         mobs:
                           %1$s:
                             Type: ZOMBIE
+                            Health: 31
                             Options:
                               NoAI: true
+                              PreventSunburn: true
                           %2$s:
                             Type: ZOMBIE
-                            Options:
-                              NoAI: true
                             Template: %1$s
+                            Health: 37
                           %3$s:
                             Type: ZOMBIE
-                            Options:
-                              NoAI: true
                             Template: %2$s
                           %4$s:
                             Type: ZOMBIE
+                          %5$s:
+                            Type: ZOMBIE
+                            Template: %2$s
+                            Exclude: [Health, Options]
+                            Health: 42
                             Options:
-                              NoAI: true
-                        """.formatted(ancestorSourceId, parentSourceId, childSourceId, controlSourceId));
+                              NoAI: false
+                        """.formatted(ancestorSourceId, parentSourceId, childSourceId, controlSourceId,
+                        excludeSourceId));
 
                 Map<String, String> targetIds = new LinkedHashMap<>();
                 for (Map<String, Object> entry : new MythicMobsImporter().convert(source, sourceRoot)) {
@@ -3499,25 +3505,33 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 String controlId = targetIds.get(controlSourceId);
                 String parentId = targetIds.get(parentSourceId);
                 String ancestorId = targetIds.get(ancestorSourceId);
-                if (childId == null || controlId == null || parentId == null || ancestorId == null) {
+                String excludeId = targetIds.get(excludeSourceId);
+                if (childId == null || controlId == null || parentId == null || ancestorId == null
+                        || excludeId == null) {
                     throw new IllegalStateException("one or more imported template-type mobs are missing");
                 }
                 mobTemplateIndex.invalidate();
                 Location origin = world.getSpawnLocation().clone().add(0, 2, 0);
                 int childInstanceId = spawnMobAt(childId, origin, null);
                 int controlInstanceId = spawnMobAt(controlId, origin.clone().add(3, 0, 0), null);
+                int excludeInstanceId = spawnMobAt(excludeId, origin.clone().add(6, 0, 0), null);
                 if (childInstanceId > 0) instanceIds.add(childInstanceId);
                 if (controlInstanceId > 0) instanceIds.add(controlInstanceId);
+                if (excludeInstanceId > 0) instanceIds.add(excludeInstanceId);
                 var childInstance = childInstanceId > 0 ? instances().impl(childInstanceId) : null;
                 var controlInstance = controlInstanceId > 0 ? instances().impl(controlInstanceId) : null;
+                var excludeInstance = excludeInstanceId > 0 ? instances().impl(excludeInstanceId) : null;
                 org.bukkit.entity.LivingEntity child = childInstance == null ? null
                         : childInstance.baseEntity().filter(org.bukkit.entity.LivingEntity.class::isInstance)
                                 .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
                 org.bukkit.entity.LivingEntity control = controlInstance == null ? null
                         : controlInstance.baseEntity().filter(org.bukkit.entity.LivingEntity.class::isInstance)
                                 .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
-                if (child == null || control == null) {
-                    throw new IllegalStateException("managed child or control entity did not spawn");
+                org.bukkit.entity.LivingEntity excluded = excludeInstance == null ? null
+                        : excludeInstance.baseEntity().filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                                .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+                if (child == null || control == null || excluded == null) {
+                    throw new IllegalStateException("managed child, control, or Exclude entity did not spawn");
                 }
 
                 var primary = dev.helstera.migration.importer.MmConditions.translate(
@@ -3545,6 +3559,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && !behavior.testCondition(negativeKey, childContext);
                 boolean controlRejected = primaryKey != null
                         && !behavior.testCondition(primaryKey, controlContext);
+                var inheritedHealthAttribute = child.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH);
+                var excludedHealthAttribute = excluded.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH);
+                boolean fieldInheritance = mobConfig(childId).getDouble("mob.health", -1) == 37.0
+                        && inheritedHealthAttribute != null
+                        && inheritedHealthAttribute.getBaseValue() == 37.0 && !child.hasAI()
+                        && mobConfig(childId).getBoolean("entity.no-ai", false);
+                boolean excludeInheritedRemoved = !mobConfig(excludeId).contains("entity.prevent-sunburn");
+                boolean excludeOwnValues = mobConfig(excludeId).getDouble("mob.health", -1) == 42.0
+                        && !mobConfig(excludeId).getBoolean("entity.no-ai", true)
+                        && excludedHealthAttribute != null && excludedHealthAttribute.getBaseValue() == 42.0
+                        && excluded.hasAI();
                 missingConfigProbe = world.spawnEntity(origin.clone().add(6, 0, 0),
                         org.bukkit.entity.EntityType.ZOMBIE);
                 dev.helstera.api.behavior.ManagedMobIdentity.mark(missingConfigProbe, "mythic_missing_template_probe");
@@ -3560,12 +3585,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && invalid.condition().contains("unknown=" + parentSourceId);
                 boolean passed = imported && primaryMapped && aliasMapped && directPositive
                         && transitivePositive && unrelatedRejected && controlRejected
+                        && fieldInheritance && excludeInheritedRemoved && excludeOwnValues
                         && missingConfigRejected && unmanagedRejected && invalidPreserved;
                 getLogger().info("[自检] template-type-imported result=" + passed
                         + " imported=" + imported + " primary-mapped=" + primaryMapped
                         + " alias-mapped=" + aliasMapped + " direct-positive=" + directPositive
                         + " transitive-positive=" + transitivePositive
                         + " unrelated-rejected=" + unrelatedRejected + " control-rejected=" + controlRejected
+                        + " field-inheritance=" + fieldInheritance
+                        + " exclude-inherited-removed=" + excludeInheritedRemoved
+                        + " exclude-own-values=" + excludeOwnValues
                         + " missing-config-rejected=" + missingConfigRejected
                         + " unmanaged-rejected=" + unmanagedRejected
                         + " invalid-preserved=" + invalidPreserved + " passed=" + passed);

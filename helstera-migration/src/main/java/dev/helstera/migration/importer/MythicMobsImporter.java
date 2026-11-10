@@ -369,6 +369,8 @@ public final class MythicMobsImporter implements MigrationImporter {
 
         ConfigurationSection defaultMobOptions = readDefaultMobOptions(
                 pluginDataFolder, sourceFile, entries);
+        MythicMobTemplateResolver templateResolver = MythicMobTemplateResolver.load(
+                pluginDataFolder == null ? null : pluginDataFolder.resolve("Mobs"));
 
         for (String mobKey : src.getKeys(false)) {
             ConfigurationSection mob = src.getConfigurationSection(mobKey);
@@ -388,7 +390,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     ConfigurationSection nested = mob.getConfigurationSection(nestedKey);
                     if (nested != null) {
                         convertMob(nestedKey, nested, sourceFile.toString(), entries, dropCatalog,
-                                defaultMobOptions);
+                                defaultMobOptions, templateResolver);
                     } else {
                         note(entries, sourceFile.toString(), "mobs." + nestedKey, "mobs", mob.get(nestedKey),
                                 "unsupported", "Mob definition must be a configuration section; original value preserved in migration report.", "WARN");
@@ -398,7 +400,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "Options", "Skills", "Drops", "Stats", "Equipment", "Disguise", "Faction", "LevelModifiers",
                     "Template") != null) {
                 convertMob(mobKey, mob, sourceFile.toString(), entries, dropCatalog,
-                        defaultMobOptions);
+                        defaultMobOptions, templateResolver);
             } else {
                 note(entries, sourceFile.toString(), mobKey, "mobs", mob.getValues(true), "unsupported",
                         "Unrecognized top-level mob definition preserved in migration report.", "WARN");
@@ -503,6 +505,15 @@ public final class MythicMobsImporter implements MigrationImporter {
                     .contains(name.toString().toLowerCase(Locale.ROOT))) return directory;
         }
         return null;
+    }
+
+    private static ConfigurationSection configurationSection(Map<String, Object> values) {
+        YamlConfiguration configuration = new YamlConfiguration();
+        values.forEach((key, value) -> {
+            if (value instanceof Map<?, ?> nested) configuration.createSection(key, nested);
+            else configuration.set(key, value);
+        });
+        return configuration;
     }
 
     private List<Map<String, Object>> convertDropTables(YamlConfiguration src, Path file,
@@ -1070,7 +1081,12 @@ public final class MythicMobsImporter implements MigrationImporter {
 
     private void convertMob(String mobKey, ConfigurationSection mob, String srcFile,
                             List<Map<String, Object>> entries, MythicDropCatalog dropCatalog,
-                            ConfigurationSection defaultMobOptions) {
+                            ConfigurationSection defaultMobOptions,
+                            MythicMobTemplateResolver templateResolver) {
+        MythicMobTemplateResolver.Resolution templateResolution = templateResolver.resolve(mobKey, mob);
+        if (templateResolution.resolved() && templateResolution.changed()) {
+            mob = configurationSection(templateResolution.effectiveFields());
+        }
         List<String> typeKeys = mob.getKeys(false).stream()
                 .filter(key -> key.equalsIgnoreCase("Type") || key.equalsIgnoreCase("MobType")
                         || key.equalsIgnoreCase("EntityType"))
@@ -1098,7 +1114,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         YamlConfiguration target = new YamlConfiguration();
         target.set("schema-version", 1);
         target.set("id", targetId);
-        mapMobTemplates(mob, mobKey, srcFile, entries, target);
+        mapMobTemplates(mob, mobKey, srcFile, entries, target, templateResolution);
 
         // ---- 基础属性 ----
         if (normalizedType != null) {
@@ -1547,52 +1563,57 @@ public final class MythicMobsImporter implements MigrationImporter {
                 "note", "MythicMobs 生物 " + mobKey + " 已转换"));
     }
 
-    /**
-     * Keeps Mythic mob-template lineage available to the official TemplateType
-     * condition. Applying the inherited fields themselves remains unsupported
-     * and is reported separately instead of being implied by this metadata map.
-     */
+    /** Retains direct lineage for TemplateType and reports the field resolution outcome. */
     private void mapMobTemplates(ConfigurationSection mob, String mobKey, String srcFile,
-                                 List<Map<String, Object>> entries, YamlConfiguration target) {
+                                 List<Map<String, Object>> entries, YamlConfiguration target,
+                                 MythicMobTemplateResolver.Resolution resolution) {
         String sourceKey = findKeyIgnoreCase(mob, "Template");
-        if (sourceKey == null) return;
-        Object raw = mob.get(sourceKey);
-        List<String> sourceTemplates = new ArrayList<>();
-        if (raw instanceof String text) {
-            sourceTemplates.addAll(List.of(text.split(",", -1)));
-        } else if (raw instanceof List<?> values) {
-            for (Object value : values) {
-                if (!(value instanceof String text)) {
-                    sourceTemplates.clear();
-                    break;
+        Object rawTemplate = resolution.rawTemplate();
+        if (sourceKey != null) {
+            if (resolution.directTemplates().isEmpty()) {
+                target.set("mob.unsupported.Template", rawTemplate);
+                note(entries, srcFile, mobKey + "." + sourceKey, "mob.unsupported.Template", rawTemplate,
+                        "unsupported", "Template references must be a non-empty string or list of strings; original value preserved.", "WARN");
+            } else {
+                LinkedHashSet<String> normalized = new LinkedHashSet<>();
+                for (String value : resolution.directTemplates()) {
+                    String id = normalizeId(value);
+                    if ("unnamed".equals(id)) {
+                        target.set("mob.unsupported.Template", rawTemplate);
+                        note(entries, srcFile, mobKey + "." + sourceKey, "mob.unsupported.Template", rawTemplate,
+                                "unsupported", "Template references must contain a valid mob ID; original value preserved.", "WARN");
+                        normalized.clear();
+                        break;
+                    }
+                    normalized.add(id.startsWith("mythic_") ? id : "mythic_" + id);
                 }
-                sourceTemplates.addAll(List.of(text.split(",", -1)));
+                if (!normalized.isEmpty()) {
+                    List<String> mapped = List.copyOf(normalized);
+                    target.set("mob.templates", mapped);
+                    note(entries, srcFile, mobKey + "." + sourceKey, "mob.templates", mapped,
+                            "mapped", "Direct template lineage is retained for TemplateType conditions.");
+                }
             }
         }
-        if (sourceTemplates.isEmpty() || sourceTemplates.stream().anyMatch(value -> value.isBlank())) {
-            target.set("mob.unsupported.Template", raw);
-            note(entries, srcFile, mobKey + "." + sourceKey, "mob.unsupported.Template", raw,
-                    "unsupported", "Template references must be a non-empty name or list of names; original value preserved.", "WARN");
-            return;
-        }
-        LinkedHashSet<String> normalized = new LinkedHashSet<>();
-        for (String value : sourceTemplates) {
-            String id = normalizeId(value);
-            if ("unnamed".equals(id)) {
-                target.set("mob.unsupported.Template", raw);
-                note(entries, srcFile, mobKey + "." + sourceKey, "mob.unsupported.Template", raw,
-                        "unsupported", "Template references must contain a valid mob ID; original value preserved.", "WARN");
-                return;
+
+        if (!resolution.changed()) return;
+        LinkedHashMap<String, Object> evidence = new LinkedHashMap<>();
+        if (rawTemplate != null) evidence.put("Template", rawTemplate);
+        if (resolution.rawExclude() != null) evidence.put("Exclude", resolution.rawExclude());
+        String sourceKeyForEvidence = sourceKey == null ? mobKey + ".Exclude" : mobKey + "." + sourceKey;
+        if (resolution.resolved()) {
+            note(entries, srcFile, sourceKeyForEvidence, "mob.template-inheritance", evidence,
+                    "mapped", "Template inheritance and top-level Exclude were resolved before ordinary mob field mapping.");
+            if (resolution.rawExclude() != null) {
+                note(entries, srcFile, mobKey + ".Exclude", "mob.template-exclude", resolution.rawExclude(),
+                        "mapped", "Excluded inherited top-level fields were removed; fields declared by this mob remain.");
             }
-            normalized.add(id.startsWith("mythic_") ? id : "mythic_" + id);
+        } else {
+            evidence.put("error", resolution.error());
+            target.set("mob.unsupported.TemplateInheritance", evidence);
+            note(entries, srcFile, sourceKeyForEvidence, "mob.unsupported.TemplateInheritance", evidence,
+                    "unsupported", "Template inheritance failed closed; no inherited fields were applied. Original references and the resolution error are preserved.", "WARN");
         }
-        List<String> mapped = List.copyOf(normalized);
-        target.set("mob.templates", mapped);
-        note(entries, srcFile, mobKey + "." + sourceKey, "mob.templates", mapped,
-                "mapped", "Template lineage is retained for TemplateType conditions; inherited mob fields are not merged.");
-        target.set("mob.unsupported.TemplateInheritance", raw);
-        note(entries, srcFile, mobKey + "." + sourceKey, "mob.unsupported.TemplateInheritance", raw,
-                "unsupported", "Mythic template field inheritance and Exclude semantics are not implemented; source references are retained.", "WARN");
     }
 
     private void mapDropExperience(ConfigurationSection mob, String srcFile,

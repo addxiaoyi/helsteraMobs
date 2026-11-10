@@ -5773,7 +5773,7 @@ class ImportersTest {
     }
 
     @Test
-    @DisplayName("Mythic mob templates retain lineage for TemplateType and mark field inheritance unsupported")
+    @DisplayName("Mythic mob templates retain direct lineage and report unresolved inheritance")
     void mythicMobTemplateLineageIsRetained(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/templates.yml", """
                 mobs:
@@ -5792,8 +5792,8 @@ class ImportersTest {
                 new StringReader(String.valueOf(plan.get("content"))));
 
         assertEquals(List.of("mythic_undead", "mythic_armored"), target.getStringList("mob.templates"));
-        assertEquals(List.of("Undead", "Template.Armored"),
-                target.getStringList("mob.unsupported.TemplateInheritance"));
+        assertTrue(target.contains("mob.unsupported.TemplateInheritance.Template"));
+        assertTrue(target.getString("mob.unsupported.TemplateInheritance.error").contains("does not resolve"));
         Map<String, Object> invalidPlan = entries.stream()
                 .filter(entry -> "mobs/mythic_invalid.yml".equals(entry.get("target-file")))
                 .findFirst().orElseThrow();
@@ -5805,5 +5805,56 @@ class ImportersTest {
         assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
                 && "mob.unsupported.TemplateInheritance"
                 .equals(entry.get("target-key"))));
+    }
+
+    @Test
+    @DisplayName("Mythic mob template fields and Exclude apply before ordinary import mapping")
+    void mythicMobTemplateFieldsAreInheritedAndExcluded(@TempDir Path root) throws Exception {
+        write(root, "Mobs/templates/base.yml", """
+                Base:
+                  Type: ZOMBIE
+                  Health: 20
+                  Damage: 3
+                  Display: '&aBase'
+                  Options:
+                    PreventOtherDrops: true
+                    NoAI: true
+                """);
+        write(root, "Mobs/templates/mid.yml", """
+                Mid:
+                  Template: Base
+                  Health: 24
+                  Options:
+                    PreventSunburn: true
+                """);
+        Path child = write(root, "Mobs/children/child.yml", """
+                Child:
+                  Type: SKELETON
+                  Template: Mid
+                  Exclude: [Display, Options]
+                  Damage: 9
+                  Options:
+                    NoAI: false
+                """);
+
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(child);
+        Map<String, Object> plan = entries.stream()
+                .filter(entry -> "mobs/mythic_child.yml".equals(entry.get("target-file")))
+                .findFirst().orElseThrow();
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new StringReader(String.valueOf(plan.get("content"))));
+
+        assertEquals("SKELETON", target.getString("mob.entity-type"));
+        assertEquals(24, target.getInt("mob.health"));
+        assertEquals(9, target.getInt("mob.attack-damage"));
+        assertFalse(target.contains("mob.display-name"));
+        assertFalse(target.contains("entity.prevent-other-drops"));
+        assertFalse(target.contains("entity.prevent-sunburn"));
+        assertFalse(target.getBoolean("entity.no-ai", true));
+        assertEquals(List.of("mythic_mid"), target.getStringList("mob.templates"));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "mob.template-inheritance".equals(entry.get("target-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "mob.template-exclude".equals(entry.get("target-key"))));
     }
 }
