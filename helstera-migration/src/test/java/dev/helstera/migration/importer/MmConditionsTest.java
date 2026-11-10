@@ -1265,6 +1265,24 @@ class MmConditionsTest {
     }
 
     @Test
+    @DisplayName("Mythic item-group cooldown condition validates and normalizes namespaced groups")
+    void itemGroupCooldownConditionMapsValidGroupsAndPreservesInvalidInput() {
+        assertEquals("item-group-on-cooldown group=minecraft:teleportingitems",
+                t("?ItemGroupOnCooldown{group=minecraft:teleportingitems}"));
+        assertEquals("item-group-on-cooldown group=minecraft:teleportingitems",
+                t("?ItemGroupOnCooldown{g=TELEPORTINGITEMS}"));
+        assertTrue(translated("?ItemGroupOnCooldown{group=helstera:combat/primary}"));
+        for (String invalid : List.of(
+                "?ItemGroupOnCooldown",
+                "?ItemGroupOnCooldown{group=}",
+                "?ItemGroupOnCooldown{group=minecraft:bad:key}",
+                "?ItemGroupOnCooldown{group=minecraft:valid;unknown=true}",
+                "?ItemGroupOnCooldown{group=minecraft:valid;g=minecraft:other}")) {
+            assertUntranslatedPreserved(invalid);
+        }
+    }
+
+    @Test
     void officialTriggerItemTypeConditionMapsDefaultsAndAliases() {
         assertEquals("trigger-item-type STONE,DIRT",
                 t("?triggerItemType{mat=STONE,DIRT}"));
@@ -1713,8 +1731,7 @@ class MmConditionsTest {
         assertFalse(m.translated(), "未知条件不能假装翻译成功");
         assertEquals("?unsupportedCondition", m.condition(), "必须原样保留，用户才能看出少了什么");
 
-        String itemGroupCooldown = "?ItemGroupOnCooldown{group=minecraft:teleportingitems}";
-        assertUntranslatedPreserved(itemGroupCooldown);
+        assertTrue(translated("?ItemGroupOnCooldown{group=minecraft:teleportingitems}"));
     }
 
     @Test

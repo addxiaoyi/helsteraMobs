@@ -4,6 +4,7 @@ debug:
   self-test-delay-ticks: 40
   self-test-entity-options: true
   self-test-item-effects: true
+  self-test-item-group-cooldown: false
   self-test-loot: true
   self-test-death-loot: true
   self-test-spawner: true

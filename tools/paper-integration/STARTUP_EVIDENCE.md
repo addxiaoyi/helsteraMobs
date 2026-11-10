@@ -1,5 +1,30 @@
 # Paper Startup Evidence
 
+Focused exploratory fixture `paper-1.21.4-item-group-cooldown-exploratory-20261110`
+ran plugin `helsteraMobs` on Paper 1.21.4-232 with a real Mineflayer 1.21.4
+player. The production skill condition/action factories set and read the named
+cooldown and then cleared it (`set-and-read=true clear=true result=true`). This
+checks the Paper 1.21.4+ API path only; it is not a strict release fixture and
+does not change the Paper 1.21.1 release baseline. Plugin SHA-256:
+`eb335851a7d87f2af00f53740a8c4df13edaf41754410b066b5285cd2a3ec5b3`. Report:
+[paper-1.21.4-item-group-cooldown-exploratory-20261110.json](reports/paper-1.21.4-item-group-cooldown-exploratory-20261110.json).
+Report SHA-256: `9a55551b868786687c64fbf27e91e78bcfc3a029d28669c55112846eb21482e8`.
+Sanitized focused log:
+[paper-1.21.4-item-group-cooldown-exploratory-20261110.txt](reports/paper-1.21.4-item-group-cooldown-exploratory-20261110.txt).
+Log SHA-256: `19e575d9adbbe883c2ee1058246256aa4523433f6cb130e429fa77ff81e1c145`.
+
+Focused exploratory fallback fixture `paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110`
+ran the same plugin on Paper 1.21.1-133. After a real player joined, the
+condition failed closed, the set action was skipped, and the server logged the
+unsupported API warning; the plugin remained enabled. Mineflayer reported a
+packet `PartialReadError` after spawn, so this record relies on the server-side
+join and self-test logs. It does not change the strict release catalog. Report:
+[paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110.json](reports/paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110.json).
+Report SHA-256: `57d3e686d7ea76f4b200f6bcc748ed0e0678f9aa93407cb626bdc9d40380b331`.
+Sanitized focused log:
+[paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110.txt](reports/paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110.txt).
+Log SHA-256: `acb173de2a0bb1cfdd22a39507d3fe24ee7ca5e9b3495155e0801ea61b9ec178`.
+
 Latest fixture `srv-paper-target-fluids-import-strict-20261110-r2` passed the full strict
 gate on Paper 1.21.1-133: 423 registered probes, 404 passed, 19 expected
 rejections, and zero failed or incomplete. Its `targetFluidConditions` probe

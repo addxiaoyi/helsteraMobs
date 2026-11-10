@@ -1860,6 +1860,73 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
     }
 
+    private static boolean validNamespacedKey(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String value = raw.trim().toLowerCase(Locale.ROOT);
+        int separator = value.indexOf(':');
+        String namespace = separator < 0 ? "minecraft" : value.substring(0, separator);
+        String key = separator < 0 ? value : value.substring(separator + 1);
+        return namespace.matches("[a-z0-9._-]+") && key.matches("[a-z0-9/._-]+")
+                && value.indexOf(':', separator + 1) < 0;
+    }
+
+    private static String normalizeNamespacedKey(String raw) {
+        String value = raw.trim().toLowerCase(Locale.ROOT);
+        return value.indexOf(':') < 0 ? "minecraft:" + value : value;
+    }
+
+    private static String setItemGroupCooldownAction(String raw) {
+        int open = MythicSpec.mechanicOpen(raw);
+        Map<String, String> arguments = new LinkedHashMap<>();
+        if (open < 0) {
+            int firstSpace = raw.indexOf(' ');
+            if (firstSpace >= 0) {
+                String tail = raw.substring(firstSpace + 1).trim();
+                if (!tail.isEmpty() && !tail.equals(executionSuffix(raw).trim())) return null;
+            }
+        }
+        if (open >= 0) {
+            int close = mechanicClose(raw, open);
+            if (close < 0) return null;
+            String body = raw.substring(open + 1, close);
+            List<String> parts = MythicSpec.keyedArguments(raw);
+            if (!body.isBlank() && parts.isEmpty()) return null;
+            for (String part : parts) {
+                int equals = part.indexOf('=');
+                if (equals <= 0 || equals == part.length() - 1) return null;
+                String key = part.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                String canonical = switch (key) {
+                    case "key", "k", "group", "g" -> "group";
+                    case "ticks", "t" -> "ticks";
+                    case "delay", "repeat" -> key;
+                    case "repeatinterval", "repeat-interval" -> "repeatinterval";
+                    default -> null;
+                };
+                String value = part.substring(equals + 1).trim();
+                if (canonical == null || value.isEmpty()
+                        || arguments.putIfAbsent(canonical, value) != null) return null;
+            }
+        }
+
+        String group = arguments.getOrDefault("group", "minecraft:item_group");
+        String ticks = arguments.getOrDefault("ticks", "20");
+        if (!validNamespacedKey(group) || !validCooldownTicks(ticks)) return null;
+        return "set-item-group-cooldown group=" + normalizeNamespacedKey(group)
+                + " ticks=" + ticks;
+    }
+
+    private static boolean validCooldownTicks(String raw) {
+        if (raw.matches("<[^<>]+>")) return true;
+        try {
+            java.math.BigDecimal ticks = new java.math.BigDecimal(raw);
+            return ticks.signum() >= 0
+                    && ticks.compareTo(java.math.BigDecimal.valueOf(Integer.MAX_VALUE)) <= 0
+                    && ticks.stripTrailingZeros().scale() <= 0;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
     private static boolean invalidDropItemAmountFields(String raw) {
         return invalidDropItemFields(raw, "amount", "a");
     }
@@ -2151,7 +2218,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "clear-experience-levels", "give-experience-levels", "give-experience", "set-absorption", "oxygen", "consume-slot",
                     "set-block", "break-block", "mount", "cancel-event",
                     "move-pin",
-                    "disarm", "set-material-cooldown", "set-game-mode", "set-offhand", "set-armor", "set-faction", "set-level", "set-weather", "set-time", "lightning", "feed",
+                    "disarm", "set-material-cooldown", "set-item-group-cooldown", "set-game-mode", "set-offhand", "set-armor", "set-faction", "set-level", "set-weather", "set-time", "lightning", "feed",
                     "swing", "swing-main-hand", "swing-off-hand",
                     "set-name", "set-ai", "set-gravity", "set-silent", "set-collidable",
                     "set-sneaking", "set-gliding", "set-swimming", "set-sprinting", "set-flying",
@@ -2449,6 +2516,9 @@ public final class MythicMobsImporter implements MigrationImporter {
                 if (ticks == null) ticks = positionalArg(trimmed, 1);
                 yield "set-material-cooldown " + (material == null ? "ENDER_PEARL" : material)
                         + " " + (ticks == null ? "0" : ticks);
+            }
+            case "setitemgroupcooldown", "set-item-group-cooldown" -> {
+                yield setItemGroupCooldownAction(trimmed);
             }
             case "setgamemode", "set-game-mode" -> {
                 String mode = firstArg(trimmed, "mode", "gamemode", "game-mode", "m");

@@ -15,7 +15,7 @@ Version-gated behavior:
 
 | Feature | Status | Compatibility boundary |
 | --- | --- | --- |
-| `ItemGroupOnCooldown` / `SetItemGroupCooldown` | unsupported-preserved | The official [MythicMobs 5.9 changelog](https://wiki.mythiccraft.io/mythicmobs/changelogs/5.9.x_changelogs) adds these namespaced item-group features, outside the declared Mythic adapter range of 5.3.x–5.7.x. The [Paper 1.21.1 HumanEntity API](https://jd.papermc.io/paper/1.21.1/org/bukkit/entity/HumanEntity.html) exposes material cooldown access, not public query/set access for arbitrary named groups. Import keeps source lines and emits warnings; focused importer regression tests enforce preservation. Revisit when the supported Mythic/Paper matrix expands. |
+| `ItemGroupOnCooldown` / `SetItemGroupCooldown` | implemented-runtime | This is feature-specific support for the MythicMobs 5.9 entries and does not expand the declared overall Mythic adapter range of 5.3.x–5.7.x. Import validates aliases and values, preserves malformed lines, and maps the mechanic's documented `minecraft:item_group` / 20-tick defaults. Named group runtime access uses Paper's `UseCooldown` component and requires Paper 1.21.4+; older APIs fail closed and skip the action with a one-time warning. Real-player exploratory fixtures verified set/read/clear on Paper 1.21.4-232 and the safe fallback on Paper 1.21.1-133. Neither fixture is strict release evidence or changes the Paper 1.21.1 release baseline. Reports are under `tools/paper-integration/reports`. |
 
 Evidence baseline: 2026-11-10, Paper API 1.21.1-R0.1-SNAPSHOT.
 
@@ -3707,10 +3707,20 @@ The complete Conditions catalog remains mapped-unverified.
 
 Material cooldown condition update: official `MaterialIsOnCooldown` now reads
 target-player Bukkit material cooldowns, defaults to `ENDER_PEARL`, and accepts
-`material/m` aliases. `ItemGroupOnCooldown` and its paired mechanic remain
-preserved with warnings: Mythic added them in 5.9, beyond the declared 5.3.x–5.7.x
-adapter range, and Paper 1.21.1 exposes no public arbitrary item-group cooldown
-query/set API. Importer tests pin this version boundary; see the version-gated
+`material/m` aliases. Mythic 5.9 `ItemGroupOnCooldown` and
+`SetItemGroupCooldown` now have isolated importer and runtime support without
+changing the overall Mythic adapter version claim. The mechanic accepts
+`key/k/group/g` and `ticks/t`, defaults to `minecraft:item_group` and 20 ticks,
+and malformed or unknown parameters remain preserved with warnings. Paper
+1.21.4+ supplies the named cooldown component API; on Paper 1.21.1 the runtime
+fails closed because that API is absent; a real-player Paper 1.21.1-133 fixture
+confirmed the false condition, skipped action, and one-time warning. A
+real-player exploratory Paper 1.21.4-232 fixture records successful
+set/read/clear in
+[`paper-1.21.4-item-group-cooldown-exploratory-20261110.json`](tools/paper-integration/reports/paper-1.21.4-item-group-cooldown-exploratory-20261110.json).
+The 1.21.1 fallback record is
+[`paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110.json`](tools/paper-integration/reports/paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110.json).
+Neither report qualifies as strict release evidence. See the version-gated
 behavior table above. Exploratory Paper
 `srv-paper-integration-exploratory-1.21.11-r110` verifies positive, wrong-item,
 and cleared negative paths through `material-cooldown-condition=true`; both
