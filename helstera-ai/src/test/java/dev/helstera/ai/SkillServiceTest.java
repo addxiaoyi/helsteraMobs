@@ -2907,9 +2907,13 @@ class SkillServiceTest {
         assertNotNull(svc.bindCondition("worldis integration-world"));
         for (String alias : List.of(
                 "serverNmsVersion{v=v1_21_R1}", "servernms{sv=v1_21_R1}",
-                "nmsversion v1_21_R1", "server-nms-version")) {
+                "nmsversion v1_21_R1", "server-nms-version",
+                "localdifficulty{d=>0}", "localdifficulty{diff=>0}",
+                "local-difficulty difficulty=>0")) {
             assertNotNull(svc.bindCondition(alias), alias);
         }
+        assertNull(svc.bindCondition("localdifficulty{unknown=>0}"));
+        assertNull(svc.bindCondition("localdifficulty{d=>0;difficulty=>1}"));
     }
 
     @Test

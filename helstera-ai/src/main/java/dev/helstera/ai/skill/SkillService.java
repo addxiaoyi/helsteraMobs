@@ -1938,7 +1938,7 @@ public final class SkillService {
                     "has-aura-stacks", "mythic-has-aura", "mythic-has-aura-stacks",
                     "mythic-has-aura-type", "mythic-target-has-aura", "health", "health-percent",
                     "compare-values", "score", "targets",
-                    "cuboid", "in-bounds", "global-score" -> true;
+                    "cuboid", "in-bounds", "global-score", "local-difficulty" -> true;
             default -> false;
         };
     }
@@ -2149,6 +2149,7 @@ public final class SkillService {
             case "serverispaper", "is-paper", "ispaper" -> "server-is-paper";
             case "servernmsversion", "server-nms-version", "servernms", "nmsversion" ->
                     "server-nms-version";
+            case "localdifficulty", "local-difficulty" -> "local-difficulty";
             case "plugin", "plugin-exists", "pluginexists", "hasplugin", "has-plugin" -> "plugin";
             case "serverversion", "server-version", "server", "version" -> "server-version";
             case "serveraftereq", "serverafter", "versionaftereq", "server-version-after-or-equal" ->
