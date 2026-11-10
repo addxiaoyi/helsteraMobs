@@ -1410,6 +1410,24 @@ class MmConditionsTest {
     }
 
     @Test
+    void officialLocalDifficultyConditionMapsAliasesAndRanges() {
+        assertEquals("local-difficulty >0", t("?localdifficulty{d=>0}"));
+        assertEquals("local-difficulty >=1", t("?LocalDifficulty{diff=>=1}"));
+        assertEquals("local-difficulty 0to3", t("?localdifficulty{difficulty=0to3}"));
+        assertEquals("local-difficulty 1-2", t("?localdifficulty{1-2}"));
+        for (String invalid : List.of(
+                "?localdifficulty",
+                "?localdifficulty{}",
+                "?localdifficulty{unknown=>0}",
+                "?localdifficulty{d=>0;difficulty=>1}",
+                "?localdifficulty{d=}",
+                "?localdifficulty{d=NaN}",
+                "?localdifficulty{d=2-1}")) {
+            assertUntranslatedPreserved(invalid);
+        }
+    }
+
+    @Test
     void officialRaiderPatrolLeaderConditionMaps() {
         assertEquals("is-raider-patrol-leader", t("?isRaiderPatrolLeader"));
         assertEquals("is-raider-patrol-leader", t("?isPatrolLeader"));

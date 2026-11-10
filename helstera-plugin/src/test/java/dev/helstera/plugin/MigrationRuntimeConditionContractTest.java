@@ -650,6 +650,51 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported LocalDifficulty aliases bind and evaluate through SkillService")
+    void importedLocalDifficultyConditionReachRuntime() {
+        var world = mock(org.bukkit.World.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(target.getLocation()).thenReturn(new org.bukkit.Location(world, 4, 64, 4));
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, target, 1.0, -1, 0, "IDLE");
+        var noLocation = dev.helstera.api.behavior.BehaviorContext.of(
+                null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+
+        try {
+            SkillExtras.localDifficultyLookup(location -> 2.0);
+            for (String source : List.of(
+                    "?LocalDifficulty{difficulty=>0}",
+                    "?localdifficulty{diff=>=2}",
+                    "?localdifficulty{d=1to3}")) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                assertTrue(mapped.translated(), source);
+                String key = service.bindCondition(mapped.condition());
+                assertNotNull(key, source + " warnings=" + service.warnings());
+                assertTrue(registry.testCondition(key, context), source);
+            }
+            for (String source : List.of("?localdifficulty{d=>2}", "?localdifficulty{d=3to4}")) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                assertTrue(mapped.translated(), source);
+                String key = service.bindCondition(mapped.condition());
+                assertNotNull(key, source);
+                assertFalse(registry.testCondition(key, context), source);
+            }
+            assertFalse(registry.testCondition(
+                    service.bindCondition("local-difficulty >0"), noLocation));
+            for (String source : List.of(
+                    "?localdifficulty{unknown=>0}",
+                    "?localdifficulty{d=>0;diff=>1}",
+                    "?localdifficulty{d=2to1}")) {
+                assertFalse(dev.helstera.migration.importer.MmConditions.translate(source).translated(), source);
+            }
+        } finally {
+            SkillExtras.resetRuntimeHooks();
+        }
+    }
+
+    @Test
     @DisplayName("imported Burning condition actions reach the runtime condition evaluator")
     void importedBurningConditionActionsReachRuntime(@TempDir Path root) throws Exception {
         Path source = Files.createDirectories(root.resolve("Skills")).resolve("burning.yml");

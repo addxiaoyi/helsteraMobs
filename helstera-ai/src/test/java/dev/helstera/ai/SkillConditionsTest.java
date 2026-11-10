@@ -1534,6 +1534,43 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("official LocalDifficulty condition compares the target or caster location and fails closed")
+    void officialLocalDifficultyConditionUsesLocationAndBoundaries() {
+        World world = mock(World.class);
+        Location targetLocation = new Location(world, 10, 64, 10);
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getLocation()).thenReturn(targetLocation);
+        Location casterLocation = new Location(world, 0, 64, 0);
+        var targetContext = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
+        var casterContext = BehaviorContext.continueExecution(null, (LivingEntity) null,
+                1.0, -1, 0, "IDLE", null, null, List.of(), casterLocation, null);
+
+        try {
+            SkillExtras.localDifficultyLookup(location -> location == targetLocation ? 2.0 : 1.0);
+            assertTrue(extraFactory("local-difficulty").create(List.of(">=2")).test(targetContext));
+            assertFalse(extraFactory("local-difficulty").create(List.of(">2")).test(targetContext));
+            assertTrue(extraFactory("local-difficulty").create(List.of("1to2")).test(targetContext));
+            assertFalse(extraFactory("local-difficulty").create(List.of("3to4")).test(targetContext));
+            assertTrue(extraFactory("local-difficulty").create(List.of("d=>=2")).test(targetContext));
+            assertTrue(extraFactory("local-difficulty").create(List.of("diff=>0")).test(casterContext));
+            assertFalse(extraFactory("local-difficulty").create(List.of(">0")).test(ctx()));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("local-difficulty").create(List.of()));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("local-difficulty").create(List.of("NaN")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("local-difficulty").create(List.of("2to1")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("local-difficulty").create(List.of("unknown=>0")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("local-difficulty").create(List.of("d=>0", "diff=>1")));
+        } finally {
+            SkillExtras.resetRuntimeHooks();
+        }
+    }
+
+    @Test
     @DisplayName("raider patrol leader condition matches the live Bukkit flag and fails closed without a raider")
     void officialRaiderPatrolLeaderConditionIsRegistered() {
         var condition = extraFactory("is-raider-patrol-leader").create(List.of());

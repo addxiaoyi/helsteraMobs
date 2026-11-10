@@ -76,6 +76,8 @@ public final class MmConditions {
             "version", "version", "sv", "version", "v", "version");
     private static final Map<String, String> SERVER_NMS_VERSION_ARGUMENTS = Map.of(
             "version", "version", "sv", "version", "v", "version");
+    private static final Map<String, String> LOCAL_DIFFICULTY_ARGUMENTS = Map.of(
+            "difficulty", "difficulty", "diff", "difficulty", "d", "difficulty");
     private static final Map<String, String> SERVER_VERSION_BOUND_ARGUMENTS = Map.of(
             "version", "version", "sv", "version", "v", "version",
             "inclusive", "inclusive", "i", "inclusive");
@@ -953,6 +955,13 @@ public final class MmConditions {
             if (value == null && arguments != null) value = "v1_19_R1_2";
             return !validNmsVersion(value) ? new Mapped(s, false)
                     : new Mapped("server-nms-version " + normalizeNmsVersion(value), true);
+        }
+        if ("localdifficulty".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(
+                    body, LOCAL_DIFFICULTY_ARGUMENTS, "difficulty");
+            String value = arguments == null ? null : arguments.get("difficulty");
+            return !validLocalDifficultyRange(value) ? new Mapped(s, false)
+                    : new Mapped("local-difficulty " + value, true);
         }
         if ("plugin".equals(name) || "pluginexists".equals(name) || "hasplugin".equals(name)) {
             String value = firstArgument(body, "plugin", "pl", "p");
@@ -1877,6 +1886,32 @@ public final class MmConditions {
             if (separator > 0) {
                 return validFiniteNumber(value.substring(0, separator).trim())
                         && validFiniteNumber(value.substring(separator + 1).trim());
+            }
+            return validFiniteNumber(value);
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean validLocalDifficultyRange(String raw) {
+        if (!validNumberRange(raw)) return false;
+        String value = raw.trim();
+        try {
+            if (value.startsWith(">=") || value.startsWith("<=")
+                    || value.startsWith(">") || value.startsWith("<")) {
+                return validFiniteNumber(value.replaceFirst("^(>=|<=|>|<)", "").trim());
+            }
+            int to = value.toLowerCase(Locale.ROOT).indexOf("to");
+            if (to > 0) {
+                double lower = Double.parseDouble(value.substring(0, to).trim());
+                double upper = Double.parseDouble(value.substring(to + 2).trim());
+                return lower <= upper;
+            }
+            int separator = value.indexOf('-', 1);
+            if (separator > 0) {
+                double lower = Double.parseDouble(value.substring(0, separator).trim());
+                double upper = Double.parseDouble(value.substring(separator + 1).trim());
+                return lower <= upper;
             }
             return validFiniteNumber(value);
         } catch (NumberFormatException ignored) {

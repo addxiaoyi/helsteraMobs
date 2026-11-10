@@ -86,6 +86,12 @@ public final class SkillExtras {
     private static volatile ThreatLookup threatLookup;
     private static volatile PinRegistry pinRegistry;
     private static volatile java.util.function.BiFunction<String, Location, Boolean> regionLookup;
+    @FunctionalInterface
+    public interface LocalDifficultyLookup {
+        Double difficulty(Location location);
+    }
+
+    private static volatile LocalDifficultyLookup localDifficultyLookup;
     private static final Map<String, String> KNOWN_NMS_VERSIONS = Map.ofEntries(
             Map.entry("1.20.1", "v1_20_R1"),
             Map.entry("1.20.2", "v1_20_R2"),
@@ -118,6 +124,11 @@ public final class SkillExtras {
     public static void regionLookup(
             java.util.function.BiFunction<String, Location, Boolean> lookup) {
         regionLookup = lookup;
+    }
+
+    /** Overrides Paper's local-difficulty lookup for integrations and unit tests. */
+    public static void localDifficultyLookup(LocalDifficultyLookup lookup) {
+        localDifficultyLookup = lookup;
     }
 
     static PinRegistry pinRegistry() {
@@ -408,6 +419,7 @@ public final class SkillExtras {
         threatLookup = null;
         pinRegistry = null;
         regionLookup = null;
+        localDifficultyLookup = null;
         damagePolicy = null;
         damageCause = null;
         itemResolver = null;
@@ -1009,6 +1021,77 @@ public final class SkillExtras {
         return raw == null || raw.isBlank() ? null : numberRange(List.of(raw), 0);
     }
 
+    private static String localDifficultyExpression(List<String> args) {
+        if (args == null || args.isEmpty()) return null;
+        String value = null;
+        boolean named = false;
+        for (int i = 0; i < args.size(); i++) {
+            String raw = args.get(i);
+            if (raw == null || raw.isBlank()) return null;
+            raw = raw.trim();
+            if (i == 0 && isComparisonToken(raw) && args.size() > 1) {
+                String next = args.get(++i);
+                if (next == null || next.isBlank() || next.indexOf('=') >= 0) return null;
+                raw += next.trim();
+            }
+            int equals = raw.startsWith(">") || raw.startsWith("<") ? -1 : raw.indexOf('=');
+            if (equals >= 0) {
+                if (equals == 0) return null;
+                String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                if (!Set.of("difficulty", "diff", "d").contains(key) || named || value != null) {
+                    return null;
+                }
+                value = raw.substring(equals + 1).trim();
+                if (value.isBlank()) return null;
+                named = true;
+            } else {
+                if (named || value != null) return null;
+                value = raw;
+            }
+        }
+        return value;
+    }
+
+    private static boolean isComparisonToken(String raw) {
+        return raw.equals(">") || raw.equals(">=") || raw.equals("<") || raw.equals("<=");
+    }
+
+    private static boolean validLocalDifficultyExpression(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String value = raw.trim();
+        try {
+            if (value.startsWith(">=") || value.startsWith("<=")
+                    || value.startsWith(">") || value.startsWith("<")) {
+                String number = value.replaceFirst("^(>=|<=|>|<)", "").trim();
+                return finite(number);
+            }
+            int to = value.toLowerCase(Locale.ROOT).indexOf("to");
+            if (to > 0) {
+                double lower = Double.parseDouble(value.substring(0, to).trim());
+                double upper = Double.parseDouble(value.substring(to + 2).trim());
+                return Double.isFinite(lower) && Double.isFinite(upper) && lower <= upper;
+            }
+            int separator = value.indexOf('-', 1);
+            if (separator > 0) {
+                double lower = Double.parseDouble(value.substring(0, separator).trim());
+                double upper = Double.parseDouble(value.substring(separator + 1).trim());
+                return Double.isFinite(lower) && Double.isFinite(upper) && lower <= upper;
+            }
+            return finite(value);
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean finite(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        try {
+            return Double.isFinite(Double.parseDouble(raw.trim()));
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
     private static NumberRange trackedLocationRange(List<String> args) {
         String named = null;
         String positional = null;
@@ -1147,6 +1230,36 @@ public final class SkillExtras {
     private static Location conditionLocation(BehaviorContext ctx) {
         LivingEntity target = targetOnlyEntity(ctx);
         return target == null ? selfLoc(ctx) : target.getLocation();
+    }
+
+    private static double localDifficultyAt(Location location) {
+        if (location == null || location.getWorld() == null) return Double.NaN;
+        LocalDifficultyLookup lookup = localDifficultyLookup;
+        if (lookup != null) {
+            try {
+                Double value = lookup.difficulty(location);
+                return value != null && Double.isFinite(value) ? value : Double.NaN;
+            } catch (Throwable ignored) {
+                return Double.NaN;
+            }
+        }
+        try {
+            Object worldHandle = location.getWorld().getClass().getMethod("getHandle")
+                    .invoke(location.getWorld());
+            Class<?> blockPosClass = Class.forName("net.minecraft.core.BlockPos");
+            Object blockPos = blockPosClass.getConstructor(int.class, int.class, int.class)
+                    .newInstance(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+            Object difficulty = worldHandle.getClass()
+                    .getMethod("getCurrentDifficultyAt", blockPosClass)
+                    .invoke(worldHandle, blockPos);
+            Class<?> difficultyClass = Class.forName("net.minecraft.world.DifficultyInstance");
+            Object effective = difficultyClass.getMethod("getEffectiveDifficulty").invoke(difficulty);
+            if (!(effective instanceof Number number)) return Double.NaN;
+            double value = number.doubleValue();
+            return Double.isFinite(value) ? value : Double.NaN;
+        } catch (Throwable ignored) {
+            return Double.NaN;
+        }
     }
 
     private static boolean boundsMatch(BehaviorContext ctx, String shape,
@@ -1817,6 +1930,18 @@ public final class SkillExtras {
                             return false;
                         }
                     };
+                }),
+                Map.entry("local-difficulty", (SkillCatalog.ConditionFactory) a -> {
+                    String expression = localDifficultyExpression(a);
+                    if (!validLocalDifficultyExpression(expression)) {
+                        throw new IllegalArgumentException(
+                                "local-difficulty requires a finite comparator or ordered range");
+                    }
+                    NumberRange range = numberRange(List.of(expression), 0);
+                    if (range == null) {
+                        throw new IllegalArgumentException("local-difficulty range is invalid: " + expression);
+                    }
+                    return ctx -> range.contains(localDifficultyAt(conditionLocation(ctx)));
                 }),
                 // Common Mythic aliases with direct Bukkit semantics.  Keep
                 // thunder separate from ordinary rain so a `raining` gate does
