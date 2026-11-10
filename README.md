@@ -13,21 +13,17 @@ baseline or expand the declared overall Mythic adapter range. See the
 and [Paper 1.21.1 fallback report](tools/paper-integration/reports/paper-1.21.1-item-group-cooldown-legacy-api-exploratory-20261110.json)
 and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
-Latest strict fixture `srv-paper-template-type-strict-20261110-r1` passes all
-424 release probes (405 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133 with plugin SHA-256
-`05dc6c3fc503b652057dda08b808db909e2c166cdcaedffed9ac96db71e10cfe`. Its
-`templateTypeImported` probe verifies imported `TemplateType`/`Template`/
-`instanceOf` aliases, direct and transitive template matching, negative
-controls, fail-closed behavior for missing mob configuration and unmanaged
-entities, and preservation of invalid arguments. Report:
-[`paper-1.21.1-template-type-strict-20261110-r1.json`](tools/paper-integration/reports/paper-1.21.1-template-type-strict-20261110-r1.json)
-(SHA-256 `ca7eb2e6faddf04a29d13c6923c6ab7091f9182933bfbe0b66cdf26a092e1b92`);
-compressed server log SHA-256
-`23134b22e9532c227ff904478e46223944ec5b8cfff41eec75ae5672d3e263f9`, client
-log archive SHA-256
-`4e6069976120209f7a0367604001fce5e6672764188676b784d63d4705375acd`.
-Latest strict report has 424 probes, zero incomplete.
+Mythic mob template inheritance is now resolved across `Mobs/` files before
+field conversion. Template chains and ordered multi-template merges support
+recursive map merging, list appending, equipment-slot and modifier-key
+overrides, trade-position overrides, and top-level `Exclude` while preserving
+fields declared by the child mob. Missing, ambiguous, malformed, and cyclic
+references fail closed without applying partial inheritance. Importer and
+runtime contract tests cover the mapping; strict Paper fixture
+`srv-paper-template-inheritance-strict-20261110-r1` verifies inherited health
+and `NoAI`, excluded inherited options, and child-owned overrides on Paper
+1.21.1-133. See [the latest Paper report](tools/paper-integration/reports/paper-1.21.1-template-inheritance-strict-20261110-r1.json)
+and [the parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
 Previous strict fixture `srv-paper-target-fluids-import-strict-20261110-r2`
 passed all 423 release probes; its imported `?targetInWater` and
@@ -1283,7 +1279,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-template-type-strict-20261110-r1` has 424 probes (405 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-template-inheritance-strict-20261110-r1` has 424 probes (405 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1464,7 +1460,7 @@ the entire MythicMobs feature catalog.
 - Official `DistanceFromLocation` now compares explicit target coordinates against x/y/z/world and distance ranges; exploratory Paper r97 verifies exact and out-of-range paths.
 - Official `EnchantingLevel` / `EnchantingExperience` now read explicit target-player level and 0..1 experience progress; exploratory Paper r92 verifies level and progress comparators with restoration.
 - Official `Plugin` / `PluginExists` / `HasPlugin` now check Bukkit PluginManager enabled state; exploratory Paper r93 verifies `helsteraMobs` positive and missing-plugin negative paths.
-- Mythic `TemplateType`, `Template`, and `instanceOf` import as `template-type`; managed mobs retain their configured template lineage for direct and recursive matching, while missing configuration, cycles, and unmanaged entities fail closed. Unknown or malformed parameters remain visible for review. Strict fixture `srv-paper-template-type-strict-20261110-r1` verifies the importer and runtime on Paper 1.21.1-133. Mob field inheritance and `Exclude` semantics remain unsupported; the complete Conditions catalog stays `mapped-unverified`.
+- Mythic `TemplateType`, `Template`, and `instanceOf` import as `template-type`; managed mobs retain their configured template lineage for direct and recursive matching. The mob importer resolves template chains and `Exclude` before field mapping; missing, ambiguous, malformed, and cyclic references fail closed. Strict fixture `srv-paper-template-inheritance-strict-20261110-r1` verifies runtime inheritance and exclusions on Paper 1.21.1-133. The complete Conditions catalog stays `mapped-unverified`.
 - Official `SpawnReason` now matches the target entity's Bukkit `Entity#getEntitySpawnReason()`, accepts case-insensitive `reason`/`r` arguments, and fails closed for missing/invalid values. Strict Paper fixture `srv-paper-spawn-reason-strict-20261110-r1` completes the 418-probe release catalog and records `actual=CUSTOM`, primary/alias mapping, positive/negative evaluation, and invalid-input preservation. The individual condition is `implemented-runtime`; the broader Conditions catalog remains `mapped-unverified`.
 - Official `IsWaterMob` and `IsZombie` use Bukkit's `WaterMob` marker and `Zombie` type checks. Strict Paper 1.21.1-133 fixture `srv-paper-entity-category-import-strict-20261106-r2` verifies all four imported primary/alias names against a real Cod/Zombie pair, both cross-type negatives, and fail-closed preservation of malformed arguments; exploratory Paper 1.21.11 r99 also records the native runtime paths.
 - Official `EntityType`, `EntityTypeIs`, and `MobType` conditions share a Paper-backed selector for nested variants, colors, Horse style, Panda genes, Villager biome/profession, Iron Golem crack state, and Tropical Fish traits. Strict Paper fixture `srv-paper-entity-type-traits-strict-20261106-r1` exercises the importer and runtime on real entities, including wrong-value rejection, `jeb_` rainbow Sheep, every Iron Golem crack tier, and traits applied to the wrong entity type. Cow/Chicken/Pig variants remain preserved with a warning on Paper 1.21.1 because its Bukkit API exposes no getter; newer Zombie Nautilus and Copper Golem variants are outside this release. The wider Conditions catalog remains open.

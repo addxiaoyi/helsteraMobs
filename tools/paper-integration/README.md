@@ -51,21 +51,23 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-template-type-strict-20261110-r1` passes all
-424 probes (405 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. Its `templateTypeImported` probe verifies Mythic
-`TemplateType`/`Template`/`instanceOf` import, direct and transitive matching,
-negative controls, missing-configuration and unmanaged-entity rejection, and
-invalid-input preservation. Report:
-[`paper-1.21.1-template-type-strict-20261110-r1.json`](reports/paper-1.21.1-template-type-strict-20261110-r1.json)
-(SHA-256 `ca7eb2e6faddf04a29d13c6923c6ab7091f9182933bfbe0b66cdf26a092e1b92`);
-server log SHA-256 is
-`23134b22e9532c227ff904478e46223944ec5b8cfff41eec75ae5672d3e263f9`, client
+Latest strict fixture `srv-paper-template-inheritance-strict-20261110-r1`
+passes all 424 probes (405 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Its `templateTypeImported` probe verifies
+direct and transitive Mythic `TemplateType` matching and live mob inheritance:
+inherited health and `NoAI`, top-level `Exclude` removal of inherited options,
+and preservation of child-owned values. Missing, ambiguous, malformed, and
+cyclic template references fail closed during import. Report:
+[`paper-1.21.1-template-inheritance-strict-20261110-r1.json`](reports/paper-1.21.1-template-inheritance-strict-20261110-r1.json)
+(SHA-256 `52b598ed79d7b81df896a247b20e8a683c25c2c55b99d7dd0fd7dea1f04fb9c0`);
+compressed server log SHA-256 is
+`fc301dfc61fbabae922a37717537945f423338f5ab9fdb550a36d14ef9f74e4d`, client
 log archive SHA-256 is
-`4e6069976120209f7a0367604001fce5e6672764188676b784d63d4705375acd`, and
+`04b05f0bf7a602e10a323fb043ff2c2ad7e51b23962d42354edb1dc1d02b3926`, and
 plugin SHA-256 is
-`05dc6c3fc503b652057dda08b808db909e2c166cdcaedffed9ac96db71e10cfe`. Archived
-logs redact web-token query values.
+`5679377756d4c7876bb3a35fd1c84135ab006a99fbf2e25aff0a11e5a097251f`. Archived
+logs redact web-token query values. The previous TemplateType-only run remains
+in the release evidence archive.
 
 Previous strict fixture `srv-paper-target-fluids-import-strict-20261110-r2`
 passed all 423 probes; its report and logs remain indexed in

@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-template-inheritance-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-template-inheritance-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-template-inheritance-strict-20261110-r1.json",
+    "reportSha256": "52b598ed79d7b81df896a247b20e8a683c25c2c55b99d7dd0fd7dea1f04fb9c0",
+    "log": "tools/paper-integration/reports/paper-1.21.1-template-inheritance-strict-20261110-r1.log.gz",
+    "logSha256": "fc301dfc61fbabae922a37717537945f423338f5ab9fdb550a36d14ef9f74e4d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-template-inheritance-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "04b05f0bf7a602e10a323fb043ff2c2ad7e51b23962d42354edb1dc1d02b3926",
+    "pluginSha256": "5679377756d4c7876bb3a35fd1c84135ab006a99fbf2e25aff0a11e5a097251f",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-template-type-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-template-type-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-template-type-strict-20261110-r1.json",

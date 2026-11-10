@@ -1,19 +1,21 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-template-type-strict-20261110-r1` passed the full
-strict gate on Paper 1.21.1-133: 424 registered probes, 405 passed, 19
+Latest fixture `srv-paper-template-inheritance-strict-20261110-r1` passed the
+full strict gate on Paper 1.21.1-133: 424 registered probes, 405 passed, 19
 expected rejections, and zero failed or incomplete. Its `templateTypeImported`
-probe verifies imported `TemplateType`/`Template`/`instanceOf` aliases, direct
-and transitive template matches, negative controls, missing-configuration and
-unmanaged-entity rejection, and invalid-input preservation. Plugin SHA-256:
-`05dc6c3fc503b652057dda08b808db909e2c166cdcaedffed9ac96db71e10cfe`. Full
+probe verifies direct and transitive template matching plus live mob
+inheritance of health and `NoAI`; top-level `Exclude` removes inherited
+options while preserving values declared by the child. Import rejects missing,
+ambiguous, malformed, and cyclic template references without applying partial
+inheritance. Plugin SHA-256:
+`5679377756d4c7876bb3a35fd1c84135ab006a99fbf2e25aff0a11e5a097251f`. Full
 catalog report:
-[paper-1.21.1-template-type-strict-20261110-r1.json](reports/paper-1.21.1-template-type-strict-20261110-r1.json), SHA-256:
-`ca7eb2e6faddf04a29d13c6923c6ab7091f9182933bfbe0b66cdf26a092e1b92`.
+[paper-1.21.1-template-inheritance-strict-20261110-r1.json](reports/paper-1.21.1-template-inheritance-strict-20261110-r1.json), SHA-256:
+`52b598ed79d7b81df896a247b20e8a683c25c2c55b99d7dd0fd7dea1f04fb9c0`.
 Compressed server log SHA-256:
-`23134b22e9532c227ff904478e46223944ec5b8cfff41eec75ae5672d3e263f9`.
+`fc301dfc61fbabae922a37717537945f423338f5ab9fdb550a36d14ef9f74e4d`.
 Client log archive SHA-256:
-`4e6069976120209f7a0367604001fce5e6672764188676b784d63d4705375acd`.
+`04b05f0bf7a602e10a323fb043ff2c2ad7e51b23962d42354edb1dc1d02b3926`.
 Archived logs redact web-token query values.
 
 Focused exploratory fixture `paper-1.21.4-item-group-cooldown-exploratory-20261110`

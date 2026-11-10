@@ -49,13 +49,27 @@ class TemplateTypeMigrationRuntimeContractTest {
         Files.createDirectories(source.getParent());
         Files.writeString(source, """
                 mobs:
+                  TemplateTypeAncestor_%2$s:
+                    Type: ZOMBIE
+                    Health: 31
+                    Options:
+                      NoAI: true
+                      PreventSunburn: true
                   %1$s:
                     Type: ZOMBIE
+                    Health: 37
                     Template: TemplateTypeAncestor_%2$s
                   %3$s:
                     Type: ZOMBIE
                     Template: %1$s
-                """.formatted(parentSourceId, suffix, childSourceId));
+                  TemplateTypeExclude_%2$s:
+                    Type: ZOMBIE
+                    Template: %1$s
+                    Exclude: [Health, Options]
+                    Health: 42
+                    Options:
+                      NoAI: false
+                """.formatted(parentSourceId, suffix, childSourceId, suffix));
 
         Map<String, YamlConfiguration> importedConfigs = new LinkedHashMap<>();
         Map<String, String> targetIds = new LinkedHashMap<>();
@@ -77,6 +91,13 @@ class TemplateTypeMigrationRuntimeContractTest {
         assertNotNull(childId);
         assertEquals(List.of(parentId), importedConfigs.get(childId).getStringList("mob.templates"));
         assertEquals(List.of(ancestorId), importedConfigs.get(parentId).getStringList("mob.templates"));
+        assertEquals(37, importedConfigs.get(childId).getInt("mob.health"));
+        assertTrue(importedConfigs.get(childId).getBoolean("entity.no-ai"));
+        String excludeId = targetIds.get("TemplateTypeExclude_" + suffix);
+        assertNotNull(excludeId);
+        assertEquals(42, importedConfigs.get(excludeId).getInt("mob.health"));
+        assertFalse(importedConfigs.get(excludeId).getBoolean("entity.no-ai", true));
+        assertFalse(importedConfigs.get(excludeId).contains("entity.prevent-sunburn"));
 
         SkillExtras.mobTemplateLookup(new MobTemplateIndex(importedConfigs::get));
         BehaviorRegistryImpl registry = new BehaviorRegistryImpl();
