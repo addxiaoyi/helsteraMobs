@@ -1170,6 +1170,24 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic LastDamager targeter normalizes its separator aliases")
+    void mythicNormalizesLastDamagerTargeter(@TempDir Path root) throws Exception {
+        Path f = write(root, "Skills/last-damager.yml", """
+                skills:
+                  last:
+                    Skills:
+                      - message{m=canonical} @LastDamager
+                      - message{m=separator} @Last-Damager
+                """);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(
+                        plan(new MythicMobsImporter().convert(f)).get().get("content"))));
+        List<String> actions = target.getStringList("skills.last.on-decision");
+        assertTrue(actions.contains("message-target \"canonical\" @lastdamager"), actions.toString());
+        assertTrue(actions.contains("message-target \"separator\" @lastdamager"), actions.toString());
+    }
+
+    @Test
     @DisplayName("Mythic utility mechanics map to native actions")
     void mythicMapsUtilityMechanics(@TempDir Path root) throws Exception {
         Path f = write(root, "Skills/utility.yml", """

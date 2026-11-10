@@ -61,6 +61,11 @@
       "status": "passed"
     },
     {
+      "id": "lastDamagerTargeter",
+      "status": "passed",
+      "requiredObservationPattern": "skill-trigger .*last-damager-targeter=true .*last-damager-projectile=true .*last-damager-environmental-rejected=true .*last-damager-removed-rejected=true"
+    },
+    {
       "id": "attributes",
       "status": "passed"
     },

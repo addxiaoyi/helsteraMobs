@@ -290,6 +290,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'contextTargeterRelations'; status = 'passed'; observations = @('context-targeter-relations passenger=true passengers=true mount=true vehicle=true owner-location=true parent-location=true invalid-rejected=true passed=true')
     }
+    $fullReport.expectedProbeIds += 'lastDamagerTargeter'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'lastDamagerTargeter'; status = 'passed'; observations = @('skill-trigger last-damager-targeter=true last-damager-projectile=true last-damager-environmental-rejected=true last-damager-removed-rejected=true')
+    }
     $fullReport.expectedProbeIds += 'importedPopulationConditions'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedPopulationConditions'; status = 'passed'; observations = @('imported-population-conditions players-online-mapped=true online-alias-mapped=true players-world-mapped=true mobs-world-mapped=true players-online-negative-mapped=true online-alias-negative-mapped=true players-world-negative-mapped=true mobs-world-negative-mapped=true players-online-positive=true online-alias-positive=true players-world-positive=true mobs-world-positive=true players-online-negative=true online-alias-negative=true players-world-negative=true mobs-world-negative=true invalid-preserved=true result=true')

@@ -32,6 +32,52 @@ import static org.mockito.Mockito.*;
 /** Cross-module contract for translated conditions and mechanics used by migration tests. */
 class MigrationRuntimeConditionContractTest {
 
+    @Test
+    @DisplayName("LastDamager targeter follows direct and projectile damage sources")
+    void lastDamagerTargeterUsesBukkitLastDamageCause() {
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var directDamager = mock(org.bukkit.entity.LivingEntity.class);
+        var projectileShooter = mock(org.bukkit.entity.LivingEntity.class);
+        var projectile = mock(org.bukkit.entity.Projectile.class);
+        var directDamage = mock(org.bukkit.event.entity.EntityDamageByEntityEvent.class);
+        var environmentalDamage = mock(org.bukkit.event.entity.EntityDamageEvent.class);
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.isValid()).thenReturn(true);
+        when(caster.isDead()).thenReturn(false);
+        when(directDamager.isValid()).thenReturn(true);
+        when(directDamager.isDead()).thenReturn(false);
+        when(projectileShooter.isValid()).thenReturn(true);
+        when(projectileShooter.isDead()).thenReturn(false);
+        when(directDamage.getDamager()).thenReturn(directDamager);
+        when(projectile.getShooter()).thenReturn(projectileShooter);
+
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0,
+                "integration", null, null, List.of(), null, null);
+        when(caster.getLastDamageCause()).thenReturn(directDamage);
+        assertEquals(List.of(directDamager), dev.helstera.api.behavior.Targeters.select(
+                "@LastDamager", context, List.of(), List.of()));
+
+        when(directDamage.getDamager()).thenReturn(projectile);
+        when(caster.getLastDamageCause()).thenReturn(directDamage);
+        assertEquals(List.of(projectileShooter), dev.helstera.api.behavior.Targeters.select(
+                "@last-damager", context, List.of(), List.of()));
+
+        when(caster.getLastDamageCause()).thenReturn(environmentalDamage);
+        assertEquals(List.of(), dev.helstera.api.behavior.Targeters.select(
+                "@LastDamager", context, List.of(), List.of()));
+        assertEquals(List.of(), dev.helstera.api.behavior.Targeters.select(
+                "@LastDamager{unknown=true}", context, List.of(), List.of()));
+
+        when(directDamager.isValid()).thenReturn(false);
+        when(directDamage.getDamager()).thenReturn(directDamager);
+        when(caster.getLastDamageCause()).thenReturn(directDamage);
+        assertEquals(List.of(), dev.helstera.api.behavior.Targeters.select(
+                "@LastDamager", context, List.of(), List.of()));
+    }
+
     private static <T extends org.bukkit.Keyed> T keyedVariant(Class<T> type, String name) {
         var key = new org.bukkit.NamespacedKey("minecraft", name.toLowerCase(java.util.Locale.ROOT));
         return type.cast(java.lang.reflect.Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
