@@ -13,7 +13,16 @@ Status values:
 
 Evidence baseline: 2026-11-10, Paper API 1.21.1-R0.1-SNAPSHOT.
 
-Latest strict release evidence: `srv-paper-armor-toughness-stats-strict-20261110-r1`
+Latest strict release evidence: `srv-paper-health-boundaries-strict-20261110-r2`
+completes 421 probes on Paper 1.21.1-133 (402 passed, 19 observed expected
+rejections, zero failed or incomplete). Its `healthImportedCondition`
+observation verifies absolute and percentage comparisons, positional health
+arguments with absorption, repeated-argument rejection, and preservation of
+overflowing and malformed values. The report and hashes are indexed in
+`tools/paper-integration/release-evidence.json`; the full Conditions catalog
+remains `mapped-unverified`.
+
+Previous strict release evidence: `srv-paper-armor-toughness-stats-strict-20261110-r1`
 completes 421 probes on Paper 1.21.1-133 (402 passed, 19 observed expected
 rejections, zero failed or incomplete). Its `armorToughnessStatsImported`
 observation verifies the documented Mythic `Stats: - ARMOR_TOUGHNESS 4` entry
