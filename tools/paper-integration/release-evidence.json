@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-grounded-strict-20261110-r3",
+    "reportFixtureDirectory": "srv-paper-grounded-strict-20261110-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-grounded-condition-strict-20261110-r3.json",
+    "reportSha256": "084df9b5e22e339aa3aea70109d8a0ae78b7018acdf59e623b0a2a41df5c7807",
+    "log": "tools/paper-integration/reports/paper-1.21.1-grounded-condition-strict-20261110-r3.log.gz",
+    "logSha256": "aef0a37c0eb04a295ce45cf7afad2bd0458721d8334244117c4fd3f51b6f7946",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-grounded-condition-strict-20261110-r3-client-logs.tar.gz",
+    "clientLogSha256": "c28e37035b017b80b95eca43a6d659871245dfee6f9362a79a050bbdd89d35b9",
+    "pluginSha256": "fa622b01450cb109dbc29edae6a30e0a5f6f06519a2fd4305860b5d0869b54ee",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-worldguard-strict-20261110-r2",
     "reportFixtureDirectory": "srv-paper-worldguard-strict-20261110-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-worldguard-strict-20261110-r2.json",

@@ -768,6 +768,42 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("official Grounded alias binds to the imported OnGround runtime condition")
+    void importedGroundedAliasReachesRuntimeAndRejectsArguments() {
+        var entity = mock(org.bukkit.entity.Zombie.class);
+        when(entity.isOnGround()).thenReturn(true);
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(entity));
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+
+        for (String source : List.of("?onGround", "?grounded")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertEquals("on-ground", mapped.condition(), source);
+            String key = service.bindCondition(mapped.condition());
+            assertNotNull(key, source + " warnings=" + service.warnings());
+            assertTrue(registry.testCondition(key, context), source);
+        }
+
+        when(entity.isOnGround()).thenReturn(false);
+        for (String source : List.of("?onGround", "?grounded")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertFalse(registry.testCondition(service.bindCondition(mapped.condition()), context), source);
+        }
+
+        var malformed = dev.helstera.migration.importer.MmConditions.translate(
+                "?grounded{unknown=true}");
+        assertFalse(malformed.translated());
+        assertEquals("?grounded{unknown=true}", malformed.condition());
+        assertNull(service.bindCondition(malformed.condition()));
+    }
+
+    @Test
     @DisplayName("imported Burning condition actions reach the runtime condition evaluator")
     void importedBurningConditionActionsReachRuntime(@TempDir Path root) throws Exception {
         Path source = Files.createDirectories(root.resolve("Skills")).resolve("burning.yml");

@@ -253,6 +253,7 @@ $probeSpecs = [ordered]@{
     conditionComposition = 'skill-actions .*condition-composition=true'
     conditionMobility = 'skill-actions .*condition-mobility=true .*moving-default-stationary=true .*moving-exact-fractional=true .*moving-alias-fractional=true .*moving-approx-same-block=true .*moving-approx-block=true .*moving-exact-argument=true .*moving-e-argument=true .*moving-invalid-rejected=true .*moving-imported=true .*moving-restored=true'
     conditionMobilityStates = 'condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true'
+    groundedCondition = 'grounded-condition imported=true primary-mapped=true grounded-alias-mapped=true positive=true alias-positive=true airborne=true negative=true alias-negative=true invalid-preserved=true restored=true passed=true'
     conditionLeashed = 'skill-actions .*leashed-condition=true'
     conditionHasOwner = 'skill-actions .*has-owner-condition=true'
     conditionHasTag = 'skill-actions .*has-tag-condition=true'

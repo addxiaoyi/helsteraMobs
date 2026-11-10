@@ -378,6 +378,11 @@
       "requiredObservation": "condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true"
     },
     {
+      "id": "groundedCondition",
+      "status": "passed",
+      "requiredObservation": "grounded-condition imported=true primary-mapped=true grounded-alias-mapped=true positive=true alias-positive=true airborne=true negative=true alias-negative=true invalid-preserved=true restored=true passed=true"
+    },
+    {
       "id": "conditionUtilityAliases",
       "status": "passed"
     },

@@ -2,9 +2,23 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-worldguard-strict-20261110-r2` passes all 422
-release probes (403 passed, 19 expected rejections, zero failed or incomplete)
+Latest strict fixture `srv-paper-grounded-strict-20261110-r3` passes all 423
+release probes (404 passed, 19 expected rejections, zero failed or incomplete)
 on Paper 1.21.1-133 with plugin SHA-256
+`fa622b01450cb109dbc29edae6a30e0a5f6f06519a2fd4305860b5d0869b54ee`. Its
+`groundedCondition` probe verifies imported `onGround` and `grounded` aliases,
+grounded positives, airborne negatives, invalid-argument preservation, and
+state restoration. Report:
+[`paper-1.21.1-grounded-condition-strict-20261110-r3.json`](tools/paper-integration/reports/paper-1.21.1-grounded-condition-strict-20261110-r3.json)
+(SHA-256 `084df9b5e22e339aa3aea70109d8a0ae78b7018acdf59e623b0a2a41df5c7807`);
+compressed server log SHA-256
+`aef0a37c0eb04a295ce45cf7afad2bd0458721d8334244117c4fd3f51b6f7946`, client
+log archive SHA-256
+`c28e37035b017b80b95eca43a6d659871245dfee6f9362a79a050bbdd89d35b9`.
+
+Previous strict fixture `srv-paper-worldguard-strict-20261110-r2` passed all
+422 release probes (403 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133 with plugin SHA-256
 `48d797baf23689b41367f3efdc30a105418f8d578177cebc2d8b21277e9e9974`. Report:
 [`paper-1.21.1-worldguard-strict-20261110-r2.json`](tools/paper-integration/reports/paper-1.21.1-worldguard-strict-20261110-r2.json)
 (SHA-256 `840f9dca50dad598ab079fc99961466f68c3d3acb5a17b3a91f0d016259b0b2b`);
@@ -79,7 +93,7 @@ Plugin SHA-256:
 This verifies the listed placeholder behavior; the full Mythic placeholder
 catalog remains `mapped-unverified`.
 
-Latest strict report has 422 probes, zero incomplete.
+Latest strict report has 423 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-health-boundaries-strict-20261110-r2` passes
 421 probes (402 passed, 19 expected rejections, zero failed or incomplete).
@@ -1228,7 +1242,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-worldguard-strict-20261110-r2` has 422 probes (403 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-grounded-strict-20261110-r3` has 423 probes (404 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1244,8 +1258,8 @@ This is a partial parity release. The matrix currently has `32`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 556 cited IDs; 464 report files; 4 directories
-   without reports; 88 missing directories; 234 archived release reports. The
+   Current fixture inventory: 557 cited IDs; 465 report files; 4 directories
+   without reports; 88 missing directories; 235 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1309,6 +1323,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
+- Official [Onground](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/onground) imports now accept `onGround` and `grounded` as aliases for the `on-ground` condition; unknown arguments remain preserved. Importer/runtime tests and strict Paper fixture `srv-paper-grounded-strict-20261110-r3` verify both aliases on real entities, grounded positives, airborne negatives, restoration, and malformed-input preservation in the complete 423-probe release catalog. The individual condition is `implemented-runtime`; the broader Conditions catalog remains `mapped-unverified`.
 - SkillTree YAML snapshots now use a same-directory temporary file, flush its contents, and atomically replace the destination. Unsupported variable types fail before the old snapshot changes, and failed writes clean up their temporary file. The API module's 97 tests pass. Clean Paper fixture `srv-paper-skilltree-atomic-restart-20261110-r2` verifies two-boot UUID state restoration and per-entity death cleanup on Paper 1.21.1-133; its evidence and redacted boot logs are archived above. Complete Mythic SkillTree semantics remain open.
 - MythicCrucible's documented mob `~onTimer:<ticks>` syntax now imports positive integer periods as independent global-clock branches. Same-period actions are grouped; distinct periods retain separate schedules; zero, negative, malformed, and overflowing intervals remain preserved with warnings. Strict Paper fixture `srv-paper-on-timer-import-strict-20261110-r1` verifies 2- and 5-tick alignment, independent execution, invalid-input preservation, and source dispatch in the complete 422-probe release catalog. The trigger has no `@trigger`; the broader Trigger catalog remains `mapped-unverified`.
 - Strict Paper fixture `srv-paper-jockey-import-strict-20261109-r1` closes the imported `PreventJockeyMounts` path through managed Zombie configuration and Bukkit mount-event cancellation/allowance; the native Zombie `NATURAL` spawn evidence remains in `srv-paper-full-strict-20261107-r4`.

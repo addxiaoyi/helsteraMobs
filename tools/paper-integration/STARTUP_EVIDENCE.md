@@ -1,17 +1,31 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-worldguard-strict-20261110-r2` passed the full strict
-gate on Paper 1.21.1-133: 422 registered probes, 403 passed, 19 expected
-rejections, and zero failed or incomplete. Its plugin SHA-256 is
-`48d797baf23689b41367f3efdc30a105418f8d578177cebc2d8b21277e9e9974`. Full
+Latest fixture `srv-paper-grounded-strict-20261110-r3` passed the full strict
+gate on Paper 1.21.1-133: 423 registered probes, 404 passed, 19 expected
+rejections, and zero failed or incomplete. Its imported `groundedCondition`
+probe verifies both `onGround` and `grounded` aliases, positive grounded and
+negative airborne states, invalid-input preservation, and restoration. Plugin
+SHA-256:
+`fa622b01450cb109dbc29edae6a30e0a5f6f06519a2fd4305860b5d0869b54ee`. Full
 catalog report:
+[paper-1.21.1-grounded-condition-strict-20261110-r3.json](reports/paper-1.21.1-grounded-condition-strict-20261110-r3.json), SHA-256:
+`084df9b5e22e339aa3aea70109d8a0ae78b7018acdf59e623b0a2a41df5c7807`.
+Compressed server log SHA-256:
+`aef0a37c0eb04a295ce45cf7afad2bd0458721d8334244117c4fd3f51b6f7946`.
+Client log archive SHA-256:
+`c28e37035b017b80b95eca43a6d659871245dfee6f9362a79a050bbdd89d35b9`.
+Archived logs replace web-token query values with `[REDACTED]`.
+
+Previous strict fixture `srv-paper-worldguard-strict-20261110-r2` passed the
+full strict gate on Paper 1.21.1-133: 422 registered probes, 403 passed, 19
+expected rejections, and zero failed or incomplete. Plugin SHA-256:
+`48d797baf23689b41367f3efdc30a105418f8d578177cebc2d8b21277e9e9974`. Report:
 [paper-1.21.1-worldguard-strict-20261110-r2.json](reports/paper-1.21.1-worldguard-strict-20261110-r2.json), SHA-256:
 `840f9dca50dad598ab079fc99961466f68c3d3acb5a17b3a91f0d016259b0b2b`.
 Compressed server log SHA-256:
 `02d11d43a04b45c22a8b03ddb669765e92fc79964e174a30c6d331a53180db0d`.
 Client log archive SHA-256:
 `40b3b5409d356d1b58b3a2a7da9f7a1e77b484fb1552f8d51bc006b478efc5cb`.
-Archived logs replace web-token query values with `[REDACTED]`.
 
 Focused installed-WorldGuard fixture `paper-1.21.1-worldguard-region-parity-20261110-r1`
 passes 13 checks on Paper 1.21.1-133 with WorldGuard 7.0.12 and WorldEdit

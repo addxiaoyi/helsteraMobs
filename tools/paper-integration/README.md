@@ -51,7 +51,22 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-worldguard-strict-20261110-r2` passes all 422
+Latest strict fixture `srv-paper-grounded-strict-20261110-r3` passes all 423
+probes (404 passed, 19 expected rejections, zero failed or incomplete) on Paper
+1.21.1-133. Its `groundedCondition` probe verifies imported `onGround` and
+`grounded` aliases, grounded positives, airborne negatives, malformed-argument
+preservation, and cleanup restoration. Report:
+[`paper-1.21.1-grounded-condition-strict-20261110-r3.json`](reports/paper-1.21.1-grounded-condition-strict-20261110-r3.json)
+(SHA-256 `084df9b5e22e339aa3aea70109d8a0ae78b7018acdf59e623b0a2a41df5c7807`);
+server log SHA-256 is
+`aef0a37c0eb04a295ce45cf7afad2bd0458721d8334244117c4fd3f51b6f7946`, client
+log archive SHA-256 is
+`c28e37035b017b80b95eca43a6d659871245dfee6f9362a79a050bbdd89d35b9`, and
+plugin SHA-256 is
+`fa622b01450cb109dbc29edae6a30e0a5f6f06519a2fd4305860b5d0869b54ee`. Archived
+reports and hashes are indexed in `release-evidence.json`.
+
+Previous strict fixture `srv-paper-worldguard-strict-20261110-r2` passes all 422
 probes (403 passed, 19 expected rejections, zero failed or incomplete) on Paper
 1.21.1-133. Report:
 [`paper-1.21.1-worldguard-strict-20261110-r2.json`](reports/paper-1.21.1-worldguard-strict-20261110-r2.json)
@@ -61,8 +76,7 @@ server log SHA-256 is
 log archive SHA-256 is
 `40b3b5409d356d1b58b3a2a7da9f7a1e77b484fb1552f8d51bc006b478efc5cb`, and
 plugin SHA-256 is
-`48d797baf23689b41367f3efdc30a105418f8d578177cebc2d8b21277e9e9974`. Archived
-reports and hashes are indexed in `release-evidence.json`.
+`48d797baf23689b41367f3efdc30a105418f8d578177cebc2d8b21277e9e9974`.
 
 Focused WorldGuard evidence passes 13/13 checks on Paper 1.21.1-133 with
 WorldGuard 7.0.12 and WorldEdit 7.3.8, including provider discovery, region
