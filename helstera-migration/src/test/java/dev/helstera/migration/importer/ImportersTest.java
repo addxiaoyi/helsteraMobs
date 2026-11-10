@@ -3255,6 +3255,48 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic NoGravity is inverted only for valid booleans")
+    void mythicNoGravityValidatesAndPreservesInvalidValues(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/no-gravity.yml", """
+                mobs:
+                  Enabled:
+                    Type: HUSK
+                    Options:
+                      Gravity: true
+                      NoGravity: true
+                  Control:
+                    Type: HUSK
+                    Options:
+                      Gravity: false
+                      NoGravity: false
+                  Invalid:
+                    Type: HUSK
+                    Options:
+                      Gravity: false
+                      NoGravity: maybe
+                """);
+
+        var entries = new MythicMobsImporter().convert(file);
+        var plans = entries.stream().filter(entry -> entry.containsKey("target-file")
+                        && String.valueOf(entry.get("target-file")).startsWith("mobs/"))
+                .collect(java.util.stream.Collectors.toMap(
+                        entry -> String.valueOf(entry.get("source-mob-id")),
+                        entry -> YamlConfiguration.loadConfiguration(new StringReader(
+                                String.valueOf(entry.get("content"))))));
+
+        assertFalse(plans.get("Enabled").getBoolean("entity.gravity", true));
+        assertTrue(plans.get("Control").getBoolean("entity.gravity"));
+        assertFalse(plans.get("Invalid").getBoolean("entity.gravity", true),
+                "an invalid alias must leave the valid Gravity value intact");
+        assertEquals("maybe", plans.get("Invalid").getString("entity.unsupported.Options.NoGravity"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.NoGravity".equals(entry.get("source-key"))
+                && "entity.unsupported.Options.NoGravity".equals(entry.get("target-key"))
+                && "maybe".equals(entry.get("value"))));
+    }
+
+    @Test
     @DisplayName("Mythic native scalar stats map while unsupported forms remain preserved")
     void mythicStatsMapNativeScalarsAndPreserveUnsupportedForms(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/stats.yml", """

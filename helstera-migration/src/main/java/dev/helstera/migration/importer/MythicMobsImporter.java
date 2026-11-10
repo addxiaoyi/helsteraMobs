@@ -4765,10 +4765,18 @@ public final class MythicMobsImporter implements MigrationImporter {
                                               String optionName, String path) {
         Object raw = ciGet(options, optionName);
         if (raw == null) return;
-        boolean value = raw instanceof Boolean b ? b : Boolean.parseBoolean(String.valueOf(raw));
-        target.set(path, !value);
-        note(entries, srcFile, "Options." + optionName, path, !value, "mapped",
-                "Inverted MythicMobs boolean option into the runtime field.");
+        Boolean parsed = parseBooleanOption(raw);
+        if (parsed == null) {
+            String unsupportedPath = "entity.unsupported.Options." + optionName;
+            target.set(unsupportedPath, raw);
+            note(entries, srcFile, "Options." + optionName, unsupportedPath, raw,
+                    "unsupported", "Invalid boolean option value was preserved instead of being applied.", "WARN");
+            return;
+        }
+        boolean value = !parsed;
+        target.set(path, value);
+        note(entries, srcFile, "Options." + optionName, path, value, "mapped",
+                "Validated and inverted the MythicMobs boolean option into the runtime field.");
     }
 
     private void mapMythicDespawnOption(ConfigurationSection options,

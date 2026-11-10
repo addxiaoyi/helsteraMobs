@@ -1791,6 +1791,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " no-damage-ticks=" + noDamageTicksApplied);
 
                 runImportedMobDefaultsSelfTest(world, origin.clone().add(30, 0, 0));
+                runImportedPlayerCreatedSelfTest(world, origin.clone().add(36, 0, 0));
 
                 runEntitySizeRangeSelfTest(world, origin.clone().add(16, 0, 0), entities);
                 runReinforcementsChanceSelfTest(world, origin.clone().add(18, 0, 0), entities);
@@ -2381,12 +2382,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                           Tamed: true
                           Angry: true
                           NoAI: true
+                          Gravity: true
+                          NoGravity: true
                       %2$s:
                         Type: WOLF
                         Options:
                           Tamed: false
                           Angry: false
                           NoAI: true
+                          Gravity: false
+                          NoGravity: false
                       %3$s:
                         Type: ZOMBIFIED_PIGLIN
                         Options:
@@ -2420,6 +2425,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                           Tamed: true
                           Angry: true
                           NoAI: true
+                          Gravity: false
+                          NoGravity: maybe
                     """.formatted(wolfId, wolfControlId, pigZombieId, pigZombieControlId,
                     raiderId, raiderControlId, wrongTypeId));
 
@@ -2560,6 +2567,24 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " control-can-join-raid=" + (raiderControl != null && raiderControl.isCanJoinRaid())
                     + " patrol-leader=" + patrolLeader + " patrol-spawn-point=" + patrolSpawnPoint
                     + " wrong-type-preserved=" + (wrongType && wrongUnsupported != null));
+            boolean noGravityImported = wolfEntityOptions != null
+                    && !wolfEntityOptions.getBoolean("gravity", true)
+                    && wolfControlEntityOptions != null
+                    && wolfControlEntityOptions.getBoolean("gravity", false);
+            boolean noGravityInvalidPreserved = wrongUnsupported != null
+                    && "maybe".equalsIgnoreCase(wrongUnsupported.getString("NoGravity"))
+                    && wrongEntityOptions != null && !wrongEntityOptions.getBoolean("gravity", true);
+            boolean noGravityApplied = wolf != null && !wolf.hasGravity()
+                    && wolfControl != null && wolfControl.hasGravity()
+                    && wrongTypeEntity != null && !wrongTypeEntity.hasGravity();
+            boolean noGravityResult = imported && noGravityImported
+                    && noGravityInvalidPreserved && noGravityApplied;
+            getLogger().info("[自检] no-gravity-imported result=" + noGravityResult
+                    + " imported=" + noGravityImported
+                    + " configured=" + (wolf != null && wolf.hasGravity())
+                    + " control=" + (wolfControl != null && wolfControl.hasGravity())
+                    + " invalid-preserved=" + noGravityInvalidPreserved
+                    + " fallback=" + (wrongTypeEntity != null && wrongTypeEntity.hasGravity()));
         } catch (Throwable failure) {
             getLogger().warning("[自检] entity-flag-options result=false imported=false error=" + failure);
         } finally {
@@ -5525,6 +5550,155 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (mobId == null || instances == null) return -1;
         MobSpawn spawned = spawnMobCore(mobId, "example/emberling", location, false, null);
         return spawned == null ? -1 : spawned.instanceId();
+    }
+
+    private void runImportedPlayerCreatedSelfTest(org.bukkit.World world, Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            if (world == null || origin == null || origin.getWorld() != world) {
+                throw new IllegalArgumentException("Invalid Paper probe world or origin");
+            }
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-player-created-import-");
+            Path mobsRoot = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            var sources = new java.util.LinkedHashMap<String, Path>();
+            sources.put("CreatedTrue_" + suffix, mobsRoot.resolve("created-true.yml"));
+            sources.put("CreatedFalse_" + suffix, mobsRoot.resolve("created-false.yml"));
+            sources.put("WrongEntity_" + suffix, mobsRoot.resolve("wrong-entity.yml"));
+            sources.put("InvalidValue_" + suffix, mobsRoot.resolve("invalid-value.yml"));
+            Files.writeString(sources.get("CreatedTrue_" + suffix), """
+                    CreatedTrue_%1$s:
+                      Type: IRON_GOLEM
+                      Options:
+                        PlayerCreated: true
+                    """.formatted(suffix));
+            Files.writeString(sources.get("CreatedFalse_" + suffix), """
+                    CreatedFalse_%1$s:
+                      Type: IRON_GOLEM
+                      Options:
+                        PlayerCreated: false
+                    """.formatted(suffix));
+            Files.writeString(sources.get("WrongEntity_" + suffix), """
+                    WrongEntity_%1$s:
+                      Type: ZOMBIE
+                      Options:
+                        PlayerCreated: true
+                    """.formatted(suffix));
+            Files.writeString(sources.get("InvalidValue_" + suffix), """
+                    InvalidValue_%1$s:
+                      Type: IRON_GOLEM
+                      Options:
+                        PlayerCreated: maybe
+                    """.formatted(suffix));
+
+            var importer = new MythicMobsImporter();
+            var mobIds = new java.util.LinkedHashMap<String, String>();
+            for (var source : sources.entrySet()) {
+                var converted = importer.convert(source.getValue());
+                var mobEntry = converted.stream()
+                        .filter(entry -> entry.get("target-file") instanceof String targetFile
+                                && targetFile.startsWith("mobs/") && targetFile.endsWith(".yml"))
+                        .findFirst().orElseThrow(() -> new IllegalStateException(
+                                "PlayerCreated import plan missing for " + source.getKey()));
+                String targetFile = String.valueOf(mobEntry.get("target-file"));
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe mob output path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(mobEntry.get("content")));
+                mobIds.put(source.getKey(), String.valueOf(mobEntry.get("target-mob-id")));
+            }
+
+            String trueId = mobIds.get("CreatedTrue_" + suffix);
+            String falseId = mobIds.get("CreatedFalse_" + suffix);
+            String wrongId = mobIds.get("WrongEntity_" + suffix);
+            String invalidId = mobIds.get("InvalidValue_" + suffix);
+            int trueInstanceId = spawnImportedMobDefaultsProbe(trueId, origin.clone());
+            int falseInstanceId = spawnImportedMobDefaultsProbe(falseId, origin.clone().add(3, 0, 0));
+            int wrongInstanceId = spawnImportedMobDefaultsProbe(wrongId, origin.clone().add(6, 0, 0));
+            int invalidInstanceId = spawnImportedMobDefaultsProbe(invalidId, origin.clone().add(9, 0, 0));
+            for (int instanceId : new int[] {trueInstanceId, falseInstanceId, wrongInstanceId, invalidInstanceId}) {
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var trueInstance = trueInstanceId > 0 ? instances().impl(trueInstanceId) : null;
+            var falseInstance = falseInstanceId > 0 ? instances().impl(falseInstanceId) : null;
+            var wrongInstance = wrongInstanceId > 0 ? instances().impl(wrongInstanceId) : null;
+            var trueEntity = trueInstance == null ? null
+                    : trueInstance.baseEntity().filter(org.bukkit.entity.IronGolem.class::isInstance)
+                    .map(org.bukkit.entity.IronGolem.class::cast).orElse(null);
+            var falseEntity = falseInstance == null ? null
+                    : falseInstance.baseEntity().filter(org.bukkit.entity.IronGolem.class::isInstance)
+                    .map(org.bukkit.entity.IronGolem.class::cast).orElse(null);
+            var wrongEntity = wrongInstance == null ? null : wrongInstance.baseEntity().orElse(null);
+
+            var wrongConfig = wrongId == null ? null : mobConfig(wrongId);
+            var invalidConfig = invalidId == null ? null : mobConfig(invalidId);
+            var wrongEntitySection = wrongConfig == null ? null : wrongConfig.getConfigurationSection("entity");
+            var invalidEntitySection = invalidConfig == null ? null : invalidConfig.getConfigurationSection("entity");
+            var wrongUnsupported = wrongEntitySection == null ? null
+                    : wrongEntitySection.getConfigurationSection("unsupported.Options");
+            var invalidUnsupported = invalidEntitySection == null ? null
+                    : invalidEntitySection.getConfigurationSection("unsupported.Options");
+            var trueConfig = trueId == null ? null : mobConfig(trueId);
+            var falseConfig = falseId == null ? null : mobConfig(falseId);
+            boolean imported = mobIds.size() == 4 && trueId != null && falseId != null
+                    && wrongId != null && invalidId != null;
+            boolean createdTrue = trueEntity != null && trueEntity.isPlayerCreated()
+                    && trueConfig != null && trueConfig.getBoolean("entity.player-created", false);
+            boolean createdFalse = falseEntity != null && !falseEntity.isPlayerCreated()
+                    && falseConfig != null && falseConfig.contains("entity.player-created")
+                    && !falseConfig.getBoolean("entity.player-created", true);
+            boolean wrongEntityPreserved = wrongEntity instanceof org.bukkit.entity.Zombie
+                    && wrongEntitySection != null && !wrongEntitySection.contains("player-created")
+                    && wrongUnsupported != null && wrongUnsupported.getBoolean("PlayerCreated");
+            boolean invalidValuePreserved = invalidEntitySection != null
+                    && !invalidEntitySection.contains("player-created")
+                    && invalidUnsupported != null
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("PlayerCreated"));
+            boolean result = imported && createdTrue && createdFalse
+                    && wrongEntityPreserved && invalidValuePreserved;
+            getLogger().info("[自检] player-created-imported result=" + result
+                    + " imported=" + imported
+                    + " created=" + (trueEntity != null && trueEntity.isPlayerCreated())
+                    + " control-created=" + (falseEntity != null && falseEntity.isPlayerCreated())
+                    + " wrong-entity-preserved=" + wrongEntityPreserved
+                    + " invalid-preserved=" + invalidValuePreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] player-created-imported result=false error=" + failure);
+        } finally {
+            for (int instanceId : instanceIds) {
+                try { instances().despawn(instanceId); } catch (RuntimeException ignored) { }
+            }
+            if (sourceRoot != null) {
+                try (var paths = Files.walk(sourceRoot)) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("player-created source cleanup failed=" + cleanupFailure);
+                }
+            }
+            for (Path mobFile : mobFiles) {
+                try { Files.deleteIfExists(mobFile); }
+                catch (IOException cleanupFailure) {
+                    getLogger().warning("player-created target cleanup failed=" + cleanupFailure);
+                }
+            }
+            if (!outputDirectoryExisted) {
+                try { Files.deleteIfExists(outputDirectory); }
+                catch (IOException ignored) { }
+            }
+        }
     }
 
     private boolean isTransformationCancelled(org.bukkit.entity.Mob mob) {

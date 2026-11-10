@@ -2,6 +2,16 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
+Latest strict fixture `srv-paper-no-gravity-strict-20261110-r2` adds
+importer-to-runtime evidence for Mythic `Options.NoGravity`: true and false
+values are read back through production mob spawning, while malformed values
+remain preserved. The same fixture verifies `Options.PlayerCreated` on real
+Iron Golems, including wrong-entity and malformed-value preservation. The full Paper 1.21.1-133 release
+catalog passes 430 probes (411 passed, 19 expected rejections) with zero failed
+or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2.json),
+[Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and
+[parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+
 Mythic Goat `Options.Screaming` now imports only for Goat entities and applies
 through `Goat#setScreaming`. Wrong-entity and malformed values remain preserved
 with migration warnings. Strict fixture
@@ -50,11 +60,13 @@ Bamboo ChestBoat readback plus negative controls in the preceding 425-probe
 release catalog. See its [strict report](tools/paper-integration/reports/paper-1.21.1-boat-options-strict-20261110-r1.json).
 
 Mythic `Options.PlayerCreated` now maps only for Iron Golems and applies through
-Paper's player-created state setter. Importer and runtime tests cover true/false,
-wrong-entity rejection, and malformed-value preservation. A fresh strict Paper
-fixture has not yet verified this option; it remains part of the open Mob
-Options catalog. See the [parity matrix](MYTHICMOBS_PARITY_MATRIX.md) and the
-[official Mob Options reference](https://wiki.mythiccraft.io/mythicmobs/Mobs/Options).
+Paper's player-created state setter. Strict fixture
+`srv-paper-player-created-strict-20261110-r1` reads back true and false from
+real Iron Golems spawned through imported production configurations and verifies
+wrong-entity and malformed-value preservation in the full 429-probe release
+catalog. The remaining Mob Options catalog is still open. See the
+[parity matrix](MYTHICMOBS_PARITY_MATRIX.md) and the [official Mob Options
+reference](https://wiki.mythiccraft.io/mythicmobs/Mobs/Options).
 
 MythicMobs 5.9 named item-group cooldowns now import with strict validation
 and run through Paper's named `UseCooldown` API on Paper 1.21.4+. A real player
@@ -1332,7 +1344,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-default-mob-options-strict-20261110-r1` has 428 probes (409 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-no-gravity-strict-20261110-r2` has 430 probes (411 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1345,13 +1357,13 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-10). The full remaining work is:
 
-Latest strict report has 428 probes, zero incomplete.
+Latest strict report has 430 probes, zero incomplete.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 566 cited IDs; 474 report files; 4 directories
-   without reports; 88 missing directories; 245 archived release reports. The
+   Current fixture inventory: 568 cited IDs; 476 report files; 4 directories
+   without reports; 88 missing directories; 247 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1419,6 +1431,8 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
+- Mythic `Options.NoGravity` now inverts only valid booleans into `entity.gravity`; malformed values stay under `entity.unsupported.Options.NoGravity` with a migration warning and do not overwrite a separately imported `Gravity` value. Importer tests and strict Paper fixture `srv-paper-no-gravity-strict-20261110-r2` verify both production readback states and invalid-value preservation in the complete 430-probe release catalog.
+- Official Iron Golem `Options.PlayerCreated` now maps to `entity.player-created` and applies through the production mob-spawn path. Importer/runtime coverage and strict Paper 1.21.1-133 fixture `srv-paper-player-created-strict-20261110-r1` verify real true/false Iron Golem state plus wrong-entity and malformed-value preservation; the full 429-probe release catalog passes with zero failed or incomplete. The broader Mob Options catalog remains open.
 - Imported Mythic `?targetInWater` and `?targetInLava` conditions now map to the target-specific runtime evaluators. Importer and runtime contract tests cover aliases, positive/negative fluid states, missing targets, and malformed arguments; the strict Paper 1.21.1-133 fixture `srv-paper-target-fluids-import-strict-20261110-r2` verifies live water/lava evaluation and block restoration in the full 423-probe catalog. Same-tick fluid-state reads remain a Paper cache-timing boundary; the complete Conditions catalog remains `mapped-unverified`.
 - Official `IsInvulnerable` and `IsInvincible` condition aliases now import to the same `is-invulnerable` evaluator. Importer and cross-module tests cover both aliases, positive and negative states, missing targets, invalid-input preservation, and state restoration; strict Paper fixture `srv-paper-invincible-strict-20261110-r3` verifies imported aliases and target evaluation in the complete 423-probe release catalog. The individual condition is `implemented-runtime`; the wider Conditions catalog remains `mapped-unverified`.
 - Official [Onground](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/onground) imports now accept `onGround` and `grounded` as aliases for the `on-ground` condition; unknown arguments remain preserved. Importer/runtime tests and strict Paper fixture `srv-paper-grounded-strict-20261110-r3` verify both aliases on real entities, grounded positives, airborne negatives, restoration, and malformed-input preservation in the complete 423-probe release catalog. The individual condition is `implemented-runtime`; the broader Conditions catalog remains `mapped-unverified`.
