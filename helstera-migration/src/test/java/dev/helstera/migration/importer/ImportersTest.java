@@ -1188,6 +1188,26 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic TargetOfTarget targeter normalizes separator aliases")
+    void mythicNormalizesTargetOfTargetTargeter(@TempDir Path root) throws Exception {
+        Path f = write(root, "Skills/target-of-target.yml", """
+                skills:
+                  target:
+                    Skills:
+                      - message{m=canonical} @TargetOfTarget
+                      - message{m=separator} @Target-Of-Target
+                      - message{m=underscore} @Target_Of_Target
+                """);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(
+                        plan(new MythicMobsImporter().convert(f)).get().get("content"))));
+        List<String> actions = target.getStringList("skills.target.on-decision");
+        assertTrue(actions.contains("message-target \"canonical\" @targetoftarget"), actions.toString());
+        assertTrue(actions.contains("message-target \"separator\" @targetoftarget"), actions.toString());
+        assertTrue(actions.contains("message-target \"underscore\" @targetoftarget"), actions.toString());
+    }
+
+    @Test
     @DisplayName("Mythic utility mechanics map to native actions")
     void mythicMapsUtilityMechanics(@TempDir Path root) throws Exception {
         Path f = write(root, "Skills/utility.yml", """

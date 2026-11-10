@@ -78,6 +78,33 @@ class MigrationRuntimeConditionContractTest {
                 "@LastDamager", context, List.of(), List.of()));
     }
 
+    @Test
+    @DisplayName("TargetOfTarget resolves the active Mob target and rejects unsupported contexts")
+    void targetOfTargetUsesMobTargetContract() {
+        var target = mock(org.bukkit.entity.Mob.class);
+        var nestedTarget = mock(org.bukkit.entity.LivingEntity.class);
+        when(target.isValid()).thenReturn(true);
+        when(target.isDead()).thenReturn(false);
+        when(nestedTarget.isValid()).thenReturn(true);
+        when(nestedTarget.isDead()).thenReturn(false);
+        when(target.getTarget()).thenReturn(nestedTarget);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, target, 1.0, -1, 0, "integration", null, null, List.of(target), null, null);
+
+        assertEquals(List.of(nestedTarget), dev.helstera.api.behavior.Targeters.select(
+                "@TargetOfTarget", context, List.of(), List.of()));
+        assertEquals(List.of(nestedTarget), dev.helstera.api.behavior.Targeters.select(
+                "@target_of_target", context, List.of(), List.of()));
+
+        when(target.getTarget()).thenReturn(null);
+        assertEquals(List.of(), dev.helstera.api.behavior.Targeters.select(
+                "@TargetOfTarget", context, List.of(), List.of()));
+        when(target.isDead()).thenReturn(true);
+        when(target.getTarget()).thenReturn(nestedTarget);
+        assertEquals(List.of(), dev.helstera.api.behavior.Targeters.select(
+                "@TargetOfTarget", context, List.of(), List.of()));
+    }
+
     private static <T extends org.bukkit.Keyed> T keyedVariant(Class<T> type, String name) {
         var key = new org.bukkit.NamespacedKey("minecraft", name.toLowerCase(java.util.Locale.ROOT));
         return type.cast(java.lang.reflect.Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},

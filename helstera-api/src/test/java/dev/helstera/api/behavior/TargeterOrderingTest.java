@@ -856,6 +856,50 @@ class TargeterOrderingTest {
     }
 
     @Test
+    @DisplayName("target of target resolves an active Mob target and fails closed at boundaries")
+    void targetOfTargetResolvesMobTarget() {
+        var targetOfTarget = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
+        var target = (org.bukkit.entity.Mob) Proxy.newProxyInstance(
+                org.bukkit.entity.Mob.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Mob.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "isValid" -> true;
+                    case "isDead" -> false;
+                    case "getTarget" -> targetOfTarget;
+                    default -> defaultValue(method.getReturnType());
+                });
+        var context = BehaviorContext.continueExecution(null, target, 1, 2, 0,
+                "skill", null, null, List.of(target), null, null);
+
+        assertEquals(List.of(targetOfTarget), Targeters.select(
+                "@TargetOfTarget", context, List.of(), List.of()));
+        assertEquals(List.of(targetOfTarget), Targeters.select(
+                "@target-of-target", context, List.of(), List.of()));
+
+        var noTarget = (org.bukkit.entity.Mob) Proxy.newProxyInstance(
+                org.bukkit.entity.Mob.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Mob.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "isValid" -> true;
+                    case "isDead" -> false;
+                    case "getTarget" -> null;
+                    default -> defaultValue(method.getReturnType());
+                });
+        var noTargetContext = BehaviorContext.continueExecution(null, noTarget, 1, 2, 0,
+                "skill", null, null, List.of(noTarget), null, null);
+        assertEquals(List.of(), Targeters.select("@targetoftarget", noTargetContext, List.of(), List.of()));
+
+        var playerTarget = (org.bukkit.entity.Player) Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Player.class},
+                (proxy, method, args) -> method.getName().equals("isValid")
+                        ? true : defaultValue(method.getReturnType()));
+        var playerContext = BehaviorContext.continueExecution(null, playerTarget, 1, 2, 0,
+                "skill", null, null, List.of(playerTarget), null, null);
+        assertEquals(List.of(), Targeters.select("@targetoftarget", playerContext, List.of(), List.of()));
+    }
+
+    @Test
     @DisplayName("targets targeter falls back to the active single target")
     void targetsTargeterUsesActiveTargetWhenListIsEmpty() {
         var target = livingProxy(org.bukkit.entity.LivingEntity.class);
