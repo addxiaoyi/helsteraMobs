@@ -3071,7 +3071,8 @@ class ImportersTest {
                   Boss:
                     Type: HUSK
                     Armor: 8
-                    ArmorToughness: 4
+                    Stats:
+                      - ARMOR_TOUGHNESS 4
                     Exp: 13
                     Options:
                       FollowRange: 40
@@ -3110,6 +3111,56 @@ class ImportersTest {
                 && target.getConfigurationSection("mob.unsupported.Options").contains("CanPickupItems"));
         assertEquals("DIAMOND_SWORD", target.getString("entity.items.main-hand"));
         assertEquals("DIAMOND_HELMET", target.getString("entity.items.helmet"));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "mob.armor-toughness".equals(entry.get("target-key"))
+                && "Boss.Stats[0]".equals(entry.get("source-key"))));
+    }
+
+    @Test
+    @DisplayName("Mythic built-in armor toughness stat maps only an unambiguous scalar override")
+    void mythicStatsMapArmorToughnessAndPreserveUnsupportedForms(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/stats.yml", """
+                mobs:
+                  Scalar:
+                    Type: ZOMBIE
+                    Stats:
+                      - ARMOR_TOUGHNESS 4
+                      - CUSTOM_DEFENSE 6
+                  Modifier:
+                    Type: ZOMBIE
+                    Stats:
+                      - ARMOR_TOUGHNESS 8 ADDITIVE
+                  Duplicate:
+                    Type: ZOMBIE
+                    Stats:
+                      - ARMOR_TOUGHNESS 2
+                      - ARMOR_TOUGHNESS 3
+                  LegacyRoot:
+                    Type: ZOMBIE
+                    ArmorToughness: 9
+                """);
+
+        var entries = new MythicMobsImporter().convert(file);
+        var plans = entries.stream().filter(entry -> entry.containsKey("target-file")
+                && String.valueOf(entry.get("target-file")).startsWith("mobs/"))
+                .collect(java.util.stream.Collectors.toMap(
+                        entry -> String.valueOf(entry.get("source-mob-id")),
+                        entry -> YamlConfiguration.loadConfiguration(new StringReader(
+                                String.valueOf(entry.get("content"))))));
+
+        assertEquals(4, plans.get("Scalar").getDouble("mob.armor-toughness"), 1e-9);
+        assertEquals(List.of("CUSTOM_DEFENSE 6"),
+                plans.get("Scalar").getStringList("mob.unsupported.Stats"));
+        assertFalse(plans.get("Modifier").contains("mob.armor-toughness"));
+        assertEquals(List.of("ARMOR_TOUGHNESS 8 ADDITIVE"),
+                plans.get("Modifier").getStringList("mob.unsupported.Stats"));
+        assertFalse(plans.get("Duplicate").contains("mob.armor-toughness"));
+        assertEquals(List.of("ARMOR_TOUGHNESS 2", "ARMOR_TOUGHNESS 3"),
+                plans.get("Duplicate").getStringList("mob.unsupported.Stats"));
+        assertFalse(plans.get("LegacyRoot").contains("mob.armor-toughness"));
+        assertEquals(9, plans.get("LegacyRoot").getInt("mob.unsupported.ArmorToughness"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "LegacyRoot.ArmorToughness".equals(entry.get("source-key"))));
     }
 
 

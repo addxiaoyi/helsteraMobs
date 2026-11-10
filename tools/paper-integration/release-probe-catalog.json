@@ -53,9 +53,9 @@
       "status": "passed"
     },
     {
-      "id": "armorToughnessOptions",
+      "id": "armorToughnessStatsImported",
       "status": "passed",
-      "requiredObservation": "armor-toughness-options result=true base=4.0"
+      "requiredObservation": "armor-toughness-stats-imported result=true imported=true base=4.0 modifier-preserved=true root-preserved=true controls=0.0,0.0"
     },
     {
       "id": "armorStand",

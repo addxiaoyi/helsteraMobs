@@ -442,6 +442,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'reinforcementsChanceOptions'; status = 'passed'; observations = @('reinforcements-chance-options result=true imported=true applied=true base=0.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true')
     }
+    $fullReport.expectedProbeIds += 'armorToughnessStatsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'armorToughnessStatsImported'; status = 'passed'; observations = @('armor-toughness-stats-imported result=true imported=true base=4.0 modifier-preserved=true root-preserved=true controls=0.0,0.0')
+    }
     $aiSelectorCore = @($fullReport.probes | Where-Object id -eq 'aiSelectorCore')
     if ($aiSelectorCore.Count -ne 1) { throw 'Synthetic release report must contain aiSelectorCore.' }
     $aiSelectorCore[0].observations = @($aiSelectorCore[0].observations) +

@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-armor-toughness-stats-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-armor-toughness-stats-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-armor-toughness-stats-imported-strict-20261110-r1.json",
+    "reportSha256": "c5b90d9f0d0bfb9296ecad2c5ee21753c07fb052e46ebe6709dff4d865f2c3e1",
+    "log": "tools/paper-integration/reports/paper-1.21.1-armor-toughness-stats-imported-strict-20261110-r1.log.gz",
+    "logSha256": "a516596c72afb53659bd3454fbe78e9f277d86e3926bd2570c6edab68bf88a0b",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-armor-toughness-stats-imported-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "e8064ae881928a126f030c0f270fd0c4c046388497a2376dea9b08a7b8a60931",
+    "pluginSha256": "571e41dadf77c0105a2b12d616774ab21ea96b8533bd3d87d3dc4a9461e70d24",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-armor-toughness-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-armor-toughness-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-armor-toughness-strict-20261110-r1.json",
