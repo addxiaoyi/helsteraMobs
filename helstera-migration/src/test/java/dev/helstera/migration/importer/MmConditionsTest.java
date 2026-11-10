@@ -1624,6 +1624,22 @@ class MmConditionsTest {
     }
 
     @Test
+    @DisplayName("Region/NotInRegion 严格保留区域名并映射到外部查询条件")
+    void regionConditionsMapStrictly() {
+        assertEquals("region arena", t("?Region{r=arena}"));
+        assertEquals("region arena", t("?region{region=arena}"));
+        assertEquals("region arena", t("?region arena"));
+        assertEquals("not-in-region arena", t("?NotInRegion{r=arena}"));
+        assertEquals("not-in-region arena", t("?not-in-region{region=arena}"));
+        for (String invalid : List.of(
+                "?region", "?region{}", "?region{r=}", "?region{unknown=arena}",
+                "?region{r=arena;region=other}", "?region{r=arena,other}",
+                "?notInRegion{r=arena;bad=true}")) {
+            assertUntranslatedPreserved(invalid);
+        }
+    }
+
+    @Test
     @DisplayName("比较号带 = 时按同向处理，不改变方向")
     void nonStrictComparisons() {
         assertEquals("health <=50", t("?health{<=50}"));

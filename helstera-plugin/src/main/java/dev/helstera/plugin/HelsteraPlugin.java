@@ -579,6 +579,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             dev.helstera.ai.skill.SkillExtras.currencyBalance(vaultEconomy::balance);
             getLogger().info("外部插件适配器: " + connected + "/" + ir.all().size() + " 已连接");
             this.integrations = ir;
+            dev.helstera.ai.skill.SkillExtras.regionLookup(ir::containsRegion);
         } catch (Throwable t) {
             getLogger().warning("外部插件集成层不可用: " + t);
         }
