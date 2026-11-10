@@ -2,21 +2,20 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-server-nms-version-20261110-r4` passes all
-417 release probes (398 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. Latest strict report has 417 probes, zero incomplete.
-Its `serverNmsVersionCondition` evidence verifies the official aliases
-(`ServerNmsVersion`, `servernms`, and `nmsversion`), `version`/`sv`/`v`
-arguments, the documented default, positive Paper evaluation, wrong-version
-rejection, and malformed-input preservation. Report:
-`tools/paper-integration/reports/paper-1.21.1-server-nms-version-strict-20261110-r4.json`
-(SHA-256 `7e5bd19c8354e5e778c0e22a76e04eb7893dbe43a3b8a2a340e547892aa3a63a`).
+Latest strict fixture `srv-paper-spawn-reason-strict-20261110-r1` passes all
+418 release probes (399 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Latest strict report has 418 probes, zero incomplete. Its `spawnReasonCondition` probe verifies
+`SpawnReason` and `spawnreason` aliases, `reason`/`r` arguments, live `CUSTOM`
+positive and alternate-reason negative evaluation, and malformed-input
+preservation. Report:
+`tools/paper-integration/reports/paper-1.21.1-spawn-reason-strict-20261110-r1.json`
+(SHA-256 `1779551596d6e8868e603ddf3edcd1101b17a472cd9f5a5cbba2144b87bf3b87`).
 Compressed server log SHA-256:
-`086934e3284bb91e39bafb2bfb8fa3b3a4d148503db6a3f3afd6963dcc353b93`.
+`16755c85d5813748b72529d589b3874b35020c8b18ab0d6210da7c9ca640cc75`.
 Client log archive SHA-256:
-`f2f67c04b14c7b01e57103d59b986ebf6558340ddd3ad9ffa522b32b9af54ba1`.
+`9df1117caf9aec720d6c9151848b04787bb0cd6f86d263eaf074e49f652ed88f`.
 Plugin SHA-256:
-`f0b125e08173737471c3b85ee89f9d19bc9a03778230bf756556d2e4ec2135b3`.
+`291ada3873ab6813e9e4444b73a09bb7e7bf9fd4955314beb6dd0820a511f231`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
 
@@ -1102,7 +1101,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-server-nms-version-20261110-r4` has 417 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-spawn-reason-strict-20261110-r1` has 418 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1118,8 +1117,8 @@ This is a partial parity release. The matrix currently has `34`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 543 cited IDs; 451 report files; 4 directories
-   without reports; 88 missing directories; 222 archived release reports. The
+   Current fixture inventory: 544 cited IDs; 452 report files; 4 directories
+   without reports; 88 missing directories; 223 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1271,7 +1270,7 @@ the entire MythicMobs feature catalog.
 - Official `DistanceFromLocation` now compares explicit target coordinates against x/y/z/world and distance ranges; exploratory Paper r97 verifies exact and out-of-range paths.
 - Official `EnchantingLevel` / `EnchantingExperience` now read explicit target-player level and 0..1 experience progress; exploratory Paper r92 verifies level and progress comparators with restoration.
 - Official `Plugin` / `PluginExists` / `HasPlugin` now check Bukkit PluginManager enabled state; exploratory Paper r93 verifies `helsteraMobs` positive and missing-plugin negative paths.
-- Official `SpawnReason` now matches the target entity's Bukkit `Entity#getEntitySpawnReason()` with case-insensitive enum parsing and fail-closed missing/invalid values; exploratory Paper 1.21.11 r98 records `spawn-reason-condition=true` with actual `CUSTOM` and a different-enum negative control.
+- Official `SpawnReason` now matches the target entity's Bukkit `Entity#getEntitySpawnReason()`, accepts case-insensitive `reason`/`r` arguments, and fails closed for missing/invalid values. Strict Paper fixture `srv-paper-spawn-reason-strict-20261110-r1` completes the 418-probe release catalog and records `actual=CUSTOM`, primary/alias mapping, positive/negative evaluation, and invalid-input preservation. The individual condition is `implemented-runtime`; the broader Conditions catalog remains `mapped-unverified`.
 - Official `IsWaterMob` and `IsZombie` use Bukkit's `WaterMob` marker and `Zombie` type checks. Strict Paper 1.21.1-133 fixture `srv-paper-entity-category-import-strict-20261106-r2` verifies all four imported primary/alias names against a real Cod/Zombie pair, both cross-type negatives, and fail-closed preservation of malformed arguments; exploratory Paper 1.21.11 r99 also records the native runtime paths.
 - Official `EntityType`, `EntityTypeIs`, and `MobType` conditions share a Paper-backed selector for nested variants, colors, Horse style, Panda genes, Villager biome/profession, Iron Golem crack state, and Tropical Fish traits. Strict Paper fixture `srv-paper-entity-type-traits-strict-20261106-r1` exercises the importer and runtime on real entities, including wrong-value rejection, `jeb_` rainbow Sheep, every Iron Golem crack tier, and traits applied to the wrong entity type. Cow/Chicken/Pig variants remain preserved with a warning on Paper 1.21.1 because its Bukkit API exposes no getter; newer Zombie Nautilus and Copper Golem variants are outside this release. The wider Conditions catalog remains open.
 - Official `Aerial` evaluates the active target's Bukkit `isOnGround()` state with `aerial`/`isAerial` aliases; exploratory Paper 1.21.11 r102 and strict Paper 1.21.1-133 fixture `srv-paper-aerial-condition-strict-20261105-r2` verify floating-ArmorStand positives through both aliases and a grounded-player negative through the dedicated `aerialCondition` probe.

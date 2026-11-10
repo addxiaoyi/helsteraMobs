@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-spawn-reason-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-spawn-reason-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-spawn-reason-strict-20261110-r1.json",
+    "reportSha256": "1779551596d6e8868e603ddf3edcd1101b17a472cd9f5a5cbba2144b87bf3b87",
+    "log": "tools/paper-integration/reports/paper-1.21.1-spawn-reason-strict-20261110-r1.log.gz",
+    "logSha256": "16755c85d5813748b72529d589b3874b35020c8b18ab0d6210da7c9ca640cc75",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-spawn-reason-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "9df1117caf9aec720d6c9151848b04787bb0cd6f86d263eaf074e49f652ed88f",
+    "pluginSha256": "291ada3873ab6813e9e4444b73a09bb7e7bf9fd4955314beb6dd0820a511f231",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-server-nms-version-20261110-r4",
     "reportFixtureDirectory": "srv-paper-server-nms-version-20261110-r4",
     "report": "tools/paper-integration/reports/paper-1.21.1-server-nms-version-strict-20261110-r4.json",

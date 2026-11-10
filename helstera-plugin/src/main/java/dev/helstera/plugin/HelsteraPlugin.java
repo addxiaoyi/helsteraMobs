@@ -5717,18 +5717,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 } finally {
                     comparisonTarget.remove();
                 }
-                var actualSpawnReason = zombie.getEntitySpawnReason();
-                var alternateSpawnReason = java.util.Arrays.stream(
-                                org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.values())
-                        .filter(reason -> reason != actualSpawnReason)
-                        .findFirst().orElse(null);
-                boolean spawnReasonPositive = actualSpawnReason != null && behaviors.testCondition(
-                        skills.bindCondition("spawnReason{reason=" + actualSpawnReason.name() + "}"), context);
-                boolean spawnReasonNegative = alternateSpawnReason != null && !behaviors.testCondition(
-                        skills.bindCondition("spawn-reason r=" + alternateSpawnReason.name()), context);
-                spawnReasonCondition = spawnReasonPositive && spawnReasonNegative;
-                getLogger().info("spawn-reason-condition-details actual=" + actualSpawnReason
-                        + " positive=" + spawnReasonPositive + " negative=" + spawnReasonNegative);
+                spawnReasonCondition = runSpawnReasonConditionSelfTest(skills, behaviors, zombie, context);
                 var waterMobProbe = world.spawn(location.clone().add(6, 0, 0),
                         org.bukkit.entity.Cod.class);
                 conditionCategoryEntities.add(waterMobProbe);
@@ -11042,6 +11031,46 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " default-rejected=" + defaultRejected
                 + " invalid-preserved=" + invalidPreserved
                 + " passed=" + passed);
+        return passed;
+    }
+
+    private boolean runSpawnReasonConditionSelfTest(
+            SkillService skills,
+            BehaviorRegistry behaviors,
+            org.bukkit.entity.LivingEntity spawnProbe,
+            dev.helstera.api.behavior.BehaviorContext context) {
+        var actualSpawnReason = spawnProbe == null ? null : spawnProbe.getEntitySpawnReason();
+        var alternateSpawnReason = actualSpawnReason == null ? null : java.util.Arrays.stream(
+                        org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.values())
+                .filter(reason -> reason != actualSpawnReason)
+                .findFirst().orElse(null);
+        String spawnReasonSource = "?spawnReason{reason=" + actualSpawnReason + "}";
+        String spawnReasonAliasSource = "?spawnReason{r=" + actualSpawnReason + "}";
+        var importedSpawnReason = dev.helstera.migration.importer.MmConditions.translate(spawnReasonSource);
+        var importedSpawnReasonAlias = dev.helstera.migration.importer.MmConditions.translate(
+                spawnReasonAliasSource);
+        String invalidSpawnReasonSource = "?spawnReason{reason=not-a-reason}";
+        var invalidSpawnReason = dev.helstera.migration.importer.MmConditions.translate(
+                invalidSpawnReasonSource);
+        boolean primaryMapped = importedSpawnReason.translated();
+        boolean aliasMapped = importedSpawnReasonAlias.translated();
+        String primaryKey = primaryMapped ? skills.bindCondition(importedSpawnReason.condition()) : null;
+        String aliasKey = aliasMapped ? skills.bindCondition(importedSpawnReasonAlias.condition()) : null;
+        boolean positive = primaryKey != null && behaviors.testCondition(primaryKey, context);
+        boolean aliasPositive = aliasKey != null && behaviors.testCondition(aliasKey, context);
+        boolean negative = alternateSpawnReason != null && !behaviors.testCondition(
+                skills.bindCondition("spawn-reason " + alternateSpawnReason.name()), context);
+        boolean invalidPreserved = !invalidSpawnReason.translated()
+                && invalidSpawnReasonSource.equals(invalidSpawnReason.condition());
+        boolean passed = primaryMapped && aliasMapped && positive && aliasPositive
+                && negative && invalidPreserved;
+        getLogger().info("spawn-reason-condition-details actual=" + actualSpawnReason
+                + " primary-mapped=" + primaryMapped
+                + " alias-mapped=" + aliasMapped
+                + " positive=" + positive
+                + " alias-positive=" + aliasPositive
+                + " negative=" + negative
+                + " invalid-preserved=" + invalidPreserved);
         return passed;
     }
 

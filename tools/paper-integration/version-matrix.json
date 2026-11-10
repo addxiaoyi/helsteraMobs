@@ -13,8 +13,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-server-nms-version-20261110-r4",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-server-nms-version-strict-20261110-r4.json"
+      "releaseFixtureId": "srv-paper-spawn-reason-strict-20261110-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-spawn-reason-strict-20261110-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

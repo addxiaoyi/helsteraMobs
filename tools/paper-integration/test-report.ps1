@@ -1047,6 +1047,10 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'serverNmsVersionCondition'; status = 'passed'; observations = @('server-nms-version-condition imported=true positive=true alias-positive=true scalar-positive=true wrong-rejected=true default-rejected=true invalid-preserved=true passed=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'spawnReasonCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'spawnReasonCondition'; status = 'passed'; observations = @('spawn-reason-condition-details actual=CUSTOM primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true invalid-preserved=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'absorptionPlayerCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'absorptionPlayerCondition'; status = 'passed'; observations = @('absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true')
