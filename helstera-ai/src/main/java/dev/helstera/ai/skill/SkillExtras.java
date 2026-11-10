@@ -84,9 +84,16 @@ public final class SkillExtras {
 
     private static volatile ThreatLookup threatLookup;
     private static volatile PinRegistry pinRegistry;
+    private static volatile java.util.function.BiFunction<String, Location, Boolean> regionLookup;
 
     public static void pinRegistry(PinRegistry registry) {
         pinRegistry = registry;
+    }
+
+    /** Connects region conditions to an optional external region provider. */
+    public static void regionLookup(
+            java.util.function.BiFunction<String, Location, Boolean> lookup) {
+        regionLookup = lookup;
     }
 
     static PinRegistry pinRegistry() {
@@ -376,6 +383,7 @@ public final class SkillExtras {
         despawner = null;
         threatLookup = null;
         pinRegistry = null;
+        regionLookup = null;
         damagePolicy = null;
         damageCause = null;
         itemResolver = null;
@@ -2488,6 +2496,18 @@ public final class SkillExtras {
                         return location != null && region != null && region.contains(
                                 location.getWorld().getName(), location.getX(), location.getY(), location.getZ());
                     };
+                }),
+                Map.entry("region", (SkillCatalog.ConditionFactory) a -> {
+                    String region = regionArgument(a);
+                    if (region.isBlank()) throw new IllegalArgumentException("region requires a region name");
+                    return ctx -> Boolean.TRUE.equals(externalRegion(region, conditionLocation(ctx)));
+                }),
+                Map.entry("not-in-region", (SkillCatalog.ConditionFactory) a -> {
+                    String region = regionArgument(a);
+                    if (region.isBlank()) {
+                        throw new IllegalArgumentException("not-in-region requires a region name");
+                    }
+                    return ctx -> Boolean.FALSE.equals(externalRegion(region, conditionLocation(ctx)));
                 }),
 
                 // ---- 权限 / 持握 / 状态 ----
@@ -7923,6 +7943,38 @@ public final class SkillExtras {
             double y2 = Double.parseDouble(args.get(offset + 4));
             double z2 = Double.parseDouble(args.get(offset + 5));
             return RegionBox.of(world, x1, y1, z1, x2, y2, z2);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private static String regionArgument(List<String> args) {
+        if (args == null || args.isEmpty()) return "";
+        String value = null;
+        for (String raw : args) {
+            if (raw == null || raw.isBlank()) return "";
+            String candidate = raw.trim();
+            int equals = candidate.indexOf('=');
+            if (equals >= 0) {
+                if (equals == 0 || equals != candidate.lastIndexOf('=')) return "";
+                String key = candidate.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                if (!key.equals("region") && !key.equals("r")) return "";
+                candidate = candidate.substring(equals + 1).trim();
+            }
+            if (candidate.isBlank() || candidate.chars().anyMatch(Character::isWhitespace)
+                    || candidate.indexOf(';') >= 0 || candidate.indexOf(',') >= 0) return "";
+            if (value != null) return "";
+            value = candidate;
+        }
+        return value == null ? "" : value;
+    }
+
+    private static Boolean externalRegion(String region, Location location) {
+        if (location == null || location.getWorld() == null) return null;
+        var lookup = regionLookup;
+        if (lookup == null) return null;
+        try {
+            return lookup.apply(region, location);
         } catch (RuntimeException ignored) {
             return null;
         }

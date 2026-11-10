@@ -953,6 +953,50 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("Region/NotInRegion 使用外部查询并在未知时 fail-closed")
+    void officialRegionConditionsUseExternalLookup() {
+        World world = mock(World.class);
+        Location casterLocation = new Location(world, 1, 64, 1);
+        Location targetLocation = new Location(world, 8, 64, 8);
+        LivingEntity caster = mock(LivingEntity.class);
+        LivingEntity target = mock(LivingEntity.class);
+        when(caster.getLocation()).thenReturn(casterLocation);
+        when(target.getLocation()).thenReturn(targetLocation);
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(casterLocation);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+
+        var region = extraFactory("region").create(List.of("arena"));
+        var outside = extraFactory("not-in-region").create(List.of("arena"));
+        try {
+            SkillExtras.regionLookup((name, location) -> name.equals("arena")
+                    && location.equals(casterLocation));
+            assertTrue(region.test(BehaviorContext.of(instance, null, 1.0, -1, 0, "IDLE")));
+            assertFalse(outside.test(BehaviorContext.of(instance, null, 1.0, -1, 0, "IDLE")));
+
+            SkillExtras.regionLookup((name, location) -> location == targetLocation);
+            var targetContext = BehaviorContext.of(instance, target, 1.0, -1, 0, "IDLE");
+            assertTrue(region.test(targetContext));
+            assertFalse(outside.test(targetContext));
+
+            SkillExtras.regionLookup((name, location) -> false);
+            assertFalse(region.test(targetContext));
+            assertTrue(outside.test(targetContext));
+
+            SkillExtras.regionLookup((name, location) -> null);
+            assertFalse(region.test(targetContext));
+            assertFalse(outside.test(targetContext));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("region").create(List.of()));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("not-in-region").create(List.of("arena", "other")));
+        } finally {
+            SkillExtras.regionLookup(null);
+        }
+    }
+
+    @Test
     @DisplayName("ProjectileHasEnded 读取命中事件记录")
     void officialProjectileHasEndedConditionReadsHitState() {
         var projectile = mock(org.bukkit.entity.Projectile.class);

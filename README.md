@@ -229,6 +229,16 @@ Plugin SHA-256:
 The importer rejects non-finite numeric values and unknown population
 arguments instead of translating them into a misleading runtime condition.
 
+WorldGuard region-condition update: official `Region`/`NotInRegion` aliases
+(`region`/`r`) now have strict importer validation and a fail-closed runtime
+resolver. The plugin connects the resolver to the optional WorldGuard
+`IntegrationRegistry`; target location is preferred and caster location is the
+fallback. Missing WorldGuard, missing regions, invalid locations, resolver
+errors, and null results all reject safely. Migration, runtime, and plugin
+initialization tests cover the contract, but this environment has no installed
+WorldGuard Paper fixture, so the Conditions and WorldGuard matrix rows remain
+`mapped-unverified`.
+
 Previous strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
 passes all 402 release probes (383 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. It verifies imported Mythic `XDiff`,

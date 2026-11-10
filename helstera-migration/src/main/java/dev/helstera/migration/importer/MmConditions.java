@@ -77,6 +77,8 @@ public final class MmConditions {
     private static final Map<String, String> SERVER_VERSION_BOUND_ARGUMENTS = Map.of(
             "version", "version", "sv", "version", "v", "version",
             "inclusive", "inclusive", "i", "inclusive");
+    private static final Map<String, String> REGION_ARGUMENTS = Map.of(
+            "region", "region", "r", "region");
     private static final Map<String, String> LOOKING_AT_ARGUMENTS = Map.of(
             "type", "type", "t", "type", "block", "block", "b", "block",
             "entity", "entity", "e", "entity", "distance", "distance", "d", "distance");
@@ -339,6 +341,11 @@ public final class MmConditions {
             String runtime = name.startsWith("world") ? "world-is"
                     : name.startsWith("weather") ? "weather-is" : "time-is";
             return new Mapped(runtime + " " + value, true);
+        }
+        if ("region".equals(name) || "notinregion".equals(name)) {
+            String region = strictRegionArgument(body);
+            if (region == null) return new Mapped(s, false);
+            return new Mapped(("region".equals(name) ? "region " : "not-in-region ") + region, true);
         }
         if (Set.of("variableequals", "variableeq", "varequals", "vareq",
                 "variableinrange", "varinrange", "varrange",
@@ -1784,6 +1791,16 @@ public final class MmConditions {
             token = token.substring(equals + 1).trim();
         }
         return token.isBlank() || token.chars().anyMatch(Character::isWhitespace) ? null : token;
+    }
+
+    private static String strictRegionArgument(String body) {
+        Map<String, String> arguments = strictValueArguments(body, REGION_ARGUMENTS, "region");
+        String region = arguments == null ? null : arguments.get("region");
+        if (region == null || region.isBlank() || !region.equals(region.trim())) return null;
+        if (region.chars().anyMatch(Character::isWhitespace)
+                || region.indexOf(';') >= 0 || region.indexOf(',') >= 0
+                || region.indexOf('=') >= 0) return null;
+        return region;
     }
 
     private static String normalizeScalar(String body) {
