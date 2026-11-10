@@ -2408,6 +2408,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                           CanJoinRaid: false
                           PatrolLeader: true
                           PatrolSpawnPoint: true
+                          HasGravity: false
                           NoAI: true
                       %6$s:
                         Type: PILLAGER
@@ -2425,8 +2426,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                           Tamed: true
                           Angry: true
                           NoAI: true
-                          Gravity: false
+                          Gravity: maybe
                           NoGravity: maybe
+                          HasGravity: maybe
                     """.formatted(wolfId, wolfControlId, pigZombieId, pigZombieControlId,
                     raiderId, raiderControlId, wrongTypeId));
 
@@ -2530,6 +2532,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && raiderEntityOptions != null && !raiderEntityOptions.getBoolean("can-join-raid", true)
                     && raiderEntityOptions.getBoolean("patrol-leader")
                     && raiderEntityOptions.getBoolean("patrol-spawn-point")
+                    && !raiderEntityOptions.getBoolean("gravity", true)
                     && raiderControlEntityOptions != null
                     && raiderControlEntityOptions.getBoolean("can-join-raid", false)
                     && !raiderControlEntityOptions.getBoolean("patrol-leader", true)
@@ -2573,17 +2576,26 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && wolfControlEntityOptions.getBoolean("gravity", false);
             boolean noGravityInvalidPreserved = wrongUnsupported != null
                     && "maybe".equalsIgnoreCase(wrongUnsupported.getString("NoGravity"))
-                    && wrongEntityOptions != null && !wrongEntityOptions.getBoolean("gravity", true);
+                    && wrongEntityOptions != null && !wrongEntityOptions.contains("gravity");
+            boolean gravityInvalidPreserved = wrongUnsupported != null
+                    && "maybe".equalsIgnoreCase(wrongUnsupported.getString("Gravity"));
+            boolean hasGravityInvalidPreserved = wrongUnsupported != null
+                    && "maybe".equalsIgnoreCase(wrongUnsupported.getString("HasGravity"));
             boolean noGravityApplied = wolf != null && !wolf.hasGravity()
                     && wolfControl != null && wolfControl.hasGravity()
-                    && wrongTypeEntity != null && !wrongTypeEntity.hasGravity();
+                    && raider != null && !raider.hasGravity()
+                    && wrongTypeEntity != null && wrongTypeEntity.hasGravity();
             boolean noGravityResult = imported && noGravityImported
-                    && noGravityInvalidPreserved && noGravityApplied;
+                    && noGravityInvalidPreserved && gravityInvalidPreserved
+                    && hasGravityInvalidPreserved && noGravityApplied;
             getLogger().info("[自检] no-gravity-imported result=" + noGravityResult
                     + " imported=" + noGravityImported
                     + " configured=" + (wolf != null && wolf.hasGravity())
                     + " control=" + (wolfControl != null && wolfControl.hasGravity())
+                    + " has-gravity-alias=" + (raider != null && raider.hasGravity())
                     + " invalid-preserved=" + noGravityInvalidPreserved
+                    + " gravity-invalid-preserved=" + gravityInvalidPreserved
+                    + " has-gravity-invalid-preserved=" + hasGravityInvalidPreserved
                     + " fallback=" + (wrongTypeEntity != null && wrongTypeEntity.hasGravity()));
         } catch (Throwable failure) {
             getLogger().warning("[自检] entity-flag-options result=false imported=false error=" + failure);

@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-gravity-aliases-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-gravity-aliases-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-gravity-aliases-strict-20261110-r1.json",
+    "reportSha256": "87ffc203b818580ca1165a8f426f39627845691999db00d5527eae54ef06791d",
+    "log": "tools/paper-integration/reports/paper-1.21.1-gravity-aliases-strict-20261110-r1.log.gz",
+    "logSha256": "80cdd5ff9906ed07512ba9d24e836fdca3925b59ac7c3e2aa69a1e268e07f302",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-gravity-aliases-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "31e4855172152e71a02968eb3df23bf7e4f082343a44ed8cbd71c6a0ac8b4c79",
+    "pluginSha256": "82848a23e358dced934fe8ce9307acec0b3c72d4953379e1afacd394f2dd3869",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-no-gravity-strict-20261110-r2",
     "reportFixtureDirectory": "srv-paper-no-gravity-strict-20261110-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2.json",

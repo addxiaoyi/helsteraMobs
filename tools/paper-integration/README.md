@@ -51,17 +51,26 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-no-gravity-strict-20261110-r2` passes all
-430 probes (411 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. `noGravityImported` verifies imported true/false gravity
-readback and malformed-value preservation; `playerCreatedImported` verifies
-both Iron Golem states and wrong-entity/malformed preservation through
-production mob spawning. Report:
-[`paper-1.21.1-no-gravity-imported-strict-20261110-r2.json`](reports/paper-1.21.1-no-gravity-imported-strict-20261110-r2.json)
-(SHA-256 `fae837ec0de566778fc75cda90b6a54bff547b0d49c731170dc75bc25119d480`); compressed server log SHA-256 is
-`70c3caa174a973b9ff67e10be5e24fbb04c1438c3c9a05274547347c62dc8b09`, client log archive SHA-256 is
-`9e3bb8ab29bcd2565f7ba0235cde40f416a3fb87dfe456d2d75efdf87542130f`, and plugin SHA-256 is
-`9c7980355113a00d754da1486c57dfd618e8b132fa8c06aacf8c2835a9b4c6fc`. Archived logs redact web-token query values.
+Latest strict fixture `srv-paper-gravity-aliases-strict-20261110-r1` passes
+all 430 probes (411 passed, 19 expected rejections, zero failed or incomplete)
+on Paper 1.21.1-133. `noGravityImported` verifies both `NoGravity` states,
+`HasGravity: false`, malformed-value preservation for the three gravity aliases,
+and the wrong-type fallback; `playerCreatedImported` verifies both Iron Golem
+states and wrong-entity/malformed preservation through production mob spawning.
+Report:
+[`paper-1.21.1-gravity-aliases-strict-20261110-r1.json`](reports/paper-1.21.1-gravity-aliases-strict-20261110-r1.json)
+(SHA-256 `87ffc203b818580ca1165a8f426f39627845691999db00d5527eae54ef06791d`);
+compressed server log SHA-256 is
+`80cdd5ff9906ed07512ba9d24e836fdca3925b59ac7c3e2aa69a1e268e07f302`, client
+log archive SHA-256 is
+`31e4855172152e71a02968eb3df23bf7e4f082343a44ed8cbd71c6a0ac8b4c79`, and
+plugin SHA-256 is
+`82848a23e358dced934fe8ce9307acec0b3c72d4953379e1afacd394f2dd3869`.
+Archived logs redact web-token query values.
+
+Previous strict fixture `srv-paper-no-gravity-strict-20261110-r2` passes all
+430 probes on Paper 1.21.1-133; its evidence remains indexed in
+`release-evidence.json`.
 
 Previous strict fixture `srv-paper-default-mob-options-strict-20261110-r1`
 passes all 428 probes (409 passed, 19 expected rejections, zero failed or
