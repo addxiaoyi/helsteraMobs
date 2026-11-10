@@ -43,6 +43,14 @@ class MythicAgeOptionsTest {
                 SpawnOptions.defaults().preventItemUse(true)));
     }
 
+    @Test
+    void tamingPolicyDistinguishesMythicDefaultFromNativeBehavior() {
+        assertFalse(HelsteraPlugin.shouldCancelTaming(SpawnOptions.defaults()));
+        assertFalse(HelsteraPlugin.shouldCancelTaming(SpawnOptions.defaults().tameable(true)));
+        assertTrue(HelsteraPlugin.shouldCancelTaming(SpawnOptions.defaults().tameable(false)));
+        assertFalse(HelsteraPlugin.shouldCancelTaming(null));
+    }
+
 
     @Test
     void importedEntityOptionsDoNotHideTheMobEntityType() {
@@ -155,6 +163,7 @@ class MythicAgeOptionsTest {
                 entity:
                   prevent-item-pickup: true
                   no-damage-ticks: 10
+                  tameable: false
                 mob:
                   prevent-leashing: true
                   prevent-transformation: true
@@ -163,6 +172,7 @@ class MythicAgeOptionsTest {
                 entity:
                   prevent-item-pickup: false
                   no-damage-ticks: 19
+                  tameable: true
                 mob:
                   prevent-leashing: false
                   prevent-transformation: true
@@ -171,6 +181,7 @@ class MythicAgeOptionsTest {
                 entity:
                   prevent-item-pickup: true
                   no-damage-ticks: 27
+                  tameable: false
                 mob:
                   prevent-leashing: true
                   prevent-transformation: false
@@ -180,14 +191,17 @@ class MythicAgeOptionsTest {
         var globalOptions = HelsteraPlugin.applyMobOptionPolicies(global, SpawnOptions.defaults());
         var explicitOptions = HelsteraPlugin.applyMobOptionPolicies(explicit, SpawnOptions.defaults());
         assertTrue(builtInOptions.preventItemPickup());
+        assertEquals(false, builtInOptions.tameable());
         assertEquals(10, builtInOptions.noDamageTicks());
         assertTrue(builtInOptions.preventLeashing());
         assertTrue(builtInOptions.preventTransformation());
         assertFalse(globalOptions.preventItemPickup());
+        assertEquals(true, globalOptions.tameable());
         assertEquals(19, globalOptions.noDamageTicks());
         assertFalse(globalOptions.preventLeashing());
         assertTrue(globalOptions.preventTransformation());
         assertTrue(explicitOptions.preventItemPickup());
+        assertEquals(false, explicitOptions.tameable());
         assertEquals(27, explicitOptions.noDamageTicks());
         assertTrue(explicitOptions.preventLeashing());
         assertFalse(explicitOptions.preventTransformation());

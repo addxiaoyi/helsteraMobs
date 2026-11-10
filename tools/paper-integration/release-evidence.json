@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-tameable-strict-20261110-r2",
+    "reportFixtureDirectory": "srv-paper-tameable-strict-20261110-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-tameable-strict-20261110-r2.json",
+    "reportSha256": "9fc4248829cfb80b19c3fa3ddef59536a74b4247c5d91bb027b00301116f3a7b",
+    "log": "tools/paper-integration/reports/paper-1.21.1-tameable-strict-20261110-r2.log.gz",
+    "logSha256": "e2c1e723b29b2243c044faf6d8cb2ca1cae327b7ef7b68ac2ca33b96aa13f84d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-tameable-strict-20261110-r2-client-logs.tar.gz",
+    "clientLogSha256": "ced4d643c3da41e8b532c35324a9da2f92531721b29384f3d34006afd87576f7",
+    "pluginSha256": "eff1862db4f2254510cb26af88872d96deb3970a05b0c52d800b12e355952a50",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-goat-screaming-strict-20261110-r2",
     "reportFixtureDirectory": "srv-paper-goat-screaming-strict-20261110-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-goat-screaming-strict-20261110-r2.json",

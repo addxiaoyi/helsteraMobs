@@ -1431,7 +1431,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "UseThreatTable", "SpawningDistance",
                     "Scale", "ShowHealth", "Silent", "NoAI",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "Gravity", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
-                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop")) {
+                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop")) {
                 removeIgnoreCase(leftover, mapped);
             }
             removeIgnoreCase(leftover, "Height");
@@ -1451,6 +1451,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                         leftover, "unsupported", "Unmapped MythicMobs Options were preserved.", "WARN");
             }
         }
+
+        mapTameableOption(options, defaultMobOptions, srcFile, entries, target, normalizedType);
 
         mapDefaultedMobOption(options, defaultMobOptions, srcFile, entries, target,
                 "PreventItemPickup", "entity.prevent-item-pickup", true, true);
@@ -4972,6 +4974,76 @@ public final class MythicMobsImporter implements MigrationImporter {
             return;
         }
         mapOption(options, srcFile, entries, target, optionName, path);
+    }
+
+    private void mapTameableOption(ConfigurationSection options,
+                                   ConfigurationSection defaultMobOptions,
+                                   String srcFile, List<Map<String, Object>> entries,
+                                   YamlConfiguration target, String normalizedType) {
+        String entityTypeName = normalizedType == null ? "ZOMBIE" : normalizedType;
+        Class<? extends org.bukkit.entity.Entity> entityClass = resolveEntityClass(entityTypeName);
+        boolean supportsTaming = entityClass != null
+                && org.bukkit.entity.Tameable.class.isAssignableFrom(entityClass);
+        String explicitKey = findKeyIgnoreCase(options, "Tameable");
+
+        if (explicitKey != null) {
+            Object raw = options.get(explicitKey);
+            Object preserved = raw == null ? "null" : raw;
+            if (!supportsTaming) {
+                String path = "entity.unsupported.Options.Tameable";
+                target.set(path, preserved);
+                note(entries, srcFile, "Options.Tameable", path, preserved, "unsupported",
+                        "Entity type " + entityTypeName
+                                + " does not implement Tameable; the value is preserved and will not be applied.",
+                        "WARN");
+                return;
+            }
+
+            Boolean configured = parseBooleanOption(raw);
+            if (configured != null) {
+                target.set("entity.tameable", configured);
+                note(entries, srcFile, "Options.Tameable", "entity.tameable", configured, "mapped",
+                        "Tameable controls whether players may tame this entity; Tamed remains a separate current-state option.");
+                return;
+            }
+
+            String path = "entity.unsupported.Options.Tameable";
+            target.set(path, preserved);
+            note(entries, srcFile, "Options.Tameable", path, preserved, "unsupported",
+                    "Invalid boolean option value was preserved instead of being applied.", "WARN");
+            target.set("entity.tameable", false);
+            note(entries, srcFile, "MythicMobs.Options.Tameable.default", "entity.tameable", false,
+                    "defaulted", "The built-in false default applies because the explicit value is invalid.");
+            return;
+        }
+
+        if (!supportsTaming) return;
+
+        String globalKey = findKeyIgnoreCase(defaultMobOptions, "Tameable");
+        if (globalKey != null) {
+            Object raw = defaultMobOptions.get(globalKey);
+            Object configured = normalizeDefaultMobOption(raw, true);
+            if (configured != null) {
+                target.set("entity.tameable", configured);
+                note(entries, srcFile,
+                        "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
+                        "entity.tameable", configured, "defaulted",
+                        "Global Mythic default applied to a compatible Tameable entity.");
+                return;
+            }
+            String path = "mob.unsupported.DefaultMobOptions.Tameable";
+            target.set(path, raw == null ? "null" : raw);
+            note(entries, srcFile,
+                    "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
+                    path, raw == null ? "null" : raw, "unsupported",
+                    "Invalid global boolean was preserved; the documented built-in default is used.", "WARN");
+        }
+
+        target.set("entity.tameable", false);
+        note(entries, srcFile, "MythicMobs.Options.Tameable.default", "entity.tameable", false,
+                "defaulted", globalKey == null
+                        ? "Documented MythicMobs built-in default applied."
+                        : "Documented MythicMobs built-in default applied after an invalid global value.");
     }
 
     private boolean mapBoatTypeOption(ConfigurationSection options, String srcFile,
