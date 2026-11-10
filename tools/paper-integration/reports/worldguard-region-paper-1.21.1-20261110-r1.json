@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "fixture": "paper-1.21.1-worldguard-region-parity-20261110-r1",
+  "generatedAtUtc": "2026-11-10T12:46:54Z",
+  "paper": {
+    "implementationVersion": "1.21.1-133-3cb8529",
+    "sha256": "020b6831758cfbaad2890d77eb05d664758319c12a1b190f6abf40323e96120e"
+  },
+  "helsteraMobsSha256": "48d797baf23689b41367f3efdc30a105418f8d578177cebc2d8b21277e9e9974",
+  "externalPlugins": [
+    {
+      "name": "WorldEdit",
+      "version": "7.3.8+6939-7d32b45",
+      "sha256": "b11e40546987c1c9c5f8af216bba89a265a5ffac8dccd92273f61ebb86040556"
+    },
+    {
+      "name": "WorldGuard",
+      "version": "7.0.12+829a4a4",
+      "sha256": "48b136938b3cd4816a95887847ff28e56a06fb110103344bb574739c35f9e86c"
+    }
+  ],
+  "probes": [
+    {
+      "id": "provider_connected",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "region_query_capability",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "simple_inside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "simple_outside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "union_inside_right",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "union_outside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "intersection_inside_overlap",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "intersection_outside_overlap",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "missing_region_false",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "imported_region_inside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "imported_region_outside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "imported_not_region_inside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "imported_not_region_outside",
+      "status": "passed",
+      "observed": "true"
+    }
+  ],
+  "compressedLog": {
+    "path": "worldguard-region-paper-1.21.1-20261110-r1.log.gz",
+    "sha256": "ecba4083af2aee50ca4b252bd1ad91fcc42647d5f7081d0f24936129a153d840"
+  }
+}

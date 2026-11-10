@@ -1,0 +1,8 @@
+name: WorldGuardParityFixture
+version: 1.0.0
+main: dev.helstera.test.worldguard.WorldGuardParityFixture
+api-version: '1.21'
+depend:
+  - WorldEdit
+  - WorldGuard
+  - helsteraMobs

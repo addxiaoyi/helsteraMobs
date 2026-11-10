@@ -29,6 +29,19 @@ $env:PAPER_BEE_STINGER_ONLY = 'false'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 150 -Strict
 ```
 
+To verify the optional WorldGuard adapter against installed WorldGuard and
+WorldEdit plugins, build the fixture and run it in a fresh evidence revision:
+
+```powershell
+mvn -o -q -f tools/paper-integration/worldguard-fixture/pom.xml package
+pwsh -NoProfile -File tools/paper-integration/run-worldguard-fixture.ps1 -EvidenceRevision r2
+```
+
+The runner pins and verifies both plugin JAR hashes, requires Paper 1.21.1-133,
+and writes a JSON report plus a compressed server log under `reports/`. Use a
+new `-EvidenceRevision` for each run; the runner refuses to overwrite evidence
+or reuse an existing fixture directory.
+
 For an isolated imported Bee stinger probe, the runner starts one idle client to
 activate nearby entity AI without changing player state:
 
@@ -38,7 +51,29 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passes all
+Latest strict fixture `srv-paper-worldguard-strict-20261110-r2` passes all 422
+probes (403 passed, 19 expected rejections, zero failed or incomplete) on Paper
+1.21.1-133. Report:
+[`paper-1.21.1-worldguard-strict-20261110-r2.json`](reports/paper-1.21.1-worldguard-strict-20261110-r2.json)
+(SHA-256 `840f9dca50dad598ab079fc99961466f68c3d3acb5a17b3a91f0d016259b0b2b`);
+server log SHA-256 is
+`02d11d43a04b45c22a8b03ddb669765e92fc79964e174a30c6d331a53180db0d`, client
+log archive SHA-256 is
+`40b3b5409d356d1b58b3a2a7da9f7a1e77b484fb1552f8d51bc006b478efc5cb`, and
+plugin SHA-256 is
+`48d797baf23689b41367f3efdc30a105418f8d578177cebc2d8b21277e9e9974`. Archived
+reports and hashes are indexed in `release-evidence.json`.
+
+Focused WorldGuard evidence passes 13/13 checks on Paper 1.21.1-133 with
+WorldGuard 7.0.12 and WorldEdit 7.3.8, including provider discovery, region
+combinations, missing-region behavior, and imported `Region`/`NotInRegion`
+conditions. Report:
+[`worldguard-region-paper-1.21.1-20261110-r1.json`](reports/worldguard-region-paper-1.21.1-20261110-r1.json)
+(SHA-256 `e9d5e8f043307eb13303179ea83ea6c4cff9bbfd7969d5d35356d52004e85a09`);
+compressed log SHA-256:
+`ecba4083af2aee50ca4b252bd1ad91fcc42647d5f7081d0f24936129a153d840`.
+
+Previous strict fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passes all
 422 probes (403 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. The build includes atomic SkillTree snapshot replacement;
 all 97 API tests pass, including failure preservation and temporary-file

@@ -2,7 +2,18 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passes all
+Latest strict fixture `srv-paper-worldguard-strict-20261110-r2` passes all 422
+release probes (403 passed, 19 expected rejections, zero failed or incomplete)
+on Paper 1.21.1-133 with plugin SHA-256
+`48d797baf23689b41367f3efdc30a105418f8d578177cebc2d8b21277e9e9974`. Report:
+[`paper-1.21.1-worldguard-strict-20261110-r2.json`](tools/paper-integration/reports/paper-1.21.1-worldguard-strict-20261110-r2.json)
+(SHA-256 `840f9dca50dad598ab079fc99961466f68c3d3acb5a17b3a91f0d016259b0b2b`);
+compressed server log SHA-256
+`02d11d43a04b45c22a8b03ddb669765e92fc79964e174a30c6d331a53180db0d`, client
+log archive SHA-256
+`40b3b5409d356d1b58b3a2a7da9f7a1e77b484fb1552f8d51bc006b478efc5cb`.
+
+Previous strict fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passes all
 422 release probes (403 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133 with plugin SHA-256
 `09fbfe2c154e57d816bbf1893fd3d2124f5f2e9ca9d12a3122c212db7b6ca18e`.
@@ -378,15 +389,17 @@ Plugin SHA-256:
 The importer rejects non-finite numeric values and unknown population
 arguments instead of translating them into a misleading runtime condition.
 
-WorldGuard region-condition update: official `Region`/`NotInRegion` aliases
-(`region`/`r`) now have strict importer validation and a fail-closed runtime
-resolver. The plugin connects the resolver to the optional WorldGuard
-`IntegrationRegistry`; target location is preferred and caster location is the
-fallback. Missing WorldGuard, missing regions, invalid locations, resolver
-errors, and null results all reject safely. Migration, runtime, and plugin
-initialization tests cover the contract, but this environment has no installed
-WorldGuard Paper fixture, so the Conditions and WorldGuard matrix rows remain
-`mapped-unverified`.
+WorldGuard region conditions are now verified with WorldGuard 7.0.12 and
+WorldEdit 7.3.8 on Paper 1.21.1-133. The installed-plugin fixture passes 13
+checks covering provider discovery, region-query capability, single/union/
+intersection regions, missing regions, and imported `Region`/`NotInRegion`
+positive and negative cases. The resolver still fails closed for missing
+regions, invalid locations, and errors; target location takes precedence over
+caster location. Report:
+[`worldguard-region-paper-1.21.1-20261110-r1.json`](tools/paper-integration/reports/worldguard-region-paper-1.21.1-20261110-r1.json)
+(SHA-256 `e9d5e8f043307eb13303179ea83ea6c4cff9bbfd7969d5d35356d52004e85a09`);
+compressed server log SHA-256
+`ecba4083af2aee50ca4b252bd1ad91fcc42647d5f7081d0f24936129a153d840`.
 
 Previous strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
 passes all 402 release probes (383 passed, 19 expected rejections, zero failed
@@ -1215,7 +1228,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-skilltree-atomic-strict-20261110-r1` has 422 probes (403 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-worldguard-strict-20261110-r2` has 422 probes (403 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1224,15 +1237,15 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 ### Current Development Goals
 
-This is a partial parity release. The matrix currently has `34`
+This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-10). The full remaining work is:
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 555 cited IDs; 463 report files; 4 directories
-   without reports; 88 missing directories; 233 archived release reports. The
+   Current fixture inventory: 556 cited IDs; 464 report files; 4 directories
+   without reports; 88 missing directories; 234 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1426,7 +1439,7 @@ the entire MythicMobs feature catalog.
 - Mythic inline drop ranges now honor the official exclusive upper bound: `1-3` and `1to3` project to 1..2, fixed amounts remain fixed, and empty/reversed ranges are preserved as unsupported. Migration tests cover the projection; strict Paper fixture `srv-paper-drops-imported-range-strict-20261102-r5` verifies an imported standalone DropTable through runtime loading and natural mob death. Broader importer range combinations remain open.
 - Scalar condition compatibility now uses one parser across spawners, immunity/damage modifiers, drops, and Mythic imports: `day, !raining, time-between=0,12000` is split into separate conditions without corrupting range or coordinate commas; nested braces, quotes, YAML lists, and arrays remain intact.
 - Spawner file loading and Mythic spawner import reject explicit null conditions, including inherited YAML merge values; explicit valid overrides and omitted conditions retain their normal behavior. File and migration-to-runtime tests cover these cases and failed reload cleanup. Paper strict fixture `srv-paper-spawner-null-20261103-r2` verifies native direct and merged null rejection and an empty-list override using forced spawn; imported and natural scheduled spawns are not covered by this fixture.
-- Natural spawner `Chance` defaults to 1 when omitted, accepts finite values from 0 to 1, and warns then fails closed to 0 for malformed, non-finite, or out-of-range explicit values. Unit tests cover invalid values; Paper two-boot fixture `srv-paper-spawner-natural-restart-20261106-r5` verifies `Chance: 1` natural generation, `Chance: 0` rejection, `Chance: "Infinity"` warning and rejection, and 580/600 cooldown restoration followed by a natural spawn after 579 observed ticks. The Mythic importer-to-runtime `Chance` path still needs Paper verification; see the [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md) and [restart evidence](tools/paper-integration/reports/paper-1.21.1-spawner-natural-restart-20261106-r5.json).
+- Natural spawner `Chance` defaults to 1 when omitted, accepts finite values from 0 to 1, and warns then fails closed to 0 for malformed, non-finite, or out-of-range explicit values. Unit tests cover invalid values; Paper two-boot fixture `srv-paper-spawner-natural-restart-20261106-r5` verifies `Chance: 1` natural generation, `Chance: 0` rejection, `Chance: "Infinity"` warning and rejection, and 580/600 cooldown restoration followed by a natural spawn after 579 observed ticks. The Mythic importer-to-runtime `Chance` path is also covered in strict Paper fixture `srv-paper-mythic-spawner-world-strict-20261107-r1`; remaining Spawner lifecycle and condition combinations are open. See the [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md) and [restart evidence](tools/paper-integration/reports/paper-1.21.1-spawner-natural-restart-20261106-r5.json).
 - Malformed spawner state YAML triggers backup recovery even when a Bukkit server logger is available. The independent two-boot Paper fixture `srv-paper-spawner-corrupt-restart-20261103-r1` verifies a generated count is restored after corrupting the primary state file; it is not a full strict release run.
 - A failed spawner configuration reload suppresses state writes until a successful load so retry or shutdown cannot overwrite saved counts; a unit test covers recovery. Reload failures are reported to commands and the web editor. These changes have not yet been verified on Paper.
 - Web-triggered loot and spawner reloads run on the Bukkit primary thread and return the actual reload result. Independent Paper fixture `srv-paper-web-reload-20261103-r2` verifies HTTP spawner reload rejects malformed YAML and restores 43 spawners after repair; it does not exercise the browser or the loot failure path.
@@ -1435,7 +1448,7 @@ the entire MythicMobs feature catalog.
 - Migration runtime contract audit now binds the canonical conditions and mechanics asserted by the importer tests through the real `SkillService`; missing runtime registrations fail `MigrationRuntimeConditionContractTest` instead of remaining a report-only mapping.
 - Mob Options, Spawners, Random Spawn, Audience, Custom Menu, SkillTree, and AI have focused Paper or unit evidence recorded in the parity matrix.
 - Exploratory Paper r55 records Creeper fuse and synthetic Bee attack-event stinger restoration. Strict Paper r6 verifies imported `PreventStingerLoss` against inverse controls through native Bee AI attacks on a stationary Zombie. Strict full fixture r4 additionally invokes Paper's native Zombie `NATURAL` spawn finalization and observes protected/control jockey mount events, with cancellation and allowance preserved respectively. The latest strict conversion fixture verifies native Zombie `DROWNED` timing; the separate `mobOptionsNatural` Bee event remains explicitly synthetic, while `CURED`, `INFECTION`, and broader Mob Option ordering remain open.
-- AI selector core is represented by a typed priority/`clear` plan with core goal/target aliases, relation/faction target resolution, conditional selectors, native `Mob#setTarget` synchronization, and an exploratory Paper `ai-selector-core` probe. Paper 1.21.1 release evidence is still required.
+- AI selector core is represented by a typed priority/`clear` plan with core goal/target aliases, relation/faction target resolution, conditional selectors, and native `Mob#setTarget` synchronization. The strict Paper 1.21.1-133 release fixture verifies `aiPriority`, `aiPriorityTargets`, and `aiSelectorCore`, including goal priority, player/monster/owner/faction targets, conditional selectors, clear-without-fallback, and native target synchronization; the broader official AI selector catalog remains open.
 - Exploratory Paper 1.21.11 r126 records `aiPriority=passed` and `aiPriorityTargets=passed` after the self-test revives and protects the online player before arbitration; `stateConditions=passed` covers real flying/sneaking/gliding state. The historical client Shield-use gap is closed by strict Paper r27, which records `stateBlocking=passed` from a real Mineflayer Shield-use window.
 - Exploratory Paper 1.21.11 r127 records independent `itemPickup=passed` and `environmentalDamage=passed` probes after isolating the managed player from earlier natural damage and binding a dedicated no-attacker damage profile.
 - Exploratory Paper 1.21.11 r128 records `lootDynamicChance=passed` with a deterministic runtime `<random.1to1>` expression; the probe no longer depends on a flaky random hit.

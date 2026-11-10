@@ -1,14 +1,36 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passed the full
-strict gate on Paper 1.21.1-133: 422 registered probes, 403 passed, 19 expected
+Latest fixture `srv-paper-worldguard-strict-20261110-r2` passed the full strict
+gate on Paper 1.21.1-133: 422 registered probes, 403 passed, 19 expected
 rejections, and zero failed or incomplete. Its plugin SHA-256 is
-`09fbfe2c154e57d816bbf1893fd3d2124f5f2e9ca9d12a3122c212db7b6ca18e`. The
-API module passes all 97 tests, including a failed-serialization check that
-preserves the prior snapshot and removes the temporary file. A clean focused
-two-boot fixture `srv-paper-skilltree-atomic-restart-20261110-r2` verifies two
-same-ID mobs restore independent UUID branch state and that death removes only
-the victim snapshot. Focused evidence:
+`48d797baf23689b41367f3efdc30a105418f8d578177cebc2d8b21277e9e9974`. Full
+catalog report:
+[paper-1.21.1-worldguard-strict-20261110-r2.json](reports/paper-1.21.1-worldguard-strict-20261110-r2.json), SHA-256:
+`840f9dca50dad598ab079fc99961466f68c3d3acb5a17b3a91f0d016259b0b2b`.
+Compressed server log SHA-256:
+`02d11d43a04b45c22a8b03ddb669765e92fc79964e174a30c6d331a53180db0d`.
+Client log archive SHA-256:
+`40b3b5409d356d1b58b3a2a7da9f7a1e77b484fb1552f8d51bc006b478efc5cb`.
+Archived logs replace web-token query values with `[REDACTED]`.
+
+Focused installed-WorldGuard fixture `paper-1.21.1-worldguard-region-parity-20261110-r1`
+passes 13 checks on Paper 1.21.1-133 with WorldGuard 7.0.12 and WorldEdit
+7.3.8. It verifies provider discovery, active region-query capability, simple,
+union, and intersection queries, missing-region handling, and imported
+`Region`/`NotInRegion` inside/outside behavior. Report:
+[worldguard-region-paper-1.21.1-20261110-r1.json](reports/worldguard-region-paper-1.21.1-20261110-r1.json), SHA-256:
+`e9d5e8f043307eb13303179ea83ea6c4cff9bbfd7969d5d35356d52004e85a09`.
+Compressed server log SHA-256:
+`ecba4083af2aee50ca4b252bd1ad91fcc42647d5f7081d0f24936129a153d840`.
+
+Previous strict fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passed
+the full strict gate: 422 registered probes, 403 passed, 19 expected
+rejections, and zero failed or incomplete. Its API module passes all 97 tests,
+including a failed-serialization check that preserves the prior snapshot and
+removes the temporary file. A clean focused two-boot fixture
+`srv-paper-skilltree-atomic-restart-20261110-r2` verifies two same-ID mobs
+restore independent UUID branch state and that death removes only the victim
+snapshot. Focused evidence:
 [report](reports/paper-1.21.1-skilltree-atomic-restart-20261110-r2-evidence.json)
 (SHA-256 `ee6d3e2204ac5bc42ae87da954a73577c363541957555a0d63e3fd284af79945`),
 [redacted boot logs](reports/paper-1.21.1-skilltree-atomic-restart-20261110-r2-logs.tar.gz)

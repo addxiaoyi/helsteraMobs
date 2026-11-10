@@ -9,6 +9,7 @@ softdepend:
   - MythicMobs
   - ItemAdder
   - CraftEngine
+  - WorldGuard
 commands:
   helstera:
     description: helsteraMobs 主命令

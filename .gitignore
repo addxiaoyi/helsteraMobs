@@ -70,6 +70,7 @@ tools/*.jar
 tools/**/*.zip
 tools/**/*.jar
 tools/paper-integration/node_modules/
+tools/paper-integration/.external-cache/
 
 # Graphify local runtime state and generated reports
 .graphify/

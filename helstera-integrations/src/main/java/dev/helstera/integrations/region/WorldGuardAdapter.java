@@ -18,7 +18,7 @@ public final class WorldGuardAdapter implements IntegrationAdapter {
     private Method getRegionManager;
     private Method getRegion;
     private Method contains;
-    private Method adaptLocation;
+    private Method adaptWorld;
 
     @Override public String pluginName() { return "WorldGuard"; }
 
@@ -61,8 +61,8 @@ public final class WorldGuardAdapter implements IntegrationAdapter {
             Object platform = wgClass.getMethod("getPlatform").invoke(wg);
             regionContainer = platform.getClass().getMethod("getRegionContainer").invoke(platform);
             getRegionManager = regionContainer.getClass().getMethod("get", Class.forName("com.sk89q.worldedit.world.World"));
-            Class<?> wgAdapter = Class.forName("com.sk89q.worldguard.bukkit.BukkitAdapter");
-            adaptLocation = wgAdapter.getMethod("adapt", Location.class);
+            Class<?> worldEditAdapter = Class.forName("com.sk89q.worldedit.bukkit.BukkitAdapter");
+            adaptWorld = worldEditAdapter.getMethod("adapt", org.bukkit.World.class);
             Class<?> managerClass = Class.forName("com.sk89q.worldguard.protection.managers.RegionManager");
             getRegion = managerClass.getMethod("getRegion", String.class);
             Class<?> regionClass = Class.forName("com.sk89q.worldguard.protection.regions.ProtectedRegion");
@@ -84,15 +84,14 @@ public final class WorldGuardAdapter implements IntegrationAdapter {
         getRegionManager = null;
         getRegion = null;
         contains = null;
-        adaptLocation = null;
+        adaptWorld = null;
     }
 
     @Override
     public Boolean containsRegion(String region, Location location) {
         if (!connected || region == null || region.isBlank() || location == null || location.getWorld() == null) return null;
         try {
-            Object adaptedWorld = Class.forName("com.sk89q.worldguard.bukkit.BukkitAdapter")
-                    .getMethod("adapt", org.bukkit.World.class).invoke(null, location.getWorld());
+            Object adaptedWorld = adaptWorld.invoke(null, location.getWorld());
             Object manager = getRegionManager.invoke(regionContainer, adaptedWorld);
             if (manager == null) return false;
             String raw = region.trim();
