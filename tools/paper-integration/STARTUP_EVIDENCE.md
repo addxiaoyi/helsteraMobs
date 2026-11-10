@@ -1,22 +1,24 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-last-damager-strict-20261110-r1` passed the full
-strict gate on Paper 1.21.1-133: 419 registered probes, 400 passed, 19
-expected rejections, and zero failed or incomplete. Its `lastDamagerTargeter`
-probe verifies direct living attackers, projectile shooters, environmental
-damage rejection, removed-attacker rejection, and imported `LastDamager`
-normalization. Report:
-[paper-1.21.1-last-damager-targeter-strict-20261110-r1.json](reports/paper-1.21.1-last-damager-targeter-strict-20261110-r1.json), SHA-256:
-`73f567709d918d7d5b6c5165c454f5678bf2d3b1a80dae8ddefc626f6c0b9115`.
+Latest fixture `srv-paper-target-of-target-strict-20261110-r1` passed the full
+strict gate on Paper 1.21.1-133: 420 registered probes, 401 passed, 19
+expected rejections, and zero failed or incomplete. Its `targetOfTargetTargeter`
+probe verifies the active Mob target's living target, separator aliases,
+non-Mob rejection, missing-target rejection, and removed-target rejection. Report:
+[paper-1.21.1-target-of-target-strict-20261110-r1.json](reports/paper-1.21.1-target-of-target-strict-20261110-r1.json), SHA-256:
+`5c1f7a26e05ae6f7916edbc32dbec3578fe8421151ec4ed0ce1a2b127de08931`.
 Compressed server log SHA-256:
-`7ba5b5a0897739edb3fbeb30f56fcc83c528c48e2937a666ae36c2c55eb58583`.
+`c46f1ea02166a76bcad00e24c0e6938a115fe02da57611b4c5f913aded03e272`.
 Client log archive SHA-256:
-`17c66043076f581a76726ec6bc39b5899522443ff5c0bace728fb41aa5975105`.
+`d21860769abb9c604830033440f597eb86f59850d6177791eb075e4f65538799`.
 Plugin SHA-256:
-`4d1381f1492a5d1678b2bf369f6d1e73efe0f651916ac701d304e12c0ccbf88e`.
+`bfd1679b795176965f0d44b8fe9e1a9c38e3a561c042bee4c03817aba0e2641d`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
 
+Previous fixture `srv-paper-last-damager-strict-20261110-r1` passed the full
+strict gate with 419 registered probes and remains archived below and in
+`release-evidence.json`.
 Previous fixture `srv-paper-moving-condition-strict-20261110-r1` passed the full
 strict gate on Paper 1.21.1-133: 418 registered probes, 399 passed, 19
 expected rejections, and zero failed or incomplete. Its `conditionMobility`

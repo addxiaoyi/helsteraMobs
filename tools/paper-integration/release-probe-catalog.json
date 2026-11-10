@@ -66,6 +66,11 @@
       "requiredObservationPattern": "skill-trigger .*last-damager-targeter=true .*last-damager-projectile=true .*last-damager-environmental-rejected=true .*last-damager-removed-rejected=true"
     },
     {
+      "id": "targetOfTargetTargeter",
+      "status": "passed",
+      "requiredObservationPattern": "skill-trigger .*target-of-target=true .*target-of-target-aliases=true .*target-of-target-non-mob-rejected=true .*target-of-target-missing-rejected=true .*target-of-target-invalid-rejected=true"
+    },
+    {
       "id": "attributes",
       "status": "passed"
     },
