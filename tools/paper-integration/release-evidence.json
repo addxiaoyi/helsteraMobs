@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-default-mob-options-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-default-mob-options-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-default-mob-options-strict-20261110-r1.json",
+    "reportSha256": "1cc0ac63d3865f982ab1a9ab4f518bf66562cd81ab000f805813bd009fcae7c7",
+    "log": "tools/paper-integration/reports/paper-1.21.1-default-mob-options-strict-20261110-r1.log.gz",
+    "logSha256": "f0c79ee1fe5e9d614b890476fcb566dda1875f82b41bb66ee4425fd84383c6a5",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-default-mob-options-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "b39566c19812f32a3c226a848e9490a61588357fa07b15fede7c9d81527daeed",
+    "pluginSha256": "118f05ec5b5179e394f21dfc9d9c26df80cdae92fa6747b42e176332f024befa",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-tameable-strict-20261110-r2",
     "reportFixtureDirectory": "srv-paper-tameable-strict-20261110-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-tameable-strict-20261110-r2.json",

@@ -51,19 +51,21 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-tameable-strict-20261110-r2` passes all 428
-probes (409 passed, 19 expected rejections, zero failed or incomplete) on
-Paper 1.21.1-133. Its `tameableOptionsImported` probe verifies Mythic
-`Options.Tameable` allow/deny/default/fallback behavior, native behavior for
-unmanaged instances, and wrong-type/invalid preservation. Report:
-[`paper-1.21.1-tameable-strict-20261110-r2.json`](reports/paper-1.21.1-tameable-strict-20261110-r2.json)
-(SHA-256 `9fc4248829cfb80b19c3fa3ddef59536a74b4247c5d91bb027b00301116f3a7b`);
+Latest strict fixture `srv-paper-default-mob-options-strict-20261110-r1`
+passes all 428 probes (409 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. `importedMobDefaults` verifies the documented
+`Despawn`, `PreventOtherDrops`, and `PreventVanillaDamage` global defaults,
+explicit precedence, and preservation of unsupported keys through production
+mob spawning. `tameableOptionsImported` confirms an unsupported global
+`Tameable` key does not override Mythic's built-in false policy. Report:
+[`paper-1.21.1-default-mob-options-strict-20261110-r1.json`](reports/paper-1.21.1-default-mob-options-strict-20261110-r1.json)
+(SHA-256 `1cc0ac63d3865f982ab1a9ab4f518bf66562cd81ab000f805813bd009fcae7c7`);
 compressed server log SHA-256 is
-`e2c1e723b29b2243c044faf6d8cb2ca1cae327b7ef7b68ac2ca33b96aa13f84d`, client
+`f0c79ee1fe5e9d614b890476fcb566dda1875f82b41bb66ee4425fd84383c6a5`, client
 log archive SHA-256 is
-`ced4d643c3da41e8b532c35324a9da2f92531721b29384f3d34006afd87576f7`, and
+`b39566c19812f32a3c226a848e9490a61588357fa07b15fede7c9d81527daeed`, and
 plugin SHA-256 is
-`eff1862db4f2254510cb26af88872d96deb3970a05b0c52d800b12e355952a50`. Archived
+`118f05ec5b5179e394f21dfc9d9c26df80cdae92fa6747b42e176332f024befa`. Archived
 logs redact web-token values.
 
 Previous strict fixture `srv-paper-interaction-options-strict-20261110-r2`
@@ -800,13 +802,12 @@ first-boot and second-boot logs are archived beside the report. The tested
 plugin SHA-256 is
 `6ba52a22a59492ec6d0fe82991d7d27d7298e152e91515974ff615a08091a750`.
 
-Previous strict fixture `srv-paper-imported-mob-defaults-strict-20261106-r4`
-passed all 373 probes (354 passed, 19 expected rejections, zero incomplete) on
-Paper 1.21.1-133. `importedMobDefaults` verifies Mythic `PreventLeashing`,
-`PreventItemPickup`, `NoDamageTicks`, and `PreventTransformation` through real
-Paper entities and transform events. The same run verifies natural Potion
-consumption/expiry, movement beyond `SpawningDistance`, web reload, and dual-client
-menu behavior. Report and logs remain in `release-evidence.json`.
+Historical fixture `srv-paper-imported-mob-defaults-strict-20261106-r4` passed
+373 probes. Its global-default assertions predate the official config audit and
+incorrectly applied unsupported keys; use the latest strict fixture above for
+`DefaultMobOptions` semantics. The run also recorded Potion consumption/expiry,
+movement beyond `SpawningDistance`, web reload, and dual-client menu behavior.
+Its original report remains historical evidence.
 
 Previous strict fixture `srv-paper-execution-audience-mob-strict-20261106-r3`
 passed 376 probes (357 passed, 19 expected rejections, zero incomplete). It

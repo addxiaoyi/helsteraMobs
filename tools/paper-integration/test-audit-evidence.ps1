@@ -332,7 +332,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'importedMobDefaults'
     $fullReport.probes += [pscustomobject]@{
-        id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-enabled=true global-no-damage-ticks=true global-prevent-leashing=false global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true explicit-pickup-enabled=true explicit-pickup-disabled=true pickup-wrong-type-preserved=true pickup-invalid-preserved=true explicit-jockey-prevented=true global-jockey-allowed=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
+        id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-despawn-normal=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-disabled=true global-no-damage-ticks=true global-prevent-leashing=true global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true global-despawn-chunk=true global-prevent-other-drops=true global-prevent-vanilla-damage=true global-unsupported-preserved=true explicit-pickup-enabled=true explicit-pickup-disabled=true pickup-wrong-type-preserved=true pickup-invalid-preserved=true explicit-jockey-prevented=true global-jockey-allowed=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true explicit-despawn-never=true explicit-prevent-other-drops-disabled=true explicit-prevent-vanilla-damage-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
     }
     $fullReport.expectedProbeIds += 'healOnReloadOptions'
     $fullReport.probes += [pscustomobject]@{
@@ -356,7 +356,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'tameableOptionsImported'
     $fullReport.probes += [pscustomobject]@{
-        id = 'tameableOptionsImported'; status = 'passed'; observations = @('tameable-options result=true imported=true allow-cancelled=false deny-cancelled=true default-cancelled=true invalid-cancelled=true unmanaged-cancelled=false wrong-type-preserved=true invalid-preserved=true')
+        id = 'tameableOptionsImported'; status = 'passed'; observations = @('tameable-options result=true imported=true allow-cancelled=false deny-cancelled=true default-cancelled=true invalid-cancelled=true unmanaged-cancelled=false wrong-type-preserved=true invalid-preserved=true global-default-ignored=true')
     }
     $fullReport.expectedProbeIds += 'foxOptionsImported'
     $fullReport.probes += [pscustomobject]@{
