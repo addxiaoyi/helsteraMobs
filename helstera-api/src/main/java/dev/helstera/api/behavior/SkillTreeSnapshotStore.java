@@ -5,6 +5,12 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -16,13 +22,32 @@ public final class SkillTreeSnapshotStore {
 
     public static void save(File file, SkillTreeContext.Snapshot snapshot) throws IOException {
         if (file == null || snapshot == null) throw new IllegalArgumentException("file and snapshot are required");
-        File parent = file.getParentFile();
-        if (parent != null && !parent.isDirectory() && !parent.mkdirs()) {
-            throw new IOException("cannot create snapshot directory: " + parent);
+        Path target = file.toPath().toAbsolutePath();
+        Path parent = target.getParent();
+        if (parent == null || target.getFileName() == null) {
+            throw new IOException("snapshot path must name a file: " + file);
         }
-        YamlConfiguration yaml = new YamlConfiguration();
-        write(yaml, snapshot);
-        yaml.save(file);
+        Files.createDirectories(parent);
+        Path temporary = Files.createTempFile(parent,
+                "skilltree-" + target.getFileName() + "-", ".tmp");
+        boolean committed = false;
+        try {
+            YamlConfiguration yaml = new YamlConfiguration();
+            write(yaml, snapshot);
+            yaml.save(temporary.toFile());
+            try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
+                channel.force(true);
+            }
+            try {
+                Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+            committed = true;
+        } finally {
+            if (!committed) Files.deleteIfExists(temporary);
+        }
     }
 
     public static SkillTreeContext.Snapshot load(File file) throws IOException {
@@ -36,9 +61,16 @@ public final class SkillTreeSnapshotStore {
         return read(yaml);
     }
 
-    private static void write(ConfigurationSection section, SkillTreeContext.Snapshot snapshot) {
+    private static void write(ConfigurationSection section, SkillTreeContext.Snapshot snapshot)
+            throws IOException {
         ConfigurationSection variables = section.createSection("variables");
-        snapshot.variables().forEach(variables::set);
+        for (var entry : snapshot.variables().entrySet()) {
+            Object value = entry.getValue();
+            if (!(value instanceof String || value instanceof Number || value instanceof Boolean)) {
+                throw new IOException("unsupported skill-tree variable type for '" + entry.getKey() + "'");
+            }
+            variables.set(entry.getKey(), value);
+        }
         ConfigurationSection locations = section.createSection("locations");
         snapshot.locations().forEach((name, value) -> {
             ConfigurationSection location = locations.createSection(name);
@@ -55,7 +87,9 @@ public final class SkillTreeSnapshotStore {
         });
         branches.set("unlocked", new java.util.ArrayList<>(snapshot.unlockedBranches()));
         section.set("damage-tags", new java.util.ArrayList<>(snapshot.damageTags()));
-        snapshot.parent().ifPresent(parent -> write(section.createSection("parent"), parent));
+        if (snapshot.parent().isPresent()) {
+            write(section.createSection("parent"), snapshot.parent().orElseThrow());
+        }
     }
 
     private static SkillTreeContext.Snapshot read(ConfigurationSection section) {

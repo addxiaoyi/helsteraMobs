@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-skilltree-atomic-restart-20261110-r2",
+  "generatedAtUtc": "2026-11-10T11:57:39.3419017Z",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529",
+  "paperJarSha256": "020b6831758cfbaad2890d77eb05d664758319c12a1b190f6abf40323e96120e",
+  "pluginSha256": "09fbfe2c154e57d816bbf1893fd3d2124f5f2e9ca9d12a3122c212db7b6ca18e",
+  "firstBoot": {
+    "result": "passed",
+    "entities": 2,
+    "snapshotsAfterShutdown": 2,
+    "branchStateSaved": true,
+    "log": "skilltree-write.log"
+  },
+  "secondBoot": {
+    "result": "passed",
+    "uuidMarkersRestored": true,
+    "foundationRestored": true,
+    "prerequisiteRestored": true,
+    "advancedBranchUnlocked": true,
+    "log": "skilltree-verify.log"
+  },
+  "entityDeath": {
+    "result": "passed",
+    "deadEntitySnapshotRemoved": true,
+    "survivorSnapshotRetained": true,
+    "snapshotsAfterShutdown": 1
+  }
+}
