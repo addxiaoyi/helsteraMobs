@@ -4860,6 +4860,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean damageMeleeMechanic = false;
             boolean conditionUtilityAliases = false;
             boolean importedPopulationConditions = false;
+            boolean localDifficultyCondition = false;
             boolean snowingCondition = false;
             boolean snowingTargetMoved = false;
             boolean snowingTargetPositive = false;
@@ -6933,6 +6934,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 conditionTarget.setCustomName("NameProbe");
                 var conditionContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, conditionTarget, 1.0, 3.0, 0, "integration");
+                localDifficultyCondition = runLocalDifficultyConditionSelfTest(
+                        skills, behaviors, modelInstance, conditionContext);
                 var originalForcePullVelocity = conditionTarget.getVelocity().clone();
                 try {
                     boolean forcePullDispatched = runIntegrationAction(skills, behaviors,
@@ -10527,6 +10530,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " imported-server-condition=" + importedServerCondition
                         + " imported-coordinate-difference-condition=" + importedCoordinateDifferenceCondition
                         + " imported-population-conditions=" + importedPopulationConditions
+                        + " local-difficulty-condition=" + localDifficultyCondition
                         + " moisture-conditions=" + moistureConditions
                         + " mob-size-condition=" + mobSizeCondition
                         + " block-type-radius-condition=" + blockTypeRadiusCondition
@@ -10927,6 +10931,58 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " invalid-preserved=" + invalidPreserved
                 + " result=" + result);
         return result;
+    }
+
+    private boolean runLocalDifficultyConditionSelfTest(
+            SkillService skills,
+            BehaviorRegistry behaviors,
+            dev.helstera.api.instance.ModelInstance modelInstance,
+            dev.helstera.api.behavior.BehaviorContext targetContext) {
+        var importedPrimary = dev.helstera.migration.importer.MmConditions.translate(
+                "?LocalDifficulty{d=>=0}");
+        var importedRange = dev.helstera.migration.importer.MmConditions.translate(
+                "?LocalDifficulty{difficulty=0to10}");
+        var importedHigh = dev.helstera.migration.importer.MmConditions.translate(
+                "?LocalDifficulty{diff=>100}");
+        boolean imported = importedPrimary.translated()
+                && "local-difficulty >=0".equals(importedPrimary.condition())
+                && importedRange.translated()
+                && "local-difficulty 0to10".equals(importedRange.condition())
+                && importedHigh.translated()
+                && "local-difficulty >100".equals(importedHigh.condition());
+        String primaryKey = imported ? skills.bindCondition(importedPrimary.condition()) : null;
+        String rangeKey = imported ? skills.bindCondition(importedRange.condition()) : null;
+        String highKey = imported ? skills.bindCondition(importedHigh.condition()) : null;
+        boolean positive = primaryKey != null && behaviors.testCondition(primaryKey, targetContext);
+        boolean rangePositive = rangeKey != null && behaviors.testCondition(rangeKey, targetContext);
+        boolean highRejected = highKey != null && !behaviors.testCondition(highKey, targetContext);
+
+        var casterContext = dev.helstera.api.behavior.BehaviorContext.of(
+                modelInstance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+        boolean fallbackPositive = primaryKey != null && behaviors.testCondition(primaryKey, casterContext);
+        var missingContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+        boolean missingContextRejected = primaryKey != null
+                && !behaviors.testCondition(primaryKey, missingContext);
+        boolean invalidPreserved = true;
+        for (String source : java.util.List.of(
+                "?LocalDifficulty{unknown=0}",
+                "?LocalDifficulty{d=NaN}",
+                "?LocalDifficulty{d=2to1}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            invalidPreserved &= !mapped.translated() && source.equals(mapped.condition());
+        }
+        boolean passed = imported && positive && rangePositive && highRejected
+                && fallbackPositive && missingContextRejected && invalidPreserved;
+        getLogger().info("[自检] local-difficulty-condition imported=" + imported
+                + " positive=" + positive
+                + " range-positive=" + rangePositive
+                + " high-rejected=" + highRejected
+                + " fallback-positive=" + fallbackPositive
+                + " missing-context-rejected=" + missingContextRejected
+                + " invalid-preserved=" + invalidPreserved
+                + " passed=" + passed);
+        return passed;
     }
 
     private boolean runAbsorptionPlayerConditionSelfTest(

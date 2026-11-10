@@ -1039,6 +1039,10 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedSignalTrigger'; status = 'passed'; observations = @('imported-signal-trigger imported=true mapped=true generic=true selector=true payload=true sender=true trigger=true invalid-preserved=true last-signal=true passed=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'localDifficultyCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'localDifficultyCondition'; status = 'passed'; observations = @('local-difficulty-condition imported=true positive=true range-positive=true high-rejected=true fallback-positive=true missing-context-rejected=true invalid-preserved=true passed=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'absorptionPlayerCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'absorptionPlayerCondition'; status = 'passed'; observations = @('absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true')

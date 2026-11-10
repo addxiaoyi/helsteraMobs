@@ -840,6 +840,11 @@
       "requiredObservation": "imported-population-conditions players-online-mapped=true online-alias-mapped=true players-world-mapped=true mobs-world-mapped=true players-online-negative-mapped=true online-alias-negative-mapped=true players-world-negative-mapped=true mobs-world-negative-mapped=true players-online-positive=true online-alias-positive=true players-world-positive=true mobs-world-positive=true players-online-negative=true online-alias-negative=true players-world-negative=true mobs-world-negative=true invalid-preserved=true result=true"
     },
     {
+      "id": "localDifficultyCondition",
+      "status": "passed",
+      "requiredObservation": "local-difficulty-condition imported=true positive=true range-positive=true high-rejected=true fallback-positive=true missing-context-rejected=true invalid-preserved=true passed=true"
+    },
+    {
       "id": "importedVariableConditions",
       "status": "passed",
       "requiredObservation": "imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true"
