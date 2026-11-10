@@ -1290,6 +1290,10 @@ This is a partial parity release. The matrix currently has `32`
 2. **Conditions and grammar**: audit the official condition and placeholder
    catalogs, aliases, comparators, defaults, malformed input, and composition;
    add mapping, fail-closed, runtime, and applicable strict Paper coverage.
+   Mythic 5.9 item-group cooldown condition/mechanic syntax is currently kept
+   verbatim with warnings because it is outside the declared 5.3.x–5.7.x Mythic
+   adapter range and the Paper 1.21.1 release baseline lacks public named-group
+   cooldown access; see the version-gated entry in the [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md).
 3. **Mechanics and Skills**: verify official parameters, defaults, positional
    syntax, targets, placeholders, event context, cancellation, repetition, and
    importer-to-runtime consumers.
