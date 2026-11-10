@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-attack-cooldown-placeholder-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-attack-cooldown-placeholder-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-attack-cooldown-placeholder-strict-20261110-r1.json",
+    "reportSha256": "2c8fe8fdd97659e81969db61a516347e04adf1e9b9ee2a9396f328f2924dd45d",
+    "log": "tools/paper-integration/reports/paper-1.21.1-attack-cooldown-placeholder-strict-20261110-r1.log.gz",
+    "logSha256": "94412a8bf3228050969b0c310d2e264839528fd5e9d9871c817878fba06defb5",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-attack-cooldown-placeholder-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "aa964b4a5fd07abb9d845179d277deca380a8d92b1af41c0f7440ba9bbcdd858",
+    "pluginSha256": "874a7cc9a977916b0ddd4c2cd212a0b1073cac919ab8913722acfcb5f92d4702",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-health-boundaries-strict-20261110-r2",
     "reportFixtureDirectory": "srv-paper-health-boundaries-strict-20261110-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-health-import-boundaries-strict-20261110-r2.json",

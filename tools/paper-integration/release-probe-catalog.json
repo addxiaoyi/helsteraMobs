@@ -877,7 +877,8 @@
     },
     {
       "id": "gameplayPlaceholders",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "attack-cooldown-placeholder result=true in-range=true recharging=true caster=\\S+ target=\\S+ aliases=true non-player-unresolved=true"
     },
     {
       "id": "giveItemAction",
