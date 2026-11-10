@@ -1,6 +1,26 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-grounded-strict-20261110-r3` passed the full strict
+Latest fixture `srv-paper-invincible-strict-20261110-r3` passed the full strict
+gate on Paper 1.21.1-133: 423 registered probes, 404 passed, 19 expected
+rejections, and zero failed or incomplete. Its imported `invulnerableCondition`
+and `targetInvulnerable` probes verify `IsInvulnerable`/`IsInvincible` aliases,
+positive and negative states, target evaluation, invalid-input preservation,
+and restoration. Plugin SHA-256:
+`0ae19ad0e0da1637f5b466a7df8eb132f62da7ad627e7b98088fe631c344c254`. Full
+catalog report:
+[paper-1.21.1-invulnerable-condition-strict-20261110-r3.json](reports/paper-1.21.1-invulnerable-condition-strict-20261110-r3.json), SHA-256:
+`36c6c1ba33c4cb32a572a08950b115f237fd8aeebb435d1f345275637511fe91`.
+Compressed server log SHA-256:
+`24ff14d79ab2d12124255eec3f6bd48bda1cae23354da82acd619d892e1ae6d9`.
+Client log archive SHA-256:
+`543fa484f9c9a82ed2926bf15cf950c4e9f36a69bfb5af1d24f0a024048e34df`.
+Archived logs replace web-token query values with `[REDACTED]`.
+
+Previous same-condition fixture `srv-paper-invincible-strict-20261110-r1`
+passed the same full 423-probe catalog. Its archived report, redacted server
+log, client log archive, and plugin hash remain in the release manifest.
+
+Previous fixture `srv-paper-grounded-strict-20261110-r3` passed the full strict
 gate on Paper 1.21.1-133: 423 registered probes, 404 passed, 19 expected
 rejections, and zero failed or incomplete. Its imported `groundedCondition`
 probe verifies both `onGround` and `grounded` aliases, positive grounded and

@@ -952,7 +952,8 @@
     },
     {
       "id": "invulnerableCondition",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "skill-actions .*invulnerable-condition=true .*invulnerable-aliases=true"
     },
     {
       "id": "isSkillCondition",

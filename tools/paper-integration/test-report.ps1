@@ -78,6 +78,7 @@ try {
         '[Server thread/INFO]: skill-tree-queue submitted=true restored=true',
         '[Server thread/INFO]: skill-lifecycle reload=true scheduled=true cancelled=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true bounds-condition=true bounding-box-overlap-condition=true',
+        '[Server thread/INFO]: skill-actions invulnerable-condition=true invulnerable-aliases=true',
         '[Server thread/INFO]: [helsteraMobs] mythic-teleport imported=true entity-target=true location-target=true safe-blocked=true unsafe-bypass=true spread-bounded=true yaw-preserved=true orientation-override=true invalid-preserved=true warnings=true restored=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-looking-at-condition primary-mapped=true alias-mapped=true entity-mapped=true positive=true alias-positive=true wrong-block-rejected=true short-block-distance-rejected=true negative=true entity-positive=true wrong-entity-rejected=true short-entity-distance-rejected=true invalid-rejected=true restored=true',
         '[Server thread/INFO]: [helsteraMobs] execution-audience-mutation imported=true explicit-empty=true added=true persisted=true member-visible=true outsider-hidden=true removed=true empty-persisted=true unset=true unrestricted=true passed=true',
@@ -803,6 +804,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'damageMeleeMechanic').status -eq 'passed') 'damage melee mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'inCombatCondition').status -eq 'passed') 'in-combat condition Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionUtilityAliases').status -eq 'passed') 'condition utility alias probe'
+    Assert-True (($report.probes | Where-Object id -eq 'invulnerableCondition').status -eq 'passed') 'imported invulnerability condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'survivalModeCondition').status -eq 'passed') 'survival mode condition Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'distanceFromSpawnCondition').status -eq 'passed') 'distance from spawn boundary probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobsInChunkCondition').status -eq 'passed') 'mobs in chunk condition probe'
@@ -1038,6 +1040,10 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogInvulnerability = @($fullCatalogReport.probes | Where-Object id -eq 'invulnerableCondition')
+    Assert-True ($fullCatalogInvulnerability.Count -eq 1) 'synthetic full catalog contains the invulnerability condition probe'
+    $fullCatalogInvulnerability[0].observations = @(
+        'skill-actions invulnerable-condition=true invulnerable-aliases=true')
     $gameplayPlaceholderProbe = $fullCatalogReport.probes | Where-Object id -eq 'gameplayPlaceholders'
     $gameplayPlaceholderProbe.observations += 'attack-cooldown-placeholder result=true in-range=true recharging=true caster=0.5 target=0.5 aliases=true non-player-unresolved=true'
     $fullCatalogConditionMobility = @($fullCatalogReport.probes | Where-Object id -eq 'conditionMobility')

@@ -1,5 +1,29 @@
 [
   {
+    "fixtureId": "srv-paper-invincible-strict-20261110-r3",
+    "reportFixtureDirectory": "srv-paper-invincible-strict-20261110-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-invulnerable-condition-strict-20261110-r3.json",
+    "reportSha256": "36c6c1ba33c4cb32a572a08950b115f237fd8aeebb435d1f345275637511fe91",
+    "log": "tools/paper-integration/reports/paper-1.21.1-invulnerable-condition-strict-20261110-r3.log.gz",
+    "logSha256": "24ff14d79ab2d12124255eec3f6bd48bda1cae23354da82acd619d892e1ae6d9",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-invulnerable-condition-strict-20261110-r3-client-logs.tar.gz",
+    "clientLogSha256": "543fa484f9c9a82ed2926bf15cf950c4e9f36a69bfb5af1d24f0a024048e34df",
+    "pluginSha256": "0ae19ad0e0da1637f5b466a7df8eb132f62da7ad627e7b98088fe631c344c254",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-invincible-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-invincible-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-invulnerable-condition-strict-20261110-r1.json",
+    "reportSha256": "3370987d029a4561d7d5cc5ab6f2a0ed5f22297d9cd80b1660ddbf4d29e10f79",
+    "log": "tools/paper-integration/reports/paper-1.21.1-invulnerable-condition-strict-20261110-r1.log.gz",
+    "logSha256": "bea4041e986297563dd43fece06563e9c75ecf880293e35e831fb4cd5f2e9b82",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-invulnerable-condition-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "efe2bca650f527784c20215d5428123e14b91e4d71c88484cc250bff963b033a",
+    "pluginSha256": "04efd7e23ebfcc608b16199170b6bf785beed5f8f523bd10bb120913337c59a0",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-grounded-strict-20261110-r3",
     "reportFixtureDirectory": "srv-paper-grounded-strict-20261110-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-grounded-condition-strict-20261110-r3.json",

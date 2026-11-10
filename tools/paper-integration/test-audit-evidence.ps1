@@ -80,6 +80,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'groundedCondition'; status = 'passed'; observations = @('grounded-condition imported=true primary-mapped=true grounded-alias-mapped=true positive=true alias-positive=true airborne=true negative=true alias-negative=true invalid-preserved=true restored=true passed=true')
     }
+    $invulnerableProbe = @($fullReport.probes | Where-Object id -eq 'invulnerableCondition')
+    if ($invulnerableProbe.Count -ne 1) { throw 'Synthetic release report must contain invulnerableCondition.' }
+    $invulnerableProbe[0].observations = @(
+        'skill-actions invulnerable-condition=true invulnerable-aliases=true')
     $fullReport.expectedProbeIds += 'serverNmsVersionCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'serverNmsVersionCondition'; status = 'passed'; observations = @('server-nms-version-condition imported=true positive=true alias-positive=true scalar-positive=true wrong-rejected=true default-rejected=true invalid-preserved=true passed=true')

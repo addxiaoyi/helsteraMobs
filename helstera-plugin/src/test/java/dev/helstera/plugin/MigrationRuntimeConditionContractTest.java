@@ -308,6 +308,38 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported invulnerability aliases bind to the entity invulnerability condition")
+    void importedInvulnerabilityAliasesReachRuntime() {
+        var entity = mock(org.bukkit.entity.LivingEntity.class);
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(entity));
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE");
+        var missingContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+
+        for (String source : List.of("?isInvulnerable", "?isInvincible")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertEquals("is-invulnerable", mapped.condition());
+            String key = service.bindCondition(mapped.condition());
+            assertNotNull(key);
+
+            when(entity.isInvulnerable()).thenReturn(true);
+            assertTrue(registry.testCondition(key, context), source + " positive");
+            when(entity.isInvulnerable()).thenReturn(false);
+            assertFalse(registry.testCondition(key, context), source + " negative");
+            assertFalse(registry.testCondition(key, missingContext), source + " missing entity");
+        }
+
+        assertFalse(dev.helstera.migration.importer.MmConditions.translate(
+                "?isInvincible{unknown=true}").translated());
+    }
+
+    @Test
     @DisplayName("imported execution-audience aliases and per-target inline filters reach runtime")
     void importedExecutionAudienceConditionsReachRuntime() {
         var member = mock(org.bukkit.entity.Player.class);

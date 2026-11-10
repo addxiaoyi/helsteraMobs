@@ -296,7 +296,7 @@ $probeSpecs = [ordered]@{
     entityStateConditions = 'skill-actions .*entity-state-conditions=true'
     stateBlocking = 'skill-actions .*state-blocking=true'
     spyglassCondition = 'skill-actions .*spyglass-condition=true'
-    invulnerableCondition = 'skill-actions .*invulnerable-condition=true'
+    invulnerableCondition = 'skill-actions .*invulnerable-condition=true .*invulnerable-aliases=true'
     targetInvulnerable = 'skill-actions .*target-invulnerable=true'
     ownerTargeter = 'skill-actions .*owner-targeter=true'
     spatialTargeters = 'skill-actions .*spatial-targeters=true'

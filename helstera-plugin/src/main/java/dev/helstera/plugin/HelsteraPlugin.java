@@ -8421,10 +8421,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills.bindCondition("biome-is __missing_biome__"), conditionContext);
                 boolean targetCategories = behaviors.testCondition(targetMonsterCondition, conditionContext)
                         && behaviors.testCondition(targetLivingCondition, conditionContext);
-                zombie.setInvulnerable(true);
-                boolean invulnerableCondition = behaviors.testCondition(
-                        skills.bindCondition("invulnerable"), context);
-                zombie.setInvulnerable(false);
+                boolean invulnerableCondition = runImportedInvulnerabilityConditionSelfTest(
+                        skills, behaviors, context, zombie);
+                boolean invulnerableAliases = invulnerableCondition;
                 var wolf = world.spawn(location.clone().add(5, 0, 0), org.bukkit.entity.Wolf.class);
                 var pillager = world.spawn(location.clone().add(7, 0, 0), org.bukkit.entity.Pillager.class);
                 var sheep = world.spawn(location.clone().add(9, 0, 0), org.bukkit.entity.Sheep.class);
@@ -10831,6 +10830,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " entity-state-conditions=" + entityStateConditions
                         + " target-state-conditions=" + targetStateConditions
                         + " invulnerable-condition=" + invulnerableCondition
+                        + " invulnerable-aliases=" + invulnerableAliases
                         + " target-invulnerable=" + targetInvulnerable
                         + " owner-targeter=" + ownerTargeter
                         + " relation-targeters=" + (relationTargeters && childrenTargeter)
@@ -10907,6 +10907,40 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 30L);
+    }
+
+    private boolean runImportedInvulnerabilityConditionSelfTest(
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext context,
+            org.bukkit.entity.LivingEntity entity) {
+        if (skills == null || behaviors == null || context == null || entity == null) return false;
+        var primary = dev.helstera.migration.importer.MmConditions.translate("?isInvulnerable");
+        var alias = dev.helstera.migration.importer.MmConditions.translate("?isInvincible");
+        var invalid = dev.helstera.migration.importer.MmConditions.translate(
+                "?isInvincible{unknown=true}");
+        boolean primaryMapped = primary.translated() && "is-invulnerable".equals(primary.condition());
+        boolean aliasMapped = alias.translated() && "is-invulnerable".equals(alias.condition());
+        boolean invalidPreserved = !invalid.translated()
+                && "?isInvincible{unknown=true}".equals(invalid.condition());
+        String primaryKey = primaryMapped ? skills.bindCondition(primary.condition()) : null;
+        String aliasKey = aliasMapped ? skills.bindCondition(alias.condition()) : null;
+        boolean originallyInvulnerable = entity.isInvulnerable();
+        boolean passed;
+        try {
+            entity.setInvulnerable(true);
+            boolean directPositive = behaviors.testCondition(skills.bindCondition("invulnerable"), context);
+            boolean primaryPositive = primaryKey != null && behaviors.testCondition(primaryKey, context);
+            boolean aliasPositive = aliasKey != null && behaviors.testCondition(aliasKey, context);
+            entity.setInvulnerable(false);
+            boolean primaryNegative = primaryKey != null && !behaviors.testCondition(primaryKey, context);
+            boolean aliasNegative = aliasKey != null && !behaviors.testCondition(aliasKey, context);
+            passed = directPositive && primaryMapped && aliasMapped && primaryPositive && aliasPositive
+                    && primaryNegative && aliasNegative && invalidPreserved;
+        } finally {
+            entity.setInvulnerable(originallyInvulnerable);
+        }
+        return passed && entity.isInvulnerable() == originallyInvulnerable;
     }
 
     private void runContextTargeterRelationsSelfTest(
@@ -14452,7 +14486,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         long observedTick = getServer().getCurrentTick();
                         long expectedFast = observedTick / 2 - spawnTick / 2;
                         long expectedSlow = observedTick / 5 - spawnTick / 5;
-                        aligned &= fastCount.get() == expectedFast && slowCount.get() == expectedSlow;
+                        boolean tickAligned = fastCount.get() == expectedFast && slowCount.get() == expectedSlow;
+                        aligned = aligned && tickAligned;
                         elapsed++;
                         if (elapsed < 20) return;
                         boolean independent = fastCount.get() == 10 && slowCount.get() == 4;
