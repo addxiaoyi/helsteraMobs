@@ -332,7 +332,7 @@ public final class Placeholders {
                     "is-monster", "is-animal", "is-villager", "is-tameable", "is-raider",
                     // 玩家状态
                     "is-creative", "is-survival", "is-spectator", "is-adventure",
-                    "level", "exp",
+                    "level", "exp", "attack-cooldown", "attack_cooldown",
                     // 位置偏移与世界向
                     "dx", "dy", "dz", "biome", "time", "is-day", "is-night",
                     "weather", "moonphase")) {
@@ -530,6 +530,11 @@ public final class Placeholders {
         if (field.equals("air.max") || field.equals("air-max")) return String.valueOf(living.getMaximumAir());
         if (field.equals("luck")) return attributeValue(living, org.bukkit.attribute.Attribute.GENERIC_LUCK);
         if (field.equals("armor")) return attributeValue(living, org.bukkit.attribute.Attribute.GENERIC_ARMOR);
+        if (field.equals("attack-cooldown") && living instanceof org.bukkit.entity.HumanEntity human) {
+            float cooldown = human.getAttackCooldown();
+            return Float.isFinite(cooldown) && cooldown >= 0.0f && cooldown <= 1.0f
+                    ? Float.toString(cooldown) : null;
+        }
         if (field.equals("mainhand.type") || field.equals("held.item")) {
             var equipment = living.getEquipment();
             var item = equipment == null ? null : equipment.getItemInMainHand();

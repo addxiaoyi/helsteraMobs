@@ -1,9 +1,10 @@
 package dev.helstera.ai.skill;
 
 import dev.helstera.api.behavior.BehaviorContext;
+import org.bukkit.entity.Monster;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.bukkit.entity.Player;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -342,5 +343,45 @@ class PlaceholdersTest {
         assertEquals("8.0", Placeholders.lookup("target.armor", context));
         assertEquals("diamond_sword", Placeholders.lookup("target.mainhand.type", context));
         assertEquals("diamond_sword", Placeholders.lookup("target.held.item", context));
+    }
+
+    @Test
+    @DisplayName("attack_cooldown aliases expose the player's precise 0..1 attack strength")
+    void exposesPlayerAttackCooldown() {
+        Player player = mock(Player.class);
+        when(player.getAttackCooldown()).thenReturn(0.375f);
+        BehaviorContext targetContext = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        assertEquals("0.375", Placeholders.lookup("target.attack_cooldown", targetContext));
+        assertEquals("0.375", Placeholders.lookup("target.attack-cooldown", targetContext));
+        assertTrue(Float.parseFloat(Placeholders.lookup("target.attack_cooldown", targetContext)) >= 0.0f);
+        assertTrue(Float.parseFloat(Placeholders.lookup("target.attack_cooldown", targetContext)) <= 1.0f);
+
+        dev.helstera.api.instance.ModelInstance instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(player));
+        BehaviorContext casterContext = BehaviorContext.of(instance, (org.bukkit.entity.LivingEntity) null,
+                1.0, -1, 0, "IDLE");
+        assertEquals("0.375", Placeholders.lookup("caster.attack_cooldown", casterContext));
+
+        when(player.getAttackCooldown()).thenReturn(1.0f);
+        assertEquals("1.0", Placeholders.lookup("target.attack_cooldown", targetContext));
+        when(player.getAttackCooldown()).thenReturn(0.0f);
+        assertEquals("0.0", Placeholders.lookup("target.attack_cooldown", targetContext));
+        when(player.getAttackCooldown()).thenReturn(1.01f);
+        assertNull(Placeholders.lookup("target.attack_cooldown", targetContext));
+        when(player.getAttackCooldown()).thenReturn(Float.NaN);
+        assertNull(Placeholders.lookup("target.attack_cooldown", targetContext));
+    }
+
+    @Test
+    @DisplayName("attack_cooldown stays unresolved for non-player or missing targets")
+    void attackCooldownRequiresHumanEntity() {
+        Monster monster = mock(Monster.class);
+        BehaviorContext monsterContext = BehaviorContext.of(null, monster, 1.0, -1, 0, "IDLE");
+        assertNull(Placeholders.lookup("target.attack_cooldown", monsterContext));
+        assertEquals("<target.attack_cooldown>",
+                Placeholders.resolve("<target.attack_cooldown>", monsterContext));
+        assertNull(Placeholders.lookup("target.attack_cooldown", ctx(1.0, -1, "IDLE")));
     }
 }

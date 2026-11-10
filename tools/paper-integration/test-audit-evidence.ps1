@@ -36,6 +36,10 @@ try {
     $archivePath = Join-Path $temporaryRoot 'tools/paper-integration/reports/test-release.json'
     [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($archivePath))
     $fullReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-drop-inline-20261104-r2.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $gameplayPlaceholderProbe = @($fullReport.probes | Where-Object id -eq 'gameplayPlaceholders')
+    if ($gameplayPlaceholderProbe.Count -ne 1) { throw 'Synthetic release report must contain gameplayPlaceholders.' }
+    $gameplayPlaceholderProbe[0].observations = @($gameplayPlaceholderProbe[0].observations) + @(
+        'attack-cooldown-placeholder result=true in-range=true recharging=true caster=0.5 target=0.5 aliases=true non-player-unresolved=true')
     $conditionMobilityProbe = @($fullReport.probes | Where-Object id -eq 'conditionMobility')
     if ($conditionMobilityProbe.Count -ne 1) { throw 'Synthetic release report must contain conditionMobility.' }
     $conditionMobilityProbe[0].observations = @($conditionMobilityProbe[0].observations | ForEach-Object {

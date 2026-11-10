@@ -1,21 +1,29 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-health-boundaries-strict-20261110-r2` passed the
-full strict gate on Paper 1.21.1-133: 421 registered probes, 402 passed, 19
-expected rejections, and zero failed or incomplete. Its
-`healthImportedCondition` probe verifies absolute and percentage comparisons,
-positional arguments with absorption, duplicate-argument rejection, and
-preservation of overflowing and invalid inputs. Report:
-[paper-1.21.1-health-import-boundaries-strict-20261110-r2.json](reports/paper-1.21.1-health-import-boundaries-strict-20261110-r2.json), SHA-256:
-`5df86825e46077bbb3edd8f8e9acb922f8dc20337ab52dea81ecb14792d8ceca`.
+Latest fixture `srv-paper-attack-cooldown-placeholder-strict-20261110-r1`
+passed the full strict gate on Paper 1.21.1-133: 421 registered probes, 402
+passed, 19 expected rejections, and zero failed or incomplete. Its
+`gameplayPlaceholders` observation reads `0.1` from live Player caster/target
+scopes after an attack, verifies dash and underscore spellings, checks the
+`0..1` range, and preserves the placeholder for a non-player target. Report:
+[paper-1.21.1-attack-cooldown-placeholder-strict-20261110-r1.json](reports/paper-1.21.1-attack-cooldown-placeholder-strict-20261110-r1.json), SHA-256:
+`2c8fe8fdd97659e81969db61a516347e04adf1e9b9ee2a9396f328f2924dd45d`.
 Compressed server log SHA-256:
-`f4a6062e23bef1f0b136e452619a96ee0e5b3df529f8366a2898d09836fe2c9d`.
+`4a3a4506f443837f183929ec0c3e3c98531d1aaaff8437f153eb0d622304a2f2`.
 Client log archive SHA-256:
-`b1949326d837b7ab81405e58d36219ad097112df09696519c4f2e0bc6f88802c`.
+`aa964b4a5fd07abb9d845179d277deca380a8d92b1af41c0f7440ba9bbcdd858`.
 Plugin SHA-256:
-`780d4172c98822cedbec1af8ae01f4d8982b08b90b82c52de164ed9454821087`.
-The Conditions catalog remains `mapped-unverified` beyond the cases tested
-here; archived logs redact web-token query values.
+`874a7cc9a977916b0ddd4c2cd212a0b1073cac919ab8913722acfcb5f92d4702`.
+This verifies the listed placeholder behavior; the complete Mythic placeholder
+catalog remains `mapped-unverified`. Archived logs redact web-token query
+values.
+
+Previous fixture `srv-paper-health-boundaries-strict-20261110-r2` passed the
+full strict gate on Paper 1.21.1-133 with 421 probes (402 passed, 19 expected
+rejections, and zero failed or incomplete). Its `healthImportedCondition`
+probe verifies absolute and percentage comparisons, positional arguments with
+absorption, duplicate-argument rejection, and preservation of overflowing or
+invalid inputs. Its report and hashes remain in `release-evidence.json`.
 
 Previous fixture `srv-paper-armor-toughness-stats-strict-20261110-r1` passed the
 full strict gate on Paper 1.21.1-133: 421 registered probes, 402 passed, 19

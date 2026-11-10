@@ -10047,12 +10047,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " invalid-rejected=" + lookingAtInvalidRejected + " restored=" + lookingAtRestored);
                     permissionProbe.setFoodLevel(14);
                     permissionProbe.setRemainingAir(100);
+                    boolean attackCooldownPlaceholder = verifyAttackCooldownPlaceholder(
+                            permissionProbe, stateContext, rechargingTarget);
                     gameplayPlaceholders = "14".equals(dev.helstera.ai.skill.Placeholders.lookup(
                             "target.food", stateContext))
                             && "100".equals(dev.helstera.ai.skill.Placeholders.lookup(
                             "target.air", stateContext))
                             && "shield".equals(dev.helstera.ai.skill.Placeholders.lookup(
-                            "target.mainhand.type", stateContext));
+                            "target.mainhand.type", stateContext))
+                            && attackCooldownPlaceholder;
                     boolean scoreSet = runIntegrationAction(skills, behaviors,
                             "setscore points 2", stateContext);
                     boolean scoreAdd = runIntegrationAction(skills, behaviors,
@@ -11762,6 +11765,29 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var context = dev.helstera.api.behavior.BehaviorContext.of(
                 instance, target, 1.0, 1.0, 0, "integration");
         return condition != null && behaviors.testCondition(condition, context);
+    }
+
+    private boolean verifyAttackCooldownPlaceholder(org.bukkit.entity.Player player,
+                                                     dev.helstera.api.behavior.BehaviorContext context,
+                                                     org.bukkit.entity.LivingEntity nonPlayer) {
+        float liveCooldown = player.getAttackCooldown();
+        String expected = Float.toString(liveCooldown);
+        String caster = dev.helstera.ai.skill.Placeholders.lookup("caster.attack_cooldown", context);
+        String target = dev.helstera.ai.skill.Placeholders.lookup("target.attack_cooldown", context);
+        String alias = dev.helstera.ai.skill.Placeholders.lookup("target.attack-cooldown", context);
+        var nonPlayerContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, nonPlayer, 1.0, -1, 0, "integration");
+        boolean inRange = Float.isFinite(liveCooldown) && liveCooldown >= 0.0f && liveCooldown <= 1.0f;
+        boolean aliases = expected.equals(caster) && expected.equals(target) && expected.equals(alias);
+        boolean nonPlayerUnresolved = dev.helstera.ai.skill.Placeholders.lookup(
+                "target.attack_cooldown", nonPlayerContext) == null;
+        boolean recharging = liveCooldown < 1.0f;
+        boolean result = inRange && recharging && aliases && nonPlayerUnresolved;
+        getLogger().info("[自检] attack-cooldown-placeholder result=" + result
+                + " in-range=" + inRange + " recharging=" + recharging
+                + " caster=" + String.valueOf(caster) + " target=" + String.valueOf(target)
+                + " aliases=" + aliases + " non-player-unresolved=" + nonPlayerUnresolved);
+        return result;
     }
 
     private static boolean runIntegrationAction(dev.helstera.ai.skill.SkillService skills,

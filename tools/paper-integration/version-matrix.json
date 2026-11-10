@@ -13,8 +13,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-health-boundaries-strict-20261110-r2",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-health-import-boundaries-strict-20261110-r2.json"
+      "releaseFixtureId": "srv-paper-attack-cooldown-placeholder-strict-20261110-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-attack-cooldown-placeholder-strict-20261110-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

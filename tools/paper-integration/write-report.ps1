@@ -270,7 +270,7 @@ $probeSpecs = [ordered]@{
     giveItemAction = 'skill-actions .*give-item=true'
     takeItemAction = 'skill-actions .*take-item=true'
     dynamicPlaceholderAction = 'skill-actions .*dynamic-placeholder=true'
-    gameplayPlaceholders = 'skill-actions .*gameplay-placeholders=true'
+    gameplayPlaceholders = 'attack-cooldown-placeholder result=true in-range=true recharging=true caster=\S+ target=\S+ aliases=true non-player-unresolved=true'
     blockSetAction = 'skill-actions .*block-set=true'
     blockBreakAction = 'skill-actions .*block-break=true'
     setAiAction = 'skill-actions .*set-ai=true'
