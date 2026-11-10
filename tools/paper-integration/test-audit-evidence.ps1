@@ -346,6 +346,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'horseOptionsImported'; status = 'passed'; observations = @('horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4')
     }
+    $fullReport.expectedProbeIds += 'interactionOptionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'interactionOptionsImported'; status = 'passed'; observations = @('interaction-options-imported result=true imported=true configured-height=2.5 configured-width=3.25 responsive=false height-only-width=1.75 defaults-applied=true wrong-type-preserved=true invalid-preserved=true')
+    }
     $fullReport.expectedProbeIds += 'foxOptionsImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'foxOptionsImported'; status = 'passed'; observations = @('fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true')

@@ -1409,6 +1409,15 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapEntityScopedOption(options, srcFile, entries, target, "FallingBlockCancelDrop",
                     "entity.falling-block-cancel-drop", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.FallingBlock.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Height",
+                    "entity.interaction-height", normalizedType, MythicMobsImporter::isInteractionDimensionOption,
+                    org.bukkit.entity.Interaction.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Width",
+                    "entity.interaction-width", normalizedType, MythicMobsImporter::isInteractionDimensionOption,
+                    org.bukkit.entity.Interaction.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Responsive",
+                    "entity.interaction-responsive", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Interaction.class);
             boolean boatTypeHandled = mapBoatTypeOption(options, srcFile, entries, target, normalizedType);
             Map<String, Object> leftover = new LinkedHashMap<>(options.getValues(true));
             for (String mapped : List.of("FollowRange", "MovementSpeed", "KnockbackResistance", "MaxCombatDistance",
@@ -1422,6 +1431,9 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop")) {
                 removeIgnoreCase(leftover, mapped);
             }
+            removeIgnoreCase(leftover, "Height");
+            removeIgnoreCase(leftover, "Width");
+            removeIgnoreCase(leftover, "Responsive");
             if (boatTypeHandled) {
                 removeIgnoreCase(leftover, "BoatType");
                 removeIgnoreCase(leftover, "Type");
@@ -5052,6 +5064,11 @@ public final class MythicMobsImporter implements MigrationImporter {
     private static boolean isFiniteNumberInRange(Object raw, double minimum, double maximum) {
         Double value = parseFiniteNumberOption(raw);
         return value != null && value >= minimum && value <= maximum;
+    }
+
+    private static boolean isInteractionDimensionOption(Object raw) {
+        Double value = parseFiniteNumberOption(raw);
+        return value != null && value >= 0.0 && value <= Float.MAX_VALUE;
     }
 
     private static Double parseFiniteNumberOption(Object raw) {

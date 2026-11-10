@@ -580,6 +580,56 @@ class MythicAgeOptionsTest {
         assertFalse(calls.containsKey("setBoatType"));
     }
 
+    @Test
+    void appliesDocumentedInteractionDefaultsAndConfiguredValues() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var interaction = proxy(org.bukkit.entity.Interaction.class, calls);
+        HelsteraPlugin.applyNonLivingEntityOptions(interaction,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                        interaction-height: 2.5
+                        interaction-width: 3.25
+                        interaction-responsive: false
+                        """)));
+
+        assertEquals(2.5f, calls.get("setInteractionHeight"));
+        assertEquals(3.25f, calls.get("setInteractionWidth"));
+        assertEquals(false, calls.get("setResponsive"));
+
+        calls.clear();
+        HelsteraPlugin.applyNonLivingEntityOptions(interaction,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                        interaction-height: 1.75
+                        """)));
+        assertEquals(1.75f, calls.get("setInteractionHeight"));
+        assertEquals(1.75f, calls.get("setInteractionWidth"));
+        assertEquals(true, calls.get("setResponsive"));
+
+        calls.clear();
+        HelsteraPlugin.applyNonLivingEntityOptions(interaction,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("interaction-width: 2.25\n")));
+        assertEquals(1.0f, calls.get("setInteractionHeight"));
+        assertEquals(2.25f, calls.get("setInteractionWidth"));
+        assertEquals(true, calls.get("setResponsive"));
+
+        calls.clear();
+        HelsteraPlugin.applyNonLivingEntityOptions(interaction,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("")));
+        assertEquals(1.0f, calls.get("setInteractionHeight"));
+        assertEquals(1.0f, calls.get("setInteractionWidth"));
+        assertEquals(true, calls.get("setResponsive"));
+
+        calls.clear();
+        HelsteraPlugin.applyNonLivingEntityOptions(interaction,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                        interaction-height: -1
+                        interaction-width: 3.5e38
+                        interaction-responsive: maybe
+                        """)));
+        assertEquals(1.0f, calls.get("setInteractionHeight"));
+        assertEquals(1.0f, calls.get("setInteractionWidth"));
+        assertEquals(true, calls.get("setResponsive"));
+    }
+
     private static <T> T proxy(Class<T> type, Map<String, Object> calls) {
         return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
                 (proxy, method, args) -> {
