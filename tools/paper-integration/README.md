@@ -51,7 +51,18 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-armor-stand-options-strict-20261110-r1` passes all 430 probes (411 passed,
+Latest strict fixture `srv-paper-armor-stand-options-strict-20261110-r2` passes all 430 probes (411 passed,
+19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
+`armorStand` observation imports the Mythic mob config, reads back six flags
+and all six armor-stand equipment slots, checks default controls, and preserves
+wrong-type and malformed values. Report:
+[`paper-1.21.1-armor-stand-options-strict-20261110-r2.json`](reports/paper-1.21.1-armor-stand-options-strict-20261110-r2.json)
+(SHA-256 `8b28de85386dc89cbfcb059fa8e503b7f0591599942663f59e983d59e0597cc4`); compressed server log SHA-256 is
+`ee780cbe8d705c4a0111dcf600f4c5cf93b226e017151b712b228ec1d644f51e`, client log archive SHA-256 is
+`c6d6285990378124e5475f6241a1adcd795f6fca52efc74e91362f7cf75e2eea`, and plugin SHA-256 is
+`ff6f2348a447f8c59a014eb72a383da7c67f3d903c06374565111502f89c3e54`. Archived logs redact web-token query values.
+
+Previous strict fixture `srv-paper-armor-stand-options-strict-20261110-r1` passes all 430 probes (411 passed,
 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. The
 `armorStand` observation imports Mythic configuration, reads back all six Armor
 Stand flags plus body armor and hand equipment, checks default controls, and

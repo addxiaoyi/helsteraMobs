@@ -213,7 +213,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
-        '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-hand=true wrong-type-preserved=true invalid-preserved=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-feet=true item-hand=true item-offhand=true item-head=true item-legs=true wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true can-join-raid=false patrol-leader=true patrol-spawn-point=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true',
@@ -586,7 +586,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'ageOptions').status -eq 'passed') 'age options probe'
     Assert-True (($report.probes | Where-Object id -eq 'armorStand').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'armorStand').observations[0] -match
-        '^armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-hand=true wrong-type-preserved=true invalid-preserved=true$') 'Armor Stand Mythic options require imported production Paper readback and preservation controls'
+        '^armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-feet=true item-hand=true item-offhand=true item-head=true item-legs=true wrong-type-preserved=true invalid-preserved=true$') 'Armor Stand Mythic options require imported production Paper readback and preservation controls'
     Assert-True (($report.probes | Where-Object id -eq 'entityFlagOptions').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'entityFlagOptions').observations[0] -match
         '^entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true$') 'imported entity flag options require production Paper evidence'
@@ -1099,7 +1099,7 @@ try {
     $fullCatalogArmorStand = @($fullCatalogReport.probes | Where-Object id -eq 'armorStand')
     Assert-True ($fullCatalogArmorStand.Count -eq 1) 'synthetic full catalog contains the Armor Stand options probe'
     $fullCatalogArmorStand[0].observations = @(
-        'armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-hand=true wrong-type-preserved=true invalid-preserved=true')
+        'armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-feet=true item-hand=true item-offhand=true item-head=true item-legs=true wrong-type-preserved=true invalid-preserved=true')
     $fullCatalogInvulnerability = @($fullCatalogReport.probes | Where-Object id -eq 'invulnerableCondition')
     Assert-True ($fullCatalogInvulnerability.Count -eq 1) 'synthetic full catalog contains the invulnerability condition probe'
     $fullCatalogInvulnerability[0].observations = @(

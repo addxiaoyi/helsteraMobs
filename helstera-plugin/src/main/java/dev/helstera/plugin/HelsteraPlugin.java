@@ -4911,10 +4911,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean itemsApplied = equipment != null
                     && equipment.getChestplate() != null
                     && equipment.getChestplate().getType() == org.bukkit.Material.DIAMOND_CHESTPLATE
+                    && equipment.getBoots() != null
+                    && equipment.getBoots().getType() == org.bukkit.Material.DIAMOND_BOOTS
                     && equipment.getItemInMainHand() != null
                     && equipment.getItemInMainHand().getType() == org.bukkit.Material.DIAMOND_SWORD
                     && equipment.getItemInOffHand() != null
-                    && equipment.getItemInOffHand().getType() == org.bukkit.Material.SHIELD;
+                    && equipment.getItemInOffHand().getType() == org.bukkit.Material.SHIELD
+                    && equipment.getHelmet() != null
+                    && equipment.getHelmet().getType() == org.bukkit.Material.DIAMOND_HELMET
+                    && equipment.getLeggings() != null
+                    && equipment.getLeggings().getType() == org.bukkit.Material.DIAMOND_LEGGINGS;
             boolean wrongTypePreserved = wrongType instanceof org.bukkit.entity.Zombie
                     && wrongEntityOptions != null && !wrongEntityOptions.contains("armor-stand-arms")
                     && wrongUnsupported != null && wrongUnsupported.getBoolean("HasArms");
@@ -4932,8 +4938,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " controls=" + controlsApplied
                     + " item-body=" + (equipment != null && equipment.getChestplate() != null
                             && equipment.getChestplate().getType() == org.bukkit.Material.DIAMOND_CHESTPLATE)
+                    + " item-feet=" + (equipment != null && equipment.getBoots() != null
+                            && equipment.getBoots().getType() == org.bukkit.Material.DIAMOND_BOOTS)
                     + " item-hand=" + (equipment != null && equipment.getItemInMainHand() != null
                             && equipment.getItemInMainHand().getType() == org.bukkit.Material.DIAMOND_SWORD)
+                    + " item-offhand=" + (equipment != null && equipment.getItemInOffHand() != null
+                            && equipment.getItemInOffHand().getType() == org.bukkit.Material.SHIELD)
+                    + " item-head=" + (equipment != null && equipment.getHelmet() != null
+                            && equipment.getHelmet().getType() == org.bukkit.Material.DIAMOND_HELMET)
+                    + " item-legs=" + (equipment != null && equipment.getLeggings() != null
+                            && equipment.getLeggings().getType() == org.bukkit.Material.DIAMOND_LEGGINGS)
                     + " wrong-type-preserved=" + wrongTypePreserved
                     + " invalid-preserved=" + invalidPreserved);
             return result;
