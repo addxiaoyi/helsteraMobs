@@ -75,9 +75,9 @@ import java.util.logging.Logger;
  * 漏改任一处的表现都是「配置写了永不触发且无报错」。现在分发统一走
  * {@link SkillTrigger} 枚举，新增触发器只剩「加枚举值 + 注册分发」两处。</p>
  *
- * <p><b>on-timer</b> 由单个共享任务驱动：所有实例、所有周期共用一个任务，
- * 每个技能按自身 {@code interval} 记录下次触发时刻。绝不为每个技能各开一个
- * {@code runTaskTimer}——那种写法在 200 个技能时会产生 200 个任务对象，
+ * <p><b>on-timer</b> 由单个共享任务驱动：所有实例、所有周期共用一个任务。
+ * Mythic 导入分支对齐 Paper 服务器全局 tick；项目原生相对计时器仍记录各自的下次触发时刻。
+ * 绝不为每个技能各开一个 {@code runTaskTimer}——那种写法在 200 个技能时会产生 200 个任务对象，
  * 而 Bukkit 的任务链表是线性扫描的。</p>
  *
  * <p>线程约束：全部回调在主线程（Bukkit 事件与事件总线均由主线程派发）。</p>
@@ -620,6 +620,11 @@ public final class SkillTriggers implements Listener {
                 || key.startsWith(SkillTrigger.ON_SIGNAL.configName() + "#"));
     }
 
+    private static boolean isTimerTriggerKey(String key) {
+        return key != null && (key.equals(SkillTrigger.TIMER.configName())
+                || key.startsWith(SkillTrigger.TIMER.configName() + "#"));
+    }
+
     private static java.util.List<AiProfile.TriggerSpec> signalSpecs(AiProfile profile) {
         java.util.List<AiProfile.TriggerSpec> out = new java.util.ArrayList<>();
         if (profile == null) return out;
@@ -705,9 +710,10 @@ public final class SkillTriggers implements Listener {
         return null;
     }
 
-    /** 推进全局 tick 并放行到期的 on-timer 技能。 */
+    /** 推进本服务的采样节拍并放行到期的 on-timer 技能。 */
     private void runTimers() {
         tick++;
+        long serverTick = plugin.getServer().getCurrentTick();
         // 连杀表回收：每 tick 都扫是纯浪费，而漏扫又会让内存随玩家进出无界增长。
         // 折中为每 20 tick 一次——窗口判定本身是惰性的，回收早一点晚一点都不影响连杀语义。
         if (tick % STREAK_PRUNE_TICKS == 0) {
@@ -720,26 +726,35 @@ public final class SkillTriggers implements Listener {
         for (var inst : snapshot) {
             AiProfile profile = ai.profileOf(inst.instanceId());
             if (profile == null) continue;
-            AiProfile.TriggerSpec spec = profile.triggers.get(SkillTrigger.TIMER.configName());
-            if (spec == null || spec.actions.isEmpty()) continue;
+            for (var entry : profile.triggers.entrySet()) {
+                if (!isTimerTriggerKey(entry.getKey())) continue;
+                AiProfile.TriggerSpec spec = entry.getValue();
+                if (spec == null || spec.actions.isEmpty()) continue;
+                int interval = spec.intervalTicks > 0 ? spec.intervalTicks : 20;
+                if (spec.globalClock) {
+                    // Mythic's timer is aligned to the server-wide clock, not entity
+                    // creation. Each interval variant has its own action set.
+                    if (Math.floorMod(serverTick, interval) != 0) continue;
+                } else {
+                    String key = inst.instanceId() + "|" + profile.name + "|" + entry.getKey();
+                    Long due = nextFire.get(key);
+                    if (due == null) {
+                        nextFire.put(key, tick + spec.effectiveStartDelay());
+                        continue;
+                    }
+                    if (tick < due) continue;
+                    nextFire.put(key, tick + interval);
+                }
 
-            String key = inst.instanceId() + "|" + profile.name + "|" + SkillTrigger.TIMER.configName();
-            Long due = nextFire.get(key);
-            if (due == null) {
-                nextFire.put(key, tick + spec.effectiveStartDelay());
-                continue;
+                // Timer callbacks have no event trigger. Preserve the existing
+                // project behavior of using the current AI target when one exists.
+                LivingEntity target = null;
+                var ctrl = ai.controllerOf(inst);
+                if (ctrl != null) target = ctrl.targetEntity();
+                dispatchWithSpec(SkillTrigger.TIMER, inst, target, inst.location(), null,
+                        target == null ? java.util.List.of() : java.util.List.of(target),
+                        null, null, spec);
             }
-            if (tick < due) continue;
-
-            int interval = spec.intervalTicks > 0 ? spec.intervalTicks : 20;
-            nextFire.put(key, tick + interval);
-
-            // 定时触发没有事件带来的目标：用 AI 当前仇恨目标，
-            // 否则「每 5 秒对当前目标造成伤害」这类技能会因为没有 target 而全程空转。
-            LivingEntity target = null;
-            var ctrl = ai.controllerOf(inst);
-            if (ctrl != null) target = ctrl.targetEntity();
-            dispatch(SkillTrigger.TIMER, inst, target, inst.location());
         }
         // 清理已移除实例的调度记录，避免 map 随生成/销毁无限增长
         if (nextFire.size() > 4096) pruneTimerKeys(snapshot);
@@ -1506,6 +1521,8 @@ public final class SkillTriggers implements Listener {
         return profile != null && trigger != null
                 && (trigger == SkillTrigger.ON_SIGNAL
                 ? profile.triggers.keySet().stream().anyMatch(SkillTriggers::isSignalTriggerKey)
+                : trigger == SkillTrigger.TIMER
+                ? profile.triggers.keySet().stream().anyMatch(SkillTriggers::isTimerTriggerKey)
                 : profile.triggers.containsKey(trigger.configName()));
     }
 
@@ -1545,6 +1562,16 @@ public final class SkillTriggers implements Listener {
                           java.util.List<? extends LivingEntity> inheritedTargets,
                           org.bukkit.event.Cancellable cancellableEvent,
                           org.bukkit.event.entity.EntityDamageEvent.DamageCause damageCause) {
+        dispatchWithSpec(trigger, instance, target, loc, triggerEntity, inheritedTargets,
+                cancellableEvent, damageCause, null);
+    }
+
+    private void dispatchWithSpec(SkillTrigger trigger, ModelInstance instance, LivingEntity target,
+                                  org.bukkit.Location loc, Entity triggerEntity,
+                                  java.util.List<? extends LivingEntity> inheritedTargets,
+                                  org.bukkit.event.Cancellable cancellableEvent,
+                                  org.bukkit.event.entity.EntityDamageEvent.DamageCause damageCause,
+                                  AiProfile.TriggerSpec selectedSpec) {
         if (instance == null) {
             trace(trigger, "实例为 null");
             return;
@@ -1558,7 +1585,8 @@ public final class SkillTriggers implements Listener {
             trace(trigger, "实例 #" + instance.instanceId() + " 未绑定 AI 档案（该生物 yml 缺少 ai 节）");
             return;
         }
-        AiProfile.TriggerSpec spec = profile.triggers.get(trigger.configName());
+        AiProfile.TriggerSpec spec = selectedSpec != null
+                ? selectedSpec : profile.triggers.get(trigger.configName());
         if (spec == null) {
             trace(trigger, "档案 " + profile.name + " 未定义 " + trigger.configName()
                     + "（已定义：" + profile.triggers.keySet() + "）");
@@ -1609,9 +1637,17 @@ public final class SkillTriggers implements Listener {
      * 转成 {@code cast-skill SkillName}），此时走 {@link SkillService} 以吃到
      * 冷却与环检测；已绑定成动作键的直接查表执行。</p>
      */
-    private void runActions(SkillTrigger trigger, java.util.List<String> actions, BehaviorContext ctx) {
+    void runActions(SkillTrigger trigger, java.util.List<String> actions, BehaviorContext ctx) {
         for (String act : actions) {
             try {
+                // Trigger actions are expanded to registered behavior keys during
+                // profile loading. Check those first: keys such as
+                // "signal:<name> ..." overlap with the short trigger syntax that
+                // parseSkillRef accepts, and must remain ordinary mechanics.
+                if (registry.hasAction(act)) {
+                    registry.runAction(act, ctx);
+                    continue;
+                }
                 String ref = SkillService.parseSkillRef(act);
                 if (ref != null && skills != null) {
                     skills.castSkill(ref, ctx);

@@ -68,6 +68,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedSignalTrigger'; status = 'passed'; observations = @('imported-signal-trigger imported=true mapped=true generic=true selector=true payload=true sender=true trigger=true invalid-preserved=true last-signal=true passed=true')
     }
+    $fullReport.expectedProbeIds += 'importedTimerTrigger'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedTimerTrigger'; status = 'passed'; observations = @('imported-timer-trigger imported=true mapped=true aligned=true independent=true invalid-preserved=true source=true passed=true')
+    }
     $fullReport.expectedProbeIds += 'localDifficultyCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'localDifficultyCondition'; status = 'passed'; observations = @('local-difficulty-condition imported=true positive=true range-positive=true high-rejected=true fallback-positive=true missing-context-rejected=true invalid-preserved=true passed=true')

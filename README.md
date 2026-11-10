@@ -2,7 +2,26 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1`
+Latest strict fixture `srv-paper-on-timer-import-strict-20261110-r1` passes all
+422 release probes (403 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Its `importedTimerTrigger` probe imports
+`~onTimer:2` and `~onTimer:5`, verifies both branches against Paper's global
+tick, checks independent intervals and source dispatch, and preserves an
+invalid zero interval. Report:
+`tools/paper-integration/reports/paper-1.21.1-on-timer-import-strict-20261110-r1.json`
+(SHA-256 `bdeffdeeccb6a55d4de73ff0492a5060ce8b815f79eb7430880dbd3180e1350e`).
+Compressed server log SHA-256:
+`3a1c0e64287a6b52aecacf51b4922eb11b494d527173aa26133df41ab3b60300`.
+Client log archive SHA-256:
+`ec8932d584ee624c4206abc5bd276ca690deaa9465ee1b4610a49d75a0121663`.
+Plugin SHA-256:
+`5b5a07c5594bcc9d19eabbd4179d2890f0a72119eb12cf6d05599989ed8261ed`.
+The [official onTimer page](https://wiki.mythiccraft.io/mythicmobs/Skills/Triggers/onTimer)
+documents the global-clock semantics and no `@trigger`, and lists MythicCrucible
+as its implementation. Helstera's imported mob-trigger slice is verified here;
+the complete Trigger catalog remains open.
+
+Previous strict fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1`
 passes all 421 release probes (402 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. Its imported Mythic Stats probe reads back
 `ATTACK_DAMAGE=12.0`, `MOVEMENT_SPEED=0.4`, `ARMOR=8.0`,
@@ -38,7 +57,7 @@ Plugin SHA-256:
 This verifies the listed placeholder behavior; the full Mythic placeholder
 catalog remains `mapped-unverified`.
 
-Latest strict report has 421 probes, zero incomplete.
+Latest strict report has 422 probes, zero incomplete.
 
 Previous strict fixture `srv-paper-health-boundaries-strict-20261110-r2` passes
 421 probes (402 passed, 19 expected rejections, zero failed or incomplete).
@@ -1185,7 +1204,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1` has 421 probes (402 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-on-timer-import-strict-20261110-r1` has 422 probes (403 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1201,8 +1220,8 @@ This is a partial parity release. The matrix currently has `34`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 552 cited IDs; 460 report files; 4 directories
-   without reports; 88 missing directories; 231 archived release reports. The
+   Current fixture inventory: 553 cited IDs; 461 report files; 4 directories
+   without reports; 88 missing directories; 232 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1266,6 +1285,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
+- MythicCrucible's documented mob `~onTimer:<ticks>` syntax now imports positive integer periods as independent global-clock branches. Same-period actions are grouped; distinct periods retain separate schedules; zero, negative, malformed, and overflowing intervals remain preserved with warnings. Strict Paper fixture `srv-paper-on-timer-import-strict-20261110-r1` verifies 2- and 5-tick alignment, independent execution, invalid-input preservation, and source dispatch in the complete 422-probe release catalog. The trigger has no `@trigger`; the broader Trigger catalog remains `mapped-unverified`.
 - Strict Paper fixture `srv-paper-jockey-import-strict-20261109-r1` closes the imported `PreventJockeyMounts` path through managed Zombie configuration and Bukkit mount-event cancellation/allowance; the native Zombie `NATURAL` spawn evidence remains in `srv-paper-full-strict-20261107-r4`.
 - The full strict Paper 1.21.1-133 fixture `srv-paper-full-strict-20261107-r4` records 391 probes with zero incomplete results. Its imported entity-flag probe reads `CanJoinRaid=false` on the protected Pillager and `true` on the inverse control, the native-AI Bee probe verifies imported `PreventStingerLoss`, and the native Zombie `NATURAL` spawn path observes protected jockey cancellation with control allowance.
 - Mythic FallingBlock options now have strict importer-to-runtime evidence. Paper fixture `srv-paper-falling-block-options-strict-20261108-r3` imports block data and drop, hurt-entity, and cancel-drop flags through production FallingBlock spawning; the configured and inverse controls are read back, and wrong-entity or malformed values remain preserved. The fixture completes all 394 registered release probes.

@@ -722,6 +722,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             runEventSelfTest();
             runImportedDamageTriggerSelfTest();
             runImportedSignalTriggerSelfTest();
+            runImportedTimerTriggerSelfTest();
             runImportedImmunitySelfTest();
             runImportedInvalidConditionsSelfTest();
             runImportedSkillReferenceSelfTest();
@@ -14148,6 +14149,150 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 deleteTriggerImportRoot(root);
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
+    }
+
+    /** Verifies imported Mythic onTimer intervals against Paper's global tick clock. */
+    private void runImportedTimerTriggerSelfTest() {
+        if (!(ai instanceof dev.helstera.ai.AiManager manager)
+                || !(skillService instanceof dev.helstera.ai.skill.SkillService skills)
+                || instances() == null) {
+            getLogger().warning("imported-timer-trigger imported=false mapped=false aligned=false"
+                    + " independent=false invalid-preserved=false source=true passed=false reason=runtime-unavailable");
+            return;
+        }
+        var wait = new java.util.concurrent.atomic.AtomicReference<org.bukkit.scheduler.BukkitTask>();
+        wait.set(getServer().getScheduler().runTaskTimer(this, () -> {
+            long currentTick = getServer().getCurrentTick();
+            // Attach just after the 10-tick common phase. A spawn-relative timer
+            // would fire later; Mythic's global intervals resume at ticks 12/15.
+            if (Math.floorMod(currentTick, 10) != 1) return;
+            org.bukkit.scheduler.BukkitTask waiting = wait.get();
+            if (waiting != null) waiting.cancel();
+
+            Path root = null;
+            dev.helstera.runtime.instance.ModelInstanceImpl instance = null;
+            org.bukkit.entity.Zombie entity = null;
+            var signals = dev.helstera.ai.skill.SkillSignals.global();
+            var fastCount = new java.util.concurrent.atomic.AtomicInteger();
+            var slowCount = new java.util.concurrent.atomic.AtomicInteger();
+            var wrongSource = new java.util.concurrent.atomic.AtomicBoolean();
+            var instanceId = new java.util.concurrent.atomic.AtomicInteger(-1);
+            String fastSignal = "helstera_timer_probe_fast";
+            String slowSignal = "helstera_timer_probe_slow";
+            dev.helstera.ai.skill.SkillSignals.Listener fastListener = (name, payload, sourceId) -> {
+                fastCount.incrementAndGet();
+                if (sourceId == null || sourceId != instanceId.get()) wrongSource.set(true);
+            };
+            dev.helstera.ai.skill.SkillSignals.Listener slowListener = (name, payload, sourceId) -> {
+                slowCount.incrementAndGet();
+                if (sourceId == null || sourceId != instanceId.get()) wrongSource.set(true);
+            };
+            signals.subscribe(null, fastSignal, fastListener);
+            signals.subscribe(null, slowSignal, slowListener);
+            try {
+                var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+                if (world == null) throw new IllegalStateException("world-unavailable");
+                root = Files.createTempDirectory("helstera-timer-trigger-import-");
+                Path mobDir = Files.createDirectory(root.resolve("Mobs"));
+                Path source = mobDir.resolve("probe.yml");
+                Files.writeString(source, """
+                        mobs:
+                          ImportedTimerProbe:
+                            Type: ZOMBIE
+                            Skills:
+                              - 'signal{signal=helstera_timer_probe_fast;payload=fast;global=true} ~onTimer:2'
+                              - 'signal{signal=helstera_timer_probe_slow;payload=slow;global=true} ~onTimer:5'
+                              - 'signal{signal=helstera_timer_probe_invalid;global=true} ~onTimer:0'
+                        """);
+                var conversion = new MythicMobsImporter().convert(source);
+                var plan = conversion.stream().filter(entry -> entry.containsKey("target-file"))
+                        .findFirst().orElseThrow();
+                var config = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(plan.get("content"))));
+                var section = config.getConfigurationSection("mob");
+                if (section == null) throw new IllegalStateException("missing imported timer mob");
+                var profile = dev.helstera.ai.AiProfile.fromSection("imported-timer-probe", section);
+                skills.expandTriggers(profile);
+                var timerKeys = profile.triggers.keySet().stream()
+                        .filter(key -> key.equals("on-timer") || key.startsWith("on-timer#"))
+                        .toList();
+                boolean mapped = timerKeys.size() == 2
+                        && timerKeys.stream().allMatch(key -> profile.triggers.get(key).globalClock
+                        && !profile.triggers.get(key).actions.isEmpty())
+                        && timerKeys.stream().map(key -> profile.triggers.get(key).intervalTicks)
+                        .collect(java.util.stream.Collectors.toSet()).equals(java.util.Set.of(2, 5));
+                boolean imported = mapped && conversion.stream()
+                        .anyMatch(entry -> "mapped".equals(entry.get("status")));
+                boolean invalidPreserved = config.getStringList("mob.unsupported.Skills")
+                        .contains("signal{signal=helstera_timer_probe_invalid;global=true} ~onTimer:0");
+                if (!mapped || !imported || !invalidPreserved) {
+                    getLogger().info("imported-timer-trigger imported=" + imported + " mapped=" + mapped
+                            + " aligned=false independent=false invalid-preserved=" + invalidPreserved
+                            + " source=false passed=false");
+                    signals.unsubscribe(null, fastSignal);
+                    signals.unsubscribe(null, slowSignal);
+                    deleteTriggerImportRoot(root);
+                    return;
+                }
+
+                org.bukkit.Location location = world.getSpawnLocation().clone().add(80, 4, 80);
+                location.getChunk().load();
+                entity = world.spawn(location, org.bukkit.entity.Zombie.class);
+                entity.setAI(false);
+                entity.setSilent(true);
+                instance = (dev.helstera.runtime.instance.ModelInstanceImpl) instances().bind(
+                        "example/emberling", entity,
+                        dev.helstera.api.instance.SpawnOptions.defaults().despawnMode("PERSISTENT"));
+                instanceId.set(instance.instanceId());
+                manager.attach(instance, profile);
+                long spawnTick = currentTick;
+                boolean noImmediateFire = fastCount.get() == 0 && slowCount.get() == 0;
+                var probeInstance = instance;
+                var probeEntity = entity;
+                var probeRoot = root;
+                new org.bukkit.scheduler.BukkitRunnable() {
+                    private int elapsed;
+                    private boolean aligned = true;
+
+                    @Override
+                    public void run() {
+                        long observedTick = getServer().getCurrentTick();
+                        long expectedFast = observedTick / 2 - spawnTick / 2;
+                        long expectedSlow = observedTick / 5 - spawnTick / 5;
+                        aligned &= fastCount.get() == expectedFast && slowCount.get() == expectedSlow;
+                        elapsed++;
+                        if (elapsed < 20) return;
+                        boolean independent = fastCount.get() == 10 && slowCount.get() == 4;
+                        boolean source = !wrongSource.get();
+                        boolean passed = imported && mapped && noImmediateFire && aligned && independent
+                                && invalidPreserved && source;
+                        getLogger().info("imported-timer-trigger imported=" + imported + " mapped=" + mapped
+                                + " aligned=" + (noImmediateFire && aligned) + " independent=" + independent
+                                + " invalid-preserved=" + invalidPreserved + " source=" + source
+                                + " passed=" + passed);
+                        signals.unsubscribe(null, fastSignal);
+                        signals.unsubscribe(null, slowSignal);
+                        if (probeInstance != null) {
+                            try { instances().despawn(probeInstance.instanceId()); } catch (RuntimeException ignored) { }
+                        }
+                        if (probeEntity != null && probeEntity.isValid()) probeEntity.remove();
+                        deleteTriggerImportRoot(probeRoot);
+                        cancel();
+                    }
+                }.runTaskTimer(this, 1L, 1L);
+            } catch (Throwable failure) {
+                getLogger().warning("imported-timer-trigger imported=false mapped=false aligned=false"
+                        + " independent=false invalid-preserved=false source=false passed=false error="
+                        + failure.getClass().getSimpleName());
+                signals.unsubscribe(null, fastSignal);
+                signals.unsubscribe(null, slowSignal);
+                if (instance != null) {
+                    try { instances().despawn(instance.instanceId()); } catch (RuntimeException ignored) { }
+                }
+                if (entity != null && entity.isValid()) entity.remove();
+                deleteTriggerImportRoot(root);
+            }
+        }, 1L, 1L));
     }
 
     private void runImportedDropTableSelfTest() {

@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-on-timer-import-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-on-timer-import-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-on-timer-import-strict-20261110-r1.json",
+    "reportSha256": "bdeffdeeccb6a55d4de73ff0492a5060ce8b815f79eb7430880dbd3180e1350e",
+    "log": "tools/paper-integration/reports/paper-1.21.1-on-timer-import-strict-20261110-r1.log.gz",
+    "logSha256": "3a1c0e64287a6b52aecacf51b4922eb11b494d527173aa26133df41ab3b60300",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-on-timer-import-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "ec8932d584ee624c4206abc5bd276ca690deaa9465ee1b4610a49d75a0121663",
+    "pluginSha256": "5b5a07c5594bcc9d19eabbd4179d2890f0a72119eb12cf6d05599989ed8261ed",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-mythic-native-stats-release-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-mythic-native-stats-release-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1.json",

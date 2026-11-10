@@ -1,5 +1,24 @@
 # Paper Startup Evidence
 
+Latest fixture `srv-paper-on-timer-import-strict-20261110-r1` passed the full
+strict gate on Paper 1.21.1-133: 422 registered probes, 403 passed, 19 expected
+rejections, and zero failed or incomplete. Its imported Timer probe verifies
+2- and 5-tick branches aligned to the Paper global clock, independent dispatch,
+source context, and preservation of an invalid zero interval. Report:
+[paper-1.21.1-on-timer-import-strict-20261110-r1.json](reports/paper-1.21.1-on-timer-import-strict-20261110-r1.json), SHA-256:
+`bdeffdeeccb6a55d4de73ff0492a5060ce8b815f79eb7430880dbd3180e1350e`.
+Compressed server log SHA-256:
+`3a1c0e64287a6b52aecacf51b4922eb11b494d527173aa26133df41ab3b60300`.
+Client log archive SHA-256:
+`ec8932d584ee624c4206abc5bd276ca690deaa9465ee1b4610a49d75a0121663`.
+Plugin SHA-256:
+`5b5a07c5594bcc9d19eabbd4179d2890f0a72119eb12cf6d05599989ed8261ed`.
+Archived logs redact web-token query values. The official [onTimer trigger
+reference](https://wiki.mythiccraft.io/mythicmobs/Skills/Triggers/onTimer)
+specifies global-clock scheduling and no `@trigger`, and lists MythicCrucible
+as the implementation; this evidence covers Helstera's imported mob-trigger
+support, not the complete Mythic Trigger catalog.
+
 Latest fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1`
 passed the full strict gate on Paper 1.21.1-133: 421 registered probes, 402
 passed, 19 expected rejections, and zero failed or incomplete. Its imported

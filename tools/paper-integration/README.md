@@ -38,6 +38,29 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
+Latest strict fixture `srv-paper-on-timer-import-strict-20261110-r1` passes all
+422 probes (403 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its imported `~onTimer:2`/`:5` branches follow the global
+server tick, execute independently, preserve invalid zero-period input, and
+retain their source dispatch. Report:
+`reports/paper-1.21.1-on-timer-import-strict-20261110-r1.json`
+(SHA-256 `bdeffdeeccb6a55d4de73ff0492a5060ce8b815f79eb7430880dbd3180e1350e`);
+server log:
+`reports/paper-1.21.1-on-timer-import-strict-20261110-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-on-timer-import-strict-20261110-r1-client-logs.tar.gz`.
+Server log SHA-256:
+`3a1c0e64287a6b52aecacf51b4922eb11b494d527173aa26133df41ab3b60300`;
+client log SHA-256:
+`ec8932d584ee624c4206abc5bd276ca690deaa9465ee1b4610a49d75a0121663`;
+plugin SHA-256:
+`5b5a07c5594bcc9d19eabbd4179d2890f0a72119eb12cf6d05599989ed8261ed`.
+Archived logs redact web-token query values. The official [onTimer
+reference](https://wiki.mythiccraft.io/mythicmobs/Skills/Triggers/onTimer)
+documents global-clock alignment and no `@trigger`, and lists MythicCrucible
+as its implementation. This report verifies Helstera's imported mob-trigger
+slice; the complete Trigger catalog remains open.
+
 Latest strict fixture `srv-paper-mythic-native-stats-release-strict-20261110-r1`
 passes all 421 probes (402 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. Its imported Mythic Stats observation reads
