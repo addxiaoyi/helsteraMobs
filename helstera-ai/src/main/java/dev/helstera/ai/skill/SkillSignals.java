@@ -53,7 +53,7 @@ public final class SkillSignals {
         /**
          * @param signal signal name
          * @param payload payload, may be null
-         * @param sourceId emitting instance id; null for a global signal
+         * @param sourceId emitting instance id; null when the signal has no managed sender
          */
         void onSignal(String signal, String payload, Integer sourceId);
     }
@@ -61,6 +61,10 @@ public final class SkillSignals {
     /** Listener key; carries scope so same-named signals in different scopes never collide. */
     private static String key(Integer scopeId, String signal) {
         return (scopeId == null ? "*" : scopeId) + " " + signal;
+    }
+
+    private static String anyKey(Integer scopeId) {
+        return key(scopeId, "*");
     }
 
     private final Map<String, Listener> listeners = new ConcurrentHashMap<>();
@@ -91,6 +95,12 @@ public final class SkillSignals {
         listeners.put(key(scopeId, signal), listener);
     }
 
+    /** Subscribe to every signal in one scope. Used by Mythic's bare ~onSignal. */
+    public void subscribeAny(Integer scopeId, Listener listener) {
+        if (listener == null) return;
+        listeners.put(anyKey(scopeId), listener);
+    }
+
     /**
      * Unsubscribe.
      *
@@ -99,6 +109,10 @@ public final class SkillSignals {
     public boolean unsubscribe(Integer scopeId, String signal) {
         if (signal == null) return false;
         return listeners.remove(key(scopeId, signal)) != null;
+    }
+
+    public boolean unsubscribeAny(Integer scopeId) {
+        return listeners.remove(anyKey(scopeId)) != null;
     }
 
     /**
@@ -110,20 +124,44 @@ public final class SkillSignals {
      * @return number of listeners that actually received the signal
      */
     public int emit(Integer scopeId, String signal, String payload) {
+        return emit(scopeId, scopeId, signal, payload);
+    }
+
+    /**
+     * Emit with an independent delivery scope and sender identity.
+     *
+     * <p>Global broadcasts have a {@code null} scope but still need to preserve
+     * the instance that emitted the signal for {@code @trigger} and payload
+     * context resolution.</p>
+     */
+    public int emit(Integer scopeId, Integer sourceId, String signal, String payload) {
         if (signal == null || signal.isBlank()) return 0;
-        List<Listener> targets = new ArrayList<>(2);
-        // A mob should hear its own signal.
-        Listener own = listeners.get(key(scopeId, signal));
-        if (own != null) targets.add(own);
-        if (scopeId != null) {
-            Listener globalListener = listeners.get(key(null, signal));
-            if (globalListener != null) targets.add(globalListener);
+        List<Listener> targets = new ArrayList<>();
+        if (scopeId == null) {
+            // A global signal is a broadcast. Keep global listeners first, then
+            // deliver it to each instance listener exactly once.
+            addIfPresent(targets, listeners.get(key(null, signal)));
+            addIfPresent(targets, listeners.get(anyKey(null)));
+            String exactSuffix = " " + signal;
+            for (var entry : listeners.entrySet()) {
+                String listenerKey = entry.getKey();
+                if (listenerKey.startsWith("*") || listenerKey.equals(anyKey(null))) continue;
+                if (listenerKey.endsWith(exactSuffix) || listenerKey.endsWith(" *")) {
+                    addIfPresent(targets, entry.getValue());
+                }
+            }
+        } else {
+            // A mob should hear its own signal, followed by global subscribers.
+            addIfPresent(targets, listeners.get(key(scopeId, signal)));
+            addIfPresent(targets, listeners.get(anyKey(scopeId)));
+            addIfPresent(targets, listeners.get(key(null, signal)));
+            addIfPresent(targets, listeners.get(anyKey(null)));
         }
 
         int n = 0;
         for (Listener l : targets) {
             try {
-                l.onSignal(signal, payload, scopeId);
+                l.onSignal(signal, payload, sourceId);
                 n++;
             } catch (Throwable t) {
                 // One bad listener must not stop the others: otherwise a single broken
@@ -132,6 +170,10 @@ public final class SkillSignals {
             }
         }
         return n;
+    }
+
+    private static void addIfPresent(List<Listener> targets, Listener listener) {
+        if (listener != null && !targets.contains(listener)) targets.add(listener);
     }
 
     /** Drop all subscriptions for one instance. Called on removal so stale listeners
@@ -151,7 +193,9 @@ public final class SkillSignals {
         java.util.Set<String> out = new java.util.LinkedHashSet<>();
         for (String k : listeners.keySet()) {
             int sp = k.indexOf(' ');
-            if (sp >= 0 && sp + 1 < k.length()) out.add(k.substring(sp + 1));
+            if (sp >= 0 && sp + 1 < k.length() && !k.substring(sp + 1).equals("*")) {
+                out.add(k.substring(sp + 1));
+            }
         }
         return out;
     }
@@ -159,6 +203,11 @@ public final class SkillSignals {
     /** Emit a payload-less global signal. */
     public int emitGlobal(String signal) {
         return emit(null, signal, null);
+    }
+
+    /** Emit a global signal while retaining the managed sender identity. */
+    public int emitGlobal(String signal, Integer sourceId) {
+        return emit(null, sourceId, signal, null);
     }
 
     /** Emit an instance-scoped signal. */

@@ -142,6 +142,7 @@ try {
         '[Server thread/INFO]: potion-natural-expiry=true expired=true event-observed=false action-observed=true item-marker-observed=false',
         '[Server thread/INFO]: kill-trigger imported=true mapped=true natural=true victim-dead=true action-observed=true passed=true',
         '[Server thread/INFO]: player-kill-trigger imported=true mapped=true natural=true victim-player=true victim-death-observed=true action-observed=true player-kills-positive=true player-kills-negative=true passed=true',
+        '[Server thread/INFO]: imported-signal-trigger imported=true mapped=true generic=true selector=true payload=true sender=true trigger=true invalid-preserved=true last-signal=true passed=true',
         '[Server thread/INFO]: imported-player-kills-condition primary-mapped=true range-mapped=true positive=true negative=true invalid-preserved=true',
         '[Server thread/INFO]: tempt-probe-delayed entity-target-trigger=true target-events=1 target-find-misses=0',
         '[Server thread/INFO]: item-pickup trigger=true player=HelsteraTester',
@@ -1033,6 +1034,10 @@ try {
                 $_ -replace 'player-kill-trigger natural=true', 'player-kill-trigger imported=true mapped=true natural=true'
             }
         })
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedSignalTrigger'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedSignalTrigger'; status = 'passed'; observations = @('imported-signal-trigger imported=true mapped=true generic=true selector=true payload=true sender=true trigger=true invalid-preserved=true last-signal=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds += 'absorptionPlayerCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

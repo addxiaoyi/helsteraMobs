@@ -720,6 +720,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (getConfig().getBoolean("debug.self-test-events", false)) {
             runEventSelfTest();
             runImportedDamageTriggerSelfTest();
+            runImportedSignalTriggerSelfTest();
             runImportedImmunitySelfTest();
             runImportedInvalidConditionsSelfTest();
             runImportedSkillReferenceSelfTest();
@@ -2896,6 +2897,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var target = origin.getWorld().spawn(probeOrigin.clone().add(4, 0, 0),
                     org.bukkit.entity.Zombie.class);
             probeTarget[0] = target;
+            target.setPersistent(true);
             target.setAI(false);
             target.setGravity(false);
             target.setSilent(true);
@@ -2933,9 +2935,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             };
             attackListener = registeredAttackListener;
             getServer().getPluginManager().registerEvents(registeredAttackListener, this);
+            protectedBee.setAI(true);
+            protectedBee.setHasStung(false);
             protectedBee.setAware(true);
             protectedBee.setAnger(1200);
             protectedBee.setTarget(target);
+            controlBee.setAI(false);
+            controlBee.setHasStung(false);
             final boolean[] controlStarted = {false};
             final boolean[] protectedRestoredObserved = {false};
             final boolean[] controlRetainedObserved = {false};
@@ -13469,6 +13475,149 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         getLogger().warning("damage-imported cleanup=" + failure.getClass().getSimpleName());
                     }
                 }
+            }
+        }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
+    }
+
+    /** Verifies imported Mythic signal selectors, payloads, broadcast senders and @trigger. */
+    private void runImportedSignalTriggerSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+            if (world == null || instances == null || bus == null
+                    || !(ai instanceof dev.helstera.ai.AiManager manager)
+                    || !(skillService instanceof dev.helstera.ai.skill.SkillService skills)
+                    || !(behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors)) {
+                getLogger().warning("imported-signal-trigger imported=false mapped=false generic=false"
+                        + " selector=false payload=false sender=false trigger=false invalid-preserved=false"
+                        + " last-signal=false passed=false reason=runtime-unavailable");
+                return;
+            }
+            Path root = null;
+            dev.helstera.runtime.instance.ModelInstanceImpl senderInstance = null;
+            dev.helstera.runtime.instance.ModelInstanceImpl receiverInstance = null;
+            org.bukkit.entity.Zombie sender = null;
+            org.bukkit.entity.Zombie receiver = null;
+            try {
+                root = Files.createTempDirectory("helstera-signal-trigger-import-");
+                Path mobDir = Files.createDirectory(root.resolve("Mobs"));
+                Path source = mobDir.resolve("probe.yml");
+                Files.writeString(source, """
+                        mobs:
+                          ImportedSignalProbe:
+                            Type: ZOMBIE
+                            Skills:
+                              - 'setname{name=GENERIC_<ctx.payload>} ~onSignal'
+                              - 'setname{name=SELECTOR_OK} ~onSignal:phase2'
+                              - 'setname{name=TRIGGER_<target.uuid>} @trigger ~onSignal:globalphase'
+                              - 'setname{name=INVALID_EMPTY} ~onSignal:'
+                              - 'setname{name=INVALID_DASH} ~onSignal:phase-2'
+                        """);
+                var conversion = new MythicMobsImporter().convert(source);
+                var plan = conversion.stream().filter(entry -> entry.containsKey("target-file"))
+                        .findFirst().orElseThrow();
+                var config = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(plan.get("content"))));
+                var section = config.getConfigurationSection("mob");
+                if (section == null) throw new IllegalStateException("missing imported signal mob");
+                var profile = dev.helstera.ai.AiProfile.fromSection(
+                        "imported-signal-probe", section);
+                skills.expandTriggers(profile);
+                var signalKeys = profile.triggers.keySet().stream()
+                        .filter(key -> key.equals("on-signal") || key.startsWith("on-signal#"))
+                        .toList();
+                boolean mapped = signalKeys.size() == 3
+                        && signalKeys.stream().allMatch(key -> profile.triggers.get(key) != null
+                        && !profile.triggers.get(key).actions.isEmpty());
+                boolean imported = mapped && conversion.stream()
+                        .anyMatch(entry -> "mapped".equals(entry.get("status")));
+                var unsupported = config.getStringList("mob.unsupported.Skills");
+                boolean invalidPreserved = unsupported.contains("setname{name=INVALID_EMPTY} ~onSignal:")
+                        && unsupported.contains("setname{name=INVALID_DASH} ~onSignal:phase-2");
+
+                Location location = world.getSpawnLocation().clone().add(80, 4, 80);
+                location.getChunk().load();
+                sender = world.spawn(location.clone().add(2, 0, 0), org.bukkit.entity.Zombie.class);
+                receiver = world.spawn(location.clone(), org.bukkit.entity.Zombie.class);
+                sender.setAI(false);
+                receiver.setAI(false);
+                sender.setSilent(true);
+                receiver.setSilent(true);
+                senderInstance = (dev.helstera.runtime.instance.ModelInstanceImpl) instances().bind(
+                        "example/emberling", sender,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                receiverInstance = (dev.helstera.runtime.instance.ModelInstanceImpl) instances().bind(
+                        "example/emberling", receiver,
+                        dev.helstera.api.instance.SpawnOptions.defaults());
+                manager.attach(senderInstance, new dev.helstera.ai.AiProfile("signal-sender"));
+                manager.attach(receiverInstance, profile);
+                // bind() deliberately does not post spawn; publish after attach so
+                // SkillTriggers can establish the signal subscriptions deterministically.
+                bus.post(new dev.helstera.api.event.ModelSpawnEvent(receiverInstance,
+                        receiver.getLocation()));
+
+                var signalBus = dev.helstera.ai.skill.SkillSignals.global();
+                var observedSource = new java.util.concurrent.atomic.AtomicReference<Integer>();
+                var observedPayload = new java.util.concurrent.atomic.AtomicReference<String>();
+                signalBus.subscribe(null, "globalphase", (name, payload, sourceId) -> {
+                    observedPayload.set(payload);
+                    observedSource.set(sourceId);
+                });
+                try {
+                    var receiverContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            receiverInstance, (LivingEntity) null, 1.0, -1, 0, "signal-probe");
+                    var senderContext = dev.helstera.api.behavior.BehaviorContext.of(
+                            senderInstance, (LivingEntity) null, 1.0, -1, 0, "signal-probe");
+                    boolean scopedDispatched = runIntegrationAction(skills, behaviors,
+                            "signal scoped scoped-payload", receiverContext);
+                    boolean generic = scopedDispatched
+                            && "GENERIC_scoped-payload".equals(receiver.getCustomName());
+
+                    receiver.setCustomName(null);
+                    boolean selectorDispatched = runIntegrationAction(skills, behaviors,
+                            "signal phase2 selector-payload", receiverContext);
+                    boolean selector = selectorDispatched
+                            && "SELECTOR_OK".equals(receiver.getCustomName());
+
+                    receiver.setCustomName(null);
+                    sender.setCustomName(null);
+                    boolean globalDispatched = runIntegrationAction(skills, behaviors,
+                            "signal globalphase global-payload global", senderContext);
+                    boolean payload = globalDispatched
+                            && "GENERIC_global-payload".equals(receiver.getCustomName())
+                            && "global-payload".equals(observedPayload.get());
+                    boolean senderIdentity = Integer.valueOf(senderInstance.instanceId())
+                            .equals(observedSource.get());
+                    boolean trigger = ("TRIGGER_" + sender.getUniqueId())
+                            .equals(sender.getCustomName());
+                    String lastSignalKey = skills.bindCondition("last-signal globalphase");
+                    boolean lastSignal = lastSignalKey != null && behaviors.testCondition(
+                            lastSignalKey, receiverContext);
+                    boolean passed = imported && mapped && generic && selector && payload
+                            && senderIdentity && trigger && invalidPreserved && lastSignal;
+                    getLogger().info("imported-signal-trigger imported=" + imported
+                            + " mapped=" + mapped + " generic=" + generic
+                            + " selector=" + selector + " payload=" + payload
+                            + " sender=" + senderIdentity + " trigger=" + trigger
+                            + " invalid-preserved=" + invalidPreserved
+                            + " last-signal=" + lastSignal + " passed=" + passed);
+                } finally {
+                    signalBus.unsubscribe(null, "globalphase");
+                }
+            } catch (Throwable failure) {
+                getLogger().warning("imported-signal-trigger imported=false mapped=false generic=false"
+                        + " selector=false payload=false sender=false trigger=false invalid-preserved=false"
+                        + " last-signal=false passed=false error="
+                        + failure.getClass().getSimpleName());
+            } finally {
+                if (receiverInstance != null && instances() != null) {
+                    try { instances().despawn(receiverInstance.instanceId()); } catch (RuntimeException ignored) { }
+                }
+                if (senderInstance != null && instances() != null) {
+                    try { instances().despawn(senderInstance.instanceId()); } catch (RuntimeException ignored) { }
+                }
+                if (receiver != null && receiver.isValid()) receiver.remove();
+                if (sender != null && sender.isValid()) sender.remove();
+                deleteTriggerImportRoot(root);
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 100L);
     }

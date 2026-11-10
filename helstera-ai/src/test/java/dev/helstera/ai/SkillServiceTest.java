@@ -509,6 +509,27 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("global signal keeps the active instance as sender")
+    void globalSignalKeepsSenderIdentity() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.instanceId()).thenReturn(18);
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+        var bus = new dev.helstera.ai.skill.SkillSignals();
+        var source = new java.util.concurrent.atomic.AtomicReference<Integer>();
+        dev.helstera.ai.skill.SkillSignals.resetGlobal(bus);
+        bus.subscribe(19, "broadcast", (name, payload, sourceId) -> source.set(sourceId));
+        try {
+            assertTrue(registry.runAction(svc.bindAction(
+                    "signal{signal=broadcast;payload=global;global=true}"), context));
+            assertEquals(18, source.get());
+        } finally {
+            dev.helstera.ai.skill.SkillSignals.resetGlobal(null);
+        }
+    }
+
+    @Test
     @DisplayName("kill-targets kills selected entities without killing the caster")
     void killTargetsKillsSelectedEntities() {
         var svc = service();
@@ -1428,6 +1449,50 @@ class SkillServiceTest {
         assertEquals(List.of("play-animation:roar true 5"), profile.triggers.get("on-damage").actions);
         assertTrue(registry.hasCondition("health-below:0.4"));
         assertTrue(registry.hasAction("play-animation:roar true 5"));
+    }
+
+    @Test
+    @DisplayName("expandTriggers 保留 on-signal 选择器，只绑定普通条件与动作")
+    void expandsSignalTriggerWithoutBindingSelectorAsCondition() {
+        var svc = service();
+        var profile = new AiProfile("signal-boss");
+        var spec = new AiProfile.TriggerSpec();
+        spec.signal = "phase2";
+        spec.require.add("has-target");
+        spec.actions.add("play-animation roar true 5");
+        profile.triggers.put("on-signal", spec);
+
+        svc.expandTriggers(profile);
+
+        assertEquals("phase2", spec.signal);
+        assertEquals(List.of("has-target"), spec.require);
+        assertEquals(List.of("play-animation:roar true 5"), spec.actions);
+        assertTrue(registry.hasCondition("has-target"));
+    }
+
+    @Test
+    @DisplayName("AiProfile 能读取 importer 生成的多分支 on-signal YAML")
+    void parsesImportedSignalTriggerVariants() {
+        var svc = service();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader("""
+                triggers:
+                  on-signal:
+                    - do: [play-animation phase2 true 5]
+                      signal: phase2
+                    - do: [play-animation generic true 5]
+                """));
+
+        AiProfile profile = AiProfile.fromSection("signal-boss", yaml);
+        svc.expandTriggers(profile);
+
+        assertEquals(List.of("on-signal#0", "on-signal#1"),
+                List.copyOf(profile.triggers.keySet()));
+        assertEquals("phase2", profile.triggers.get("on-signal#0").signal);
+        assertNull(profile.triggers.get("on-signal#1").signal);
+        assertEquals(List.of("play-animation:phase2 true 5"),
+                profile.triggers.get("on-signal#0").actions);
+        assertEquals(List.of("play-animation:generic true 5"),
+                profile.triggers.get("on-signal#1").actions);
     }
 
     @Test

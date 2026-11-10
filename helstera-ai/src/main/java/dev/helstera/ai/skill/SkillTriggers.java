@@ -614,30 +614,40 @@ public final class SkillTriggers implements Listener {
         }
     }
 
-    /**
-     * 若该实例的档案配置了 on-signal，则订阅其信号名。
- *
- * <p>信号名取自 TriggerSpec 的 require 列表——复用 require 而非新增字段，
- * 是为了让配置形态与其它事件触发器一致：{@code on-signal.require: [phase2]}。
- * 载荷对比走不过则不订阅（派发时没有目标可比），此时用首个信号名兜底。</p>
-     */
+    /** Whether a trigger map key is the canonical on-signal key or an imported variant. */
+    private static boolean isSignalTriggerKey(String key) {
+        return key != null && (key.equals(SkillTrigger.ON_SIGNAL.configName())
+                || key.startsWith(SkillTrigger.ON_SIGNAL.configName() + "#"));
+    }
+
+    private static java.util.List<AiProfile.TriggerSpec> signalSpecs(AiProfile profile) {
+        java.util.List<AiProfile.TriggerSpec> out = new java.util.ArrayList<>();
+        if (profile == null) return out;
+        for (var entry : profile.triggers.entrySet()) {
+            if (isSignalTriggerKey(entry.getKey())) out.add(entry.getValue());
+        }
+        return out;
+    }
+
+    /** Subscribe an instance to explicit or generic Mythic signal triggers. */
     private void subscribeSignal(ModelInstance instance) {
         if (instance == null || !instance.isValid()) return;
         AiProfile profile = ai.profileOf(instance.instanceId());
         if (profile == null) return;
-        AiProfile.TriggerSpec spec = profile.triggers.get(SkillTrigger.ON_SIGNAL.configName());
-        if (spec == null || spec.actions.isEmpty() || spec.require.isEmpty()) return;
-
         int id = instance.instanceId();
-        for (String cond : spec.require) {
-            // require 里可能写成 "signal=phase2" 或裸 "phase2"，两种都要认
-            String signalName = cond.contains("=") ? cond.substring(cond.indexOf('=') + 1).trim() : cond.trim();
-            if (signalName.isEmpty()) continue;
-            SkillSignals.global().subscribe(id, signalName,
-                    (sig, payload, sourceId) -> {
-                        SkillExtras.rememberSignal(id, sig);
-                        dispatchSignal(instance, payload);
-                    });
+        java.util.List<AiProfile.TriggerSpec> specs = signalSpecs(profile);
+        if (specs.isEmpty()) return;
+        SkillSignals.Listener listener = (sig, payload, sourceId) -> {
+            SkillExtras.rememberSignal(id, sig);
+            dispatchSignal(instance, sig, payload, sourceId);
+        };
+        for (AiProfile.TriggerSpec spec : specs) {
+            if (spec == null || spec.actions.isEmpty()) continue;
+            if (spec.signal == null || spec.signal.isBlank()) {
+                SkillSignals.global().subscribeAny(id, listener);
+            } else {
+                SkillSignals.global().subscribe(id, spec.signal, listener);
+            }
         }
     }
 
@@ -648,24 +658,51 @@ public final class SkillTriggers implements Listener {
      * 接收方拿不到 {@code signal} 动作传来的内容。这里单独构造一次上下文，
      * 其余语义（require 过滤、阶段切换、动作执行）与 dispatch 保持一致。</p>
      */
-    private void dispatchSignal(ModelInstance instance, String payload) {
+    private void dispatchSignal(ModelInstance instance, String signal, String payload, Integer sourceId) {
         AiProfile profile = ai.profileOf(instance.instanceId());
         if (profile == null) return;
-        AiProfile.TriggerSpec spec = profile.triggers.get(SkillTrigger.ON_SIGNAL.configName());
-        if (spec == null || spec.actions.isEmpty()) return;
+        java.util.List<AiProfile.TriggerSpec> specs = signalSpecs(profile);
+        if (specs.isEmpty()) return;
 
         double healthRatio = 1.0;
         if (instance.baseEntity().orElse(null) instanceof LivingEntity le && le.getMaxHealth() > 0) {
             healthRatio = le.getHealth() / le.getMaxHealth();
         }
-        var ctx = BehaviorContext.withPayload(instance, null, healthRatio, -1, 0,
-                SkillTrigger.ON_SIGNAL.configName(), payload);
-
-        for (String cond : spec.require) {
-            if (!registry.testCondition(cond, ctx)) return;
+        LivingEntity sender = sourceId == null ? null : signalSender(sourceId);
+        double distance = -1;
+        if (sender != null && instance.location() != null && sender.getWorld() != null
+                && sender.getWorld().equals(instance.location().getWorld())) {
+            distance = sender.getLocation().distance(instance.location());
         }
-        runActions(SkillTrigger.ON_SIGNAL, spec.actions, ctx);
-        fired.incrementAndGet();
+        java.util.List<LivingEntity> targets = sender == null ? java.util.List.of() : java.util.List.of(sender);
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(sender, targets, instance.location());
+        var ctx = BehaviorContext.continueExecution(instance, sender, healthRatio, distance, 0,
+                SkillTrigger.ON_SIGNAL.configName(), payload, sender, targets, instance.location(), tree);
+
+        for (AiProfile.TriggerSpec spec : specs) {
+            if (spec == null || spec.actions.isEmpty()) continue;
+            if (spec.signal != null && !spec.signal.equals(signal)) continue;
+            boolean accepted = true;
+            for (String cond : spec.require) {
+                if (!registry.testCondition(cond, ctx)) {
+                    accepted = false;
+                    break;
+                }
+            }
+            if (!accepted) continue;
+            runActions(SkillTrigger.ON_SIGNAL, spec.actions, ctx);
+            fired.incrementAndGet();
+        }
+    }
+
+    private LivingEntity signalSender(Integer sourceId) {
+        if (sourceId == null || ai == null) return null;
+        for (var candidate : ai.allInstances()) {
+            if (candidate.instanceId() != sourceId) continue;
+            Entity entity = candidate.baseEntity().orElse(null);
+            return entity instanceof LivingEntity living ? living : null;
+        }
+        return null;
     }
 
     /** 推进全局 tick 并放行到期的 on-timer 技能。 */
@@ -1467,7 +1504,9 @@ public final class SkillTriggers implements Listener {
     /** Pure routing predicate kept separate so event binding cannot drift silently. */
     static boolean profileDeclaresTrigger(AiProfile profile, SkillTrigger trigger) {
         return profile != null && trigger != null
-                && profile.triggers.containsKey(trigger.configName());
+                && (trigger == SkillTrigger.ON_SIGNAL
+                ? profile.triggers.keySet().stream().anyMatch(SkillTriggers::isSignalTriggerKey)
+                : profile.triggers.containsKey(trigger.configName()));
     }
 
     // ------------------------------------------------------------------

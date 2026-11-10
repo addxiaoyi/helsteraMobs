@@ -36,6 +36,29 @@ try {
     $archivePath = Join-Path $temporaryRoot 'tools/paper-integration/reports/test-release.json'
     [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($archivePath))
     $fullReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-drop-inline-20261104-r2.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    foreach ($requiredKillProbe in @('killTrigger', 'playerKillTrigger')) {
+        $killProbe = @($fullReport.probes | Where-Object id -eq $requiredKillProbe)
+        if ($killProbe.Count -ne 1) { throw "Synthetic release report must contain $requiredKillProbe." }
+        $killProbe[0].observations = @($killProbe[0].observations | ForEach-Object {
+            if ($_ -match 'kill-trigger imported=true mapped=true natural=true' -or
+                    $_ -match 'player-kill-trigger imported=true mapped=true natural=true') {
+                $_
+            } elseif ($requiredKillProbe -eq 'killTrigger') {
+                $_ -replace 'kill-trigger natural=true', 'kill-trigger imported=true mapped=true natural=true'
+            } else {
+                $_ -replace 'player-kill-trigger natural=true', 'player-kill-trigger imported=true mapped=true natural=true'
+            }
+        })
+    }
+    $skillTriggerProbe = @($fullReport.probes | Where-Object id -eq 'skillTrigger')
+    if ($skillTriggerProbe.Count -ne 1) { throw 'Synthetic release report must contain skillTrigger.' }
+    $skillTriggerProbe[0].observations = @($skillTriggerProbe[0].observations | ForEach-Object {
+        if ($_ -match 'attack=true') { $_ } else { "$_ attack=true" }
+    })
+    $fullReport.expectedProbeIds += 'importedSignalTrigger'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedSignalTrigger'; status = 'passed'; observations = @('imported-signal-trigger imported=true mapped=true generic=true selector=true payload=true sender=true trigger=true invalid-preserved=true last-signal=true passed=true')
+    }
     $fullReport.expectedProbeIds += 'mobOptionsSlimeSplitNatural'
     $fullReport.probes += [pscustomobject]@{
         id = 'mobOptionsSlimeSplitNatural'; status = 'passed'; observations = @('mob-options-slime-split-natural protected-size=4 control-size=4 protected-event=true protected-cancelled=true protected-event-count=4 control-event=true control-cancelled=false control-event-count=3 protected-dead=true control-dead=true protected-children=0 control-children=3 monster-spawning-enabled=true spawn-flags-restored=true damage=api passed=true')

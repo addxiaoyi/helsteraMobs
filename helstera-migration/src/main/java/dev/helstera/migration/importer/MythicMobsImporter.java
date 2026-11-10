@@ -1493,8 +1493,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                 note(entries, srcFile, mobKey + ".Skills", "mob.unsupported.Skills",
                         preserved, "unsupported", "Only unresolved or externally referenced Skills are preserved.");
             }
+            writeTriggers(target, "mob.triggers", scan.triggers);
             for (SkillScan.Trigger t : scan.triggers) {
-                target.set("mob.triggers." + t.trigger + ".do", t.actions);
                 note(entries, srcFile, mobKey + ".Skills[~" + t.trigger + "]", "mob.triggers." + t.trigger,
                         t.actions, "mapped", "MythicMobs trigger skill converted to a Helstera trigger.");
             }
@@ -1597,20 +1597,26 @@ public final class MythicMobsImporter implements MigrationImporter {
         final List<String> unsupported = new ArrayList<>();
 
         void add(String trigger, String action) {
+            add(trigger, null, action);
+        }
+
+        void add(String trigger, String signal, String action) {
             for (Trigger t : triggers) {
-                if (t.trigger.equals(trigger)) {
+                if (t.trigger.equals(trigger) && java.util.Objects.equals(t.signal, signal)) {
                     t.actions.add(action);
                     return;
                 }
             }
             Trigger t = new Trigger();
             t.trigger = trigger;
+            t.signal = signal;
             t.actions.add(action);
             triggers.add(t);
         }
 
         static final class Trigger {
             String trigger;
+            String signal;
             final List<String> actions = new ArrayList<>();
         }
     }
@@ -1745,20 +1751,14 @@ public final class MythicMobsImporter implements MigrationImporter {
             int end = pos;
             while (end < raw.length() && !Character.isWhitespace(raw.charAt(end))) end++;
             String event = raw.substring(pos, end);
-            String trigger = event.equalsIgnoreCase("~onSpawn") ? "on-spawn"
-                    : event.equalsIgnoreCase("~onDeath") ? "on-death"
-                    : event.equalsIgnoreCase("~onAttack") ? "on-attack"
-                    : event.equalsIgnoreCase("~onKill") ? "on-kill"
-                    : event.equalsIgnoreCase("~onKillPlayer") ? "on-kill-player"
-                    : event.equalsIgnoreCase("~onDamaged") || event.equalsIgnoreCase("~onHurt")
-                    ? "on-damage" : null;
+            EventSpec eventSpec = eventSpec(event);
             String action = (raw.substring(0, pos) + raw.substring(end)).trim();
             String normalized = MythicSpec.skillRef(action) != null ? action : mapSkillMechanic(action);
             if (normalized == null) normalized = MythicSpec.normalize(action);
-            if (!standaloneSkill && eventPositions.size() == 1 && trigger != null
-                    && !(trigger.equals("on-damage") && action.toLowerCase(Locale.ROOT).contains("<skill.var.damage-"))
+            if (!standaloneSkill && eventPositions.size() == 1 && eventSpec != null
+                    && !(eventSpec.trigger().equals("on-damage") && action.toLowerCase(Locale.ROOT).contains("<skill.var.damage-"))
                     && normalized != null && (MythicSpec.skillRef(action) != null || isSupportedAction(normalized))) {
-                scan.add(trigger, normalized);
+                scan.add(eventSpec.trigger(), eventSpec.signal(), normalized);
             } else {
                 preserveEventLine(raw, scan, entries, srcFile, mobKey, standaloneSkill);
             }
@@ -1953,6 +1953,57 @@ public final class MythicMobsImporter implements MigrationImporter {
         scan.unsupported.add(raw);
         note(entries, srcFile, key + ".Skills[]", standalone ? "skills.unsupported" : "mob.unsupported.Skills",
                 raw, "unsupported", "Event trigger requires manual conversion; original line preserved.", "WARN");
+    }
+
+    /** Parsed Mythic event suffix, including the optional onSignal selector. */
+    private record EventSpec(String trigger, String signal) { }
+
+    private static EventSpec eventSpec(String raw) {
+        if (raw == null || !raw.startsWith("~")) return null;
+        String value = raw.substring(1).trim();
+        int colon = value.indexOf(':');
+        String name = colon < 0 ? value : value.substring(0, colon).trim();
+        String signal = colon < 0 ? null : value.substring(colon + 1).trim();
+        String trigger = name.equalsIgnoreCase("onSpawn") ? "on-spawn"
+                : name.equalsIgnoreCase("onDeath") ? "on-death"
+                : name.equalsIgnoreCase("onAttack") ? "on-attack"
+                : name.equalsIgnoreCase("onKill") ? "on-kill"
+                : name.equalsIgnoreCase("onKillPlayer") ? "on-kill-player"
+                : name.equalsIgnoreCase("onSignal") ? "on-signal"
+                : name.equalsIgnoreCase("onDamaged") || name.equalsIgnoreCase("onHurt")
+                ? "on-damage" : null;
+        if (trigger == null) return null;
+        if (!trigger.equals("on-signal")) {
+            return colon < 0 ? new EventSpec(trigger, null) : null;
+        }
+        if (signal != null && !signal.matches("[A-Za-z0-9]+")) return null;
+        return new EventSpec(trigger, signal == null || signal.isBlank() ? null : signal);
+    }
+
+    private static void writeTriggers(YamlConfiguration target, String base,
+                                      List<SkillScan.Trigger> triggers) {
+        Map<String, List<SkillScan.Trigger>> grouped = new LinkedHashMap<>();
+        for (SkillScan.Trigger trigger : triggers) {
+            grouped.computeIfAbsent(trigger.trigger, ignored -> new ArrayList<>()).add(trigger);
+        }
+        for (var entry : grouped.entrySet()) {
+            String path = base + "." + entry.getKey();
+            List<SkillScan.Trigger> variants = entry.getValue();
+            if (!entry.getKey().equals("on-signal") || variants.size() == 1) {
+                SkillScan.Trigger trigger = variants.get(0);
+                target.set(path + ".do", trigger.actions);
+                if (trigger.signal != null) target.set(path + ".signal", trigger.signal);
+                continue;
+            }
+            List<Map<String, Object>> list = new ArrayList<>();
+            for (SkillScan.Trigger trigger : variants) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                if (trigger.signal != null) item.put("signal", trigger.signal);
+                item.put("do", List.copyOf(trigger.actions));
+                list.add(item);
+            }
+            target.set(path, list);
+        }
     }
 
     private static String locationTargeter(String raw) {
@@ -3099,9 +3150,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                 noteUnmappedSkillConditions(entries, file.toString(), key + ".TriggerConditions",
                         targetPath, unmapped);
             }
-            for (SkillScan.Trigger trigger : scan.triggers) {
-                target.set("skills." + skillId + ".triggers." + trigger.trigger + ".do", trigger.actions);
-            }
+            writeTriggers(target, "skills." + skillId + ".triggers", scan.triggers);
             entries.addAll(skillNotes);
             converted++;
         }
@@ -3122,9 +3171,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
             if (!actions.isEmpty()) target.set("skills." + skillId + ".on-decision", actions);
             if (!scan.unsupported.isEmpty()) target.set("skills." + skillId + ".unsupported", scan.unsupported);
-            for (SkillScan.Trigger trigger : scan.triggers) {
-                target.set("skills." + skillId + ".triggers." + trigger.trigger + ".do", trigger.actions);
-            }
+            writeTriggers(target, "skills." + skillId + ".triggers", scan.triggers);
         }
         if (target.getConfigurationSection("skills") == null) return entries;
         entries.add(Map.of(

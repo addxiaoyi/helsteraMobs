@@ -69,6 +69,15 @@ class SkillSignalsTest {
     }
 
     @Test
+    @DisplayName("通配订阅接收实例范围内的任意信号")
+    void scopedWildcardReceivesAnySignal() {
+        bus.subscribeAny(3, mark("any"));
+        assertEquals(1, bus.emit(3, "phase2", null));
+        assertEquals(0, bus.emit(4, "phase2", null));
+        assertEquals(List.of("any:phase2:null"), log);
+    }
+
+    @Test
     @DisplayName("实例监听与全局监听可同时收到")
     void bothScopesFireOnceEach() {
         bus.subscribe(1, "s", mark("own"));
@@ -175,6 +184,25 @@ class SkillSignalsTest {
     void emitGlobalWorks() {
         bus.subscribe(null, "s", mark("g"));
         assertEquals(1, bus.emitGlobal("s"));
+    }
+
+    @Test
+    @DisplayName("全局信号广播到实例订阅者与全局通配订阅者")
+    void globalEmitBroadcastsToInstanceListeners() {
+        bus.subscribe(1, "s", mark("one"));
+        bus.subscribeAny(2, mark("two"));
+        bus.subscribeAny(null, mark("all"));
+        assertEquals(3, bus.emitGlobal("s"));
+        assertEquals(3, log.size());
+    }
+
+    @Test
+    @DisplayName("全局广播可携带独立发送者 ID")
+    void globalEmitKeepsIndependentSourceId() {
+        bus.subscribe(1, "s", (signal, payload, sourceId) ->
+                log.add("source=" + sourceId));
+        assertEquals(1, bus.emitGlobal("s", 42));
+        assertEquals(List.of("source=42"), log);
     }
 
     @Test

@@ -152,6 +152,13 @@ public final class AiProfile {
         public final List<String> require = new ArrayList<>();
         public final List<String> actions = new ArrayList<>();
         /**
+         * Optional signal selector for {@code on-signal}. Null means every signal.
+         * This is deliberately separate from {@link #require}: the selector chooses
+         * which bus events subscribe the instance, while require remains an ordinary
+         * runtime condition that can inspect the signal payload.
+         */
+        public String signal;
+        /**
          * 触发周期（tick）。仅 {@code on-timer} 使用；其余触发器由事件驱动，字段留 0。
          *
          * <p>不能沿用「事件来了就跑」：定时技能必须有自己的节奏，
@@ -245,6 +252,7 @@ public final class AiProfile {
             TriggerSpec dst = new TriggerSpec();
             dst.require.addAll(src.require);
             dst.actions.addAll(src.actions);
+            dst.signal = src.signal;
             dst.intervalTicks = src.intervalTicks;
             dst.startDelayTicks = src.startDelayTicks;
             dst.lowerHealthPercent = src.lowerHealthPercent;
@@ -665,30 +673,70 @@ public final class AiProfile {
         org.bukkit.configuration.ConfigurationSection trSec = s.getConfigurationSection("triggers");
         if (trSec == null) return;
         for (String event : trSec.getKeys(false)) {
+            Object raw = trSec.get(event);
+            if (raw instanceof Iterable<?> items) {
+                int variant = 0;
+                for (Object item : items) {
+                    if (item instanceof Map<?, ?> values) {
+                        putTrigger(event, variant++, triggerSpec(values));
+                    }
+                }
+                continue;
+            }
             var evSec = trSec.getConfigurationSection(event);
             if (evSec == null) continue;
-            TriggerSpec spec = new TriggerSpec();
-            spec.require.addAll(evSec.getStringList("require"));
-            spec.actions.addAll(evSec.getStringList("do"));
-            // 周期字段只对 on-timer 有意义，但这里不做条件判断：
-            // 让写在 on-damage 下的 interval 也照读，写错时由 /helstera check 提示，
-            // 而不是在加载期静默丢弃一个作者认为生效了的参数。
-            spec.intervalTicks = readTicks(evSec.get("interval"), 20);
-            spec.startDelayTicks = readTicks(evSec.get("start-delay"), 0);
-            // on-lower-health 的阈值单列：读百分数（50 / 50%），缺省 50。
-            // 越界值按 0..100 夹取而不是丢弃——写了 200 的作者本意是「永不触发」，
-            // 而静默丢弃会让他以为阈值生效了。
-            spec.lowerHealthPercent = readPercent(evSec.get("health-below"),
-                    spec.lowerHealthPercent);
-            spec.sync = evSec.getBoolean("sync", false);
-            // Store the canonical key used by SkillTriggers.  Keeping an alias such
-            // as onSpawn in the map makes it pass the catalog check but never dispatch.
-            SkillTrigger parsed = SkillTrigger.of(event);
-            String key = parsed == null
-                    ? event.trim().toLowerCase(java.util.Locale.ROOT)
-                    : parsed.configName();
-            this.triggers.put(key, spec);
+            putTrigger(event, null, triggerSpec(evSec));
         }
+    }
+
+    private void putTrigger(String event, Integer variant, TriggerSpec spec) {
+        if (spec == null) return;
+        SkillTrigger parsed = SkillTrigger.of(event);
+        String canonical = parsed == null
+                ? event.trim().toLowerCase(java.util.Locale.ROOT)
+                : parsed.configName();
+        // A list of on-signal variants needs independent action sets. The suffix is
+        // an internal key; SkillTrigger.of accepts it for diagnostics and routing.
+        String key = variant != null && parsed == SkillTrigger.ON_SIGNAL
+                ? canonical + "#" + variant : canonical;
+        this.triggers.put(key, spec);
+    }
+
+    private static TriggerSpec triggerSpec(ConfigurationSection evSec) {
+        TriggerSpec spec = new TriggerSpec();
+        spec.require.addAll(stringOrList(evSec, "require"));
+        spec.actions.addAll(stringOrList(evSec, "do"));
+        spec.signal = trimToNull(evSec.getString("signal"));
+        spec.intervalTicks = readTicks(evSec.get("interval"), 20);
+        spec.startDelayTicks = readTicks(evSec.get("start-delay"), 0);
+        spec.lowerHealthPercent = readPercent(evSec.get("health-below"), spec.lowerHealthPercent);
+        spec.sync = evSec.getBoolean("sync", false);
+        return spec;
+    }
+
+    private static TriggerSpec triggerSpec(Map<?, ?> values) {
+        TriggerSpec spec = new TriggerSpec();
+        spec.require.addAll(stringList(values.get("require")));
+        spec.actions.addAll(stringList(values.get("do")));
+        Object signal = values.get("signal");
+        spec.signal = trimToNull(signal == null ? null : String.valueOf(signal));
+        spec.intervalTicks = readTicks(values.get("interval"), 20);
+        spec.startDelayTicks = readTicks(values.get("start-delay"), 0);
+        spec.lowerHealthPercent = readPercent(values.get("health-below"), spec.lowerHealthPercent);
+        Object sync = values.get("sync");
+        spec.sync = sync instanceof Boolean b ? b : sync != null && Boolean.parseBoolean(String.valueOf(sync));
+        return spec;
+    }
+
+    private static List<String> stringList(Object raw) {
+        if (raw == null) return List.of();
+        if (raw instanceof String value) return List.of(value);
+        if (raw instanceof Iterable<?> values) {
+            List<String> out = new ArrayList<>();
+            for (Object value : values) if (value != null) out.add(String.valueOf(value));
+            return out;
+        }
+        return List.of(String.valueOf(raw));
     }
 
     /**

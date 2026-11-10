@@ -4589,7 +4589,7 @@ public final class SkillExtras {
                     return ctx -> {
                         if (name.isEmpty() || !ctx.instanceValid()) return;
                         int id = ctx.instance().instanceId();
-                        SkillSignals.global().emit(globalScope ? null : id, name, payload);
+                        SkillSignals.global().emit(globalScope ? null : id, id, name, payload);
                     };
                 }),
 
