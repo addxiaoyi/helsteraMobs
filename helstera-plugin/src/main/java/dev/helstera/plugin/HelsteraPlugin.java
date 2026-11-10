@@ -1309,8 +1309,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (armorProbeId > 0) instances().despawn(armorProbeId);
                 }
 
+                if (mobConfig("armor_toughness_probe") != null) {
+                    int armorToughnessProbeId = spawnMobAt("armor_toughness_probe",
+                            origin.clone().add(13, 0, 0), null);
+                    var armorToughnessProbe = armorToughnessProbeId > 0
+                            ? instances().impl(armorToughnessProbeId) : null;
+                    var armorToughnessEntity = armorToughnessProbe == null
+                            ? null : armorToughnessProbe.baseEntity().orElse(null);
+                    var armorToughnessAttribute = armorToughnessEntity instanceof org.bukkit.entity.LivingEntity living
+                            ? living.getAttribute(resolveAttribute("ARMOR_TOUGHNESS")) : null;
+                    double observedArmorToughness = armorToughnessAttribute == null
+                            ? Double.NaN : armorToughnessAttribute.getBaseValue();
+                    boolean armorToughnessOptions = Math.abs(observedArmorToughness - 4.0) < 1.0e-9;
+                    getLogger().info("[自检] armor-toughness-options result=" + armorToughnessOptions
+                            + " base=" + observedArmorToughness);
+                    if (armorToughnessProbeId > 0) instances().despawn(armorToughnessProbeId);
+                }
+
                 if (mobConfig("entity_flags_probe") != null) {
-                    int entityFlagsProbeId = spawnMobAt("entity_flags_probe", origin.clone().add(13, 0, 0), null);
+                    int entityFlagsProbeId = spawnMobAt("entity_flags_probe", origin.clone().add(14, 0, 0), null);
                     var entityFlagsProbe = entityFlagsProbeId > 0 ? instances().impl(entityFlagsProbeId) : null;
                     var entityFlagsEntity = entityFlagsProbe == null ? null
                             : entityFlagsProbe.baseEntity().orElse(null);
@@ -21104,6 +21121,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     cfg.getDouble("attack-damage", Double.NaN)));
             applyBaseAttribute(ent, "ARMOR", cfg.getDouble("mob.armor",
                     cfg.getDouble("armor", Double.NaN)));
+            applyBaseAttribute(ent, "ARMOR_TOUGHNESS", cfg.getDouble("mob.armor-toughness",
+                    cfg.getDouble("armor-toughness", Double.NaN)));
             ent.setCustomNameVisible(opts.showName());
             if (ent instanceof org.bukkit.entity.Mob mobEntity) {
                 mobEntity.setAware(!entitySec.getBoolean("no-ai", opts.noAi()));

@@ -53,6 +53,11 @@
       "status": "passed"
     },
     {
+      "id": "armorToughnessOptions",
+      "status": "passed",
+      "requiredObservation": "armor-toughness-options result=true base=4.0"
+    },
+    {
       "id": "armorStand",
       "status": "passed"
     },

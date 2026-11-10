@@ -2,9 +2,26 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-last-damager-strict-20261110-r1` passes all
+Latest strict fixture `srv-paper-armor-toughness-strict-20261110-r1` passes all
+421 release probes (402 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Latest strict report has 421 probes, zero incomplete. Its `armorToughnessOptions` evidence verifies
+imported `Options.ArmorToughness` maps to `mob.armor-toughness`, applies to a
+real Zombie's Bukkit `ARMOR_TOUGHNESS` attribute, and reads back
+`armor-toughness-options result=true base=4.0`. Report:
+`tools/paper-integration/reports/paper-1.21.1-armor-toughness-strict-20261110-r1.json`
+(SHA-256 `647608055e860dee803ca183cbd5bd9ee646c2e26b094ad88a5a90d917ac0692`).
+Compressed server log SHA-256:
+`d6a432e8061682a597c0dbd081cf9654c1d63b59118cc451fdca28f10d83baac`.
+Client log archive SHA-256:
+`9ea4ff119d797916c1a31df478422b6d52d552ebc43b8c843d4733850312e0b1`.
+Plugin SHA-256:
+`d9964898008c68a2e9a91dd33399c28e24a2ec3b53b8aeb0a6691cc3dcc28c44`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-last-damager-strict-20261110-r1` passes all
 419 release probes (400 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. Latest strict report has 419 probes, zero incomplete. Its `lastDamagerTargeter` evidence verifies
+incomplete) on Paper 1.21.1-133. Its `lastDamagerTargeter` evidence verifies
 direct living attackers, projectile shooters, environmental-damage rejection,
 removed-attacker rejection, and imported `LastDamager` normalization. Report:
 `tools/paper-integration/reports/paper-1.21.1-last-damager-targeter-strict-20261110-r1.json`
@@ -1122,7 +1139,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-last-damager-strict-20261110-r1` has 419 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-armor-toughness-strict-20261110-r1` has 421 probes (402 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1138,8 +1155,8 @@ This is a partial parity release. The matrix currently has `34`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 546 cited IDs; 454 report files; 4 directories
-   without reports; 88 missing directories; 225 archived release reports. The
+   Current fixture inventory: 548 cited IDs; 456 report files; 4 directories
+   without reports; 88 missing directories; 227 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1378,6 +1395,7 @@ the entire MythicMobs feature catalog.
 - Mythic `Options.FollowRange` now applies the migrated `mob.sight-radius` value to Bukkit `FOLLOW_RANGE`; strict fixture `srv-paper-integration-follow-range-20261031-r9` reads back `base=40.0` from `mobs/follow_range_probe.yml`.
 - Mythic `Options.Damage` now applies the migrated `mob.attack-damage` value to Bukkit `ATTACK_DAMAGE`; strict fixture `srv-paper-integration-damage-20261031-r10` reads back `base=12.0` from `mobs/damage_probe.yml`.
 - Mythic root `Armor` now applies the migrated `mob.armor` value to Bukkit `ARMOR`; strict fixture `srv-paper-integration-armor-20261031-r11` reads back `base=8.0` from `mobs/armor_probe.yml`.
+- Mythic `Options.ArmorToughness` now applies the migrated `mob.armor-toughness` value to Bukkit `ARMOR_TOUGHNESS`; strict fixture `srv-paper-armor-toughness-strict-20261110-r1` reads back `base=4.0` from `mobs/armor_toughness_probe.yml`.
 - Entity option configuration now has strict real-entity coverage for `NoAI`, `Invincible`, `Silent`, `Gravity`, and `Collidable`; fixture `srv-paper-integration-entity-flags-20261031-r12` reads back all five configured states.
 - Mythic root `Exp` now maps to an explicit mob death-experience override, including fixed and ranged `drops.experience*` values; strict fixture `srv-paper-integration-exp-20261031-r16` records `exp-options result=true experience=13 event=true`.
 - Natural Mythic mob death now has separate strict Paper evidence: `srv-paper-exp-natural-death-20261101-r3` applies real Bukkit damage to a managed Zombie, observes its death and 13 spawned experience points, and passes the complete 255-probe report with zero incomplete probes. The synthetic `EntityDeathEvent` probe remains separate.

@@ -1095,6 +1095,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         mapScalar(mob, "display", srcFile, entries, target, "mob.display-name");
         mapScalar(mob, "speed", srcFile, entries, target, "mob.move-speed");
         mapScalar(mob, "armor", srcFile, entries, target, "mob.armor");
+        mapScalar(mob, "armortoughness", srcFile, entries, target, "mob.armor-toughness");
         mapScalar(mob, "followrange", srcFile, entries, target, "mob.sight-radius");
         mapScalar(mob, "exp", srcFile, entries, target, "mob.exp");
         mapScalar(mob, "level", srcFile, entries, target, "mob.level");

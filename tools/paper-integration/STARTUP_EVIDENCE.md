@@ -1,20 +1,36 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-target-of-target-strict-20261110-r1` passed the full
-strict gate on Paper 1.21.1-133: 420 registered probes, 401 passed, 19
-expected rejections, and zero failed or incomplete. Its `targetOfTargetTargeter`
-probe verifies the active Mob target's living target, separator aliases,
-non-Mob rejection, missing-target rejection, and removed-target rejection. Report:
-[paper-1.21.1-target-of-target-strict-20261110-r1.json](reports/paper-1.21.1-target-of-target-strict-20261110-r1.json), SHA-256:
-`5c1f7a26e05ae6f7916edbc32dbec3578fe8421151ec4ed0ce1a2b127de08931`.
+Latest fixture `srv-paper-armor-toughness-strict-20261110-r1` passed the full
+strict gate on Paper 1.21.1-133: 421 registered probes, 402 passed, 19
+expected rejections, and zero failed or incomplete. Its `armorToughnessOptions`
+probe verifies imported `Options.ArmorToughness` maps to `mob.armor-toughness`,
+applies to a real Zombie's Bukkit `ARMOR_TOUGHNESS` attribute, and reads back
+`armor-toughness-options result=true base=4.0`. Report:
+[paper-1.21.1-armor-toughness-strict-20261110-r1.json](reports/paper-1.21.1-armor-toughness-strict-20261110-r1.json), SHA-256:
+`647608055e860dee803ca183cbd5bd9ee646c2e26b094ad88a5a90d917ac0692`.
 Compressed server log SHA-256:
-`c46f1ea02166a76bcad00e24c0e6938a115fe02da57611b4c5f913aded03e272`.
+`d6a432e8061682a597c0dbd081cf9654c1d63b59118cc451fdca28f10d83baac`.
 Client log archive SHA-256:
-`d21860769abb9c604830033440f597eb86f59850d6177791eb075e4f65538799`.
+`9ea4ff119d797916c1a31df478422b6d52d552ebc43b8c843d4733850312e0b1`.
 Plugin SHA-256:
-`bfd1679b795176965f0d44b8fe9e1a9c38e3a561c042bee4c03817aba0e2641d`.
+`d9964898008c68a2e9a91dd33399c28e24a2ec3b53b8aeb0a6691cc3dcc28c44`.
 Archived logs redact web token query values; the source fixture retains the
 original run logs.
+
+Previous strict fixture `srv-paper-target-of-target-strict-20261110-r1` passes all
+420 probes (401 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `targetOfTargetTargeter` probe verifies the active Mob
+target's living target, separator aliases, non-Mob rejection, missing-target
+rejection, and removed-target rejection. Report:
+`reports/paper-1.21.1-target-of-target-strict-20261110-r1.json`;
+server log:
+`reports/paper-1.21.1-target-of-target-strict-20261110-r1.log.gz`;
+client logs:
+`reports/paper-1.21.1-target-of-target-strict-20261110-r1-client-logs.tar.gz`.
+Report SHA-256: `5c1f7a26e05ae6f7916edbc32dbec3578fe8421151ec4ed0ce1a2b127de08931`;
+server log SHA-256: `c46f1ea02166a76bcad00e24c0e6938a115fe02da57611b4c5f913aded03e272`;
+client log SHA-256: `d21860769abb9c604830033440f597eb86f59850d6177791eb075e4f65538799`;
+plugin SHA-256: `bfd1679b795176965f0d44b8fe9e1a9c38e3a561c042bee4c03817aba0e2641d`.
 
 Previous fixture `srv-paper-last-damager-strict-20261110-r1` passed the full
 strict gate with 419 registered probes and remains archived below and in
