@@ -1409,6 +1409,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapEntityScopedOption(options, srcFile, entries, target, "FallingBlockCancelDrop",
                     "entity.falling-block-cancel-drop", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.FallingBlock.class);
+            boolean boatTypeHandled = mapBoatTypeOption(options, srcFile, entries, target, normalizedType);
             Map<String, Object> leftover = new LinkedHashMap<>(options.getValues(true));
             for (String mapped : List.of("FollowRange", "MovementSpeed", "KnockbackResistance", "MaxCombatDistance",
                     "Despawn", "Health", "Damage", "RangedAttack", "RangedAttackRange", "ProjectileSpeed",
@@ -1420,6 +1421,10 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "Gravity", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
                     "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "Tamed", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop")) {
                 removeIgnoreCase(leftover, mapped);
+            }
+            if (boatTypeHandled) {
+                removeIgnoreCase(leftover, "BoatType");
+                removeIgnoreCase(leftover, "Type");
             }
             if (preventConversionMapped) removeIgnoreCase(leftover, "PreventConversion");
             if (reviveHealthMapped) removeIgnoreCase(leftover, "ReviveHealth");
@@ -4952,6 +4957,69 @@ public final class MythicMobsImporter implements MigrationImporter {
             return;
         }
         mapOption(options, srcFile, entries, target, optionName, path);
+    }
+
+    private boolean mapBoatTypeOption(ConfigurationSection options, String srcFile,
+                                      List<Map<String, Object>> entries, YamlConfiguration target,
+                                      String normalizedType) {
+        String boatTypeKey = findKeyIgnoreCase(options, "BoatType");
+        String typeKey = findKeyIgnoreCase(options, "Type");
+        boolean boat = false;
+        try {
+            Class<? extends org.bukkit.entity.Entity> entityClass = normalizedType == null ? null
+                    : org.bukkit.entity.EntityType.valueOf(normalizedType).getEntityClass();
+            boat = entityClass != null && org.bukkit.entity.Boat.class.isAssignableFrom(entityClass);
+        } catch (IllegalArgumentException ignored) {
+            // Invalid entity IDs are already reported by the main Type mapper.
+        }
+        if (boatTypeKey == null && (!boat || typeKey == null)) return false;
+
+        LinkedHashMap<String, Object> rawValues = new LinkedHashMap<>();
+        LinkedHashMap<String, String> normalizedValues = new LinkedHashMap<>();
+        if (boatTypeKey != null) {
+            Object raw = options.get(boatTypeKey);
+            rawValues.put(boatTypeKey, raw);
+            normalizedValues.put(boatTypeKey, normalizeBoatType(raw));
+        }
+        if (boat && typeKey != null) {
+            Object raw = options.get(typeKey);
+            rawValues.put(typeKey, raw);
+            normalizedValues.put(typeKey, normalizeBoatType(raw));
+        }
+
+        boolean valid = normalizedValues.values().stream().allMatch(java.util.Objects::nonNull);
+        boolean aliasesAgree = normalizedValues.values().stream().distinct().count() <= 1;
+        if (!boat || !valid || !aliasesAgree) {
+            for (Map.Entry<String, Object> value : rawValues.entrySet()) {
+                String targetPath = "entity.unsupported.Options." + value.getKey();
+                target.set(targetPath, value.getValue());
+                String reason = !boat
+                        ? "Boat type options only apply to Bukkit Boat and ChestBoat entities."
+                        : !valid
+                        ? "Value is not a supported Bukkit boat type; it was preserved and not applied."
+                        : "BoatType and Type aliases conflict; both values were preserved and not applied.";
+                note(entries, srcFile, "Options." + value.getKey(), targetPath, value.getValue(),
+                        "unsupported", reason, "WARN");
+            }
+            return boatTypeKey != null || boat;
+        }
+
+        String canonical = normalizedValues.values().iterator().next();
+        target.set("entity.boat-type", canonical);
+        for (String sourceKey : normalizedValues.keySet()) {
+            note(entries, srcFile, "Options." + sourceKey, "entity.boat-type", canonical,
+                    "mapped", "Mythic boat type was normalized to the Bukkit boat variant.");
+        }
+        return true;
+    }
+
+    private static String normalizeBoatType(Object raw) {
+        if (!(raw instanceof String text) || text.isBlank()) return null;
+        try {
+            return org.bukkit.entity.Boat.Type.valueOf(text.trim().toUpperCase(Locale.ROOT)).name();
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     private static Class<? extends org.bukkit.entity.Entity> resolveEntityClass(String entityTypeName) {

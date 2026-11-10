@@ -4992,6 +4992,55 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic boat type aliases map only to boats and preserve invalid or conflicting values")
+    void mythicMapsBoatTypeAliasesAndPreservesInvalidValues(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/boat-options.yml", """
+                mobs:
+                  spruce_boat:
+                    Type: BOAT
+                    Options:
+                      BoatType: spruce
+                  bamboo_chest_boat:
+                    Type: CHEST_BOAT
+                    Options:
+                      Type: bamboo
+                  wrong_entity:
+                    Type: ZOMBIE
+                    Options:
+                      BoatType: CHERRY
+                  invalid_boat:
+                    Type: BOAT
+                    Options:
+                      BoatType: NOT_A_BOAT
+                  conflicting_aliases:
+                    Type: BOAT
+                    Options:
+                      BoatType: SPRUCE
+                      Type: BAMBOO
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        assertEquals("SPRUCE", convertedMob(entries, "spruce_boat").getString("entity.boat-type"));
+        assertEquals("BAMBOO", convertedMob(entries, "bamboo_chest_boat").getString("entity.boat-type"));
+        var wrongEntity = convertedMob(entries, "wrong_entity");
+        assertEquals("CHERRY", wrongEntity.getString("entity.unsupported.Options.BoatType"));
+        assertFalse(wrongEntity.contains("entity.boat-type"));
+        var invalidBoat = convertedMob(entries, "invalid_boat");
+        assertEquals("NOT_A_BOAT", invalidBoat.getString("entity.unsupported.Options.BoatType"));
+        assertFalse(invalidBoat.contains("entity.boat-type"));
+        var conflict = convertedMob(entries, "conflicting_aliases");
+        assertEquals("SPRUCE", conflict.getString("entity.unsupported.Options.BoatType"));
+        assertEquals("BAMBOO", conflict.getString("entity.unsupported.Options.Type"));
+        assertFalse(conflict.contains("entity.boat-type"));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "Options.Type".equals(entry.get("source-key"))
+                && "entity.boat-type".equals(entry.get("target-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "Options.BoatType".equals(entry.get("source-key"))
+                && "WARN".equals(entry.get("severity"))));
+    }
+
+    @Test
     @DisplayName("Mythic Cat options map type, sitting, and collar color")
     void mythicMapsCatOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/cat-options.yml", """

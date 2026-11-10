@@ -51,23 +51,24 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-template-inheritance-strict-20261110-r1`
-passes all 424 probes (405 passed, 19 expected rejections, zero failed or
-incomplete) on Paper 1.21.1-133. Its `templateTypeImported` probe verifies
-direct and transitive Mythic `TemplateType` matching and live mob inheritance:
-inherited health and `NoAI`, top-level `Exclude` removal of inherited options,
-and preservation of child-owned values. Missing, ambiguous, malformed, and
-cyclic template references fail closed during import. Report:
-[`paper-1.21.1-template-inheritance-strict-20261110-r1.json`](reports/paper-1.21.1-template-inheritance-strict-20261110-r1.json)
-(SHA-256 `52b598ed79d7b81df896a247b20e8a683c25c2c55b99d7dd0fd7dea1f04fb9c0`);
+Latest strict fixture `srv-paper-boat-options-strict-20261110-r1` passes all
+425 probes (406 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its `boatOptionsImported` probe reads back SPRUCE for an
+imported Boat, OAK for its control, and BAMBOO for a ChestBoat. Wrong-entity,
+invalid-variant, and conflicting-alias values remain preserved. Report:
+[`paper-1.21.1-boat-options-strict-20261110-r1.json`](reports/paper-1.21.1-boat-options-strict-20261110-r1.json)
+(SHA-256 `84d40706def0462014e2919d846a0feb1cd5a723d08ebe06b9b6290b411c7b4c`);
 compressed server log SHA-256 is
-`fc301dfc61fbabae922a37717537945f423338f5ab9fdb550a36d14ef9f74e4d`, client
+`5c6f18da998fdae14375019f996dad9311b8111835af6ca4729fa8a66e544601`, client
 log archive SHA-256 is
-`04b05f0bf7a602e10a323fb043ff2c2ad7e51b23962d42354edb1dc1d02b3926`, and
+`6da8c31d86769119b73177da7a14961085569ab5f4435ca60058af22b721eac1`, and
 plugin SHA-256 is
-`5679377756d4c7876bb3a35fd1c84135ab006a99fbf2e25aff0a11e5a097251f`. Archived
-logs redact web-token query values. The previous TemplateType-only run remains
-in the release evidence archive.
+`06698a7145d6cfa547eef3bffe4c53dc474b9d0f1ddb12eca7d9134b38d3ac3a`. Archived
+logs redact web-token query values. The preceding strict fixture
+`srv-paper-template-inheritance-strict-20261110-r1` verified direct and
+transitive `TemplateType` matching and live inheritance of health and `NoAI`,
+including top-level `Exclude` behavior; its report and hashes remain in the
+release evidence archive.
 
 Previous strict fixture `srv-paper-target-fluids-import-strict-20261110-r2`
 passed all 423 probes; its report and logs remain indexed in

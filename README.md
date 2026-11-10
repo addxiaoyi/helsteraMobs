@@ -2,6 +2,15 @@
 
 ## MythicMobs Parity Development Status (2026-11-10)
 
+Mythic Boat and ChestBoat variants now import from `Options.BoatType` or its
+documented `Options.Type` alias and apply through the production spawn path.
+Wrong entity types, invalid values, and conflicting aliases remain preserved
+with migration warnings. Strict Paper fixture
+`srv-paper-boat-options-strict-20261110-r1` verifies Spruce Boat and Bamboo
+ChestBoat readback plus negative controls in all 425 release probes on Paper
+1.21.1-133. See the [strict report](tools/paper-integration/reports/paper-1.21.1-boat-options-strict-20261110-r1.json)
+and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+
 MythicMobs 5.9 named item-group cooldowns now import with strict validation
 and run through Paper's named `UseCooldown` API on Paper 1.21.4+. A real player
 connected to Paper 1.21.4-232 and the focused self-test verified setting,
@@ -1279,7 +1288,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-template-inheritance-strict-20261110-r1` has 424 probes (405 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-boat-options-strict-20261110-r1` has 425 probes (406 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1292,11 +1301,13 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-10). The full remaining work is:
 
+Latest strict report has 425 probes, zero incomplete.
+
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 561 cited IDs; 469 report files; 4 directories
-   without reports; 88 missing directories; 239 archived release reports. The
+   Current fixture inventory: 562 cited IDs; 470 report files; 4 directories
+   without reports; 88 missing directories; 241 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

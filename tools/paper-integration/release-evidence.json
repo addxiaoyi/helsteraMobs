@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-boat-options-strict-20261110-r1",
+    "reportFixtureDirectory": "srv-paper-boat-options-strict-20261110-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-boat-options-strict-20261110-r1.json",
+    "reportSha256": "84d40706def0462014e2919d846a0feb1cd5a723d08ebe06b9b6290b411c7b4c",
+    "log": "tools/paper-integration/reports/paper-1.21.1-boat-options-strict-20261110-r1.log.gz",
+    "logSha256": "5c6f18da998fdae14375019f996dad9311b8111835af6ca4729fa8a66e544601",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-boat-options-strict-20261110-r1-client-logs.tar.gz",
+    "clientLogSha256": "6da8c31d86769119b73177da7a14961085569ab5f4435ca60058af22b721eac1",
+    "pluginSha256": "06698a7145d6cfa547eef3bffe4c53dc474b9d0f1ddb12eca7d9134b38d3ac3a",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-template-inheritance-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-template-inheritance-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-template-inheritance-strict-20261110-r1.json",

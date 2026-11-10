@@ -956,6 +956,11 @@
       "requiredObservation": "falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true"
     },
     {
+      "id": "boatOptionsImported",
+      "status": "passed",
+      "requiredObservationPattern": "^boat-options-imported result=true imported=true boat-type=SPRUCE control-type=OAK chest-type=BAMBOO wrong-type-preserved=true invalid-preserved=true conflict-preserved=true$"
+    },
+    {
       "id": "invulnerableCondition",
       "status": "passed",
       "requiredObservationPattern": "skill-actions .*invulnerable-condition=true .*invulnerable-aliases=true"

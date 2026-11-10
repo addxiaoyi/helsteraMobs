@@ -565,6 +565,21 @@ class MythicAgeOptionsTest {
         assertEquals(true, calls.get("setCancelDrop"));
     }
 
+    @Test
+    void appliesBoatTypeOnlyToBoatEntities() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var options = YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                boat-type: BAMBOO
+                """));
+
+        HelsteraPlugin.applyNonLivingEntityOptions(proxy(org.bukkit.entity.Boat.class, calls), options);
+        assertEquals(org.bukkit.entity.Boat.Type.BAMBOO, calls.get("setBoatType"));
+
+        calls.clear();
+        HelsteraPlugin.applyNonLivingEntityOptions(proxy(org.bukkit.entity.Zombie.class, calls), options);
+        assertFalse(calls.containsKey("setBoatType"));
+    }
+
     private static <T> T proxy(Class<T> type, Map<String, Object> calls) {
         return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
                 (proxy, method, args) -> {

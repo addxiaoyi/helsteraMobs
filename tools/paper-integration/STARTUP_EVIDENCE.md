@@ -1,21 +1,19 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-template-inheritance-strict-20261110-r1` passed the
-full strict gate on Paper 1.21.1-133: 424 registered probes, 405 passed, 19
-expected rejections, and zero failed or incomplete. Its `templateTypeImported`
-probe verifies direct and transitive template matching plus live mob
-inheritance of health and `NoAI`; top-level `Exclude` removes inherited
-options while preserving values declared by the child. Import rejects missing,
-ambiguous, malformed, and cyclic template references without applying partial
-inheritance. Plugin SHA-256:
-`5679377756d4c7876bb3a35fd1c84135ab006a99fbf2e25aff0a11e5a097251f`. Full
+Latest fixture `srv-paper-boat-options-strict-20261110-r1` passed the full
+strict gate on Paper 1.21.1-133: 425 registered probes, 406 passed, 19
+expected rejections, and zero failed or incomplete. Its
+`boatOptionsImported` probe reads back SPRUCE for an imported Boat, OAK for the
+control, and BAMBOO for a ChestBoat; wrong-entity, invalid-variant, and
+conflicting-alias values remain preserved. Plugin SHA-256:
+`06698a7145d6cfa547eef3bffe4c53dc474b9d0f1ddb12eca7d9134b38d3ac3a`. Full
 catalog report:
-[paper-1.21.1-template-inheritance-strict-20261110-r1.json](reports/paper-1.21.1-template-inheritance-strict-20261110-r1.json), SHA-256:
-`52b598ed79d7b81df896a247b20e8a683c25c2c55b99d7dd0fd7dea1f04fb9c0`.
+[paper-1.21.1-boat-options-strict-20261110-r1.json](reports/paper-1.21.1-boat-options-strict-20261110-r1.json), SHA-256:
+`84d40706def0462014e2919d846a0feb1cd5a723d08ebe06b9b6290b411c7b4c`.
 Compressed server log SHA-256:
-`fc301dfc61fbabae922a37717537945f423338f5ab9fdb550a36d14ef9f74e4d`.
+`5c6f18da998fdae14375019f996dad9311b8111835af6ca4729fa8a66e544601`.
 Client log archive SHA-256:
-`04b05f0bf7a602e10a323fb043ff2c2ad7e51b23962d42354edb1dc1d02b3926`.
+`6da8c31d86769119b73177da7a14961085569ab5f4435ca60058af22b721eac1`.
 Archived logs redact web-token query values.
 
 Focused exploratory fixture `paper-1.21.4-item-group-cooldown-exploratory-20261110`

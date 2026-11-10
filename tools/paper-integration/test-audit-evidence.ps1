@@ -92,6 +92,10 @@ try {
     if ($targetFluidProbe.Count -ne 1) { throw 'Synthetic release report must contain targetFluidConditions.' }
     $targetFluidProbe[0].observations = @(
         'target-fluids-delayed imported=true water=true lava=true invalid-preserved=true restored=true passed=true')
+    $fullReport.expectedProbeIds += 'boatOptionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'boatOptionsImported'; status = 'passed'; observations = @('boat-options-imported result=true imported=true boat-type=SPRUCE control-type=OAK chest-type=BAMBOO wrong-type-preserved=true invalid-preserved=true conflict-preserved=true')
+    }
     $fullReport.expectedProbeIds += 'serverNmsVersionCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'serverNmsVersionCondition'; status = 'passed'; observations = @('server-nms-version-condition imported=true positive=true alias-positive=true scalar-positive=true wrong-rejected=true default-rejected=true invalid-preserved=true passed=true')
