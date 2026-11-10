@@ -1,6 +1,22 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-on-kill-import-strict-20261109-r4` passed the full
+Latest fixture `srv-paper-imported-signal-strict-20261109-r3` passed the full strict gate on Paper 1.21.1-133:
+415 registered probes, 396 passed, 19 expected rejections, and zero failed or
+incomplete. Its imported `~onSignal` probe records wildcard and named selector
+routing, payload propagation, sender and `@trigger` context, payload
+placeholders, `last-signal`, and invalid-selector preservation. Report:
+[paper-1.21.1-imported-signal-strict-20261109-r3.json](reports/paper-1.21.1-imported-signal-strict-20261109-r3.json), SHA-256:
+`3345c7db2a19eef0c3248978dda4b6788740f07f616e3dea9f1073d38a7b260b`.
+Compressed server log SHA-256:
+`522013481ff241b2778b45956ef018c0d5f64daa69b55c41ba1face873957aff`.
+Client log archive SHA-256:
+`0d931326df2927909fee1a53bf43b2d758262c70708543e763f3e2fde612edc6`.
+Plugin SHA-256:
+`0ec52dbcd0622ac7f6460b3d70c66e6c83fd22edc3a8f545a5de3b34b94b30cb`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous fixture `srv-paper-on-kill-import-strict-20261109-r4` passed the full
 strict gate on Paper 1.21.1-133: 414 registered probes, 395 passed, 19
 expected rejections, and zero failed or incomplete. Its imported `~onKill` and
 `~onKillPlayer` probes record `imported=true`, `mapped=true`, real killer-side

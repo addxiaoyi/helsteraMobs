@@ -78,6 +78,7 @@ public final class Placeholders {
             case "caster" -> caster(ctx, field);
             case "target" -> target(ctx, field);
             case "skill" -> skill(ctx, dot < 0 ? "" : key.substring(dot + 1));
+            case "ctx" -> context(ctx, field);
             case "mob" -> caster(ctx, field);       // 兼容旧写法
             case "player" -> target(ctx, field);    // 公告里的 %player%
             default -> null;
@@ -202,10 +203,19 @@ public final class Placeholders {
         }
         field = normalizeField(field);
         if (field.equals("trigger") || field.equals("name")) return ctx.state();
+        if (field.equals("payload")) return ctx.payload().orElse(null);
         if (field.equals("health")) return fmt(ctx.healthRatio() * 100.0);
         if (field.equals("distance")) {
             return ctx.distanceToTarget() < 0 ? null : fmt(ctx.distanceToTarget());
         }
+        return null;
+    }
+
+    private static String context(BehaviorContext ctx, String field) {
+        if (ctx == null) return null;
+        field = normalizeField(field);
+        if (field.equals("payload")) return ctx.payload().orElse(null);
+        if (field.equals("state")) return ctx.state();
         return null;
     }
 
@@ -329,7 +339,8 @@ public final class Placeholders {
                 out.add(scope + "." + f);
             }
         }
-        out.addAll(List.of("caster.id", "caster.state", "caster.decisions",
+        out.addAll(List.of("skill.payload", "ctx.payload", "ctx.state",
+                "caster.id", "caster.state", "caster.decisions",
                 "random.1to10", "random.1to100", "random.percent"));
         return List.copyOf(out);
     }

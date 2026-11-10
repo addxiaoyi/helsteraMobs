@@ -979,6 +979,11 @@
       "requiredObservationPattern": "kill-trigger imported=true mapped=true natural=true .*victim-dead=true .*action-observed=true passed=true"
     },
     {
+      "id": "importedSignalTrigger",
+      "status": "passed",
+      "requiredObservationPattern": "imported-signal-trigger imported=true mapped=true generic=true selector=true payload=true sender=true trigger=true invalid-preserved=true last-signal=true passed=true"
+    },
+    {
       "id": "knockbackResistanceOptions",
       "status": "passed"
     },

@@ -38,7 +38,24 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-on-kill-import-strict-20261109-r4` passes all
+Latest strict fixture `srv-paper-imported-signal-strict-20261109-r3` passes all
+415 probes (396 passed, 19 expected rejections, zero failed or incomplete) on
+Paper 1.21.1-133. Its imported `~onSignal` probe verifies wildcard and named
+selectors, payload propagation, sender and `@trigger` context, payload
+placeholders, `last-signal`, and invalid-selector preservation. Report:
+`reports/paper-1.21.1-imported-signal-strict-20261109-r3.json`;
+server log:
+`reports/paper-1.21.1-imported-signal-strict-20261109-r3.log.gz`;
+client logs:
+`reports/paper-1.21.1-imported-signal-strict-20261109-r3-client-logs.tar.gz`.
+Report SHA-256: `3345c7db2a19eef0c3248978dda4b6788740f07f616e3dea9f1073d38a7b260b`;
+server log SHA-256: `522013481ff241b2778b45956ef018c0d5f64daa69b55c41ba1face873957aff`;
+client log SHA-256: `0d931326df2927909fee1a53bf43b2d758262c70708543e763f3e2fde612edc6`;
+plugin SHA-256: `0ec52dbcd0622ac7f6460b3d70c66e6c83fd22edc3a8f545a5de3b34b94b30cb`.
+Archived logs redact web token query values; the source fixture retains the
+original run logs.
+
+Previous strict fixture `srv-paper-on-kill-import-strict-20261109-r4` passes all
 414 probes (395 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. Latest strict report has 414 probes, zero incomplete. Its
 imported `~onKill` and `~onKillPlayer` probes verify `imported=true`,

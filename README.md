@@ -1,8 +1,27 @@
 # helsteraMobs
 
-## MythicMobs Parity Development Status (2026-11-09)
+## MythicMobs Parity Development Status (2026-11-10)
 
-Latest strict fixture `srv-paper-on-kill-import-strict-20261109-r4` passes all
+Latest strict fixture `srv-paper-imported-signal-strict-20261109-r3` passes all
+415 release probes (396 passed, 19 expected rejections, zero failed or
+incomplete) on Paper 1.21.1-133. Latest strict report has 415 probes, zero incomplete.
+Its imported `~onSignal` evidence records
+wildcard and named selector dispatch, payload propagation, sender and
+`@trigger` context, `<ctx.payload>`/`<skill.payload>` placeholders,
+`last-signal`, and preservation of invalid selectors. The fixture also retains
+all previously released trigger, mob-option, and spawner evidence; natural
+projectile and client-version timing remain open.
+Report:
+`tools/paper-integration/reports/paper-1.21.1-imported-signal-strict-20261109-r3.json`
+(SHA-256 `3345c7db2a19eef0c3248978dda4b6788740f07f616e3dea9f1073d38a7b260b`).
+Compressed server log SHA-256:
+`522013481ff241b2778b45956ef018c0d5f64daa69b55c41ba1face873957aff`.
+Client log archive SHA-256:
+`0d931326df2927909fee1a53bf43b2d758262c70708543e763f3e2fde612edc6`.
+Plugin SHA-256:
+`0ec52dbcd0622ac7f6460b3d70c66e6c83fd22edc3a8f545a5de3b34b94b30cb`.
+
+Previous strict fixture `srv-paper-on-kill-import-strict-20261109-r4` passes all
 414 release probes (395 passed, 19 expected rejections, zero failed or
 incomplete) on Paper 1.21.1-133. Latest strict report has 414 probes, zero incomplete.
 Its imported `~onKill` and `~onKillPlayer` evidence records
@@ -1037,7 +1056,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-on-kill-import-strict-20261109-r4` has 414 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-imported-signal-strict-20261109-r3` has 415 probes, zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1053,8 +1072,8 @@ This is a partial parity release. The matrix currently has `33`
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 540 cited IDs; 448 report files; 4 directories
-   without reports; 88 missing directories; 219 archived release reports. The
+   Current fixture inventory: 541 cited IDs; 449 report files; 4 directories
+   without reports; 88 missing directories; 220 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

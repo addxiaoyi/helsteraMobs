@@ -193,6 +193,8 @@ public enum SkillTrigger {
         String candidate = name.trim();
         int colon = candidate.indexOf(':');
         if (colon >= 0) candidate = candidate.substring(0, colon).trim();
+        int variant = candidate.indexOf('#');
+        if (variant >= 0) candidate = candidate.substring(0, variant).trim();
         String n = normalize(candidate);
         if (n.isEmpty()) return null;
         // Common Mythic aliases for the Bukkit item-consumption event.

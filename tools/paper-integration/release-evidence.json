@@ -1,4 +1,16 @@
 [{
+    "fixtureId": "srv-paper-imported-signal-strict-20261109-r3",
+    "reportFixtureDirectory": "srv-paper-imported-signal-strict-20261109-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-imported-signal-strict-20261109-r3.json",
+    "reportSha256": "3345c7db2a19eef0c3248978dda4b6788740f07f616e3dea9f1073d38a7b260b",
+    "log": "tools/paper-integration/reports/paper-1.21.1-imported-signal-strict-20261109-r3.log.gz",
+    "logSha256": "522013481ff241b2778b45956ef018c0d5f64daa69b55c41ba1face873957aff",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-imported-signal-strict-20261109-r3-client-logs.tar.gz",
+    "clientLogSha256": "0d931326df2927909fee1a53bf43b2d758262c70708543e763f3e2fde612edc6",
+    "pluginSha256": "0ec52dbcd0622ac7f6460b3d70c66e6c83fd22edc3a8f545a5de3b34b94b30cb",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-on-kill-import-strict-20261109-r4",
     "reportFixtureDirectory": "srv-paper-on-kill-import-strict-20261109-r4",
     "report": "tools/paper-integration/reports/paper-1.21.1-on-kill-import-strict-20261109-r4.json",

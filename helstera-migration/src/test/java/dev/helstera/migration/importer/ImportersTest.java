@@ -810,6 +810,41 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("MythicMobs：onSignal 过滤器映射为独立信号分支")
+    void mythicSignalTriggersKeepSelectorsAndGenericBranch(@TempDir Path root) throws Exception {
+        Path f = write(root, "Mobs/signals.yml", """
+                mobs:
+                  Receiver:
+                    Skills:
+                      - message{m=any signal} ~onSignal
+                      - message{m=phase two} ~onSignal:phase2
+                      - skill{s=PhaseThree} ~onSignal:phase3
+                      - 'message{m=bad} ~onSignal:phase-2'
+                      - 'message{m=empty} ~onSignal:'
+                      - '~onSignal:SignalReceiver'
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(f);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+
+        List<?> variants = target.getList("mob.triggers.on-signal");
+        assertNotNull(variants, "multiple signal selectors must remain separate branches");
+        assertEquals(3, variants.size());
+        assertEquals(null, ((Map<?, ?>) variants.get(0)).get("signal"));
+        assertEquals("phase2", ((Map<?, ?>) variants.get(1)).get("signal"));
+        assertEquals("phase3", ((Map<?, ?>) variants.get(2)).get("signal"));
+        assertEquals(List.of("message-target \"any signal\""),
+                ((Map<?, ?>) variants.get(0)).get("do"));
+        assertEquals(List.of("message-target \"phase two\""),
+                ((Map<?, ?>) variants.get(1)).get("do"));
+        assertEquals(List.of("skill{s=PhaseThree}"),
+                ((Map<?, ?>) variants.get(2)).get("do"));
+        assertEquals(List.of("message{m=bad} ~onSignal:phase-2",
+                        "message{m=empty} ~onSignal:", "~onSignal:SignalReceiver"),
+                target.getStringList("mob.unsupported.Skills"));
+    }
+
+    @Test
     void invalidReviveHealthIsPreserved(@TempDir Path root) throws Exception {
         Path f = write(root, "Mobs/revive.yml", "mobs:\n  Boss:\n    Options:\n      ReviveHealth: 0\n");
         var entries = new MythicMobsImporter().convert(f);

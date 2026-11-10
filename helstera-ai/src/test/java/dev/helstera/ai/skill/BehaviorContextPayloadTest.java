@@ -65,6 +65,15 @@ class BehaviorContextPayloadTest {
     }
 
     @Test
+    @DisplayName("payload placeholders expose the signal context")
+    void payloadPlaceholdersExposeContext() {
+        var c = ctx("PAYLOAD_TEXT");
+        assertEquals("PAYLOAD_TEXT", Placeholders.lookup("ctx.payload", c));
+        assertEquals("PAYLOAD_TEXT", Placeholders.lookup("skill.payload", c));
+        assertEquals("on-signal", Placeholders.lookup("ctx.state", c));
+    }
+
+    @Test
     @DisplayName("健康比与距离仍按原样保存")
     void otherFieldsPreserved() {
         var c = BehaviorContext.withPayload(null, null, 0.42, 7.5, 3, "on-signal", "x");
