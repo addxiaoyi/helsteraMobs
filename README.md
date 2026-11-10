@@ -1,15 +1,4 @@
-# helsteraMobs
-
-## MythicMobs Parity Development Status (2026-11-10)
-
-Latest strict fixture `srv-paper-armor-stand-options-strict-20261110-r1` verifies imported Mythic Armor Stand
-options through production mob spawning: arms, base plate, marker, size, movement,
-ticking, body armor, and hand equipment all read back as configured. Default
-controls also read back correctly, while wrong-entity options and malformed
-values remain preserved. The full 430-probe catalog (411 passed, 19 expected
-rejections) has zero failed or incomplete probes. See the [strict report](tools/paper-integration/reports/paper-1.21.1-armor-stand-options-strict-20261110-r1.json),
-[Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and
-[parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+Latest strict fixture `srv-paper-armor-stand-options-strict-20261110-r2` verifies imported Mythic Armor Stand options through production mob spawning: all six flags and all six equipment slots (`ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`, `ItemHead`, `ItemLegs`) read back as configured. Default controls also read back correctly, while wrong-entity options and malformed values remain preserved. The full 430-probe catalog (411 passed, 19 expected rejections) has zero failed or incomplete probes. See the [strict report](tools/paper-integration/reports/paper-1.21.1-armor-stand-options-strict-20261110-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
 Mythic Goat `Options.Screaming` now imports only for Goat entities and applies
 through `Goat#setScreaming`. Wrong-entity and malformed values remain preserved
@@ -1343,7 +1332,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-armor-stand-options-strict-20261110-r1` has 430 probes (411 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-armor-stand-options-strict-20261110-r2` has 430 probes (411 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1361,8 +1350,8 @@ Latest strict report has 430 probes, zero incomplete.
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 571 cited IDs; 479 report files; 4 directories
-   without reports; 88 missing directories; 250 archived release reports. The
+   Current fixture inventory: 572 cited IDs; 480 report files; 4 directories
+   without reports; 88 missing directories; 251 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1430,7 +1419,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
-- Mythic Armor Stand `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` options now import and apply on production-spawned Armor Stands. Paper reads back all six values, body armor and hand equipment, default controls, and preservation for wrong entity types and malformed values in strict fixture `srv-paper-armor-stand-options-strict-20261110-r1`.
+- Mythic Armor Stand `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` options now import and apply on production-spawned Armor Stands. Paper reads back all six flags and the `ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`, `ItemHead`, and `ItemLegs` equipment slots, default controls, and preservation for wrong entity types and malformed values in strict fixture `srv-paper-armor-stand-options-strict-20261110-r2`.
 - Official Mythic [`Options.NoGravity`](https://wiki.mythiccraft.io/mythicmobs/Mobs/Options) maps to the inverse `entity.gravity` value for supported entities. Armor Stand-only `Options.HasGravity` maps directly; wrong-entity and malformed values remain preserved with migration warnings. `Options.Gravity` is not listed in the official options reference and remains unsupported-preserved. Importer tests and strict Paper fixture `srv-paper-gravity-scope-strict-20261110-r1` verify production readback and preservation boundaries in the complete 430-probe release catalog.
 - Official Iron Golem `Options.PlayerCreated` now maps to `entity.player-created` and applies through the production mob-spawn path. Importer/runtime coverage and strict Paper 1.21.1-133 fixture `srv-paper-player-created-strict-20261110-r1` verify real true/false Iron Golem state plus wrong-entity and malformed-value preservation; the full 429-probe release catalog passes with zero failed or incomplete. The broader Mob Options catalog remains open.
 - Imported Mythic `?targetInWater` and `?targetInLava` conditions now map to the target-specific runtime evaluators. Importer and runtime contract tests cover aliases, positive/negative fluid states, missing targets, and malformed arguments; the strict Paper 1.21.1-133 fixture `srv-paper-target-fluids-import-strict-20261110-r2` verifies live water/lava evaluation and block restoration in the full 423-probe catalog. Same-tick fluid-state reads remain a Paper cache-timing boundary; the complete Conditions catalog remains `mapped-unverified`.

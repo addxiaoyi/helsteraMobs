@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-armor-stand-options-strict-20261110-r2",
+    "reportFixtureDirectory": "srv-paper-armor-stand-options-strict-20261110-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-armor-stand-options-strict-20261110-r2.json",
+    "reportSha256": "8b28de85386dc89cbfcb059fa8e503b7f0591599942663f59e983d59e0597cc4",
+    "log": "tools/paper-integration/reports/paper-1.21.1-armor-stand-options-strict-20261110-r2.log.gz",
+    "logSha256": "06253c4cccfbd35c21d9df7a2063fe5d14d16c46ed3790b774bbd5f4e099ce8c",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-armor-stand-options-strict-20261110-r2-client-logs.tar.gz",
+    "clientLogSha256": "c6d6285990378124e5475f6241a1adcd795f6fca52efc74e91362f7cf75e2eea",
+    "pluginSha256": "ff6f2348a447f8c59a014eb72a383da7c67f3d903c06374565111502f89c3e54",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-armor-stand-options-strict-20261110-r1",
     "reportFixtureDirectory": "srv-paper-armor-stand-options-strict-20261110-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-armor-stand-options-strict-20261110-r1.json",

@@ -1,6 +1,19 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-armor-stand-options-strict-20261110-r1` passed the full strict gate on Paper 1.21.1-133:
+Latest fixture `srv-paper-armor-stand-options-strict-20261110-r2` passed the full strict gate on Paper 1.21.1-133:
+430 registered probes, 411 passed, 19 expected rejections, and zero failed or
+incomplete. The `armorStand` probe verifies all six imported Armor Stand flags
+and all six equipment slots (`ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`,
+`ItemHead`, `ItemLegs`), default controls, and wrong-entity/malformed-value
+preservation through production spawning. Plugin SHA-256: `ff6f2348a447f8c59a014eb72a383da7c67f3d903c06374565111502f89c3e54`. Report:
+[paper-1.21.1-armor-stand-options-strict-20261110-r2.json](reports/paper-1.21.1-armor-stand-options-strict-20261110-r2.json), SHA-256:
+`8b28de85386dc89cbfcb059fa8e503b7f0591599942663f59e983d59e0597cc4`. Compressed server log:
+[paper-1.21.1-armor-stand-options-strict-20261110-r2.log.gz](reports/paper-1.21.1-armor-stand-options-strict-20261110-r2.log.gz), SHA-256:
+`06253c4cccfbd35c21d9df7a2063fe5d14d16c46ed3790b774bbd5f4e099ce8c`. Client log archive:
+[paper-1.21.1-armor-stand-options-strict-20261110-r2-client-logs.tar.gz](reports/paper-1.21.1-armor-stand-options-strict-20261110-r2-client-logs.tar.gz), SHA-256:
+`c6d6285990378124e5475f6241a1adcd795f6fca52efc74e91362f7cf75e2eea`. Archived logs redact web-token query values.
+
+Previous fixture `srv-paper-armor-stand-options-strict-20261110-r1` passed the full strict gate on Paper 1.21.1-133:
 430 registered probes, 411 passed, 19 expected rejections, and zero failed or
 incomplete. The `armorStand` probe verifies all six imported Armor Stand flags,
 body and hand equipment, default controls, and wrong-entity/malformed-value
