@@ -1695,12 +1695,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && standEquipment.getItemInOffHand().getType() == org.bukkit.Material.SHIELD
                         && standEquipment.getHelmet().getType() == org.bukkit.Material.DIAMOND_HELMET
                         && standEquipment.getLeggings().getType() == org.bukkit.Material.DIAMOND_LEGGINGS;
+                boolean importedArmorStandOptions = runImportedArmorStandOptionsSelfTest(
+                        world, origin.clone().add(128, 0, 0));
+                boolean armorStandOptionsResult = stand.hasArms() && !stand.hasBasePlate()
+                        && stand.isMarker() && stand.isSmall() && !stand.canMove() && !stand.canTick()
+                        && armorStandItems && importedArmorStandOptions;
                 getLogger().info("[自检] armor-stand-options result="
-                        + (stand.hasArms() && !stand.hasBasePlate() && stand.isMarker() && stand.isSmall()
-                        && !stand.canMove() && !stand.canTick() && armorStandItems)
+                        + armorStandOptionsResult
                         + " can-move=" + stand.canMove()
                         + " can-tick=" + stand.canTick()
-                        + " items=" + armorStandItems);
+                        + " items=" + armorStandItems
+                        + " imported=" + importedArmorStandOptions);
 
                 runImportedCatOptionsSelfTest(world, origin.clone().add(6, 0, 0));
                 runImportedFoxOptionsSelfTest(origin.clone().add(7, 0, 0));
@@ -4767,6 +4772,193 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } catch (Throwable failure) {
             getLogger().warning("[自检] goat-options result=false imported=false error=" + failure);
         } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private boolean runImportedArmorStandOptionsSelfTest(org.bukkit.World world, Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            if (world == null || origin == null || origin.getWorld() != world) {
+                throw new IllegalArgumentException("Invalid Paper Armor Stand option probe world or origin");
+            }
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-armor-stand-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("armor-stand-options.yml");
+            String configuredId = "ImportedArmorStand_" + suffix;
+            String controlId = "ImportedArmorStandControl_" + suffix;
+            String wrongTypeId = "ImportedArmorStandWrongType_" + suffix;
+            String invalidId = "ImportedArmorStandInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ARMOR_STAND
+                        Options:
+                          HasArms: true
+                          HasBasePlate: false
+                          Marker: true
+                          Small: true
+                          CanMove: false
+                          CanTick: false
+                          ItemBody: DIAMOND_CHESTPLATE
+                          ItemFeet: DIAMOND_BOOTS
+                          ItemHand: DIAMOND_SWORD
+                          ItemOffhand: SHIELD
+                          ItemHead: DIAMOND_HELMET
+                          ItemLegs: DIAMOND_LEGGINGS
+                      %2$s:
+                        Type: ARMOR_STAND
+                        Options:
+                          HasArms: false
+                          HasBasePlate: true
+                          Marker: false
+                          Small: false
+                          CanMove: true
+                          CanTick: true
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          HasArms: true
+                      %4$s:
+                        Type: ARMOR_STAND
+                        Options:
+                          HasArms: maybe
+                          Marker: maybe
+                    """.formatted(configuredId, controlId, wrongTypeId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Armor Stand mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Armor Stand mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(configuredId, controlId, wrongTypeId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic Armor Stand option probe mobs were not all imported");
+            }
+
+            int[] spawned = new int[sourceIds.size()];
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnImportedMobDefaultsProbe(targetIds.get(sourceIds.get(i)),
+                        origin.clone().add(i * 3, 0, 0));
+                spawned[i] = instanceId;
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+            java.util.function.IntFunction<org.bukkit.entity.Entity> spawnedEntity = instanceId -> {
+                var instance = instanceId > 0 ? instances().impl(instanceId) : null;
+                return instance == null ? null : instance.baseEntity().orElse(null);
+            };
+            var configured = spawnedEntity.apply(spawned[0]) instanceof org.bukkit.entity.ArmorStand stand
+                    ? stand : null;
+            var control = spawnedEntity.apply(spawned[1]) instanceof org.bukkit.entity.ArmorStand stand
+                    ? stand : null;
+            var wrongType = spawnedEntity.apply(spawned[2]);
+
+            var configuredOptions = mobConfig(targetIds.get(configuredId));
+            var controlOptions = mobConfig(targetIds.get(controlId));
+            var wrongOptions = mobConfig(targetIds.get(wrongTypeId));
+            var invalidOptions = mobConfig(targetIds.get(invalidId));
+            var configuredEntityOptions = configuredOptions == null ? null
+                    : configuredOptions.getConfigurationSection("entity");
+            var controlEntityOptions = controlOptions == null ? null
+                    : controlOptions.getConfigurationSection("entity");
+            var wrongEntityOptions = wrongOptions == null ? null
+                    : wrongOptions.getConfigurationSection("entity");
+            var invalidEntityOptions = invalidOptions == null ? null
+                    : invalidOptions.getConfigurationSection("entity");
+            var wrongUnsupported = wrongEntityOptions == null ? null
+                    : wrongEntityOptions.getConfigurationSection("unsupported.Options");
+            var invalidUnsupported = invalidEntityOptions == null ? null
+                    : invalidEntityOptions.getConfigurationSection("unsupported.Options");
+
+            boolean imported = targetIds.size() == 4 && configuredEntityOptions != null
+                    && controlEntityOptions != null && wrongEntityOptions != null && invalidEntityOptions != null;
+            boolean configuredApplied = configured != null && configured.hasArms() && !configured.hasBasePlate()
+                    && configured.isMarker() && configured.isSmall() && !configured.canMove() && !configured.canTick()
+                    && configuredEntityOptions != null
+                    && configuredEntityOptions.getBoolean("armor-stand-arms")
+                    && !configuredEntityOptions.getBoolean("armor-stand-baseplate", true)
+                    && configuredEntityOptions.getBoolean("armor-stand-marker")
+                    && configuredEntityOptions.getBoolean("armor-stand-small")
+                    && !configuredEntityOptions.getBoolean("armor-stand-can-move", true)
+                    && !configuredEntityOptions.getBoolean("armor-stand-can-tick", true);
+            boolean controlsApplied = control != null && !control.hasArms() && control.hasBasePlate()
+                    && !control.isMarker() && !control.isSmall() && control.canMove() && control.canTick()
+                    && controlEntityOptions != null
+                    && !controlEntityOptions.getBoolean("armor-stand-arms", true)
+                    && controlEntityOptions.getBoolean("armor-stand-baseplate")
+                    && !controlEntityOptions.getBoolean("armor-stand-marker", true)
+                    && !controlEntityOptions.getBoolean("armor-stand-small", true)
+                    && controlEntityOptions.getBoolean("armor-stand-can-move")
+                    && controlEntityOptions.getBoolean("armor-stand-can-tick");
+            var equipment = configured == null ? null : configured.getEquipment();
+            boolean itemsApplied = equipment != null
+                    && equipment.getChestplate() != null
+                    && equipment.getChestplate().getType() == org.bukkit.Material.DIAMOND_CHESTPLATE
+                    && equipment.getItemInMainHand() != null
+                    && equipment.getItemInMainHand().getType() == org.bukkit.Material.DIAMOND_SWORD
+                    && equipment.getItemInOffHand() != null
+                    && equipment.getItemInOffHand().getType() == org.bukkit.Material.SHIELD;
+            boolean wrongTypePreserved = wrongType instanceof org.bukkit.entity.Zombie
+                    && wrongEntityOptions != null && !wrongEntityOptions.contains("armor-stand-arms")
+                    && wrongUnsupported != null && wrongUnsupported.getBoolean("HasArms");
+            boolean invalidPreserved = invalidEntityOptions != null
+                    && !invalidEntityOptions.contains("armor-stand-arms")
+                    && !invalidEntityOptions.contains("armor-stand-marker")
+                    && invalidUnsupported != null
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("HasArms"))
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("Marker"));
+            boolean result = imported && configuredApplied && controlsApplied && itemsApplied
+                    && wrongTypePreserved && invalidPreserved;
+            getLogger().info("[自检] armor-stand-options-imported result=" + result
+                    + " imported=" + imported
+                    + " configured=" + configuredApplied
+                    + " controls=" + controlsApplied
+                    + " item-body=" + (equipment != null && equipment.getChestplate() != null
+                            && equipment.getChestplate().getType() == org.bukkit.Material.DIAMOND_CHESTPLATE)
+                    + " item-hand=" + (equipment != null && equipment.getItemInMainHand() != null
+                            && equipment.getItemInMainHand().getType() == org.bukkit.Material.DIAMOND_SWORD)
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved);
+            return result;
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] armor-stand-options-imported result=false error=" + failure);
+            return false;
+        } finally {
+            for (int instanceId : instanceIds) {
+                try { instances().despawn(instanceId); } catch (RuntimeException ignored) { }
+            }
+            if (sourceRoot != null) {
+                try (var paths = Files.walk(sourceRoot)) {
+                    for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                } catch (IOException cleanupFailure) {
+                    getLogger().warning("Armor Stand option source cleanup failed=" + cleanupFailure);
+                }
+            }
+            for (Path mobFile : mobFiles) {
+                try { Files.deleteIfExists(mobFile); }
+                catch (IOException cleanupFailure) {
+                    getLogger().warning("Armor Stand option target cleanup failed=" + cleanupFailure);
+                }
+            }
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
     }

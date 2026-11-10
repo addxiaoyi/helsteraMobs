@@ -19,26 +19,19 @@ Version-gated behavior:
 
 Evidence baseline: 2026-11-10, Paper API 1.21.1-R0.1-SNAPSHOT.
 
-Latest strict release evidence: `srv-paper-gravity-scope-strict-20261110-r1`
-completes 430 probes on Paper 1.21.1-133 (411 passed, 19 observed expected
-rejections, zero failed or incomplete) with plugin SHA-256
-`e18a30a8c72b6e79e23bb7ebbf5c25c547d276091222d60e420ecbe3b1a37c80`. Its
-`noGravityImported` probe verifies both general `NoGravity` states,
-Armor Stand-only `HasGravity` true/false readback, malformed preservation, and
-wrong-entity handling; undocumented `Gravity` remains unsupported-preserved.
-The earlier `srv-paper-gravity-aliases-strict-20261110-r1` report is archived
-as superseded because its option scope did not match the official reference.
-`playerCreatedImported` verifies true/false Iron Golem
-states and wrong-entity/malformed-value preservation. The `importedMobDefaults`
-probe verifies the three documented global defaults, explicit precedence, and
-preservation of unsupported keys through Paper mob spawning. The
-`tameableOptionsImported` probe also confirms that unsupported global
-`Tameable` does not change the built-in false policy. The full-catalog report
-and redacted server/client logs are archived under
-`tools/paper-integration/reports`; paths and hashes are indexed in
-`tools/paper-integration/release-evidence.json`. The complete Conditions and
+Latest strict release evidence: `srv-paper-armor-stand-options-strict-20261110-r1` completes 430 probes on Paper
+1.21.1-133 (411 passed, 19 observed expected rejections, zero failed or
+incomplete) with plugin SHA-256 `17551be8a9046434ee5e9d1c0a850ada8a36af58c6c528ac5ba7261ebd6a700f`. The `armorStand` probe imports
+Mythic `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick`
+through production mob spawning; it reads back body/hand equipment and default
+controls and checks wrong-entity and malformed-value preservation. The full
+catalog report and redacted server/client logs are indexed in
+`tools/paper-integration/release-evidence.json`. Previous strict fixture
+`srv-paper-gravity-scope-strict-20261110-r1` verifies general `NoGravity`,
+Armor Stand-only `HasGravity`, malformed preservation, and unsupported
+`Gravity`; its `playerCreatedImported` and `importedMobDefaults` probes cover
+Iron Golem state and documented global defaults. The complete Conditions and
 Mob Options catalogs remain `mapped-unverified`.
-
 Previous strict release evidence: `srv-paper-goat-screaming-strict-20261110-r2`
 completed 427 probes (408 passed, 19 expected rejections) and verified imported
 Goat screaming state, its false control and default, and wrong-type/malformed
@@ -2730,6 +2723,7 @@ lava-tick timing and other uncovered natural-event paths remain open.
 | `Options.Size` | implemented-runtime | Fixed Mythic `Options.Size` and inclusive positive integer ranges migrate to `entity.size` or `entity.size-min`/`size-max`; Paper API confirms `MagmaCube extends Slime`, so the Slime setter covers both families. Strict Paper 1.21.1-133 fixture `srv-paper-entity-size-range-strict-20261107-r1` imports `2to5` configs and samples real Slime, MagmaCube, and Phantom entities 64 times each, with every observation in range and both endpoints reached. Invalid, reversed, and non-positive ranges remain preserved with warnings. |
 | `Options.PlayerCreated` (Iron Golem) | implemented-runtime | The importer maps this boolean only for Iron Golems to `entity.player-created`; production spawning applies it through `IronGolem#setPlayerCreated`. Importer/runtime tests and strict Paper fixture `srv-paper-player-created-strict-20261110-r1` verify true/false readback from real imported Iron Golems plus wrong-entity and malformed-value preservation in the complete 429-probe release catalog. |
 | `Options.NoGravity` | implemented-runtime | General `NoGravity` maps as the inverse of `entity.gravity`. Invalid values remain preserved with migration warnings. Importer tests cover true/false states and malformed preservation; strict Paper fixture `srv-paper-gravity-scope-strict-20261110-r1` verifies both states through production spawning in the complete 430-probe release catalog. |
+| Armor Stand options (`HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, `CanTick`) | implemented-runtime | The importer maps these flags only for Armor Stand entities and applies them during production mob spawning. Imported body armor and hand equipment are also read back. Wrong entity types and malformed values remain preserved with warnings. Strict Paper fixture `srv-paper-armor-stand-options-strict-20261110-r1` verifies all six values against defaults and checks equipment plus both preservation controls in the complete 430-probe release catalog. |
 | Armor Stand `Options.HasGravity` | implemented-runtime | The importer maps this Armor Stand-specific boolean directly to `entity.gravity`; other entity types retain the value under `entity.unsupported.Options.HasGravity` with a migration warning. Importer tests cover true/false values, wrong entity types, and malformed preservation. Strict Paper fixture `srv-paper-gravity-scope-strict-20261110-r1` verifies both states on real Armor Stands plus the wrong-type control through production spawning in the complete 430-probe release catalog. |
 | `Options.Gravity` | unsupported-preserved | `Gravity` is not listed in the [official MythicMobs Options reference](https://wiki.mythiccraft.io/mythicmobs/Mobs/Options), so the importer preserves it under `mob.unsupported.Options.Gravity` with a migration warning and does not apply it. Importer tests and strict Paper fixture `srv-paper-gravity-scope-strict-20261110-r1` cover valid-looking and malformed values. |
 | `Options.PreventSlimeSplit` | implemented-runtime | The importer maps the option to the managed entity policy and persists that policy through the instance lifecycle. Strict Paper 1.21.1-133 fixture `srv-paper-slime-natural-strict-20261107-r10` kills imported protected and control Slimes through Bukkit's native damage path: both parents die, the protected native `SlimeSplitEvent` is cancelled with zero children, and the control event remains uncancelled with real child Slimes. The fixture also verifies temporary mob-spawning state restoration; report probe `mobOptionsSlimeSplitNatural` is required by the release gate. |
@@ -2900,7 +2894,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
 | Rabbit Killer Bunny option | implemented-runtime | Official `Options.IsKillerBunny` and alias `Angry` map only for Rabbits; the runtime preserves explicit false and applies true after `RabbitType`. Wolf/Zombie Pigman `Angry` behavior remains mapped separately. Importer/plugin tests verify aliases, wrong types, invalid values, false values, and conflicts. Strict Paper fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` verifies real imported Killer Bunny, regular Rabbit, and `RabbitType` controls in the complete 409-probe catalog; conflicting aliases and wrong-entity/invalid values remain preserved. |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-gravity-scope-strict-20261110-r1` completes all 430 registered probes on Paper 1.21.1-133, including general `NoGravity` true/false readback, Armor Stand `HasGravity` true/false readback, wrong-entity and malformed preservation, undocumented `Gravity` preservation, imported Iron Golem `PlayerCreated` true/false, the supported `DefaultMobOptions` allowlist and unsupported-key preservation, and the `tameableOptionsImported` check that global `Tameable` is ignored. Previous Tameable and Goat fixtures verify their individual option paths; earlier strict fixtures verify Interaction dimensions/defaults, Boat/ChestBoat variants, imported `TemplateType` inheritance, and `?targetInWater`/`?targetInLava` aliases. The full Conditions and Mob Options catalogs, universal option ordering, complete Mythic catalog, and broader Paper/client-version semantics remain open. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json` |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-armor-stand-options-strict-20261110-r1` completes all 430 registered probes on Paper 1.21.1-133, including imported Armor Stand flags/equipment and invalid-input preservation, general `NoGravity`, Armor Stand `HasGravity`, unsupported `Gravity` preservation, imported Iron Golem `PlayerCreated`, the supported `DefaultMobOptions` allowlist, and ignored unsupported global `Tameable`. Previous fixtures cover Interaction dimensions/defaults, Boat/ChestBoat variants, imported `TemplateType`, and target-fluid aliases. The full Conditions and Mob Options catalogs, universal option ordering, complete Mythic catalog, and broader Paper/client-version semantics remain open. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json` |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.

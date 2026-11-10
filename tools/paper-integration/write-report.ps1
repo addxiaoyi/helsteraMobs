@@ -101,7 +101,7 @@ $probeSpecs = [ordered]@{
     tameableOptionsImported = 'tameable-options result=true imported=true allow-cancelled=false deny-cancelled=true default-cancelled=true invalid-cancelled=true unmanaged-cancelled=false wrong-type-preserved=true invalid-preserved=true global-default-ignored=true'
     foxOptionsImported = 'fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true'
     rabbitOptionsImported = 'rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN killer-type=THE_KILLER_BUNNY angry-type=THE_KILLER_BUNNY false-killer-type=SALT_AND_PEPPER wrong-type-preserved=true invalid-preserved=true conflict-preserved=true'
-    armorStand = 'armor-stand-options result=true .*can-move=false .*can-tick=false .*items=true'
+    armorStand = 'armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-hand=true wrong-type-preserved=true invalid-preserved=true'
     cat = 'cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED'
     fallingBlock = 'falling-block-options result=true'
     fallingBlockOptionsImported = 'falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true'

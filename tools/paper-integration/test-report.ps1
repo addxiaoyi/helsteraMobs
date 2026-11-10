@@ -213,6 +213,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-hand=true wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true can-join-raid=false patrol-leader=true patrol-spawn-point=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true',
@@ -583,6 +584,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'reinforcementsChanceOptions').status -eq 'passed') 'imported Zombie reinforcement chance and invalid-input evidence'
     Assert-True ($report.expectedProbeIds -contains 'reinforcementsChanceOptions') 'reinforcement chance probe is part of every report catalog'
     Assert-True (($report.probes | Where-Object id -eq 'ageOptions').status -eq 'passed') 'age options probe'
+    Assert-True (($report.probes | Where-Object id -eq 'armorStand').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'armorStand').observations[0] -match
+        '^armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-hand=true wrong-type-preserved=true invalid-preserved=true$') 'Armor Stand Mythic options require imported production Paper readback and preservation controls'
     Assert-True (($report.probes | Where-Object id -eq 'entityFlagOptions').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'entityFlagOptions').observations[0] -match
         '^entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true$') 'imported entity flag options require production Paper evidence'
@@ -1092,6 +1096,10 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogArmorStand = @($fullCatalogReport.probes | Where-Object id -eq 'armorStand')
+    Assert-True ($fullCatalogArmorStand.Count -eq 1) 'synthetic full catalog contains the Armor Stand options probe'
+    $fullCatalogArmorStand[0].observations = @(
+        'armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-hand=true wrong-type-preserved=true invalid-preserved=true')
     $fullCatalogInvulnerability = @($fullCatalogReport.probes | Where-Object id -eq 'invulnerableCondition')
     Assert-True ($fullCatalogInvulnerability.Count -eq 1) 'synthetic full catalog contains the invulnerability condition probe'
     $fullCatalogInvulnerability[0].observations = @(
@@ -2330,6 +2338,19 @@ try {
     } catch { $incompleteNoGravityRejected = $_.Exception.Message -match 'required observation for noGravityImported' }
     Assert-True $incompleteNoGravityRejected 'full release gate rejects incomplete imported NoGravity evidence'
     $fullCatalogNoGravity[0].observations = $noGravityObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $fullCatalogArmorStand = @($fullCatalogReport.probes | Where-Object id -eq 'armorStand')
+    if ($fullCatalogArmorStand.Count -ne 1) { throw 'Synthetic full catalog report must contain armorStand.' }
+    $armorStandObservations = $fullCatalogArmorStand[0].observations
+    $fullCatalogArmorStand[0].observations = @('armor-stand-options-imported result=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteArmorStandRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteArmorStandRejected = $_.Exception.Message -match 'required observation for armorStand' }
+    Assert-True $incompleteArmorStandRejected 'full release gate rejects incomplete imported Armor Stand option evidence'
+    $fullCatalogArmorStand[0].observations = $armorStandObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $creeperOptionsObservations = $fullCatalogCreeperOptions[0].observations
     $fullCatalogCreeperOptions[0].observations = @('creeper-options result=true')

@@ -59,7 +59,8 @@
     },
     {
       "id": "armorStand",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-hand=true wrong-type-preserved=true invalid-preserved=true"
     },
     {
       "id": "attackerTargeter",
