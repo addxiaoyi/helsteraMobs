@@ -1759,7 +1759,8 @@
     },
     {
       "id": "targetFluidConditions",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "target-fluids-delayed imported=true water=true lava=true invalid-preserved=true restored=true passed=true"
     },
     {
       "id": "targetHasTagCondition",

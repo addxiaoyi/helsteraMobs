@@ -13,8 +13,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-invincible-strict-20261110-r3",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-invulnerable-condition-strict-20261110-r3.json"
+      "releaseFixtureId": "srv-paper-target-fluids-import-strict-20261110-r2",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-target-fluids-import-strict-20261110-r2.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

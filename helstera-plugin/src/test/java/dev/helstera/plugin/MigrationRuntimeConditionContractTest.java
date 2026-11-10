@@ -340,6 +340,47 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported target fluid aliases bind to the target's Bukkit fluid state")
+    void importedTargetFluidAliasesReachRuntime() {
+        var target = mock(org.bukkit.entity.Zombie.class);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, target, 1.0, -1, 0, "IDLE");
+        var missingTarget = dev.helstera.api.behavior.BehaviorContext.of(
+                null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var water = dev.helstera.migration.importer.MmConditions.translate("?targetInWater");
+        var lava = dev.helstera.migration.importer.MmConditions.translate("?targetInLava");
+
+        assertTrue(water.translated());
+        assertEquals("target-in-water", water.condition());
+        assertTrue(lava.translated());
+        assertEquals("target-in-lava", lava.condition());
+        String waterKey = service.bindCondition(water.condition());
+        String lavaKey = service.bindCondition(lava.condition());
+        assertNotNull(waterKey);
+        assertNotNull(lavaKey);
+
+        when(target.isInWater()).thenReturn(true);
+        when(target.isInLava()).thenReturn(false);
+        assertTrue(registry.testCondition(waterKey, context));
+        assertFalse(registry.testCondition(lavaKey, context));
+        assertFalse(registry.testCondition(waterKey, missingTarget));
+        assertFalse(registry.testCondition(lavaKey, missingTarget));
+
+        when(target.isInWater()).thenReturn(false);
+        when(target.isInLava()).thenReturn(true);
+        assertFalse(registry.testCondition(waterKey, context));
+        assertTrue(registry.testCondition(lavaKey, context));
+
+        for (String source : List.of("?targetInWater{unknown=true}", "?targetInLava{unknown=true}")) {
+            var invalid = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertFalse(invalid.translated(), source);
+            assertEquals(source, invalid.condition());
+        }
+    }
+
+    @Test
     @DisplayName("imported execution-audience aliases and per-target inline filters reach runtime")
     void importedExecutionAudienceConditionsReachRuntime() {
         var member = mock(org.bukkit.entity.Player.class);

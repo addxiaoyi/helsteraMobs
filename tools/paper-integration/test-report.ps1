@@ -116,6 +116,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-population-conditions players-online-mapped=true online-alias-mapped=true players-world-mapped=true mobs-world-mapped=true players-online-negative-mapped=true online-alias-negative-mapped=true players-world-negative-mapped=true mobs-world-negative-mapped=true players-online-positive=true online-alias-positive=true players-world-positive=true mobs-world-positive=true players-online-negative=true online-alias-negative=true players-world-negative=true mobs-world-negative=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] attack-cooldown-placeholder result=true in-range=true recharging=true caster=0.5 target=0.5 aliases=true non-player-unresolved=true',
+        '[Server thread/INFO]: [helsteraMobs] target-fluids-delayed imported=true water=true lava=true invalid-preserved=true restored=true passed=true',
         '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true in-combat-condition=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
         '[Server thread/INFO]: condition-utility-details .*spawn-distance-exact=true .*spawn-distance-over-rejected=true .*mobs-chunk=true .*mobs-chunk-high-rejected=true .*mobs-chunk-zero=true .*mobs-chunk-occupied=true .*mobs-chunk-adjacent-excluded=true .*mobs-chunk-boundaries=true .*mobs-in-chunk-condition=true .*chance-100=true .*chance-0-rejected=true .*chance-invalid-rejected=true',
@@ -1044,6 +1045,10 @@ try {
     Assert-True ($fullCatalogInvulnerability.Count -eq 1) 'synthetic full catalog contains the invulnerability condition probe'
     $fullCatalogInvulnerability[0].observations = @(
         'skill-actions invulnerable-condition=true invulnerable-aliases=true')
+    $fullCatalogTargetFluids = @($fullCatalogReport.probes | Where-Object id -eq 'targetFluidConditions')
+    Assert-True ($fullCatalogTargetFluids.Count -eq 1) 'synthetic full catalog contains the target fluid condition probe'
+    $fullCatalogTargetFluids[0].observations = @(
+        'target-fluids-delayed imported=true water=true lava=true invalid-preserved=true restored=true passed=true')
     $gameplayPlaceholderProbe = $fullCatalogReport.probes | Where-Object id -eq 'gameplayPlaceholders'
     $gameplayPlaceholderProbe.observations += 'attack-cooldown-placeholder result=true in-range=true recharging=true caster=0.5 target=0.5 aliases=true non-player-unresolved=true'
     $fullCatalogConditionMobility = @($fullCatalogReport.probes | Where-Object id -eq 'conditionMobility')

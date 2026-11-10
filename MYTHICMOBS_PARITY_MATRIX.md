@@ -13,17 +13,16 @@ Status values:
 
 Evidence baseline: 2026-11-10, Paper API 1.21.1-R0.1-SNAPSHOT.
 
-Latest strict release evidence: `srv-paper-invincible-strict-20261110-r3`
+Latest strict release evidence: `srv-paper-target-fluids-import-strict-20261110-r2`
 completes 423 probes on Paper 1.21.1-133 (404 passed, 19 observed expected
 rejections, zero failed or incomplete) with plugin SHA-256
-`0ae19ad0e0da1637f5b466a7df8eb132f62da7ad627e7b98088fe631c344c254`. Its
-`invulnerableCondition` and `targetInvulnerable` probes verify imported
-`IsInvulnerable`/`IsInvincible` aliases, positive and negative states, target
-evaluation, malformed-argument preservation, and state restoration. The
-full-catalog report and redacted server/client logs are archived under
-`tools/paper-integration/reports`; report paths and hashes are indexed in
-`tools/paper-integration/release-evidence.json`. The complete Conditions catalog
-remains `mapped-unverified`.
+`eb536ff2ed308e44893e0ecd2d13e730f39f8952aafc2b969b327add939ad0ea`. Its
+`targetFluidConditions` probe verifies imported `?targetInWater` and
+`?targetInLava` aliases on a live target, malformed-argument preservation, and
+restoration of the touched blocks. The full-catalog report and redacted
+server/client logs are archived under `tools/paper-integration/reports`; report
+paths and hashes are indexed in `tools/paper-integration/release-evidence.json`.
+The complete Conditions catalog remains `mapped-unverified`.
 
 Previous same-condition release evidence: `srv-paper-invincible-strict-20261110-r1`
 completed the same 423-probe catalog and remains archived in the release
@@ -2863,7 +2862,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
 | Rabbit Killer Bunny option | implemented-runtime | Official `Options.IsKillerBunny` and alias `Angry` map only for Rabbits; the runtime preserves explicit false and applies true after `RabbitType`. Wolf/Zombie Pigman `Angry` behavior remains mapped separately. Importer/plugin tests verify aliases, wrong types, invalid values, false values, and conflicts. Strict Paper fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` verifies real imported Killer Bunny, regular Rabbit, and `RabbitType` controls in the complete 409-probe catalog; conflicting aliases and wrong-entity/invalid values remain preserved. |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-invincible-strict-20261110-r3` completes all 423 probes (404 passed, 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133; it includes imported `IsInvulnerable`/`IsInvincible` aliases, positive/negative state, invalid-input, target evaluation, and cleanup evidence. The same strict catalog verifies `aiPriority`, `aiPriorityTargets`, and `aiSelectorCore`, as well as the live Player `attack_cooldown` placeholder in caster/target scopes, aliases, range, and non-player preservation. Previous strict fixtures retain imported Armor Toughness Stats, grounded condition aliases, `TargetOfTarget`, direct/projectile `LastDamager`, imported `SpawnReason`, `LocalDifficulty`, `~onSignal`/`~onAttack`, native conversion, imported HealOnReload, route patrol, jockey mounting, item pickup, and Killer Bunny alias evidence, along with the native `stats.yml` provider and weighted `BiasStat` path, DropItem owners, item metadata and similarity, legacy numeric Items/Equipment, target relationships, conditions, natural spawner/drop behavior, and restart workflows. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`. The complete Mythic catalog, universal Mob Option ordering, and broader Paper/client-version semantics remain open |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-target-fluids-import-strict-20261110-r2` completes all 423 probes (404 passed, 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133; it includes imported `?targetInWater`/`?targetInLava` aliases, live target fluid checks, malformed-input preservation, and block restoration. The same strict catalog verifies `aiPriority`, `aiPriorityTargets`, and `aiSelectorCore`, as well as the live Player `attack_cooldown` placeholder in caster/target scopes, aliases, range, and non-player preservation. Previous strict fixtures retain imported `IsInvulnerable`/`IsInvincible` aliases, Armor Toughness Stats, grounded condition aliases, `TargetOfTarget`, direct/projectile `LastDamager`, imported `SpawnReason`, `LocalDifficulty`, `~onSignal`/`~onAttack`, native conversion, imported HealOnReload, route patrol, jockey mounting, item pickup, and Killer Bunny alias evidence, along with the native `stats.yml` provider and weighted `BiasStat` path, DropItem owners, item metadata and similarity, legacy numeric Items/Equipment, target relationships, conditions, natural spawner/drop behavior, and restart workflows. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`. The complete Mythic catalog, universal Mob Option ordering, and broader Paper/client-version semantics remain open |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
@@ -3102,7 +3101,10 @@ visibility aliases: `target-is-on-fire`, `target-in-air`, `target-in-water`,
 `target-in-lava`, `target-is-invisible`, `target-is-climbing`, and
 `target-is-blocked`, with runtime and migration tests. These additions do not
 change the row status because the complete Mythic condition catalog and broad
-Paper evidence are still incomplete.
+Paper evidence are still incomplete. Imported `?targetInWater` and
+`?targetInLava` now also have strict Paper evidence for live target evaluation,
+malformed-input preservation, and block restoration in
+`srv-paper-target-fluids-import-strict-20261110-r2`.
 
 Target ground-state aliases `target-is-on-ground` and `target-is-airborne` now
 use the Bukkit `LivingEntity#isOnGround()` state directly, with runtime and
@@ -3345,10 +3347,12 @@ real target on successive Paper ticks and restoring the temporary blocks. The
 same-tick diagnostic remains false because Paper's cached fluid state updates
 on the next tick; the report probe intentionally accepts only the delayed
 observation. Strict Paper 1.21.1 fixture
-`srv-paper-condition-mobility-states-strict-20261108-r7` now records the same
-delayed water/lava result in its release catalog, so the target-fluid evidence
-is closed for Paper 1.21.1-133. The same-tick diagnostic remains a known Paper
-cache-timing boundary and is not claimed as a supported observation.
+`srv-paper-condition-mobility-states-strict-20261108-r7` established the delayed
+runtime result. The latest imported-condition fixture
+`srv-paper-target-fluids-import-strict-20261110-r2` also verifies the Mythic
+aliases, malformed-input preservation, and restoration against Paper 1.21.1-133.
+The same-tick diagnostic remains a known Paper cache-timing boundary and is not
+claimed as a supported observation.
 
 Official population/dimension condition update: `LivingInRadius` now counts
 valid Bukkit living entities around the active location, `MobsInChunk` counts

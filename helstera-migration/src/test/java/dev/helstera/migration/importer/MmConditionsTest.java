@@ -1597,6 +1597,8 @@ class MmConditionsTest {
         assertEquals("target-in-air", t("?targetAirborne"));
         assertEquals("target-in-water", t("?targetInWater"));
         assertEquals("target-in-lava", t("?targetInLava"));
+        assertFalse(MmConditions.translate("?targetInWater{unknown=true}").translated());
+        assertFalse(MmConditions.translate("?targetInLava{unknown=true}").translated());
         assertEquals("target-is-glowing", t("?targetIsGlowing"));
         assertEquals("target-is-invisible", t("?targetIsInvisible"));
         assertEquals("target-is-climbing", t("?targetIsClimbing"));
