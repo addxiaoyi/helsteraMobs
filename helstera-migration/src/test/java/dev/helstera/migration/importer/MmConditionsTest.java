@@ -520,9 +520,11 @@ class MmConditionsTest {
         assertEquals("is-invisible", t("?isInvisible"));
         assertEquals("is-glowing", t("?isGlowing"));
         assertEquals("is-invulnerable", t("?isInvulnerable"));
+        assertEquals("is-invulnerable", t("?isInvincible"));
         assertTrue(translated("?onGround"));
         assertTrue(translated("?grounded"));
         assertFalse(translated("?grounded{unknown=true}"));
+        assertFalse(translated("?isInvincible{unknown=true}"));
         assertFalse(translated("?lightLevel{<50%}"));
     }
 

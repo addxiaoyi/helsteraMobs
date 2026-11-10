@@ -51,7 +51,27 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-grounded-strict-20261110-r3` passes all 423
+Latest strict fixture `srv-paper-invincible-strict-20261110-r3` passes all 423
+probes (404 passed, 19 expected rejections, zero failed or incomplete) on Paper
+1.21.1-133. Its `invulnerableCondition` and `targetInvulnerable` probes verify
+imported `IsInvulnerable`/`IsInvincible` aliases, positive and negative states,
+target evaluation, malformed-argument preservation, and cleanup restoration.
+Report:
+[`paper-1.21.1-invulnerable-condition-strict-20261110-r3.json`](reports/paper-1.21.1-invulnerable-condition-strict-20261110-r3.json)
+(SHA-256 `36c6c1ba33c4cb32a572a08950b115f237fd8aeebb435d1f345275637511fe91`);
+server log SHA-256 is
+`24ff14d79ab2d12124255eec3f6bd48bda1cae23354da82acd619d892e1ae6d9`, client
+log archive SHA-256 is
+`543fa484f9c9a82ed2926bf15cf950c4e9f36a69bfb5af1d24f0a024048e34df`, and
+plugin SHA-256 is
+`0ae19ad0e0da1637f5b466a7df8eb132f62da7ad627e7b98088fe631c344c254`. Archived
+reports and hashes are indexed in `release-evidence.json`.
+
+Previous same-condition strict fixture `srv-paper-invincible-strict-20261110-r1`
+passed the same 423-probe catalog; its report and logs remain archived in the
+release manifest as historical evidence.
+
+Previous strict fixture `srv-paper-grounded-strict-20261110-r3` passes all 423
 probes (404 passed, 19 expected rejections, zero failed or incomplete) on Paper
 1.21.1-133. Its `groundedCondition` probe verifies imported `onGround` and
 `grounded` aliases, grounded positives, airborne negatives, malformed-argument
@@ -63,8 +83,7 @@ server log SHA-256 is
 log archive SHA-256 is
 `c28e37035b017b80b95eca43a6d659871245dfee6f9362a79a050bbdd89d35b9`, and
 plugin SHA-256 is
-`fa622b01450cb109dbc29edae6a30e0a5f6f06519a2fd4305860b5d0869b54ee`. Archived
-reports and hashes are indexed in `release-evidence.json`.
+`fa622b01450cb109dbc29edae6a30e0a5f6f06519a2fd4305860b5d0869b54ee`.
 
 Previous strict fixture `srv-paper-worldguard-strict-20261110-r2` passes all 422
 probes (403 passed, 19 expected rejections, zero failed or incomplete) on Paper

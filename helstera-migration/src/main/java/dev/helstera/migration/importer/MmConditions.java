@@ -120,7 +120,7 @@ public final class MmConditions {
             "isliving", "isplayer", "ismob", "ismonster", "isanimal", "isvillager", "istameable", "israider",
             "iswatermob", "watermob", "iszombie", "zombie", "aerial", "isaerial", "isenderman", "enderman",
             "isundead", "iscreature", "child", "isop", "isoperator", "iscollidable", "onground", "grounded",
-            "isinvulnerable", "iscancelled", "iscanceled", "cancelled", "canceled",
+            "isinvulnerable", "isinvincible", "iscancelled", "iscanceled", "cancelled", "canceled",
             "isbaby", "ischild", "isadult", "istamed", "issheared", "issaddled", "ispowered", "ischarged",
             "charged", "climbing", "isclimbing", "invisible", "isinvisible", "glowing", "isglowing",
             "isinsurvivalmode", "insurvivalmode",
@@ -873,7 +873,9 @@ public final class MmConditions {
         if ("isclimbing".equals(name)) return new Mapped("is-climbing", true);
         if ("isinvisible".equals(name)) return new Mapped("is-invisible", true);
         if ("isglowing".equals(name)) return new Mapped("is-glowing", true);
-        if ("isinvulnerable".equals(name)) return new Mapped("is-invulnerable", true);
+        if ("isinvulnerable".equals(name) || "isinvincible".equals(name)) {
+            return new Mapped("is-invulnerable", true);
+        }
         if ("iscancelled".equals(name) || "iscanceled".equals(name)
                 || "cancelled".equals(name) || "canceled".equals(name)) {
             return new Mapped("is-cancelled", true);
