@@ -949,7 +949,7 @@
     {
       "id": "horseOptionsImported",
       "status": "passed",
-      "requiredObservationPattern": "^horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0\\.8 saddled=true armor=DIAMOND_HORSE_ARMOR control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0\\.4 control-saddled=false control-armor=AIR donkey-chest=true control-donkey-chest=false$"
+      "requiredObservationPattern": "^horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0\\.8 saddled=true armor=DIAMOND_HORSE_ARMOR control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0\\.4 control-saddled=false control-armor=AIR donkey-chest=true control-donkey-chest=false pig-saddled=true control-pig-saddled=false strider-saddled=true control-strider-saddled=false$"
     },
     {
       "id": "interactionOptionsImported",

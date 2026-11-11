@@ -5240,6 +5240,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             String controlMobId = "ImportedHorseControl_" + suffix;
             String chestDonkeyMobId = "ImportedHorseChestDonkey_" + suffix;
             String controlDonkeyMobId = "ImportedHorseControlDonkey_" + suffix;
+            String pigMobId = "ImportedSaddledPig_" + suffix;
+            String controlPigMobId = "ImportedUnsaddledPig_" + suffix;
+            String striderMobId = "ImportedSaddledStrider_" + suffix;
+            String controlStriderMobId = "ImportedUnsaddledStrider_" + suffix;
             Files.writeString(source, """
                     mobs:
                       %1$s:
@@ -5269,7 +5273,24 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         Type: DONKEY
                         Options:
                           CarryingChest: false
-                    """.formatted(configuredMobId, controlMobId, chestDonkeyMobId, controlDonkeyMobId));
+                      %5$s:
+                        Type: PIG
+                        Options:
+                          Saddled: true
+                      %6$s:
+                        Type: PIG
+                        Options:
+                          Saddled: false
+                      %7$s:
+                        Type: STRIDER
+                        Options:
+                          Saddled: true
+                      %8$s:
+                        Type: STRIDER
+                        Options:
+                          Saddled: false
+                    """.formatted(configuredMobId, controlMobId, chestDonkeyMobId, controlDonkeyMobId,
+                    pigMobId, controlPigMobId, striderMobId, controlStriderMobId));
 
             var converted = new MythicMobsImporter().convert(source, sourceRoot);
             var targetIds = new java.util.LinkedHashMap<String, String>();
@@ -5295,9 +5316,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             String controlTargetId = targetIds.get(controlMobId);
             String chestDonkeyTargetId = targetIds.get(chestDonkeyMobId);
             String controlDonkeyTargetId = targetIds.get(controlDonkeyMobId);
+            String pigTargetId = targetIds.get(pigMobId);
+            String controlPigTargetId = targetIds.get(controlPigMobId);
+            String striderTargetId = targetIds.get(striderMobId);
+            String controlStriderTargetId = targetIds.get(controlStriderMobId);
             if (configuredTargetId == null || controlTargetId == null
-                    || chestDonkeyTargetId == null || controlDonkeyTargetId == null) {
-                throw new IllegalStateException("Mythic Horse and Donkey options were not imported for all probe mobs");
+                    || chestDonkeyTargetId == null || controlDonkeyTargetId == null
+                    || pigTargetId == null || controlPigTargetId == null
+                    || striderTargetId == null || controlStriderTargetId == null) {
+                throw new IllegalStateException("Mythic mount options were not imported for all probe mobs");
             }
             MobSpawn configuredSpawn = spawnMobCore(configuredTargetId, "example/emberling", origin,
                     false, null);
@@ -5307,6 +5334,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     origin.clone().add(6, 0, 0), false, null);
             MobSpawn controlDonkeySpawn = spawnMobCore(controlDonkeyTargetId, "example/emberling",
                     origin.clone().add(9, 0, 0), false, null);
+            MobSpawn pigSpawn = spawnMobCore(pigTargetId, "example/emberling",
+                    origin.clone().add(12, 0, 0), false, null);
+            MobSpawn controlPigSpawn = spawnMobCore(controlPigTargetId, "example/emberling",
+                    origin.clone().add(15, 0, 0), false, null);
+            MobSpawn striderSpawn = spawnMobCore(striderTargetId, "example/emberling",
+                    origin.clone().add(18, 0, 0), false, null);
+            MobSpawn controlStriderSpawn = spawnMobCore(controlStriderTargetId, "example/emberling",
+                    origin.clone().add(21, 0, 0), false, null);
             if (configuredSpawn != null && configuredSpawn.instanceId() > 0) {
                 instanceIds.add(configuredSpawn.instanceId());
             }
@@ -5319,6 +5354,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (controlDonkeySpawn != null && controlDonkeySpawn.instanceId() > 0) {
                 instanceIds.add(controlDonkeySpawn.instanceId());
             }
+            if (pigSpawn != null && pigSpawn.instanceId() > 0) {
+                instanceIds.add(pigSpawn.instanceId());
+            }
+            if (controlPigSpawn != null && controlPigSpawn.instanceId() > 0) {
+                instanceIds.add(controlPigSpawn.instanceId());
+            }
+            if (striderSpawn != null && striderSpawn.instanceId() > 0) {
+                instanceIds.add(striderSpawn.instanceId());
+            }
+            if (controlStriderSpawn != null && controlStriderSpawn.instanceId() > 0) {
+                instanceIds.add(controlStriderSpawn.instanceId());
+            }
             var configuredInstance = configuredSpawn == null || configuredSpawn.instanceId() <= 0
                     ? null : instances().impl(configuredSpawn.instanceId());
             var controlInstance = controlSpawn == null || controlSpawn.instanceId() <= 0
@@ -5327,6 +5374,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     ? null : instances().impl(chestDonkeySpawn.instanceId());
             var controlDonkeyInstance = controlDonkeySpawn == null || controlDonkeySpawn.instanceId() <= 0
                     ? null : instances().impl(controlDonkeySpawn.instanceId());
+            var pigInstance = pigSpawn == null || pigSpawn.instanceId() <= 0
+                    ? null : instances().impl(pigSpawn.instanceId());
+            var controlPigInstance = controlPigSpawn == null || controlPigSpawn.instanceId() <= 0
+                    ? null : instances().impl(controlPigSpawn.instanceId());
+            var striderInstance = striderSpawn == null || striderSpawn.instanceId() <= 0
+                    ? null : instances().impl(striderSpawn.instanceId());
+            var controlStriderInstance = controlStriderSpawn == null || controlStriderSpawn.instanceId() <= 0
+                    ? null : instances().impl(controlStriderSpawn.instanceId());
             var configuredHorse = configuredInstance == null ? null
                     : configuredInstance.baseEntity().filter(org.bukkit.entity.Horse.class::isInstance)
                     .map(org.bukkit.entity.Horse.class::cast).orElse(null);
@@ -5339,6 +5394,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var controlDonkey = controlDonkeyInstance == null ? null
                     : controlDonkeyInstance.baseEntity().filter(org.bukkit.entity.ChestedHorse.class::isInstance)
                     .map(org.bukkit.entity.ChestedHorse.class::cast).orElse(null);
+            var pig = pigInstance == null ? null
+                    : pigInstance.baseEntity().filter(org.bukkit.entity.Steerable.class::isInstance)
+                    .map(org.bukkit.entity.Steerable.class::cast).orElse(null);
+            var controlPig = controlPigInstance == null ? null
+                    : controlPigInstance.baseEntity().filter(org.bukkit.entity.Steerable.class::isInstance)
+                    .map(org.bukkit.entity.Steerable.class::cast).orElse(null);
+            var strider = striderInstance == null ? null
+                    : striderInstance.baseEntity().filter(org.bukkit.entity.Steerable.class::isInstance)
+                    .map(org.bukkit.entity.Steerable.class::cast).orElse(null);
+            var controlStrider = controlStriderInstance == null ? null
+                    : controlStriderInstance.baseEntity().filter(org.bukkit.entity.Steerable.class::isInstance)
+                    .map(org.bukkit.entity.Steerable.class::cast).orElse(null);
             var configuredOptions = configuredInstance == null ? null : mobConfig(configuredTargetId)
                     .getConfigurationSection("entity");
             var controlOptions = controlInstance == null ? null : mobConfig(controlTargetId)
@@ -5347,6 +5414,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     .getConfigurationSection("entity");
             var controlDonkeyOptions = controlDonkeyInstance == null ? null : mobConfig(controlDonkeyTargetId)
                     .getConfigurationSection("entity");
+            var pigOptions = pigInstance == null ? null : mobConfig(pigTargetId).getConfigurationSection("entity");
+            var controlPigOptions = controlPigInstance == null ? null
+                    : mobConfig(controlPigTargetId).getConfigurationSection("entity");
+            var striderOptions = striderInstance == null ? null
+                    : mobConfig(striderTargetId).getConfigurationSection("entity");
+            var controlStriderOptions = controlStriderInstance == null ? null
+                    : mobConfig(controlStriderTargetId).getConfigurationSection("entity");
 
             boolean imported = configuredHorse != null && controlHorse != null
                     && configuredOptions != null && controlOptions != null
@@ -5368,7 +5442,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && chestDonkeyOptions != null && controlDonkeyOptions != null
                     && chestDonkeyOptions.getBoolean("carrying-chest")
                     && controlDonkeyOptions.contains("carrying-chest")
-                    && !controlDonkeyOptions.getBoolean("carrying-chest");
+                    && !controlDonkeyOptions.getBoolean("carrying-chest")
+                    && pigOptions != null && controlPigOptions != null
+                    && pigOptions.getBoolean("saddled")
+                    && controlPigOptions.contains("saddled") && !controlPigOptions.getBoolean("saddled")
+                    && striderOptions != null && controlStriderOptions != null
+                    && striderOptions.getBoolean("saddled")
+                    && controlStriderOptions.contains("saddled") && !controlStriderOptions.getBoolean("saddled");
             var configuredSaddle = configuredHorse == null ? null : configuredHorse.getInventory().getSaddle();
             var configuredArmor = configuredHorse == null ? null : configuredHorse.getInventory().getArmor();
             var controlSaddle = controlHorse == null ? null : controlHorse.getInventory().getSaddle();
@@ -5398,7 +5478,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && !controlSaddled
                     && "AIR".equals(controlArmorName)
                     && chestDonkey.isCarryingChest()
-                    && !controlDonkey.isCarryingChest();
+                    && !controlDonkey.isCarryingChest()
+                    && pig != null && pig.hasSaddle()
+                    && controlPig != null && !controlPig.hasSaddle()
+                    && strider != null && strider.hasSaddle()
+                    && controlStrider != null && !controlStrider.hasSaddle();
             getLogger().info("[自检] horse-options result=" + (imported && applied)
                     + " imported=" + imported
                     + " color=" + (configuredHorse == null ? "missing" : configuredHorse.getColor().name())
@@ -5416,7 +5500,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " control-saddled=" + controlSaddled
                     + " control-armor=" + controlArmorName
                     + " donkey-chest=" + (chestDonkey != null && chestDonkey.isCarryingChest())
-                    + " control-donkey-chest=" + (controlDonkey != null && controlDonkey.isCarryingChest()));
+                    + " control-donkey-chest=" + (controlDonkey != null && controlDonkey.isCarryingChest())
+                    + " pig-saddled=" + (pig != null && pig.hasSaddle())
+                    + " control-pig-saddled=" + (controlPig != null && controlPig.hasSaddle())
+                    + " strider-saddled=" + (strider != null && strider.hasSaddle())
+                    + " control-strider-saddled=" + (controlStrider != null && controlStrider.hasSaddle()));
         } catch (Throwable failure) {
             getLogger().warning("[自检] horse-options result=false error=" + failure);
         } finally {
