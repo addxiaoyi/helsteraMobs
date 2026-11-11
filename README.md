@@ -1,4 +1,5 @@
-Latest strict fixture `srv-paper-dig-out-of-ground-strict-20261111-r1` verifies imported Mythic `Options.DigOutOfGround`: `true` cancels `SUFFOCATION` and moves the managed mob up two blocks; `FALL`, explicit `false`, and malformed-value controls behave correctly. The full Paper 1.21.1-133 release catalog records 445 probes (426 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-dig-out-of-ground-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
+Latest strict fixture `srv-paper-prevent-mob-kill-drops-strict-20261111-r1` verifies imported Mythic `Options.PreventMobKillDrops`: a managed killer suppresses its target's drops and XP; explicit `false` and malformed-value controls preserve them. The full Paper 1.21.1-133 release catalog records 446 probes (427 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-prevent-mob-kill-drops-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
+Previous strict fixture `srv-paper-dig-out-of-ground-strict-20261111-r1` verifies imported Mythic `Options.DigOutOfGround`: `true` cancels `SUFFOCATION` and moves the managed mob up two blocks, with cause, false, and invalid controls. Its 445-probe release report remains archived.
 Previous strict fixture `srv-paper-frog-options-strict-20261111-r1` verifies imported Mythic Frog `Options.Type` and `Options.Variant` through production mob spawning. `COLD`, the `WARM` alias, and the `TEMPERATE` control read back correctly; wrong-entity, invalid, and conflicting values remain preserved with warnings. Its 444-probe release report remains archived.
 Previous strict fixture `srv-paper-legacy-item-ids-strict-20261111-r1` verifies the corrected Mythic legacy item boundary through import and the production ItemStack resolver: `450 -> SHULKER_SHELL`, `451` is retained as unsupported, `452 -> IRON_NUGGET`, and `453 -> KNOWLEDGE_BOOK`. Its complete catalog recorded 443 probes (424 passed, 19 expected rejections), with zero failed or incomplete; the broader legacy data table remains open.
 Previous strict fixture `srv-paper-environmental-damage-options-strict-20261111-r2` verifies imported Mythic `Options.PreventDrowning` and `Options.PreventFallDamage`, cause-specific damage cancellation, false and cross-cause controls, and malformed-value fallback; its 443-probe report remains archived in the [Paper evidence index](tools/paper-integration/STARTUP_EVIDENCE.md).
@@ -1347,7 +1348,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-dig-out-of-ground-strict-20261111-r1` has 445 probes (426 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-prevent-mob-kill-drops-strict-20261111-r1` has 446 probes (427 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1360,12 +1361,12 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-11). The full remaining work is:
 
-Latest strict report has 445 probes, zero incomplete.
+Latest strict report has 446 probes, zero incomplete.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 592 cited IDs; 499 report files; 4 directories without reports; 89 missing directories; 272 archived release reports. The
+   Current fixture inventory: 593 cited IDs; 500 report files; 4 directories without reports; 89 missing directories; 273 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

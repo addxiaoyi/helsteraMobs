@@ -224,6 +224,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] prevent-random-equipment-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true random-cleared=true explicit-equipment-preserved=true control-preserved=true invalid-fallback=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] environmental-damage-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true drowning-protected=true fall-protected=true controls-allowed=true invalid-fallback=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2.00 fall-control=true disabled-allowed=true invalid-fallback=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] prevent-mob-kill-drops-imported result=true imported=true configured=true policies=true killers-resolved=true drops-suppressed=true controls-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] experience-orb-options result=true imported=true experience=17 wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true',
@@ -549,7 +550,7 @@ try {
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
             'importedItemSimilarityConditions',
-            'importedPlayerKillsCondition', 'importedTimerTrigger', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'frogOptionsImported', 'digOutOfGroundImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
+            'importedPlayerKillsCondition', 'importedTimerTrigger', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'frogOptionsImported', 'digOutOfGroundImported', 'preventMobKillDropsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -664,6 +665,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'digOutOfGroundImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'digOutOfGroundImported').observations[0] -match
         '^dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2\.00 fall-control=true disabled-allowed=true invalid-fallback=true$') 'Mythic DigOutOfGround requires a two-block suffocation response, cause/disabled controls, and malformed-value fallback'
+    Assert-True (($report.probes | Where-Object id -eq 'preventMobKillDropsImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'preventMobKillDropsImported').observations[0] -ceq
+        'prevent-mob-kill-drops-imported result=true imported=true configured=true policies=true killers-resolved=true drops-suppressed=true controls-preserved=true') 'Mythic PreventMobKillDrops requires imported killer policy, suppressed target drops, and false/malformed controls'
     Assert-True (($report.probes | Where-Object id -eq 'tamedFamilyOptions').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'tamedFamilyOptions').observations[0] -match
         '^tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true$') 'Tamed option family probe requires supported readback plus Camel false-state preservation'
@@ -1431,6 +1435,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'digOutOfGroundImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'digOutOfGroundImported'; status = 'passed'; observations = @('dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2.00 fall-control=true disabled-allowed=true invalid-fallback=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'preventMobKillDropsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'preventMobKillDropsImported'; status = 'passed'; observations = @('prevent-mob-kill-drops-imported result=true imported=true configured=true policies=true killers-resolved=true drops-suppressed=true controls-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'tamedFamilyOptions'
     $fullCatalogReport.probes += [pscustomobject]@{

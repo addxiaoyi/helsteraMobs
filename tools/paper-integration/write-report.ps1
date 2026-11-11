@@ -123,6 +123,7 @@ $probeSpecs = [ordered]@{
     preventRandomEquipmentImported = 'prevent-random-equipment-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true random-cleared=true explicit-equipment-preserved=true control-preserved=true invalid-fallback=true'
     environmentalDamageOptionsImported = 'environmental-damage-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true drowning-protected=true fall-protected=true controls-allowed=true invalid-fallback=true'
     digOutOfGroundImported = 'dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2\.00 fall-control=true disabled-allowed=true invalid-fallback=true'
+    preventMobKillDropsImported = 'prevent-mob-kill-drops-imported result=true imported=true configured=true policies=true killers-resolved=true drops-suppressed=true controls-preserved=true'
     glowingOptionImported = 'glowing-option-imported result=true imported=true enabled-configured=true control-configured=true invalid-preserved=true enabled-entity=true control-entity=true invalid-entity=true'
     experienceOrbOptions = 'experience-orb-options result=true imported=true experience=17 wrong-type-preserved=true invalid-preserved=true'
     pandaOptions = 'panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true'

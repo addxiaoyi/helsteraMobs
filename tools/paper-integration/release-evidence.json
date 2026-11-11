@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-prevent-mob-kill-drops-strict-20261111-r1",
+    "reportFixtureDirectory": "srv-paper-prevent-mob-kill-drops-strict-20261111-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-prevent-mob-kill-drops-strict-20261111-r1.json",
+    "reportSha256": "952ccd063597fe57242544ea5c288188803853351a1e65f46360c415efbd3f59",
+    "log": "tools/paper-integration/reports/paper-1.21.1-prevent-mob-kill-drops-strict-20261111-r1.log.gz",
+    "logSha256": "6a23b3e85d3104a333bde08ce3e9b9fe3a0a1e855019de3530e8be30f277ba1d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-prevent-mob-kill-drops-strict-20261111-r1-client-logs.tar.gz",
+    "clientLogSha256": "510010c33e66f233d5c58e91c4e2b178511c1579acf890d8305db9611e725ab3",
+    "pluginSha256": "2c366625dc2a23b1226cf534cbc2d824749bbc18f6a261bf6d27c15252474d6e",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-dig-out-of-ground-strict-20261111-r1",
     "reportFixtureDirectory": "srv-paper-dig-out-of-ground-strict-20261111-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-dig-out-of-ground-strict-20261111-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-dig-out-of-ground-strict-20261111-r1-client-logs.tar.gz",
     "clientLogSha256": "4c7822981dde3efdebb4f6f7f28886b1b302bc118ffaeeb4150a12a2a6aff095",
     "pluginSha256": "ec948e2945f4b35e50b2cc4371713cb6a6421da3b9f2876252bb47f0c4753b6f",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-prevent-mob-kill-drops-strict-20261111-r1"
   },
   {
     "fixtureId": "srv-paper-frog-options-strict-20261111-r1",
