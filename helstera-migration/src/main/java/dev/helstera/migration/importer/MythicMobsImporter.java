@@ -1198,7 +1198,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "Invisible", "entity.invisible");
             mapOption(options, srcFile, entries, target, "NoAI", "entity.no-ai");
             mapOption(options, srcFile, entries, target, "Invincible", "entity.invulnerable");
-            mapOption(options, srcFile, entries, target, "Glowing", "glowing");
+            mapBooleanOption(options, srcFile, entries, target, "Glowing", "glowing");
             mapOption(options, srcFile, entries, target, "AlwaysShowName", "show-name");
             mapOption(options, srcFile, entries, target, "Persistent", "persistent");
             mapOption(options, srcFile, entries, target, "VisibleByDefault", "entity.visible-by-default");

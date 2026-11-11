@@ -634,6 +634,11 @@
       "requiredObservationPattern": "^entity-flag-options result=true imported=true wolf-tamed=true cat-tamed=true control-cat-tamed=false horse-tamed=true control-horse-tamed=false parrot-tamed=true control-parrot-tamed=false wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true$"
     },
     {
+      "id": "glowingOptionImported",
+      "status": "passed",
+      "requiredObservation": "glowing-option-imported result=true imported=true enabled-configured=true control-configured=true invalid-preserved=true enabled-entity=true control-entity=true invalid-entity=true"
+    },
+    {
       "id": "tamedFamilyOptions",
       "status": "passed",
       "requiredObservationPattern": "^tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true$"

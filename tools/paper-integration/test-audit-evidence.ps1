@@ -593,6 +593,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'preventTeleportImported'; status = 'passed'; observations = @('prevent-teleport-imported result=true imported=true mapped=true invalid-preserved=true spawned=true protected-api-blocked=true control-api-teleported=true')
     }
+    $fullReport.expectedProbeIds += 'glowingOptionImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'glowingOptionImported'; status = 'passed'; observations = @('glowing-option-imported result=true imported=true enabled-configured=true control-configured=true invalid-preserved=true enabled-entity=true control-entity=true invalid-entity=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

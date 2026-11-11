@@ -2778,6 +2778,117 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    private void runImportedGlowingOptionSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-glowing-option-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("glowing-options.yml");
+            String enabledId = "GlowingEnabled_" + suffix;
+            String controlId = "GlowingControl_" + suffix;
+            String invalidId = "GlowingInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          Glowing: true
+                      %2$s:
+                        Type: ZOMBIE
+                        Options:
+                          Glowing: false
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          Glowing: maybe
+                    """.formatted(enabledId, controlId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Glowing mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite Glowing mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                importedConfig.set("entity.silent", true);
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(enabledId, controlId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic Glowing fixtures were not all imported");
+            }
+
+            var locations = java.util.List.of(origin, origin.clone().add(2, 0, 0),
+                    origin.clone().add(4, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var enabledConfig = mobConfig(targetIds.get(enabledId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            boolean enabledConfigured = enabledConfig != null && enabledConfig.getBoolean("glowing");
+            boolean controlConfigured = controlConfig != null && controlConfig.contains("glowing")
+                    && !controlConfig.getBoolean("glowing", true);
+            var invalidOptions = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean invalidPreserved = invalidOptions != null
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("Glowing"))
+                    && !invalidConfig.contains("glowing");
+
+            var enabledInstance = instances().impl(spawnedIds.get(enabledId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            var enabledEntity = enabledInstance == null ? null : enabledInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var controlEntity = controlInstance == null ? null : controlInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var invalidEntity = invalidInstance == null ? null : invalidInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            boolean enabledState = enabledEntity != null && enabledEntity.isGlowing();
+            boolean controlState = controlEntity != null && !controlEntity.isGlowing();
+            boolean invalidState = invalidEntity != null && !invalidEntity.isGlowing();
+            boolean imported = targetIds.keySet().containsAll(sourceIds)
+                    && enabledConfigured && controlConfigured && invalidPreserved;
+            boolean passed = imported && enabledState && controlState && invalidState;
+            getLogger().info("[自检] glowing-option-imported result=" + passed
+                    + " imported=" + imported
+                    + " enabled-configured=" + enabledConfigured
+                    + " control-configured=" + controlConfigured
+                    + " invalid-preserved=" + invalidPreserved
+                    + " enabled-entity=" + enabledState
+                    + " control-entity=" + controlState
+                    + " invalid-entity=" + invalidState);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] glowing-option-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
     private void runImportedArmorToughnessStatsSelfTest(Location origin) {
         Path sourceRoot = null;
         Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
@@ -10959,6 +11070,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " patrol-leader=" + raiderView.isPatrolLeader()
                         + " patrol-spawn-point=" + patrolSpawnPoint);
                 runImportedEntityFlagOptionsSelfTest(location.clone().add(25, 0, 0));
+                runImportedGlowingOptionSelfTest(location.clone().add(35, 0, 0));
                 runImportedTamedFamilyOptionsSelfTest(location.clone().add(27, 0, 0));
                 runImportedExperienceOrbOptionsSelfTest(location.clone().add(29, 0, 0));
                 runImportedPandaOptionsSelfTest(location.clone().add(31, 0, 0));

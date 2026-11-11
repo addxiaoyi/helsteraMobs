@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-glowing-option-strict-20261111-r1",
+    "reportFixtureDirectory": "srv-paper-glowing-option-strict-20261111-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-glowing-option-strict-20261111-r1.json",
+    "reportSha256": "42a43274bcbf78a6ff599b397789609463fe938fe439faff60d96b0b74138856",
+    "log": "tools/paper-integration/reports/paper-1.21.1-glowing-option-strict-20261111-r1.log.gz",
+    "logSha256": "e50145f002d842d0cee4b483f1b26cb62328b9bd38044c2824b8a3a768287843",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-glowing-option-strict-20261111-r1-client-logs.tar.gz",
+    "clientLogSha256": "eea3fe64686ab8d3bcf37452923c6dc7533f55e8c29f1e481898d33c5b299c74",
+    "pluginSha256": "e45dc8be7271b77bc1022f8beeaa349f09d8dcbe94e69d83620c16061e0f8db3",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-prevent-teleport-strict-20261111-r1",
     "reportFixtureDirectory": "srv-paper-prevent-teleport-strict-20261111-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-prevent-teleport-strict-20261111-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-prevent-teleport-strict-20261111-r1-client-logs.tar.gz",
     "clientLogSha256": "ffd818afa4d8a02b6b97a6192ee486e763e56c049b45b898e836f47dc7f78938",
     "pluginSha256": "4d1336ea98d59aa3f1fe83b3e5bee3bdd02ef268a36878e6caa311a5ff13f74c",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-glowing-option-strict-20261111-r1"
   },
   {
     "fixtureId": "srv-paper-show-health-strict-20261111-r3",
