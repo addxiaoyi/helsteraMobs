@@ -5056,6 +5056,14 @@ class ImportersTest {
                       JumpStrength: 0.8
                       Saddled: true
                       HorseArmor: DIAMOND_HORSE_ARMOR
+                  donkey:
+                    Type: DONKEY
+                    Options:
+                      CarryingChest: true
+                  donkey_control:
+                    Type: DONKEY
+                    Options:
+                      CarryingChest: false
                   wrong:
                     Type: ZOMBIE
                     Options:
@@ -5063,6 +5071,7 @@ class ImportersTest {
                       Size: 5
                       ExplosionRadius: 5
                       HasNectar: true
+                      CarryingChest: true
                       HorseColor: WHITE
                       CatType: SIAMESE
                       SheepColor: RED
@@ -5081,6 +5090,7 @@ class ImportersTest {
                       JumpStrength: 3.5
                       Domestication: -1
                       Saddled: maybe
+                      CarryingChest: maybe
                   invalid_cat:
                     Type: CAT
                     Options:
@@ -5117,9 +5127,15 @@ class ImportersTest {
         assertTrue(horse.getBoolean("entity.saddled"));
         assertEquals("DIAMOND_HORSE_ARMOR", horse.getString("entity.horse-armor"));
 
+        var donkey = convertedMob(entries, "donkey");
+        assertTrue(donkey.getBoolean("entity.carrying-chest"));
+        var controlDonkey = convertedMob(entries, "donkey_control");
+        assertTrue(controlDonkey.contains("entity.carrying-chest"));
+        assertFalse(controlDonkey.getBoolean("entity.carrying-chest"));
+
         var wrong = convertedMob(entries, "wrong");
         for (String mapped : List.of("entity.held-block", "entity.size",
-                "entity.creeper-explosion-radius", "entity.has-nectar", "entity.horse-color",
+                "entity.creeper-explosion-radius", "entity.has-nectar", "entity.carrying-chest", "entity.horse-color",
                 "entity.cat-type", "entity.sheep-color", "entity.armor-stand-arms",
                 "entity.falling-block-data")) {
             assertFalse(wrong.contains(mapped), mapped);
@@ -5128,6 +5144,7 @@ class ImportersTest {
         assertEquals(5, wrong.getInt("entity.unsupported.Options.Size"));
         assertEquals(5, wrong.getInt("entity.unsupported.Options.ExplosionRadius"));
         assertTrue(wrong.getBoolean("entity.unsupported.Options.HasNectar"));
+        assertTrue(wrong.getBoolean("entity.unsupported.Options.CarryingChest"));
         assertEquals("WHITE", wrong.getString("entity.unsupported.Options.HorseColor"));
         assertEquals("SIAMESE", wrong.getString("entity.unsupported.Options.CatType"));
         assertEquals("RED", wrong.getString("entity.unsupported.Options.SheepColor"));
@@ -5148,10 +5165,12 @@ class ImportersTest {
         assertEquals(3.5, invalidHorse.getDouble("entity.unsupported.Options.JumpStrength"), 1e-9);
         assertEquals(-1, invalidHorse.getInt("entity.unsupported.Options.Domestication"));
         assertEquals("maybe", invalidHorse.getString("entity.unsupported.Options.Saddled"));
+        assertEquals("maybe", invalidHorse.getString("entity.unsupported.Options.CarryingChest"));
         assertFalse(invalidHorse.contains("entity.horse-color"));
         assertFalse(invalidHorse.contains("entity.horse-jump-strength"));
         assertFalse(invalidHorse.contains("entity.horse-domestication"));
         assertFalse(invalidHorse.contains("entity.saddled"));
+        assertFalse(invalidHorse.contains("entity.carrying-chest"));
 
         assertEquals("NOT_A_CAT", convertedMob(entries, "invalid_cat")
                 .getString("entity.unsupported.Options.CatType"));
@@ -5170,6 +5189,9 @@ class ImportersTest {
         assertTrue(entries.stream().filter(entry -> "unsupported".equals(entry.get("status")))
                 .anyMatch(entry -> "WARN".equals(entry.get("severity"))
                         && "Options.HorseColor".equals(entry.get("source-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.CarryingChest".equals(entry.get("source-key"))));
         assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
                 && "Options.FallingBlockData".equals(entry.get("source-key"))
                 && "WARN".equals(entry.get("severity"))));
