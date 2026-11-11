@@ -1,15 +1,21 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-horse-inventory-options-strict-20261111-r2` passed the full strict gate on Paper 1.21.1-133:
+Latest fixture `srv-paper-steerable-saddles-strict-20261111-r1` passed the full strict gate on Paper 1.21.1-133:
 430 registered probes, 411 passed, 19 expected rejections, and zero failed or
 incomplete. The `horseOptionsImported` probe imports Horse `Saddled` and
-`HorseArmor` plus Donkey `CarryingChest`, then reads back the real Horse saddle
-and diamond armor and Donkey chest true/false states through production
-spawning. Horse color, style, domestication, and jump-strength controls also
-pass. Plugin SHA-256: `503eca6fb8d2d90f7e4a34a90617995a4ff373bd3a27d4a5e36df68b43d4d161`. Report:
-[paper-1.21.1-horse-inventory-options-strict-20261111-r2.json](reports/paper-1.21.1-horse-inventory-options-strict-20261111-r2.json), SHA-256: `174e15013bd9432ca91f764b68a80ca37c12db421b4fb36fa56253a9544b16ff`. Compressed redacted server log:
-[paper-1.21.1-horse-inventory-options-strict-20261111-r2.log.gz](reports/paper-1.21.1-horse-inventory-options-strict-20261111-r2.log.gz), SHA-256: `f747e7f4fb922b84861da3341ea69268749d161a4471138eba5f6c3a4a23e845`. Client log archive:
-[paper-1.21.1-horse-inventory-options-strict-20261111-r2-client-logs.tar.gz](reports/paper-1.21.1-horse-inventory-options-strict-20261111-r2-client-logs.tar.gz), SHA-256: `d37589842c90f3da87ed424f1f84a7c01d31742527365f8fe975dccf4ed6acc8`. Archived logs redact token values.
+`HorseArmor`, Donkey `CarryingChest`, and `Saddled` on Pig and Strider. Through
+production spawning it reads back Horse saddle/diamond armor, Donkey chest
+true/false, and Pig/Strider saddle true/false controls. Horse color, style,
+domestication, and jump-strength controls also pass. Plugin SHA-256: `e1bc4e9c44c5fc1e80dfbba1d0b72dd2e9cab8cbc92648e291e9fb9734e46198`. Report:
+[paper-1.21.1-steerable-saddles-strict-20261111-r1.json](reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.json), SHA-256: `4c69994a9e71990e8cedf290e5cb3198029d8863e0c792d89cfb2272fd40052c`. Compressed redacted server log:
+[paper-1.21.1-steerable-saddles-strict-20261111-r1.log.gz](reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.log.gz), SHA-256: `df6e7397ae008a211218c0b2a33051de851d8518bde22161bb67a24b16386585`. Client log archive:
+[paper-1.21.1-steerable-saddles-strict-20261111-r1-client-logs.tar.gz](reports/paper-1.21.1-steerable-saddles-strict-20261111-r1-client-logs.tar.gz), SHA-256: `f31df7258b7c0c86c4ace8538d42b1422e457b3a50ef65037a28119682f8d92d`. Archived logs redact token values.
+
+Previous fixture `srv-paper-horse-inventory-options-strict-20261111-r2` passed the full strict gate on Paper 1.21.1-133:
+430 registered probes, 411 passed, 19 expected rejections, and zero failed or
+incomplete. It verifies Horse saddle/armor and Donkey chest true/false states
+with Horse variant/stat controls. Report, redacted server log, client log
+archive, and plugin hash are indexed in `release-evidence.json`.
 
 Previous fixture `srv-paper-visibility-options-strict-20261111-r1` passed the full strict gate on Paper 1.21.1-133:
 430 registered probes, 411 passed, 19 expected rejections, and zero failed or

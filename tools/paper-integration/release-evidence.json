@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-steerable-saddles-strict-20261111-r1",
+    "reportFixtureDirectory": "srv-paper-steerable-saddles-strict-20261111-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.json",
+    "reportSha256": "4c69994a9e71990e8cedf290e5cb3198029d8863e0c792d89cfb2272fd40052c",
+    "log": "tools/paper-integration/reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.log.gz",
+    "logSha256": "df6e7397ae008a211218c0b2a33051de851d8518bde22161bb67a24b16386585",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-steerable-saddles-strict-20261111-r1-client-logs.tar.gz",
+    "clientLogSha256": "f31df7258b7c0c86c4ace8538d42b1422e457b3a50ef65037a28119682f8d92d",
+    "pluginSha256": "e1bc4e9c44c5fc1e80dfbba1d0b72dd2e9cab8cbc92648e291e9fb9734e46198",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-horse-inventory-options-strict-20261111-r2",
     "reportFixtureDirectory": "srv-paper-horse-inventory-options-strict-20261111-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-horse-inventory-options-strict-20261111-r2.json",

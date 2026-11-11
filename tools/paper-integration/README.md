@@ -1,15 +1,16 @@
 # Isolated Paper Integration Server
 
-Latest strict fixture `srv-paper-horse-inventory-options-strict-20261111-r2` passes all 430 probes (411 passed,
+Latest strict fixture `srv-paper-steerable-saddles-strict-20261111-r1` passes all 430 probes (411 passed,
 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
-`horseOptionsImported` probe imports Horse `Saddled`/`HorseArmor` and Donkey
-`CarryingChest`; the real Horse reads back a saddle and diamond armor, while
-the two imported Donkeys read back chest true and explicit false. Horse color,
-style, domestication, and jump-strength controls remain covered. Report:
-[`paper-1.21.1-horse-inventory-options-strict-20261111-r2.json`](reports/paper-1.21.1-horse-inventory-options-strict-20261111-r2.json), SHA-256 `174e15013bd9432ca91f764b68a80ca37c12db421b4fb36fa56253a9544b16ff`.
-Compressed redacted server log SHA-256: `f747e7f4fb922b84861da3341ea69268749d161a4471138eba5f6c3a4a23e845`; client log archive SHA-256:
-`d37589842c90f3da87ed424f1f84a7c01d31742527365f8fe975dccf4ed6acc8`; tested plugin SHA-256:
-`503eca6fb8d2d90f7e4a34a90617995a4ff373bd3a27d4a5e36df68b43d4d161`.
+`horseOptionsImported` probe imports Horse `Saddled`/`HorseArmor`, Donkey
+`CarryingChest`, and `Saddled` on Pig and Strider. The real Horse reads back a
+saddle and diamond armor, the Donkeys read back chest true/false, and the Pig
+and Strider controls read back saddle true/false. Horse color, style,
+domestication, and jump-strength controls remain covered. Report:
+[`paper-1.21.1-steerable-saddles-strict-20261111-r1.json`](reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.json), SHA-256 `4c69994a9e71990e8cedf290e5cb3198029d8863e0c792d89cfb2272fd40052c`.
+Compressed redacted server log SHA-256: `df6e7397ae008a211218c0b2a33051de851d8518bde22161bb67a24b16386585`; client log archive SHA-256:
+`f31df7258b7c0c86c4ace8538d42b1422e457b3a50ef65037a28119682f8d92d`; tested plugin SHA-256:
+`e1bc4e9c44c5fc1e80dfbba1d0b72dd2e9cab8cbc92648e291e9fb9734e46198`.
 Archived logs redact token values.
 
 Previous strict fixture `srv-paper-visibility-options-strict-20261111-r1` passes all 430 probes (411 passed,

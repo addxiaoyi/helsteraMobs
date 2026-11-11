@@ -5064,6 +5064,22 @@ class ImportersTest {
                     Type: DONKEY
                     Options:
                       CarryingChest: false
+                  pig:
+                    Type: PIG
+                    Options:
+                      Saddled: true
+                  pig_control:
+                    Type: PIG
+                    Options:
+                      Saddled: false
+                  strider:
+                    Type: STRIDER
+                    Options:
+                      Saddled: true
+                  strider_control:
+                    Type: STRIDER
+                    Options:
+                      Saddled: false
                   wrong:
                     Type: ZOMBIE
                     Options:
@@ -5132,6 +5148,15 @@ class ImportersTest {
         var controlDonkey = convertedMob(entries, "donkey_control");
         assertTrue(controlDonkey.contains("entity.carrying-chest"));
         assertFalse(controlDonkey.getBoolean("entity.carrying-chest"));
+
+        assertTrue(convertedMob(entries, "pig").getBoolean("entity.saddled"));
+        var controlPig = convertedMob(entries, "pig_control");
+        assertTrue(controlPig.contains("entity.saddled"));
+        assertFalse(controlPig.getBoolean("entity.saddled"));
+        assertTrue(convertedMob(entries, "strider").getBoolean("entity.saddled"));
+        var controlStrider = convertedMob(entries, "strider_control");
+        assertTrue(controlStrider.contains("entity.saddled"));
+        assertFalse(controlStrider.getBoolean("entity.saddled"));
 
         var wrong = convertedMob(entries, "wrong");
         for (String mapped : List.of("entity.held-block", "entity.size",
