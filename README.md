@@ -1,4 +1,6 @@
-Latest strict fixture `srv-paper-steerable-saddles-strict-20261111-r1` verifies imported Horse `Saddled`/`HorseArmor`, Donkey `CarryingChest`, and `Saddled` on Pig and Strider through production spawning. Horse inventory and color/style/domestication/jump-strength controls pass; Donkeys read back chest true/false, while Pigs and Striders read back saddle true/false. All 430 Paper probes passed or recorded expected rejection (411 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+Latest strict fixture `srv-paper-tameable-families-strict-20261111-r2` verifies `Options.Tamed` through production spawning on Cat, Horse, and Parrot, with true/false controls for each alongside existing Wolf evidence. All 430 Paper probes passed or recorded expected rejection (411 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+
+Previous strict fixture `srv-paper-steerable-saddles-strict-20261111-r1` verifies imported Horse `Saddled`/`HorseArmor`, Donkey `CarryingChest`, and `Saddled` on Pig and Strider through production spawning. Horse inventory and color/style/domestication/jump-strength controls pass; Donkeys read back chest true/false, while Pigs and Striders read back saddle true/false. All 430 Paper probes passed or recorded expected rejection (411 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
 Previous strict fixture `srv-paper-horse-inventory-options-strict-20261111-r2` verifies Horse saddle/armor and Donkey chest true/false through production spawning, alongside Horse color, style, domestication, and jump-strength controls. Its complete 430-probe report remains in the [Paper evidence archive](tools/paper-integration/STARTUP_EVIDENCE.md).
 
@@ -1338,7 +1340,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-steerable-saddles-strict-20261111-r1` has 430 probes (411 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-tameable-families-strict-20261111-r2` has 430 probes (411 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1356,7 +1358,7 @@ Latest strict report has 430 probes, zero incomplete.
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 575 cited IDs; 483 report files; 4 directories without reports; 88 missing directories; 255 archived release reports. The
+   Current fixture inventory: 576 cited IDs; 484 report files; 4 directories without reports; 88 missing directories; 256 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

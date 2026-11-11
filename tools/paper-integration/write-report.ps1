@@ -115,7 +115,7 @@ $probeSpecs = [ordered]@{
     entitySizeRange = 'entity-size-range result=true samples=64 configured=2\.\.5 slime=[2-5]\.\.[2-5] magma-cube=[2-5]\.\.[2-5] phantom=[2-5]\.\.[2-5] imported=true'
     reinforcementsChanceOptions = 'reinforcements-chance-options result=true imported=true applied=true base=0\.38 zero-mapped=true upper-bound-mapped=true wrong-type-preserved=true invalid-preserved=true wrong-entity-rejected=true invalid-runtime-rejected=true'
     ageOptions = 'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true'
-    entityFlagOptions = 'entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true'
+    entityFlagOptions = 'entity-flag-options result=true imported=true wolf-tamed=true cat-tamed=true control-cat-tamed=false horse-tamed=true control-horse-tamed=false parrot-tamed=true control-parrot-tamed=false wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true'
     endermanHeldBlock = 'enderman-held-block result=true material=OBSIDIAN'
     mobPickupOption = 'mob-pickup-option result=true disabled=true explicit-overrides-default=true'
     spawnOptionRuntime = 'spawn-option-runtime result=true pickup-disabled=true explicit-pickup-overrides-fallback=true random-equipment-cleared=true explicit-equipment-preserved=true no-damage-ticks=true'
