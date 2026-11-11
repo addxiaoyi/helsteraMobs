@@ -126,6 +126,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private HelsteraCommand command;
     private CustomMenuService customMenuService;
     private boolean itemEffectsWaitedForPlayer;
+    private boolean showHealthDeliverySelfTestStarted;
     private final java.util.concurrent.atomic.AtomicBoolean targeterArgumentValidationComplete =
             new java.util.concurrent.atomic.AtomicBoolean();
     private final java.util.concurrent.atomic.AtomicBoolean spawningDistanceProbeRequested =
@@ -256,6 +257,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             this.behaviorRegistry = br;
             if (getConfig().getBoolean("ai.enabled", true)) {
                 AiManager a = new AiManager(this, (InstanceManagerImpl) instances, bus);
+                a.setShowHealthMessageSettings(
+                        getConfig().getDouble("mythic-parity.show-health.radius",
+                                dev.helstera.ai.ShowHealthMessage.DEFAULT_RADIUS),
+                        getConfig().getString("mythic-parity.show-health.format",
+                                dev.helstera.ai.ShowHealthMessage.DEFAULT_FORMAT));
                 a.setBehaviors(br);
                 // summon 动作需要一个生成钩子才能落地；SkillCatalog 是纯目录类，
                 // 不能直接依赖实例管理器，否则单元测试里根本加载不了它。
@@ -1030,6 +1036,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (!restoreConfigImmunityConditions()) return false;
         if (mobTemplateIndex != null) mobTemplateIndex.invalidate();
         if (ai instanceof AiManager manager) {
+            manager.setShowHealthMessageSettings(
+                    getConfig().getDouble("mythic-parity.show-health.radius",
+                            dev.helstera.ai.ShowHealthMessage.DEFAULT_RADIUS),
+                    getConfig().getString("mythic-parity.show-health.format",
+                            dev.helstera.ai.ShowHealthMessage.DEFAULT_FORMAT));
             manager.loadProfiles(getConfig().getConfigurationSection("ai.profiles"));
         }
         int healed = applyHealOnReloadToManagedMobs();
@@ -26930,6 +26941,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (mob.contains("move-speed")) profile.moveSpeed = mob.getDouble("move-speed", profile.moveSpeed);
         if (mob.contains("threat-weight")) profile.threatDistanceWeight = mob.getDouble("threat-weight", profile.threatDistanceWeight);
         if (mob.contains("threat-enabled")) profile.threatEnabled = mob.getBoolean("threat-enabled", profile.threatEnabled);
+        if (mob.contains("show-health-message")) {
+            profile.showHealthMessage = mob.getBoolean("show-health-message", profile.showHealthMessage);
+        }
     }
 
     static void applyAgeOptions(org.bukkit.entity.LivingEntity entity,
@@ -27380,6 +27394,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
+        if (getConfig().getBoolean("debug.self-test-show-health", false)
+                && !showHealthDeliverySelfTestStarted
+                && getServer().getOnlinePlayers().size() >= 2) {
+            showHealthDeliverySelfTestStarted = true;
+            getServer().getScheduler().runTaskLater(this, this::runImportedShowHealthDeliverySelfTest, 40L);
+        }
         if (getConfig().getBoolean("debug.self-test-item-group-cooldown", false)) {
             Player player = e.getPlayer();
             getServer().getScheduler().runTaskLater(this, () -> {
@@ -27409,6 +27429,123 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             return;
         }
         ((ResourcePackServiceImpl) resourcePack).apply(e.getPlayer());
+    }
+
+    private void runImportedShowHealthDeliverySelfTest() {
+        Player receiver = getServer().getPlayerExact("HelsteraTester");
+        Player outside = getServer().getPlayerExact("AudienceGuest");
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        boolean imported = false;
+        boolean spawned = false;
+        boolean nearInside = false;
+        boolean outsiderOutside = false;
+        boolean thresholds = false;
+        try {
+            if (receiver == null || outside == null || !receiver.isOnline() || !outside.isOnline()
+                    || !(ai instanceof AiManager manager)) {
+                throw new IllegalStateException("two online Paper probe clients and AI runtime are required");
+            }
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String sourceId = "ImportedShowHealth_" + suffix;
+            sourceRoot = Files.createTempDirectory("helstera-show-health-import-");
+            Path source = Files.createDirectories(sourceRoot.resolve("Mobs")).resolve("show-health.yml");
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Display: ShowHealthProbe
+                        Health: 100
+                        Options:
+                          NoAI: true
+                          ShowHealth: true
+                    """.formatted(sourceId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            String targetId = null;
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory) || Files.exists(destination)) {
+                    throw new IOException("Unsafe or existing ShowHealth probe config: " + destination);
+                }
+                Files.createDirectories(destination.getParent());
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                if (sourceId.equals(String.valueOf(entry.get("source-mob-id")))) {
+                    targetId = String.valueOf(entry.get("target-mob-id"));
+                }
+            }
+            var importedConfig = targetId == null ? null : mobConfig(targetId);
+            imported = importedConfig != null
+                    && importedConfig.getBoolean("mob.show-health-message", false)
+                    && "ShowHealthProbe".equals(importedConfig.getString("mob.display-name"));
+            if (!imported) throw new IllegalStateException("ShowHealth importer output did not reach mob runtime config");
+
+            var spawn = spawnMobCore(targetId, "example/emberling", receiver.getLocation(), false, null);
+            int instanceId = spawn == null ? -1 : spawn.instanceId();
+            if (instanceId > 0) instanceIds.add(instanceId);
+            var instance = instanceId > 0 ? instances().impl(instanceId) : null;
+            var mob = instance == null ? null : instance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            spawned = mob != null && manager.profileOf(instanceId) != null
+                    && manager.profileOf(instanceId).showHealthMessage
+                    && Math.abs(mob.getMaxHealth() - 100.0) < 1.0e-6;
+            if (!spawned) throw new IllegalStateException("imported ShowHealth mob did not spawn with its runtime profile");
+
+            double radius = getConfig().getDouble("mythic-parity.show-health.radius",
+                    dev.helstera.ai.ShowHealthMessage.DEFAULT_RADIUS);
+            var mobLocation = mob.getLocation();
+            nearInside = receiver.getWorld().equals(mobLocation.getWorld())
+                    && receiver.getLocation().distanceSquared(mobLocation) <= radius * radius;
+            outsiderOutside = !outside.getWorld().equals(mobLocation.getWorld())
+                    || outside.getLocation().distanceSquared(mobLocation) > radius * radius;
+            if (!nearInside || !outsiderOutside) {
+                throw new IllegalStateException("probe clients do not straddle configured ShowHealth radius");
+            }
+
+            mob.setHealth(100.0);
+            mob.setNoDamageTicks(0);
+            mob.damage(5.0, receiver);
+            boolean belowThresholdQuiet = mob.getHealth() > 90.0 && mob.getHealth() < 100.0;
+            mob.setNoDamageTicks(0);
+            mob.damage(6.0);
+            boolean firstCrossing = mob.getHealth() <= 90.0 && mob.getHealth() > 80.0;
+            mob.setNoDamageTicks(0);
+            mob.damage(1.0, receiver);
+            boolean insideBandQuiet = mob.getHealth() <= 90.0 && mob.getHealth() > 80.0;
+            mob.setNoDamageTicks(0);
+            mob.damage(9.0, receiver);
+            boolean secondCrossing = mob.getHealth() <= 80.0 && mob.getHealth() > 70.0;
+            mob.setHealth(85.0);
+            mob.setNoDamageTicks(0);
+            mob.damage(6.0, receiver);
+            boolean healedCrossing = mob.getHealth() <= 80.0 && mob.getHealth() > 70.0;
+            thresholds = belowThresholdQuiet && firstCrossing && insideBandQuiet
+                    && secondCrossing && healedCrossing;
+            getLogger().info("show-health-delivery result=" + thresholds
+                    + " imported=" + imported + " spawned=" + spawned
+                    + " first-crossing=" + firstCrossing + " second-crossing=" + secondCrossing
+                    + " healing-recross=" + healedCrossing
+                    + " below-threshold-quiet=" + belowThresholdQuiet
+                    + " inside-band-quiet=" + insideBandQuiet
+                    + " near-inside=" + nearInside + " outsider-outside=" + outsiderOutside
+                    + " radius=" + radius + " environmental-damage=true entity-damage=true");
+        } catch (Throwable failure) {
+            getLogger().warning("show-health-delivery result=false imported=" + imported
+                    + " spawned=" + spawned + " first-crossing=false second-crossing=false"
+                    + " healing-recross=false below-threshold-quiet=false inside-band-quiet=false"
+                    + " near-inside=" + nearInside + " outsider-outside=" + outsiderOutside
+                    + " error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
     }
 
     private void runItemGroupCooldownSelfTest(Player player) {

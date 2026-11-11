@@ -3,6 +3,7 @@ $previousRawPotionWorkflow = $env:PAPER_RAW_POTION_WORKFLOW
 $previousRawPotionShort = $env:PAPER_RAW_POTION_SHORT
 $previousSpawningDistanceWalkWorkflow = $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW
 $previousInteractableWorkflow = $env:PAPER_INTERACTABLE_WORKFLOW
+$previousShowHealthWorkflow = $env:PAPER_SHOW_HEALTH_WORKFLOW
 $env:PAPER_RAW_POTION_WORKFLOW = 'false'
 $env:PAPER_RAW_POTION_SHORT = 'false'
 $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = 'true'
@@ -470,6 +471,44 @@ try {
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $messageTemp | Out-Null
     $messageReport = Get-Content -LiteralPath (Join-Path $messageTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
     Assert-True (($messageReport.probes | Where-Object id -eq 'importedEscapedMessageClient').status -eq 'not-observed') 'escaped message probe requires server dispatch'
+
+    $env:PAPER_SHOW_HEALTH_WORKFLOW = 'true'
+    $showHealthTemp = Join-Path $temp 'show-health-client-fixture'
+    New-Item -ItemType Directory -Path (Join-Path $showHealthTemp 'logs') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $showHealthTemp 'logs/latest.log') -Value @(
+        'This server is running Paper version 1.21.1-133 (Implementing API version 1.21.1-R0.1-SNAPSHOT)',
+        'show-health-delivery result=true imported=true spawned=true first-crossing=true second-crossing=true healing-recross=true below-threshold-quiet=true inside-band-quiet=true near-inside=true outsider-outside=true radius=25 environmental-damage=true entity-damage=true'
+    ) -Encoding utf8
+    $showHealthClientPayload = @{
+        status = 'passed'
+        observations = @{
+            nearPlayerReceivedFirstThreshold = $true
+            nearPlayerReceivedSecondThreshold = $true
+            outsidePlayerExcluded = $true
+            belowThresholdQuiet = $true
+            withinBandQuiet = $true
+            healingRearmedThreshold = $true
+        }
+        testerMessages = @('SHOW_HEALTH_PROBE|ShowHealthProbe|89|89|100', 'SHOW_HEALTH_PROBE|ShowHealthProbe|79|79|100')
+        outsideMessages = @()
+    } | ConvertTo-Json -Compress -Depth 5
+    Set-Content -LiteralPath (Join-Path $showHealthTemp 'audience-client.stdout.log') `
+        -Value "PAPER_SHOW_HEALTH_CLIENT_REPORT $showHealthClientPayload" -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $showHealthTemp | Out-Null
+    $showHealthReport = Get-Content -LiteralPath (Join-Path $showHealthTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True ($showHealthReport.expectedProbeIds -contains 'showHealthDelivery' -and
+        $showHealthReport.expectedProbeIds -contains 'showHealthClientDelivery') 'ShowHealth server and client probes are registered when requested'
+    Assert-True (($showHealthReport.probes | Where-Object id -eq 'showHealthDelivery').status -eq 'passed') 'ShowHealth Paper runtime observation is parsed'
+    Assert-True (($showHealthReport.probes | Where-Object id -eq 'showHealthClientDelivery').status -eq 'passed') 'ShowHealth real-client delivery observation is parsed'
+    $showHealthClientPayload = $showHealthClientPayload | ConvertFrom-Json
+    $showHealthClientPayload.observations.outsidePlayerExcluded = $false
+    Set-Content -LiteralPath (Join-Path $showHealthTemp 'audience-client.stdout.log') `
+        -Value ('PAPER_SHOW_HEALTH_CLIENT_REPORT ' + ($showHealthClientPayload | ConvertTo-Json -Compress -Depth 5)) -Encoding utf8
+    & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $showHealthTemp | Out-Null
+    $showHealthReport = Get-Content -LiteralPath (Join-Path $showHealthTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-True (($showHealthReport.probes | Where-Object id -eq 'showHealthClientDelivery').status -eq 'not-observed') 'ShowHealth client probe rejects an outside-player delivery failure'
+    $env:PAPER_SHOW_HEALTH_WORKFLOW = 'false'
+
     Set-Content -LiteralPath (Join-Path $messageTemp 'logs/latest.log') -Value 'named-condition-failure-closed bound=true blocked=true control=true' -Encoding utf8
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $messageTemp | Out-Null
     $messageReport = Get-Content -LiteralPath (Join-Path $messageTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
@@ -1809,6 +1848,14 @@ try {
     $fullCatalogReport.expectedProbeIds += 'expTierDeath'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'expTierDeath'; status = 'passed'; observations = @('exp-tier-death result=true low=2 qualified=7 low-dead=true qualified-dead=true low-bread=4 qualified-bread=4')
+    }
+    $fullCatalogReport.expectedProbeIds += 'showHealthDelivery'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'showHealthDelivery'; status = 'passed'; observations = @('show-health-delivery result=true imported=true spawned=true first-crossing=true second-crossing=true healing-recross=true below-threshold-quiet=true inside-band-quiet=true near-inside=true outsider-outside=true radius=25 environmental-damage=true entity-damage=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'showHealthClientDelivery'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'showHealthClientDelivery'; status = 'passed'; observations = @('{"nearPlayerReceivedFirstThreshold":true,"nearPlayerReceivedSecondThreshold":true,"outsidePlayerExcluded":true,"belowThresholdQuiet":true,"withinBandQuiet":true,"healingRearmedThreshold":true}')
     }
     $fullCatalogPath = Join-Path $temp 'full-catalog-report.json'
     $originalPluginEnabled = $fullCatalogReport.pluginEnabled
@@ -3937,6 +3984,7 @@ try {
     $env:PAPER_RAW_POTION_SHORT = $previousRawPotionShort
     $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW = $previousSpawningDistanceWalkWorkflow
     $env:PAPER_INTERACTABLE_WORKFLOW = $previousInteractableWorkflow
+    $env:PAPER_SHOW_HEALTH_WORKFLOW = $previousShowHealthWorkflow
     $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
     $tempPath = [System.IO.Path]::GetFullPath($temp)
     $isOwnedTemp = $tempPath.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase) -and

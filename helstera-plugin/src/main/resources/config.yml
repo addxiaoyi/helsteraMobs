@@ -195,6 +195,7 @@ debug:
   # 代价：会在世界出生点生成一个模型。仅调试用，生产环境请保持 false。
   self-test: false
   self-test-entity-options: false
+  self-test-show-health: false
   self-test-item-effects: false
   self-test-loot: false
   self-test-death-loot: false
@@ -214,3 +215,10 @@ compatibility:
   mythicmobs: true
   itemadder: true
   craftengine: true
+
+# MythicMobs stores ShowHealth radius/format globally; imported mob files carry
+# the per-mob Options.ShowHealth switch.
+mythic-parity:
+  show-health:
+    radius: 25
+    format: '&c$mobname &7- &c$percent% &7($mobhp/$mobmaxhp)'

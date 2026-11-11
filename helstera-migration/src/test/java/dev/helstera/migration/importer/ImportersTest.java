@@ -4465,7 +4465,9 @@ class ImportersTest {
         List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
         YamlConfiguration target = converted(file);
 
-        assertTrue(target.getBoolean("show-health-bar"));
+        assertTrue(target.getBoolean("mob.show-health-message"));
+        assertFalse(target.contains("show-health-bar"),
+                "Mythic ShowHealth is a radius chat broadcast, not a model BossBar");
         assertEquals(1.25, target.getDouble("scale"), 1e-9);
         assertTrue(target.getBoolean("ai.threat-enabled"),
                 "Options.UseThreatTable is an explicit runtime override");

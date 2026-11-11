@@ -15,8 +15,9 @@ if ($Strict -and $env:PAPER_BEE_STINGER_ONLY -eq 'true') {
 if ($Strict -and ($env:PAPER_MENU_WORKFLOW -ne 'true' -or $env:PAPER_WEB_RELOAD_PROBE -ne 'true' -or
         $env:PAPER_RAW_POTION_WORKFLOW -ne 'true' -or $env:PAPER_RAW_POTION_SHORT -ne 'true' -or
         $env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW -ne 'true' -or
-        $env:PAPER_INTERACTABLE_WORKFLOW -ne 'true')) {
-    throw 'Strict mode requires PAPER_MENU_WORKFLOW, PAPER_WEB_RELOAD_PROBE, PAPER_RAW_POTION_WORKFLOW, PAPER_RAW_POTION_SHORT, PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW, and PAPER_INTERACTABLE_WORKFLOW set to true.'
+        $env:PAPER_INTERACTABLE_WORKFLOW -ne 'true' -or
+        $env:PAPER_SHOW_HEALTH_WORKFLOW -ne 'true')) {
+    throw 'Strict mode requires PAPER_MENU_WORKFLOW, PAPER_WEB_RELOAD_PROBE, PAPER_RAW_POTION_WORKFLOW, PAPER_RAW_POTION_SHORT, PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW, PAPER_INTERACTABLE_WORKFLOW, and PAPER_SHOW_HEALTH_WORKFLOW set to true.'
 }
 $pythonInfo = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
 if ($LASTEXITCODE -ne 0 -or $null -eq $pythonInfo) {
@@ -158,6 +159,13 @@ New-Item -ItemType Directory -Path $pluginData -Force | Out-Null
 if ($env:PAPER_SKILLTREE_REUSE -ne 'true' -or
         -not (Test-Path -LiteralPath (Join-Path $pluginData 'config.yml'))) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'config.yml') -Destination (Join-Path $pluginData 'config.yml') -Force
+}
+if ($env:PAPER_SHOW_HEALTH_WORKFLOW -eq 'true') {
+    $pluginConfig = Join-Path $pluginData 'config.yml'
+    $yaml = Get-Content -LiteralPath $pluginConfig -Raw
+    $yaml = [regex]::Replace($yaml, '(?m)^  self-test-show-health:\s*false\s*$',
+        '  self-test-show-health: true')
+    Set-Content -LiteralPath $pluginConfig -Value $yaml -Encoding utf8
 }
 if ($env:PAPER_BEE_STINGER_ONLY -eq 'true') {
     $pluginConfig = Join-Path $pluginData 'config.yml'
