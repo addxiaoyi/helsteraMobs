@@ -6365,6 +6365,8 @@ class ImportersTest {
 
         assertEquals(-1, target.getInt("mob.unsupported.AIPathfindingMalus.WATER"));
         assertEquals(0, target.getInt("mob.unsupported.AIPathfindingMalus.FIRE"));
+        assertTrue(target.contains("mob.unsupported.AIPathfindingMalus"));
+        assertFalse(target.contains("ai.pathfinding-malus"));
         assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
                 && "mob.unsupported.AIPathfindingMalus".equals(e.get("target-key"))
                 && "WARN".equals(e.get("severity"))));
