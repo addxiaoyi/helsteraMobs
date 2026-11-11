@@ -61,6 +61,7 @@ $probeSpecs = [ordered]@{
     armorOptions = 'armor-options result=true base=8(?:\.0+)?'
     armorToughnessStatsImported = 'armor-toughness-stats-imported result=true imported=true base=4(?:\.0+)? attack-damage=12(?:\.0+)? movement-speed=0\.4(?:0*) armor=8(?:\.0+)? knockback-resistance=0\.25(?:0*) follow-range=36(?:\.0+)? unsupported-preserved=true modifier-preserved=true root-preserved=true controls=0(?:\.0+)?,0(?:\.0+)?'
     entityConfigFlags = 'entity-config-flags result=true no-ai=true invulnerable=true silent=true gravity=false collidable=false'
+    tamedFamilyOptions = 'tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true'
     expOptions = 'exp-options result=true experience=13 event=true'
     expNaturalDeath = 'exp-natural-death result=true dead=true experience=13 cause=BukkitDamage'
     expTierDeath = 'exp-tier-death result=true low=2 qualified=7 low-dead=true qualified-dead=true low-bread=4 qualified-bread=4'

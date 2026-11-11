@@ -1,4 +1,4 @@
-Latest strict fixture `srv-paper-tameable-families-strict-20261111-r2` verifies `Options.Tamed` through production spawning on Cat, Horse, and Parrot, with true/false controls for each alongside existing Wolf evidence. All 430 Paper probes passed or recorded expected rejection (411 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+Latest strict fixture `srv-paper-tameable-families-strict-20261111-r3` verifies `Options.Tamed` through production spawning on Donkey, Mule, Llama, Trader Llama, Skeleton Horse, Zombie Horse, and Camel. The six stateful families read back true/false pairs; Camel reads back true, while its unrepresentable false request is preserved because Paper 1.21.1 always reports Camel as tamed. Prior strict evidence covers Wolf, Cat, Horse, and Parrot. All 431 Paper probes passed or recorded expected rejection (412 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r3.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
 Previous strict fixture `srv-paper-steerable-saddles-strict-20261111-r1` verifies imported Horse `Saddled`/`HorseArmor`, Donkey `CarryingChest`, and `Saddled` on Pig and Strider through production spawning. Horse inventory and color/style/domestication/jump-strength controls pass; Donkeys read back chest true/false, while Pigs and Striders read back saddle true/false. All 430 Paper probes passed or recorded expected rejection (411 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
@@ -1340,7 +1340,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-tameable-families-strict-20261111-r2` has 430 probes (411 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-tameable-families-strict-20261111-r3` has 431 probes (412 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1353,12 +1353,12 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-11). The full remaining work is:
 
-Latest strict report has 430 probes, zero incomplete.
+Latest strict report has 431 probes, zero incomplete.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 576 cited IDs; 484 report files; 4 directories without reports; 88 missing directories; 256 archived release reports. The
+   Current fixture inventory: 577 cited IDs; 485 report files; 4 directories without reports; 88 missing directories; 257 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

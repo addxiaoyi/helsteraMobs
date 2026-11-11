@@ -217,6 +217,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-feet=true item-hand=true item-offhand=true item-head=true item-legs=true wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true can-join-raid=false patrol-leader=true patrol-spawn-point=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true imported=true wolf-tamed=true cat-tamed=true control-cat-tamed=false horse-tamed=true control-horse-tamed=false parrot-tamed=true control-parrot-tamed=false wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
         '[Server thread/INFO]: attribute-options result=true modifiers=1',
@@ -591,6 +592,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'entityFlagOptions').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'entityFlagOptions').observations[0] -match
         '^entity-flag-options result=true imported=true wolf-tamed=true cat-tamed=true control-cat-tamed=false horse-tamed=true control-horse-tamed=false parrot-tamed=true control-parrot-tamed=false wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true$') 'imported entity flag options require production Paper evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'tamedFamilyOptions').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'tamedFamilyOptions').observations[0] -match
+        '^tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true$') 'Tamed option family probe requires supported readback plus Camel false-state preservation'
     Assert-True (($report.probes | Where-Object id -eq 'noGravityImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'noGravityImported').observations[0] -match
         '^no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true$') 'imported NoGravity requires production readback and malformed-value preservation'
@@ -1321,6 +1325,10 @@ try {
     if ($fullCatalogEntityFlags.Count -ne 1) { throw 'Synthetic full catalog report must contain entityFlagOptions.' }
     $fullCatalogEntityFlags[0].observations = @(
         'entity-flag-options result=true imported=true wolf-tamed=true cat-tamed=true control-cat-tamed=false horse-tamed=true control-horse-tamed=false parrot-tamed=true control-parrot-tamed=false wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true')
+    $fullCatalogReport.expectedProbeIds += 'tamedFamilyOptions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'tamedFamilyOptions'; status = 'passed'; observations = @('tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true')
+    }
     $fullCatalogCatOptions = @($fullCatalogReport.probes | Where-Object id -eq 'cat')
     if ($fullCatalogCatOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain cat.' }
     $fullCatalogCatOptions[0].observations = @(
@@ -1991,11 +1999,15 @@ try {
     $entitySizeProbe.observations = @('entity-size-range result=true samples=64 configured=2..5 observed=2..5')
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $oldEntitySizeEvidenceRejected = $false
+    $oldEntitySizeEvidenceRejectionMessage = ''
     try {
         & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
             -RequireTargetPaperVersion -RequireFullReleaseCatalog
-    } catch { $oldEntitySizeEvidenceRejected = $_.Exception.Message -match 'required observation for entitySizeRange' }
-    Assert-True $oldEntitySizeEvidenceRejected 'full release gate rejects size evidence missing MagmaCube and Phantom'
+    } catch {
+        $oldEntitySizeEvidenceRejectionMessage = $_.Exception.Message
+        $oldEntitySizeEvidenceRejected = $oldEntitySizeEvidenceRejectionMessage -match 'required observation for entitySizeRange'
+    }
+    Assert-True $oldEntitySizeEvidenceRejected "full release gate rejects size evidence missing MagmaCube and Phantom (actual: $oldEntitySizeEvidenceRejectionMessage)"
     $entitySizeProbe.observations = $entitySizeObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $reinforcementsProbe = @($fullCatalogReport.probes | Where-Object id -eq 'reinforcementsChanceOptions')
@@ -2318,6 +2330,19 @@ try {
     } catch { $incompleteTameableOptionsRejected = $_.Exception.Message -match 'required observation for tameableOptionsImported' }
     Assert-True $incompleteTameableOptionsRejected 'full release gate rejects incomplete imported Tameable option evidence'
     $fullCatalogTameableOptions[0].observations = $tameableOptionsObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $fullCatalogTamedFamilies = @($fullCatalogReport.probes | Where-Object id -eq 'tamedFamilyOptions')
+    if ($fullCatalogTamedFamilies.Count -ne 1) { throw 'Synthetic full catalog report must contain tamedFamilyOptions.' }
+    $tamedFamilyObservations = $fullCatalogTamedFamilies[0].observations
+    $fullCatalogTamedFamilies[0].observations = @('tamed-family-options result=true imported=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteTamedFamiliesRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteTamedFamiliesRejected = $_.Exception.Message -match 'required observation for tamedFamilyOptions' }
+    Assert-True $incompleteTamedFamiliesRejected 'full release gate rejects incomplete Tamed family evidence'
+    $fullCatalogTamedFamilies[0].observations = $tamedFamilyObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $fullCatalogPlayerCreated = @($fullCatalogReport.probes | Where-Object id -eq 'playerCreatedImported')
     if ($fullCatalogPlayerCreated.Count -ne 1) { throw 'Synthetic full catalog report must contain playerCreatedImported.' }

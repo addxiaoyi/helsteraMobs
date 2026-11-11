@@ -4898,6 +4898,62 @@ class ImportersTest {
                     Type: PARROT
                     Options:
                       Tamed: false
+                  donkey:
+                    Type: DONKEY
+                    Options:
+                      Tamed: true
+                  donkey_control:
+                    Type: DONKEY
+                    Options:
+                      Tamed: false
+                  mule:
+                    Type: MULE
+                    Options:
+                      Tamed: true
+                  mule_control:
+                    Type: MULE
+                    Options:
+                      Tamed: false
+                  llama:
+                    Type: LLAMA
+                    Options:
+                      Tamed: true
+                  llama_control:
+                    Type: LLAMA
+                    Options:
+                      Tamed: false
+                  trader_llama:
+                    Type: TRADER_LLAMA
+                    Options:
+                      Tamed: true
+                  trader_llama_control:
+                    Type: TRADER_LLAMA
+                    Options:
+                      Tamed: false
+                  skeleton_horse:
+                    Type: SKELETON_HORSE
+                    Options:
+                      Tamed: true
+                  skeleton_horse_control:
+                    Type: SKELETON_HORSE
+                    Options:
+                      Tamed: false
+                  zombie_horse:
+                    Type: ZOMBIE_HORSE
+                    Options:
+                      Tamed: true
+                  zombie_horse_control:
+                    Type: ZOMBIE_HORSE
+                    Options:
+                      Tamed: false
+                  camel:
+                    Type: CAMEL
+                    Options:
+                      Tamed: true
+                  camel_control:
+                    Type: CAMEL
+                    Options:
+                      Tamed: false
                   raider:
                     Type: PILLAGER
                     Options:
@@ -4936,6 +4992,17 @@ class ImportersTest {
         assertFalse(horseControl.getBoolean("entity.tamed", true));
         assertTrue(parrot.getBoolean("entity.tamed"));
         assertFalse(parrotControl.getBoolean("entity.tamed", true));
+        for (String family : List.of("donkey", "mule", "llama", "trader_llama",
+                "skeleton_horse", "zombie_horse")) {
+            assertTrue(configs.get("mythic_" + family).getBoolean("entity.tamed"), family);
+            assertFalse(configs.get("mythic_" + family + "_control").getBoolean("entity.tamed", true), family);
+        }
+        var camel = configs.get("mythic_camel");
+        var camelControl = configs.get("mythic_camel_control");
+        assertTrue(camel.getBoolean("entity.tamed"));
+        assertFalse(camel.contains("entity.unsupported.Options.Tamed"));
+        assertFalse(camelControl.contains("entity.tamed"));
+        assertFalse(camelControl.getBoolean("entity.unsupported.Options.Tamed", true));
         assertFalse(raider.getBoolean("entity.can-join-raid", true));
         assertTrue(raider.getBoolean("entity.patrol-leader"));
         assertTrue(raider.getBoolean("entity.patrol-spawn-point"));
