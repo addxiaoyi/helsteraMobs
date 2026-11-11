@@ -14,8 +14,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-legacy-item-ids-strict-20261111-r1",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-legacy-item-id-boundaries-strict-20261111-r1.json"
+      "releaseFixtureId": "srv-paper-frog-options-strict-20261111-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-frog-options-strict-20261111-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

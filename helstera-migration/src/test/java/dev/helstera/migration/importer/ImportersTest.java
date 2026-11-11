@@ -5894,6 +5894,68 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Frog Type and Variant map to the native variant with preservation boundaries")
+    void mythicMapsFrogTypeAliasesAndPreservesInvalidValues(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/frog-options.yml", """
+                mobs:
+                  cold_frog:
+                    Type: FROG
+                    Options:
+                      Type: cold
+                  warm_frog:
+                    Type: FROG
+                    Options:
+                      Variant: warm
+                  matching_aliases:
+                    Type: FROG
+                    Options:
+                      Type: TEMPERATE
+                      Variant: temperate
+                  wrong_entity:
+                    Type: ZOMBIE
+                    Options:
+                      Type: COLD
+                  invalid:
+                    Type: FROG
+                    Options:
+                      Type: PURPLE
+                  conflicting_aliases:
+                    Type: FROG
+                    Options:
+                      Type: COLD
+                      Variant: WARM
+                """);
+
+        var entries = new MythicMobsImporter().convert(file);
+
+        var cold = convertedMob(entries, "cold_frog");
+        assertEquals("COLD", cold.getString("entity.frog-variant"));
+        assertFalse(cold.contains("mob.unsupported.Options"));
+        var warm = convertedMob(entries, "warm_frog");
+        assertEquals("WARM", warm.getString("entity.frog-variant"));
+        var matchingAliases = convertedMob(entries, "matching_aliases");
+        assertEquals("TEMPERATE", matchingAliases.getString("entity.frog-variant"));
+        assertFalse(matchingAliases.contains("entity.unsupported.Options"));
+
+        var wrongEntity = convertedMob(entries, "wrong_entity");
+        assertEquals("COLD", wrongEntity.getString("entity.unsupported.Options.Type"));
+        assertFalse(wrongEntity.contains("entity.frog-variant"));
+        var invalid = convertedMob(entries, "invalid");
+        assertEquals("PURPLE", invalid.getString("entity.unsupported.Options.Type"));
+        assertFalse(invalid.contains("entity.frog-variant"));
+        var conflict = convertedMob(entries, "conflicting_aliases");
+        assertEquals("COLD", conflict.getString("entity.unsupported.Options.Type"));
+        assertEquals("WARM", conflict.getString("entity.unsupported.Options.Variant"));
+        assertFalse(conflict.contains("entity.frog-variant"));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "Options.Variant".equals(entry.get("source-key"))
+                && "entity.frog-variant".equals(entry.get("target-key"))));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "Options.Type".equals(entry.get("source-key"))
+                && "WARN".equals(entry.get("severity"))));
+    }
+
+    @Test
     @DisplayName("Mythic Tameable controls taming independently from Tamed")
     void mythicMapsTameablePolicyAndDefaults(@TempDir Path root) throws Exception {
         write(root, "config-mobs.yml", """
