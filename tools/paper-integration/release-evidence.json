@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-tameable-families-strict-20261111-r2",
+    "reportFixtureDirectory": "srv-paper-tameable-families-strict-20261111-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r2.json",
+    "reportSha256": "55b72d54b7c6ee8bd4e26bb2f3acf9282121a7f1b86944cabcec4631edc6e560",
+    "log": "tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r2.log.gz",
+    "logSha256": "c5ca550e0724f71e54e7ca5b7199e5f6a89aff0bd6f8eb70879297c69df75a23",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r2-client-logs.tar.gz",
+    "clientLogSha256": "fe5862e38e12c2560eec32fc05e2a4116c593ba71654e6516eda7bdaf4aa4712",
+    "pluginSha256": "70f007403ff552aebac595542f52ed0b3028c14206fc56bdac56c6186045f821",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-steerable-saddles-strict-20261111-r1",
     "reportFixtureDirectory": "srv-paper-steerable-saddles-strict-20261111-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.json",

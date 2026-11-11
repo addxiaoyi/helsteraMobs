@@ -1,6 +1,19 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-steerable-saddles-strict-20261111-r1` passed the full strict gate on Paper 1.21.1-133:
+Latest fixture `srv-paper-tameable-families-strict-20261111-r2` passed the full strict gate on Paper 1.21.1-133:
+430 registered probes, 411 passed, 19 expected rejections, and zero failed or
+incomplete. The `entityFlagOptions` probe imports `Options.Tamed` on Cat, Horse,
+and Parrot through production spawning and reads back true/false states for all
+three families alongside Wolf coverage. Plugin SHA-256:
+`70f007403ff552aebac595542f52ed0b3028c14206fc56bdac56c6186045f821`. Report:
+[paper-1.21.1-tameable-families-strict-20261111-r2.json](reports/paper-1.21.1-tameable-families-strict-20261111-r2.json), SHA-256:
+`55b72d54b7c6ee8bd4e26bb2f3acf9282121a7f1b86944cabcec4631edc6e560`. Compressed redacted server log:
+[paper-1.21.1-tameable-families-strict-20261111-r2.log.gz](reports/paper-1.21.1-tameable-families-strict-20261111-r2.log.gz), SHA-256:
+`c5ca550e0724f71e54e7ca5b7199e5f6a89aff0bd6f8eb70879297c69df75a23`. Client log archive:
+[paper-1.21.1-tameable-families-strict-20261111-r2-client-logs.tar.gz](reports/paper-1.21.1-tameable-families-strict-20261111-r2-client-logs.tar.gz), SHA-256:
+`fe5862e38e12c2560eec32fc05e2a4116c593ba71654e6516eda7bdaf4aa4712`. Archived logs redact token query values.
+
+Previous fixture `srv-paper-steerable-saddles-strict-20261111-r1` passed the full strict gate on Paper 1.21.1-133:
 430 registered probes, 411 passed, 19 expected rejections, and zero failed or
 incomplete. The `horseOptionsImported` probe imports Horse `Saddled` and
 `HorseArmor`, Donkey `CarryingChest`, and `Saddled` on Pig and Strider. Through

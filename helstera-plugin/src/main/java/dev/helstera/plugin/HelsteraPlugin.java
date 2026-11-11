@@ -2375,6 +2375,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             Path source = sourceDirectory.resolve("entity-flags.yml");
             String wolfId = "EntityFlagsWolf_" + suffix;
             String wolfControlId = "EntityFlagsWolfControl_" + suffix;
+            String catId = "EntityFlagsCat_" + suffix;
+            String catControlId = "EntityFlagsCatControl_" + suffix;
+            String horseId = "EntityFlagsHorse_" + suffix;
+            String horseControlId = "EntityFlagsHorseControl_" + suffix;
+            String parrotId = "EntityFlagsParrot_" + suffix;
+            String parrotControlId = "EntityFlagsParrotControl_" + suffix;
             String pigZombieId = "EntityFlagsPigZombie_" + suffix;
             String pigZombieControlId = "EntityFlagsPigZombieControl_" + suffix;
             String raiderId = "EntityFlagsRaider_" + suffix;
@@ -2400,6 +2406,30 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                           NoAI: true
                           Gravity: false
                           NoGravity: false
+                      %10$s:
+                        Type: CAT
+                        Options:
+                          Tamed: true
+                      %11$s:
+                        Type: CAT
+                        Options:
+                          Tamed: false
+                      %12$s:
+                        Type: HORSE
+                        Options:
+                          Tamed: true
+                      %13$s:
+                        Type: HORSE
+                        Options:
+                          Tamed: false
+                      %14$s:
+                        Type: PARROT
+                        Options:
+                          Tamed: true
+                      %15$s:
+                        Type: PARROT
+                        Options:
+                          Tamed: false
                       %3$s:
                         Type: ZOMBIFIED_PIGLIN
                         Options:
@@ -2446,7 +2476,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         Options:
                           HasGravity: true
                     """.formatted(wolfId, wolfControlId, pigZombieId, pigZombieControlId,
-                    raiderId, raiderControlId, wrongTypeId, hasGravityId, hasGravityControlId));
+                    raiderId, raiderControlId, wrongTypeId, hasGravityId, hasGravityControlId,
+                    catId, catControlId, horseId, horseControlId, parrotId, parrotControlId));
 
             var targetIds = new java.util.LinkedHashMap<String, String>();
             for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
@@ -2471,7 +2502,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         String.valueOf(entry.get("target-mob-id")));
             }
 
-            var sourceIds = java.util.List.of(wolfId, wolfControlId, pigZombieId,
+            var sourceIds = java.util.List.of(wolfId, wolfControlId,
+                    catId, catControlId, horseId, horseControlId, parrotId, parrotControlId, pigZombieId,
                     pigZombieControlId, raiderId, raiderControlId, wrongTypeId,
                     hasGravityId, hasGravityControlId);
             if (!targetIds.keySet().containsAll(sourceIds)) {
@@ -2481,7 +2513,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     origin.clone().add(4, 0, 0), origin.clone().add(6, 0, 0),
                     origin.clone().add(8, 0, 0), origin.clone().add(10, 0, 0),
                     origin.clone().add(12, 0, 0), origin.clone().add(14, 0, 0),
-                    origin.clone().add(16, 0, 0));
+                    origin.clone().add(16, 0, 0), origin.clone().add(18, 0, 0),
+                    origin.clone().add(20, 0, 0), origin.clone().add(22, 0, 0),
+                    origin.clone().add(24, 0, 0), origin.clone().add(26, 0, 0),
+                    origin.clone().add(28, 0, 0));
             var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
             for (int i = 0; i < sourceIds.size(); i++) {
                 int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
@@ -2491,6 +2526,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
             var wolfInstance = instances().impl(spawnedIds.get(wolfId));
             var wolfControlInstance = instances().impl(spawnedIds.get(wolfControlId));
+            var catInstance = instances().impl(spawnedIds.get(catId));
+            var catControlInstance = instances().impl(spawnedIds.get(catControlId));
+            var horseInstance = instances().impl(spawnedIds.get(horseId));
+            var horseControlInstance = instances().impl(spawnedIds.get(horseControlId));
+            var parrotInstance = instances().impl(spawnedIds.get(parrotId));
+            var parrotControlInstance = instances().impl(spawnedIds.get(parrotControlId));
             var pigZombieInstance = instances().impl(spawnedIds.get(pigZombieId));
             var pigZombieControlInstance = instances().impl(spawnedIds.get(pigZombieControlId));
             var raiderInstance = instances().impl(spawnedIds.get(raiderId));
@@ -2504,6 +2545,24 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var wolfControl = wolfControlInstance == null ? null : wolfControlInstance.baseEntity()
                     .filter(org.bukkit.entity.Wolf.class::isInstance)
                     .map(org.bukkit.entity.Wolf.class::cast).orElse(null);
+            var cat = catInstance == null ? null : catInstance.baseEntity()
+                    .filter(org.bukkit.entity.Cat.class::isInstance)
+                    .map(org.bukkit.entity.Cat.class::cast).orElse(null);
+            var catControl = catControlInstance == null ? null : catControlInstance.baseEntity()
+                    .filter(org.bukkit.entity.Cat.class::isInstance)
+                    .map(org.bukkit.entity.Cat.class::cast).orElse(null);
+            var horse = horseInstance == null ? null : horseInstance.baseEntity()
+                    .filter(org.bukkit.entity.Horse.class::isInstance)
+                    .map(org.bukkit.entity.Horse.class::cast).orElse(null);
+            var horseControl = horseControlInstance == null ? null : horseControlInstance.baseEntity()
+                    .filter(org.bukkit.entity.Horse.class::isInstance)
+                    .map(org.bukkit.entity.Horse.class::cast).orElse(null);
+            var parrot = parrotInstance == null ? null : parrotInstance.baseEntity()
+                    .filter(org.bukkit.entity.Parrot.class::isInstance)
+                    .map(org.bukkit.entity.Parrot.class::cast).orElse(null);
+            var parrotControl = parrotControlInstance == null ? null : parrotControlInstance.baseEntity()
+                    .filter(org.bukkit.entity.Parrot.class::isInstance)
+                    .map(org.bukkit.entity.Parrot.class::cast).orElse(null);
             var pigZombie = pigZombieInstance == null ? null : pigZombieInstance.baseEntity()
                     .filter(org.bukkit.entity.PigZombie.class::isInstance)
                     .map(org.bukkit.entity.PigZombie.class::cast).orElse(null);
@@ -2528,6 +2587,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
             var wolfOptions = mobConfig(targetIds.get(wolfId));
             var wolfControlOptions = mobConfig(targetIds.get(wolfControlId));
+            var catOptions = mobConfig(targetIds.get(catId));
+            var catControlOptions = mobConfig(targetIds.get(catControlId));
+            var horseOptions = mobConfig(targetIds.get(horseId));
+            var horseControlOptions = mobConfig(targetIds.get(horseControlId));
+            var parrotOptions = mobConfig(targetIds.get(parrotId));
+            var parrotControlOptions = mobConfig(targetIds.get(parrotControlId));
             var pigZombieOptions = mobConfig(targetIds.get(pigZombieId));
             var pigZombieControlOptions = mobConfig(targetIds.get(pigZombieControlId));
             var raiderOptions = mobConfig(targetIds.get(raiderId));
@@ -2538,6 +2603,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var wolfEntityOptions = wolfOptions == null ? null : wolfOptions.getConfigurationSection("entity");
             var wolfControlEntityOptions = wolfControlOptions == null ? null
                     : wolfControlOptions.getConfigurationSection("entity");
+            var catEntityOptions = catOptions == null ? null : catOptions.getConfigurationSection("entity");
+            var catControlEntityOptions = catControlOptions == null ? null
+                    : catControlOptions.getConfigurationSection("entity");
+            var horseEntityOptions = horseOptions == null ? null : horseOptions.getConfigurationSection("entity");
+            var horseControlEntityOptions = horseControlOptions == null ? null
+                    : horseControlOptions.getConfigurationSection("entity");
+            var parrotEntityOptions = parrotOptions == null ? null : parrotOptions.getConfigurationSection("entity");
+            var parrotControlEntityOptions = parrotControlOptions == null ? null
+                    : parrotControlOptions.getConfigurationSection("entity");
             var pigZombieEntityOptions = pigZombieOptions == null ? null
                     : pigZombieOptions.getConfigurationSection("entity");
             var pigZombieControlEntityOptions = pigZombieControlOptions == null ? null
@@ -2561,6 +2635,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && wolfEntityOptions.getBoolean("angry")
                     && wolfControlEntityOptions != null && !wolfControlEntityOptions.getBoolean("tamed", true)
                     && !wolfControlEntityOptions.getBoolean("angry", true)
+                    && catEntityOptions != null && catEntityOptions.getBoolean("tamed")
+                    && catControlEntityOptions != null && catControlEntityOptions.contains("tamed")
+                    && !catControlEntityOptions.getBoolean("tamed")
+                    && horseEntityOptions != null && horseEntityOptions.getBoolean("tamed")
+                    && horseControlEntityOptions != null && horseControlEntityOptions.contains("tamed")
+                    && !horseControlEntityOptions.getBoolean("tamed")
+                    && parrotEntityOptions != null && parrotEntityOptions.getBoolean("tamed")
+                    && parrotControlEntityOptions != null && parrotControlEntityOptions.contains("tamed")
+                    && !parrotControlEntityOptions.getBoolean("tamed")
                     && pigZombieEntityOptions != null && pigZombieEntityOptions.getBoolean("angry")
                     && pigZombieControlEntityOptions != null
                     && !pigZombieControlEntityOptions.getBoolean("angry", true)
@@ -2584,21 +2667,34 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && !wrongEntityOptions.contains("tamed") && !wrongEntityOptions.contains("angry");
             boolean wolfState = wolf != null && wolf.isTamed() && wolf.isAngry()
                     && wolfControl != null && !wolfControl.isTamed() && !wolfControl.isAngry();
+            boolean otherTameableStates = cat != null && cat.isTamed()
+                    && catControl != null && !catControl.isTamed()
+                    && horse != null && horse.isTamed()
+                    && horseControl != null && !horseControl.isTamed()
+                    && parrot != null && parrot.isTamed()
+                    && parrotControl != null && !parrotControl.isTamed();
             boolean pigZombieState = pigZombie != null && pigZombie.isAngry()
                     && pigZombieControl != null && !pigZombieControl.isAngry();
             boolean patrolLeader = raider != null && raider.isPatrolLeader()
                     && raiderControl != null && !raiderControl.isPatrolLeader();
             org.bukkit.block.Block patrolTarget = raider == null ? null : raider.getPatrolTarget();
-            boolean patrolSpawnPoint = patrolTarget != null && patrolTarget.equals(locations.get(4).getBlock())
+            boolean patrolSpawnPoint = patrolTarget != null
+                    && patrolTarget.equals(locations.get(sourceIds.indexOf(raiderId)).getBlock())
                     && raiderControl != null && raiderControl.getPatrolTarget() == null;
             boolean canJoinRaidSetter = spawnedIds.get(raiderId) > 0 && spawnedIds.get(raiderControlId) > 0;
             boolean canJoinRaidState = raider != null && !raider.isCanJoinRaid()
                     && raiderControl != null && raiderControl.isCanJoinRaid();
             boolean wrongType = wrongTypeEntity instanceof org.bukkit.entity.Husk;
             boolean passed = imported && wolfState && pigZombieState && patrolLeader
-                    && patrolSpawnPoint && canJoinRaidSetter && canJoinRaidState && wrongType;
+                    && otherTameableStates && patrolSpawnPoint && canJoinRaidSetter && canJoinRaidState && wrongType;
             getLogger().info("[自检] entity-flag-options result=" + passed
                     + " imported=" + imported + " wolf-tamed=" + (wolf != null && wolf.isTamed())
+                    + " cat-tamed=" + (cat != null && cat.isTamed())
+                    + " control-cat-tamed=" + (catControl != null && catControl.isTamed())
+                    + " horse-tamed=" + (horse != null && horse.isTamed())
+                    + " control-horse-tamed=" + (horseControl != null && horseControl.isTamed())
+                    + " parrot-tamed=" + (parrot != null && parrot.isTamed())
+                    + " control-parrot-tamed=" + (parrotControl != null && parrotControl.isTamed())
                     + " wolf-angry=" + (wolf != null && wolf.isAngry())
                     + " pig-zombie-angry=" + (pigZombie != null && pigZombie.isAngry())
                     + " can-join-raid-setter=" + canJoinRaidSetter

@@ -1,6 +1,17 @@
 # Isolated Paper Integration Server
 
-Latest strict fixture `srv-paper-steerable-saddles-strict-20261111-r1` passes all 430 probes (411 passed,
+Latest strict fixture `srv-paper-tameable-families-strict-20261111-r2` passes all 430 probes (411 passed,
+19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
+`entityFlagOptions` probe imports `Options.Tamed` on Cat, Horse, and Parrot
+through production spawning and reads back true/false states for all three
+families alongside Wolf coverage. Report:
+[`paper-1.21.1-tameable-families-strict-20261111-r2.json`](reports/paper-1.21.1-tameable-families-strict-20261111-r2.json), SHA-256 `55b72d54b7c6ee8bd4e26bb2f3acf9282121a7f1b86944cabcec4631edc6e560`.
+Compressed redacted server log SHA-256: `c5ca550e0724f71e54e7ca5b7199e5f6a89aff0bd6f8eb70879297c69df75a23`; client log archive SHA-256:
+`fe5862e38e12c2560eec32fc05e2a4116c593ba71654e6516eda7bdaf4aa4712`; tested plugin SHA-256:
+`70f007403ff552aebac595542f52ed0b3028c14206fc56bdac56c6186045f821`.
+Archived logs redact token query values.
+
+Previous strict fixture `srv-paper-steerable-saddles-strict-20261111-r1` passes all 430 probes (411 passed,
 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
 `horseOptionsImported` probe imports Horse `Saddled`/`HorseArmor`, Donkey
 `CarryingChest`, and `Saddled` on Pig and Strider. The real Horse reads back a

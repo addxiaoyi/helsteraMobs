@@ -4874,6 +4874,30 @@ class ImportersTest {
                     Type: WOLF
                     Options:
                       Tamed: true
+                  cat:
+                    Type: CAT
+                    Options:
+                      Tamed: true
+                  cat_control:
+                    Type: CAT
+                    Options:
+                      Tamed: false
+                  horse:
+                    Type: HORSE
+                    Options:
+                      Tamed: true
+                  horse_control:
+                    Type: HORSE
+                    Options:
+                      Tamed: false
+                  parrot:
+                    Type: PARROT
+                    Options:
+                      Tamed: true
+                  parrot_control:
+                    Type: PARROT
+                    Options:
+                      Tamed: false
                   raider:
                     Type: PILLAGER
                     Options:
@@ -4896,10 +4920,22 @@ class ImportersTest {
                         java.util.function.Function.identity()));
 
         var wolf = configs.get("mythic_wolf");
+        var cat = configs.get("mythic_cat");
+        var catControl = configs.get("mythic_cat_control");
+        var horse = configs.get("mythic_horse");
+        var horseControl = configs.get("mythic_horse_control");
+        var parrot = configs.get("mythic_parrot");
+        var parrotControl = configs.get("mythic_parrot_control");
         var raider = configs.get("mythic_raider");
         var husk = configs.get("mythic_husk");
         assertTrue(wolf.getBoolean("entity.tamed"));
         assertFalse(wolf.contains("entity.unsupported.Options.Tamed"));
+        assertTrue(cat.getBoolean("entity.tamed"));
+        assertFalse(catControl.getBoolean("entity.tamed", true));
+        assertTrue(horse.getBoolean("entity.tamed"));
+        assertFalse(horseControl.getBoolean("entity.tamed", true));
+        assertTrue(parrot.getBoolean("entity.tamed"));
+        assertFalse(parrotControl.getBoolean("entity.tamed", true));
         assertFalse(raider.getBoolean("entity.can-join-raid", true));
         assertTrue(raider.getBoolean("entity.patrol-leader"));
         assertTrue(raider.getBoolean("entity.patrol-spawn-point"));
