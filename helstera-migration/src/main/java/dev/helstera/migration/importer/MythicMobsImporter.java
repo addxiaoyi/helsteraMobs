@@ -1413,6 +1413,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapEntityScopedOption(options, srcFile, entries, target, "FallingBlockCancelDrop",
                     "entity.falling-block-cancel-drop", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.FallingBlock.class);
+            mapExperienceOption(options, srcFile, entries, target, normalizedType);
             mapEntityScopedOption(options, srcFile, entries, target, "Height",
                     "entity.interaction-height", normalizedType, MythicMobsImporter::isInteractionDimensionOption,
                     org.bukkit.entity.Interaction.class);
@@ -1432,7 +1433,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "UseThreatTable", "SpawningDistance",
                     "Scale", "ShowHealth", "Silent", "NoAI",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
-                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop")) {
+                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop", "Experience")) {
                 removeIgnoreCase(leftover, mapped);
             }
             removeIgnoreCase(leftover, "Height");
@@ -5101,6 +5102,35 @@ public final class MythicMobsImporter implements MigrationImporter {
             return;
         }
         mapOption(options, srcFile, entries, target, optionName, path);
+    }
+
+    private void mapExperienceOption(ConfigurationSection options, String srcFile,
+                                     List<Map<String, Object>> entries, YamlConfiguration target,
+                                     String normalizedType) {
+        Object raw = ciGet(options, "Experience");
+        if (raw == null) return;
+
+        String unsupportedPath = "entity.unsupported.Options.Experience";
+        if (!"EXPERIENCE_ORB".equals(normalizedType)) {
+            target.set(unsupportedPath, raw);
+            note(entries, srcFile, "Options.Experience", unsupportedPath, raw, "unsupported",
+                    "Experience is only applicable to EXPERIENCE_ORB entities; the value is preserved and will not be applied.",
+                    "WARN");
+            return;
+        }
+
+        Integer experience = parseNonNegativeIntegerOption(raw);
+        if (experience == null) {
+            target.set(unsupportedPath, raw);
+            note(entries, srcFile, "Options.Experience", unsupportedPath, raw, "unsupported",
+                    "Experience must be a non-negative integer; the value is preserved and will not be applied.",
+                    "WARN");
+            return;
+        }
+
+        target.set("entity.experience-orb-value", experience);
+        note(entries, srcFile, "Options.Experience", "entity.experience-orb-value", experience,
+                "mapped", "Experience mapped to the Bukkit ExperienceOrb value.");
     }
 
     private void mapTamedOption(ConfigurationSection options, String srcFile,

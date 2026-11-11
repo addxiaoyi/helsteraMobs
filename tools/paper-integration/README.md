@@ -1,6 +1,20 @@
 # Isolated Paper Integration Server
 
-Latest strict fixture `srv-paper-tameable-families-strict-20261111-r3` passes all 431 probes (412 passed,
+Latest strict fixture `srv-paper-experience-orb-strict-20261111-r1` passes all 432 probes (413 passed,
+19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
+`experienceOrbOptions` probe imports Mythic `Options.Experience` only for
+`EXPERIENCE_ORB`, canonicalizes non-negative integers into
+`entity.experience-orb-value`, and reads back 17 from a production-spawned orb.
+Wrong entity types and negative, fractional, or nonnumeric values remain under
+`entity.unsupported.Options.Experience` with warnings. Plugin SHA-256:
+`dc3e56f3edafd9bfad2e63dcda77ee730338e3dfc37090b01705e6864c1e4e76`. Report:
+[`paper-1.21.1-experience-orb-options-strict-20261111-r1.json`](reports/paper-1.21.1-experience-orb-options-strict-20261111-r1.json), SHA-256
+`0de4db3d74a8b2d2ae81cedbf8702215cda7e35906e0f50a6f69d5c8c0d18a0c`. Compressed
+redacted server log SHA-256: `3b95b128036897b4f1afbbf3427fe4be91391a58464ebe296340f3c9e039cd11`;
+client log archive SHA-256: `04ca16261b54d95522afc07074c4f314ec571fc3581be91037df9ab8f5e191cc`.
+Archived logs redact token query values.
+
+Previous strict fixture `srv-paper-tameable-families-strict-20261111-r3` passes all 431 probes (412 passed,
 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
 `tamedFamilyOptions` probe imports `Options.Tamed` for Donkey, Mule, Llama, Trader
 Llama, Skeleton Horse, Zombie Horse, and Camel through production spawning. The

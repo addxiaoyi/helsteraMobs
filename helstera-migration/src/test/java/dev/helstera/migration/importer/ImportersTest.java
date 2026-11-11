@@ -5326,6 +5326,59 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Experience option maps only to experience orbs and preserves invalid values")
+    void mythicMapsExperienceOptionOnlyToExperienceOrbs(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/experience-orb-options.yml", """
+                mobs:
+                  configured:
+                    Type: EXPERIENCE_ORB
+                    Options:
+                      Experience: 17
+                  numeric_string:
+                    Type: EXPERIENCE_ORB
+                    Options:
+                      Experience: "3"
+                  wrong_entity:
+                    Type: ZOMBIE
+                    Options:
+                      Experience: 8
+                  invalid_negative:
+                    Type: EXPERIENCE_ORB
+                    Options:
+                      Experience: -1
+                  invalid_fraction:
+                    Type: EXPERIENCE_ORB
+                    Options:
+                      Experience: 2.5
+                  invalid_text:
+                    Type: EXPERIENCE_ORB
+                    Options:
+                      Experience: many
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        assertEquals(17, convertedMob(entries, "configured").getInt("entity.experience-orb-value"));
+        assertEquals(3, convertedMob(entries, "numeric_string").getInt("entity.experience-orb-value"));
+
+        var wrongEntity = convertedMob(entries, "wrong_entity");
+        assertEquals(8, wrongEntity.getInt("entity.unsupported.Options.Experience"));
+        assertFalse(wrongEntity.contains("entity.experience-orb-value"));
+
+        var negative = convertedMob(entries, "invalid_negative");
+        assertEquals(-1, negative.getInt("entity.unsupported.Options.Experience"));
+        assertFalse(negative.contains("entity.experience-orb-value"));
+        var fraction = convertedMob(entries, "invalid_fraction");
+        assertEquals(2.5, fraction.getDouble("entity.unsupported.Options.Experience"), 1e-9);
+        assertFalse(fraction.contains("entity.experience-orb-value"));
+        var text = convertedMob(entries, "invalid_text");
+        assertEquals("many", text.getString("entity.unsupported.Options.Experience"));
+        assertFalse(text.contains("entity.experience-orb-value"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.Experience".equals(entry.get("source-key"))));
+    }
+
+    @Test
     @DisplayName("Mythic boat type aliases map only to boats and preserve invalid or conflicting values")
     void mythicMapsBoatTypeAliasesAndPreservesInvalidValues(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/boat-options.yml", """

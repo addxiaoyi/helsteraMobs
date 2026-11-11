@@ -14,8 +14,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-tameable-families-strict-20261111-r3",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r3.json"
+      "releaseFixtureId": "srv-paper-experience-orb-strict-20261111-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-experience-orb-options-strict-20261111-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

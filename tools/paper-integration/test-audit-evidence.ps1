@@ -144,7 +144,15 @@ try {
     }
     $entityFlagOptionsProbe = @($fullReport.probes | Where-Object id -eq 'entityFlagOptions')
     if ($entityFlagOptionsProbe.Count -ne 1) { throw 'Synthetic release report must contain entityFlagOptions.' }
-    $entityFlagOptionsProbe[0].observations = @('entity-flag-options result=true imported=true wolf-tamed=true wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true')
+    $entityFlagOptionsProbe[0].observations = @('entity-flag-options result=true imported=true wolf-tamed=true cat-tamed=true control-cat-tamed=false horse-tamed=true control-horse-tamed=false parrot-tamed=true control-parrot-tamed=false wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true')
+    $fullReport.expectedProbeIds += 'tamedFamilyOptions'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'tamedFamilyOptions'; status = 'passed'; observations = @('tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true')
+    }
+    $fullReport.expectedProbeIds += 'experienceOrbOptions'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'experienceOrbOptions'; status = 'passed'; observations = @('experience-orb-options result=true imported=true experience=17 wrong-type-preserved=true invalid-preserved=true')
+    }
     $fullReport.expectedProbeIds += 'preventSunburnNatural'
     $fullReport.probes += [pscustomobject]@{
         id = 'preventSunburnNatural'; status = 'passed'; observations = @('prevent-sunburn-natural imported=true mapped=true protected-option=true control-option=false daylight=true weather-clear=true observer-present=true protected-player-distance=7 control-player-distance=15 sky-exposed=true protected-ai=true control-ai=true protected-age-ticks=90 control-age-ticks=110 protected-events=2 protected-cancelled=2 protected-fire-ticks=0 control-events=1 control-cancelled=0 control-fire-ticks=154 elapsed-ticks=40 restored=true passed=true')
