@@ -1,4 +1,6 @@
-Latest strict fixture `srv-paper-visibility-options-strict-20261111-r1` verifies imported Mythic `Options.VisibleByDefault`, `Options.Invisible`, and `Options.AlwaysShowName` through production mob spawning. A configured Zombie and inverse control read back all three states correctly. The full 430-probe catalog (411 passed, 19 expected rejections) has zero failed or incomplete probes. See the [strict report](tools/paper-integration/reports/paper-1.21.1-visibility-options-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+Latest strict fixture `srv-paper-horse-saddle-import-strict-20261111-r1` verifies imported Horse `Saddled: true` and `HorseArmor: DIAMOND_HORSE_ARMOR` through production spawning. The real Horse has a saddle and diamond armor; an imported `Saddled: false` control has neither. Existing color, style, domestication, and jump-strength controls remain covered. All 430 Paper probes passed or recorded expected rejection (411 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-horse-saddle-import-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+
+Previous strict fixture `srv-paper-visibility-options-strict-20261111-r1` verifies imported Mythic `Options.VisibleByDefault`, `Options.Invisible`, and `Options.AlwaysShowName` through production mob spawning. A configured Zombie and inverse control read back all three states correctly. The full 430-probe catalog (411 passed, 19 expected rejections) has zero failed or incomplete probes. See the [strict report](tools/paper-integration/reports/paper-1.21.1-visibility-options-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
 Previous strict fixture `srv-paper-armor-stand-options-strict-20261110-r2` verifies all six imported Armor Stand flags and all six equipment slots through production spawning, with default controls and wrong-type/malformed-value preservation. Its report remains in the [Paper evidence archive](tools/paper-integration/STARTUP_EVIDENCE.md).
 
@@ -1334,7 +1336,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-visibility-options-strict-20261111-r1` has 430 probes (411 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-horse-saddle-import-strict-20261111-r1` has 430 probes (411 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1345,15 +1347,14 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
-`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-10). The full remaining work is:
+`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-11). The full remaining work is:
 
 Latest strict report has 430 probes, zero incomplete.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 573 cited IDs; 481 report files; 4 directories
-   without reports; 88 missing directories; 252 archived release reports. The
+   Current fixture inventory: 574 cited IDs; 482 report files; 4 directories without reports; 88 missing directories; 253 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

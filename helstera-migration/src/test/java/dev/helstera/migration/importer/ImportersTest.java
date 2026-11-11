@@ -5080,6 +5080,7 @@ class ImportersTest {
                       HorseColor: PAISLEY
                       JumpStrength: 3.5
                       Domestication: -1
+                      Saddled: maybe
                   invalid_cat:
                     Type: CAT
                     Options:
@@ -5146,9 +5147,11 @@ class ImportersTest {
         assertEquals("PAISLEY", invalidHorse.getString("entity.unsupported.Options.HorseColor"));
         assertEquals(3.5, invalidHorse.getDouble("entity.unsupported.Options.JumpStrength"), 1e-9);
         assertEquals(-1, invalidHorse.getInt("entity.unsupported.Options.Domestication"));
+        assertEquals("maybe", invalidHorse.getString("entity.unsupported.Options.Saddled"));
         assertFalse(invalidHorse.contains("entity.horse-color"));
         assertFalse(invalidHorse.contains("entity.horse-jump-strength"));
         assertFalse(invalidHorse.contains("entity.horse-domestication"));
+        assertFalse(invalidHorse.contains("entity.saddled"));
 
         assertEquals("NOT_A_CAT", convertedMob(entries, "invalid_cat")
                 .getString("entity.unsupported.Options.CatType"));
