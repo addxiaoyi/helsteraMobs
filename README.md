@@ -1,4 +1,5 @@
-Latest strict fixture `srv-paper-legacy-item-ids-strict-20261111-r1` verifies the corrected Mythic legacy item boundary through import and the production ItemStack resolver: `450 -> SHULKER_SHELL`, `451` is retained as unsupported, `452 -> IRON_NUGGET`, and `453 -> KNOWLEDGE_BOOK`. The complete Paper 1.21.1-133 catalog records 443 probes (424 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-legacy-item-id-boundaries-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity, including the broader legacy data table, remains incomplete.
+Latest strict fixture `srv-paper-frog-options-strict-20261111-r1` verifies imported Mythic Frog `Options.Type` and `Options.Variant` through production mob spawning. `COLD`, the `WARM` alias, and the `TEMPERATE` control read back correctly; wrong-entity, invalid, and conflicting values remain preserved with warnings. The full Paper 1.21.1-133 release catalog records 444 probes (425 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-frog-options-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
+Previous strict fixture `srv-paper-legacy-item-ids-strict-20261111-r1` verifies the corrected Mythic legacy item boundary through import and the production ItemStack resolver: `450 -> SHULKER_SHELL`, `451` is retained as unsupported, `452 -> IRON_NUGGET`, and `453 -> KNOWLEDGE_BOOK`. Its complete catalog recorded 443 probes (424 passed, 19 expected rejections), with zero failed or incomplete; the broader legacy data table remains open.
 Previous strict fixture `srv-paper-environmental-damage-options-strict-20261111-r2` verifies imported Mythic `Options.PreventDrowning` and `Options.PreventFallDamage`, cause-specific damage cancellation, false and cross-cause controls, and malformed-value fallback; its 443-probe report remains archived in the [Paper evidence index](tools/paper-integration/STARTUP_EVIDENCE.md).
 Previous strict fixture `srv-paper-prevent-random-equipment-strict-20261111-r1` verifies imported Mythic `Options.PreventRandomEquipment` through production spawning: `true` clears pre-existing random gear before explicit equipment is applied, `false` preserves the control gear, and malformed input is retained with a warning. Its 442-probe report remains in the [Paper evidence archive](tools/paper-integration/STARTUP_EVIDENCE.md).
 Previous strict fixture `srv-paper-show-health-strict-20261111-r3` verifies imported Mythic `Options.ShowHealth` end to end: health messages fire when a mob crosses each 10% threshold, stay quiet within a band and below the first threshold, re-arm after healing, respect the configured 25-block audience radius, and reach a nearby real client while excluding an outside client. Its complete Paper catalog recorded 438 probes (419 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-show-health-strict-20261111-r3.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
@@ -1345,7 +1346,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-legacy-item-ids-strict-20261111-r1` has 443 probes (424 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-frog-options-strict-20261111-r1` has 444 probes (425 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1358,12 +1359,12 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-11). The full remaining work is:
 
-Latest strict report has 443 probes, zero incomplete.
+Latest strict report has 444 probes, zero incomplete.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 590 cited IDs; 497 report files; 4 directories without reports; 89 missing directories; 270 archived release reports. The
+   Current fixture inventory: 591 cited IDs; 498 report files; 4 directories without reports; 89 missing directories; 271 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

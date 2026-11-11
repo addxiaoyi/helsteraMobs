@@ -395,6 +395,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'goatOptionsImported'; status = 'passed'; observations = @('goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true')
     }
+    $fullReport.expectedProbeIds += 'frogOptionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'frogOptionsImported'; status = 'passed'; observations = @('frog-options result=true imported=true type=COLD alias-type=WARM control-type=TEMPERATE wrong-type-preserved=true invalid-preserved=true conflict-preserved=true')
+    }
     $fullReport.expectedProbeIds += 'tameableOptionsImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'tameableOptionsImported'; status = 'passed'; observations = @('tameable-options result=true imported=true allow-cancelled=false deny-cancelled=true default-cancelled=true invalid-cancelled=true unmanaged-cancelled=false wrong-type-preserved=true invalid-preserved=true global-default-ignored=true')

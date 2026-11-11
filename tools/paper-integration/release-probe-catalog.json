@@ -1012,6 +1012,11 @@
       "requiredObservationPattern": "^goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true$"
     },
     {
+      "id": "frogOptionsImported",
+      "status": "passed",
+      "requiredObservationPattern": "^frog-options result=true imported=true type=COLD alias-type=WARM control-type=TEMPERATE wrong-type-preserved=true invalid-preserved=true conflict-preserved=true$"
+    },
+    {
       "id": "tameableOptionsImported",
       "status": "passed",
       "requiredObservationPattern": "^tameable-options result=true imported=true allow-cancelled=false deny-cancelled=true default-cancelled=true invalid-cancelled=true unmanaged-cancelled=false wrong-type-preserved=true invalid-preserved=true global-default-ignored=true$"

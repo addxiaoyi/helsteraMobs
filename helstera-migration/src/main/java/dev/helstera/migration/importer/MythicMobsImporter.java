@@ -1347,10 +1347,12 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "entity.panda-hidden-gene", normalizedType,
                     raw -> isEnumOptionValue(raw, org.bukkit.entity.Panda.Gene.class),
                     org.bukkit.entity.Panda.class);
-            mapEntityScopedOption(options, srcFile, entries, target, "Type",
-                    "entity.villager-type", normalizedType,
-                    MythicMobsImporter::isVillagerTypeOptionValue,
-                    org.bukkit.entity.Villager.class);
+            if ("VILLAGER".equals(normalizedType)) {
+                mapEntityScopedOption(options, srcFile, entries, target, "Type",
+                        "entity.villager-type", normalizedType,
+                        MythicMobsImporter::isVillagerTypeOptionValue,
+                        org.bukkit.entity.Villager.class);
+            }
             mapEntityScopedOption(options, srcFile, entries, target, "Profession",
                     "entity.villager-profession", normalizedType,
                     MythicMobsImporter::isVillagerProfessionOptionValue,
@@ -1465,6 +1467,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapEntityScopedOption(options, srcFile, entries, target, "Responsive",
                     "entity.interaction-responsive", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.Interaction.class);
+            boolean frogTypeHandled = mapFrogTypeOption(options, srcFile, entries, target, normalizedType);
             boolean boatTypeHandled = mapBoatTypeOption(options, srcFile, entries, target, normalizedType);
             Map<String, Object> leftover = new LinkedHashMap<>(options.getValues(true));
             for (String mapped : List.of("FollowRange", "MovementSpeed", "KnockbackResistance", "MaxCombatDistance",
@@ -1473,7 +1476,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "ProjectileFireTicks", "ProjectileExplosion", "ProjectileMaxHits", "ProjectilePotion",
                     "ProjectilePierce", "ProjectileTracking", "ProjectileTrackingTicks", "ThreatTable",
                     "UseThreatTable", "SpawningDistance",
-                    "Scale", "ShowHealth", "Silent", "NoAI", "Type", "Profession", "Level", "HasTrades",
+                    "Scale", "ShowHealth", "Silent", "NoAI", "Profession", "Level", "HasTrades",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
                     "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PassthroughDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "MainGene", "HiddenGene", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop", "Experience", "FlyingSpeed")) {
                 removeIgnoreCase(leftover, mapped);
@@ -1481,9 +1484,16 @@ public final class MythicMobsImporter implements MigrationImporter {
             removeIgnoreCase(leftover, "Height");
             removeIgnoreCase(leftover, "Width");
             removeIgnoreCase(leftover, "Responsive");
+            if ("VILLAGER".equals(normalizedType) && ciGet(options, "Type") != null) {
+                removeIgnoreCase(leftover, "Type");
+            }
+            if (frogTypeHandled) {
+                removeIgnoreCase(leftover, "Type");
+                removeIgnoreCase(leftover, "Variant");
+            }
             if (boatTypeHandled) {
                 removeIgnoreCase(leftover, "BoatType");
-                removeIgnoreCase(leftover, "Type");
+                if (isBoatEntityType(normalizedType)) removeIgnoreCase(leftover, "Type");
             }
             if (preventConversionMapped) removeIgnoreCase(leftover, "PreventConversion");
             if (reviveHealthMapped) removeIgnoreCase(leftover, "ReviveHealth");
@@ -5241,6 +5251,68 @@ public final class MythicMobsImporter implements MigrationImporter {
                 "defaulted", "MythicMobs built-in false default applied.");
     }
 
+    private boolean mapFrogTypeOption(ConfigurationSection options, String srcFile,
+                                      List<Map<String, Object>> entries, YamlConfiguration target,
+                                      String normalizedType) {
+        String typeKey = findKeyIgnoreCase(options, "Type");
+        String variantKey = findKeyIgnoreCase(options, "Variant");
+        if (typeKey == null && variantKey == null) return false;
+        if ("VILLAGER".equals(normalizedType) || isBoatEntityType(normalizedType)) return false;
+
+        if (!"FROG".equals(normalizedType)) {
+            for (String key : new String[]{typeKey, variantKey}) {
+                if (key == null) continue;
+                Object raw = options.get(key);
+                String targetPath = "entity.unsupported.Options." + key;
+                target.set(targetPath, raw == null ? "null" : raw);
+                note(entries, srcFile, "Options." + key, targetPath, raw == null ? "null" : raw,
+                        "unsupported", "Frog Type/Variant options only apply to Bukkit Frog entities.", "WARN");
+            }
+            return true;
+        }
+
+        LinkedHashMap<String, Object> rawValues = new LinkedHashMap<>();
+        LinkedHashMap<String, String> normalizedValues = new LinkedHashMap<>();
+        for (String key : new String[]{typeKey, variantKey}) {
+            if (key == null) continue;
+            Object raw = options.get(key);
+            rawValues.put(key, raw);
+            normalizedValues.put(key, normalizeFrogVariant(raw));
+        }
+
+        boolean valid = normalizedValues.values().stream().allMatch(java.util.Objects::nonNull);
+        boolean aliasesAgree = normalizedValues.values().stream().distinct().count() <= 1;
+        if (!valid || !aliasesAgree) {
+            for (Map.Entry<String, Object> value : rawValues.entrySet()) {
+                String targetPath = "entity.unsupported.Options." + value.getKey();
+                target.set(targetPath, value.getValue() == null ? "null" : value.getValue());
+                String reason = !valid
+                        ? "Frog Type/Variant must be WARM, COLD, or TEMPERATE; the source value was preserved."
+                        : "Frog Type and Variant aliases conflict; both values were preserved and not applied.";
+                note(entries, srcFile, "Options." + value.getKey(), targetPath,
+                        value.getValue() == null ? "null" : value.getValue(),
+                        "unsupported", reason, "WARN");
+            }
+            return true;
+        }
+
+        String canonical = normalizedValues.values().iterator().next();
+        target.set("entity.frog-variant", canonical);
+        for (String sourceKey : normalizedValues.keySet()) {
+            note(entries, srcFile, "Options." + sourceKey, "entity.frog-variant", canonical,
+                    "mapped", "Mythic Frog Type/Variant was normalized to the Bukkit Frog variant.");
+        }
+        return true;
+    }
+
+    private static String normalizeFrogVariant(Object raw) {
+        if (!(raw instanceof String text) || text.isBlank()) return null;
+        return switch (text.trim().toUpperCase(Locale.ROOT)) {
+            case "WARM", "COLD", "TEMPERATE" -> text.trim().toUpperCase(Locale.ROOT);
+            default -> null;
+        };
+    }
+
     private boolean mapBoatTypeOption(ConfigurationSection options, String srcFile,
                                       List<Map<String, Object>> entries, YamlConfiguration target,
                                       String normalizedType) {
@@ -5311,6 +5383,11 @@ public final class MythicMobsImporter implements MigrationImporter {
             // Invalid explicit types are rejected earlier in conversion.
             return null;
         }
+    }
+
+    private static boolean isBoatEntityType(String entityTypeName) {
+        Class<? extends org.bukkit.entity.Entity> entityClass = resolveEntityClass(entityTypeName);
+        return entityClass != null && org.bukkit.entity.Boat.class.isAssignableFrom(entityClass);
     }
 
     private static boolean isBooleanOptionValue(Object raw) {

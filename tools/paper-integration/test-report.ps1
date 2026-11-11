@@ -64,6 +64,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED',
         '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 saddled=true armor=DIAMOND_HORSE_ARMOR control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4 control-saddled=false control-armor=AIR donkey-chest=true control-donkey-chest=false pig-saddled=true control-pig-saddled=false strider-saddled=true control-strider-saddled=false',
         '[Server thread/INFO]: [helsteraMobs] [自检] fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] frog-options result=true imported=true type=COLD alias-type=WARM control-type=TEMPERATE wrong-type-preserved=true invalid-preserved=true conflict-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN killer-type=THE_KILLER_BUNNY angry-type=THE_KILLER_BUNNY false-killer-type=SALT_AND_PEPPER wrong-type-preserved=true invalid-preserved=true conflict-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] boat-options-imported result=true imported=true boat-type=SPRUCE control-type=OAK chest-type=BAMBOO wrong-type-preserved=true invalid-preserved=true conflict-preserved=true',
@@ -547,10 +548,13 @@ try {
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
             'importedItemSimilarityConditions',
-            'importedPlayerKillsCondition', 'importedTimerTrigger', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
+            'importedPlayerKillsCondition', 'importedTimerTrigger', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'frogOptionsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
+    Assert-True (($report.probes | Where-Object id -eq 'frogOptionsImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'frogOptionsImported').observations[0] -match
+        '^frog-options result=true imported=true type=COLD alias-type=WARM control-type=TEMPERATE wrong-type-preserved=true invalid-preserved=true conflict-preserved=true$') 'imported Frog variants require mapped, alias, control, and preservation evidence'
     Assert-True $report.pluginEnabled 'plugin enabled detection'
     Assert-True (($report.probes | Where-Object id -eq 'pathfinderClear').status -eq 'passed') 'native Pathfinder clear probe'
     Assert-True (($report.probes | Where-Object id -eq 'interactableClient').status -eq 'passed') 'Interactable client/server evidence requires blocked and allowed real-client interactions'
@@ -1489,6 +1493,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'goatOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'goatOptionsImported'; status = 'passed'; observations = @('goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'frogOptionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'frogOptionsImported'; status = 'passed'; observations = @('frog-options result=true imported=true type=COLD alias-type=WARM control-type=TEMPERATE wrong-type-preserved=true invalid-preserved=true conflict-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'tameableOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{

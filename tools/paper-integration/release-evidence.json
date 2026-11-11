@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-frog-options-strict-20261111-r1",
+    "reportFixtureDirectory": "srv-paper-frog-options-strict-20261111-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-frog-options-strict-20261111-r1.json",
+    "reportSha256": "2311321bbf8c7d8059ee978794d85db3bbd609da1c04e0d2fc13b8aaa4fb1176",
+    "log": "tools/paper-integration/reports/paper-1.21.1-frog-options-strict-20261111-r1.log.gz",
+    "logSha256": "22423656e4d068b626b5303382126e4bfba1e9d7a34b6e9f9f64e859a30888f2",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-frog-options-strict-20261111-r1-client-logs.tar.gz",
+    "clientLogSha256": "2e33ab328a2c96ce2bf97fa823fba143bb20264f2f8c3cec50537800c2237d5d",
+    "pluginSha256": "2b7f29da105c918e9fcd9bb1c6bcc0748aacdc0d93b288e63e3354e85d054446",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-legacy-item-ids-strict-20261111-r1",
     "reportFixtureDirectory": "srv-paper-legacy-item-ids-strict-20261111-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-legacy-item-id-boundaries-strict-20261111-r1.json",

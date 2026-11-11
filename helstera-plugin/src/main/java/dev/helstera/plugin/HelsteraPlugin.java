@@ -1739,6 +1739,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedBoatOptionsSelfTest(origin.clone().add(64, 0, 0));
                 runImportedInteractionOptionsSelfTest(origin.clone().add(80, 0, 0));
                 runImportedGoatOptionsSelfTest(origin.clone().add(96, 0, 0));
+                runImportedFrogOptionsSelfTest(origin.clone().add(99, 0, 0));
                 runImportedTameableOptionsSelfTest(origin.clone().add(120, 0, 0));
 
                 var falling = world.spawnFallingBlock(origin.clone().add(8, 0, 0),
@@ -4918,6 +4919,157 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " invalid-preserved=" + invalidPreserved);
         } catch (Throwable failure) {
             getLogger().warning("[自检] fox-options result=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedFrogOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String configuredId = "ImportedFrogConfigured_" + suffix;
+            String aliasId = "ImportedFrogAlias_" + suffix;
+            String controlId = "ImportedFrogControl_" + suffix;
+            String wrongTypeId = "ImportedFrogWrongType_" + suffix;
+            String invalidId = "ImportedFrogInvalid_" + suffix;
+            String conflictId = "ImportedFrogConflict_" + suffix;
+            sourceRoot = Files.createTempDirectory("helstera-frog-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("frog-options.yml");
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: FROG
+                        Options:
+                          Type: COLD
+                      %2$s:
+                        Type: FROG
+                        Options:
+                          Variant: WARM
+                      %3$s:
+                        Type: FROG
+                        Options:
+                          Type: TEMPERATE
+                      %4$s:
+                        Type: ZOMBIE
+                        Options:
+                          Type: COLD
+                      %5$s:
+                        Type: FROG
+                        Options:
+                          Type: PURPLE
+                      %6$s:
+                        Type: FROG
+                        Options:
+                          Type: COLD
+                          Variant: WARM
+                    """.formatted(configuredId, aliasId, controlId, wrongTypeId, invalidId, conflictId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!"mapped".equals(entry.get("status"))
+                        || !(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !(entry.get("content") instanceof String content)) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Frog mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Frog mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, content);
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            var sourceIds = java.util.List.of(configuredId, aliasId, controlId,
+                    wrongTypeId, invalidId, conflictId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic Frog Type probe mobs were not all imported");
+            }
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        origin.clone().add(i * 3, 0, 0), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var configuredEntity = importedProbeEntity(spawnedIds.get(configuredId));
+            var aliasEntity = importedProbeEntity(spawnedIds.get(aliasId));
+            var controlEntity = importedProbeEntity(spawnedIds.get(controlId));
+            var wrongEntity = importedProbeEntity(spawnedIds.get(wrongTypeId));
+            var invalidEntity = importedProbeEntity(spawnedIds.get(invalidId));
+            var conflictEntity = importedProbeEntity(spawnedIds.get(conflictId));
+            var configuredConfig = mobConfig(targetIds.get(configuredId));
+            var aliasConfig = mobConfig(targetIds.get(aliasId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var wrongConfig = mobConfig(targetIds.get(wrongTypeId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var conflictConfig = mobConfig(targetIds.get(conflictId));
+            var wrongUnsupported = wrongConfig == null ? null
+                    : wrongConfig.getConfigurationSection("entity.unsupported.Options");
+            var invalidUnsupported = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("entity.unsupported.Options");
+            var conflictUnsupported = conflictConfig == null ? null
+                    : conflictConfig.getConfigurationSection("entity.unsupported.Options");
+
+            boolean imported = configuredEntity instanceof org.bukkit.entity.Frog
+                    && aliasEntity instanceof org.bukkit.entity.Frog
+                    && controlEntity instanceof org.bukkit.entity.Frog
+                    && wrongEntity instanceof org.bukkit.entity.Zombie
+                    && invalidEntity instanceof org.bukkit.entity.Frog
+                    && conflictEntity instanceof org.bukkit.entity.Frog
+                    && configuredConfig != null && aliasConfig != null && controlConfig != null
+                    && "COLD".equalsIgnoreCase(configuredConfig.getString("entity.frog-variant"))
+                    && "WARM".equalsIgnoreCase(aliasConfig.getString("entity.frog-variant"))
+                    && "TEMPERATE".equalsIgnoreCase(controlConfig.getString("entity.frog-variant"))
+                    && wrongUnsupported != null && "COLD".equalsIgnoreCase(wrongUnsupported.getString("Type"))
+                    && invalidUnsupported != null && "PURPLE".equalsIgnoreCase(invalidUnsupported.getString("Type"))
+                    && conflictUnsupported != null
+                    && "COLD".equalsIgnoreCase(conflictUnsupported.getString("Type"))
+                    && "WARM".equalsIgnoreCase(conflictUnsupported.getString("Variant"))
+                    && !wrongConfig.contains("entity.frog-variant")
+                    && !invalidConfig.contains("entity.frog-variant")
+                    && !conflictConfig.contains("entity.frog-variant");
+            boolean applied = imported
+                    && ((org.bukkit.entity.Frog) configuredEntity).getVariant()
+                    == org.bukkit.entity.Frog.Variant.COLD
+                    && ((org.bukkit.entity.Frog) aliasEntity).getVariant()
+                    == org.bukkit.entity.Frog.Variant.WARM
+                    && ((org.bukkit.entity.Frog) controlEntity).getVariant()
+                    == org.bukkit.entity.Frog.Variant.TEMPERATE;
+            boolean wrongTypePreserved = wrongEntity instanceof org.bukkit.entity.Zombie
+                    && wrongUnsupported != null && "COLD".equalsIgnoreCase(wrongUnsupported.getString("Type"));
+            boolean invalidPreserved = invalidUnsupported != null
+                    && "PURPLE".equalsIgnoreCase(invalidUnsupported.getString("Type"));
+            boolean conflictPreserved = conflictUnsupported != null
+                    && "COLD".equalsIgnoreCase(conflictUnsupported.getString("Type"))
+                    && "WARM".equalsIgnoreCase(conflictUnsupported.getString("Variant"));
+            boolean passed = imported && applied && wrongTypePreserved && invalidPreserved && conflictPreserved;
+            getLogger().info("[自检] frog-options result=" + passed
+                    + " imported=" + imported
+                    + " type=" + (configuredEntity instanceof org.bukkit.entity.Frog frog
+                    ? frog.getVariant().name() : "missing")
+                    + " alias-type=" + (aliasEntity instanceof org.bukkit.entity.Frog frog
+                    ? frog.getVariant().name() : "missing")
+                    + " control-type=" + (controlEntity instanceof org.bukkit.entity.Frog frog
+                    ? frog.getVariant().name() : "missing")
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved
+                    + " conflict-preserved=" + conflictPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] frog-options result=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
@@ -27640,6 +27792,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (entity == null || options == null) return;
         if (entity instanceof org.bukkit.entity.Goat goat && options.contains("goat-screaming")) {
             goat.setScreaming(options.getBoolean("goat-screaming"));
+        }
+        if (entity instanceof org.bukkit.entity.Frog frog && options.contains("frog-variant")) {
+            try {
+                frog.setVariant(org.bukkit.entity.Frog.Variant.valueOf(
+                        options.getString("frog-variant", "TEMPERATE").trim()
+                                .toUpperCase(java.util.Locale.ROOT)));
+            } catch (IllegalArgumentException | LinkageError ignored) {
+                // Invalid imported values remain visible under entity.unsupported.Options.*.
+            }
         }
         if (entity instanceof org.bukkit.entity.Enderman enderman && options.contains("held-block")) {
             String heldBlock = options.getString("held-block", "").trim();
