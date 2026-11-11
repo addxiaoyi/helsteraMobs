@@ -33,6 +33,9 @@ try {
     [System.IO.File]::WriteAllText(
         (Join-Path $temporaryRoot 'srv-paper-1.21.1-r4/integration-report.json'), '{}')
     [void][System.IO.Directory]::CreateDirectory((Join-Path $temporaryRoot 'srv-paper-no-report'))
+    [void][System.IO.Directory]::CreateDirectory((Join-Path $temporaryRoot 'srv-paper-current-release'))
+    [System.IO.File]::WriteAllText(
+        (Join-Path $temporaryRoot 'srv-paper-current-release/integration-report.json'), '{}')
     $archivePath = Join-Path $temporaryRoot 'tools/paper-integration/reports/test-release.json'
     [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($archivePath))
     $fullReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-drop-inline-20261104-r2.json') -Raw -Encoding utf8 | ConvertFrom-Json
@@ -657,16 +660,32 @@ try {
     } | ConvertTo-Json -Depth 6))
 
     $readmePath = Join-Path $temporaryRoot 'README.md'
-    [System.IO.File]::WriteAllText($readmePath, [regex]::Replace(
+    $syntheticReleaseFixtureId = 'srv-paper-current-release'
+    $syntheticLatestReadme = "Latest strict fixture ``$syntheticReleaseFixtureId`` has $latestProbeCount probes.`n"
+    $syntheticReadmeContent = [regex]::Replace(
         [System.IO.File]::ReadAllText($readmePath),
         'Latest strict report has \d+ probes, zero incomplete',
-        "Latest strict report has $latestProbeCount probes, zero incomplete"))
+        "Latest strict report has $latestProbeCount probes, zero incomplete")
+    $syntheticReadmeContent = $syntheticReadmeContent.Replace(
+        'Current fixture inventory: 3 cited IDs; 1 report files;',
+        'Current fixture inventory: 4 cited IDs; 2 report files;')
+    [System.IO.File]::WriteAllText($readmePath, $syntheticLatestReadme + $syntheticReadmeContent)
+    $matrixPath = Join-Path $temporaryRoot 'MYTHICMOBS_PARITY_MATRIX.md'
+    [System.IO.File]::WriteAllText($matrixPath,
+        "Latest strict release evidence: ``$syntheticReleaseFixtureId`` completes $latestProbeCount probes on Paper.`n" +
+        [System.IO.File]::ReadAllText($matrixPath))
+    [System.IO.File]::WriteAllText((Join-Path $temporaryRoot 'tools/paper-integration/README.md'),
+        "Latest strict fixture ``$syntheticReleaseFixtureId`` passes all $latestProbeCount probes.`n")
+    $startupEvidence = Get-Content -LiteralPath $evidencePath -Raw -Encoding utf8
+    [System.IO.File]::WriteAllText($evidencePath,
+        "Latest fixture ``$syntheticReleaseFixtureId`` passed the full strict gate on Paper 1.21.1-133: $latestProbeCount registered probes.`n" +
+        $startupEvidence)
     $auditScript = Join-Path $PSScriptRoot 'audit-evidence.ps1'
     $output = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
     if ($LASTEXITCODE -ne 0) {
         throw "Default audit failed unexpectedly: $output"
     }
-    if ($output -notmatch 'Fixture report files: 1' -or
+    if ($output -notmatch 'Fixture report files: 2' -or
             $output -notmatch 'Directories without report files: 1' -or
             $output -notmatch 'Missing fixture directories: 1') {
         throw "Report, directory-only, and missing artifacts were not distinguished: $output"
@@ -675,7 +694,7 @@ try {
             $output -notmatch 'Archived release reports: 2') {
         throw "Historical inventory and current release evidence were not distinguished: $output"
     }
-    if ($output -notmatch 'srv-paper-old \(tools/paper-integration/STARTUP_EVIDENCE.md:4\)') {
+    if ($output -notmatch 'srv-paper-old \(tools/paper-integration/STARTUP_EVIDENCE.md:5\)') {
         throw "Missing fixture source location was not reported: $output"
     }
     $invalidReportHashManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
@@ -694,6 +713,15 @@ try {
         throw "Paper jar directory was treated as an evidence fixture: $output"
     }
 
+    $originalMatrix = [System.IO.File]::ReadAllText($matrixPath)
+    [System.IO.File]::WriteAllText($matrixPath, $originalMatrix.Replace(
+        "completes $latestProbeCount probes", 'completes 290 probes'))
+    $staleMatrixOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $staleMatrixOutput -notmatch 'MYTHICMOBS_PARITY_MATRIX\.md:\s*expected') {
+        throw "Stale parity-matrix release evidence was not rejected: $staleMatrixOutput"
+    }
+    [System.IO.File]::WriteAllText($matrixPath, $originalMatrix)
+
     $originalReadme = [System.IO.File]::ReadAllText($readmePath)
     [System.IO.File]::WriteAllText($readmePath, $originalReadme.Replace(
         "Latest strict report has $latestProbeCount probes", 'Latest strict report has 290 probes'))
@@ -703,34 +731,34 @@ try {
     }
     [System.IO.File]::WriteAllText($readmePath, $originalReadme)
     [System.IO.File]::WriteAllText($readmePath,
-        'The matrix currently has `1`' + [Environment]::NewLine +
+        $syntheticLatestReadme + 'The matrix currently has `1`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
             "Latest strict report has $latestProbeCount probes, zero incomplete" + [Environment]::NewLine +
-                    'Current fixture inventory: 4 cited IDs; 2 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
+                    'Current fixture inventory: 5 cited IDs; 3 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
     $staleOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0 -or $staleOutput -notmatch 'README fixture inventory is stale') {
         throw "Stale README inventory was not rejected: $staleOutput"
     }
     [System.IO.File]::WriteAllText($readmePath,
-        'The matrix currently has `1`' + [Environment]::NewLine +
+        $syntheticLatestReadme + 'The matrix currently has `1`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
             "Latest strict report has $latestProbeCount probes, zero incomplete" + [Environment]::NewLine +
-                    'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
+                    'Current fixture inventory: 4 cited IDs; 2 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
 
     [System.IO.File]::WriteAllText($readmePath,
-        'The matrix currently has `2`' + [Environment]::NewLine +
+        $syntheticLatestReadme + 'The matrix currently has `2`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
             "Latest strict report has $latestProbeCount probes, zero incomplete" + [Environment]::NewLine +
-                    'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
+                    'Current fixture inventory: 4 cited IDs; 2 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
     $staleStatusOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0 -or $staleStatusOutput -notmatch 'README mapped-unverified row count is stale') {
         throw "Stale matrix status count was not rejected: $staleStatusOutput"
     }
     [System.IO.File]::WriteAllText($readmePath,
-        'The matrix currently has `1`' + [Environment]::NewLine +
+        $syntheticLatestReadme + 'The matrix currently has `1`' + [Environment]::NewLine +
             '`mapped-unverified` rows.' + [Environment]::NewLine +
             "Latest strict report has $latestProbeCount probes, zero incomplete" + [Environment]::NewLine +
-                    'Current fixture inventory: 3 cited IDs; 1 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
+                    'Current fixture inventory: 4 cited IDs; 2 report files; 1 directories without reports; 1 missing directories; 2 archived release reports.' + [Environment]::NewLine)
 
     $requiredOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -RequirePresent 2>&1 | Out-String)
     if ($LASTEXITCODE -ne 0 -or $requiredOutput -notmatch 'Required release evidence audit passed') {

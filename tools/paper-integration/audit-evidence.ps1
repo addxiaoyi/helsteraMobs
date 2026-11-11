@@ -221,6 +221,36 @@ foreach ($item in $releaseEvidence) {
         if (-not $summary.Success -or [int]$summary.Groups['count'].Value -ne $probes.Count) {
             throw "README latest strict report probe count does not match release evidence: $fixtureId"
         }
+        $latestReleaseDocuments = @(
+            @{
+                name = 'README.md'
+                text = $readme
+                pattern = '(?m)^Latest strict fixture `(?<fixture>[^`]+)`[^\r\n]*?(?<count>\d+) probes'
+            },
+            @{
+                name = 'MYTHICMOBS_PARITY_MATRIX.md'
+                text = $matrixText
+                pattern = '(?m)^Latest strict release evidence: `(?<fixture>[^`]+)`\s*completes (?<count>\d+) probes'
+            },
+            @{
+                name = 'tools/paper-integration/README.md'
+                text = (Get-Content -LiteralPath (Join-Path $Root 'tools/paper-integration/README.md') -Raw -Encoding utf8)
+                pattern = '(?m)^Latest strict fixture `(?<fixture>[^`]+)` passes all (?<count>\d+) probes'
+            },
+            @{
+                name = 'tools/paper-integration/STARTUP_EVIDENCE.md'
+                text = (Get-Content -LiteralPath (Join-Path $Root 'tools/paper-integration/STARTUP_EVIDENCE.md') -Raw -Encoding utf8)
+                pattern = '(?m)^Latest fixture `(?<fixture>[^`]+)` passed the full strict gate[^\r\n]*?(?<count>\d+) registered probes'
+            }
+        )
+        foreach ($document in $latestReleaseDocuments) {
+            $documentSummary = [regex]::Match([string]$document.text, [string]$document.pattern)
+            if (-not $documentSummary.Success -or
+                    [string]$documentSummary.Groups['fixture'].Value -cne [string]$releaseCombination.releaseFixtureId -or
+                    [int]$documentSummary.Groups['count'].Value -ne $probes.Count) {
+                throw "Latest strict release documentation is stale in $($document.name): expected $($releaseCombination.releaseFixtureId) with $($probes.Count) probes."
+            }
+        }
         if ($releasePluginHash -and [string]$report.pluginSha256 -cne $releasePluginHash) {
             throw "Latest full release report plugin SHA-256 does not match release JAR: $fixtureId"
         }
