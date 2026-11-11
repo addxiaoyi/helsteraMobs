@@ -1637,6 +1637,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " invisible=" + invisible + " show-name=" + showName);
                     if (visibilityProbeId > 0) instances().despawn(visibilityProbeId);
                 }
+                runImportedVisibilityOptionsSelfTest(world, origin.clone().add(20, 0, 0));
 
                 var sheep = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Sheep.class);
                 sheep.setColor(org.bukkit.DyeColor.RED);
@@ -3074,12 +3075,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     private void runImportedBeeStingerLossSelfTest(Location origin, int retryCount) {
-        var observer = getServer().getOnlinePlayers().stream()
-                .filter(player -> player.isValid() && !player.isDead()
-                        && player.getWorld().equals(origin.getWorld()))
-                .min(java.util.Comparator.comparingDouble(player ->
-                        player.getLocation().distanceSquared(origin)))
-                .orElse(null);
+        var selectedObserver = getServer().getPlayerExact("HelsteraTester");
+        if (selectedObserver == null || !selectedObserver.isValid() || selectedObserver.isDead()
+                || !selectedObserver.getWorld().equals(origin.getWorld())) {
+            selectedObserver = getServer().getOnlinePlayers().stream()
+                    .filter(player -> player.isValid() && !player.isDead()
+                            && player.getWorld().equals(origin.getWorld()))
+                    .min(java.util.Comparator.comparingDouble(player ->
+                            player.getLocation().distanceSquared(origin)))
+                    .orElse(null);
+        }
+        final var observer = selectedObserver;
         if (observer == null) {
             if (retryCount >= 180) {
                 getLogger().info("[自检] bee-stinger-loss-imported result=false imported=false"
@@ -4973,6 +4979,98 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     getLogger().warning("Armor Stand option target cleanup failed=" + cleanupFailure);
                 }
             }
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private boolean runImportedVisibilityOptionsSelfTest(org.bukkit.World world, Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            if (world == null || origin == null || origin.getWorld() != world) {
+                throw new IllegalArgumentException("Invalid Paper visibility option probe world or origin");
+            }
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-visibility-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("visibility-options.yml");
+            String configuredId = "ImportedVisibility_" + suffix;
+            String controlId = "ImportedVisibilityControl_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          VisibleByDefault: false
+                          Invisible: true
+                          AlwaysShowName: true
+                      %2$s:
+                        Type: ZOMBIE
+                        Options:
+                          VisibleByDefault: true
+                          Invisible: false
+                          AlwaysShowName: false
+                    """.formatted(configuredId, controlId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe visibility mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing visibility mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            if (!targetIds.keySet().containsAll(java.util.List.of(configuredId, controlId))) {
+                throw new IllegalStateException("Mythic visibility option mobs were not both imported");
+            }
+
+            int configuredIdValue = spawnImportedMobDefaultsProbe(targetIds.get(configuredId), origin);
+            if (configuredIdValue > 0) instanceIds.add(configuredIdValue);
+            int controlIdValue = spawnImportedMobDefaultsProbe(targetIds.get(controlId), origin.clone().add(3, 0, 0));
+            if (controlIdValue > 0) instanceIds.add(controlIdValue);
+            var configuredInstance = configuredIdValue > 0 ? instances().impl(configuredIdValue) : null;
+            var controlInstance = controlIdValue > 0 ? instances().impl(controlIdValue) : null;
+            var configured = configuredInstance == null ? null : configuredInstance.baseEntity().orElse(null);
+            var control = controlInstance == null ? null : controlInstance.baseEntity().orElse(null);
+            var configuredConfig = mobConfig(targetIds.get(configuredId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var configuredEntityOptions = configuredConfig == null ? null
+                    : configuredConfig.getConfigurationSection("entity");
+            var controlEntityOptions = controlConfig == null ? null
+                    : controlConfig.getConfigurationSection("entity");
+
+            boolean imported = targetIds.size() == 2 && configuredEntityOptions != null
+                    && controlEntityOptions != null
+                    && configuredConfig.contains("show-name") && controlConfig.contains("show-name");
+            boolean configuredApplied = configured != null && configuredEntityOptions != null && configuredConfig != null
+                    && !configured.isVisibleByDefault() && configured.isInvisible() && configured.isCustomNameVisible()
+                    && !configuredEntityOptions.getBoolean("visible-by-default", true)
+                    && configuredEntityOptions.getBoolean("invisible") && configuredConfig.getBoolean("show-name");
+            boolean controlsApplied = control != null && controlEntityOptions != null && controlConfig != null
+                    && control.isVisibleByDefault() && !control.isInvisible() && !control.isCustomNameVisible()
+                    && controlEntityOptions.getBoolean("visible-by-default")
+                    && !controlEntityOptions.getBoolean("invisible", true) && !controlConfig.getBoolean("show-name", true);
+            boolean result = imported && configuredApplied && controlsApplied;
+            getLogger().info("[自检] visibility-options-imported result=" + result
+                    + " imported=" + imported + " configured=" + configuredApplied
+                    + " controls=" + controlsApplied);
+            return result;
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] visibility-options-imported result=false error=" + failure);
+            return false;
+        } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
     }
@@ -11320,6 +11418,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " invalid-rejected=" + lookingAtInvalidRejected + " restored=" + lookingAtRestored);
                     permissionProbe.setFoodLevel(14);
                     permissionProbe.setRemainingAir(100);
+                    // Force a known in-progress attack cooldown instead of
+                    // depending on incidental client input during startup.
+                    permissionProbe.resetCooldown();
                     boolean attackCooldownPlaceholder = verifyAttackCooldownPlaceholder(
                             permissionProbe, stateContext, rechargingTarget);
                     gameplayPlaceholders = "14".equals(dev.helstera.ai.skill.Placeholders.lookup(

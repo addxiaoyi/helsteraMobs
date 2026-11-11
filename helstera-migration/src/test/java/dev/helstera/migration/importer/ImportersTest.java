@@ -4336,6 +4336,8 @@ class ImportersTest {
                       Scale: 1.25
                       ShowHealth: true
                       VisibleByDefault: false
+                      Invisible: true
+                      AlwaysShowName: true
                     Modules:
                       ThreatTable: false
                       CustomVendorModule: true
@@ -4349,7 +4351,11 @@ class ImportersTest {
                 "Options.UseThreatTable is an explicit runtime override");
         assertTrue(target.getBoolean("mob.unsupported.Modules.CustomVendorModule"));
         assertFalse(target.getBoolean("entity.visible-by-default", true));
+        assertTrue(target.getBoolean("entity.invisible"));
+        assertTrue(target.getBoolean("show-name"));
         assertFalse(target.contains("mob.unsupported.Options.VisibleByDefault"));
+        assertFalse(target.contains("mob.unsupported.Options.Invisible"));
+        assertFalse(target.contains("mob.unsupported.Options.AlwaysShowName"));
         assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
                 && String.valueOf(e.get("source-key")).contains("Modules")));
     }
