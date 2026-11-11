@@ -4236,6 +4236,86 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Villager options map only to valid Villagers and preserve Mythic defaults")
+    void mythicMapsVillagerOptionsAndPreservesInvalidValues(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/villager-options.yml", """
+                mobs:
+                  Configured:
+                    Type: VILLAGER
+                    Options:
+                      Type: DESERT
+                      Profession: MASON
+                      Level: 4
+                      HasTrades: true
+                  WrongType:
+                    Type: ZOMBIE
+                    Options:
+                      Type: TAIGA
+                      Profession: CLERIC
+                      Level: 3
+                      HasTrades: true
+                  Invalid:
+                    Type: VILLAGER
+                    Options:
+                      Type: NOT_A_BIOME
+                      Profession: NOT_A_PROFESSION
+                      Level: 6
+                      HasTrades: sometimes
+                  DefaultHasTrades:
+                    Type: VILLAGER
+                    Options: {}
+                  ExplicitInteraction:
+                    Type: VILLAGER
+                    Options:
+                      HasTrades: true
+                      Interactable: false
+                """);
+
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        Map<String, YamlConfiguration> configs = entries.stream()
+                .filter(entry -> entry.containsKey("target-file"))
+                .map(entry -> YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                        String.valueOf(entry.get("content")))))
+                .collect(java.util.stream.Collectors.toMap(config -> config.getString("id"),
+                        java.util.function.Function.identity()));
+        YamlConfiguration configured = configs.get("mythic_configured");
+        assertEquals("DESERT", configured.getString("entity.villager-type"));
+        assertEquals("MASON", configured.getString("entity.villager-profession"));
+        assertEquals(4, configured.getInt("entity.villager-level"));
+        assertTrue(configured.getBoolean("entity.villager-has-trades"));
+        assertTrue(configured.getBoolean("mob.interactable"),
+                "trade availability enables interaction unless explicitly overridden");
+        assertFalse(configured.contains("entity.unsupported.Options.Type"));
+
+        YamlConfiguration wrongType = configs.get("mythic_wrongtype");
+        assertEquals("TAIGA", wrongType.getString("entity.unsupported.Options.Type"));
+        assertEquals("CLERIC", wrongType.getString("entity.unsupported.Options.Profession"));
+        assertEquals(3, wrongType.getInt("entity.unsupported.Options.Level"));
+        assertTrue(wrongType.getBoolean("entity.unsupported.Options.HasTrades"));
+        assertFalse(wrongType.contains("entity.villager-type"));
+
+        YamlConfiguration invalid = configs.get("mythic_invalid");
+        assertEquals("NOT_A_BIOME", invalid.getString("entity.unsupported.Options.Type"));
+        assertEquals("NOT_A_PROFESSION", invalid.getString("entity.unsupported.Options.Profession"));
+        assertEquals(6, invalid.getInt("entity.unsupported.Options.Level"));
+        assertEquals("sometimes", invalid.getString("entity.unsupported.Options.HasTrades"));
+        assertFalse(invalid.contains("entity.villager-level"));
+
+        YamlConfiguration defaulted = configs.get("mythic_defaulthastrades");
+        assertFalse(defaulted.getBoolean("entity.villager-has-trades", true));
+        assertTrue(entries.stream().anyMatch(entry ->
+                "defaulted".equals(entry.get("status"))
+                        && "entity.villager-has-trades".equals(entry.get("target-key"))
+                        && "false".equals(entry.get("value"))));
+
+        YamlConfiguration explicitInteraction = configs.get("mythic_explicitinteraction");
+        assertTrue(explicitInteraction.getBoolean("entity.villager-has-trades"));
+        assertFalse(explicitInteraction.getBoolean("mob.interactable"),
+                "an explicit Interactable value takes precedence over the trade default");
+        assertTrue(entries.stream().filter(entry -> "unsupported".equals(entry.get("status"))).count() >= 7);
+    }
+
+    @Test
     @DisplayName("MythicMobs ReinforcementsChance maps only valid Zombie-family values")
     void mythicMapsZombieReinforcementsChanceAndPreservesInvalidValues(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/reinforcements.yml", """

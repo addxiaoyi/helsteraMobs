@@ -58,6 +58,8 @@ public final class SpawnOptions {
     private boolean preventSnowFormation = false;
     private boolean healOnReload = false;
     private boolean digOutOfGround = false;
+    /** Null keeps native Villager trade acquisition behavior for unmanaged policies. */
+    private Boolean villagerHasTrades = null;
     /** Null keeps native behavior for instances without a Mythic Tameable policy. */
     private Boolean tameable = null;
 
@@ -234,6 +236,8 @@ public final class SpawnOptions {
     public SpawnOptions healOnReload(boolean value) { healOnReload = value; return this; }
     public boolean digOutOfGround() { return digOutOfGround; }
     public SpawnOptions digOutOfGround(boolean value) { digOutOfGround = value; return this; }
+    public Boolean villagerHasTrades() { return villagerHasTrades; }
+    public SpawnOptions villagerHasTrades(Boolean value) { villagerHasTrades = value; return this; }
 
     public boolean blocksTransformationReason(String reason) {
         return preventTransformation || containsReason(preventTransformationReasons, reason);

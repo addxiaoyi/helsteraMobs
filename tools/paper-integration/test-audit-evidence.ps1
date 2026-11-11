@@ -157,6 +157,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'pandaOptions'; status = 'passed'; observations = @('panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true')
     }
+    $fullReport.expectedProbeIds += 'villagerOptions'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'villagerOptions'; status = 'passed'; observations = @('villager-options result=true imported=true type=DESERT profession=MASON level=4 has-trades=true trades-available=true control-type=PLAINS control-profession=LIBRARIAN control-level=2 control-has-trades=false no-trades=true acquire-allowed=true acquire-denied=true trading-interactable=true wrong-type-preserved=true invalid-preserved=true')
+    }
     $fullReport.expectedProbeIds += 'parrotFlyingSpeed'
     $fullReport.probes += [pscustomobject]@{
         id = 'parrotFlyingSpeed'; status = 'passed'; observations = @('parrot-flying-speed result=true imported=true configured=0.8 sentinel-unchanged=true wrong-type-preserved=true invalid-preserved=true')
