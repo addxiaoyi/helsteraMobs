@@ -220,6 +220,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] experience-orb-options result=true imported=true experience=17 wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] villager-options result=true imported=true type=DESERT profession=MASON level=4 has-trades=true trades-available=true control-type=PLAINS control-profession=LIBRARIAN control-level=2 control-has-trades=false no-trades=true acquire-allowed=true acquire-denied=true trading-interactable=true wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] parrot-flying-speed result=true imported=true configured=0.8 sentinel-unchanged=true wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
@@ -604,6 +605,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'pandaOptions').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'pandaOptions').observations[0] -match
         '^panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true$') 'Panda genes require imported Paper readback plus wrong-entity and invalid-value preservation'
+    Assert-True (($report.probes | Where-Object id -eq 'villagerOptions').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'villagerOptions').observations[0] -match
+        '^villager-options result=true imported=true type=DESERT profession=MASON level=4 has-trades=true trades-available=true control-type=PLAINS control-profession=LIBRARIAN control-level=2 control-has-trades=false no-trades=true acquire-allowed=true acquire-denied=true trading-interactable=true wrong-type-preserved=true invalid-preserved=true$') 'Villager options require imported Paper readback plus wrong-entity and invalid-value preservation'
     Assert-True (($report.probes | Where-Object id -eq 'parrotFlyingSpeed').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'parrotFlyingSpeed').observations[0] -match
         '^parrot-flying-speed result=true imported=true configured=0\.8 sentinel-unchanged=true wrong-type-preserved=true invalid-preserved=true$') 'Parrot FlyingSpeed requires imported attribute readback, sentinel control, and preservation'
@@ -1348,6 +1352,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'pandaOptions'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'pandaOptions'; status = 'passed'; observations = @('panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'villagerOptions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'villagerOptions'; status = 'passed'; observations = @('villager-options result=true imported=true type=DESERT profession=MASON level=4 has-trades=true trades-available=true control-type=PLAINS control-profession=LIBRARIAN control-level=2 control-has-trades=false no-trades=true acquire-allowed=true acquire-denied=true trading-interactable=true wrong-type-preserved=true invalid-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'parrotFlyingSpeed'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -2393,6 +2401,19 @@ try {
     } catch { $incompletePandaOptionsRejected = $_.Exception.Message -match 'required observation for pandaOptions' }
     Assert-True $incompletePandaOptionsRejected 'full release gate rejects Panda option evidence without gene readback and preservation controls'
     $fullCatalogPandaOptions[0].observations = $pandaObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $fullCatalogVillagerOptions = @($fullCatalogReport.probes | Where-Object id -eq 'villagerOptions')
+    if ($fullCatalogVillagerOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain villagerOptions.' }
+    $villagerObservations = $fullCatalogVillagerOptions[0].observations
+    $fullCatalogVillagerOptions[0].observations = @('villager-options result=true imported=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteVillagerOptionsRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteVillagerOptionsRejected = $_.Exception.Message -match 'required observation for villagerOptions' }
+    Assert-True $incompleteVillagerOptionsRejected 'full release gate rejects Villager option evidence without readback and preservation controls'
+    $fullCatalogVillagerOptions[0].observations = $villagerObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $fullCatalogParrotFlyingSpeed = @($fullCatalogReport.probes | Where-Object id -eq 'parrotFlyingSpeed')
     if ($fullCatalogParrotFlyingSpeed.Count -ne 1) { throw 'Synthetic full catalog report must contain parrotFlyingSpeed.' }

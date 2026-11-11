@@ -52,6 +52,48 @@ class MythicAgeOptionsTest {
         assertFalse(HelsteraPlugin.shouldCancelTaming(null));
     }
 
+    @Test
+    void villagerTradePolicyDistinguishesMythicDefaultFromNativeBehavior() {
+        assertFalse(HelsteraPlugin.shouldCancelVillagerTradeAcquisition(null));
+        assertFalse(HelsteraPlugin.shouldCancelVillagerTradeAcquisition(SpawnOptions.defaults()));
+        assertFalse(HelsteraPlugin.shouldCancelVillagerTradeAcquisition(
+                SpawnOptions.defaults().villagerHasTrades(true)));
+        assertTrue(HelsteraPlugin.shouldCancelVillagerTradeAcquisition(
+                SpawnOptions.defaults().villagerHasTrades(false)));
+    }
+
+    @Test
+    void appliesVillagerTradeAvailabilityWithoutTouchingOtherVillagerOptions() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        org.bukkit.entity.Villager villager = (org.bukkit.entity.Villager) Proxy.newProxyInstance(
+                org.bukkit.entity.Villager.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Villager.class}, (proxy, method, args) -> {
+                    if (method.getName().startsWith("set")) {
+                        calls.put(method.getName(), args == null || args.length == 0 ? true : args[0]);
+                    } else if (method.getName().equals("getRecipes")) {
+                        return List.of();
+                    } else if (method.getName().equals("resetOffers")) {
+                        calls.put("resetOffers", true);
+                    }
+                    Class<?> type = method.getReturnType();
+                    if (type == boolean.class) return false;
+                    if (type == int.class) return 0;
+                    return null;
+                });
+
+        var disabled = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader("villager-has-trades: false\n"));
+        assertTrue(disabled.contains("villager-has-trades"), disabled.saveToString());
+        HelsteraPlugin.applyVillagerOptions(villager, disabled);
+        assertEquals(List.of(), calls.get("setRecipes"), calls.toString());
+
+        calls.clear();
+        HelsteraPlugin.applyVillagerOptions(villager, YamlConfiguration.loadConfiguration(
+                new java.io.StringReader("villager-has-trades: true\n")));
+        assertEquals(true, calls.get("resetOffers"));
+        assertFalse(calls.containsKey("setRecipes"));
+    }
+
 
     @Test
     void importedEntityOptionsDoNotHideTheMobEntityType() {

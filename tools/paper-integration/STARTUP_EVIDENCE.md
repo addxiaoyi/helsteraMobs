@@ -1,15 +1,15 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-parrot-flying-speed-strict-20261111-r2` passed the full strict gate on Paper 1.21.1-133:
+Latest fixture `srv-paper-villager-options-strict-20261111-r4` passed the full strict gate on Paper 1.21.1-133: 435 registered probes, 416 passed, 19 expected rejections, and zero failed or incomplete. Its `villagerOptions` probe imports `Type: DESERT`, `Profession: MASON`, `Level: 4`, and `HasTrades:true`; production spawning reads back `DESERT/MASON/4` and available offers against `PLAINS/LIBRARIAN/2` with `HasTrades:false`, no offers, and blocked trade acquisition. With `HasTrades:true`, default interaction is enabled. Wrong-entity and invalid values remain preserved with warnings. Plugin SHA-256: `72da321cfae76be8af49ee8070517debd94d240e3914db577ea4060f23b6d45e`. Report: [paper-1.21.1-villager-options-strict-20261111-r4.json](paper-1.21.1-villager-options-strict-20261111-r4.json), SHA-256 `70b716cb88b29b3b62f877872f54b28243070ddbb4ecfa7d7b57e3e8b6dd72da`. Compressed redacted server log: [paper-1.21.1-villager-options-strict-20261111-r4.log.gz](paper-1.21.1-villager-options-strict-20261111-r4.log.gz), SHA-256 `252e9cd5f695aed1b161ed10ad650b5b746ec90c734c29dd1afefa238a463f15`. Client log archive: [paper-1.21.1-villager-options-strict-20261111-r4-client-logs.tar.gz](paper-1.21.1-villager-options-strict-20261111-r4-client-logs.tar.gz), SHA-256 `7535bc484ef8a41c0b2831eac98b1942903dfd31fa9670483b1a6e7797f051bc`. Archived logs redact web-token query values.
+
+Previous fixture `srv-paper-villager-options-strict-20261111-r2` verified Villager `Type`, `Profession`, and `Level`; its report and hashes remain in `release-evidence.json`.
+
+Previous fixture `srv-paper-parrot-flying-speed-strict-20261111-r2` passed the full strict gate on Paper 1.21.1-133:
 434 registered probes, 415 passed, 19 expected rejections, and zero failed or
-incomplete. The `parrotFlyingSpeed` probe imports Mythic `Options.FlyingSpeed: 0.8`
-and reads back Paper's Parrot flying-speed attribute through production spawning.
-The `-1` sentinel leaves the native attribute unchanged; wrong entity types and
-invalid negative values remain preserved with warnings.
-Plugin SHA-256: `dacecefabecefdc826a3008953a491ba08cf689511c4a1578dbfd359944ec38d`. Report: [paper-1.21.1-parrot-flying-speed-strict-20261111-r2.json](reports/paper-1.21.1-parrot-flying-speed-strict-20261111-r2.json), SHA-256: `e23d83076c5965c3a5b7bfcfc7b367dffdc7bc9a5fab598de44f9e5947cad684`.
-Compressed redacted server log: [paper-1.21.1-parrot-flying-speed-strict-20261111-r2.log.gz](reports/paper-1.21.1-parrot-flying-speed-strict-20261111-r2.log.gz), SHA-256: `810ee362974fcdc23b73f9861038557e9e6647017e2ad76fd73f01bc11e38a69`.
-Client log archive: [paper-1.21.1-parrot-flying-speed-strict-20261111-r2-client-logs.tar.gz](reports/paper-1.21.1-parrot-flying-speed-strict-20261111-r2-client-logs.tar.gz), SHA-256: `5737592bb14f9f870a4b412bad9b6225434f2f1cf87bb98b5261e1fa41803067`.
-Archived logs redact web-token query values.
+incomplete. Its `parrotFlyingSpeed` probe reads back Mythic `Options.FlyingSpeed: 0.8`
+through production spawning; the `-1` sentinel preserves native speed, while
+wrong-entity and invalid values remain preserved with warnings. Report, redacted
+server/client logs, and hashes remain indexed in `release-evidence.json`.
 
 Previous fixture `srv-paper-panda-options-strict-20261111-r1` passed the full strict gate on Paper 1.21.1-133:
 433 registered probes, 414 passed, 19 expected rejections, and zero failed or

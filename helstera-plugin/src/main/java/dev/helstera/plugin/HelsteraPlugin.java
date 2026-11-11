@@ -1711,6 +1711,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedCatOptionsSelfTest(world, origin.clone().add(6, 0, 0));
                 runImportedFoxOptionsSelfTest(origin.clone().add(7, 0, 0));
                 runImportedPandaOptionsSelfTest(origin.clone().add(160, 0, 0));
+                runImportedVillagerOptionsSelfTest(origin.clone().add(162, 0, 0));
                 runImportedParrotFlyingSpeedSelfTest(origin.clone().add(164, 0, 0));
                 runImportedRabbitOptionsSelfTest(origin.clone().add(8, 0, 0));
                 runImportedHorseOptionsSelfTest(origin.clone().add(32, 0, 0));
@@ -1907,15 +1908,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean armorModifier = hasAttributeModifier(armor, 1.0,
                 org.bukkit.attribute.AttributeModifier.Operation.MULTIPLY_SCALAR_1,
                 org.bukkit.inventory.EquipmentSlotGroup.ANY);
-        boolean entityDeduplicated = modifierCount(attack) == 1
-                && modifierCount(speed) == 1 && modifierCount(armor) == 1;
+        boolean entityDeduplicated = hasAttributeModifierId(attack, zombie.getUniqueId(), "main-hand", "damage")
+                && hasAttributeModifierId(speed, zombie.getUniqueId(), "off-hand", "speed")
+                && hasAttributeModifierId(armor, zombie.getUniqueId(), "any", "armor");
+        boolean invalidRejected = !hasAttributeModifierId(attack, zombie.getUniqueId(), "any", "invalid")
+                && !hasAttributeModifierId(speed, zombie.getUniqueId(), "any", "invalid")
+                && !hasAttributeModifierId(armor, zombie.getUniqueId(), "any", "invalid");
         boolean entityCombination = attackModifier && speedModifier && armorModifier
-                && entityDeduplicated;
+                && entityDeduplicated && invalidRejected;
         getLogger().info("attribute-options-composite result=" + entityCombination
                 + " attack=" + attackModifier + " speed=" + speedModifier
                 + " armor=" + armorModifier + " dedup=" + entityDeduplicated
-                + " invalid-rejected=" + (modifierCount(attack) == 1
-                && modifierCount(speed) == 1 && modifierCount(armor) == 1));
+                + " invalid-rejected=" + invalidRejected);
         var item = new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_SWORD);
         var itemConfig = new org.bukkit.configuration.file.YamlConfiguration();
         itemConfig.set("attributes.mainhand.damage.attribute", "DAMAGE");
@@ -1962,8 +1966,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + (itemAttack.size() + itemSpeed.size() + itemArmor.size()));
     }
 
-    private static int modifierCount(org.bukkit.attribute.AttributeInstance instance) {
-        return instance == null ? 0 : instance.getModifiers().size();
+    private static boolean hasAttributeModifierId(org.bukkit.attribute.AttributeInstance instance,
+                                                  java.util.UUID entityId, String slotKey, String id) {
+        if (instance == null || entityId == null) return false;
+        java.util.UUID modifierId = java.util.UUID.nameUUIDFromBytes(
+                (entityId + "|" + slotKey + "|" + id)
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        return instance.getModifiers().stream().anyMatch(modifier -> modifierId.equals(modifier.getUniqueId()));
     }
 
     private static boolean hasAttributeModifier(org.bukkit.attribute.AttributeInstance instance, double amount,
@@ -4415,6 +4424,174 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " invalid-preserved=" + invalidPreserved);
         } catch (Throwable failure) {
             getLogger().warning("[自检] panda-options result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedVillagerOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String configuredId = "ImportedVillagerOptions_" + suffix;
+            String controlId = "ImportedVillagerOptionsControl_" + suffix;
+            String wrongTypeId = "ImportedVillagerOptionsWrongType_" + suffix;
+            String invalidId = "ImportedVillagerOptionsInvalid_" + suffix;
+            sourceRoot = Files.createTempDirectory("helstera-villager-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("villager-options.yml");
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: VILLAGER
+                        Options:
+                          Type: DESERT
+                          Profession: MASON
+                          Level: 4
+                          HasTrades: true
+                      %2$s:
+                        Type: VILLAGER
+                        Options:
+                          Type: PLAINS
+                          Profession: LIBRARIAN
+                          Level: 2
+                          HasTrades: false
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          Type: TAIGA
+                          Profession: CLERIC
+                          Level: 3
+                          HasTrades: true
+                      %4$s:
+                        Type: VILLAGER
+                        Options:
+                          Type: NOT_A_BIOME
+                          Profession: NOT_A_PROFESSION
+                          Level: 6
+                          HasTrades: sometimes
+                    """.formatted(configuredId, controlId, wrongTypeId, invalidId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory) || Files.exists(destination)) {
+                    throw new IOException("Unsafe or existing Villager option probe config: " + destination);
+                }
+                Files.createDirectories(destination.getParent());
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(configuredId, controlId, wrongTypeId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic Villager option probe mobs were not all imported");
+            }
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0),
+                    origin.clone().add(6, 0, 0), origin.clone().add(9, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        locations.get(i), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+            var configuredInstance = instances().impl(spawnedIds.get(configuredId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var wrongTypeInstance = instances().impl(spawnedIds.get(wrongTypeId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            var configured = configuredInstance == null ? null : configuredInstance.baseEntity()
+                    .filter(org.bukkit.entity.Villager.class::isInstance)
+                    .map(org.bukkit.entity.Villager.class::cast).orElse(null);
+            var control = controlInstance == null ? null : controlInstance.baseEntity()
+                    .filter(org.bukkit.entity.Villager.class::isInstance)
+                    .map(org.bukkit.entity.Villager.class::cast).orElse(null);
+            var wrongEntity = wrongTypeInstance == null ? null : wrongTypeInstance.baseEntity().orElse(null);
+            var invalid = invalidInstance == null ? null : invalidInstance.baseEntity()
+                    .filter(org.bukkit.entity.Villager.class::isInstance)
+                    .map(org.bukkit.entity.Villager.class::cast).orElse(null);
+            var wrongConfig = mobConfig(targetIds.get(wrongTypeId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var wrongEntityOptions = wrongConfig == null ? null : wrongConfig.getConfigurationSection("entity");
+            var invalidEntityOptions = invalidConfig == null ? null : invalidConfig.getConfigurationSection("entity");
+            var wrongUnsupported = wrongEntityOptions == null ? null
+                    : wrongEntityOptions.getConfigurationSection("unsupported.Options");
+            var invalidUnsupported = invalidEntityOptions == null ? null
+                    : invalidEntityOptions.getConfigurationSection("unsupported.Options");
+            boolean controlHasTradesDisabled = controlInstance != null
+                    && Boolean.FALSE.equals(controlInstance.options().villagerHasTrades());
+            boolean imported = configured != null && control != null && invalid != null
+                    && wrongEntityOptions != null && wrongUnsupported != null && invalidUnsupported != null
+                    && wrongUnsupported.getString("Type", "").equalsIgnoreCase("TAIGA")
+                    && wrongUnsupported.getString("Profession", "").equalsIgnoreCase("CLERIC")
+                    && wrongUnsupported.getInt("Level", -1) == 3
+                    && wrongUnsupported.getBoolean("HasTrades")
+                    && invalidUnsupported.getString("Type", "").equalsIgnoreCase("NOT_A_BIOME")
+                    && invalidUnsupported.getString("Profession", "").equalsIgnoreCase("NOT_A_PROFESSION")
+                    && invalidUnsupported.getInt("Level", -1) == 6
+                    && "sometimes".equals(invalidUnsupported.getString("HasTrades"))
+                    && configuredInstance.options().villagerHasTrades() == Boolean.TRUE
+                    && controlHasTradesDisabled
+                    && configuredInstance.options().interactable()
+                    && !invalidEntityOptions.contains("villager-type")
+                    && !invalidEntityOptions.contains("villager-profession")
+                    && !invalidEntityOptions.contains("villager-level");
+            var recipe = new org.bukkit.inventory.MerchantRecipe(
+                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.EMERALD), 1);
+            var allowedAcquire = new org.bukkit.event.entity.VillagerAcquireTradeEvent(configured, recipe);
+            var deniedAcquire = new org.bukkit.event.entity.VillagerAcquireTradeEvent(control, recipe);
+            getServer().getPluginManager().callEvent(allowedAcquire);
+            getServer().getPluginManager().callEvent(deniedAcquire);
+            boolean tradesAvailable = configured != null && !configured.getRecipes().isEmpty();
+            boolean noTrades = control != null && control.getRecipes().isEmpty();
+            boolean acquireAllowed = !allowedAcquire.isCancelled();
+            boolean acquireDenied = deniedAcquire.isCancelled();
+            boolean tradingInteractable = configuredInstance != null
+                    && configuredInstance.options().interactable();
+            boolean applied = imported
+                    && configured.getVillagerType() == org.bukkit.entity.Villager.Type.DESERT
+                    && configured.getProfession() == org.bukkit.entity.Villager.Profession.MASON
+                    && configured.getVillagerLevel() == 4
+                    && tradesAvailable
+                    && control.getVillagerType() == org.bukkit.entity.Villager.Type.PLAINS
+                    && control.getProfession() == org.bukkit.entity.Villager.Profession.LIBRARIAN
+                    && control.getVillagerLevel() == 2
+                    && controlHasTradesDisabled && noTrades && acquireAllowed && acquireDenied && tradingInteractable;
+            boolean wrongTypePreserved = wrongEntity instanceof org.bukkit.entity.Zombie;
+            boolean invalidPreserved = invalid != null && invalidUnsupported != null;
+            boolean passed = imported && applied && wrongTypePreserved && invalidPreserved;
+            getLogger().info("[自检] villager-options result=" + passed
+                    + " imported=" + imported
+                    + " type=" + (configured == null ? "missing" : configured.getVillagerType().name())
+                    + " profession=" + (configured == null ? "missing" : configured.getProfession().name())
+                    + " level=" + (configured == null ? -1 : configured.getVillagerLevel())
+                    + " has-trades=" + (configuredInstance != null
+                            && Boolean.TRUE.equals(configuredInstance.options().villagerHasTrades()))
+                    + " trades-available=" + tradesAvailable
+                    + " control-type=" + (control == null ? "missing" : control.getVillagerType().name())
+                    + " control-profession=" + (control == null ? "missing" : control.getProfession().name())
+                    + " control-level=" + (control == null ? -1 : control.getVillagerLevel())
+                    + " control-has-trades=" + (controlInstance == null
+                            || controlInstance.options().villagerHasTrades() == null
+                            ? "missing" : controlInstance.options().villagerHasTrades().toString())
+                    + " no-trades=" + noTrades
+                    + " acquire-allowed=" + acquireAllowed
+                    + " acquire-denied=" + acquireDenied
+                    + " trading-interactable=" + tradingInteractable
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] villager-options result=false imported=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
@@ -10558,6 +10735,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedTamedFamilyOptionsSelfTest(location.clone().add(27, 0, 0));
                 runImportedExperienceOrbOptionsSelfTest(location.clone().add(29, 0, 0));
                 runImportedPandaOptionsSelfTest(location.clone().add(31, 0, 0));
+                runImportedVillagerOptionsSelfTest(location.clone().add(33, 0, 0));
                 runImportedParrotFlyingSpeedSelfTest(location.clone().add(34, 0, 0));
                 runImportedArmorToughnessStatsSelfTest(location.clone().add(26, 0, 0));
                 var wolfContext = dev.helstera.api.behavior.BehaviorContext.of(
@@ -23772,6 +23950,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         cfg.getBoolean("prevent-snow-formation", false)))
                 .healOnReload(cfg.getBoolean("mob.heal-on-reload", cfg.getBoolean("heal-on-reload", false)))
                 .digOutOfGround(cfg.getBoolean("mob.dig-out-of-ground", cfg.getBoolean("dig-out-of-ground", false)))
+                .villagerHasTrades(cfg.contains("entity.villager-has-trades")
+                        ? cfg.getBoolean("entity.villager-has-trades") : null)
                 .silent(cfg.getBoolean("entity.silent", false))
                 .noAi(cfg.getBoolean("entity.no-ai", false))
                 .invulnerable(cfg.getBoolean("entity.invulnerable", false))
@@ -24366,6 +24546,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (instances == null) return;
         dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getRightClicked());
         if (instance != null && shouldCancelEntityInteraction(instance.options())) event.setCancelled(true);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
+    public void onVillagerAcquireTrade(org.bukkit.event.entity.VillagerAcquireTradeEvent event) {
+        if (instances == null) return;
+        dev.helstera.runtime.instance.ModelInstanceImpl instance = findInstance(event.getEntity());
+        if (instance != null && shouldCancelVillagerTradeAcquisition(instance.options())) {
+            event.setCancelled(true);
+        }
+    }
+
+    static boolean shouldCancelVillagerTradeAcquisition(SpawnOptions options) {
+        return options != null && Boolean.FALSE.equals(options.villagerHasTrades());
     }
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
@@ -26643,6 +26836,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (entity instanceof org.bukkit.entity.Panda panda) {
             applyPandaOptions(panda, options);
         }
+        if (entity instanceof org.bukkit.entity.Villager villager) {
+            applyVillagerOptions(villager, options);
+        }
         if (entity instanceof org.bukkit.entity.Parrot parrot) {
             applyParrotFlyingSpeed(parrot, options);
         }
@@ -26744,6 +26940,36 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         } catch (IllegalArgumentException | LinkageError ignored) {
             // Invalid imported values remain visible under entity.unsupported.Options.*.
+        }
+    }
+
+    static void applyVillagerOptions(org.bukkit.entity.Villager villager,
+                                    org.bukkit.configuration.ConfigurationSection options) {
+        if (villager == null || options == null) return;
+        try {
+            if (options.contains("villager-type")) {
+                villager.setVillagerType(org.bukkit.entity.Villager.Type.valueOf(
+                        options.getString("villager-type", "PLAINS").trim()
+                                .toUpperCase(java.util.Locale.ROOT)));
+            }
+            if (options.contains("villager-profession")) {
+                villager.setProfession(org.bukkit.entity.Villager.Profession.valueOf(
+                        options.getString("villager-profession", "NONE").trim()
+                                .toUpperCase(java.util.Locale.ROOT)));
+            }
+            if (options.contains("villager-level")) {
+                int level = options.getInt("villager-level", -1);
+                if (level >= 1 && level <= 5) villager.setVillagerLevel(level);
+            }
+            if (options.contains("villager-has-trades")) {
+                if (options.getBoolean("villager-has-trades")) {
+                    if (villager.getRecipes().isEmpty()) villager.resetOffers();
+                } else {
+                    villager.setRecipes(java.util.List.of());
+                }
+            }
+        } catch (IllegalArgumentException | LinkageError ignored) {
+            // Importer preserves malformed enum/range values under entity.unsupported.Options.*.
         }
     }
 

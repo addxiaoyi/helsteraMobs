@@ -119,6 +119,7 @@ $probeSpecs = [ordered]@{
     entityFlagOptions = 'entity-flag-options result=true imported=true wolf-tamed=true cat-tamed=true control-cat-tamed=false horse-tamed=true control-horse-tamed=false parrot-tamed=true control-parrot-tamed=false wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true'
     experienceOrbOptions = 'experience-orb-options result=true imported=true experience=17 wrong-type-preserved=true invalid-preserved=true'
     pandaOptions = 'panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true'
+    villagerOptions = 'villager-options result=true imported=true type=DESERT profession=MASON level=4 has-trades=true trades-available=true control-type=PLAINS control-profession=LIBRARIAN control-level=2 control-has-trades=false no-trades=true acquire-allowed=true acquire-denied=true trading-interactable=true wrong-type-preserved=true invalid-preserved=true'
     parrotFlyingSpeed = 'parrot-flying-speed result=true imported=true configured=0\.8 sentinel-unchanged=true wrong-type-preserved=true invalid-preserved=true'
     endermanHeldBlock = 'enderman-held-block result=true material=OBSIDIAN'
     mobPickupOption = 'mob-pickup-option result=true disabled=true explicit-overrides-default=true'

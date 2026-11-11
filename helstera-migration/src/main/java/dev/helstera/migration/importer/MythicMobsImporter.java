@@ -1347,6 +1347,36 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "entity.panda-hidden-gene", normalizedType,
                     raw -> isEnumOptionValue(raw, org.bukkit.entity.Panda.Gene.class),
                     org.bukkit.entity.Panda.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Type",
+                    "entity.villager-type", normalizedType,
+                    MythicMobsImporter::isVillagerTypeOptionValue,
+                    org.bukkit.entity.Villager.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Profession",
+                    "entity.villager-profession", normalizedType,
+                    MythicMobsImporter::isVillagerProfessionOptionValue,
+                    org.bukkit.entity.Villager.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "Level",
+                    "entity.villager-level", normalizedType,
+                    MythicMobsImporter::isVillagerLevelOptionValue,
+                    org.bukkit.entity.Villager.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "HasTrades",
+                    "entity.villager-has-trades", normalizedType,
+                    MythicMobsImporter::isBooleanOptionValue,
+                    org.bukkit.entity.Villager.class);
+            if ("VILLAGER".equals(normalizedType)) {
+                if (!target.contains("entity.villager-has-trades")) {
+                    target.set("entity.villager-has-trades", false);
+                    note(entries, srcFile, "MythicMobs.Options.HasTrades.default",
+                            "entity.villager-has-trades", false, "defaulted",
+                            "MythicMobs Villager HasTrades defaults to false.");
+                }
+                if (target.getBoolean("entity.villager-has-trades")
+                        && ciGet(options, "Interactable") == null) {
+                    target.set("mob.interactable", true);
+                    note(entries, srcFile, "Options.HasTrades", "mob.interactable", true, "defaulted",
+                            "Villager trading requires interaction unless Interactable is explicitly configured.");
+                }
+            }
             mapEntityScopedOption(options, srcFile, entries, target, "Sitting",
                     "entity.cat-sitting", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.Cat.class);
@@ -1443,7 +1473,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "ProjectileFireTicks", "ProjectileExplosion", "ProjectileMaxHits", "ProjectilePotion",
                     "ProjectilePierce", "ProjectileTracking", "ProjectileTrackingTicks", "ThreatTable",
                     "UseThreatTable", "SpawningDistance",
-                    "Scale", "ShowHealth", "Silent", "NoAI",
+                    "Scale", "ShowHealth", "Silent", "NoAI", "Type", "Profession", "Level", "HasTrades",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
                     "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "MainGene", "HiddenGene", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop", "Experience", "FlyingSpeed")) {
                 removeIgnoreCase(leftover, mapped);
@@ -5297,6 +5327,24 @@ public final class MythicMobsImporter implements MigrationImporter {
 
     private static boolean isNonNegativeIntegerOptionValue(Object raw) {
         return parseNonNegativeIntegerOption(raw) != null;
+    }
+
+    private static boolean isVillagerLevelOptionValue(Object raw) {
+        Integer level = parseNonNegativeIntegerOption(raw);
+        return level != null && level >= 1 && level <= 5;
+    }
+
+    private static boolean isVillagerTypeOptionValue(Object raw) {
+        return raw instanceof String text && java.util.Set.of(
+                "DESERT", "JUNGLE", "PLAINS", "SAVANNA", "SNOW", "SWAMP", "TAIGA")
+                .contains(text.trim().toUpperCase(Locale.ROOT));
+    }
+
+    private static boolean isVillagerProfessionOptionValue(Object raw) {
+        return raw instanceof String text && java.util.Set.of(
+                "NONE", "ARMORER", "BUTCHER", "CARTOGRAPHER", "CLERIC", "FARMER", "FISHERMAN",
+                "FLETCHER", "LEATHERWORKER", "LIBRARIAN", "MASON", "NITWIT", "SHEPHERD",
+                "TOOLSMITH", "WEAPONSMITH").contains(text.trim().toUpperCase(Locale.ROOT));
     }
 
     private static boolean isFiniteNumberInRange(Object raw, double minimum, double maximum) {
