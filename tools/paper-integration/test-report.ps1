@@ -219,6 +219,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true tamed=true angry=true can-join-raid-setter=true can-join-raid=false patrol-leader=true patrol-spawn-point=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] entity-flag-options result=true imported=true wolf-tamed=true cat-tamed=true control-cat-tamed=false horse-tamed=true control-horse-tamed=false parrot-tamed=true control-parrot-tamed=false wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] glowing-option-imported result=true imported=true enabled-configured=true control-configured=true invalid-preserved=true enabled-entity=true control-entity=true invalid-entity=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] boolean-mob-options-imported result=true imported=true configured=true controls=true invalid-preserved=true entity-states=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] experience-orb-options result=true imported=true experience=17 wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true',
@@ -644,6 +645,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'glowingOptionImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'glowingOptionImported').observations[0] -ceq
         'glowing-option-imported result=true imported=true enabled-configured=true control-configured=true invalid-preserved=true enabled-entity=true control-entity=true invalid-entity=true') 'Mythic Glowing requires imported Paper state readback and invalid-value preservation'
+    Assert-True (($report.probes | Where-Object id -eq 'booleanMobOptionsImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'booleanMobOptionsImported').observations[0] -ceq
+        'boolean-mob-options-imported result=true imported=true configured=true controls=true invalid-preserved=true entity-states=true') 'common Mythic boolean options require imported Paper state readback and malformed-value preservation'
     Assert-True (($report.probes | Where-Object id -eq 'tamedFamilyOptions').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'tamedFamilyOptions').observations[0] -match
         '^tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true$') 'Tamed option family probe requires supported readback plus Camel false-state preservation'
@@ -1395,6 +1399,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'glowingOptionImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'glowingOptionImported'; status = 'passed'; observations = @('glowing-option-imported result=true imported=true enabled-configured=true control-configured=true invalid-preserved=true enabled-entity=true control-entity=true invalid-entity=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'booleanMobOptionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'booleanMobOptionsImported'; status = 'passed'; observations = @('boolean-mob-options-imported result=true imported=true configured=true controls=true invalid-preserved=true entity-states=true')
     }
     $fullCatalogReport.expectedProbeIds += 'tamedFamilyOptions'
     $fullCatalogReport.probes += [pscustomobject]@{
