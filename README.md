@@ -1,4 +1,5 @@
-Latest strict fixture `srv-paper-panda-options-strict-20261111-r1` verifies Panda `MainGene: LAZY` and `HiddenGene: WORRIED` through production spawning; `NORMAL` controls pass, while wrong-entity and invalid values are preserved with warnings. The complete strict catalog records 433 probes (414 passed, 19 expected rejections), zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-panda-options-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+Latest strict fixture `srv-paper-parrot-flying-speed-strict-20261111-r2` verifies imported Parrot `Options.FlyingSpeed: 0.8` through Paper attribute readback; Mythic's `-1` sentinel leaves native speed unchanged, and wrong-entity/invalid values remain preserved with warnings. The full strict catalog records 434 probes (415 passed, 19 expected rejections), zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-parrot-flying-speed-strict-20261111-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
+Previous strict fixture `srv-paper-panda-options-strict-20261111-r1` verifies Panda `MainGene: LAZY` and `HiddenGene: WORRIED` through production spawning; `NORMAL` controls pass, while wrong-entity and invalid values are preserved with warnings. The complete strict catalog records 433 probes (414 passed, 19 expected rejections), zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-panda-options-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
 Previous strict fixture `srv-paper-steerable-saddles-strict-20261111-r1` verifies imported Horse `Saddled`/`HorseArmor`, Donkey `CarryingChest`, and `Saddled` on Pig and Strider through production spawning. Horse inventory and color/style/domestication/jump-strength controls pass; Donkeys read back chest true/false, while Pigs and Striders read back saddle true/false. All 430 Paper probes passed or recorded expected rejection (411 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
@@ -1353,12 +1354,12 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-11). The full remaining work is:
 
-Latest strict report has 433 probes, zero incomplete.
+Latest strict report has 434 probes, zero incomplete.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 579 cited IDs; 486 report files; 4 directories without reports; 89 missing directories; 259 archived release reports. The
+   Current fixture inventory: 580 cited IDs; 487 report files; 4 directories without reports; 89 missing directories; 260 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

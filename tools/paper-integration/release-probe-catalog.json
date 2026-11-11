@@ -649,6 +649,11 @@
       "requiredObservationPattern": "^panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true$"
     },
     {
+      "id": "parrotFlyingSpeed",
+      "status": "passed",
+      "requiredObservationPattern": "^parrot-flying-speed result=true imported=true configured=0\\.8 sentinel-unchanged=true wrong-type-preserved=true invalid-preserved=true$"
+    },
+    {
       "id": "entityAngryPollination",
       "status": "passed",
       "requiredObservation": "entity-angry-pollination result=true bee-angry-positive=true bee-angry-negative=true wolf-angry-positive=true wolf-angry-negative=true vex-angry-positive=true vex-angry-negative=true bee-pollinated-positive=true bee-pollinated-negative=true unsupported-angry-rejected=true missing-context-rejected=true aliases=true"

@@ -5804,6 +5804,54 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Parrot flying speed maps with its no-op sentinel and entity boundary")
+    void mythicMapsParrotFlyingSpeedAndPreservesInvalidValues(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/parrot-flying-speed.yml", """
+                mobs:
+                  parrot:
+                    Type: PARROT
+                    Options:
+                      FlyingSpeed: 0.8
+                  default_speed:
+                    Type: PARROT
+                    Options:
+                      FlyingSpeed: -1
+                  wrong_type:
+                    Type: ZOMBIE
+                    Options:
+                      FlyingSpeed: 0.5
+                  invalid_number:
+                    Type: PARROT
+                    Options:
+                      FlyingSpeed: -2
+                  invalid_text:
+                    Type: PARROT
+                    Options:
+                      FlyingSpeed: many
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        var parrot = convertedMob(entries, "parrot");
+        assertEquals(0.8, parrot.getDouble("entity.parrot-flying-speed"), 1e-9);
+        var defaultSpeed = convertedMob(entries, "default_speed");
+        assertEquals(-1.0, defaultSpeed.getDouble("entity.parrot-flying-speed"), 1e-9);
+
+        var wrongType = convertedMob(entries, "wrong_type");
+        assertEquals(0.5, wrongType.getDouble("entity.unsupported.Options.FlyingSpeed"), 1e-9);
+        assertFalse(wrongType.contains("entity.parrot-flying-speed"));
+        var invalidNumber = convertedMob(entries, "invalid_number");
+        assertEquals(-2.0, invalidNumber.getDouble("entity.unsupported.Options.FlyingSpeed"), 1e-9);
+        assertFalse(invalidNumber.contains("entity.parrot-flying-speed"));
+        var invalidText = convertedMob(entries, "invalid_text");
+        assertEquals("many", invalidText.getString("entity.unsupported.Options.FlyingSpeed"));
+        assertFalse(invalidText.contains("entity.parrot-flying-speed"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.FlyingSpeed".equals(entry.get("source-key"))
+                && "entity.unsupported.Options.FlyingSpeed".equals(entry.get("target-key"))));
+    }
+
+    @Test
     @DisplayName("Mythic Sheep options map color and sheared state")
     void mythicMapsSheepOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/sheep-options.yml", """
