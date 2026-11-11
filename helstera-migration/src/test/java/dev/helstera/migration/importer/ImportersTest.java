@@ -1493,6 +1493,7 @@ class ImportersTest {
                       - title{title=Hello;subtitle=World;fadein=5;stay=40;fadeout=5}
                       - randomskill{skills=child}
                       - summon{type=example/minion;amount=2;radius=4}
+                      - summon{type=ForestGuardian;amount=1;radius=3}
                       - transform{type=ZOMBIE}
                       - dash{distance=6;mode=forward}
                       - blink{distance=8;mode=target}
@@ -1537,6 +1538,7 @@ class ImportersTest {
         assertTrue(actions.contains("title \"Hello\" \"World\" 5 40 5"), actions.toString());
         assertTrue(actions.contains("random-skill child"), actions.toString());
         assertTrue(actions.contains("summon example/minion 2 4"));
+        assertTrue(actions.contains("summon mythic_forestguardian 1 3"));
         assertTrue(actions.contains("transform ZOMBIE"));
         assertTrue(actions.contains("dash 6 forward"));
         assertTrue(actions.contains("blink 8 target"));
@@ -3331,6 +3333,44 @@ class ImportersTest {
                 && String.valueOf(entry.get("source-key")).endsWith("UndocumentedGravity.Options")
                 && "mob.unsupported.Options".equals(entry.get("target-key"))
                 && String.valueOf(entry.get("value")).contains("Gravity=true")));
+    }
+
+    @Test
+    @DisplayName("Mythic PassthroughDamage maps booleans and preserves invalid values")
+    void mythicPassthroughDamageMapsAndPreservesInvalidValues(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/passthrough-damage.yml", """
+                mobs:
+                  Enabled:
+                    Type: ZOMBIE
+                    Options:
+                      PassthroughDamage: true
+                  Disabled:
+                    Type: ZOMBIE
+                    Options:
+                      PassthroughDamage: false
+                  Invalid:
+                    Type: ZOMBIE
+                    Options:
+                      PassthroughDamage: sometimes
+                """);
+
+        var entries = new MythicMobsImporter().convert(file);
+        var plans = entries.stream().filter(entry -> entry.containsKey("target-file")
+                        && String.valueOf(entry.get("target-file")).startsWith("mobs/"))
+                .collect(java.util.stream.Collectors.toMap(
+                        entry -> String.valueOf(entry.get("source-mob-id")),
+                        entry -> YamlConfiguration.loadConfiguration(new StringReader(
+                                String.valueOf(entry.get("content"))))));
+
+        assertTrue(plans.get("Enabled").getBoolean("mob.passthrough-damage"));
+        assertFalse(plans.get("Disabled").getBoolean("mob.passthrough-damage", true));
+        assertEquals("sometimes", plans.get("Invalid")
+                .getString("mob.unsupported.Options.PassthroughDamage"));
+        assertFalse(plans.get("Invalid").contains("mob.passthrough-damage"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.PassthroughDamage".equals(entry.get("source-key"))
+                && "mob.unsupported.Options.PassthroughDamage".equals(entry.get("target-key"))));
     }
 
     @Test

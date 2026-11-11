@@ -85,7 +85,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] execution-audience-mutation imported=true explicit-empty=true added=true persisted=true member-visible=true outsider-hidden=true removed=true empty-persisted=true unset=true unrestricted=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] execution-audience-mob-spawn imported=true mapped=true spawned=true selected-member=true outsider-excluded=true persisted=true member-visible=true outsider-hidden=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] execution-audience-mob-mutation imported=true targeter-removed=true empty-persisted=true hidden=true targeter-added=true restored-persisted=true member-visible=true outsider-hidden=true passed=true',
-        '[Server thread/INFO]: [helsteraMobs] execution-audience-mob-summon imported=true action-bound=true spawned=true inherited=true visuals=true member-visible=true outsider-hidden=true passed=true',
+        '[Server thread/INFO]: [helsteraMobs] execution-audience-mob-summon imported=true action-bound=true spawned=true inherited=true parent-linked=true visuals=true member-visible=true outsider-hidden=true passed=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-mobility=true moving-default-stationary=true moving-exact-fractional=true moving-alias-fractional=true moving-approx-same-block=true moving-approx-block=true moving-exact-argument=true moving-e-argument=true moving-invalid-rejected=true moving-imported=true moving-restored=true drowning-condition=true leashed-condition=true has-owner-condition=true has-tag-condition=true target-has-tag-condition=true scoreboard-tag-mechanics=true score-mechanics=true global-score-condition=true score-condition=true custom-owner-relation=true owner-condition=true children-condition=true inside-outside-conditions=true distance-from-location-condition=true coordinate-difference-condition=true origin-location-condition=true line-of-sight-from-origin-condition=true bounds-condition=true enchanting-conditions=true plugin-condition=true field-of-view-condition=true spawn-reason-condition=true water-mob-condition=true zombie-condition=true entity-type-condition=true aerial-condition=true enderman-condition=true enchantment-condition=true color-condition=true material-cooldown-condition=true material-cooldown-mechanic=true set-game-mode-mechanic=true jump-mechanic=true force-pull-mechanic=true set-offhand-mechanic=true set-armor-mechanic=true clear-inventory-mechanic=true remove-held-item-mechanic=true raw-experience-mechanic=true set-absorption-mechanic=true trigger-item-type-condition=true entity-item-type-condition=true entity-item-similar-condition=true item-similar-condition=true targets-condition=true item-type-condition=true structure-condition=true mythic-mob-type-condition=true trigger-block-type-condition=true frozen-condition=true dialogue-condition=true player-kills-condition=true absorption-condition=true health-absorption-condition=true potion-effect-condition=true aura-stacks-condition=true level-condition=true lunar-phase-condition=true string-equals-condition=true string-empty-condition=true compare-values-condition=true is-skill-condition=true owner-online-condition=true parent-relation=true is-child-condition=true is-child-import-condition=true adult-parent-positive=true adult-not-baby=true unrelated-baby-not-child=true baby-positive=true parent-derived-conditions=true player-experience-mechanics=true oxygen-mechanic=true consume-slot-mechanic=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true',
         '[Server thread/INFO]: skill-actions mythic-aura-action=true mythic-has-aura-condition=true mythic-target-has-aura-condition=true mythic-has-aura-stacks-condition=true mythic-has-aura-type-condition=true mythic-aura-remove=true mythic-aura-invalid-rejected=true',
@@ -221,6 +221,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] experience-orb-options result=true imported=true experience=17 wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] villager-options result=true imported=true type=DESERT profession=MASON level=4 has-trades=true trades-available=true control-type=PLAINS control-profession=LIBRARIAN control-level=2 control-has-trades=false no-trades=true acquire-allowed=true acquire-denied=true trading-interactable=true wrong-type-preserved=true invalid-preserved=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] passthrough-damage result=true imported=true parent-linked=true transferred=true source-preserved=true disabled-control=true orphan-fallback=true cancelled-respected=true cycle-safe=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] parrot-flying-speed result=true imported=true configured=0.8 sentinel-unchanged=true wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
@@ -486,7 +487,7 @@ try {
             'importedAerialCondition', 'endermanCondition', 'importedColorCondition',
             'importedIsFrozenCondition', 'importedBurningCondition', 'importedEntityCategoryCondition',
             'importedExecutionAudienceCondition', 'executionAudienceMutation', 'executionAudienceMobSpawn',
-            'executionAudienceMobMutation', 'executionAudienceMobSummon',
+            'executionAudienceMobMutation', 'executionAudienceMobSummon', 'passthroughDamageOptions',
             'importedTargetRelationshipsCondition',
             'importedEntityTypeVariantCondition',
             'importedEntityTypeTraitsCondition',
@@ -521,6 +522,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'executionAudienceMobSpawn').status -eq 'passed') 'mob execution audience requires importer, real spawn, PDC, target selection, and two-client visibility evidence'
     Assert-True (($report.probes | Where-Object id -eq 'executionAudienceMobMutation').status -eq 'passed') 'mob audience mutations require imported AddToAudience/RemoveFromAudience, targeter selection, PDC, and two-client visibility evidence'
     Assert-True (($report.probes | Where-Object id -eq 'executionAudienceMobSummon').status -eq 'passed') 'summoned mobs require imported summon execution, inherited audience, PDC, and two-client visibility evidence'
+    Assert-True (($report.probes | Where-Object id -eq 'passthroughDamageOptions').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'passthroughDamageOptions').observations[0] -match
+        '^passthrough-damage result=true imported=true parent-linked=true transferred=true source-preserved=true disabled-control=true orphan-fallback=true cancelled-respected=true cycle-safe=true invalid-preserved=true$') 'PassthroughDamage requires imported production transfer, source, fallback, cancellation, and cycle evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedTargetRelationshipsCondition').status -eq 'passed') 'imported target relationship conditions require strict Paper owner, online-player, leash, and fail-closed evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedEntityTypeVariantCondition').status -eq 'passed') 'imported EntityType variants require strict Paper positive, alternative, wrong-variant, wrong-type, and malformed-input evidence'
     Assert-True (($report.probes | Where-Object id -eq 'importedEntityTypeTraitsCondition').status -eq 'passed') 'imported EntityType traits require strict Paper getter coverage, negative controls, and all documented API-backed trait families'
@@ -1521,7 +1525,11 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'executionAudienceMobSummon'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'executionAudienceMobSummon'; status = 'passed'; observations = @('execution-audience-mob-summon imported=true action-bound=true spawned=true inherited=true visuals=true member-visible=true outsider-hidden=true passed=true')
+        id = 'executionAudienceMobSummon'; status = 'passed'; observations = @('execution-audience-mob-summon imported=true action-bound=true spawned=true inherited=true parent-linked=true visuals=true member-visible=true outsider-hidden=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'passthroughDamageOptions'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'passthroughDamageOptions'; status = 'passed'; observations = @('passthrough-damage result=true imported=true parent-linked=true transferred=true source-preserved=true disabled-control=true orphan-fallback=true cancelled-respected=true cycle-safe=true invalid-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'importedTargetRelationshipsCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

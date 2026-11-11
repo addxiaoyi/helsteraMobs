@@ -187,7 +187,7 @@ class SkillExecutionAudienceTest {
         Location origin = new Location(world, 0, 64, 0);
         when(instance.location()).thenReturn(origin);
         List<Set<UUID>> inherited = new ArrayList<>();
-        SkillCatalog.summoner((modelId, at) -> 42);
+        SkillCatalog.summoner((modelId, at, parent) -> 42);
         SkillCatalog.summonedAudienceUpdater((instanceId, audience) -> {
             assertEquals(42, instanceId);
             inherited.add(audience == null ? null : Set.copyOf(audience));

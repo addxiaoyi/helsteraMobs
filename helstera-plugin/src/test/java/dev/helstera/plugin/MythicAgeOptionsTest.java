@@ -63,6 +63,20 @@ class MythicAgeOptionsTest {
     }
 
     @Test
+    void passthroughDamagePolicyDefaultsOffAndReadsImportedMobOption() {
+        var defaults = HelsteraPlugin.applyMobOptionPolicies(
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("mob: {}\n")),
+                SpawnOptions.defaults());
+        var enabled = HelsteraPlugin.applyMobOptionPolicies(
+                YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                        "mob:\n  passthrough-damage: true\n")),
+                SpawnOptions.defaults());
+
+        assertFalse(defaults.passthroughDamage());
+        assertTrue(enabled.passthroughDamage());
+    }
+
+    @Test
     void appliesVillagerTradeAvailabilityWithoutTouchingOtherVillagerOptions() {
         Map<String, Object> calls = new LinkedHashMap<>();
         org.bukkit.entity.Villager villager = (org.bukkit.entity.Villager) Proxy.newProxyInstance(

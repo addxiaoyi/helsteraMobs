@@ -259,9 +259,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 a.setBehaviors(br);
                 // summon 动作需要一个生成钩子才能落地；SkillCatalog 是纯目录类，
                 // 不能直接依赖实例管理器，否则单元测试里根本加载不了它。
-                dev.helstera.ai.skill.SkillCatalog.summoner((modelId, at) -> {
+                dev.helstera.ai.skill.SkillCatalog.summoner((targetId, at, parent) -> {
+                    // Imported Mythic Summon references a converted mob config. Spawn it
+                    // through the production entity pipeline so it has a Bukkit base mob,
+                    // inherited options, AI, spawn events, and a persistent parent link.
+                    if (mobConfig(targetId) != null) {
+                        MobSpawn spawned = spawnMobCore(targetId, null, at, false, null, null, parent);
+                        return spawned == null ? -1 : spawned.instanceId();
+                    }
+                    // Keep direct model-ID summons compatible for callers that intentionally
+                    // create a visual-only instance without a converted mob configuration.
                     var inst = ((InstanceManagerImpl) instances)
-                            .spawn(modelId, at, dev.helstera.api.instance.SpawnOptions.defaults());
+                            .spawn(targetId, at, dev.helstera.api.instance.SpawnOptions.defaults());
                     // 必须回真实实例 id：召唤闸门靠它推算递归深度，
                     // 返回布尔会让深度恒为 1，闸门形同虚设
                     return inst == null ? -1 : inst.instanceId();
@@ -1712,6 +1721,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedFoxOptionsSelfTest(origin.clone().add(7, 0, 0));
                 runImportedPandaOptionsSelfTest(origin.clone().add(160, 0, 0));
                 runImportedVillagerOptionsSelfTest(origin.clone().add(162, 0, 0));
+                runImportedPassthroughDamageSelfTest(origin.clone().add(163, 0, 0));
                 runImportedParrotFlyingSpeedSelfTest(origin.clone().add(164, 0, 0));
                 runImportedRabbitOptionsSelfTest(origin.clone().add(8, 0, 0));
                 runImportedHorseOptionsSelfTest(origin.clone().add(32, 0, 0));
@@ -4593,6 +4603,212 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } catch (Throwable failure) {
             getLogger().warning("[自检] villager-options result=false imported=false error=" + failure);
         } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedPassthroughDamageSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        var spawnedEntities = new java.util.ArrayList<org.bukkit.entity.Entity>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String configuredId = "ImportedPassthroughDamage_" + suffix;
+            String controlId = "ImportedPassthroughDamageControl_" + suffix;
+            String orphanId = "ImportedPassthroughDamageOrphan_" + suffix;
+            String invalidId = "ImportedPassthroughDamageInvalid_" + suffix;
+            sourceRoot = Files.createTempDirectory("helstera-passthrough-damage-import-");
+            Path source = Files.createDirectories(sourceRoot.resolve("Mobs"))
+                    .resolve("passthrough-damage.yml");
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          PassthroughDamage: true
+                      %2$s:
+                        Type: ZOMBIE
+                        Options:
+                          PassthroughDamage: false
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          PassthroughDamage: true
+                      %4$s:
+                        Type: ZOMBIE
+                        Options:
+                          PassthroughDamage: sometimes
+                    """.formatted(configuredId, controlId, orphanId, invalidId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory) || Files.exists(destination)) {
+                    throw new IOException("Unsafe or existing PassthroughDamage probe config: " + destination);
+                }
+                Files.createDirectories(destination.getParent());
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(configuredId, controlId, orphanId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic PassthroughDamage probe mobs were not all imported");
+            }
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0),
+                    origin.clone().add(6, 0, 0), origin.clone().add(9, 0, 0),
+                    origin.clone().add(12, 0, 0));
+            for (var location : locations) location.getChunk().load();
+            origin.getWorld().getChunkAt(origin.clone().add(26, 0, 0)).load();
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        locations.get(i), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+            MobSpawn cycleSpawn = spawnMobCore(targetIds.get(configuredId), "example/emberling",
+                    locations.get(4), false, null);
+            int cycleId = cycleSpawn == null ? -1 : cycleSpawn.instanceId();
+            if (cycleId > 0) instanceIds.add(cycleId);
+
+            var protectedInstance = instances().impl(spawnedIds.get(configuredId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var orphanInstance = instances().impl(spawnedIds.get(orphanId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            var cycleInstance = instances().impl(cycleId);
+            var protectedChild = protectedInstance == null ? null : protectedInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var controlChild = controlInstance == null ? null : controlInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var orphanChild = orphanInstance == null ? null : orphanInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var unsupported = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean imported = protectedChild != null && controlChild != null && orphanChild != null
+                    && cycleInstance != null && protectedInstance.options().passthroughDamage()
+                    && !controlInstance.options().passthroughDamage()
+                    && orphanInstance.options().passthroughDamage()
+                    && unsupported != null
+                    && "sometimes".equals(unsupported.getString("PassthroughDamage"));
+
+            var world = origin.getWorld();
+            var protectedParent = controlChild;
+            var controlParent = (org.bukkit.entity.LivingEntity) world.spawnEntity(
+                    origin.clone().add(23, 0, 0), org.bukkit.entity.EntityType.ZOMBIE);
+            var attacker = world.spawnEntity(origin.clone().add(26, 0, 0),
+                    org.bukkit.entity.EntityType.SKELETON);
+            spawnedEntities.add(controlParent);
+            spawnedEntities.add(attacker);
+            var sourceDamage = org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.MOB_ATTACK)
+                    .withCausingEntity(attacker).withDirectEntity(attacker).build();
+
+            boolean parentLinked = imported && controlInstance != null
+                    && dev.helstera.api.behavior.MobRelations.setParent(protectedChild, protectedParent)
+                    && java.util.Objects.equals(protectedParent,
+                    dev.helstera.api.behavior.MobRelations.parent(protectedChild));
+            double childHealthBefore = protectedChild.getHealth();
+            double parentHealthBefore = protectedParent.getHealth();
+            protectedChild.setNoDamageTicks(0);
+            protectedParent.setNoDamageTicks(0);
+            protectedChild.damage(4.0, sourceDamage);
+            var parentDamage = protectedParent.getLastDamageCause();
+            var delegatedSource = parentDamage == null ? null : parentDamage.getDamageSource();
+            boolean transferred = parentHealthBefore > protectedParent.getHealth()
+                    && Math.abs(childHealthBefore - protectedChild.getHealth()) < 1.0e-9;
+            boolean sourcePreserved = delegatedSource != null
+                    && delegatedSource.getDamageType().equals(org.bukkit.damage.DamageType.MOB_ATTACK)
+                    && java.util.Objects.equals(attacker.getUniqueId(), delegatedSource.getCausingEntity() == null
+                    ? null : delegatedSource.getCausingEntity().getUniqueId())
+                    && java.util.Objects.equals(attacker.getUniqueId(), delegatedSource.getDirectEntity() == null
+                    ? null : delegatedSource.getDirectEntity().getUniqueId())
+                    && parentDamage.getCause() == org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK;
+
+            dev.helstera.api.behavior.MobRelations.setParent(controlChild, controlParent);
+            double controlChildBefore = controlChild.getHealth();
+            double controlParentBefore = controlParent.getHealth();
+            controlChild.setNoDamageTicks(0);
+            controlParent.setNoDamageTicks(0);
+            controlChild.damage(4.0, sourceDamage);
+            boolean disabledControl = controlChild.getHealth() < controlChildBefore
+                    && Math.abs(controlParent.getHealth() - controlParentBefore) < 1.0e-9;
+
+            double orphanBefore = orphanChild.getHealth();
+            orphanChild.setNoDamageTicks(0);
+            orphanChild.damage(4.0, sourceDamage);
+            boolean orphanFallback = orphanChild.getHealth() < orphanBefore;
+
+            protectedChild.setHealth(protectedChild.getMaxHealth());
+            protectedParent.setHealth(protectedParent.getMaxHealth());
+            protectedChild.setNoDamageTicks(0);
+            protectedParent.setNoDamageTicks(0);
+            dev.helstera.api.behavior.MobRelations.setParent(protectedChild, protectedParent);
+            var cancelTarget = protectedChild.getUniqueId();
+            org.bukkit.event.Listener cancellationProbe = new org.bukkit.event.Listener() { };
+            getServer().getPluginManager().registerEvent(
+                    org.bukkit.event.entity.EntityDamageEvent.class, cancellationProbe,
+                    org.bukkit.event.EventPriority.LOW,
+                    (listener, event) -> {
+                        var damageEvent = (org.bukkit.event.entity.EntityDamageEvent) event;
+                        if (cancelTarget.equals(damageEvent.getEntity().getUniqueId())) {
+                            damageEvent.setCancelled(true);
+                        }
+                    }, this, false);
+            double cancelledChildBefore = protectedChild.getHealth();
+            double cancelledParentBefore = protectedParent.getHealth();
+            try {
+                protectedChild.damage(4.0, sourceDamage);
+            } finally {
+                org.bukkit.event.HandlerList.unregisterAll(cancellationProbe);
+            }
+            boolean cancelledRespected = Math.abs(protectedChild.getHealth() - cancelledChildBefore) < 1.0e-9
+                    && Math.abs(protectedParent.getHealth() - cancelledParentBefore) < 1.0e-9;
+
+            var cyclePeer = cycleInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            boolean cycleSafe = false;
+            if (cyclePeer != null) {
+                protectedChild.setHealth(protectedChild.getMaxHealth());
+                cyclePeer.setHealth(cyclePeer.getMaxHealth());
+                protectedChild.setNoDamageTicks(0);
+                cyclePeer.setNoDamageTicks(0);
+                boolean firstParentSet = dev.helstera.api.behavior.MobRelations.setParent(protectedChild, cyclePeer);
+                boolean secondParentSet = dev.helstera.api.behavior.MobRelations.setParent(cyclePeer, protectedChild);
+                double firstHealthBefore = protectedChild.getHealth();
+                double secondHealthBefore = cyclePeer.getHealth();
+                protectedChild.damage(4.0, sourceDamage);
+                cycleSafe = firstParentSet && secondParentSet
+                        && protectedChild.getHealth() < firstHealthBefore
+                        && Math.abs(cyclePeer.getHealth() - secondHealthBefore) < 1.0e-9;
+            }
+            boolean passed = imported && parentLinked && transferred && sourcePreserved
+                    && disabledControl && orphanFallback && cancelledRespected && cycleSafe;
+            getLogger().info("[自检] passthrough-damage result=" + passed
+                    + " imported=" + imported + " parent-linked=" + parentLinked
+                    + " transferred=" + transferred
+                    + " source-preserved=" + sourcePreserved + " disabled-control=" + disabledControl
+                    + " orphan-fallback=" + orphanFallback + " cancelled-respected=" + cancelledRespected
+                    + " cycle-safe=" + cycleSafe + " invalid-preserved=" + (unsupported != null));
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] passthrough-damage result=false imported=false error=" + failure);
+        } finally {
+            for (var entity : spawnedEntities) {
+                if (entity != null && entity.isValid()) entity.remove();
+            }
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
     }
@@ -23624,6 +23840,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean summonActionBound = false;
             boolean summonSpawned = false;
             boolean summonInherited = false;
+            boolean summonParentLinked = false;
             boolean summonVisuals = false;
             boolean summonMemberVisible = false;
             boolean summonOutsiderHidden = false;
@@ -23711,7 +23928,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                               - RemoveFromAudience{a=target;mobs=@EntitiesInRadius{r=1};ignoreSkillAudience=true}
                               - AddToAudience{a=target;mobs=@EntitiesInRadius{r=1};ignoreSkillAudience=true}
                               - summon{type=%s;amount=1;radius=1}
-                        """.formatted(modelId));
+                        """.formatted("mythic_executionaudienceprobe"));
                 Map<String, Object> importedSkillFile = new MythicMobsImporter().convert(skillSource).stream()
                         .filter(entry -> "skills.yml".equals(entry.get("target-file")))
                         .findFirst().orElseThrow();
@@ -23719,7 +23936,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         new java.io.StringReader(String.valueOf(importedSkillFile.get("content"))));
                 List<String> actionSpecs = importedSkills.getStringList("skills.mob_audience_probe.on-decision");
                 summonImported = actionSpecs.size() == 3
-                        && actionSpecs.get(2).equals("summon " + modelId + " 1 1");
+                        && actionSpecs.get(2).equals("summon mythic_executionaudienceprobe 1 1");
                 mutationImported = actionSpecs.size() == 3
                         && actionSpecs.get(0).startsWith("remove-from-audience{")
                         && actionSpecs.get(0).contains("mobs=@EntitiesInRadius{r=1}")
@@ -23761,12 +23978,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         .map(dev.helstera.runtime.instance.ModelInstanceImpl::instanceId)
                         .collect(java.util.stream.Collectors.toSet());
                 boolean summonDispatched = skills.runAction(summonAction, mutationContext);
+                var parentEntityId = instance.boundEntityId().orElse(null);
                 summonedInstance = manager.allImpl().stream()
                         .filter(candidate -> !instancesBeforeSummon.contains(candidate.instanceId()))
+                        .filter(candidate -> candidate.baseEntity().map(child -> parentEntityId != null
+                                && parentEntityId.equals(
+                                dev.helstera.api.behavior.MobRelations.parentId(child))).orElse(false))
                         .findFirst().orElse(null);
                 summonSpawned = summonDispatched && summonedInstance != null && summonedInstance.isValid();
                 if (summonSpawned) {
                     summonInherited = summonedInstance.executionAudience().filter(expectedAudience::equals).isPresent();
+                    var summonedBase = summonedInstance.baseEntity().orElse(null);
+                    summonParentLinked = summonedBase != null && parentEntityId != null
+                            && parentEntityId.equals(
+                            dev.helstera.api.behavior.MobRelations.parentId(summonedBase));
                     List<org.bukkit.entity.Entity> summonedVisuals = manager.renderer()
                             instanceof dev.helstera.render.display.DisplayRenderer displayRenderer
                             ? displayRenderer.modelEntities(summonedInstance) : List.of();
@@ -23825,10 +24050,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " outsider-hidden=" + outsiderHiddenAfterAdd
                     + " passed=" + mutationPassed);
             boolean summonPassed = summonImported && summonActionBound && summonSpawned && summonInherited
-                    && summonVisuals && summonMemberVisible && summonOutsiderHidden;
+                    && summonParentLinked && summonVisuals && summonMemberVisible && summonOutsiderHidden;
             getLogger().info("execution-audience-mob-summon imported=" + summonImported
                     + " action-bound=" + summonActionBound + " spawned=" + summonSpawned
-                    + " inherited=" + summonInherited + " visuals=" + summonVisuals
+                    + " inherited=" + summonInherited + " parent-linked=" + summonParentLinked
+                    + " visuals=" + summonVisuals
                     + " member-visible=" + summonMemberVisible + " outsider-hidden=" + summonOutsiderHidden
                     + " passed=" + summonPassed);
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 380L);
@@ -23895,6 +24121,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private MobSpawn spawnMobCore(String mobId, String modelOverride, org.bukkit.Location base,
                                    boolean forwardOffset, String aiProfileOverride,
                                    org.bukkit.entity.LivingEntity existingEntity) {
+        return spawnMobCore(mobId, modelOverride, base, forwardOffset, aiProfileOverride,
+                existingEntity, null);
+    }
+
+    private MobSpawn spawnMobCore(String mobId, String modelOverride, org.bukkit.Location base,
+                                   boolean forwardOffset, String aiProfileOverride,
+                                   org.bukkit.entity.LivingEntity existingEntity,
+                                   org.bukkit.entity.Entity parentEntity) {
         org.bukkit.configuration.ConfigurationSection cfg = mobConfig(mobId);
         if (cfg == null) return null;
         if (instances == null) return new MobSpawn(-1, "实例系统未启用（需 2.0+ 版本）");
@@ -24082,6 +24316,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (inst != null) {
             inst.baseEntity().ifPresent(entity ->
                     dev.helstera.api.behavior.ManagedMobIdentity.mark(entity, mobId));
+        }
+        if (parentEntity != null) {
+            var childEntity = inst == null ? null : inst.baseEntity().orElse(null);
+            if (childEntity == null
+                    || !dev.helstera.api.behavior.MobRelations.setParent(childEntity, parentEntity)) {
+                getLogger().warning("[MobRelations] summon parent link rejected child="
+                        + (inst == null ? "missing" : inst.instanceId())
+                        + " parent=" + parentEntity.getUniqueId());
+            }
         }
         if (inst != null && inst.baseEntity().orElse(null) instanceof org.bukkit.entity.LivingEntity living) {
             markPersistentMob(living, mobId, opts);
@@ -24665,6 +24908,34 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 && cause == org.bukkit.event.entity.EntityDamageEvent.DamageCause.BLOCK_EXPLOSION) event.setCancelled(true);
         if ((options.preventExplosions() || options.preventEntityExplosions())
                 && cause == org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) event.setCancelled(true);
+    }
+
+    private static final ThreadLocal<java.util.Set<java.util.UUID>> PASSTHROUGH_DAMAGE_ROUTE =
+            ThreadLocal.withInitial(java.util.HashSet::new);
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPassthroughDamage(org.bukkit.event.entity.EntityDamageEvent event) {
+        if (instances == null || !(event.getEntity() instanceof org.bukkit.entity.LivingEntity child)) return;
+        var instance = findInstance(child);
+        if (instance == null || !instance.options().passthroughDamage()) return;
+        var parent = dev.helstera.api.behavior.MobRelations.parent(child);
+        if (!(parent instanceof org.bukkit.entity.LivingEntity livingParent)
+                || parent.equals(child) || !parent.isValid() || parent.isDead()) return;
+
+        java.util.UUID childId = child.getUniqueId();
+        if (childId == null) return;
+        var route = PASSTHROUGH_DAMAGE_ROUTE.get();
+        if (route.contains(childId)) return;
+        route.add(childId);
+        try {
+            livingParent.damage(event.getDamage(), event.getDamageSource());
+            event.setCancelled(true);
+        } catch (RuntimeException ignored) {
+            // Preserve the original child hit if the server rejects delegated damage.
+        } finally {
+            route.remove(childId);
+            if (route.isEmpty()) PASSTHROUGH_DAMAGE_ROUTE.remove();
+        }
     }
 
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
@@ -26706,6 +26977,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         options.tameable(tameable);
         return options
+                .passthroughDamage(config.getBoolean("mob.passthrough-damage", false))
                 .preventLeashing(config.getBoolean("mob.prevent-leashing",
                         config.getBoolean("prevent-leashing", false)))
                 .preventTransformation(config.getBoolean("mob.prevent-transformation",
