@@ -605,6 +605,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'preventRandomEquipmentImported'; status = 'passed'; observations = @('prevent-random-equipment-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true random-cleared=true explicit-equipment-preserved=true control-preserved=true invalid-fallback=true')
     }
+    $fullReport.expectedProbeIds += 'environmentalDamageOptionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'environmentalDamageOptionsImported'; status = 'passed'; observations = @('environmental-damage-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true drowning-protected=true fall-protected=true controls-allowed=true invalid-fallback=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

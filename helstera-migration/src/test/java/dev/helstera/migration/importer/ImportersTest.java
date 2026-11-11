@@ -4729,6 +4729,47 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic environmental damage options validate booleans and preserve malformed values")
+    void mythicEnvironmentalDamageOptionsRequireBooleans(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/environmental-damage-options.yml", """
+                mobs:
+                  drowning_protected:
+                    Type: SHEEP
+                    Options:
+                      PreventDrowning: true
+                      PreventFallDamage: false
+                  fall_protected:
+                    Type: SHEEP
+                    Options:
+                      PreventDrowning: false
+                      PreventFallDamage: true
+                  malformed:
+                    Type: SHEEP
+                    Options:
+                      PreventDrowning: maybe
+                      PreventFallDamage: maybe
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        var drowning = convertedMob(entries, "drowning_protected");
+        assertTrue(drowning.getBoolean("mob.prevent-drowning"));
+        assertFalse(drowning.getBoolean("mob.prevent-fall-damage"));
+        var fall = convertedMob(entries, "fall_protected");
+        assertFalse(fall.getBoolean("mob.prevent-drowning"));
+        assertTrue(fall.getBoolean("mob.prevent-fall-damage"));
+        var malformed = convertedMob(entries, "malformed");
+        assertEquals("maybe", malformed.getString("mob.unsupported.Options.PreventDrowning"));
+        assertEquals("maybe", malformed.getString("mob.unsupported.Options.PreventFallDamage"));
+        assertFalse(malformed.contains("mob.prevent-drowning"));
+        assertFalse(malformed.contains("mob.prevent-fall-damage"));
+        assertTrue(entries.stream().filter(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity")))
+                .filter(entry -> String.valueOf(entry.get("source-key")).matches(
+                        "Options\\.Prevent(Drowning|FallDamage)"))
+                .count() == 2);
+    }
+
+    @Test
     @DisplayName("Mythic PreventTeleport imports booleans and preserves malformed values")
     void mythicPreventTeleportBooleanValues(@TempDir Path root) throws Exception {
         Path enabledFile = write(root, "Mobs/prevent-teleport-enabled.yml", """

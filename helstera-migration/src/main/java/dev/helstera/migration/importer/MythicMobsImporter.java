@@ -1290,8 +1290,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                 note(entries, srcFile, "Options.Interactable", "mob.interactable", false, "defaulted",
                         "MythicMobs Interactable defaults to false.");
             }
-            mapOption(options, srcFile, entries, target, "PreventDrowning", "mob.prevent-drowning");
-            mapOption(options, srcFile, entries, target, "PreventFallDamage", "mob.prevent-fall-damage");
+            mapBooleanOption(options, srcFile, entries, target, "PreventDrowning", "mob.prevent-drowning");
+            mapBooleanOption(options, srcFile, entries, target, "PreventFallDamage", "mob.prevent-fall-damage");
             mapOption(options, srcFile, entries, target, "PreventFire", "mob.prevent-fire");
             mapOption(options, srcFile, entries, target, "PreventFireCauses", "mob.prevent-fire-causes");
             mapOption(options, srcFile, entries, target, "PreventProjectiles", "mob.prevent-projectiles");
