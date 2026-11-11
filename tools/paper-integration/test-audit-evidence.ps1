@@ -153,6 +153,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'experienceOrbOptions'; status = 'passed'; observations = @('experience-orb-options result=true imported=true experience=17 wrong-type-preserved=true invalid-preserved=true')
     }
+    $fullReport.expectedProbeIds += 'pandaOptions'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'pandaOptions'; status = 'passed'; observations = @('panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true')
+    }
     $fullReport.expectedProbeIds += 'preventSunburnNatural'
     $fullReport.probes += [pscustomobject]@{
         id = 'preventSunburnNatural'; status = 'passed'; observations = @('prevent-sunburn-natural imported=true mapped=true protected-option=true control-option=false daylight=true weather-clear=true observer-present=true protected-player-distance=7 control-player-distance=15 sky-exposed=true protected-ai=true control-ai=true protected-age-ticks=90 control-age-ticks=110 protected-events=2 protected-cancelled=2 protected-fire-ticks=0 control-events=1 control-cancelled=0 control-fire-ticks=154 elapsed-ticks=40 restored=true passed=true')
