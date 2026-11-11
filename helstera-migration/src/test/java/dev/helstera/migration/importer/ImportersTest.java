@@ -3315,6 +3315,7 @@ class ImportersTest {
                       PreventSunburn: false
                       PreventRandomEquipment: true
                       DigOutOfGround: true
+                      PreventMobKillDrops: true
                   Disabled:
                     Type: ZOMBIE
                     Options:
@@ -3329,6 +3330,7 @@ class ImportersTest {
                       PreventSunburn: true
                       PreventRandomEquipment: false
                       DigOutOfGround: false
+                      PreventMobKillDrops: false
                   Invalid:
                     Type: ZOMBIE
                     Options:
@@ -3343,6 +3345,7 @@ class ImportersTest {
                       PreventSunburn: maybe
                       PreventRandomEquipment: maybe
                       DigOutOfGround: maybe
+                      PreventMobKillDrops: maybe
                 """);
         var entries = new MythicMobsImporter().convert(file);
         var plans = entries.stream().filter(entry -> entry.containsKey("target-file"))
@@ -3366,6 +3369,7 @@ class ImportersTest {
         assertFalse(enabled.getBoolean("entity.prevent-sunburn"));
         assertTrue(enabled.getBoolean("entity.prevent-random-equipment"));
         assertTrue(enabled.getBoolean("mob.dig-out-of-ground"));
+        assertTrue(enabled.getBoolean("mob.prevent-mob-kill-drops"));
 
         var disabled = plans.get("Disabled");
         assertNotNull(disabled);
@@ -3380,6 +3384,7 @@ class ImportersTest {
         assertTrue(disabled.getBoolean("entity.prevent-sunburn"));
         assertFalse(disabled.getBoolean("entity.prevent-random-equipment"));
         assertFalse(disabled.getBoolean("mob.dig-out-of-ground"));
+        assertFalse(disabled.getBoolean("mob.prevent-mob-kill-drops"));
 
         var invalid = plans.get("Invalid");
         assertNotNull(invalid);
@@ -3396,7 +3401,8 @@ class ImportersTest {
                 Map.entry("Collidable", "entity.collidable"),
                 Map.entry("PreventSunburn", "entity.prevent-sunburn"),
                 Map.entry("PreventRandomEquipment", "entity.prevent-random-equipment"),
-                Map.entry("DigOutOfGround", "mob.dig-out-of-ground"));
+                Map.entry("DigOutOfGround", "mob.dig-out-of-ground"),
+                Map.entry("PreventMobKillDrops", "mob.prevent-mob-kill-drops"));
         optionPaths.forEach((option, runtimePath) -> {
             assertEquals("maybe", invalidOptions.getString(option), option + " is retained");
             assertFalse(invalid.contains(runtimePath), option + " must not enter the runtime config");

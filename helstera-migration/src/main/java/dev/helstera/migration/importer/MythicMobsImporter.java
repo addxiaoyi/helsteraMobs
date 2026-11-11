@@ -1303,7 +1303,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "PreventEntityExplosions", "mob.prevent-entity-explosions");
             mapBooleanOption(options, srcFile, entries, target, "HealOnReload", "mob.heal-on-reload");
             mapBooleanOption(options, srcFile, entries, target, "DigOutOfGround", "mob.dig-out-of-ground");
-            mapOption(options, srcFile, entries, target, "PreventMobKillDrops", "mob.prevent-mob-kill-drops");
+            mapBooleanOption(options, srcFile, entries, target, "PreventMobKillDrops", "mob.prevent-mob-kill-drops");
             mapEntityScopedOption(options, srcFile, entries, target, "HorseColor",
                     "entity.horse-color", normalizedType,
                     raw -> isEnumOptionValue(raw, org.bukkit.entity.Horse.Color.class),

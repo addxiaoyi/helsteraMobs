@@ -617,6 +617,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'digOutOfGroundImported'; status = 'passed'; observations = @('dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2.00 fall-control=true disabled-allowed=true invalid-fallback=true')
     }
+    $fullReport.expectedProbeIds += 'preventMobKillDropsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'preventMobKillDropsImported'; status = 'passed'; observations = @('prevent-mob-kill-drops-imported result=true imported=true configured=true policies=true killers-resolved=true drops-suppressed=true controls-preserved=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

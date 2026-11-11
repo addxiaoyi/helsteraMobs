@@ -2912,6 +2912,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         runImportedRandomEquipmentSelfTest(origin.clone().add(8, 0, 0));
         runImportedEnvironmentalDamageOptionsSelfTest(origin.clone().add(14, 0, 0));
         runImportedDigOutOfGroundSelfTest(origin.clone().add(20, 0, 0));
+        runImportedPreventMobKillDropsSelfTest(origin.clone().add(32, 0, 0));
     }
 
     private void runImportedDigOutOfGroundSelfTest(Location origin) {
@@ -3054,6 +3055,154 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } catch (Throwable failure) {
             getLogger().warning("[自检] dig-out-of-ground-imported result=false imported=false error=" + failure);
         } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedPreventMobKillDropsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        var victims = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String protectedId = "PreventMobKillDropsProtected_" + suffix;
+            String controlId = "PreventMobKillDropsControl_" + suffix;
+            String invalidId = "PreventMobKillDropsInvalid_" + suffix;
+            sourceRoot = Files.createTempDirectory("helstera-prevent-mob-kill-drops-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("prevent-mob-kill-drops.yml");
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventMobKillDrops: true
+                      %2$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventMobKillDrops: false
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventMobKillDrops: maybe
+                    """.formatted(protectedId, controlId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe PreventMobKillDrops mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite PreventMobKillDrops mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(protectedId, controlId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic PreventMobKillDrops fixtures were not all imported");
+            }
+
+            var locations = java.util.List.of(origin, origin.clone().add(4, 0, 0),
+                    origin.clone().add(8, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var protectedConfig = mobConfig(targetIds.get(protectedId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var invalidUnsupported = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean configured = protectedConfig != null
+                    && protectedConfig.getBoolean("mob.prevent-mob-kill-drops")
+                    && controlConfig != null && controlConfig.contains("mob.prevent-mob-kill-drops")
+                    && !controlConfig.getBoolean("mob.prevent-mob-kill-drops", true)
+                    && invalidConfig != null && !invalidConfig.contains("mob.prevent-mob-kill-drops")
+                    && invalidUnsupported != null
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("PreventMobKillDrops"));
+
+            var protectedInstance = instances().impl(spawnedIds.get(protectedId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            boolean policies = protectedInstance != null && protectedInstance.options().preventMobKillDrops()
+                    && controlInstance != null && !controlInstance.options().preventMobKillDrops()
+                    && invalidInstance != null && !invalidInstance.options().preventMobKillDrops();
+
+            var world = origin.getWorld();
+            var protectedKiller = livingEntity(protectedInstance);
+            var controlKiller = livingEntity(controlInstance);
+            var invalidKiller = livingEntity(invalidInstance);
+            var protectedVictim = world == null ? null
+                    : world.spawn(origin.clone().add(12, 0, 0), org.bukkit.entity.Sheep.class);
+            var controlVictim = world == null ? null
+                    : world.spawn(origin.clone().add(16, 0, 0), org.bukkit.entity.Sheep.class);
+            var invalidVictim = world == null ? null
+                    : world.spawn(origin.clone().add(20, 0, 0), org.bukkit.entity.Sheep.class);
+            for (var victim : java.util.List.of(protectedVictim, controlVictim, invalidVictim)) {
+                if (victim != null) {
+                    victim.setAI(false);
+                    victims.add(victim);
+                }
+            }
+            if (protectedVictim != null && protectedKiller != null) protectedVictim.damage(1.0, protectedKiller);
+            if (controlVictim != null && controlKiller != null) controlVictim.damage(1.0, controlKiller);
+            if (invalidVictim != null && invalidKiller != null) invalidVictim.damage(1.0, invalidKiller);
+            boolean killersResolved = protectedVictim != null && controlVictim != null && invalidVictim != null
+                    && protectedKiller != null && controlKiller != null && invalidKiller != null
+                    && resolveDeathKiller(protectedVictim) == protectedKiller
+                    && resolveDeathKiller(controlVictim) == controlKiller
+                    && resolveDeathKiller(invalidVictim) == invalidKiller;
+
+            var genericDamageSource = org.bukkit.damage.DamageSource.builder(
+                    org.bukkit.damage.DamageType.GENERIC).build();
+            var protectedDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>(
+                    java.util.List.of(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON, 2)));
+            var controlDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>(
+                    java.util.List.of(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON, 2)));
+            var invalidDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>(
+                    java.util.List.of(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON, 2)));
+            var protectedDeath = protectedVictim == null ? null
+                    : new org.bukkit.event.entity.EntityDeathEvent(protectedVictim, genericDamageSource, protectedDrops, 7);
+            var controlDeath = controlVictim == null ? null
+                    : new org.bukkit.event.entity.EntityDeathEvent(controlVictim, genericDamageSource, controlDrops, 7);
+            var invalidDeath = invalidVictim == null ? null
+                    : new org.bukkit.event.entity.EntityDeathEvent(invalidVictim, genericDamageSource, invalidDrops, 7);
+            if (protectedDeath != null) getServer().getPluginManager().callEvent(protectedDeath);
+            if (controlDeath != null) getServer().getPluginManager().callEvent(controlDeath);
+            if (invalidDeath != null) getServer().getPluginManager().callEvent(invalidDeath);
+            boolean dropsSuppressed = protectedDeath != null && protectedDrops.isEmpty()
+                    && protectedDeath.getDroppedExp() == 0;
+            boolean controlsPreserved = controlDeath != null && controlDrops.size() == 1
+                    && controlDeath.getDroppedExp() == 7 && invalidDeath != null
+                    && invalidDrops.size() == 1 && invalidDeath.getDroppedExp() == 7;
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            boolean passed = imported && configured && policies && killersResolved
+                    && dropsSuppressed && controlsPreserved;
+            getLogger().info("[自检] prevent-mob-kill-drops-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured + " policies=" + policies
+                    + " killers-resolved=" + killersResolved + " drops-suppressed=" + dropsSuppressed
+                    + " controls-preserved=" + controlsPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] prevent-mob-kill-drops-imported result=false imported=false error=" + failure);
+        } finally {
+            victims.forEach(org.bukkit.entity.Entity::remove);
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
     }
