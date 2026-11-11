@@ -316,6 +316,46 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Glowing maps boolean values and preserves malformed input")
+    void mapsGlowingBooleanAndPreservesMalformedValues(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/glowing-options.yml", """
+                mobs:
+                  Glowing:
+                    Type: ZOMBIE
+                    Options:
+                      Glowing: true
+                  Control:
+                    Type: ZOMBIE
+                    Options:
+                      Glowing: false
+                  Invalid:
+                    Type: ZOMBIE
+                    Options:
+                      Glowing: maybe
+                  Missing:
+                    Type: ZOMBIE
+                """);
+
+        var entries = new MythicMobsImporter().convert(file);
+        var glowingMob = convertedMob(entries, "glowing");
+        var controlMob = convertedMob(entries, "control");
+        var invalidMob = convertedMob(entries, "invalid");
+        var missingMob = convertedMob(entries, "missing");
+
+        assertTrue(glowingMob.getBoolean("glowing"));
+        assertFalse(controlMob.getBoolean("glowing", true));
+        assertEquals("maybe", invalidMob.getString("mob.unsupported.Options.Glowing"));
+        assertFalse(invalidMob.contains("glowing"));
+        assertFalse(missingMob.contains("glowing"));
+        assertTrue(entries.stream().anyMatch(e -> "mapped".equals(e.get("status"))
+                && "Options.Glowing".equals(e.get("source-key"))
+                && "true".equals(String.valueOf(e.get("value")))));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "Options.Glowing".equals(e.get("source-key"))
+                && "WARN".equals(e.get("severity"))));
+    }
+
+    @Test
     void convertsContentInScannedSubdirectories(@TempDir Path root) throws Exception {
         var importer = new MythicMobsImporter();
         Path item = write(root, "Items/area/items.yml", "blade:\n  Id: DIAMOND_SWORD\n");
