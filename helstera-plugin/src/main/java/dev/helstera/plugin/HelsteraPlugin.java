@@ -1710,6 +1710,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
                 runImportedCatOptionsSelfTest(world, origin.clone().add(6, 0, 0));
                 runImportedFoxOptionsSelfTest(origin.clone().add(7, 0, 0));
+                runImportedPandaOptionsSelfTest(origin.clone().add(160, 0, 0));
                 runImportedRabbitOptionsSelfTest(origin.clone().add(8, 0, 0));
                 runImportedHorseOptionsSelfTest(origin.clone().add(32, 0, 0));
                 runImportedBoatOptionsSelfTest(origin.clone().add(64, 0, 0));
@@ -4275,6 +4276,144 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " invalid-preserved=" + invalidPreserved);
         } catch (Throwable failure) {
             getLogger().warning("[自检] fox-options result=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedPandaOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String configuredMobId = "ImportedPandaConfigured_" + suffix;
+            String controlMobId = "ImportedPandaControl_" + suffix;
+            String wrongTypeMobId = "ImportedPandaWrongType_" + suffix;
+            String invalidMobId = "ImportedPandaInvalid_" + suffix;
+            sourceRoot = Files.createTempDirectory("helstera-panda-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("panda-options.yml");
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: PANDA
+                        Options:
+                          MainGene: LAZY
+                          HiddenGene: WORRIED
+                      %2$s:
+                        Type: PANDA
+                        Options:
+                          MainGene: NORMAL
+                          HiddenGene: NORMAL
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          MainGene: BROWN
+                      %4$s:
+                        Type: PANDA
+                        Options:
+                          HiddenGene: NOT_A_GENE
+                    """.formatted(configuredMobId, controlMobId, wrongTypeMobId, invalidMobId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory) || Files.exists(destination)) {
+                    throw new IOException("Unsafe or existing Panda option probe config: " + destination);
+                }
+                Files.createDirectories(destination.getParent());
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            var sourceIds = java.util.List.of(configuredMobId, controlMobId, wrongTypeMobId, invalidMobId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic Panda gene probe mobs were not all imported");
+            }
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0),
+                    origin.clone().add(6, 0, 0), origin.clone().add(9, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        locations.get(i), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var configuredInstance = instances().impl(spawnedIds.get(configuredMobId));
+            var controlInstance = instances().impl(spawnedIds.get(controlMobId));
+            var wrongTypeInstance = instances().impl(spawnedIds.get(wrongTypeMobId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidMobId));
+            var configuredPanda = configuredInstance == null ? null : configuredInstance.baseEntity()
+                    .filter(org.bukkit.entity.Panda.class::isInstance)
+                    .map(org.bukkit.entity.Panda.class::cast).orElse(null);
+            var controlPanda = controlInstance == null ? null : controlInstance.baseEntity()
+                    .filter(org.bukkit.entity.Panda.class::isInstance)
+                    .map(org.bukkit.entity.Panda.class::cast).orElse(null);
+            var wrongTypeEntity = wrongTypeInstance == null ? null : wrongTypeInstance.baseEntity().orElse(null);
+            var invalidPanda = invalidInstance == null ? null : invalidInstance.baseEntity()
+                    .filter(org.bukkit.entity.Panda.class::isInstance)
+                    .map(org.bukkit.entity.Panda.class::cast).orElse(null);
+
+            var configuredOptions = mobConfig(targetIds.get(configuredMobId));
+            var controlOptions = mobConfig(targetIds.get(controlMobId));
+            var wrongTypeOptions = mobConfig(targetIds.get(wrongTypeMobId));
+            var invalidOptions = mobConfig(targetIds.get(invalidMobId));
+            var configuredEntityOptions = configuredOptions == null ? null
+                    : configuredOptions.getConfigurationSection("entity");
+            var controlEntityOptions = controlOptions == null ? null
+                    : controlOptions.getConfigurationSection("entity");
+            var wrongTypeEntityOptions = wrongTypeOptions == null ? null
+                    : wrongTypeOptions.getConfigurationSection("entity");
+            var invalidEntityOptions = invalidOptions == null ? null
+                    : invalidOptions.getConfigurationSection("entity");
+            var wrongTypeUnsupported = wrongTypeEntityOptions == null ? null
+                    : wrongTypeEntityOptions.getConfigurationSection("unsupported.Options");
+            var invalidUnsupported = invalidEntityOptions == null ? null
+                    : invalidEntityOptions.getConfigurationSection("unsupported.Options");
+
+            boolean imported = configuredPanda != null && controlPanda != null && invalidPanda != null
+                    && configuredEntityOptions != null && controlEntityOptions != null
+                    && wrongTypeUnsupported != null && invalidUnsupported != null
+                    && "LAZY".equalsIgnoreCase(configuredEntityOptions.getString("panda-main-gene"))
+                    && "WORRIED".equalsIgnoreCase(configuredEntityOptions.getString("panda-hidden-gene"))
+                    && "NORMAL".equalsIgnoreCase(controlEntityOptions.getString("panda-main-gene"))
+                    && "NORMAL".equalsIgnoreCase(controlEntityOptions.getString("panda-hidden-gene"))
+                    && "BROWN".equalsIgnoreCase(wrongTypeUnsupported.getString("MainGene"))
+                    && "NOT_A_GENE".equalsIgnoreCase(invalidUnsupported.getString("HiddenGene"))
+                    && !wrongTypeEntityOptions.contains("panda-main-gene")
+                    && !invalidEntityOptions.contains("panda-hidden-gene");
+            boolean applied = imported
+                    && configuredPanda.getMainGene() == org.bukkit.entity.Panda.Gene.LAZY
+                    && configuredPanda.getHiddenGene() == org.bukkit.entity.Panda.Gene.WORRIED
+                    && controlPanda.getMainGene() == org.bukkit.entity.Panda.Gene.NORMAL
+                    && controlPanda.getHiddenGene() == org.bukkit.entity.Panda.Gene.NORMAL;
+            boolean wrongTypePreserved = wrongTypeEntity instanceof org.bukkit.entity.Zombie;
+            boolean invalidPreserved = invalidPanda != null && invalidEntityOptions != null
+                    && !invalidEntityOptions.contains("panda-hidden-gene")
+                    && invalidUnsupported != null
+                    && "NOT_A_GENE".equalsIgnoreCase(invalidUnsupported.getString("HiddenGene"));
+            boolean passed = imported && applied && wrongTypePreserved && invalidPreserved;
+            getLogger().info("[自检] panda-options result=" + passed
+                    + " imported=" + imported
+                    + " main-gene=" + (configuredPanda == null ? "missing" : configuredPanda.getMainGene().name())
+                    + " hidden-gene=" + (configuredPanda == null ? "missing" : configuredPanda.getHiddenGene().name())
+                    + " control-main-gene=" + (controlPanda == null ? "missing" : controlPanda.getMainGene().name())
+                    + " control-hidden-gene=" + (controlPanda == null ? "missing" : controlPanda.getHiddenGene().name())
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] panda-options result=false imported=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
@@ -10279,6 +10418,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedEntityFlagOptionsSelfTest(location.clone().add(25, 0, 0));
                 runImportedTamedFamilyOptionsSelfTest(location.clone().add(27, 0, 0));
                 runImportedExperienceOrbOptionsSelfTest(location.clone().add(29, 0, 0));
+                runImportedPandaOptionsSelfTest(location.clone().add(31, 0, 0));
                 runImportedArmorToughnessStatsSelfTest(location.clone().add(26, 0, 0));
                 var wolfContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, wolf, 1.0, 5.0, 0, "integration");
@@ -26360,6 +26500,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (entity instanceof org.bukkit.entity.Rabbit rabbit) {
             applyRabbitOptions(rabbit, options);
         }
+        if (entity instanceof org.bukkit.entity.Panda panda) {
+            applyPandaOptions(panda, options);
+        }
         if (entity instanceof org.bukkit.entity.Sheep sheep) {
             applySheepOptions(sheep, options);
         }
@@ -26440,6 +26583,24 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             } catch (IllegalArgumentException | LinkageError ignored) {
                 // Older Paper versions may not expose the Killer Bunny type.
             }
+        }
+    }
+
+    private static void applyPandaOptions(org.bukkit.entity.Panda panda,
+                                          org.bukkit.configuration.ConfigurationSection options) {
+        try {
+            if (options.contains("panda-main-gene")) {
+                panda.setMainGene(org.bukkit.entity.Panda.Gene.valueOf(
+                        options.getString("panda-main-gene", "NORMAL").trim()
+                                .toUpperCase(java.util.Locale.ROOT)));
+            }
+            if (options.contains("panda-hidden-gene")) {
+                panda.setHiddenGene(org.bukkit.entity.Panda.Gene.valueOf(
+                        options.getString("panda-hidden-gene", "NORMAL").trim()
+                                .toUpperCase(java.util.Locale.ROOT)));
+            }
+        } catch (IllegalArgumentException | LinkageError ignored) {
+            // Invalid imported values remain visible under entity.unsupported.Options.*.
         }
     }
 

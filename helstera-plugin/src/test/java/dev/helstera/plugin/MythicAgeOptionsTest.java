@@ -539,6 +539,26 @@ class MythicAgeOptionsTest {
     }
 
     @Test
+    void appliesPandaGenesAndRejectsMalformedValues() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var panda = proxy(org.bukkit.entity.Panda.class, calls);
+        HelsteraPlugin.applyEntitySpecificOptions(panda,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("""
+                        panda-main-gene: LAZY
+                        panda-hidden-gene: WORRIED
+                        """)));
+
+        assertEquals(org.bukkit.entity.Panda.Gene.LAZY, calls.get("setMainGene"), calls.toString());
+        assertEquals(org.bukkit.entity.Panda.Gene.WORRIED, calls.get("setHiddenGene"), calls.toString());
+
+        calls.clear();
+        HelsteraPlugin.applyEntitySpecificOptions(panda,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                        "panda-main-gene: NOT_A_GENE\n")));
+        assertTrue(calls.isEmpty(), calls.toString());
+    }
+
+    @Test
     void ignoresEntitySpecificOptionsOnIncompatibleRuntimeTypes() {
         Map<String, Object> calls = new LinkedHashMap<>();
         var options = YamlConfiguration.loadConfiguration(new java.io.StringReader("""

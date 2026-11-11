@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-panda-options-strict-20261111-r1",
+    "reportFixtureDirectory": "srv-paper-panda-options-strict-20261111-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-panda-options-strict-20261111-r1.json",
+    "reportSha256": "bc1f819e540d62ab67adaa5281486806d134f5bc496dc60aca6e6d9aabcae08f",
+    "log": "tools/paper-integration/reports/paper-1.21.1-panda-options-strict-20261111-r1.log.gz",
+    "logSha256": "9b8aa4e520630ba2435a59c459e97917e5ef8a52e70027e1b323e9faea74652b",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-panda-options-strict-20261111-r1-client-logs.tar.gz",
+    "clientLogSha256": "c4f87648dbc2924a2d5fac3d8877bdb6c3e7db36eb6d610c2e63ef66eef2b3d0",
+    "pluginSha256": "8741a5d35063e64995121457a09f4c05f476cdea550c1656542298a4ad1b3398",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-experience-orb-strict-20261111-r1",
     "reportFixtureDirectory": "srv-paper-experience-orb-strict-20261111-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-experience-orb-options-strict-20261111-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-experience-orb-options-strict-20261111-r1-client-logs.tar.gz",
     "clientLogSha256": "04ca16261b54d95522afc07074c4f314ec571fc3581be91037df9ab8f5e191cc",
     "pluginSha256": "dc3e56f3edafd9bfad2e63dcda77ee730338e3dfc37090b01705e6864c1e4e76",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-panda-options-strict-20261111-r1"
   },
   {
     "fixtureId": "srv-paper-tameable-families-strict-20261111-r3",

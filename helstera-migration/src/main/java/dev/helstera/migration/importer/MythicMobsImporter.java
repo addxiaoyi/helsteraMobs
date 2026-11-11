@@ -1335,6 +1335,14 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "entity.rabbit-type", normalizedType,
                     raw -> isEnumOptionValue(raw, org.bukkit.entity.Rabbit.Type.class),
                     org.bukkit.entity.Rabbit.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "MainGene",
+                    "entity.panda-main-gene", normalizedType,
+                    raw -> isEnumOptionValue(raw, org.bukkit.entity.Panda.Gene.class),
+                    org.bukkit.entity.Panda.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "HiddenGene",
+                    "entity.panda-hidden-gene", normalizedType,
+                    raw -> isEnumOptionValue(raw, org.bukkit.entity.Panda.Gene.class),
+                    org.bukkit.entity.Panda.class);
             mapEntityScopedOption(options, srcFile, entries, target, "Sitting",
                     "entity.cat-sitting", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.Cat.class);
@@ -1433,7 +1441,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "UseThreatTable", "SpawningDistance",
                     "Scale", "ShowHealth", "Silent", "NoAI",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
-                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop", "Experience")) {
+                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "MainGene", "HiddenGene", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop", "Experience")) {
                 removeIgnoreCase(leftover, mapped);
             }
             removeIgnoreCase(leftover, "Height");

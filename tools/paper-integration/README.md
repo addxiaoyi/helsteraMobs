@@ -1,18 +1,19 @@
 # Isolated Paper Integration Server
 
-Latest strict fixture `srv-paper-experience-orb-strict-20261111-r1` passes all 432 probes (413 passed,
+Latest strict fixture `srv-paper-panda-options-strict-20261111-r1` passes all 433 probes (414 passed,
 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
-`experienceOrbOptions` probe imports Mythic `Options.Experience` only for
-`EXPERIENCE_ORB`, canonicalizes non-negative integers into
-`entity.experience-orb-value`, and reads back 17 from a production-spawned orb.
-Wrong entity types and negative, fractional, or nonnumeric values remain under
-`entity.unsupported.Options.Experience` with warnings. Plugin SHA-256:
-`dc3e56f3edafd9bfad2e63dcda77ee730338e3dfc37090b01705e6864c1e4e76`. Report:
-[`paper-1.21.1-experience-orb-options-strict-20261111-r1.json`](reports/paper-1.21.1-experience-orb-options-strict-20261111-r1.json), SHA-256
-`0de4db3d74a8b2d2ae81cedbf8702215cda7e35906e0f50a6f69d5c8c0d18a0c`. Compressed
-redacted server log SHA-256: `4421f47b1846d6f13da8232e15df9e46c3b4f7342a9a731c69653900f7af38a8`;
-client log archive SHA-256: `04ca16261b54d95522afc07074c4f314ec571fc3581be91037df9ab8f5e191cc`.
-Archived logs redact token query values.
+`pandaOptions` probe imports Mythic `MainGene: LAZY` and `HiddenGene: WORRIED`
+for a Panda, verifies `NORMAL` controls, and preserves wrong-entity/invalid
+values with warnings. Plugin SHA-256: `8741a5d35063e64995121457a09f4c05f476cdea550c1656542298a4ad1b3398`. Report:
+[`paper-1.21.1-panda-options-strict-20261111-r1.json`](reports/paper-1.21.1-panda-options-strict-20261111-r1.json), SHA-256
+`bc1f819e540d62ab67adaa5281486806d134f5bc496dc60aca6e6d9aabcae08f`. Compressed redacted server log SHA-256: `9b8aa4e520630ba2435a59c459e97917e5ef8a52e70027e1b323e9faea74652b`; client
+log archive SHA-256: `c4f87648dbc2924a2d5fac3d8877bdb6c3e7db36eb6d610c2e63ef66eef2b3d0`. Archived logs redact token query values.
+
+Previous strict fixture `srv-paper-experience-orb-strict-20261111-r1` passes all
+432 probes (413 passed, 19 expected rejections, zero failed or incomplete).
+It verifies imported `Options.Experience` on `EXPERIENCE_ORB`; the production
+spawn reads back 17, while wrong-entity and malformed values are preserved.
+Its report and log hashes remain indexed in `release-evidence.json`.
 
 Previous strict fixture `srv-paper-tameable-families-strict-20261111-r3` passes all 431 probes (412 passed,
 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its

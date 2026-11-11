@@ -5765,6 +5765,45 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Panda genes map only to pandas and preserve invalid values")
+    void mythicMapsPandaGenesWithEntityBoundary(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/panda-genes.yml", """
+                mobs:
+                  panda:
+                    Type: PANDA
+                    Options:
+                      MainGene: LAZY
+                      HiddenGene: WORRIED
+                  wrong_type:
+                    Type: ZOMBIE
+                    Options:
+                      MainGene: BROWN
+                  invalid:
+                    Type: PANDA
+                    Options:
+                      HiddenGene: NOT_A_GENE
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        var panda = convertedMob(entries, "panda");
+        assertEquals("LAZY", panda.getString("entity.panda-main-gene"));
+        assertEquals("WORRIED", panda.getString("entity.panda-hidden-gene"));
+        assertFalse(panda.contains("entity.unsupported.Options"));
+
+        var wrongType = convertedMob(entries, "wrong_type");
+        assertEquals("BROWN", wrongType.getString("entity.unsupported.Options.MainGene"));
+        assertFalse(wrongType.contains("entity.panda-main-gene"));
+
+        var invalid = convertedMob(entries, "invalid");
+        assertEquals("NOT_A_GENE", invalid.getString("entity.unsupported.Options.HiddenGene"));
+        assertFalse(invalid.contains("entity.panda-hidden-gene"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.HiddenGene".equals(entry.get("source-key"))
+                && "entity.unsupported.Options.HiddenGene".equals(entry.get("target-key"))));
+    }
+
+    @Test
     @DisplayName("Mythic Sheep options map color and sheared state")
     void mythicMapsSheepOptions(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/sheep-options.yml", """
