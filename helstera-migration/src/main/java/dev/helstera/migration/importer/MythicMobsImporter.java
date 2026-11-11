@@ -1194,21 +1194,21 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "SpawningDistance", "mob.spawning-distance");
             mapOption(options, srcFile, entries, target, "Scale", "scale");
             mapBooleanOption(options, srcFile, entries, target, "ShowHealth", "mob.show-health-message");
-            mapOption(options, srcFile, entries, target, "Silent", "entity.silent");
-            mapOption(options, srcFile, entries, target, "Invisible", "entity.invisible");
-            mapOption(options, srcFile, entries, target, "NoAI", "entity.no-ai");
-            mapOption(options, srcFile, entries, target, "Invincible", "entity.invulnerable");
+            mapBooleanOption(options, srcFile, entries, target, "Silent", "entity.silent");
+            mapBooleanOption(options, srcFile, entries, target, "Invisible", "entity.invisible");
+            mapBooleanOption(options, srcFile, entries, target, "NoAI", "entity.no-ai");
+            mapBooleanOption(options, srcFile, entries, target, "Invincible", "entity.invulnerable");
             mapBooleanOption(options, srcFile, entries, target, "Glowing", "glowing");
-            mapOption(options, srcFile, entries, target, "AlwaysShowName", "show-name");
-            mapOption(options, srcFile, entries, target, "Persistent", "persistent");
-            mapOption(options, srcFile, entries, target, "VisibleByDefault", "entity.visible-by-default");
+            mapBooleanOption(options, srcFile, entries, target, "AlwaysShowName", "show-name");
+            mapBooleanOption(options, srcFile, entries, target, "Persistent", "persistent");
+            mapBooleanOption(options, srcFile, entries, target, "VisibleByDefault", "entity.visible-by-default");
             mapOptionInvertedBoolean(options, srcFile, entries, target, "NoGravity", "entity.gravity");
             mapEntityScopedOption(options, srcFile, entries, target, "HasGravity",
                     "entity.gravity", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.ArmorStand.class);
-            mapOption(options, srcFile, entries, target, "Collidable", "entity.collidable");
-            mapOption(options, srcFile, entries, target, "PreventSunburn", "entity.prevent-sunburn");
-            mapOption(options, srcFile, entries, target, "PreventRandomEquipment", "entity.prevent-random-equipment");
+            mapBooleanOption(options, srcFile, entries, target, "Collidable", "entity.collidable");
+            mapBooleanOption(options, srcFile, entries, target, "PreventSunburn", "entity.prevent-sunburn");
+            mapBooleanOption(options, srcFile, entries, target, "PreventRandomEquipment", "entity.prevent-random-equipment");
             mapEntityScopedOption(options, srcFile, entries, target, "CanPickupItems",
                     "entity.can-pickup-items", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.Mob.class);

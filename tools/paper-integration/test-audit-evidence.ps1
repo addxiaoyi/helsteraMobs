@@ -597,6 +597,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'glowingOptionImported'; status = 'passed'; observations = @('glowing-option-imported result=true imported=true enabled-configured=true control-configured=true invalid-preserved=true enabled-entity=true control-entity=true invalid-entity=true')
     }
+    $fullReport.expectedProbeIds += 'booleanMobOptionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'booleanMobOptionsImported'; status = 'passed'; observations = @('boolean-mob-options-imported result=true imported=true configured=true controls=true invalid-preserved=true entity-states=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

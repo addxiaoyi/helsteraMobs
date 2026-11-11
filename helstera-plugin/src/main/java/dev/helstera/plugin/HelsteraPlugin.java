@@ -2887,6 +2887,157 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
+        runImportedBooleanMobOptionsSelfTest(origin.clone().add(2, 0, 0));
+    }
+
+    private void runImportedBooleanMobOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-boolean-mob-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("boolean-mob-options.yml");
+            String enabledId = "BooleanOptionsEnabled_" + suffix;
+            String controlId = "BooleanOptionsControl_" + suffix;
+            String invalidId = "BooleanOptionsInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          Silent: true
+                          Invisible: true
+                          NoAI: true
+                          Invincible: true
+                          AlwaysShowName: true
+                          Persistent: true
+                          VisibleByDefault: false
+                          Collidable: false
+                      %2$s:
+                        Type: ZOMBIE
+                        Options:
+                          Silent: false
+                          Invisible: false
+                          NoAI: false
+                          Invincible: false
+                          AlwaysShowName: false
+                          Persistent: false
+                          VisibleByDefault: true
+                          Collidable: true
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          Silent: maybe
+                          Invisible: maybe
+                          NoAI: maybe
+                          Invincible: maybe
+                          AlwaysShowName: maybe
+                          Persistent: maybe
+                          VisibleByDefault: maybe
+                          Collidable: maybe
+                    """.formatted(enabledId, controlId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe boolean-option mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite boolean-option mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(enabledId, controlId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Common Mythic boolean option fixtures were not all imported");
+            }
+
+            var locations = java.util.List.of(origin, origin.clone().add(2, 0, 0),
+                    origin.clone().add(4, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var enabledConfig = mobConfig(targetIds.get(enabledId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            boolean configured = enabledConfig != null
+                    && enabledConfig.getBoolean("entity.silent")
+                    && enabledConfig.getBoolean("entity.invisible")
+                    && enabledConfig.getBoolean("entity.no-ai")
+                    && enabledConfig.getBoolean("entity.invulnerable")
+                    && enabledConfig.getBoolean("show-name")
+                    && enabledConfig.getBoolean("persistent")
+                    && !enabledConfig.getBoolean("entity.visible-by-default", true)
+                    && !enabledConfig.getBoolean("entity.collidable", true)
+                    && "PERSISTENT".equals(enabledConfig.getString("mob.despawn"));
+            boolean controls = controlConfig != null
+                    && !controlConfig.getBoolean("entity.silent", true)
+                    && !controlConfig.getBoolean("entity.invisible", true)
+                    && !controlConfig.getBoolean("entity.no-ai", true)
+                    && !controlConfig.getBoolean("entity.invulnerable", true)
+                    && !controlConfig.getBoolean("show-name", true)
+                    && !controlConfig.getBoolean("persistent", true)
+                    && controlConfig.getBoolean("entity.visible-by-default")
+                    && controlConfig.getBoolean("entity.collidable");
+            var invalidOptions = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean invalidPreserved = invalidOptions != null
+                    && java.util.List.of("Silent", "Invisible", "NoAI", "Invincible", "AlwaysShowName",
+                            "Persistent", "VisibleByDefault", "Collidable")
+                            .stream().allMatch(key -> "maybe".equalsIgnoreCase(invalidOptions.getString(key)))
+                    && invalidConfig.getConfigurationSection("entity") != null
+                    && java.util.List.of("silent", "invisible", "no-ai", "invulnerable", "visible-by-default", "collidable")
+                            .stream().noneMatch(key -> invalidConfig.getConfigurationSection("entity").contains(key))
+                    && !invalidConfig.contains("show-name") && !invalidConfig.contains("persistent");
+
+            var enabledInstance = instances().impl(spawnedIds.get(enabledId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var enabledEntity = enabledInstance == null ? null : enabledInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var controlEntity = controlInstance == null ? null : controlInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            boolean entityStates = enabledEntity instanceof org.bukkit.entity.Mob enabledMob
+                    && enabledMob.isSilent() && enabledMob.isInvisible() && !enabledMob.hasAI()
+                    && enabledMob.isInvulnerable() && enabledMob.isCustomNameVisible()
+                    && enabledMob.isPersistent() && !enabledMob.isVisibleByDefault()
+                    && !enabledMob.isCollidable()
+                    && controlEntity instanceof org.bukkit.entity.Mob controlMob
+                    && !controlMob.isSilent() && !controlMob.isInvisible() && controlMob.hasAI()
+                    && !controlMob.isInvulnerable() && !controlMob.isCustomNameVisible()
+                    && !controlMob.isPersistent() && controlMob.isVisibleByDefault()
+                    && controlMob.isCollidable();
+            boolean passed = targetIds.keySet().containsAll(sourceIds)
+                    && configured && controls && invalidPreserved && entityStates;
+            getLogger().info("[自检] boolean-mob-options-imported result=" + passed
+                    + " imported=" + targetIds.keySet().containsAll(sourceIds)
+                    + " configured=" + configured + " controls=" + controls
+                    + " invalid-preserved=" + invalidPreserved + " entity-states=" + entityStates);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] boolean-mob-options-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
     }
 
     private void runImportedArmorToughnessStatsSelfTest(Location origin) {

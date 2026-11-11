@@ -3297,6 +3297,112 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("MythicMobs common boolean options normalize values and preserve malformed input")
+    void mythicValidatesCommonBooleanOptions(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/boolean-options.yml", """
+                mobs:
+                  Enabled:
+                    Type: ZOMBIE
+                    Options:
+                      Silent: true
+                      Invisible: false
+                      NoAI: true
+                      Invincible: false
+                      AlwaysShowName: true
+                      Persistent: true
+                      VisibleByDefault: false
+                      Collidable: true
+                      PreventSunburn: false
+                      PreventRandomEquipment: true
+                  Disabled:
+                    Type: ZOMBIE
+                    Options:
+                      Silent: false
+                      Invisible: true
+                      NoAI: false
+                      Invincible: true
+                      AlwaysShowName: false
+                      Persistent: false
+                      VisibleByDefault: true
+                      Collidable: false
+                      PreventSunburn: true
+                      PreventRandomEquipment: false
+                  Invalid:
+                    Type: ZOMBIE
+                    Options:
+                      Silent: maybe
+                      Invisible: maybe
+                      NoAI: maybe
+                      Invincible: maybe
+                      AlwaysShowName: maybe
+                      Persistent: maybe
+                      VisibleByDefault: maybe
+                      Collidable: maybe
+                      PreventSunburn: maybe
+                      PreventRandomEquipment: maybe
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var plans = entries.stream().filter(entry -> entry.containsKey("target-file"))
+                .filter(entry -> "mapped".equals(entry.get("status")))
+                .collect(java.util.stream.Collectors.toMap(
+                        entry -> String.valueOf(entry.get("source-mob-id")),
+                        entry -> YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                                String.valueOf(entry.get("content"))))));
+
+        var enabled = plans.get("Enabled");
+        assertNotNull(enabled);
+        assertTrue(enabled.getBoolean("entity.silent"));
+        assertFalse(enabled.getBoolean("entity.invisible"));
+        assertTrue(enabled.getBoolean("entity.no-ai"));
+        assertFalse(enabled.getBoolean("entity.invulnerable"));
+        assertTrue(enabled.getBoolean("show-name"));
+        assertTrue(enabled.getBoolean("persistent"));
+        assertEquals("PERSISTENT", enabled.getString("mob.despawn"));
+        assertFalse(enabled.getBoolean("entity.visible-by-default"));
+        assertTrue(enabled.getBoolean("entity.collidable"));
+        assertFalse(enabled.getBoolean("entity.prevent-sunburn"));
+        assertTrue(enabled.getBoolean("entity.prevent-random-equipment"));
+
+        var disabled = plans.get("Disabled");
+        assertNotNull(disabled);
+        assertFalse(disabled.getBoolean("entity.silent"));
+        assertTrue(disabled.getBoolean("entity.invisible"));
+        assertFalse(disabled.getBoolean("entity.no-ai"));
+        assertTrue(disabled.getBoolean("entity.invulnerable"));
+        assertFalse(disabled.getBoolean("show-name"));
+        assertFalse(disabled.getBoolean("persistent"));
+        assertTrue(disabled.getBoolean("entity.visible-by-default"));
+        assertFalse(disabled.getBoolean("entity.collidable"));
+        assertTrue(disabled.getBoolean("entity.prevent-sunburn"));
+        assertFalse(disabled.getBoolean("entity.prevent-random-equipment"));
+
+        var invalid = plans.get("Invalid");
+        assertNotNull(invalid);
+        var invalidOptions = invalid.getConfigurationSection("mob.unsupported.Options");
+        assertNotNull(invalidOptions);
+        var optionPaths = Map.ofEntries(
+                Map.entry("Silent", "entity.silent"),
+                Map.entry("Invisible", "entity.invisible"),
+                Map.entry("NoAI", "entity.no-ai"),
+                Map.entry("Invincible", "entity.invulnerable"),
+                Map.entry("AlwaysShowName", "show-name"),
+                Map.entry("Persistent", "persistent"),
+                Map.entry("VisibleByDefault", "entity.visible-by-default"),
+                Map.entry("Collidable", "entity.collidable"),
+                Map.entry("PreventSunburn", "entity.prevent-sunburn"),
+                Map.entry("PreventRandomEquipment", "entity.prevent-random-equipment"));
+        optionPaths.forEach((option, runtimePath) -> {
+            assertEquals("maybe", invalidOptions.getString(option), option + " is retained");
+            assertFalse(invalid.contains(runtimePath), option + " must not enter the runtime config");
+            assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                    && ("Options." + option).equals(entry.get("source-key"))
+                    && "WARN".equals(entry.get("severity"))), option + " emits a migration warning");
+        });
+        assertFalse("PERSISTENT".equals(invalid.getString("mob.despawn")),
+                "malformed Persistent must not enable persistent despawn mode");
+    }
+
+    @Test
     @DisplayName("Mythic gravity options preserve undocumented values and scope HasGravity to armor stands")
     void mythicGravityOptionsPreserveUndocumentedValuesAndScopeHasGravity(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/no-gravity.yml", """
