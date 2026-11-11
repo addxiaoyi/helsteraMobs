@@ -1,16 +1,16 @@
 # Isolated Paper Integration Server
 
-Latest strict fixture `srv-paper-horse-saddle-import-strict-20261111-r1` passes all 430 probes (411 passed,
+Latest strict fixture `srv-paper-horse-inventory-options-strict-20261111-r2` passes all 430 probes (411 passed,
 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
-`horseOptionsImported` probe imports `Saddled: true` and
-`HorseArmor: DIAMOND_HORSE_ARMOR`, reads back the saddle and armor from a real
-production-spawned Horse, and verifies explicit unsaddled/no-armor controls
-alongside color, style, domestication, and jump strength. Report:
-[`paper-1.21.1-horse-saddle-import-strict-20261111-r1.json`](reports/paper-1.21.1-horse-saddle-import-strict-20261111-r1.json)
-(SHA-256 `efc6f9f9d07359d95c505cd3ed54fe8178ee0eb2ebafdd452d48e07c7cc60e09`); compressed server log SHA-256 is
-`f72d8bc6d283997332d7a837cd6eca25a36424dcb97e65ad9055b1dde29f0314`, client log archive SHA-256 is
-`8346b45eaca25f09732c2ee517067822312617fd8ab98a54b71343e988f00caf`, and plugin SHA-256 is
-`1992e34073f4960b0e8a4b76c8d345fa2a4eec308382e1bd47847fbe2529dd38`. Archived logs redact web-token query values.
+`horseOptionsImported` probe imports Horse `Saddled`/`HorseArmor` and Donkey
+`CarryingChest`; the real Horse reads back a saddle and diamond armor, while
+the two imported Donkeys read back chest true and explicit false. Horse color,
+style, domestication, and jump-strength controls remain covered. Report:
+[`paper-1.21.1-horse-inventory-options-strict-20261111-r2.json`](reports/paper-1.21.1-horse-inventory-options-strict-20261111-r2.json), SHA-256 `174e15013bd9432ca91f764b68a80ca37c12db421b4fb36fa56253a9544b16ff`.
+Compressed redacted server log SHA-256: `f747e7f4fb922b84861da3341ea69268749d161a4471138eba5f6c3a4a23e845`; client log archive SHA-256:
+`d37589842c90f3da87ed424f1f84a7c01d31742527365f8fe975dccf4ed6acc8`; tested plugin SHA-256:
+`503eca6fb8d2d90f7e4a34a90617995a4ff373bd3a27d4a5e36df68b43d4d161`.
+Archived logs redact token values.
 
 Previous strict fixture `srv-paper-visibility-options-strict-20261111-r1` passes all 430 probes (411 passed,
 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its

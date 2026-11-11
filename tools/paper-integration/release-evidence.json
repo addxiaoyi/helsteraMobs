@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-horse-inventory-options-strict-20261111-r2",
+    "reportFixtureDirectory": "srv-paper-horse-inventory-options-strict-20261111-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-horse-inventory-options-strict-20261111-r2.json",
+    "reportSha256": "174e15013bd9432ca91f764b68a80ca37c12db421b4fb36fa56253a9544b16ff",
+    "log": "tools/paper-integration/reports/paper-1.21.1-horse-inventory-options-strict-20261111-r2.log.gz",
+    "logSha256": "f747e7f4fb922b84861da3341ea69268749d161a4471138eba5f6c3a4a23e845",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-horse-inventory-options-strict-20261111-r2-client-logs.tar.gz",
+    "clientLogSha256": "d37589842c90f3da87ed424f1f84a7c01d31742527365f8fe975dccf4ed6acc8",
+    "pluginSha256": "503eca6fb8d2d90f7e4a34a90617995a4ff373bd3a27d4a5e36df68b43d4d161",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-horse-saddle-import-strict-20261111-r1",
     "reportFixtureDirectory": "srv-paper-horse-saddle-import-strict-20261111-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-horse-saddle-import-strict-20261111-r1.json",

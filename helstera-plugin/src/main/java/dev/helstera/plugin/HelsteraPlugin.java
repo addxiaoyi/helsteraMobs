@@ -5238,6 +5238,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             Path source = sourceDirectory.resolve("horse-options.yml");
             String configuredMobId = "ImportedHorseConfigured_" + suffix;
             String controlMobId = "ImportedHorseControl_" + suffix;
+            String chestDonkeyMobId = "ImportedHorseChestDonkey_" + suffix;
+            String controlDonkeyMobId = "ImportedHorseControlDonkey_" + suffix;
             Files.writeString(source, """
                     mobs:
                       %1$s:
@@ -5259,7 +5261,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                           MaxDomestication: 12
                           JumpStrength: 0.4
                           Saddled: false
-                    """.formatted(configuredMobId, controlMobId));
+                      %3$s:
+                        Type: DONKEY
+                        Options:
+                          CarryingChest: true
+                      %4$s:
+                        Type: DONKEY
+                        Options:
+                          CarryingChest: false
+                    """.formatted(configuredMobId, controlMobId, chestDonkeyMobId, controlDonkeyMobId));
 
             var converted = new MythicMobsImporter().convert(source, sourceRoot);
             var targetIds = new java.util.LinkedHashMap<String, String>();
@@ -5283,32 +5293,59 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
             String configuredTargetId = targetIds.get(configuredMobId);
             String controlTargetId = targetIds.get(controlMobId);
-            if (configuredTargetId == null || controlTargetId == null) {
-                throw new IllegalStateException("Mythic Horse options were not imported for both probe mobs");
+            String chestDonkeyTargetId = targetIds.get(chestDonkeyMobId);
+            String controlDonkeyTargetId = targetIds.get(controlDonkeyMobId);
+            if (configuredTargetId == null || controlTargetId == null
+                    || chestDonkeyTargetId == null || controlDonkeyTargetId == null) {
+                throw new IllegalStateException("Mythic Horse and Donkey options were not imported for all probe mobs");
             }
             MobSpawn configuredSpawn = spawnMobCore(configuredTargetId, "example/emberling", origin,
                     false, null);
             MobSpawn controlSpawn = spawnMobCore(controlTargetId, "example/emberling",
                     origin.clone().add(3, 0, 0), false, null);
+            MobSpawn chestDonkeySpawn = spawnMobCore(chestDonkeyTargetId, "example/emberling",
+                    origin.clone().add(6, 0, 0), false, null);
+            MobSpawn controlDonkeySpawn = spawnMobCore(controlDonkeyTargetId, "example/emberling",
+                    origin.clone().add(9, 0, 0), false, null);
             if (configuredSpawn != null && configuredSpawn.instanceId() > 0) {
                 instanceIds.add(configuredSpawn.instanceId());
             }
             if (controlSpawn != null && controlSpawn.instanceId() > 0) {
                 instanceIds.add(controlSpawn.instanceId());
             }
+            if (chestDonkeySpawn != null && chestDonkeySpawn.instanceId() > 0) {
+                instanceIds.add(chestDonkeySpawn.instanceId());
+            }
+            if (controlDonkeySpawn != null && controlDonkeySpawn.instanceId() > 0) {
+                instanceIds.add(controlDonkeySpawn.instanceId());
+            }
             var configuredInstance = configuredSpawn == null || configuredSpawn.instanceId() <= 0
                     ? null : instances().impl(configuredSpawn.instanceId());
             var controlInstance = controlSpawn == null || controlSpawn.instanceId() <= 0
                     ? null : instances().impl(controlSpawn.instanceId());
+            var chestDonkeyInstance = chestDonkeySpawn == null || chestDonkeySpawn.instanceId() <= 0
+                    ? null : instances().impl(chestDonkeySpawn.instanceId());
+            var controlDonkeyInstance = controlDonkeySpawn == null || controlDonkeySpawn.instanceId() <= 0
+                    ? null : instances().impl(controlDonkeySpawn.instanceId());
             var configuredHorse = configuredInstance == null ? null
                     : configuredInstance.baseEntity().filter(org.bukkit.entity.Horse.class::isInstance)
                     .map(org.bukkit.entity.Horse.class::cast).orElse(null);
             var controlHorse = controlInstance == null ? null
                     : controlInstance.baseEntity().filter(org.bukkit.entity.Horse.class::isInstance)
                     .map(org.bukkit.entity.Horse.class::cast).orElse(null);
+            var chestDonkey = chestDonkeyInstance == null ? null
+                    : chestDonkeyInstance.baseEntity().filter(org.bukkit.entity.ChestedHorse.class::isInstance)
+                    .map(org.bukkit.entity.ChestedHorse.class::cast).orElse(null);
+            var controlDonkey = controlDonkeyInstance == null ? null
+                    : controlDonkeyInstance.baseEntity().filter(org.bukkit.entity.ChestedHorse.class::isInstance)
+                    .map(org.bukkit.entity.ChestedHorse.class::cast).orElse(null);
             var configuredOptions = configuredInstance == null ? null : mobConfig(configuredTargetId)
                     .getConfigurationSection("entity");
             var controlOptions = controlInstance == null ? null : mobConfig(controlTargetId)
+                    .getConfigurationSection("entity");
+            var chestDonkeyOptions = chestDonkeyInstance == null ? null : mobConfig(chestDonkeyTargetId)
+                    .getConfigurationSection("entity");
+            var controlDonkeyOptions = controlDonkeyInstance == null ? null : mobConfig(controlDonkeyTargetId)
                     .getConfigurationSection("entity");
 
             boolean imported = configuredHorse != null && controlHorse != null
@@ -5326,7 +5363,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && controlOptions.getInt("horse-max-domestication", -1) == 12
                     && Math.abs(controlOptions.getDouble("horse-jump-strength", Double.NaN) - 0.4) < 1.0e-9
                     && controlOptions.contains("saddled") && !controlOptions.getBoolean("saddled")
-                    && !controlOptions.contains("horse-armor");
+                    && !controlOptions.contains("horse-armor")
+                    && chestDonkey != null && controlDonkey != null
+                    && chestDonkeyOptions != null && controlDonkeyOptions != null
+                    && chestDonkeyOptions.getBoolean("carrying-chest")
+                    && controlDonkeyOptions.contains("carrying-chest")
+                    && !controlDonkeyOptions.getBoolean("carrying-chest");
             var configuredSaddle = configuredHorse == null ? null : configuredHorse.getInventory().getSaddle();
             var configuredArmor = configuredHorse == null ? null : configuredHorse.getInventory().getArmor();
             var controlSaddle = controlHorse == null ? null : controlHorse.getInventory().getSaddle();
@@ -5354,7 +5396,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && controlHorse.getMaxDomestication() == 12
                     && Math.abs(controlHorse.getJumpStrength() - 0.4) < 1.0e-9
                     && !controlSaddled
-                    && "AIR".equals(controlArmorName);
+                    && "AIR".equals(controlArmorName)
+                    && chestDonkey.isCarryingChest()
+                    && !controlDonkey.isCarryingChest();
             getLogger().info("[自检] horse-options result=" + (imported && applied)
                     + " imported=" + imported
                     + " color=" + (configuredHorse == null ? "missing" : configuredHorse.getColor().name())
@@ -5370,7 +5414,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " control-max-domestication=" + (controlHorse == null ? -1 : controlHorse.getMaxDomestication())
                     + " control-jump-strength=" + (controlHorse == null ? "missing" : controlHorse.getJumpStrength())
                     + " control-saddled=" + controlSaddled
-                    + " control-armor=" + controlArmorName);
+                    + " control-armor=" + controlArmorName
+                    + " donkey-chest=" + (chestDonkey != null && chestDonkey.isCarryingChest())
+                    + " control-donkey-chest=" + (controlDonkey != null && controlDonkey.isCarryingChest()));
         } catch (Throwable failure) {
             getLogger().warning("[自检] horse-options result=false error=" + failure);
         } finally {
@@ -6108,9 +6154,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private void scheduleInteractableClientProbe(int attemptsRemaining) {
         var player = getServer().getOnlinePlayers().stream()
                 .filter(candidate -> candidate.isOnline() && !candidate.isDead()
-                        && candidate.getGameMode() != org.bukkit.GameMode.SPECTATOR)
-                .min(java.util.Comparator.comparing(candidate ->
-                        !candidate.getName().equalsIgnoreCase("HelsteraTester")))
+                        && candidate.getGameMode() != org.bukkit.GameMode.SPECTATOR
+                        && candidate.getName().equalsIgnoreCase("HelsteraTester"))
+                .findFirst()
                 .orElse(null);
         if (player == null) {
             if (attemptsRemaining > 0) {
