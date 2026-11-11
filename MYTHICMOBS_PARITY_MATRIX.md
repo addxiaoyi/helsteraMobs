@@ -19,9 +19,13 @@ Version-gated behavior:
 
 Evidence baseline: 2026-11-11, Paper API 1.21.1-R0.1-SNAPSHOT.
 
-Latest strict release evidence: `srv-paper-tameable-families-strict-20261111-r3` completes 431 probes on Paper
-1.21.1-133 (412 passed, 19 observed expected rejections, zero failed or
-incomplete). Its dedicated `tamedFamilyOptions` probe imports `Options.Tamed`
+Latest strict release evidence: `srv-paper-experience-orb-strict-20261111-r1` completes 432 probes on Paper
+1.21.1-133 (413 passed, 19 observed expected rejections, zero failed or
+incomplete). Its dedicated `experienceOrbOptions` probe imports Mythic
+`Options.Experience` only for `EXPERIENCE_ORB`, reads back 17 from a production
+spawn, and verifies wrong-entity and malformed-value preservation. Earlier
+strict evidence covers `Options.Tamed` across tameable families. Its dedicated
+`tamedFamilyOptions` probe imports `Options.Tamed`
 and reads back true/false for Donkey, Mule, Llama, Trader Llama, Skeleton Horse,
 and Zombie Horse through production spawning. Camel reads back true, and the
 unrepresentable false request is preserved because Paper 1.21.1 always reports
@@ -2926,7 +2930,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
 | Rabbit Killer Bunny option | implemented-runtime | Official `Options.IsKillerBunny` and alias `Angry` map only for Rabbits; the runtime preserves explicit false and applies true after `RabbitType`. Wolf/Zombie Pigman `Angry` behavior remains mapped separately. Importer/plugin tests verify aliases, wrong types, invalid values, false values, and conflicts. Strict Paper fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` verifies real imported Killer Bunny, regular Rabbit, and `RabbitType` controls in the complete 409-probe catalog; conflicting aliases and wrong-entity/invalid values remain preserved. |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-tameable-families-strict-20261111-r3` completes all 431 registered probes on Paper 1.21.1-133, including imported `Options.Tamed` readback across eleven Bukkit `Tameable` types, inverse controls for six mutable families, preserved Camel false input, Horse saddle/armor, Donkey chest, Pig/Strider saddles, visibility settings, Armor Stand flags/equipment, entity-option preservation, and other focused import/runtime probes. The full Conditions and Mob Options catalogs, universal option ordering, complete Mythic catalog, and broader Paper/client-version semantics remain open. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json` |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-experience-orb-strict-20261111-r1` completes all 432 registered probes on Paper 1.21.1-133, including imported `Options.Experience` readback on `EXPERIENCE_ORB` and preservation of wrong-entity/invalid values. Earlier strict evidence verifies `Options.Tamed` across eleven Bukkit `Tameable` types, six mutable-family inverse controls, Camel false preservation, Horse saddle/armor, Donkey chest, Pig/Strider saddles, visibility settings, Armor Stand flags/equipment, and other focused probes. The full Conditions and Mob Options catalogs, universal option ordering, complete Mythic catalog, and broader Paper/client-version semantics remain open. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json` |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.

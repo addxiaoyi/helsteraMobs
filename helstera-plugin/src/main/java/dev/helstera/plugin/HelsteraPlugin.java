@@ -3065,6 +3065,86 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return entity instanceof org.bukkit.entity.Tameable tameable ? tameable.isTamed() : null;
     }
 
+    private void runImportedExperienceOrbOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String sourceContent = """
+                    mobs:
+                      configured:
+                        Type: EXPERIENCE_ORB
+                        Options:
+                          Experience: 17
+                      wrong_entity:
+                        Type: ZOMBIE
+                        Options:
+                          Experience: 8
+                      invalid:
+                        Type: EXPERIENCE_ORB
+                        Options:
+                          Experience: many
+                    """;
+            sourceRoot = Files.createTempDirectory("helstera-experience-orb-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("experience-orb-options.yml");
+            Files.writeString(source, sourceContent);
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory) || Files.exists(destination)) {
+                    throw new IOException("Unsafe or existing Experience option probe config: " + destination);
+                }
+                Files.createDirectories(destination.getParent());
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            String configuredSourceId = "configured";
+            int instanceId = -1;
+            String targetId = targetIds.get(configuredSourceId);
+            if (targetId != null) {
+                MobSpawn spawn = spawnMobCore(targetId, "example/emberling", origin, false, null);
+                instanceId = spawn == null ? -1 : spawn.instanceId();
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+            var configured = instanceId > 0 ? instances().impl(instanceId) : null;
+            var entity = configured == null ? null : configured.baseEntity().orElse(null);
+            boolean imported = targetIds.size() == 3;
+            boolean applied = entity instanceof org.bukkit.entity.ExperienceOrb orb
+                    && orb.getExperience() == 17;
+
+            var wrongConfig = mobConfig(targetIds.get("wrong_entity"));
+            boolean wrongTypePreserved = wrongConfig != null
+                    && !wrongConfig.contains("entity.experience-orb-value")
+                    && wrongConfig.getInt("entity.unsupported.Options.Experience", -1) == 8;
+            var invalidConfig = mobConfig(targetIds.get("invalid"));
+            boolean invalidPreserved = invalidConfig != null
+                    && !invalidConfig.contains("entity.experience-orb-value")
+                    && "many".equals(invalidConfig.getString("entity.unsupported.Options.Experience"));
+            boolean result = imported && applied && wrongTypePreserved && invalidPreserved;
+            getLogger().info("[自检] experience-orb-options result=" + result
+                    + " imported=" + imported
+                    + " experience=" + (entity instanceof org.bukkit.entity.ExperienceOrb orb
+                    ? orb.getExperience() : -1)
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] experience-orb-options result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
     private void runImportedSheepOptionsSelfTest(Location origin) {
         Path sourceRoot = null;
         Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
@@ -10198,6 +10278,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " patrol-spawn-point=" + patrolSpawnPoint);
                 runImportedEntityFlagOptionsSelfTest(location.clone().add(25, 0, 0));
                 runImportedTamedFamilyOptionsSelfTest(location.clone().add(27, 0, 0));
+                runImportedExperienceOrbOptionsSelfTest(location.clone().add(29, 0, 0));
                 runImportedArmorToughnessStatsSelfTest(location.clone().add(26, 0, 0));
                 var wolfContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, wolf, 1.0, 5.0, 0, "integration");
@@ -23689,6 +23770,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     // Invalid hand-authored values are ignored; the importer preserves source values.
                 }
             }
+        }
+        if (entity instanceof org.bukkit.entity.ExperienceOrb orb
+                && options.contains("experience-orb-value")) {
+            int experience = options.getInt("experience-orb-value", -1);
+            if (experience >= 0) orb.setExperience(experience);
         }
         if (!(entity instanceof org.bukkit.entity.FallingBlock falling)) return;
         String blockData = options.getString("falling-block-data", options.getString("block-data"));

@@ -639,6 +639,11 @@
       "requiredObservationPattern": "^tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true$"
     },
     {
+      "id": "experienceOrbOptions",
+      "status": "passed",
+      "requiredObservationPattern": "^experience-orb-options result=true imported=true experience=17 wrong-type-preserved=true invalid-preserved=true$"
+    },
+    {
       "id": "entityAngryPollination",
       "status": "passed",
       "requiredObservation": "entity-angry-pollination result=true bee-angry-positive=true bee-angry-negative=true wolf-angry-positive=true wolf-angry-negative=true vex-angry-positive=true vex-angry-negative=true bee-pollinated-positive=true bee-pollinated-negative=true unsupported-angry-rejected=true missing-context-rejected=true aliases=true"

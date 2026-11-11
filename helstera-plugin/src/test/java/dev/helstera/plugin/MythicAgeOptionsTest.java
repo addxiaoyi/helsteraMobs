@@ -19,6 +19,7 @@ import org.bukkit.entity.Sheep;
 import org.bukkit.entity.Fox;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.FallingBlock;
+import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionType;
 import org.junit.jupiter.api.Test;
@@ -592,6 +593,20 @@ class MythicAgeOptionsTest {
         calls.clear();
         HelsteraPlugin.applyNonLivingEntityOptions(proxy(org.bukkit.entity.Zombie.class, calls), options);
         assertFalse(calls.containsKey("setBoatType"));
+    }
+
+    @Test
+    void appliesExperienceOnlyToExperienceOrbs() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var options = YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                "experience-orb-value: 17\n"));
+
+        HelsteraPlugin.applyNonLivingEntityOptions(proxy(ExperienceOrb.class, calls), options);
+        assertEquals(17, calls.get("setExperience"));
+
+        calls.clear();
+        HelsteraPlugin.applyNonLivingEntityOptions(proxy(org.bukkit.entity.Zombie.class, calls), options);
+        assertFalse(calls.containsKey("setExperience"));
     }
 
     @Test
