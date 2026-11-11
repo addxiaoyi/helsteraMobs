@@ -649,6 +649,11 @@
       "requiredObservation": "environmental-damage-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true drowning-protected=true fall-protected=true controls-allowed=true invalid-fallback=true"
     },
     {
+      "id": "digOutOfGroundImported",
+      "status": "passed",
+      "requiredObservationPattern": "^dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2\\.00 fall-control=true disabled-allowed=true invalid-fallback=true$"
+    },
+    {
       "id": "glowingOptionImported",
       "status": "passed",
       "requiredObservation": "glowing-option-imported result=true imported=true enabled-configured=true control-configured=true invalid-preserved=true enabled-entity=true control-entity=true invalid-entity=true"

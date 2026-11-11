@@ -613,6 +613,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'environmentalDamageOptionsImported'; status = 'passed'; observations = @('environmental-damage-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true drowning-protected=true fall-protected=true controls-allowed=true invalid-fallback=true')
     }
+    $fullReport.expectedProbeIds += 'digOutOfGroundImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'digOutOfGroundImported'; status = 'passed'; observations = @('dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2.00 fall-control=true disabled-allowed=true invalid-fallback=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'
