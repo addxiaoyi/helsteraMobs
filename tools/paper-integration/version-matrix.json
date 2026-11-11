@@ -14,8 +14,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-show-health-strict-20261111-r3",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-show-health-strict-20261111-r3.json"
+      "releaseFixtureId": "srv-paper-prevent-teleport-strict-20261111-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-prevent-teleport-strict-20261111-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

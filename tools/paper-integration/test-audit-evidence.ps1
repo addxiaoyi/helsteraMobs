@@ -578,6 +578,18 @@ try {
     if ($healthImportedProbe.Count -ne 1) { throw 'Synthetic release report must contain healthImportedCondition.' }
     $healthImportedProbe[0].observations = @(
         'health-imported result=true comparisons=true duplicate-rejected=true overflow-preserved=true invalid-preserved=true')
+    $fullReport.expectedProbeIds += 'showHealthDelivery'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'showHealthDelivery'; status = 'passed'; observations = @('show-health-delivery result=true imported=true spawned=true first-crossing=true second-crossing=true healing-recross=true below-threshold-quiet=true inside-band-quiet=true near-inside=true outsider-outside=true radius=25.0 environmental-damage=true entity-damage=true')
+    }
+    $fullReport.expectedProbeIds += 'showHealthClientDelivery'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'showHealthClientDelivery'; status = 'passed'; observations = @('{"status":"passed","observations":{"nearPlayerReceivedFirstThreshold":true,"nearPlayerReceivedSecondThreshold":true,"outsidePlayerExcluded":true,"belowThresholdQuiet":true,"withinBandQuiet":true,"healingRearmedThreshold":true},"testerMessages":[],"outsideMessages":[]}')
+    }
+    $fullReport.expectedProbeIds += 'preventTeleportImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'preventTeleportImported'; status = 'passed'; observations = @('prevent-teleport-imported result=true imported=true mapped=true invalid-preserved=true spawned=true protected-api-blocked=true control-api-teleported=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

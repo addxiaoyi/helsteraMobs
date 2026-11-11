@@ -1281,7 +1281,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapEntityScopedOption(options, srcFile, entries, target, "PreventStingerLoss",
                     "mob.prevent-stinger-loss", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.Bee.class);
-            mapOption(options, srcFile, entries, target, "PreventTeleport", "mob.prevent-teleport");
+            mapBooleanOption(options, srcFile, entries, target, "PreventTeleport", "mob.prevent-teleport");
             mapOption(options, srcFile, entries, target, "PreventPickup", "mob.prevent-pickup");
             mapOption(options, srcFile, entries, target, "PreventItemUse", "mob.prevent-item-use");
             mapOption(options, srcFile, entries, target, "Interactable", "mob.interactable");

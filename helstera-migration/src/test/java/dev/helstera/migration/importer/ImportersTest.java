@@ -4583,6 +4583,54 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic PreventTeleport imports booleans and preserves malformed values")
+    void mythicPreventTeleportBooleanValues(@TempDir Path root) throws Exception {
+        Path enabledFile = write(root, "Mobs/prevent-teleport-enabled.yml", """
+                mobs:
+                  Protected:
+                    Type: ZOMBIE
+                    Options:
+                      PreventTeleport: true
+                """);
+        var enabledEntries = new MythicMobsImporter().convert(enabledFile);
+        var enabled = converted(enabledFile);
+        assertTrue(enabled.getBoolean("mob.prevent-teleport"));
+        assertTrue(enabledEntries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "Options.PreventTeleport".equals(entry.get("source-key"))
+                && "mob.prevent-teleport".equals(entry.get("target-key"))));
+
+        Path disabledFile = write(root, "Mobs/prevent-teleport-disabled.yml", """
+                mobs:
+                  Control:
+                    Type: ZOMBIE
+                    Options:
+                      PreventTeleport: false
+                """);
+        var disabledEntries = new MythicMobsImporter().convert(disabledFile);
+        var disabled = converted(disabledFile);
+        assertFalse(disabled.getBoolean("mob.prevent-teleport", true));
+        assertTrue(disabledEntries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "Options.PreventTeleport".equals(entry.get("source-key"))
+                && "mob.prevent-teleport".equals(entry.get("target-key"))));
+
+        Path malformedFile = write(root, "Mobs/prevent-teleport-invalid.yml", """
+                mobs:
+                  Invalid:
+                    Type: ZOMBIE
+                    Options:
+                      PreventTeleport: sometimes
+                """);
+        var malformedEntries = new MythicMobsImporter().convert(malformedFile);
+        var malformed = converted(malformedFile);
+        assertEquals("sometimes", malformed.getString("mob.unsupported.Options.PreventTeleport"));
+        assertFalse(malformed.contains("mob.prevent-teleport"));
+        assertTrue(malformedEntries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && "Options.PreventTeleport".equals(entry.get("source-key"))
+                && "mob.unsupported.Options.PreventTeleport".equals(entry.get("target-key"))));
+    }
+
+    @Test
     @DisplayName("interaction guard options require their runtime entity types and boolean values")
     void mythicPreservesInteractionGuardOptionBoundaries(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/interaction-guard-boundaries.yml", """

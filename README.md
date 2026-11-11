@@ -1,4 +1,5 @@
-Latest strict fixture `srv-paper-show-health-strict-20261111-r3` verifies imported Mythic `Options.ShowHealth` end to end: health messages fire when a mob crosses each 10% threshold, stay quiet within a band and below the first threshold, re-arm after healing, respect the configured 25-block audience radius, and reach a nearby real client while excluding an outside client. The complete Paper 1.21.1-133 catalog records 438 probes (419 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-show-health-strict-20261111-r3.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity, including the broader Mob Options catalog, remains incomplete.
+Latest strict fixture `srv-paper-prevent-teleport-strict-20261111-r1` verifies Mythic `Options.PreventTeleport` from import through production spawning: `Entity#teleport` is blocked for the imported true mob while an imported false control moves, and malformed input is preserved with a migration warning. The complete Paper 1.21.1-133 catalog records 439 probes (420 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-prevent-teleport-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity, including the broader Mob Options catalog, remains incomplete.
+Previous strict fixture `srv-paper-show-health-strict-20261111-r3` verifies imported Mythic `Options.ShowHealth` end to end: health messages fire when a mob crosses each 10% threshold, stay quiet within a band and below the first threshold, re-arm after healing, respect the configured 25-block audience radius, and reach a nearby real client while excluding an outside client. Its complete Paper catalog recorded 438 probes (419 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-show-health-strict-20261111-r3.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 Previous strict fixture `srv-paper-villager-options-strict-20261111-r2` verified imported Villager `Type: DESERT`, `Profession: MASON`, and `Level: 4` against `PLAINS/LIBRARIAN/2` controls in the 435-probe release catalog; its report remains in the [Paper evidence archive](tools/paper-integration/STARTUP_EVIDENCE.md).
 Previous strict fixture `srv-paper-panda-options-strict-20261111-r1` verifies Panda `MainGene: LAZY` and `HiddenGene: WORRIED` through production spawning; `NORMAL` controls pass, while wrong-entity and invalid values are preserved with warnings. The complete strict catalog records 433 probes (414 passed, 19 expected rejections), zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-panda-options-strict-20261111-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md).
 
@@ -1342,7 +1343,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-show-health-strict-20261111-r3` has 438 probes (419 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-prevent-teleport-strict-20261111-r1` has 439 probes (420 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1355,12 +1356,12 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-11). The full remaining work is:
 
-Latest strict report has 438 probes, zero incomplete.
+Latest strict report has 439 probes, zero incomplete.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 584 cited IDs; 491 report files; 4 directories without reports; 89 missing directories; 264 archived release reports. The
+   Current fixture inventory: 585 cited IDs; 492 report files; 4 directories without reports; 89 missing directories; 265 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
