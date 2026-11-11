@@ -29,6 +29,13 @@ class SpawnOptionsTest {
     }
 
     @Test
+    void passthroughDamageDefaultsOffAndCanBeEnabled() {
+        var options = SpawnOptions.defaults();
+        assertFalse(options.passthroughDamage());
+        assertTrue(options.passthroughDamage(true).passthroughDamage());
+    }
+
+    @Test
     void silverfishBlockInfectionPreventionDefaultsOffAndCanBeEnabled() {
         var options = SpawnOptions.defaults();
         assertFalse(options.preventBlockInfection());

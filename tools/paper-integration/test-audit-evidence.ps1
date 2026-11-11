@@ -334,7 +334,11 @@ try {
     }
     $fullReport.expectedProbeIds += 'executionAudienceMobSummon'
     $fullReport.probes += [pscustomobject]@{
-        id = 'executionAudienceMobSummon'; status = 'passed'; observations = @('execution-audience-mob-summon imported=true action-bound=true spawned=true inherited=true visuals=true member-visible=true outsider-hidden=true passed=true')
+        id = 'executionAudienceMobSummon'; status = 'passed'; observations = @('execution-audience-mob-summon imported=true action-bound=true spawned=true inherited=true parent-linked=true visuals=true member-visible=true outsider-hidden=true passed=true')
+    }
+    $fullReport.expectedProbeIds += 'passthroughDamageOptions'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'passthroughDamageOptions'; status = 'passed'; observations = @('passthrough-damage result=true imported=true parent-linked=true transferred=true source-preserved=true disabled-control=true orphan-fallback=true cancelled-respected=true cycle-safe=true invalid-preserved=true')
     }
     $fullReport.expectedProbeIds += 'importedTargetRelationshipsCondition'
     $fullReport.probes += [pscustomobject]@{

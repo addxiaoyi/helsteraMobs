@@ -652,7 +652,7 @@ class SkillActionsTest {
     @DisplayName("summon：模型名为空时不生成")
     void summonBlankModelId() {
         java.util.List<String> calls = new java.util.ArrayList<>();
-        SkillCatalog.summoner((modelId, at) -> {
+        SkillCatalog.summoner((modelId, at, parent) -> {
             calls.add(modelId);
             return 1;   // Summoner 现返回新实例 id（-1 表示失败）
         });
@@ -668,7 +668,7 @@ class SkillActionsTest {
     @DisplayName("summon：缺实例时不生成")
     void summonNeedsInstance() {
         java.util.List<String> calls = new java.util.ArrayList<>();
-        SkillCatalog.summoner((modelId, at) -> {
+        SkillCatalog.summoner((modelId, at, parent) -> {
             calls.add(modelId);
             return 1;   // Summoner 现返回新实例 id（-1 表示失败）
         });
@@ -681,10 +681,33 @@ class SkillActionsTest {
     }
 
     @Test
+    @DisplayName("summon：成功生成后把召唤者实体交给父关系钩子")
+    void summonPassesCasterEntityToSummoner() {
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var world = mock(World.class);
+        var parent = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(new Location(world, 0, 64, 0));
+        when(instance.baseEntity()).thenReturn(Optional.of(parent));
+        var context = BehaviorContext.of(instance, parent, 1.0, -1, 0, "IDLE");
+        var parents = new java.util.ArrayList<Entity>();
+        SkillCatalog.summoner((modelId, at, parentEntity) -> {
+            parents.add(parentEntity);
+            return 42;
+        });
+        try {
+            factory("summon").create(List.of("my_model")).accept(context);
+            assertTrue(parents.contains(parent));
+        } finally {
+            SkillCatalog.summoner(null);
+        }
+    }
+
+    @Test
     @DisplayName("summon：数量与半径被限制在上限内")
     void summonClampsArgs() {
         java.util.List<String> calls = new java.util.ArrayList<>();
-        SkillCatalog.summoner((modelId, at) -> {
+        SkillCatalog.summoner((modelId, at, parent) -> {
             calls.add(modelId);
             return 1;   // Summoner 现返回新实例 id（-1 表示失败）
         });

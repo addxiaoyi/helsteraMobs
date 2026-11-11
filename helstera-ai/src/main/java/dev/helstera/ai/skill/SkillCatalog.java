@@ -95,11 +95,12 @@ public final class SkillCatalog {
         /**
          * 生成一个实例。
          *
+         * @param parent 父实体；没有可用实体时为 null
          * @return 新实例的 id；失败（模型未加载或位置非法）返回 -1。
          *         必须返回真实 id——召唤闸门要用它推算递归深度，
          *         拿位置哈希之类的替代值会让深度恒为 1，从而闸门形同虚设。
          */
-        int summon(String modelId, org.bukkit.Location at);
+        int summon(String modelId, org.bukkit.Location at, org.bukkit.entity.Entity parent);
     }
 
     @FunctionalInterface
@@ -1102,7 +1103,8 @@ public final class SkillCatalog {
                             double ang = (Math.PI * 2 * i) / count;
                             Location at = me.clone().add(Math.cos(ang) * radius, 0, Math.sin(ang) * radius);
                             try {
-                                int minionId = hook.summon(modelId, at);
+                                int minionId = hook.summon(modelId, at,
+                                        ctx.instance().baseEntity().orElse(null));
                                 if (minionId >= 0) {
                                     SummonedAudienceUpdater audienceUpdater = summonedAudienceUpdater;
                                     if (audienceUpdater != null) {

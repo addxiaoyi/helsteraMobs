@@ -116,7 +116,7 @@
     {
       "id": "executionAudienceMobSummon",
       "status": "passed",
-      "requiredObservation": "execution-audience-mob-summon imported=true action-bound=true spawned=true inherited=true visuals=true member-visible=true outsider-hidden=true passed=true"
+      "requiredObservation": "execution-audience-mob-summon imported=true action-bound=true spawned=true inherited=true parent-linked=true visuals=true member-visible=true outsider-hidden=true passed=true"
     },
     {
       "id": "auraStacksCondition",
@@ -657,6 +657,11 @@
       "id": "parrotFlyingSpeed",
       "status": "passed",
       "requiredObservationPattern": "^parrot-flying-speed result=true imported=true configured=0\\.8 sentinel-unchanged=true wrong-type-preserved=true invalid-preserved=true$"
+    },
+    {
+      "id": "passthroughDamageOptions",
+      "status": "passed",
+      "requiredObservationPattern": "^passthrough-damage result=true imported=true parent-linked=true transferred=true source-preserved=true disabled-control=true orphan-fallback=true cancelled-respected=true cycle-safe=true invalid-preserved=true$"
     },
     {
       "id": "entityAngryPollination",

@@ -1475,7 +1475,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "UseThreatTable", "SpawningDistance",
                     "Scale", "ShowHealth", "Silent", "NoAI", "Type", "Profession", "Level", "HasTrades",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
-                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "MainGene", "HiddenGene", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop", "Experience", "FlyingSpeed")) {
+                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PassthroughDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "MainGene", "HiddenGene", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop", "Experience", "FlyingSpeed")) {
                 removeIgnoreCase(leftover, mapped);
             }
             removeIgnoreCase(leftover, "Height");
@@ -1501,6 +1501,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                 "PreventOtherDrops", "entity.prevent-other-drops", false);
         mapDefaultedGlobalBooleanOption(options, defaultMobOptions, srcFile, entries, target,
                 "PreventVanillaDamage", "mob.prevent-vanilla-damage", false);
+        mapBooleanOption(options, srcFile, entries, target,
+                "PassthroughDamage", "mob.passthrough-damage");
 
         mapTameableOption(options, srcFile, entries, target, normalizedType);
 
@@ -2498,7 +2500,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "sound", "playsound" -> "sound " + firstArgOrPositional(trimmed, 0, "", "sound", "s", "name");
             case "particle", "particles" -> "particle " + firstArgOrPositional(trimmed, 0, "", "particle", "p", "name");
             case "summon" -> "summon "
-                    + firstArgOrPositional(trimmed, 0, "", "type", "mob", "model") + " "
+                    + summonTargetId(firstArgOrPositional(trimmed, 0, "", "type", "mob", "model")) + " "
                     + firstArgOrPositional(trimmed, 1, "1", "amount", "count") + " "
                     + firstArgOrPositional(trimmed, 2, "3", "radius", "r");
             case "transform" -> "transform " + firstArgOrPositional(trimmed, 0, "", "type", "entitytype", "entity");
@@ -5974,6 +5976,15 @@ public final class MythicMobsImporter implements MigrationImporter {
         s = s.replaceAll("[^a-z0-9_]", "_").replaceAll("_+", "_")
                 .replaceAll("^_", "").replaceAll("_$", "");
         return s.isEmpty() ? "unnamed" : s;
+    }
+
+    /** Resolve Mythic mob names to imported mob IDs while retaining explicit model IDs. */
+    private static String summonTargetId(String raw) {
+        if (raw == null || raw.isBlank()) return "";
+        String target = raw.trim();
+        if (target.contains("/")) return target;
+        String normalized = normalizeId(target);
+        return normalized.startsWith("mythic_") ? normalized : "mythic_" + normalized;
     }
 
     private static Object firstOf(ConfigurationSection s, String... keys) {

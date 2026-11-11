@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-passthrough-damage-strict-20261111-r3",
+    "reportFixtureDirectory": "srv-paper-passthrough-damage-strict-20261111-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-passthrough-damage-strict-20261111-r3.json",
+    "reportSha256": "48e17247b2e41737f7523e5fbdd79377eeaed1c7e32fff6e2eedbb82af428141",
+    "log": "tools/paper-integration/reports/paper-1.21.1-passthrough-damage-strict-20261111-r3.log.gz",
+    "logSha256": "c09d9d0ea96df16e61b1a8d57fc61971e1f6184ec75732aac331b164a43d46fd",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-passthrough-damage-strict-20261111-r3-client-logs.tar.gz",
+    "clientLogSha256": "8338ec4765d4566f3cd90f65e0654581367c6c977f03f36c4cd62c0efe8784be",
+    "pluginSha256": "4358cee22c0ff46a9e009fffbf16c718adb6a267880d23369c69095627ab2ca4",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-villager-options-strict-20261111-r4",
     "reportFixtureDirectory": "srv-paper-villager-options-strict-20261111-r4",
     "report": "tools/paper-integration/reports/paper-1.21.1-villager-options-strict-20261111-r4.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-villager-options-strict-20261111-r4-client-logs.tar.gz",
     "clientLogSha256": "7535bc484ef8a41c0b2831eac98b1942903dfd31fa9670483b1a6e7797f051bc",
     "pluginSha256": "72da321cfae76be8af49ee8070517debd94d240e3914db577ea4060f23b6d45e",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-passthrough-damage-strict-20261111-r3"
   },
   {
     "fixtureId": "srv-paper-villager-options-strict-20261111-r2",

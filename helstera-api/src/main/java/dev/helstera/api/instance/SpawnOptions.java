@@ -39,6 +39,7 @@ public final class SpawnOptions {
     private java.util.Set<String> preventTargetReasons = java.util.Set.of();
     private boolean preventAttack = false;
     private boolean preventVanillaDamage = false;
+    private boolean passthroughDamage = false;
     private boolean preventSlimeSplit = false;
     private boolean preventStingerLoss = false;
     private boolean preventTeleport = false;
@@ -192,6 +193,8 @@ public final class SpawnOptions {
     public SpawnOptions preventAttack(boolean value) { preventAttack = value; return this; }
     public boolean preventVanillaDamage() { return preventVanillaDamage; }
     public SpawnOptions preventVanillaDamage(boolean value) { preventVanillaDamage = value; return this; }
+    public boolean passthroughDamage() { return passthroughDamage; }
+    public SpawnOptions passthroughDamage(boolean value) { passthroughDamage = value; return this; }
     public boolean preventSlimeSplit() { return preventSlimeSplit; }
     public SpawnOptions preventSlimeSplit(boolean value) { preventSlimeSplit = value; return this; }
     public boolean preventStingerLoss() { return preventStingerLoss; }
