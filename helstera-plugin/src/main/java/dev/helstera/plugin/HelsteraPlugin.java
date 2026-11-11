@@ -2889,6 +2889,175 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         runImportedBooleanMobOptionsSelfTest(origin.clone().add(2, 0, 0));
         runImportedRandomEquipmentSelfTest(origin.clone().add(8, 0, 0));
+        runImportedEnvironmentalDamageOptionsSelfTest(origin.clone().add(14, 0, 0));
+    }
+
+    private void runImportedEnvironmentalDamageOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-environmental-damage-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("environmental-damage-options.yml");
+            String drowningId = "PreventDrowningEnabled_" + suffix;
+            String fallId = "PreventFallDamageEnabled_" + suffix;
+            String controlId = "EnvironmentalDamageControl_" + suffix;
+            String invalidId = "EnvironmentalDamageInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: SHEEP
+                        Options:
+                          PreventDrowning: true
+                          PreventFallDamage: false
+                      %2$s:
+                        Type: SHEEP
+                        Options:
+                          PreventDrowning: false
+                          PreventFallDamage: true
+                      %3$s:
+                        Type: SHEEP
+                        Options:
+                          PreventDrowning: false
+                          PreventFallDamage: false
+                      %4$s:
+                        Type: SHEEP
+                        Options:
+                          PreventDrowning: maybe
+                          PreventFallDamage: maybe
+                    """.formatted(drowningId, fallId, controlId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe environmental-option mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite environmental-option mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(drowningId, fallId, controlId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic environmental damage fixtures were not all imported");
+            }
+
+            var locations = java.util.List.of(origin, origin.clone().add(2, 0, 0),
+                    origin.clone().add(4, 0, 0), origin.clone().add(6, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var drowningConfig = mobConfig(targetIds.get(drowningId));
+            var fallConfig = mobConfig(targetIds.get(fallId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var invalidOptions = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean configured = drowningConfig != null
+                    && drowningConfig.getBoolean("mob.prevent-drowning")
+                    && !drowningConfig.getBoolean("mob.prevent-fall-damage")
+                    && fallConfig != null
+                    && !fallConfig.getBoolean("mob.prevent-drowning")
+                    && fallConfig.getBoolean("mob.prevent-fall-damage");
+            boolean controls = controlConfig != null
+                    && !controlConfig.getBoolean("mob.prevent-drowning", true)
+                    && !controlConfig.getBoolean("mob.prevent-fall-damage", true);
+            boolean invalidPreserved = invalidOptions != null
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("PreventDrowning"))
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("PreventFallDamage"))
+                    && !invalidConfig.contains("mob.prevent-drowning")
+                    && !invalidConfig.contains("mob.prevent-fall-damage");
+
+            var drowningInstance = instances().impl(spawnedIds.get(drowningId));
+            var fallInstance = instances().impl(spawnedIds.get(fallId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            var drowningEntity = livingEntity(drowningInstance);
+            var fallEntity = livingEntity(fallInstance);
+            var controlEntity = livingEntity(controlInstance);
+            var invalidEntity = livingEntity(invalidInstance);
+            var drowningOptions = drowningInstance == null ? null : drowningInstance.options();
+            var fallOptions = fallInstance == null ? null : fallInstance.options();
+            var controlOptions = controlInstance == null ? null : controlInstance.options();
+            var invalidRuntimeOptions = invalidInstance == null ? null : invalidInstance.options();
+            boolean policies = drowningOptions != null && drowningOptions.preventDrowning()
+                    && !drowningOptions.preventFallDamage()
+                    && fallOptions != null && !fallOptions.preventDrowning()
+                    && fallOptions.preventFallDamage()
+                    && controlOptions != null && !controlOptions.preventDrowning()
+                    && !controlOptions.preventFallDamage()
+                    && invalidRuntimeOptions != null && !invalidRuntimeOptions.preventDrowning()
+                    && !invalidRuntimeOptions.preventFallDamage();
+
+            var drowningEvent = damageEvent(drowningEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.DROWNING);
+            var drowningCrossCauseEvent = damageEvent(drowningEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL);
+            var fallEvent = damageEvent(fallEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL);
+            var fallCrossCauseEvent = damageEvent(fallEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.DROWNING);
+            var controlDrowningEvent = damageEvent(controlEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.DROWNING);
+            var controlFallEvent = damageEvent(controlEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL);
+            var invalidDrowningEvent = damageEvent(invalidEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.DROWNING);
+            var invalidFallEvent = damageEvent(invalidEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL);
+            for (var event : java.util.List.of(drowningEvent, drowningCrossCauseEvent, fallEvent,
+                    fallCrossCauseEvent, controlDrowningEvent, controlFallEvent,
+                    invalidDrowningEvent, invalidFallEvent)) {
+                getServer().getPluginManager().callEvent(event);
+            }
+            boolean drowningProtected = drowningEvent.isCancelled() && !drowningCrossCauseEvent.isCancelled();
+            boolean fallProtected = fallEvent.isCancelled() && !fallCrossCauseEvent.isCancelled();
+            boolean controlsAllowed = !controlDrowningEvent.isCancelled() && !controlFallEvent.isCancelled();
+            boolean invalidFallback = !invalidDrowningEvent.isCancelled() && !invalidFallEvent.isCancelled();
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            boolean passed = imported && configured && controls && invalidPreserved && policies
+                    && drowningProtected && fallProtected && controlsAllowed && invalidFallback;
+            getLogger().info("[自检] environmental-damage-options-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured + " controls=" + controls
+                    + " invalid-preserved=" + invalidPreserved + " policies=" + policies
+                    + " drowning-protected=" + drowningProtected + " fall-protected=" + fallProtected
+                    + " controls-allowed=" + controlsAllowed + " invalid-fallback=" + invalidFallback);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] environmental-damage-options-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private static org.bukkit.entity.LivingEntity livingEntity(
+            dev.helstera.runtime.instance.ModelInstanceImpl instance) {
+        return instance == null ? null : instance.baseEntity()
+                .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+    }
+
+    private static org.bukkit.event.entity.EntityDamageEvent damageEvent(
+            org.bukkit.entity.Entity entity, org.bukkit.event.entity.EntityDamageEvent.DamageCause cause) {
+        return new org.bukkit.event.entity.EntityDamageEvent(entity, cause, 2.0);
     }
 
     private void runImportedRandomEquipmentSelfTest(Location origin) {

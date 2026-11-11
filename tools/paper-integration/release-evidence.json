@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-environmental-damage-options-strict-20261111-r2",
+    "reportFixtureDirectory": "srv-paper-environmental-damage-options-strict-20261111-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-environmental-damage-options-strict-20261111-r2.json",
+    "reportSha256": "58096d6025cd42bd36c376fe89ffd0ed786983086eac37e5c10ae5aaafba2d6d",
+    "log": "tools/paper-integration/reports/paper-1.21.1-environmental-damage-options-strict-20261111-r2.log.gz",
+    "logSha256": "23affd56ee85a630b441902b8450524eed5573840910ca58cf1d2a62042b8d98",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-environmental-damage-options-strict-20261111-r2-client-logs.tar.gz",
+    "clientLogSha256": "3b06ddadb778e0127c96f6938009719820a58dcd14c2d04211f85c5042dbe7d8",
+    "pluginSha256": "ee1e7333f8de2e3b87176b4b45f80fa52a88913ec67838573a0775e06240b5f6",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-prevent-random-equipment-strict-20261111-r1",
     "reportFixtureDirectory": "srv-paper-prevent-random-equipment-strict-20261111-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-prevent-random-equipment-strict-20261111-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-prevent-random-equipment-strict-20261111-r1-client-logs.tar.gz",
     "clientLogSha256": "1c9b72ce2122ce9bbd53ec5c3a08a65b22f4380653c1e6d12d9493e96a4f7b19",
     "pluginSha256": "0e4d947ca3dbf4fc604dfda592f4c8bc5766a46073d00b7820df8a193f80b29e",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-environmental-damage-options-strict-20261111-r2"
   },
   {
     "fixtureId": "srv-paper-boolean-mob-options-strict-20261111-r1",
