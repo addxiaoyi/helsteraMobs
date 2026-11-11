@@ -1335,6 +1335,10 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "entity.rabbit-type", normalizedType,
                     raw -> isEnumOptionValue(raw, org.bukkit.entity.Rabbit.Type.class),
                     org.bukkit.entity.Rabbit.class);
+            mapEntityScopedOption(options, srcFile, entries, target, "FlyingSpeed",
+                    "entity.parrot-flying-speed", normalizedType,
+                    MythicMobsImporter::isParrotFlyingSpeedOptionValue,
+                    org.bukkit.entity.Parrot.class);
             mapEntityScopedOption(options, srcFile, entries, target, "MainGene",
                     "entity.panda-main-gene", normalizedType,
                     raw -> isEnumOptionValue(raw, org.bukkit.entity.Panda.Gene.class),
@@ -1441,7 +1445,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "UseThreatTable", "SpawningDistance",
                     "Scale", "ShowHealth", "Silent", "NoAI",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
-                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "MainGene", "HiddenGene", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop", "Experience")) {
+                    "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "MainGene", "HiddenGene", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop", "Experience", "FlyingSpeed")) {
                 removeIgnoreCase(leftover, mapped);
             }
             removeIgnoreCase(leftover, "Height");
@@ -5298,6 +5302,12 @@ public final class MythicMobsImporter implements MigrationImporter {
     private static boolean isFiniteNumberInRange(Object raw, double minimum, double maximum) {
         Double value = parseFiniteNumberOption(raw);
         return value != null && value >= minimum && value <= maximum;
+    }
+
+    private static boolean isParrotFlyingSpeedOptionValue(Object raw) {
+        Double value = parseFiniteNumberOption(raw);
+        // Mythic uses -1 as the explicit "do not apply" sentinel for Parrot FlyingSpeed.
+        return value != null && (value == -1.0 || value >= 0.0);
     }
 
     private static boolean isInteractionDimensionOption(Object raw) {

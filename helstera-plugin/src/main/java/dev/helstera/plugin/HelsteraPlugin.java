@@ -1711,6 +1711,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedCatOptionsSelfTest(world, origin.clone().add(6, 0, 0));
                 runImportedFoxOptionsSelfTest(origin.clone().add(7, 0, 0));
                 runImportedPandaOptionsSelfTest(origin.clone().add(160, 0, 0));
+                runImportedParrotFlyingSpeedSelfTest(origin.clone().add(164, 0, 0));
                 runImportedRabbitOptionsSelfTest(origin.clone().add(8, 0, 0));
                 runImportedHorseOptionsSelfTest(origin.clone().add(32, 0, 0));
                 runImportedBoatOptionsSelfTest(origin.clone().add(64, 0, 0));
@@ -4417,6 +4418,144 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
+    }
+
+    private void runImportedParrotFlyingSpeedSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String configuredId = "ImportedParrotFlyingSpeed_" + suffix;
+            String sentinelId = "ImportedParrotFlyingSpeedSentinel_" + suffix;
+            String baselineId = "ImportedParrotFlyingSpeedBaseline_" + suffix;
+            String wrongTypeId = "ImportedParrotFlyingSpeedWrongType_" + suffix;
+            String invalidId = "ImportedParrotFlyingSpeedInvalid_" + suffix;
+            sourceRoot = Files.createTempDirectory("helstera-parrot-flying-speed-import-");
+            Path source = Files.createDirectories(sourceRoot.resolve("Mobs"))
+                    .resolve("parrot-flying-speed.yml");
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: PARROT
+                        Options:
+                          FlyingSpeed: 0.8
+                      %2$s:
+                        Type: PARROT
+                        Options:
+                          FlyingSpeed: -1
+                      %3$s:
+                        Type: PARROT
+                      %4$s:
+                        Type: ZOMBIE
+                        Options:
+                          FlyingSpeed: 0.5
+                      %5$s:
+                        Type: PARROT
+                        Options:
+                          FlyingSpeed: -2
+                    """.formatted(configuredId, sentinelId, baselineId, wrongTypeId, invalidId));
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var sourceIds = java.util.List.of(configuredId, sentinelId, baselineId, wrongTypeId, invalidId);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory) || Files.exists(destination)) {
+                    throw new IOException("Unsafe or existing Parrot FlyingSpeed config: " + destination);
+                }
+                Files.createDirectories(destination.getParent());
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic Parrot FlyingSpeed probe mobs were not all imported");
+            }
+
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceIds.get(i)), "example/emberling",
+                        origin.clone().add(i * 3, 0, 0), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var configuredEntity = importedProbeEntity(spawnedIds.get(configuredId));
+            var sentinelEntity = importedProbeEntity(spawnedIds.get(sentinelId));
+            var baselineEntity = importedProbeEntity(spawnedIds.get(baselineId));
+            var wrongTypeEntity = importedProbeEntity(spawnedIds.get(wrongTypeId));
+            var invalidEntity = importedProbeEntity(spawnedIds.get(invalidId));
+            double configuredSpeed = readAttributeBase(configuredEntity,
+                    org.bukkit.attribute.Attribute.GENERIC_FLYING_SPEED);
+            double sentinelSpeed = readAttributeBase(sentinelEntity,
+                    org.bukkit.attribute.Attribute.GENERIC_FLYING_SPEED);
+            double baselineSpeed = readAttributeBase(baselineEntity,
+                    org.bukkit.attribute.Attribute.GENERIC_FLYING_SPEED);
+            double invalidSpeed = readAttributeBase(invalidEntity,
+                    org.bukkit.attribute.Attribute.GENERIC_FLYING_SPEED);
+
+            var configuredConfig = mobConfig(targetIds.get(configuredId));
+            var sentinelConfig = mobConfig(targetIds.get(sentinelId));
+            var baselineConfig = mobConfig(targetIds.get(baselineId));
+            var wrongTypeConfig = mobConfig(targetIds.get(wrongTypeId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var wrongTypeUnsupported = wrongTypeConfig == null ? null
+                    : wrongTypeConfig.getConfigurationSection("entity.unsupported.Options");
+            var invalidUnsupported = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("entity.unsupported.Options");
+
+            boolean imported = configuredConfig != null && sentinelConfig != null && baselineConfig != null
+                    && wrongTypeUnsupported != null && invalidUnsupported != null
+                    && Math.abs(configuredConfig.getDouble("entity.parrot-flying-speed", Double.NaN) - 0.8) < 1.0e-9
+                    && Math.abs(sentinelConfig.getDouble("entity.parrot-flying-speed", Double.NaN) + 1.0) < 1.0e-9
+                    && !baselineConfig.contains("entity.parrot-flying-speed")
+                    && Math.abs(wrongTypeUnsupported.getDouble("FlyingSpeed", Double.NaN) - 0.5) < 1.0e-9
+                    && !wrongTypeConfig.contains("entity.parrot-flying-speed")
+                    && Math.abs(invalidUnsupported.getDouble("FlyingSpeed", Double.NaN) + 2.0) < 1.0e-9
+                    && !invalidConfig.contains("entity.parrot-flying-speed");
+            boolean applied = imported && configuredEntity instanceof org.bukkit.entity.Parrot
+                    && sentinelEntity instanceof org.bukkit.entity.Parrot
+                    && baselineEntity instanceof org.bukkit.entity.Parrot
+                    && invalidEntity instanceof org.bukkit.entity.Parrot
+                    && Math.abs(configuredSpeed - 0.8) < 1.0e-9
+                    && Double.isFinite(sentinelSpeed) && Math.abs(sentinelSpeed - baselineSpeed) < 1.0e-9
+                    && Double.isFinite(invalidSpeed) && Math.abs(invalidSpeed - baselineSpeed) < 1.0e-9;
+            boolean wrongTypePreserved = wrongTypeEntity instanceof org.bukkit.entity.Zombie;
+            boolean invalidPreserved = invalidUnsupported != null
+                    && Math.abs(invalidUnsupported.getDouble("FlyingSpeed", Double.NaN) + 2.0) < 1.0e-9;
+            boolean result = imported && applied && wrongTypePreserved && invalidPreserved;
+            getLogger().info("[自检] parrot-flying-speed result=" + result
+                    + " imported=" + imported
+                    + " configured=" + configuredSpeed
+                    + " sentinel-unchanged=" + (Double.isFinite(sentinelSpeed)
+                    && Math.abs(sentinelSpeed - baselineSpeed) < 1.0e-9)
+                    + " wrong-type-preserved=" + wrongTypePreserved
+                    + " invalid-preserved=" + invalidPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] parrot-flying-speed result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private org.bukkit.entity.Entity importedProbeEntity(Integer instanceId) {
+        var instance = instanceId == null || instanceId <= 0 ? null : instances().impl(instanceId);
+        return instance == null ? null : instance.baseEntity().orElse(null);
+    }
+
+    private static double readAttributeBase(org.bukkit.entity.Entity entity,
+                                            org.bukkit.attribute.Attribute attribute) {
+        if (!(entity instanceof org.bukkit.entity.LivingEntity living)) return Double.NaN;
+        var instance = living.getAttribute(attribute);
+        return instance == null ? Double.NaN : instance.getBaseValue();
     }
 
     private void runImportedRabbitOptionsSelfTest(Location origin) {
@@ -10419,6 +10558,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedTamedFamilyOptionsSelfTest(location.clone().add(27, 0, 0));
                 runImportedExperienceOrbOptionsSelfTest(location.clone().add(29, 0, 0));
                 runImportedPandaOptionsSelfTest(location.clone().add(31, 0, 0));
+                runImportedParrotFlyingSpeedSelfTest(location.clone().add(34, 0, 0));
                 runImportedArmorToughnessStatsSelfTest(location.clone().add(26, 0, 0));
                 var wolfContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, wolf, 1.0, 5.0, 0, "integration");
@@ -26503,6 +26643,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (entity instanceof org.bukkit.entity.Panda panda) {
             applyPandaOptions(panda, options);
         }
+        if (entity instanceof org.bukkit.entity.Parrot parrot) {
+            applyParrotFlyingSpeed(parrot, options);
+        }
         if (entity instanceof org.bukkit.entity.Sheep sheep) {
             applySheepOptions(sheep, options);
         }
@@ -26601,6 +26744,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         } catch (IllegalArgumentException | LinkageError ignored) {
             // Invalid imported values remain visible under entity.unsupported.Options.*.
+        }
+    }
+
+    private static void applyParrotFlyingSpeed(org.bukkit.entity.Parrot parrot,
+                                                org.bukkit.configuration.ConfigurationSection options) {
+        if (parrot == null || options == null || !options.contains("parrot-flying-speed")) return;
+        double speed = options.getDouble("parrot-flying-speed", Double.NaN);
+        // Mythic's -1 sentinel leaves the Parrot's native attribute untouched.
+        if (!Double.isFinite(speed) || speed < 0.0) return;
+        var attribute = parrot.getAttribute(org.bukkit.attribute.Attribute.GENERIC_FLYING_SPEED);
+        if (attribute == null) return;
+        try {
+            attribute.setBaseValue(speed);
+        } catch (IllegalArgumentException ignored) {
+            // Invalid values are retained by migration instead of being forced into the attribute.
         }
     }
 

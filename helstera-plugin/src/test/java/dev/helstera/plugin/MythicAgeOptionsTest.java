@@ -559,6 +559,43 @@ class MythicAgeOptionsTest {
     }
 
     @Test
+    void appliesParrotFlyingSpeedAndHonorsNoOpSentinel() {
+        Map<String, Object> calls = new LinkedHashMap<>();
+        var attribute = (org.bukkit.attribute.AttributeInstance) Proxy.newProxyInstance(
+                org.bukkit.attribute.AttributeInstance.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.attribute.AttributeInstance.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("setBaseValue")) calls.put("setBaseValue", args[0]);
+                    if (method.getReturnType() == double.class) return 0.4;
+                    if (method.getReturnType() == boolean.class) return false;
+                    return null;
+                });
+        var parrot = (org.bukkit.entity.Parrot) Proxy.newProxyInstance(
+                org.bukkit.entity.Parrot.class.getClassLoader(), new Class<?>[]{org.bukkit.entity.Parrot.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getAttribute")) {
+                        assertEquals(org.bukkit.attribute.Attribute.GENERIC_FLYING_SPEED, args[0]);
+                        return attribute;
+                    }
+                    if (method.getReturnType() == boolean.class) return false;
+                    if (method.getReturnType() == int.class) return 0;
+                    return null;
+                });
+        HelsteraPlugin.applyEntitySpecificOptions(parrot,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("parrot-flying-speed: 0.8")));
+        assertEquals(0.8, calls.get("setBaseValue"));
+
+        calls.clear();
+        HelsteraPlugin.applyEntitySpecificOptions(parrot,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("parrot-flying-speed: -1")));
+        assertTrue(calls.isEmpty(), calls.toString());
+
+        HelsteraPlugin.applyEntitySpecificOptions(parrot,
+                YamlConfiguration.loadConfiguration(new java.io.StringReader("parrot-flying-speed: -2")));
+        assertTrue(calls.isEmpty(), calls.toString());
+    }
+
+    @Test
     void ignoresEntitySpecificOptionsOnIncompatibleRuntimeTypes() {
         Map<String, Object> calls = new LinkedHashMap<>();
         var options = YamlConfiguration.loadConfiguration(new java.io.StringReader("""

@@ -14,8 +14,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-panda-options-strict-20261111-r1",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-panda-options-strict-20261111-r1.json"
+      "releaseFixtureId": "srv-paper-parrot-flying-speed-strict-20261111-r2",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-parrot-flying-speed-strict-20261111-r2.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

@@ -220,6 +220,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] tamed-family-options result=true imported=true donkey-tamed=true control-donkey-tamed=false mule-tamed=true control-mule-tamed=false llama-tamed=true control-llama-tamed=false trader-llama-tamed=true control-trader-llama-tamed=false skeleton-horse-tamed=true control-skeleton-horse-tamed=false zombie-horse-tamed=true control-zombie-horse-tamed=false camel-tamed=true control-camel-tamed=true camel-false-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] experience-orb-options result=true imported=true experience=17 wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] parrot-flying-speed result=true imported=true configured=0.8 sentinel-unchanged=true wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] enderman-held-block result=true material=OBSIDIAN',
         '[Server thread/INFO]: attribute-options result=true modifiers=1',
@@ -603,6 +604,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'pandaOptions').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'pandaOptions').observations[0] -match
         '^panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true$') 'Panda genes require imported Paper readback plus wrong-entity and invalid-value preservation'
+    Assert-True (($report.probes | Where-Object id -eq 'parrotFlyingSpeed').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'parrotFlyingSpeed').observations[0] -match
+        '^parrot-flying-speed result=true imported=true configured=0\.8 sentinel-unchanged=true wrong-type-preserved=true invalid-preserved=true$') 'Parrot FlyingSpeed requires imported attribute readback, sentinel control, and preservation'
     Assert-True (($report.probes | Where-Object id -eq 'noGravityImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'noGravityImported').observations[0] -match
         '^no-gravity-imported result=true imported=true configured=false control=true has-gravity=false has-gravity-control=true has-gravity-wrong-type-preserved=true invalid-preserved=true gravity-invalid-preserved=true has-gravity-invalid-preserved=true fallback=true$') 'imported NoGravity requires production readback and malformed-value preservation'
@@ -1344,6 +1348,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'pandaOptions'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'pandaOptions'; status = 'passed'; observations = @('panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'parrotFlyingSpeed'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'parrotFlyingSpeed'; status = 'passed'; observations = @('parrot-flying-speed result=true imported=true configured=0.8 sentinel-unchanged=true wrong-type-preserved=true invalid-preserved=true')
     }
     $fullCatalogCatOptions = @($fullCatalogReport.probes | Where-Object id -eq 'cat')
     if ($fullCatalogCatOptions.Count -ne 1) { throw 'Synthetic full catalog report must contain cat.' }
@@ -2385,6 +2393,19 @@ try {
     } catch { $incompletePandaOptionsRejected = $_.Exception.Message -match 'required observation for pandaOptions' }
     Assert-True $incompletePandaOptionsRejected 'full release gate rejects Panda option evidence without gene readback and preservation controls'
     $fullCatalogPandaOptions[0].observations = $pandaObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $fullCatalogParrotFlyingSpeed = @($fullCatalogReport.probes | Where-Object id -eq 'parrotFlyingSpeed')
+    if ($fullCatalogParrotFlyingSpeed.Count -ne 1) { throw 'Synthetic full catalog report must contain parrotFlyingSpeed.' }
+    $parrotFlyingSpeedObservations = $fullCatalogParrotFlyingSpeed[0].observations
+    $fullCatalogParrotFlyingSpeed[0].observations = @('parrot-flying-speed result=true imported=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $incompleteParrotFlyingSpeedRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $incompleteParrotFlyingSpeedRejected = $_.Exception.Message -match 'required observation for parrotFlyingSpeed' }
+    Assert-True $incompleteParrotFlyingSpeedRejected 'full release gate rejects Parrot FlyingSpeed evidence without attribute readback and controls'
+    $fullCatalogParrotFlyingSpeed[0].observations = $parrotFlyingSpeedObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $fullCatalogPlayerCreated = @($fullCatalogReport.probes | Where-Object id -eq 'playerCreatedImported')
     if ($fullCatalogPlayerCreated.Count -ne 1) { throw 'Synthetic full catalog report must contain playerCreatedImported.' }

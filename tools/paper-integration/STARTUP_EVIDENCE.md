@@ -1,6 +1,17 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-panda-options-strict-20261111-r1` passed the full strict gate on Paper 1.21.1-133:
+Latest fixture `srv-paper-parrot-flying-speed-strict-20261111-r2` passed the full strict gate on Paper 1.21.1-133:
+434 registered probes, 415 passed, 19 expected rejections, and zero failed or
+incomplete. The `parrotFlyingSpeed` probe imports Mythic `Options.FlyingSpeed: 0.8`
+and reads back Paper's Parrot flying-speed attribute through production spawning.
+The `-1` sentinel leaves the native attribute unchanged; wrong entity types and
+invalid negative values remain preserved with warnings.
+Plugin SHA-256: `dacecefabecefdc826a3008953a491ba08cf689511c4a1578dbfd359944ec38d`. Report: [paper-1.21.1-parrot-flying-speed-strict-20261111-r2.json](reports/paper-1.21.1-parrot-flying-speed-strict-20261111-r2.json), SHA-256: `e23d83076c5965c3a5b7bfcfc7b367dffdc7bc9a5fab598de44f9e5947cad684`.
+Compressed redacted server log: [paper-1.21.1-parrot-flying-speed-strict-20261111-r2.log.gz](reports/paper-1.21.1-parrot-flying-speed-strict-20261111-r2.log.gz), SHA-256: `810ee362974fcdc23b73f9861038557e9e6647017e2ad76fd73f01bc11e38a69`.
+Client log archive: [paper-1.21.1-parrot-flying-speed-strict-20261111-r2-client-logs.tar.gz](reports/paper-1.21.1-parrot-flying-speed-strict-20261111-r2-client-logs.tar.gz), SHA-256: `5737592bb14f9f870a4b412bad9b6225434f2f1cf87bb98b5261e1fa41803067`.
+Archived logs redact web-token query values.
+
+Previous fixture `srv-paper-panda-options-strict-20261111-r1` passed the full strict gate on Paper 1.21.1-133:
 433 registered probes, 414 passed, 19 expected rejections, and zero failed or
 incomplete. The dedicated `pandaOptions` probe imports `MainGene: LAZY` and
 `HiddenGene: WORRIED`, reads back both genes from a production-spawned Panda,
