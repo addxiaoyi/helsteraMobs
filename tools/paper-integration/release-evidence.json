@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-dig-out-of-ground-strict-20261111-r1",
+    "reportFixtureDirectory": "srv-paper-dig-out-of-ground-strict-20261111-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-dig-out-of-ground-strict-20261111-r1.json",
+    "reportSha256": "90289de38cd77c2108fe43d999d24fdd7a9c2d3328c2d4968e82e831ffb5610b",
+    "log": "tools/paper-integration/reports/paper-1.21.1-dig-out-of-ground-strict-20261111-r1.log.gz",
+    "logSha256": "a5bbda7552ca68ce58b5f116c25698a0b29926465ce9355507401baddbb4c737",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-dig-out-of-ground-strict-20261111-r1-client-logs.tar.gz",
+    "clientLogSha256": "4c7822981dde3efdebb4f6f7f28886b1b302bc118ffaeeb4150a12a2a6aff095",
+    "pluginSha256": "ec948e2945f4b35e50b2cc4371713cb6a6421da3b9f2876252bb47f0c4753b6f",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-frog-options-strict-20261111-r1",
     "reportFixtureDirectory": "srv-paper-frog-options-strict-20261111-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-frog-options-strict-20261111-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-frog-options-strict-20261111-r1-client-logs.tar.gz",
     "clientLogSha256": "2e33ab328a2c96ce2bf97fa823fba143bb20264f2f8c3cec50537800c2237d5d",
     "pluginSha256": "2b7f29da105c918e9fcd9bb1c6bcc0748aacdc0d93b288e63e3354e85d054446",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-dig-out-of-ground-strict-20261111-r1"
   },
   {
     "fixtureId": "srv-paper-legacy-item-ids-strict-20261111-r1",

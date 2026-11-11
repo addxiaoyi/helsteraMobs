@@ -2911,6 +2911,151 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         runImportedBooleanMobOptionsSelfTest(origin.clone().add(2, 0, 0));
         runImportedRandomEquipmentSelfTest(origin.clone().add(8, 0, 0));
         runImportedEnvironmentalDamageOptionsSelfTest(origin.clone().add(14, 0, 0));
+        runImportedDigOutOfGroundSelfTest(origin.clone().add(20, 0, 0));
+    }
+
+    private void runImportedDigOutOfGroundSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String protectedId = "DigOutOfGroundProtected_" + suffix;
+            String causeControlId = "DigOutOfGroundCauseControl_" + suffix;
+            String disabledId = "DigOutOfGroundDisabled_" + suffix;
+            String invalidId = "DigOutOfGroundInvalid_" + suffix;
+            sourceRoot = Files.createTempDirectory("helstera-dig-out-of-ground-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("dig-out-of-ground.yml");
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          DigOutOfGround: true
+                      %2$s:
+                        Type: ZOMBIE
+                        Options:
+                          DigOutOfGround: true
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          DigOutOfGround: false
+                      %4$s:
+                        Type: ZOMBIE
+                        Options:
+                          DigOutOfGround: maybe
+                    """.formatted(protectedId, causeControlId, disabledId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe DigOutOfGround mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite DigOutOfGround mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(protectedId, causeControlId, disabledId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic DigOutOfGround fixtures were not all imported");
+            }
+
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0),
+                    origin.clone().add(6, 0, 0), origin.clone().add(9, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var protectedConfig = mobConfig(targetIds.get(protectedId));
+            var causeControlConfig = mobConfig(targetIds.get(causeControlId));
+            var disabledConfig = mobConfig(targetIds.get(disabledId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var invalidUnsupported = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean configured = protectedConfig != null && protectedConfig.getBoolean("mob.dig-out-of-ground")
+                    && causeControlConfig != null && causeControlConfig.getBoolean("mob.dig-out-of-ground")
+                    && disabledConfig != null && !disabledConfig.getBoolean("mob.dig-out-of-ground", true)
+                    && invalidConfig != null && !invalidConfig.contains("mob.dig-out-of-ground")
+                    && invalidUnsupported != null
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("DigOutOfGround"));
+
+            var protectedInstance = instances().impl(spawnedIds.get(protectedId));
+            var causeControlInstance = instances().impl(spawnedIds.get(causeControlId));
+            var disabledInstance = instances().impl(spawnedIds.get(disabledId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            var protectedEntity = livingEntity(protectedInstance);
+            var causeControlEntity = livingEntity(causeControlInstance);
+            var disabledEntity = livingEntity(disabledInstance);
+            var invalidEntity = livingEntity(invalidInstance);
+            boolean policies = protectedInstance != null && protectedInstance.options().digOutOfGround()
+                    && causeControlInstance != null && causeControlInstance.options().digOutOfGround()
+                    && disabledInstance != null && !disabledInstance.options().digOutOfGround()
+                    && invalidInstance != null && !invalidInstance.options().digOutOfGround();
+
+            var protectedBefore = protectedEntity == null ? null : protectedEntity.getLocation().clone();
+            var suffocation = damageEvent(protectedEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.SUFFOCATION);
+            getServer().getPluginManager().callEvent(suffocation);
+            double protectedRise = protectedBefore == null || protectedEntity == null ? Double.NaN
+                    : protectedEntity.getLocation().getY() - protectedBefore.getY();
+
+            var fallBefore = protectedEntity == null ? null : protectedEntity.getLocation().clone();
+            var fall = damageEvent(protectedEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL);
+            getServer().getPluginManager().callEvent(fall);
+            boolean fallControl = fallBefore != null && protectedEntity != null && !fall.isCancelled()
+                    && protectedEntity.getLocation().distanceSquared(fallBefore) < 1.0e-6;
+
+            var disabledBefore = disabledEntity == null ? null : disabledEntity.getLocation().clone();
+            var disabledSuffocation = damageEvent(disabledEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.SUFFOCATION);
+            getServer().getPluginManager().callEvent(disabledSuffocation);
+            boolean disabledAllowed = disabledBefore != null && disabledEntity != null
+                    && !disabledSuffocation.isCancelled()
+                    && disabledEntity.getLocation().distanceSquared(disabledBefore) < 1.0e-6;
+
+            var invalidBefore = invalidEntity == null ? null : invalidEntity.getLocation().clone();
+            var invalidSuffocation = damageEvent(invalidEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.SUFFOCATION);
+            getServer().getPluginManager().callEvent(invalidSuffocation);
+            boolean invalidFallback = invalidBefore != null && invalidEntity != null
+                    && !invalidSuffocation.isCancelled()
+                    && invalidEntity.getLocation().distanceSquared(invalidBefore) < 1.0e-6;
+
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            boolean suffocationProtected = suffocation.isCancelled()
+                    && Math.abs(protectedRise - 2.0) < 0.01;
+            boolean passed = imported && configured && policies && suffocationProtected
+                    && fallControl && disabledAllowed && invalidFallback;
+            getLogger().info("[自检] dig-out-of-ground-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured + " policies=" + policies
+                    + " suffocation-cancelled=" + suffocation.isCancelled()
+                    + " rise=" + String.format(java.util.Locale.ROOT, "%.2f", protectedRise)
+                    + " fall-control=" + fallControl + " disabled-allowed=" + disabledAllowed
+                    + " invalid-fallback=" + invalidFallback);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] dig-out-of-ground-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
     }
 
     private void runImportedEnvironmentalDamageOptionsSelfTest(Location origin) {
