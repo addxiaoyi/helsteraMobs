@@ -2929,6 +2929,142 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    private void runImportedTamedFamilyOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            var families = java.util.List.of("DONKEY", "MULE", "LLAMA", "TRADER_LLAMA",
+                    "SKELETON_HORSE", "ZOMBIE_HORSE", "CAMEL");
+            var sourceIds = new java.util.ArrayList<String>();
+            var trueIds = new java.util.LinkedHashMap<String, String>();
+            var controlIds = new java.util.LinkedHashMap<String, String>();
+            StringBuilder sourceContent = new StringBuilder("mobs:\n");
+            for (String family : families) {
+                String label = family.toLowerCase(java.util.Locale.ROOT).replace('_', '-');
+                String configuredId = "ImportedTamed" + family + "_" + suffix;
+                String controlId = "ImportedTamed" + family + "Control_" + suffix;
+                for (var variant : java.util.List.of(
+                        new java.util.AbstractMap.SimpleImmutableEntry<>(configuredId, true),
+                        new java.util.AbstractMap.SimpleImmutableEntry<>(controlId, false))) {
+                    sourceIds.add(variant.getKey());
+                    sourceContent.append("  ").append(variant.getKey()).append(":\n")
+                            .append("    Type: ").append(family).append("\n")
+                            .append("    Options:\n")
+                            .append("      Tamed: ").append(variant.getValue()).append("\n");
+                }
+                trueIds.put(label, configuredId);
+                controlIds.put(label, controlId);
+            }
+
+            sourceRoot = Files.createTempDirectory("helstera-tamed-family-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("tamed-family-options.yml");
+            Files.writeString(source, sourceContent.toString());
+
+            var converted = new MythicMobsImporter().convert(source, sourceRoot);
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : converted) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe Tamed family mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite existing Tamed family mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+
+            boolean imported = targetIds.size() == sourceIds.size() && targetIds.keySet().containsAll(sourceIds);
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                String sourceId = sourceIds.get(i);
+                MobSpawn spawn = spawnMobCore(targetIds.get(sourceId), "example/emberling",
+                        origin.clone().add(i * 3, 0, 0), false, null);
+                int instanceId = spawn == null ? -1 : spawn.instanceId();
+                spawnedIds.put(sourceId, instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            boolean allStatesApplied = imported;
+            var observation = new StringBuilder();
+            for (String family : families) {
+                String label = family.toLowerCase(java.util.Locale.ROOT).replace('_', '-');
+                String configuredSourceId = trueIds.get(label);
+                String controlSourceId = controlIds.get(label);
+                Boolean configuredState = readImportedTamedFamilyState(
+                        configuredSourceId, true, targetIds, spawnedIds);
+                Boolean controlState;
+                boolean pairPassed;
+                if ("CAMEL".equals(family)) {
+                    controlState = readTamedFamilyRuntimeState(controlSourceId, targetIds, spawnedIds);
+                    String controlTargetId = targetIds.get(controlSourceId);
+                    var controlConfig = controlTargetId == null ? null : mobConfig(controlTargetId);
+                    boolean falsePreserved = controlConfig != null
+                            && !controlConfig.contains("entity.tamed")
+                            && controlConfig.contains("entity.unsupported.Options.Tamed")
+                            && !controlConfig.getBoolean("entity.unsupported.Options.Tamed", true);
+                    pairPassed = Boolean.TRUE.equals(configuredState)
+                            && Boolean.TRUE.equals(controlState) && falsePreserved;
+                    observation.append(" ").append(label).append("-tamed=")
+                            .append(configuredState == null ? "missing" : configuredState)
+                            .append(" control-").append(label).append("-tamed=")
+                            .append(controlState == null ? "missing" : controlState)
+                            .append(" camel-false-preserved=").append(falsePreserved);
+                } else {
+                    controlState = readImportedTamedFamilyState(
+                            controlSourceId, false, targetIds, spawnedIds);
+                    pairPassed = Boolean.TRUE.equals(configuredState)
+                            && Boolean.FALSE.equals(controlState);
+                    observation.append(" ").append(label).append("-tamed=")
+                            .append(configuredState == null ? "missing" : configuredState)
+                            .append(" control-").append(label).append("-tamed=")
+                            .append(controlState == null ? "missing" : controlState);
+                }
+                allStatesApplied &= pairPassed;
+            }
+            getLogger().info("[自检] tamed-family-options result=" + allStatesApplied
+                    + " imported=" + imported + observation);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] tamed-family-options result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private Boolean readImportedTamedFamilyState(String sourceId, boolean expectedTamed,
+                                                  java.util.Map<String, String> targetIds,
+                                                  java.util.Map<String, Integer> spawnedIds) {
+        String targetId = targetIds.get(sourceId);
+        Integer instanceId = spawnedIds.get(sourceId);
+        var importedConfig = targetId == null ? null : mobConfig(targetId);
+        var instance = instanceId == null || instanceId <= 0 ? null : instances().impl(instanceId);
+        var entity = instance == null ? null : instance.baseEntity().orElse(null);
+        if (importedConfig == null || !importedConfig.contains("entity.tamed")
+                || importedConfig.getBoolean("entity.tamed") != expectedTamed
+                || !(entity instanceof org.bukkit.entity.Tameable tameable)) return null;
+        return tameable.isTamed();
+    }
+
+    private Boolean readTamedFamilyRuntimeState(String sourceId,
+                                                java.util.Map<String, String> targetIds,
+                                                java.util.Map<String, Integer> spawnedIds) {
+        Integer instanceId = spawnedIds.get(sourceId);
+        var instance = instanceId == null || instanceId <= 0 ? null : instances().impl(instanceId);
+        var entity = instance == null ? null : instance.baseEntity().orElse(null);
+        return entity instanceof org.bukkit.entity.Tameable tameable ? tameable.isTamed() : null;
+    }
+
     private void runImportedSheepOptionsSelfTest(Location origin) {
         Path sourceRoot = null;
         Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
@@ -10061,6 +10197,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " patrol-leader=" + raiderView.isPatrolLeader()
                         + " patrol-spawn-point=" + patrolSpawnPoint);
                 runImportedEntityFlagOptionsSelfTest(location.clone().add(25, 0, 0));
+                runImportedTamedFamilyOptionsSelfTest(location.clone().add(27, 0, 0));
                 runImportedArmorToughnessStatsSelfTest(location.clone().add(26, 0, 0));
                 var wolfContext = dev.helstera.api.behavior.BehaviorContext.of(
                         modelInstance, wolf, 1.0, 5.0, 0, "integration");

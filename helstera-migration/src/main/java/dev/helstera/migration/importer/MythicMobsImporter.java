@@ -1256,9 +1256,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapEntityScopedOption(options, srcFile, entries, target, "PatrolSpawnPoint",
                     "entity.patrol-spawn-point", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.Raider.class);
-            mapEntityScopedOption(options, srcFile, entries, target, "Tamed",
-                    "entity.tamed", normalizedType, MythicMobsImporter::isBooleanOptionValue,
-                    org.bukkit.entity.Tameable.class);
+            mapTamedOption(options, srcFile, entries, target, normalizedType);
             mapRabbitKillerBunnyOptions(options, srcFile, entries, target, normalizedType);
             mapEntityScopedOption(options, srcFile, entries, target, "HeldBlock",
                     "entity.held-block", normalizedType, MythicMobsImporter::isNonBlankStringOption,
@@ -5103,6 +5101,23 @@ public final class MythicMobsImporter implements MigrationImporter {
             return;
         }
         mapOption(options, srcFile, entries, target, optionName, path);
+    }
+
+    private void mapTamedOption(ConfigurationSection options, String srcFile,
+                                List<Map<String, Object>> entries, YamlConfiguration target,
+                                String normalizedType) {
+        Object raw = ciGet(options, "Tamed");
+        if ("CAMEL".equals(normalizedType) && Boolean.FALSE.equals(parseBooleanOption(raw))) {
+            String path = "entity.unsupported.Options.Tamed";
+            target.set(path, raw);
+            note(entries, srcFile, "Options.Tamed", path, raw, "unsupported",
+                    "Bukkit Camel always reports Tamed=true; the requested false state cannot be represented and is preserved.",
+                    "WARN");
+            return;
+        }
+        mapEntityScopedOption(options, srcFile, entries, target, "Tamed",
+                "entity.tamed", normalizedType, MythicMobsImporter::isBooleanOptionValue,
+                org.bukkit.entity.Tameable.class);
     }
 
     private void mapTameableOption(ConfigurationSection options,

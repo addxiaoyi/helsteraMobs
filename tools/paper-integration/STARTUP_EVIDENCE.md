@@ -1,6 +1,24 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-tameable-families-strict-20261111-r2` passed the full strict gate on Paper 1.21.1-133:
+Latest fixture `srv-paper-tameable-families-strict-20261111-r3` passed the full strict gate on Paper 1.21.1-133:
+431 registered probes, 412 passed, 19 expected rejections, and zero failed or
+incomplete. The dedicated `tamedFamilyOptions` probe imports `Options.Tamed`
+for Donkey, Mule, Llama, Trader Llama, Skeleton Horse, Zombie Horse, and Camel
+through production spawning. Donkey, Mule, Llama, Trader Llama, Skeleton Horse,
+and Zombie Horse each read back true/false control states. Paper 1.21.1 always
+reports Camel as tamed, so imported `Tamed:false` is retained under
+`entity.unsupported.Options.Tamed` with a warning; Camel true reads back as
+tamed. Earlier strict fixtures cover Wolf, Cat, Horse, and Parrot. Plugin
+SHA-256: `6a2811b446426eeb3bc4eb18946143f92a2a68ebc55fb1cc28e6d478ba9a8779`.
+Report: [paper-1.21.1-tameable-families-strict-20261111-r3.json](reports/paper-1.21.1-tameable-families-strict-20261111-r3.json), SHA-256:
+`d0b88acdb37fa8d6d16c7a15c026f4ba8ed1165f20f85b920754b72ca3c2c588`. Compressed
+redacted server log: [paper-1.21.1-tameable-families-strict-20261111-r3.log.gz](reports/paper-1.21.1-tameable-families-strict-20261111-r3.log.gz), SHA-256:
+`a7e54bf8ef26848ff8eded4fce628ee3d491e9ed5f465cfb9a929027c89279b2`. Client
+log archive: [paper-1.21.1-tameable-families-strict-20261111-r3-client-logs.tar.gz](reports/paper-1.21.1-tameable-families-strict-20261111-r3-client-logs.tar.gz), SHA-256:
+`9b77621c915f2d4532b3e83365b55383a4a4d055edbd071c32d5850d3ddb487c`. Archived
+logs redact token query values.
+
+Previous fixture `srv-paper-tameable-families-strict-20261111-r2` passed the full strict gate on Paper 1.21.1-133:
 430 registered probes, 411 passed, 19 expected rejections, and zero failed or
 incomplete. The `entityFlagOptions` probe imports `Options.Tamed` on Cat, Horse,
 and Parrot through production spawning and reads back true/false states for all

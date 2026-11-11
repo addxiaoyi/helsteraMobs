@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-tameable-families-strict-20261111-r3",
+    "reportFixtureDirectory": "srv-paper-tameable-families-strict-20261111-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r3.json",
+    "reportSha256": "d0b88acdb37fa8d6d16c7a15c026f4ba8ed1165f20f85b920754b72ca3c2c588",
+    "log": "tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r3.log.gz",
+    "logSha256": "a7e54bf8ef26848ff8eded4fce628ee3d491e9ed5f465cfb9a929027c89279b2",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r3-client-logs.tar.gz",
+    "clientLogSha256": "9b77621c915f2d4532b3e83365b55383a4a4d055edbd071c32d5850d3ddb487c",
+    "pluginSha256": "6a2811b446426eeb3bc4eb18946143f92a2a68ebc55fb1cc28e6d478ba9a8779",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-tameable-families-strict-20261111-r2",
     "reportFixtureDirectory": "srv-paper-tameable-families-strict-20261111-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r2.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-tameable-families-strict-20261111-r2-client-logs.tar.gz",
     "clientLogSha256": "fe5862e38e12c2560eec32fc05e2a4116c593ba71654e6516eda7bdaf4aa4712",
     "pluginSha256": "70f007403ff552aebac595542f52ed0b3028c14206fc56bdac56c6186045f821",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-tameable-families-strict-20261111-r3"
   },
   {
     "fixtureId": "srv-paper-steerable-saddles-strict-20261111-r1",
