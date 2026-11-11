@@ -119,6 +119,7 @@ $probeSpecs = [ordered]@{
     ageOptions = 'age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true'
     entityFlagOptions = 'entity-flag-options result=true imported=true wolf-tamed=true cat-tamed=true control-cat-tamed=false horse-tamed=true control-horse-tamed=false parrot-tamed=true control-parrot-tamed=false wolf-angry=true pig-zombie-angry=true can-join-raid-setter=true can-join-raid=false control-can-join-raid=true patrol-leader=true patrol-spawn-point=true wrong-type-preserved=true'
     booleanMobOptionsImported = 'boolean-mob-options-imported result=true imported=true configured=true controls=true invalid-preserved=true entity-states=true'
+    preventRandomEquipmentImported = 'prevent-random-equipment-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true random-cleared=true explicit-equipment-preserved=true control-preserved=true invalid-fallback=true'
     glowingOptionImported = 'glowing-option-imported result=true imported=true enabled-configured=true control-configured=true invalid-preserved=true enabled-entity=true control-entity=true invalid-entity=true'
     experienceOrbOptions = 'experience-orb-options result=true imported=true experience=17 wrong-type-preserved=true invalid-preserved=true'
     pandaOptions = 'panda-options result=true imported=true main-gene=LAZY hidden-gene=WORRIED control-main-gene=NORMAL control-hidden-gene=NORMAL wrong-type-preserved=true invalid-preserved=true'

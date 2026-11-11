@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-prevent-random-equipment-strict-20261111-r1",
+    "reportFixtureDirectory": "srv-paper-prevent-random-equipment-strict-20261111-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-prevent-random-equipment-strict-20261111-r1.json",
+    "reportSha256": "320ad2feb254792728daa03223759b9de12b9fdfb180dc152ff523b2220fbaa1",
+    "log": "tools/paper-integration/reports/paper-1.21.1-prevent-random-equipment-strict-20261111-r1.log.gz",
+    "logSha256": "5687081df90a43d974578d40f9eb804746052cc590153c1bfec814d510481a1f",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-prevent-random-equipment-strict-20261111-r1-client-logs.tar.gz",
+    "clientLogSha256": "1c9b72ce2122ce9bbd53ec5c3a08a65b22f4380653c1e6d12d9493e96a4f7b19",
+    "pluginSha256": "0e4d947ca3dbf4fc604dfda592f4c8bc5766a46073d00b7820df8a193f80b29e",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-boolean-mob-options-strict-20261111-r1",
     "reportFixtureDirectory": "srv-paper-boolean-mob-options-strict-20261111-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-boolean-mob-options-strict-20261111-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-boolean-mob-options-strict-20261111-r1-client-logs.tar.gz",
     "clientLogSha256": "3c83fb5cc50888c461328f67432d8f0d4426ffb594d9a2286913c7a6cab0ffa9",
     "pluginSha256": "92853e7bdb9ee657f46239a0221e4c5311854fb7d95f31700c183d682001e788",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-prevent-random-equipment-strict-20261111-r1"
   },
   {
     "fixtureId": "srv-paper-glowing-option-strict-20261111-r1",
