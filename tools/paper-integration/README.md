@@ -1,5 +1,16 @@
 # Isolated Paper Integration Server
 
+Latest strict fixture `srv-paper-visibility-options-strict-20261111-r1` passes all 430 probes (411 passed,
+19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
+`visibilityOptions` observation imports `VisibleByDefault`, `Invisible`, and
+`AlwaysShowName`, reads back the configured states from a production-spawned
+Zombie, and verifies inverse controls. Report:
+[`paper-1.21.1-visibility-options-strict-20261111-r1.json`](reports/paper-1.21.1-visibility-options-strict-20261111-r1.json)
+(SHA-256 `7c561d6c17a0286665f25b44847f96d3c11c39a8ecf4f44c6bab8ea951aafbb3`); compressed server log SHA-256 is
+`0cf72104920d7f2bda11429dffd44e9d65b0bb20bd184ec6507a892ba73a56f6`, client log archive SHA-256 is
+`83ec7374154df5b654b8d2050cee28362f6ff088a240a50f7a88381eab95954b`, and plugin SHA-256 is
+`24bf2350158faee75b207eef24dae2595a3cf1a5d49d1a2d3364e46eeedec28e`. Archived logs redact web-token query values.
+
 This fixture starts a disposable Paper 1.21.1 server in the repository root at
 `srv-paper-integration` (or the directory named by `PAPER_INTEGRATION_DIR`).
 Each run resets only that fixture's plugin data and
@@ -51,7 +62,7 @@ $env:PAPER_INTEGRATION_DIR = 'srv-paper-bee-stinger-isolated'
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/run-server.ps1 -RunSeconds 75
 ```
 
-Latest strict fixture `srv-paper-armor-stand-options-strict-20261110-r2` passes all 430 probes (411 passed,
+Previous strict fixture `srv-paper-armor-stand-options-strict-20261110-r2` passes all 430 probes (411 passed,
 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
 `armorStand` observation imports the Mythic mob config, reads back six flags
 and all six armor-stand equipment slots, checks default controls, and preserves

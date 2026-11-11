@@ -1,6 +1,15 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-armor-stand-options-strict-20261110-r2` passed the full strict gate on Paper 1.21.1-133:
+Latest fixture `srv-paper-visibility-options-strict-20261111-r1` passed the full strict gate on Paper 1.21.1-133:
+430 registered probes, 411 passed, 19 expected rejections, and zero failed or
+incomplete. The `visibilityOptions` probe imports Mythic `VisibleByDefault`,
+`Invisible`, and `AlwaysShowName` and reads back all configured values from a
+production-spawned Zombie alongside inverse controls. Plugin SHA-256: `24bf2350158faee75b207eef24dae2595a3cf1a5d49d1a2d3364e46eeedec28e`. Report:
+[paper-1.21.1-visibility-options-strict-20261111-r1.json](paper-1.21.1-visibility-options-strict-20261111-r1.json), SHA-256: `7c561d6c17a0286665f25b44847f96d3c11c39a8ecf4f44c6bab8ea951aafbb3`. Compressed server log:
+[paper-1.21.1-visibility-options-strict-20261111-r1.log.gz](paper-1.21.1-visibility-options-strict-20261111-r1.log.gz), SHA-256: `0cf72104920d7f2bda11429dffd44e9d65b0bb20bd184ec6507a892ba73a56f6`. Client log archive:
+[paper-1.21.1-visibility-options-strict-20261111-r1-client-logs.tar.gz](paper-1.21.1-visibility-options-strict-20261111-r1-client-logs.tar.gz), SHA-256: `83ec7374154df5b654b8d2050cee28362f6ff088a240a50f7a88381eab95954b`. Archived logs redact web-token query values.
+
+Previous fixture `srv-paper-armor-stand-options-strict-20261110-r2` passed the full strict gate on Paper 1.21.1-133:
 430 registered probes, 411 passed, 19 expected rejections, and zero failed or
 incomplete. The `armorStand` probe verifies all six imported Armor Stand flags
 and all six equipment slots (`ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`,

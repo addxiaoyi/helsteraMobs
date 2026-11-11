@@ -1881,7 +1881,8 @@
     },
     {
       "id": "visibilityOptions",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "visibility-options-imported result=true imported=true configured=true controls=true"
     },
     {
       "id": "weatherMechanic",

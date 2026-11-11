@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-visibility-options-strict-20261111-r1",
+    "reportFixtureDirectory": "srv-paper-visibility-options-strict-20261111-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-visibility-options-strict-20261111-r1.json",
+    "reportSha256": "7c561d6c17a0286665f25b44847f96d3c11c39a8ecf4f44c6bab8ea951aafbb3",
+    "log": "tools/paper-integration/reports/paper-1.21.1-visibility-options-strict-20261111-r1.log.gz",
+    "logSha256": "0cf72104920d7f2bda11429dffd44e9d65b0bb20bd184ec6507a892ba73a56f6",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-visibility-options-strict-20261111-r1-client-logs.tar.gz",
+    "clientLogSha256": "83ec7374154df5b654b8d2050cee28362f6ff088a240a50f7a88381eab95954b",
+    "pluginSha256": "24bf2350158faee75b207eef24dae2595a3cf1a5d49d1a2d3364e46eeedec28e",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-armor-stand-options-strict-20261110-r2",
     "reportFixtureDirectory": "srv-paper-armor-stand-options-strict-20261110-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-armor-stand-options-strict-20261110-r2.json",

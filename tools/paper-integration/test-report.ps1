@@ -211,6 +211,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-item-similarity-conditions entity-primary-mapped=true entity-alias-mapped=true entity-positive=true entity-alias-positive=true entity-negative=true entity-invalid-preserved=true inventory-primary-mapped=true inventory-alias-mapped=true inventory-positive=true inventory-alias-positive=true inventory-negative=true inventory-invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options result=true visible-by-default=true invisible=true show-name=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] visibility-options-imported result=true imported=true configured=true controls=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] age-options result=true age=-24000 baby=true adult=true age-lock=true zombie-baby=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options result=true can-move=false can-tick=false items=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] armor-stand-options-imported result=true imported=true configured=true controls=true item-body=true item-feet=true item-hand=true item-offhand=true item-head=true item-legs=true wrong-type-preserved=true invalid-preserved=true',
@@ -641,7 +642,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'dropUnsafeReferences').status -eq 'passed') 'unsafe drop references probe'
     Assert-True (($report.probes | Where-Object id -eq 'dropMergedNull').status -eq 'passed') 'merged null drop probe'
     Assert-True (($report.probes | Where-Object id -eq 'despawnOptions').status -eq 'passed') 'despawn option probe'
-    Assert-True (($report.probes | Where-Object id -eq 'visibilityOptions').status -eq 'passed') 'visibility option probe'
+    Assert-True (($report.probes | Where-Object id -eq 'visibilityOptions').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'visibilityOptions').observations[0] -match
+        '^visibility-options-imported result=true imported=true configured=true controls=true$') 'visibility option probe requires imported production Paper readback and inverse controls'
     Assert-True (($report.probes | Where-Object id -eq 'endermanHeldBlock').status -eq 'passed') 'Enderman held block option probe'
     Assert-True (($report.probes | Where-Object id -eq 'spawnOptionRuntime').status -eq 'passed') 'spawn option runtime probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobPickupOption').status -eq 'passed') 'mob pickup option probe'
@@ -1096,6 +1099,9 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogVisibility = @($fullCatalogReport.probes | Where-Object id -eq 'visibilityOptions')
+    Assert-True ($fullCatalogVisibility.Count -eq 1) 'synthetic full catalog contains the visibility options probe'
+    $fullCatalogVisibility[0].observations = @('visibility-options-imported result=true imported=true configured=true controls=true')
     $fullCatalogArmorStand = @($fullCatalogReport.probes | Where-Object id -eq 'armorStand')
     Assert-True ($fullCatalogArmorStand.Count -eq 1) 'synthetic full catalog contains the Armor Stand options probe'
     $fullCatalogArmorStand[0].observations = @(
