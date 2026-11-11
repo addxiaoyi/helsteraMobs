@@ -84,6 +84,7 @@ class HealthClampTest {
                 attack-cooldown: 0.5
                 move-speed: 0.4
                 threat-weight: 12
+                show-health-message: true
                 """));
         HelsteraPlugin.applyMobOptions(profile, yaml);
         assertEquals(40, profile.sightRadius, 1e-9);
@@ -91,6 +92,7 @@ class HealthClampTest {
         assertEquals(0.5, profile.attackCooldown, 1e-9);
         assertEquals(0.4, profile.moveSpeed, 1e-9);
         assertEquals(12, profile.threatDistanceWeight, 1e-9);
+        assertTrue(profile.showHealthMessage);
     }    @Test
     @DisplayName("despawn distance prefers explicit value then legacy spawning distance")
     void configuredDespawnDistancePrefersNewField() {

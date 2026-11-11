@@ -354,6 +354,34 @@ async function run() {
   }
 
   if (audienceReportPath) {
+    if (process.env.PAPER_SHOW_HEALTH_WORKFLOW === 'true') {
+      const healthDeadline = Date.now() + 15000;
+      const healthChatLines = () => events.filter(event => event.startsWith('chat:')
+        && event.includes('SHOW_HEALTH_PROBE|ShowHealthProbe|'));
+      const healthPercentLines = (percent) => healthChatLines().filter(event =>
+        new RegExp(`\\|${percent}\\|[0-9]+(?:\\.[0-9]+)?\\|100(?:\\.0+)?(?:$|\\s)`).test(event));
+      while (Date.now() < healthDeadline && healthChatLines().length < 3) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      const healthChats = healthChatLines();
+      const report = {
+        status: 'failed',
+        observations: {
+          nearPlayerReceivedFirstThreshold: healthPercentLines(89).length === 1,
+          nearPlayerReceivedSecondThreshold: healthPercentLines(79).length === 2,
+          outsidePlayerExcluded: !guestEvents.some(event => event.includes('SHOW_HEALTH_PROBE|')),
+          belowThresholdQuiet: healthPercentLines(95).length === 0,
+          withinBandQuiet: healthPercentLines(88).length === 0,
+          healingRearmedThreshold: healthPercentLines(79).length === 2
+        },
+        testerMessages: healthChats,
+        outsideMessages: guestEvents.filter(event => event.includes('SHOW_HEALTH_PROBE|'))
+      };
+      report.status = Object.values(report.observations).every(value => value === true) ? 'passed' : 'failed';
+      const showHealthLine = `PAPER_SHOW_HEALTH_CLIENT_REPORT ${JSON.stringify(report)}\n`;
+      fs.appendFileSync(audienceReportPath, showHealthLine, 'utf8');
+      console.log(showHealthLine.trim());
+    }
     bot.chat('MENU_FILTER_READY');
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
@@ -368,7 +396,7 @@ async function run() {
       };
       if (Object.values(audience.observations).every(value => value === true)) {
         const audienceLine = `PAPER_AUDIENCE_REPORT ${JSON.stringify(audience)}\n`;
-        fs.writeFileSync(audienceReportPath, audienceLine, 'utf8');
+        fs.appendFileSync(audienceReportPath, audienceLine, 'utf8');
         console.log(audienceLine.trim());
         break;
       }

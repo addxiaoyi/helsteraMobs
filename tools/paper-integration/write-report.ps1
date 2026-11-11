@@ -122,6 +122,7 @@ $probeSpecs = [ordered]@{
     villagerOptions = 'villager-options result=true imported=true type=DESERT profession=MASON level=4 has-trades=true trades-available=true control-type=PLAINS control-profession=LIBRARIAN control-level=2 control-has-trades=false no-trades=true acquire-allowed=true acquire-denied=true trading-interactable=true wrong-type-preserved=true invalid-preserved=true'
     parrotFlyingSpeed = 'parrot-flying-speed result=true imported=true configured=0\.8 sentinel-unchanged=true wrong-type-preserved=true invalid-preserved=true'
     passthroughDamageOptions = 'passthrough-damage result=true imported=true parent-linked=true transferred=true source-preserved=true disabled-control=true orphan-fallback=true cancelled-respected=true cycle-safe=true invalid-preserved=true'
+    showHealthDelivery = 'show-health-delivery result=true imported=true spawned=true first-crossing=true second-crossing=true healing-recross=true below-threshold-quiet=true inside-band-quiet=true near-inside=true outsider-outside=true .*environmental-damage=true entity-damage=true'
     endermanHeldBlock = 'enderman-held-block result=true material=OBSIDIAN'
     mobPickupOption = 'mob-pickup-option result=true disabled=true explicit-overrides-default=true'
     spawnOptionRuntime = 'spawn-option-runtime result=true pickup-disabled=true explicit-pickup-overrides-fallback=true random-equipment-cleared=true explicit-equipment-preserved=true no-damage-ticks=true'
@@ -447,6 +448,9 @@ $probeSpecs = [ordered]@{
 if ($env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW -ne 'true') {
     $probeSpecs.Remove('spawningDistanceClientWalk')
 }
+if ($env:PAPER_SHOW_HEALTH_WORKFLOW -ne 'true') {
+    $probeSpecs.Remove('showHealthDelivery')
+}
 $probes = @(
     foreach ($entry in $probeSpecs.GetEnumerator()) {
         $matches = [regex]::Matches($logText, $entry.Value)
@@ -587,6 +591,8 @@ $probes += [ordered]@{
 }
 
 $audienceClientLog = Join-Path $server 'audience-client.stdout.log'
+$showHealthClientStatus = 'not-observed'
+$showHealthClientObservation = 'ShowHealth client report missing'
 $audienceStatus = 'not-observed'
 $audienceObservation = 'client report missing'
 $filterStatus = 'not-observed'
@@ -627,6 +633,25 @@ if (Test-Path -LiteralPath $audienceClientLog -PathType Leaf) {
             $filterObservation = "invalid audience filter report: $($_.Exception.Message)"
         }
     }
+    if ($env:PAPER_SHOW_HEALTH_WORKFLOW -eq 'true') {
+        $showHealthLine = Get-Content -LiteralPath $audienceClientLog -Encoding utf8 |
+            Where-Object { $_ -match '^PAPER_SHOW_HEALTH_CLIENT_REPORT ' } | Select-Object -Last 1
+        if ($showHealthLine -match '^PAPER_SHOW_HEALTH_CLIENT_REPORT (.+)$') {
+            try {
+                $showHealth = $Matches[1] | ConvertFrom-Json
+                $showHealthClientObservation = $Matches[1]
+                $requiredShowHealth = @('nearPlayerReceivedFirstThreshold', 'nearPlayerReceivedSecondThreshold',
+                    'outsidePlayerExcluded', 'belowThresholdQuiet', 'withinBandQuiet', 'healingRearmedThreshold')
+                $allPassed = $showHealth.status -eq 'passed'
+                foreach ($field in $requiredShowHealth) {
+                    $allPassed = $allPassed -and $showHealth.observations.$field -eq $true
+                }
+                if ($allPassed) { $showHealthClientStatus = 'passed' }
+            } catch {
+                $showHealthClientObservation = "invalid client report: $($_.Exception.Message)"
+            }
+        }
+    }
 }
 $probes += [ordered]@{
     id = 'audience-player-delivery'
@@ -637,6 +662,13 @@ $probes += [ordered]@{
     id = 'audience-filter-delivery'
     status = $filterStatus
     observations = @($filterObservation)
+}
+if ($env:PAPER_SHOW_HEALTH_WORKFLOW -eq 'true') {
+    $probes += [ordered]@{
+        id = 'showHealthClientDelivery'
+        status = $showHealthClientStatus
+        observations = @($showHealthClientObservation)
+    }
 }
 
 # The raw potion client is opt-in. Register its probe only when the log proves
@@ -777,6 +809,8 @@ $report = [ordered]@{
         'interactableClient', 'audience-filter-delivery', 'random-spawn-distribution',
         'skillTeleportCoordinates') + $(if ($env:PAPER_WEB_RELOAD_PROBE -eq 'true') {
             @('webSpawnerReload')
+        } else { @() }) + $(if ($env:PAPER_SHOW_HEALTH_WORKFLOW -eq 'true') {
+            @('showHealthClientDelivery')
         } else { @() }) + $(if ($playerPotionConsumeRequested) {
             @('playerPotionConsume')
         } else { @() }) + $(if ($playerPotionNaturalExpiryRequested -or $playerPotionNaturalExpiryObserved) {

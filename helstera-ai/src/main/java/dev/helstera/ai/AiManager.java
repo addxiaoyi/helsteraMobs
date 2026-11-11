@@ -20,6 +20,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.plugin.Plugin;
@@ -75,6 +76,8 @@ public final class AiManager implements Listener {
      * 需要遍历所有实例才能得到，而目标选择与伤害过滤都在热路径上。</p>
      */
     private final FactionService factions = new FactionService();
+    private volatile double showHealthRadius = ShowHealthMessage.DEFAULT_RADIUS;
+    private volatile String showHealthFormat = ShowHealthMessage.DEFAULT_FORMAT;
 
     public FactionService factions() {
         return factions;
@@ -129,6 +132,13 @@ public final class AiManager implements Listener {
     public void setSkills(dev.helstera.ai.skill.SkillService skills) {
         this.skills = skills;
         installConditionalTargeterProvider();
+    }
+
+    /** Configures global MythicMobs ShowHealth radius and message format. */
+    public void setShowHealthMessageSettings(double radius, String format) {
+        if (Double.isFinite(radius) && radius >= 0) this.showHealthRadius = radius;
+        this.showHealthFormat = format == null || format.isBlank()
+                ? ShowHealthMessage.DEFAULT_FORMAT : format;
     }
 
     /** Injects the canonical condition binder used by conditional selectors. */
@@ -709,18 +719,41 @@ public final class AiManager implements Listener {
         }
     }
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onDamage(EntityDamageByEntityEvent e) {
+    public void onDamage(EntityDamageEvent e) {
         ModelInstanceImpl inst = findByEntity(e.getEntity());
         if (inst != null) {
             AiController c = controllers.get(inst.instanceId());
             // 传实际结算伤害（已扣除护甲/抗性）：威胁按真实扣血计，
             // 否则高护甲目标会凭空拿到成倍仇恨
-            if (c != null) {
-                c.onDamaged(DamageSourceResolver.resolve(e.getDamager()),
+            if (c != null && e instanceof EntityDamageByEntityEvent byEntity) {
+                c.onDamaged(DamageSourceResolver.resolve(byEntity.getDamager()),
                         Math.max(0, e.getFinalDamage()));
             }
             // Boss 血条更新：挂在同一条路径上，避免血条与仇恨脱节
             updateBossBar(inst);
+            if (inst.baseEntity().orElse(null) instanceof LivingEntity living) {
+                updateShowHealthMessage(living, profileOf(inst.instanceId()), e.getFinalDamage());
+            }
+        }
+    }
+
+    private void updateShowHealthMessage(LivingEntity mob, AiProfile profile, double damage) {
+        if (profile == null || !profile.showHealthMessage || !Double.isFinite(damage) || damage <= 0) return;
+        double maximum = mob.getMaxHealth();
+        double before = mob.getHealth();
+        double after = Math.max(0, before - damage);
+        if (!ShowHealthMessage.crossedThreshold(before, after, maximum)) return;
+        double radius = showHealthRadius;
+        if (!Double.isFinite(radius) || radius < 0 || mob.getWorld() == null) return;
+        String name = mob.getCustomName();
+        if (name == null || name.isBlank()) name = mob.getType().name();
+        String message = ShowHealthMessage.render(showHealthFormat, name, after, maximum);
+        double radiusSquared = radius * radius;
+        var location = mob.getLocation();
+        for (Player player : mob.getWorld().getPlayers()) {
+            if (player.getLocation().distanceSquared(location) <= radiusSquared) {
+                player.sendMessage(message);
+            }
         }
     }
 

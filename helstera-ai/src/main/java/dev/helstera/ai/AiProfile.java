@@ -119,6 +119,9 @@ public final class AiProfile {
     /** Boss 血条配置；null 表示未配置。 */
     public dev.helstera.ai.bossbar.BossBarConfig.Parsed bossBar;
 
+    /** MythicMobs ShowHealth compatibility; emits a chat message on each 10% health threshold. */
+    public boolean showHealthMessage = false;
+
     /** 编译后的规则表；null 表示未配置。不可变，可安全跨事件复用。 */
     private transient dev.helstera.ai.immunity.ImmunityService.Table immunityTable;
 

@@ -1193,7 +1193,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "UseThreatTable", "ai.threat-enabled");
             mapOption(options, srcFile, entries, target, "SpawningDistance", "mob.spawning-distance");
             mapOption(options, srcFile, entries, target, "Scale", "scale");
-            mapOption(options, srcFile, entries, target, "ShowHealth", "show-health-bar");
+            mapBooleanOption(options, srcFile, entries, target, "ShowHealth", "mob.show-health-message");
             mapOption(options, srcFile, entries, target, "Silent", "entity.silent");
             mapOption(options, srcFile, entries, target, "Invisible", "entity.invisible");
             mapOption(options, srcFile, entries, target, "NoAI", "entity.no-ai");

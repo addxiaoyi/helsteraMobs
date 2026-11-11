@@ -19,12 +19,17 @@ debug:
   self-test-execution-audience-persistence-stage: write
   self-test-skilltree-persistence: false
   self-test-skilltree-stage: write
+  self-test-show-health: false
 web:
   enabled: false
 compatibility:
   mythicmobs: false
   itemadder: false
   craftengine: false
+mythic-parity:
+  show-health:
+    radius: 25
+    format: 'SHOW_HEALTH_PROBE|$mobname|$percent|$mobhp|$mobmaxhp'
 ai:
   factions:
     players: guards

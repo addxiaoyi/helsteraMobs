@@ -1925,6 +1925,16 @@
     {
       "id": "worldBiomeReject",
       "status": "passed"
+    },
+    {
+      "id": "showHealthDelivery",
+      "status": "passed",
+      "requiredObservationPattern": "^show-health-delivery result=true imported=true spawned=true first-crossing=true second-crossing=true healing-recross=true below-threshold-quiet=true inside-band-quiet=true near-inside=true outsider-outside=true radius=[0-9]+(?:\\.[0-9]+)? environmental-damage=true entity-damage=true$"
+    },
+    {
+      "id": "showHealthClientDelivery",
+      "status": "passed",
+      "requiredObservationPattern": "\\\"nearPlayerReceivedFirstThreshold\\\":true.*\\\"nearPlayerReceivedSecondThreshold\\\":true.*\\\"outsidePlayerExcluded\\\":true.*\\\"belowThresholdQuiet\\\":true.*\\\"withinBandQuiet\\\":true.*\\\"healingRearmedThreshold\\\":true"
     }
   ]
 }
