@@ -358,7 +358,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'horseOptionsImported'
     $fullReport.probes += [pscustomobject]@{
-        id = 'horseOptionsImported'; status = 'passed'; observations = @('horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4')
+        id = 'horseOptionsImported'; status = 'passed'; observations = @('horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 saddled=true armor=DIAMOND_HORSE_ARMOR control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4 control-saddled=false control-armor=AIR')
     }
     $fullReport.expectedProbeIds += 'interactionOptionsImported'
     $fullReport.probes += [pscustomobject]@{

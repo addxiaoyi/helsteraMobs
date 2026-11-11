@@ -1,13 +1,23 @@
 # Paper Startup Evidence
 
-Latest fixture `srv-paper-visibility-options-strict-20261111-r1` passed the full strict gate on Paper 1.21.1-133:
+Latest fixture `srv-paper-horse-saddle-import-strict-20261111-r1` passed the full strict gate on Paper 1.21.1-133:
+430 registered probes, 411 passed, 19 expected rejections, and zero failed or
+incomplete. The `horseOptionsImported` probe imports Mythic `Saddled` and
+`HorseArmor`, reads back a real saddle and `DIAMOND_HORSE_ARMOR`, and verifies
+explicit unsaddled/no-armor controls alongside the Horse variant and stat
+options. Plugin SHA-256: `1992e34073f4960b0e8a4b76c8d345fa2a4eec308382e1bd47847fbe2529dd38`. Report:
+[paper-1.21.1-horse-saddle-import-strict-20261111-r1.json](reports/paper-1.21.1-horse-saddle-import-strict-20261111-r1.json), SHA-256: `efc6f9f9d07359d95c505cd3ed54fe8178ee0eb2ebafdd452d48e07c7cc60e09`. Compressed server log:
+[paper-1.21.1-horse-saddle-import-strict-20261111-r1.log.gz](reports/paper-1.21.1-horse-saddle-import-strict-20261111-r1.log.gz), SHA-256: `f72d8bc6d283997332d7a837cd6eca25a36424dcb97e65ad9055b1dde29f0314`. Client log archive:
+[paper-1.21.1-horse-saddle-import-strict-20261111-r1-client-logs.tar.gz](reports/paper-1.21.1-horse-saddle-import-strict-20261111-r1-client-logs.tar.gz), SHA-256: `8346b45eaca25f09732c2ee517067822312617fd8ab98a54b71343e988f00caf`. Archived logs redact web-token query values.
+
+Previous fixture `srv-paper-visibility-options-strict-20261111-r1` passed the full strict gate on Paper 1.21.1-133:
 430 registered probes, 411 passed, 19 expected rejections, and zero failed or
 incomplete. The `visibilityOptions` probe imports Mythic `VisibleByDefault`,
 `Invisible`, and `AlwaysShowName` and reads back all configured values from a
 production-spawned Zombie alongside inverse controls. Plugin SHA-256: `24bf2350158faee75b207eef24dae2595a3cf1a5d49d1a2d3364e46eeedec28e`. Report:
-[paper-1.21.1-visibility-options-strict-20261111-r1.json](paper-1.21.1-visibility-options-strict-20261111-r1.json), SHA-256: `7c561d6c17a0286665f25b44847f96d3c11c39a8ecf4f44c6bab8ea951aafbb3`. Compressed server log:
-[paper-1.21.1-visibility-options-strict-20261111-r1.log.gz](paper-1.21.1-visibility-options-strict-20261111-r1.log.gz), SHA-256: `0cf72104920d7f2bda11429dffd44e9d65b0bb20bd184ec6507a892ba73a56f6`. Client log archive:
-[paper-1.21.1-visibility-options-strict-20261111-r1-client-logs.tar.gz](paper-1.21.1-visibility-options-strict-20261111-r1-client-logs.tar.gz), SHA-256: `83ec7374154df5b654b8d2050cee28362f6ff088a240a50f7a88381eab95954b`. Archived logs redact web-token query values.
+[paper-1.21.1-visibility-options-strict-20261111-r1.json](reports/paper-1.21.1-visibility-options-strict-20261111-r1.json), SHA-256: `7c561d6c17a0286665f25b44847f96d3c11c39a8ecf4f44c6bab8ea951aafbb3`. Compressed server log:
+[paper-1.21.1-visibility-options-strict-20261111-r1.log.gz](reports/paper-1.21.1-visibility-options-strict-20261111-r1.log.gz), SHA-256: `0cf72104920d7f2bda11429dffd44e9d65b0bb20bd184ec6507a892ba73a56f6`. Client log archive:
+[paper-1.21.1-visibility-options-strict-20261111-r1-client-logs.tar.gz](reports/paper-1.21.1-visibility-options-strict-20261111-r1-client-logs.tar.gz), SHA-256: `83ec7374154df5b654b8d2050cee28362f6ff088a240a50f7a88381eab95954b`. Archived logs redact web-token query values.
 
 Previous fixture `srv-paper-armor-stand-options-strict-20261110-r2` passed the full strict gate on Paper 1.21.1-133:
 430 registered probes, 411 passed, 19 expected rejections, and zero failed or

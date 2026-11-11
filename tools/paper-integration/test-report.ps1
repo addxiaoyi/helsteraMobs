@@ -61,7 +61,7 @@ try {
         '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
         '[Server thread/INFO]: [helsteraMobs] [自检] creeper-options result=true imported=true explosion-radius=5 fuse-ticks=60 super-charged=true prevent-suicide=true protected-cancelled=true control-allowed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] cat-options result=true imported=true type=SIAMESE sitting=true collar=BLUE control-type=TABBY control-sitting=false control-collar=RED',
-        '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4',
+        '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 saddled=true armor=DIAMOND_HORSE_ARMOR control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4 control-saddled=false control-armor=AIR',
         '[Server thread/INFO]: [helsteraMobs] [自检] fox-options result=true imported=true type=SNOW control-type=RED wrong-type-preserved=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] rabbit-options result=true imported=true type=SALT_AND_PEPPER control-type=BROWN killer-type=THE_KILLER_BUNNY angry-type=THE_KILLER_BUNNY false-killer-type=SALT_AND_PEPPER wrong-type-preserved=true invalid-preserved=true conflict-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] falling-block-options-imported result=true imported=true material=OBSIDIAN control-material=SAND drop-item=false hurt-entities=true cancel-drop=true wrong-type-preserved=true invalid-preserved=true',
@@ -671,13 +671,13 @@ try {
         'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
         '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
         '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
-        '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4'
+        '[Server thread/INFO]: [helsteraMobs] [自检] horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 saddled=true armor=DIAMOND_HORSE_ARMOR control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4 control-saddled=false control-armor=AIR'
     ) -Encoding utf8
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $horseOptionsTemp | Out-Null
     $horseOptionsReport = Get-Content -LiteralPath (Join-Path $horseOptionsTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
     Assert-True (($horseOptionsReport.probes | Where-Object id -eq 'horseOptionsImported').status -eq 'passed' -and
         ($horseOptionsReport.probes | Where-Object id -eq 'horseOptionsImported').observations[0] -match
-        'imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0\.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0\.4') 'report writer requires imported Horse option evidence'
+        'imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0\.8 saddled=true armor=DIAMOND_HORSE_ARMOR control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0\.4 control-saddled=false control-armor=AIR') 'report writer requires imported Horse option evidence including saddle and armor controls'
     $interactionOptionsTemp = Join-Path $temp 'interaction-options-fixture'
     $interactionOptionsLogDirectory = Join-Path $interactionOptionsTemp 'logs'
     New-Item -ItemType Directory -Path $interactionOptionsLogDirectory -Force | Out-Null
@@ -1331,7 +1331,7 @@ try {
         'sheep-options result=true imported=true color=RED sheared=true control-color=WHITE control-sheared=false')
     $fullCatalogReport.expectedProbeIds += 'horseOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'horseOptionsImported'; status = 'passed'; observations = @('horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4')
+        id = 'horseOptionsImported'; status = 'passed'; observations = @('horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 saddled=true armor=DIAMOND_HORSE_ARMOR control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4 control-saddled=false control-armor=AIR')
     }
     $fullCatalogReport.expectedProbeIds += 'beeOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -2243,7 +2243,7 @@ try {
     Assert-True $incompleteSheepOptionsRejected 'full release gate rejects incomplete imported Sheep option evidence'
     $fullCatalogSheepOptions[0].observations = $sheepOptionsObservations
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
-    $horseOptionsObservations = $fullCatalogHorseOptions[0].observations
+    $horseOptionsObservations = @('horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0.8 saddled=true armor=DIAMOND_HORSE_ARMOR control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0.4 control-saddled=false control-armor=AIR')
     $fullCatalogHorseOptions[0].observations = @('horse-options result=true')
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $incompleteHorseOptionsRejected = $false

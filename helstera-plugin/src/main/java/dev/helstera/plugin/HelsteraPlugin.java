@@ -5248,6 +5248,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                           Domestication: 5
                           MaxDomestication: 20
                           JumpStrength: 0.8
+                          Saddled: true
+                          HorseArmor: DIAMOND_HORSE_ARMOR
                       %2$s:
                         Type: HORSE
                         Options:
@@ -5256,6 +5258,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                           Domestication: 1
                           MaxDomestication: 12
                           JumpStrength: 0.4
+                          Saddled: false
                     """.formatted(configuredMobId, controlMobId));
 
             var converted = new MythicMobsImporter().convert(source, sourceRoot);
@@ -5315,22 +5318,43 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && configuredOptions.getInt("horse-domestication", -1) == 5
                     && configuredOptions.getInt("horse-max-domestication", -1) == 20
                     && Math.abs(configuredOptions.getDouble("horse-jump-strength", Double.NaN) - 0.8) < 1.0e-9
+                    && configuredOptions.getBoolean("saddled")
+                    && "DIAMOND_HORSE_ARMOR".equalsIgnoreCase(configuredOptions.getString("horse-armor"))
                     && "BLACK".equalsIgnoreCase(controlOptions.getString("horse-color"))
                     && "BLACK_DOTS".equalsIgnoreCase(controlOptions.getString("horse-style"))
                     && controlOptions.getInt("horse-domestication", -1) == 1
                     && controlOptions.getInt("horse-max-domestication", -1) == 12
-                    && Math.abs(controlOptions.getDouble("horse-jump-strength", Double.NaN) - 0.4) < 1.0e-9;
+                    && Math.abs(controlOptions.getDouble("horse-jump-strength", Double.NaN) - 0.4) < 1.0e-9
+                    && controlOptions.contains("saddled") && !controlOptions.getBoolean("saddled")
+                    && !controlOptions.contains("horse-armor");
+            var configuredSaddle = configuredHorse == null ? null : configuredHorse.getInventory().getSaddle();
+            var configuredArmor = configuredHorse == null ? null : configuredHorse.getInventory().getArmor();
+            var controlSaddle = controlHorse == null ? null : controlHorse.getInventory().getSaddle();
+            var controlArmor = controlHorse == null ? null : controlHorse.getInventory().getArmor();
+            boolean configuredSaddled = configuredSaddle != null
+                    && configuredSaddle.getType() == org.bukkit.Material.SADDLE;
+            boolean controlSaddled = controlSaddle != null
+                    && controlSaddle.getType() == org.bukkit.Material.SADDLE;
+            String configuredArmorName = configuredArmor == null || configuredArmor.getType().isAir()
+                    ? "AIR" : configuredArmor.getType().name();
+            String controlArmorName = controlArmor == null || controlArmor.getType().isAir()
+                    ? "AIR" : controlArmor.getType().name();
             boolean applied = imported
                     && configuredHorse.getColor() == org.bukkit.entity.Horse.Color.GRAY
                     && configuredHorse.getStyle() == org.bukkit.entity.Horse.Style.WHITE_DOTS
                     && configuredHorse.getDomestication() == 5
                     && configuredHorse.getMaxDomestication() == 20
                     && Math.abs(configuredHorse.getJumpStrength() - 0.8) < 1.0e-9
+                    && configuredSaddled
+                    && configuredArmor != null
+                    && configuredArmor.getType() == org.bukkit.Material.DIAMOND_HORSE_ARMOR
                     && controlHorse.getColor() == org.bukkit.entity.Horse.Color.BLACK
                     && controlHorse.getStyle() == org.bukkit.entity.Horse.Style.BLACK_DOTS
                     && controlHorse.getDomestication() == 1
                     && controlHorse.getMaxDomestication() == 12
-                    && Math.abs(controlHorse.getJumpStrength() - 0.4) < 1.0e-9;
+                    && Math.abs(controlHorse.getJumpStrength() - 0.4) < 1.0e-9
+                    && !controlSaddled
+                    && "AIR".equals(controlArmorName);
             getLogger().info("[自检] horse-options result=" + (imported && applied)
                     + " imported=" + imported
                     + " color=" + (configuredHorse == null ? "missing" : configuredHorse.getColor().name())
@@ -5338,11 +5362,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " domestication=" + (configuredHorse == null ? -1 : configuredHorse.getDomestication())
                     + " max-domestication=" + (configuredHorse == null ? -1 : configuredHorse.getMaxDomestication())
                     + " jump-strength=" + (configuredHorse == null ? "missing" : configuredHorse.getJumpStrength())
+                    + " saddled=" + configuredSaddled
+                    + " armor=" + configuredArmorName
                     + " control-color=" + (controlHorse == null ? "missing" : controlHorse.getColor().name())
                     + " control-style=" + (controlHorse == null ? "missing" : controlHorse.getStyle().name())
                     + " control-domestication=" + (controlHorse == null ? -1 : controlHorse.getDomestication())
                     + " control-max-domestication=" + (controlHorse == null ? -1 : controlHorse.getMaxDomestication())
-                    + " control-jump-strength=" + (controlHorse == null ? "missing" : controlHorse.getJumpStrength()));
+                    + " control-jump-strength=" + (controlHorse == null ? "missing" : controlHorse.getJumpStrength())
+                    + " control-saddled=" + controlSaddled
+                    + " control-armor=" + controlArmorName);
         } catch (Throwable failure) {
             getLogger().warning("[自检] horse-options result=false error=" + failure);
         } finally {

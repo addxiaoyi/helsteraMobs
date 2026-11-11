@@ -1,6 +1,18 @@
 # Isolated Paper Integration Server
 
-Latest strict fixture `srv-paper-visibility-options-strict-20261111-r1` passes all 430 probes (411 passed,
+Latest strict fixture `srv-paper-horse-saddle-import-strict-20261111-r1` passes all 430 probes (411 passed,
+19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
+`horseOptionsImported` probe imports `Saddled: true` and
+`HorseArmor: DIAMOND_HORSE_ARMOR`, reads back the saddle and armor from a real
+production-spawned Horse, and verifies explicit unsaddled/no-armor controls
+alongside color, style, domestication, and jump strength. Report:
+[`paper-1.21.1-horse-saddle-import-strict-20261111-r1.json`](reports/paper-1.21.1-horse-saddle-import-strict-20261111-r1.json)
+(SHA-256 `efc6f9f9d07359d95c505cd3ed54fe8178ee0eb2ebafdd452d48e07c7cc60e09`); compressed server log SHA-256 is
+`f72d8bc6d283997332d7a837cd6eca25a36424dcb97e65ad9055b1dde29f0314`, client log archive SHA-256 is
+`8346b45eaca25f09732c2ee517067822312617fd8ab98a54b71343e988f00caf`, and plugin SHA-256 is
+`1992e34073f4960b0e8a4b76c8d345fa2a4eec308382e1bd47847fbe2529dd38`. Archived logs redact web-token query values.
+
+Previous strict fixture `srv-paper-visibility-options-strict-20261111-r1` passes all 430 probes (411 passed,
 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. Its
 `visibilityOptions` observation imports `VisibleByDefault`, `Invisible`, and
 `AlwaysShowName`, reads back the configured states from a production-spawned
