@@ -28,7 +28,7 @@ public interface IntegrationAdapter {
     /** 是否已连接（插件存在且版本匹配、钩子启用成功）。 */
     boolean isConnected();
 
-    /** 缺失依赖/初始化失败的报告，未连接时非空。 */
+    /** 缺失依赖/初始化失败的报告；首次启用前或 disable 清理后可以为空。 */
     String statusReport();
 
     /** 启用钩子（软依赖，失败不得抛出）。返回是否成功。 */

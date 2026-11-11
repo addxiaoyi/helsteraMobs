@@ -1413,7 +1413,9 @@ Latest strict report has 439 probes, zero incomplete.
 12. **External integrations**: define versions and contracts for Vault,
     MythicCrucible, MMOItems, ModelEngine, ItemAdder, CraftEngine, MythicMobs,
     and WorldGuard; require installed-plugin runtime evidence or retain the
-    `blocked-by-external-plugin` status.
+    `blocked-by-external-plugin` status. The current adapter lifecycle,
+    capability, fallback, and conformance requirements are defined in the
+    [External Plugin Integration Contract](docs/EXTERNAL_PLUGIN_INTEGRATION_CONTRACT.md).
 13. **Version matrix**: declare supported Paper/Minecraft combinations and run
     key strict workflows per combination; Paper 1.21.1 evidence does not imply
     compatibility with other versions or servers.
