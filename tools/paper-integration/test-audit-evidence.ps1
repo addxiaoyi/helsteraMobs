@@ -559,7 +559,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'legacyNumericItems'
     $fullReport.probes += [pscustomobject]@{
-        id = 'legacyNumericItems'; status = 'passed'; observations = @('legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true')
+        id = 'legacyNumericItems'; status = 'passed'; observations = @('legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true legacy-id-boundaries=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true')
     }
     $fullReport.expectedProbeIds += 'itemMetadata'
     $fullReport.probes += [pscustomobject]@{

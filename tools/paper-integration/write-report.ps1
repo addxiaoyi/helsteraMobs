@@ -139,7 +139,7 @@ $probeSpecs = [ordered]@{
     itemAttributes = 'item-attribute-options result=true modifiers=1'
     itemAttributesComposite = 'item-attribute-options-composite result=true attack=true speed=true armor=true dedup=true invalid-rejected=true modifiers=3'
     itemMetadata = 'item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true(?: flag-values=\[[^]]*\])? restrictions=true potion=true skull=true invalid-preserved=true result=true'
-    legacyNumericItems = 'legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true'
+    legacyNumericItems = 'legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true legacy-id-boundaries=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true'
     skillEquipment = 'skill-actions equipment=true'
     playerExperienceMechanics = 'skill-actions .*player-experience-mechanics=true'
     oxygenMechanic = 'skill-actions .*oxygen-mechanic=true'
