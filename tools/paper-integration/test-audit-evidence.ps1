@@ -601,6 +601,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'booleanMobOptionsImported'; status = 'passed'; observations = @('boolean-mob-options-imported result=true imported=true configured=true controls=true invalid-preserved=true entity-states=true')
     }
+    $fullReport.expectedProbeIds += 'preventRandomEquipmentImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'preventRandomEquipmentImported'; status = 'passed'; observations = @('prevent-random-equipment-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true random-cleared=true explicit-equipment-preserved=true control-preserved=true invalid-fallback=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

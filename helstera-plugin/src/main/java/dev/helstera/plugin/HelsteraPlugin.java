@@ -2888,6 +2888,166 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
         runImportedBooleanMobOptionsSelfTest(origin.clone().add(2, 0, 0));
+        runImportedRandomEquipmentSelfTest(origin.clone().add(8, 0, 0));
+    }
+
+    private void runImportedRandomEquipmentSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-random-equipment-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("random-equipment.yml");
+            String enabledId = "RandomEquipmentEnabled_" + suffix;
+            String controlId = "RandomEquipmentControl_" + suffix;
+            String invalidId = "RandomEquipmentInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventRandomEquipment: true
+                      %2$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventRandomEquipment: false
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventRandomEquipment: maybe
+                    """.formatted(enabledId, controlId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe random-equipment mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite random-equipment mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                if (enabledId.equals(String.valueOf(entry.get("source-mob-id")))) {
+                    importedConfig.set("entity.items.main-hand", "DIAMOND_SWORD");
+                }
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(enabledId, controlId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic PreventRandomEquipment fixtures were not all imported");
+            }
+
+            var locations = java.util.List.of(origin, origin.clone().add(2, 0, 0),
+                    origin.clone().add(4, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var enabledConfig = mobConfig(targetIds.get(enabledId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var invalidOptions = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean configured = enabledConfig != null
+                    && enabledConfig.getBoolean("entity.prevent-random-equipment")
+                    && "DIAMOND_SWORD".equals(enabledConfig.getString("entity.items.main-hand"));
+            boolean controls = controlConfig != null
+                    && !controlConfig.getBoolean("entity.prevent-random-equipment", true);
+            boolean invalidPreserved = invalidOptions != null
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("PreventRandomEquipment"))
+                    && invalidConfig.getConfigurationSection("entity") != null
+                    && !invalidConfig.getConfigurationSection("entity").contains("prevent-random-equipment");
+
+            var enabledInstance = instances().impl(spawnedIds.get(enabledId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            var enabledEntity = enabledInstance == null ? null : enabledInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var controlEntity = controlInstance == null ? null : controlInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var invalidEntity = invalidInstance == null ? null : invalidInstance.baseEntity()
+                    .filter(org.bukkit.entity.LivingEntity.class::isInstance)
+                    .map(org.bukkit.entity.LivingEntity.class::cast).orElse(null);
+            var enabledEquipment = enabledEntity == null ? null : enabledEntity.getEquipment();
+            var controlEquipment = controlEntity == null ? null : controlEntity.getEquipment();
+            var invalidEquipment = invalidEntity == null ? null : invalidEntity.getEquipment();
+            var enabledSpawnOptions = enabledInstance == null ? null : enabledInstance.options();
+            var controlSpawnOptions = controlInstance == null ? null : controlInstance.options();
+            var invalidSpawnOptions = invalidInstance == null ? null : invalidInstance.options();
+            boolean policies = enabledSpawnOptions != null && enabledSpawnOptions.preventRandomEquipment()
+                    && controlSpawnOptions != null && !controlSpawnOptions.preventRandomEquipment()
+                    && invalidSpawnOptions != null && !invalidSpawnOptions.preventRandomEquipment();
+
+            if (enabledEquipment != null && controlEquipment != null && invalidEquipment != null) {
+                for (var equipment : java.util.List.of(enabledEquipment, controlEquipment, invalidEquipment)) {
+                    equipment.setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_SWORD));
+                    equipment.setItemInOffHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+                    equipment.setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_HELMET));
+                    equipment.setChestplate(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_CHESTPLATE));
+                    equipment.setLeggings(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_LEGGINGS));
+                    equipment.setBoots(new org.bukkit.inventory.ItemStack(org.bukkit.Material.CHAINMAIL_BOOTS));
+                }
+                applyRandomEquipmentPolicy(enabledEntity, enabledSpawnOptions);
+                applyEntityEquipment(enabledEntity, enabledConfig.getConfigurationSection("entity"));
+                applyRandomEquipmentPolicy(controlEntity, controlSpawnOptions);
+                applyEntityEquipment(controlEntity, controlConfig.getConfigurationSection("entity"));
+                applyRandomEquipmentPolicy(invalidEntity, invalidSpawnOptions);
+                applyEntityEquipment(invalidEntity, invalidConfig.getConfigurationSection("entity"));
+            }
+            boolean randomEquipmentCleared = enabledEquipment != null
+                    && enabledEquipment.getItemInOffHand().getType() == org.bukkit.Material.AIR
+                    && enabledEquipment.getHelmet().getType() == org.bukkit.Material.AIR
+                    && enabledEquipment.getChestplate().getType() == org.bukkit.Material.AIR
+                    && enabledEquipment.getLeggings().getType() == org.bukkit.Material.AIR
+                    && enabledEquipment.getBoots().getType() == org.bukkit.Material.AIR;
+            boolean explicitEquipmentPreserved = enabledEquipment != null
+                    && enabledEquipment.getItemInMainHand().getType() == org.bukkit.Material.DIAMOND_SWORD;
+            boolean controlPreserved = controlEquipment != null
+                    && controlEquipment.getItemInMainHand().getType() == org.bukkit.Material.IRON_SWORD
+                    && controlEquipment.getItemInOffHand().getType() == org.bukkit.Material.SHIELD
+                    && controlEquipment.getHelmet().getType() == org.bukkit.Material.CHAINMAIL_HELMET
+                    && controlEquipment.getChestplate().getType() == org.bukkit.Material.CHAINMAIL_CHESTPLATE
+                    && controlEquipment.getLeggings().getType() == org.bukkit.Material.CHAINMAIL_LEGGINGS
+                    && controlEquipment.getBoots().getType() == org.bukkit.Material.CHAINMAIL_BOOTS;
+            boolean invalidFallback = invalidEquipment != null
+                    && invalidEquipment.getItemInMainHand().getType() == org.bukkit.Material.IRON_SWORD
+                    && invalidEquipment.getItemInOffHand().getType() == org.bukkit.Material.SHIELD
+                    && invalidEquipment.getHelmet().getType() == org.bukkit.Material.CHAINMAIL_HELMET
+                    && invalidEquipment.getChestplate().getType() == org.bukkit.Material.CHAINMAIL_CHESTPLATE
+                    && invalidEquipment.getLeggings().getType() == org.bukkit.Material.CHAINMAIL_LEGGINGS
+                    && invalidEquipment.getBoots().getType() == org.bukkit.Material.CHAINMAIL_BOOTS;
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            boolean passed = imported && configured && controls && invalidPreserved && policies
+                    && randomEquipmentCleared && explicitEquipmentPreserved && controlPreserved && invalidFallback;
+            getLogger().info("[自检] prevent-random-equipment-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured + " controls=" + controls
+                    + " invalid-preserved=" + invalidPreserved + " policies=" + policies
+                    + " random-cleared=" + randomEquipmentCleared
+                    + " explicit-equipment-preserved=" + explicitEquipmentPreserved
+                    + " control-preserved=" + controlPreserved + " invalid-fallback=" + invalidFallback);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] prevent-random-equipment-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
     }
 
     private void runImportedBooleanMobOptionsSelfTest(Location origin) {
