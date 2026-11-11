@@ -2036,6 +2036,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean equipmentBlockData = false;
         boolean equipmentAmount = false;
         boolean invalidPreserved = false;
+        boolean legacyIdBoundaries = false;
         try {
             sourceRoot = Files.createTempDirectory("helstera-legacy-item-import-");
             Path itemSource = Files.createDirectories(sourceRoot.resolve("Items"))
@@ -2061,6 +2062,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                       invalid_text:
                         Id: 276
                         Data: not-a-number
+                      legacy_shulker_shell:
+                        Id: 450
+                      legacy_unused_451:
+                        Id: 451
+                      legacy_iron_nugget:
+                        Id: 452
+                      legacy_knowledge_book:
+                        Id: 453
                     """);
             Path mobSource = Files.createDirectories(sourceRoot.resolve("Mobs"))
                     .resolve("legacy-equipment.yml");
@@ -2099,6 +2108,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && slab.getItemMeta() instanceof org.bukkit.inventory.meta.BlockDataMeta blockMeta
                     && blockMeta.getBlockData(slab.getType()) != null
                     && blockMeta.getBlockData(slab.getType()).getAsString().contains("type=top");
+            var shulkerShell = resolveConfiguredItem("legacy_shulker_shell");
+            var ironNugget = resolveConfiguredItem("legacy_iron_nugget");
+            var knowledgeBook = resolveConfiguredItem("legacy_knowledge_book");
+            ConfigurationSection unused451 = itemConfig.getConfigurationSection("items.legacy_unused_451");
+            legacyIdBoundaries = shulkerShell != null
+                    && shulkerShell.getType() == org.bukkit.Material.SHULKER_SHELL
+                    && ironNugget != null && ironNugget.getType() == org.bukkit.Material.IRON_NUGGET
+                    && knowledgeBook != null && knowledgeBook.getType() == org.bukkit.Material.KNOWLEDGE_BOOK
+                    && unused451 != null && "451".equals(unused451.getString("id"))
+                    && "451".equals(unused451.getString("unsupported.legacy-id"));
             invalidPreserved = "1561".equals(itemConfig.getString("items.invalid_over.unsupported.legacy-data"))
                     && "-1".equals(itemConfig.getString("items.invalid_negative.unsupported.legacy-data"))
                     && "not-a-number".equals(itemConfig.getString("items.invalid_text.unsupported.legacy-data"));
@@ -2148,7 +2167,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         }
         boolean result = imported && itemsMaterial && itemsDurability && itemsPotion
-                && itemsBlockData && itemsAmount && equipmentMaterial && equipmentDurability
+                && itemsBlockData && itemsAmount && legacyIdBoundaries && equipmentMaterial && equipmentDurability
                 && equipmentPotion && equipmentBlockData && equipmentAmount && invalidPreserved;
         getLogger().info("[自检] legacy-numeric-items imported=" + imported
                 + " items-material=" + itemsMaterial
@@ -2156,6 +2175,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " items-potion=" + itemsPotion
                 + " items-block-data=" + itemsBlockData
                 + " items-amount=" + itemsAmount
+                + " legacy-id-boundaries=" + legacyIdBoundaries
                 + " equipment-material=" + equipmentMaterial
                 + " equipment-durability=" + equipmentDurability
                 + " equipment-potion=" + equipmentPotion

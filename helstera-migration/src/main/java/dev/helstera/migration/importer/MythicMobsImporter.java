@@ -145,7 +145,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             Map.entry(442, "SHIELD"), Map.entry(443, "ELYTRA"), Map.entry(444, "SPRUCE_BOAT"),
             Map.entry(445, "BIRCH_BOAT"), Map.entry(446, "JUNGLE_BOAT"), Map.entry(447, "ACACIA_BOAT"),
             Map.entry(448, "DARK_OAK_BOAT"), Map.entry(449, "TOTEM_OF_UNDYING"),
-            Map.entry(450, "SHULKER_SHELL"), Map.entry(451, "IRON_NUGGET"), Map.entry(452, "KNOWLEDGE_BOOK"),
+            Map.entry(450, "SHULKER_SHELL"), Map.entry(452, "IRON_NUGGET"), Map.entry(453, "KNOWLEDGE_BOOK"),
             Map.entry(2256, "MUSIC_DISC_13"), Map.entry(2257, "MUSIC_DISC_CAT"),
             Map.entry(2258, "MUSIC_DISC_BLOCKS"), Map.entry(2259, "MUSIC_DISC_CHIRP"),
             Map.entry(2260, "MUSIC_DISC_FAR"), Map.entry(2261, "MUSIC_DISC_MALL"),

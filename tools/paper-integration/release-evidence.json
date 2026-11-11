@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-legacy-item-ids-strict-20261111-r1",
+    "reportFixtureDirectory": "srv-paper-legacy-item-ids-strict-20261111-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-legacy-item-id-boundaries-strict-20261111-r1.json",
+    "reportSha256": "f702ee144a6941df58f08ee14eb954804c55d5f3f68941b4398a631c9ff9e1db",
+    "log": "tools/paper-integration/reports/paper-1.21.1-legacy-item-id-boundaries-strict-20261111-r1.log.gz",
+    "logSha256": "d59e9be0a95cfe1d0c73d1d2932ba7afd03af2d77a3ed46f233e134b3c8509f9",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-legacy-item-id-boundaries-strict-20261111-r1-client-logs.tar.gz",
+    "clientLogSha256": "841980e0d981cde6ce5dcbffd7235efc47cdcd5086e2157aa306f46f77c76093",
+    "pluginSha256": "6d9dc792e21bb06b55976f52e349ea03cb20a13b5ba5c25a45d997bfaaa3f7bc",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-environmental-damage-options-strict-20261111-r2",
     "reportFixtureDirectory": "srv-paper-environmental-damage-options-strict-20261111-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-environmental-damage-options-strict-20261111-r2.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-environmental-damage-options-strict-20261111-r2-client-logs.tar.gz",
     "clientLogSha256": "3b06ddadb778e0127c96f6938009719820a58dcd14c2d04211f85c5042dbe7d8",
     "pluginSha256": "ee1e7333f8de2e3b87176b4b45f80fa52a88913ec67838573a0775e06240b5f6",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-legacy-item-ids-strict-20261111-r1"
   },
   {
     "fixtureId": "srv-paper-prevent-random-equipment-strict-20261111-r1",

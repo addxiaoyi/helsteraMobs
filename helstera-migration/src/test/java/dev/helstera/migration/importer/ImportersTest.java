@@ -4098,7 +4098,7 @@ class ImportersTest {
     }
 
     @Test
-    @DisplayName("legacy item IDs 318-449 map to Paper materials and keep data-bearing boundaries explicit")
+    @DisplayName("legacy item IDs 318-453 map known Paper materials and preserve unsupported boundaries")
     void mythicConvertsLegacyItemIdsAndData(@TempDir Path root) throws Exception {
         StringBuilder yaml = new StringBuilder("items:\n");
         for (int id = 318; id <= 449; id++) {
@@ -4213,10 +4213,10 @@ class ImportersTest {
         assertEquals("COBBLESTONE", target.getString("items.cobblestone_zero_data.id"));
         assertFalse(target.contains("items.cobblestone_zero_data.unsupported.legacy-data"));
         assertEquals("SHULKER_SHELL", target.getString("items.item_450.id"));
-        assertEquals("IRON_NUGGET", target.getString("items.item_451.id"));
-        assertEquals("KNOWLEDGE_BOOK", target.getString("items.item_452.id"));
-        assertEquals("453", target.getString("items.item_453.id"));
-        assertTrue(target.contains("items.item_453.unsupported.legacy-id"));
+        assertEquals("451", target.getString("items.item_451.id"));
+        assertTrue(target.contains("items.item_451.unsupported.legacy-id"));
+        assertEquals("IRON_NUGGET", target.getString("items.item_452.id"));
+        assertEquals("KNOWLEDGE_BOOK", target.getString("items.item_453.id"));
         assertEquals("WHITE_BED", target.getString("items.white_bed.id"));
         assertEquals("RED_BED", target.getString("items.red_bed.id"));
         assertEquals("MUSIC_DISC_13", target.getString("items.record_13.id"));
