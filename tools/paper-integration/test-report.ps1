@@ -236,6 +236,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] legacy-numeric-items imported=true items-material=true items-durability=true items-potion=true items-block-data=true items-amount=true equipment-material=true equipment-durability=true equipment-potion=true equipment-block-data=true equipment-amount=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true restrictions=true potion=true skull=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true prevent-transformation-reasons=true prevent-skeleton-conversion=true prevent-block-infection=true prevent-snow-formation=true tame-breed-tame=true tame-breed-breed=true leash-unleash-leash=true leash-unleash-unleash=true prevent-leash=true prevent-rename=true prevent-target=true prevent-vanilla-damage=true prevent-projectiles=true prevent-entity-explosions=true prevent-block-explosion-damage=true prevent-drowning=true prevent-fall-damage=true prevent-fire=true prevent-fire-causes=true prevent-pickup=true prevent-item-use=true interactable=true interactable-armor-stand=true prevent-teleport=true prevent-sunburn=true prevent-other-drops=true prevent-mob-kill-drops=true prevent-mob-kill-custom-loot=true shear-trigger=true bed-enter-leave-enter=true bed-enter-leave-leave=true trade-trigger=true quit-trigger=true item-drop-break-damage=true player-actions-interact=true world-change=true jump=true swing=true fish-trigger=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] prevent-teleport-imported result=true imported=true mapped=true invalid-preserved=true spawned=true protected-api-blocked=true control-api-teleported=true',
         '[Server thread/INFO]: mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true',
         '[Server thread/INFO]: mob-options-natural bee-stinger=true bee-event=synthetic bee-attacks=1/1 zombie-conversion=true zombie-control=true zombie-protected=true passed=true',
         '[Server thread/INFO]: mob-options-skeleton-conversion protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=SKELETON protected-valid=true control-stray=true control-converted=true elapsed-ticks=21 restored=true passed=true',
@@ -788,6 +789,9 @@ try {
     $events = @($report.probes | Where-Object id -eq 'events')
     Assert-True ($events.Count -eq 1 -and $events[0].status -eq 'passed') 'single passing events probe'
     Assert-True ($events[0].observations[0] -match 'creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true .*prevent-transformation-reasons=true .*prevent-skeleton-conversion=true .*prevent-block-infection=true .*prevent-snow-formation=true .*prevent-leash=true .*prevent-rename=true .*prevent-target=true .*prevent-vanilla-damage=true .*prevent-projectiles=true .*prevent-entity-explosions=true .*prevent-block-explosion-damage=true .*prevent-drowning=true .*prevent-fall-damage=true .*prevent-fire=true .*prevent-fire-causes=true .*prevent-pickup=true .*prevent-item-use=true .*interactable=true .*interactable-armor-stand=true .*prevent-teleport=true .*prevent-sunburn=true .*prevent-other-drops=true .*prevent-mob-kill-drops=true .*prevent-mob-kill-custom-loot=true') 'all event policies cancelled'
+    Assert-True (($report.probes | Where-Object id -eq 'preventTeleportImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'preventTeleportImported').observations[0] -ceq
+        'prevent-teleport-imported result=true imported=true mapped=true invalid-preserved=true spawned=true protected-api-blocked=true control-api-teleported=true') 'imported PreventTeleport requires real Paper Entity#teleport evidence and an inverse control'
     Assert-True (($report.probes | Where-Object id -eq 'tameBreed').status -eq 'passed') 'tame and breed trigger probe'
     Assert-True (($report.probes | Where-Object id -eq 'leashLifecycle').status -eq 'passed') 'leash lifecycle trigger probe'
     Assert-True (($report.probes | Where-Object id -eq 'shearTrigger').status -eq 'passed') 'shear trigger probe'
@@ -1856,6 +1860,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'showHealthClientDelivery'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'showHealthClientDelivery'; status = 'passed'; observations = @('{"nearPlayerReceivedFirstThreshold":true,"nearPlayerReceivedSecondThreshold":true,"outsidePlayerExcluded":true,"belowThresholdQuiet":true,"withinBandQuiet":true,"healingRearmedThreshold":true}')
+    }
+    $fullCatalogReport.expectedProbeIds += 'preventTeleportImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'preventTeleportImported'; status = 'passed'; observations = @('prevent-teleport-imported result=true imported=true mapped=true invalid-preserved=true spawned=true protected-api-blocked=true control-api-teleported=true')
     }
     $fullCatalogPath = Join-Path $temp 'full-catalog-report.json'
     $originalPluginEnabled = $fullCatalogReport.pluginEnabled

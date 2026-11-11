@@ -95,6 +95,7 @@ $probeSpecs = [ordered]@{
     spawningDistanceRuntime = 'spawning-distance-runtime result=true inside-retained=true outside-removed=true'
     spawningDistanceClientWalk = 'spawning-distance-client-walk result=true player-displacement=(?:8|9|[1-9][0-9]+)(?:\.[0-9]+)? player-entity-distance=[0-9]+(?:\.[0-9]+)? instance-removed=true entity-removed=true despawn-elapsed-ticks=[0-9]+ decision-period-ticks=[0-9]+'
     visibilityOptions = 'visibility-options-imported result=true imported=true configured=true controls=true'
+    preventTeleportImported = 'prevent-teleport-imported result=true imported=true mapped=true invalid-preserved=true spawned=true protected-api-blocked=true control-api-teleported=true'
     sheep = 'sheep-options result=true imported=true color=RED sheared=true control-color=WHITE control-sheared=false'
     horseOptionsImported = 'horse-options result=true imported=true color=GRAY style=WHITE_DOTS domestication=5 max-domestication=20 jump-strength=0\.8 saddled=true armor=DIAMOND_HORSE_ARMOR control-color=BLACK control-style=BLACK_DOTS control-domestication=1 control-max-domestication=12 control-jump-strength=0\.4 control-saddled=false control-armor=AIR donkey-chest=true control-donkey-chest=false pig-saddled=true control-pig-saddled=false strider-saddled=true control-strider-saddled=false'
     interactionOptionsImported = 'interaction-options-imported result=true imported=true configured-height=2\.5 configured-width=3\.25 responsive=false height-only-width=1\.75 defaults-applied=true wrong-type-preserved=true invalid-preserved=true'

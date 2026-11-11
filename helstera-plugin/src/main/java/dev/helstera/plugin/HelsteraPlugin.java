@@ -20649,6 +20649,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " swing=" + swingTrigger
                         + " fish-trigger=" + fishTrigger);
                 attacker.remove();
+                runImportedPreventTeleportSelfTest(world, location.clone().add(40, 0, 5));
             } catch (Throwable t) {
                 getLogger().warning("[自检] events 异常: " + t);
             } finally {
@@ -27543,6 +27544,154 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " healing-recross=false below-threshold-quiet=false inside-band-quiet=false"
                     + " near-inside=" + nearInside + " outsider-outside=" + outsiderOutside
                     + " error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedPreventTeleportSelfTest(org.bukkit.World world, org.bukkit.Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        boolean imported = false;
+        boolean mapped = false;
+        boolean invalidPreserved = false;
+        boolean spawned = false;
+        boolean protectedBlocked = false;
+        boolean controlTeleported = false;
+        try {
+            if (world == null || origin == null || origin.getWorld() != world) {
+                throw new IllegalArgumentException("Invalid PreventTeleport probe world or origin");
+            }
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String protectedSourceId = "ImportedPreventTeleport_" + suffix;
+            String controlSourceId = "ImportedTeleportControl_" + suffix;
+            String invalidSourceId = "ImportedPreventTeleportInvalid_" + suffix;
+            sourceRoot = Files.createTempDirectory("helstera-prevent-teleport-import-");
+            Path mobsRoot = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path protectedSource = mobsRoot.resolve("prevent-teleport.yml");
+            Path controlSource = mobsRoot.resolve("teleport-control.yml");
+            Path invalidSource = mobsRoot.resolve("prevent-teleport-invalid.yml");
+            Files.writeString(protectedSource, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          NoAI: true
+                          PreventTeleport: true
+                    """.formatted(protectedSourceId));
+            Files.writeString(controlSource, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          NoAI: true
+                          PreventTeleport: false
+                    """.formatted(controlSourceId));
+            Files.writeString(invalidSource, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventTeleport: sometimes
+                    """.formatted(invalidSourceId));
+
+            var importer = new MythicMobsImporter();
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var source : java.util.Map.of(
+                    protectedSourceId, protectedSource,
+                    controlSourceId, controlSource,
+                    invalidSourceId, invalidSource).entrySet()) {
+                var converted = importer.convert(source.getValue(), sourceRoot);
+                var entry = converted.stream()
+                        .filter(candidate -> candidate.get("target-file") instanceof String targetFile
+                                && targetFile.startsWith("mobs/") && targetFile.endsWith(".yml")
+                                && "mapped".equals(candidate.get("status")))
+                        .findFirst().orElseThrow(() -> new IllegalStateException(
+                                "PreventTeleport importer output missing for " + source.getKey()));
+                String targetFile = String.valueOf(entry.get("target-file"));
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory) || Files.exists(destination)) {
+                    throw new IOException("Unsafe or existing PreventTeleport probe config: " + destination);
+                }
+                Files.createDirectories(destination.getParent());
+                mobFiles.add(destination);
+                Files.writeString(destination, String.valueOf(entry.get("content")));
+                targetIds.put(source.getKey(), String.valueOf(entry.get("target-mob-id")));
+                if (source.getKey().equals(invalidSourceId)) {
+                    invalidPreserved = converted.stream().anyMatch(candidate ->
+                            "unsupported".equals(candidate.get("status"))
+                                    && "WARN".equals(candidate.get("severity"))
+                                    && "Options.PreventTeleport".equals(candidate.get("source-key"))
+                                    && "mob.unsupported.Options.PreventTeleport".equals(candidate.get("target-key")));
+                }
+            }
+
+            String protectedId = targetIds.get(protectedSourceId);
+            String controlId = targetIds.get(controlSourceId);
+            String invalidId = targetIds.get(invalidSourceId);
+            var protectedConfig = protectedId == null ? null : mobConfig(protectedId);
+            var controlConfig = controlId == null ? null : mobConfig(controlId);
+            var invalidConfig = invalidId == null ? null : mobConfig(invalidId);
+            imported = protectedConfig != null && controlConfig != null && invalidConfig != null;
+            mapped = imported
+                    && protectedConfig.getBoolean("mob.prevent-teleport", false)
+                    && !controlConfig.getBoolean("mob.prevent-teleport", true);
+            invalidPreserved = invalidPreserved
+                    && "sometimes".equals(invalidConfig.getString("mob.unsupported.Options.PreventTeleport"))
+                    && !invalidConfig.contains("mob.prevent-teleport");
+            if (!mapped || !invalidPreserved) {
+                throw new IllegalStateException("PreventTeleport importer values did not reach runtime config or preserve invalid input");
+            }
+
+            var protectedSpawn = spawnMobCore(protectedId, "example/emberling", origin.clone(), false, null);
+            var controlSpawn = spawnMobCore(controlId, "example/emberling",
+                    origin.clone().add(4, 0, 0), false, null);
+            int protectedInstanceId = protectedSpawn == null ? -1 : protectedSpawn.instanceId();
+            int controlInstanceId = controlSpawn == null ? -1 : controlSpawn.instanceId();
+            if (protectedInstanceId > 0) instanceIds.add(protectedInstanceId);
+            if (controlInstanceId > 0) instanceIds.add(controlInstanceId);
+            var protectedInstance = protectedInstanceId > 0 ? instances().impl(protectedInstanceId) : null;
+            var controlInstance = controlInstanceId > 0 ? instances().impl(controlInstanceId) : null;
+            var protectedMob = protectedInstance == null ? null : protectedInstance.baseEntity()
+                    .filter(org.bukkit.entity.Entity.class::isInstance)
+                    .map(org.bukkit.entity.Entity.class::cast).orElse(null);
+            var controlMob = controlInstance == null ? null : controlInstance.baseEntity()
+                    .filter(org.bukkit.entity.Entity.class::isInstance)
+                    .map(org.bukkit.entity.Entity.class::cast).orElse(null);
+            spawned = protectedMob != null && controlMob != null
+                    && protectedInstance.options().preventTeleport()
+                    && !controlInstance.options().preventTeleport();
+            if (!spawned) throw new IllegalStateException("Imported PreventTeleport mobs did not spawn with inverse runtime options");
+
+            var protectedStart = protectedMob.getLocation().clone();
+            var protectedDestination = protectedStart.clone().add(0, 0, 4);
+            boolean protectedApiReturned = protectedMob.teleport(protectedDestination);
+            protectedBlocked = !protectedApiReturned
+                    && protectedMob.getWorld().equals(protectedStart.getWorld())
+                    && protectedMob.getLocation().distanceSquared(protectedStart) <= 1.0e-6;
+
+            var controlStart = controlMob.getLocation().clone();
+            var controlDestination = controlStart.clone().add(0, 0, 4);
+            boolean controlApiReturned = controlMob.teleport(controlDestination);
+            controlTeleported = controlApiReturned
+                    && controlMob.getWorld().equals(controlDestination.getWorld())
+                    && controlMob.getLocation().distanceSquared(controlDestination) <= 1.0e-6;
+
+            boolean passed = imported && mapped && invalidPreserved && spawned
+                    && protectedBlocked && controlTeleported;
+            getLogger().info("[自检] prevent-teleport-imported result=" + passed
+                    + " imported=" + imported + " mapped=" + mapped
+                    + " invalid-preserved=" + invalidPreserved + " spawned=" + spawned
+                    + " protected-api-blocked=" + protectedBlocked
+                    + " control-api-teleported=" + controlTeleported);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] prevent-teleport-imported result=false imported=" + imported
+                    + " mapped=" + mapped + " invalid-preserved=" + invalidPreserved + " spawned=" + spawned
+                    + " protected-api-blocked=" + protectedBlocked
+                    + " control-api-teleported=" + controlTeleported + " error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }

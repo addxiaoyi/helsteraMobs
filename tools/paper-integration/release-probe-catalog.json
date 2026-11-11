@@ -1935,6 +1935,11 @@
       "id": "showHealthClientDelivery",
       "status": "passed",
       "requiredObservationPattern": "\\\"nearPlayerReceivedFirstThreshold\\\":true.*\\\"nearPlayerReceivedSecondThreshold\\\":true.*\\\"outsidePlayerExcluded\\\":true.*\\\"belowThresholdQuiet\\\":true.*\\\"withinBandQuiet\\\":true.*\\\"healingRearmedThreshold\\\":true"
+    },
+    {
+      "id": "preventTeleportImported",
+      "status": "passed",
+      "requiredObservation": "prevent-teleport-imported result=true imported=true mapped=true invalid-preserved=true spawned=true protected-api-blocked=true control-api-teleported=true"
     }
   ]
 }
