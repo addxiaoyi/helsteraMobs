@@ -706,6 +706,62 @@ class SkillNestingTest {
     }
 
     @Test
+    void inlineTriggerConditionsUseTriggerContextAndRejectMissingOrNonLivingTrigger() {
+        var trigger = mock(org.bukkit.entity.Zombie.class);
+        var activeTarget = mock(org.bukkit.entity.Zombie.class);
+        var caster = mock(org.bukkit.entity.Zombie.class);
+        when(caster.getMaxHealth()).thenReturn(20.0);
+        when(caster.getHealth()).thenReturn(15.0);
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        var observed = new java.util.ArrayList<BehaviorContext>();
+        var triggerEvaluations = new AtomicInteger();
+        var fired = new AtomicInteger();
+        registry.registerCondition("capture-caster", context -> {
+            observed.add(context);
+            return context.targetEntity().orElse(null) == caster;
+        });
+        registry.registerCondition("capture-trigger", context -> {
+            triggerEvaluations.incrementAndGet();
+            observed.add(context);
+            return context.targetEntity().orElse(null) == trigger;
+        });
+        registry.registerAction("probe-trigger", context -> fired.incrementAndGet());
+        var svc = service();
+        String action = svc.bindAction("probe-trigger ?capture-caster ?~capture-trigger");
+        assertNotNull(action, svc.warnings().toString());
+
+        var valid = BehaviorContext.continueExecution(instance, activeTarget, 0.5, 3, 0, "damage",
+                null, trigger, List.of(activeTarget), null, null);
+        assertTrue(registry.runAction(action, valid));
+        assertEquals(1, fired.get());
+        assertEquals(2, observed.size());
+        assertSame(caster, observed.get(0).targetEntity().orElseThrow(),
+                "ordinary inline conditions evaluate against the model caster");
+        assertSame(trigger, observed.get(1).targetEntity().orElseThrow(),
+                "?~ conditions evaluate against the trigger entity");
+
+        var noTrigger = BehaviorContext.continueExecution(instance, activeTarget, 0.5, 3, 0, "damage",
+                null, null, List.of(activeTarget), null, null);
+        var nonLivingTrigger = mock(org.bukkit.entity.Item.class);
+        var nonLiving = BehaviorContext.continueExecution(instance, activeTarget, 0.5, 3, 0, "damage",
+                null, nonLivingTrigger, List.of(activeTarget), null, null);
+        assertTrue(registry.runAction(action, noTrigger));
+        assertTrue(registry.runAction(action, nonLiving));
+        assertEquals(1, fired.get(), "missing or non-living trigger must fail closed");
+        assertEquals(1, triggerEvaluations.get(), "trigger conditions must not run without a living trigger");
+
+        registry.registerCondition("reject-trigger", ignored -> false);
+        String negatedAction = svc.bindAction("probe-trigger ?~!reject-trigger");
+        assertNotNull(negatedAction, svc.warnings().toString());
+        assertTrue(registry.runAction(negatedAction, valid));
+        assertEquals(2, fired.get(), "?~! negates a condition for a valid trigger");
+        assertTrue(registry.runAction(negatedAction, noTrigger));
+        assertEquals(2, fired.get(), "negation does not make a missing trigger pass");
+    }
+
+    @Test
     void previewChecksTargetConditionsWithoutChangingTreeTargets() {
         var target = mock(org.bukkit.entity.Zombie.class);
         var other = mock(org.bukkit.entity.Zombie.class);

@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-inline-condition-strict-20261112-r1",
+    "reportFixtureDirectory": "srv-paper-inline-condition-strict-20261112-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1.json",
+    "reportSha256": "016e6a034b1860d81b377d705220b97c7322430f37d5dec1b113cc3b50763891",
+    "log": "tools/paper-integration/reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1.log.gz",
+    "logSha256": "3cb7a9b2454459e69e4d15dd5542487650fda4f4926d16b1eac72debe32bfe21",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1-client-logs.tar.gz",
+    "clientLogSha256": "358e4b071969c72d4bf725ce1a36aed72f6ac5cbd76c53b0ac6b29ff5caf6970",
+    "pluginSha256": "3cd83778bb9e926c60aa8ae7c6e0627aa703f80aa520a057c7e9b518e784357d",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-prevent-vanilla-damage-strict-20261112-r3",
     "reportFixtureDirectory": "srv-paper-prevent-vanilla-damage-strict-20261112-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.json",

@@ -384,6 +384,11 @@
       "requiredObservationPattern": "skill-actions .*condition-mobility=true .*moving-default-stationary=true .*moving-exact-fractional=true .*moving-alias-fractional=true .*moving-approx-same-block=true .*moving-approx-block=true .*moving-exact-argument=true .*moving-e-argument=true .*moving-invalid-rejected=true .*moving-imported=true .*moving-restored=true"
     },
     {
+      "id": "inlineConditionScopes",
+      "status": "passed",
+      "requiredObservationPattern": "skill-actions .*inline-condition-scopes=true"
+    },
+    {
       "id": "conditionMobilityStates",
       "status": "passed",
       "requiredObservation": "condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true"

@@ -1248,6 +1248,10 @@ try {
     $fullCatalogConditionMobility[0].observations = @($fullCatalogConditionMobility[0].observations | ForEach-Object {
         $_ -replace 'condition-mobility=true', 'condition-mobility=true moving-default-stationary=true moving-exact-fractional=true moving-alias-fractional=true moving-approx-same-block=true moving-approx-block=true moving-exact-argument=true moving-e-argument=true moving-invalid-rejected=true moving-imported=true moving-restored=true'
     })
+    $fullCatalogReport.expectedProbeIds += 'inlineConditionScopes'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'inlineConditionScopes'; status = 'passed'; observations = @('skill-actions inline-condition-scopes=true')
+    }
     $fullCatalogSkillTrigger = @($fullCatalogReport.probes | Where-Object id -eq 'skillTrigger')
     Assert-True ($fullCatalogSkillTrigger.Count -eq 1) 'synthetic full catalog contains the skill trigger probe'
     $fullCatalogSkillTrigger[0].observations = @($fullCatalogSkillTrigger[0].observations | ForEach-Object {

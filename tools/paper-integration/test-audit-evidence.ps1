@@ -291,6 +291,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'conditionMobilityStates'; status = 'passed'; observations = @('condition-mobility-states result=true falling-positive=true falling-negative=true climbing-positive=true climbing-negative=true charged-positive=true charged-negative=true restored=true aliases=true')
     }
+    $fullReport.expectedProbeIds += 'inlineConditionScopes'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'inlineConditionScopes'; status = 'passed'; observations = @('skill-actions inline-condition-scopes=true')
+    }
     $fullReport.expectedProbeIds += 'damageAttribution'
     $fullReport.probes += [pscustomobject]@{
         id = 'damageAttribution'; status = 'passed'; observations = @('damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true')

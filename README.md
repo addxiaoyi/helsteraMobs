@@ -1,3 +1,4 @@
+Latest strict fixture `srv-paper-inline-condition-strict-20261112-r1` verifies inline skill condition scopes: `?condition` checks the caster, `?~condition` checks a living trigger, and `?~!condition` negates the trigger condition while missing or non-living triggers fail closed. Parser/runtime tests cover `?~!` negation. The real Paper probe validates positive scope selection, caster/trigger mismatches, and missing/non-living trigger rejection. The full Paper 1.21.1-133 release catalog completed 455 probes (436 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
 Latest strict fixture `srv-paper-prevent-vanilla-damage-strict-20261112-r3` verifies imported Mythic `Options.PreventVanillaDamage` through real direct melee and Arrow hits on Paper: both events remain uncancelled with zero damage, and both protected targets retain their health. Explicit `false` and malformed-value controls take real damage, while malformed input remains preserved. The full Paper 1.21.1-133 release catalog completed 454 probes (435 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
 Previous strict fixture `srv-paper-prevent-attack-strict-20261112-r1` verifies imported Mythic `Options.PreventAttack`: true cancels melee and projectile attacks, false allows them, and malformed input is preserved and safely allowed. Its full Paper 1.21.1-133 release catalog completed 453 probes (434 passed, 19 expected rejections), with zero failed or incomplete.
 Previous strict fixture `srv-paper-explosion-options-strict-20261112-r2` verifies imported Mythic `Options.PreventProjectiles`, `PreventExplosions`, `PreventBlockExplosions`, and `PreventEntityExplosions`, with independent projectile, block-explosion, and entity-explosion policies plus blanket protection. False controls pass, malformed values remain preserved with safe fallbacks, and its complete catalog recorded 449 probes (430 passed, 19 expected rejections). Its report remains archived in the [Paper evidence index](tools/paper-integration/STARTUP_EVIDENCE.md).
@@ -1366,12 +1367,12 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-12). The full remaining work is:
 
-Latest strict report has 454 probes, zero incomplete.
+Latest strict report has 455 probes, zero incomplete (436 passed, 19 expected rejections, zero failed).
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 600 cited IDs; 507 report files; 4 directories without reports; 89 missing directories; 282 archived release reports. The
+   Current fixture inventory: 601 cited IDs; 508 report files; 4 directories without reports; 89 missing directories; 283 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

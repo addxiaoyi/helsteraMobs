@@ -14333,6 +14333,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean movingImported = movingProbe.imported();
                 boolean movingRestored = movingProbe.restored();
                 boolean movingNow = movingProbe.passed();
+                boolean inlineConditionScopes = runInlineConditionScopeProbe(
+                        world, skills, behaviors, modelInstance, zombie, conditionTarget);
                 boolean conditionMobility = unmountedBefore && noPassengerBefore
                         && mountedNow && hasPassengerNow && movingNow;
                 int previousCasterAir = zombie.getRemainingAir();
@@ -15506,6 +15508,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " moving-invalid-rejected=" + movingInvalidArguments
                         + " moving-imported=" + movingImported
                         + " moving-restored=" + movingRestored
+                        + " inline-condition-scopes=" + inlineConditionScopes
                         + " drowning-condition=" + drowningCondition
                         + " leashed-condition=" + leashedCondition
                         + " has-owner-condition=" + hasOwnerCondition
@@ -16729,6 +16732,75 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return new MovingConditionProbe(defaultStationary, exactFractional, aliasFractional,
                 approximateSameBlock, approximateBlock, exactArgument, shortApproximateArgument,
                 invalidArguments, imported, restored);
+    }
+
+    private static boolean runInlineConditionScopeProbe(
+            org.bukkit.World world,
+            SkillService skills,
+            BehaviorRegistry behaviors,
+            dev.helstera.api.instance.ModelInstance instance,
+            LivingEntity caster,
+            LivingEntity trigger) {
+        if (world == null || skills == null || behaviors == null || instance == null
+                || caster == null || trigger == null
+                || caster.getEquipment() == null || trigger.getEquipment() == null) return false;
+        var casterMainHand = caster.getEquipment().getItemInMainHand().clone();
+        var triggerMainHand = trigger.getEquipment().getItemInMainHand().clone();
+        var actionRuns = new java.util.concurrent.atomic.AtomicInteger();
+        org.bukkit.entity.Item nonLivingTrigger = null;
+        try {
+            caster.getEquipment().setItemInMainHand(
+                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+            trigger.getEquipment().setItemInMainHand(
+                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.WOODEN_SWORD));
+            behaviors.registerAction("paper-inline-condition-capture", ignored -> actionRuns.incrementAndGet());
+            String action = skills.bindAction(
+                    "paper-inline-condition-capture ?holding{m=SHIELD} ?~holding{m=WOODEN_SWORD}");
+            var triggerContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                    instance, trigger, healthRatio(trigger), 3.0, 0, "integration", null,
+                    trigger, java.util.List.of(trigger), trigger.getLocation(), null);
+            boolean positive = action != null && behaviors.runAction(action, triggerContext)
+                    && actionRuns.get() == 1;
+
+            caster.getEquipment().setItemInMainHand(
+                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_SWORD));
+            boolean casterMismatchRejected = action != null
+                    && behaviors.runAction(action, triggerContext) && actionRuns.get() == 1;
+
+            caster.getEquipment().setItemInMainHand(
+                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+            trigger.getEquipment().setItemInMainHand(
+                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE_SWORD));
+            boolean triggerMismatchRejected = action != null
+                    && behaviors.runAction(action, triggerContext) && actionRuns.get() == 1;
+
+            trigger.getEquipment().setItemInMainHand(
+                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.WOODEN_SWORD));
+            var missingTriggerContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                    instance, trigger, healthRatio(trigger), 3.0, 0, "integration", null,
+                    null, java.util.List.of(trigger), trigger.getLocation(), null);
+            boolean missingTriggerRejected = action != null
+                    && behaviors.runAction(action, missingTriggerContext) && actionRuns.get() == 1;
+
+            nonLivingTrigger = world.dropItem(trigger.getLocation(),
+                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.STICK));
+            var nonLivingContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                    instance, trigger, healthRatio(trigger), 3.0, 0, "integration", null,
+                    nonLivingTrigger, java.util.List.of(trigger), trigger.getLocation(), null);
+            boolean nonLivingTriggerRejected = action != null
+                    && behaviors.runAction(action, nonLivingContext) && actionRuns.get() == 1;
+            return positive && casterMismatchRejected && triggerMismatchRejected
+                    && missingTriggerRejected && nonLivingTriggerRejected;
+        } finally {
+            caster.getEquipment().setItemInMainHand(casterMainHand);
+            trigger.getEquipment().setItemInMainHand(triggerMainHand);
+            if (nonLivingTrigger != null) nonLivingTrigger.remove();
+        }
+    }
+
+    private static double healthRatio(LivingEntity entity) {
+        double maxHealth = entity.getMaxHealth();
+        return maxHealth > 0 ? entity.getHealth() / maxHealth : 0;
     }
 
     private void runConditionMobilityStateSelfTest(Location origin) {

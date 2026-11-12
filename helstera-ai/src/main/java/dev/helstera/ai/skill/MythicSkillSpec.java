@@ -61,7 +61,7 @@ public record MythicSkillSpec(
         List<String> targetConditions = new ArrayList<>();
         for (int i = 0; i < tokens.size(); i++) {
             String token = tokens.get(i);
-            if (token.equals("@") || token.equals("?") || token.equals("?@")) {
+            if (token.equals("@") || token.equals("?") || token.equals("?@") || token.equals("?~")) {
                 throw new IllegalArgumentException("incomplete targeter or condition");
             }
             if (token.startsWith("@") && token.length() > 1) {
@@ -85,6 +85,7 @@ public record MythicSkillSpec(
                 trigger = token.substring(3);
             }
             else if (token.startsWith("?@") && token.length() > 2) targetConditions.add(token.substring(2));
+            else if (token.startsWith("?~") && token.length() > 2) conditions.add("~" + token.substring(2));
             else if (token.startsWith("?") && token.length() > 1) conditions.add(token.substring(1));
             else {
                 Matcher match = CHANCE.matcher(token);

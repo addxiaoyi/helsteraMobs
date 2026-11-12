@@ -772,12 +772,15 @@ public final class SkillService {
         }
 
         List<String> conditionKeys = new ArrayList<>();
+        List<String> triggerConditionKeys = new ArrayList<>();
         List<String> targetConditionKeys = new ArrayList<>();
         if (parsed != null) {
             for (String condition : parsed.inlineConditions()) {
-                String key = bindCondition(condition);
+                boolean triggerCondition = condition.startsWith("~");
+                String conditionSpec = triggerCondition ? condition.substring(1).trim() : condition;
+                String key = bindCondition(conditionSpec);
                 if (key == null) return null;
-                conditionKeys.add(key);
+                (triggerCondition ? triggerConditionKeys : conditionKeys).add(key);
             }
             for (String condition : parsed.targetConditions()) {
                 String key = bindCondition(condition);
@@ -799,10 +802,12 @@ public final class SkillService {
 
         List<String> factoryArgs = args;
         String key = actionName + (factoryArgs.isEmpty() ? "" : ":" + String.join(" ", factoryArgs));
-        if (chance != null || !conditionKeys.isEmpty() || !targetConditionKeys.isEmpty() || targeterSpec != null
+        if (chance != null || !conditionKeys.isEmpty() || !triggerConditionKeys.isEmpty()
+                || !targetConditionKeys.isEmpty() || targeterSpec != null
                 || delayTicks > 0 || repeat > 0 || repeatInterval > 0) {
             key += "|meta:" + (chance == null ? "" : chance) + ":"
                     + String.join(",", conditionKeys) + ":@" + String.join(",", targetConditionKeys)
+                    + ":~" + String.join(",", triggerConditionKeys)
                     + ":" + (targeterSpec == null ? "" : targeterSpec)
                     + ":delay=" + delayTicks + ":repeat=" + repeat + ":interval=" + repeatInterval;
         }
@@ -831,8 +836,17 @@ public final class SkillService {
                     Consumer<dev.helstera.api.behavior.BehaviorContext> guarded = attempt -> {
                         if (requiredChance != null
                                 && ThreadLocalRandom.current().nextDouble(100.0) >= requiredChance) return;
+                        var casterContext = inlineCasterConditionContext(attempt);
                         for (String condition : conditionKeys) {
-                            if (!registry.testCondition(condition, attempt)) return;
+                            if (!registry.testCondition(condition, casterContext)) return;
+                        }
+                        if (!triggerConditionKeys.isEmpty()) {
+                            if (attempt == null || !(attempt.trigger().orElse(null)
+                                    instanceof org.bukkit.entity.LivingEntity)) return;
+                            var triggerContext = triggerConditionContext(attempt);
+                            for (String condition : triggerConditionKeys) {
+                                if (!registry.testCondition(condition, triggerContext)) return;
+                            }
                         }
                         if (targeterSpec != null) {
                             invokeTargeted(action, targeterSpec, attempt, targetConditionKeys);
@@ -1491,6 +1505,22 @@ public final class SkillService {
                 ctx.skillTree().orElse(null), ctx.cancellableEvent().orElse(null),
                 ctx.damageCause().orElse(null)).withExecutionAudienceFrom(ctx);
     }
+
+    private dev.helstera.api.behavior.BehaviorContext inlineCasterConditionContext(
+            dev.helstera.api.behavior.BehaviorContext ctx) {
+        if (ctx == null || !ctx.instanceValid()) return ctx;
+        var caster = ctx.instance().baseEntity().orElse(null);
+        if (!(caster instanceof org.bukkit.entity.LivingEntity living)) return ctx;
+        double maxHealth = living.getMaxHealth();
+        double healthRatio = maxHealth > 0 ? living.getHealth() / maxHealth : 0;
+        return dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                ctx.instance(), living, healthRatio, ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),
+                ctx.payload().orElse(null), ctx.trigger().orElse(null), ctx.targets(),
+                ctx.origin().orElse(null), ctx.skillTree().orElse(null),
+                ctx.cancellableEvent().orElse(null), ctx.damageCause().orElse(null))
+                .withExecutionAudienceFrom(ctx);
+    }
+
     private boolean isInstanceBusy(int instId) {
         // 读条完成判定：activeCasts 里有无该实例的活跃读条
         boolean hasActiveCast = activeCasts.values().stream().anyMatch(c -> c.instanceId() == instId && !c.isComplete());
