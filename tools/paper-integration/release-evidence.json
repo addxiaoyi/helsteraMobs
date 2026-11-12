@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-prevent-leashing-strict-20261112-r2",
+    "reportFixtureDirectory": "srv-paper-prevent-leashing-strict-20261112-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-prevent-leashing-strict-20261112-r2.json",
+    "reportSha256": "36ae235fe64a3306940232aae7d785d86f42e8fca43881aebfc26620034e2a93",
+    "log": "tools/paper-integration/reports/paper-1.21.1-prevent-leashing-strict-20261112-r2.log.gz",
+    "logSha256": "047a707f9d1c545c4061d629402d07e199f474cacf5ff61a000a53d6a6c372c5",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-prevent-leashing-strict-20261112-r2-client-logs.tar.gz",
+    "clientLogSha256": "e8e5f5b86c7da5a6070a1f3babe88ead0c548d437c70d69b09dff754a0446691",
+    "pluginSha256": "7b71f17dd37aa132b5f03e710ca28bba165aa14df640cd90a571954c24095e9d",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-explosion-options-strict-20261112-r2",
     "reportFixtureDirectory": "srv-paper-explosion-options-strict-20261112-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-explosion-options-strict-20261112-r2.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-explosion-options-strict-20261112-r2-client-logs.tar.gz",
     "clientLogSha256": "45f1540904f6f9aaf32bd7d34ba593aac36ee6739ef95d5870a9e23559e0cce4",
     "pluginSha256": "63652c229cb3740e05faec87141b43eb751eac30542490ae2e540e57f6dcc7b6",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-prevent-leashing-strict-20261112-r2"
   },
   {
     "fixtureId": "srv-paper-fire-protection-strict-20261112-r2",

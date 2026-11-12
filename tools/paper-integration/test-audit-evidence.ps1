@@ -633,6 +633,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'explosionOptionsImported'; status = 'passed'; observations = @('explosion-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-protected=true block-only=true entity-only=true projectile-only=true controls-allowed=true invalid-fallback=true')
     }
+    $fullReport.expectedProbeIds += 'preventLeashingImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'preventLeashingImported'; status = 'passed'; observations = @('prevent-leashing-imported result=true imported=true configured=true invalid-preserved=true policies=true protected-cancelled=true control-allowed=true invalid-fallback-cancelled=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'
