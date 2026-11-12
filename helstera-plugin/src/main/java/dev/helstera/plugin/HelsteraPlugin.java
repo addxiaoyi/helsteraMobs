@@ -4418,6 +4418,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var mobFiles = new java.util.ArrayList<Path>();
         var instanceIds = new java.util.ArrayList<Integer>();
         var spawnedEntities = new java.util.ArrayList<org.bukkit.entity.Entity>();
+        org.bukkit.event.Listener damageObserver = null;
+        boolean cleanupDeferred = false;
         try {
             String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
             sourceRoot = Files.createTempDirectory("helstera-prevent-vanilla-damage-import-");
@@ -4508,49 +4510,161 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
             var world = origin.getWorld();
             var meleeVictim = world.spawn(origin.clone().add(0, 0, 2), org.bukkit.entity.Pig.class);
-            var projectileVictim = world.spawn(origin.clone().add(2, 0, 2), org.bukkit.entity.Pig.class);
+            // Keep the live projectile in the spawn-ticking area. The imported
+            // shooter fixture stays at the isolated self-test origin, but Paper
+            // does not tick entities outside the configured simulation distance.
+            var projectileLocation = world.getSpawnLocation().clone().add(2, 0, 2);
+            projectileLocation.setY(world.getMaxHeight() - 32.0);
+            var projectileVictim = world.spawn(projectileLocation, org.bukkit.entity.Pig.class);
             var disabledVictim = world.spawn(origin.clone().add(4, 0, 2), org.bukkit.entity.Pig.class);
             var invalidVictim = world.spawn(origin.clone().add(8, 0, 2), org.bukkit.entity.Pig.class);
-            var snowball = world.spawn(origin.clone().add(2, 0, 1), org.bukkit.entity.Snowball.class);
-            snowball.setShooter(protectedWolf);
-            spawnedEntities.addAll(java.util.List.of(meleeVictim, projectileVictim, disabledVictim,
-                    invalidVictim, snowball));
+            projectileVictim.setAI(false);
+            projectileVictim.setGravity(false);
+            spawnedEntities.addAll(java.util.List.of(meleeVictim, projectileVictim, disabledVictim, invalidVictim));
+            var arrowOrigin = projectileVictim.getLocation().clone().add(0, 0.45, -1.0);
+            var launchDirection = projectileVictim.getLocation().clone().add(0, 0.45, 0).toVector()
+                    .subtract(arrowOrigin.toVector()).normalize();
+            var arrow = world.spawnArrow(arrowOrigin, launchDirection.clone(), 1.5f, 0.0f);
+            arrow.setShooter(protectedWolf);
+            arrow.setDamage(6.0);
+            arrow.setGravity(false);
+            arrow.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
+            spawnedEntities.add(arrow);
 
-            var meleeEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(protectedWolf, meleeVictim,
-                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 6.0);
-            var projectileEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(snowball, projectileVictim,
-                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.PROJECTILE, 6.0);
-            var disabledEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(disabledWolf, disabledVictim,
-                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 6.0);
-            var invalidEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(invalidWolf, invalidVictim,
-                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 6.0);
-            for (var event : java.util.List.of(meleeEvent, projectileEvent, disabledEvent, invalidEvent)) {
-                getServer().getPluginManager().callEvent(event);
-            }
+            var victimIds = java.util.Set.of(meleeVictim.getUniqueId(), projectileVictim.getUniqueId(),
+                    disabledVictim.getUniqueId(), invalidVictim.getUniqueId());
+            var observedEvents = new java.util.HashMap<java.util.UUID,
+                    org.bukkit.event.entity.EntityDamageEvent>();
+            var observedProjectileHit = new java.util.concurrent.atomic.AtomicReference<
+                    org.bukkit.event.entity.ProjectileHitEvent>();
+            damageObserver = new org.bukkit.event.Listener() {
+                @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR,
+                        ignoreCancelled = false)
+                public void observeProbeDamage(org.bukkit.event.entity.EntityDamageEvent event) {
+                    if (victimIds.contains(event.getEntity().getUniqueId())) {
+                        observedEvents.put(event.getEntity().getUniqueId(), event);
+                    }
+                }
 
-            boolean directZero = meleeEvent.getDamage() == 0.0;
-            boolean projectileZero = projectileEvent.getDamage() == 0.0;
-            boolean directUncancelled = !meleeEvent.isCancelled();
-            boolean projectileUncancelled = !projectileEvent.isCancelled();
-            boolean disabledUnchanged = !disabledEvent.isCancelled() && disabledEvent.getDamage() == 6.0;
-            boolean invalidUnchanged = !invalidEvent.isCancelled() && invalidEvent.getDamage() == 6.0;
-            boolean passed = imported && configured && invalidPreserved && policies
-                    && directZero && projectileZero && directUncancelled && projectileUncancelled
-                    && disabledUnchanged && invalidUnchanged;
-            getLogger().info("[自检] prevent-vanilla-damage-imported result=" + passed
-                    + " imported=" + imported + " configured=" + configured + " policies=" + policies
-                    + " direct-zero=" + directZero + " projectile-zero=" + projectileZero
-                    + " direct-uncancelled=" + directUncancelled
-                    + " projectile-uncancelled=" + projectileUncancelled
-                    + " controls-unchanged=" + disabledUnchanged
-                    + " invalid-preserved=" + invalidPreserved + " invalid-unchanged=" + invalidUnchanged);
+                @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+                public void observeProbeProjectileHit(org.bukkit.event.entity.ProjectileHitEvent event) {
+                    if (event.getEntity().getUniqueId().equals(arrow.getUniqueId())) {
+                        observedProjectileHit.set(event);
+                    }
+                }
+            };
+            getServer().getPluginManager().registerEvents(damageObserver, this);
+
+            double meleeHealthBefore = meleeVictim.getHealth();
+            double projectileHealthBefore = projectileVictim.getHealth();
+            double disabledHealthBefore = disabledVictim.getHealth();
+            double invalidHealthBefore = invalidVictim.getHealth();
+            meleeVictim.damage(6.0, protectedWolf);
+            disabledVictim.damage(6.0, disabledWolf);
+            invalidVictim.damage(6.0, invalidWolf);
+
+            arrow.setVelocity(launchDirection.multiply(2.0));
+
+            var cleanupSourceRoot = sourceRoot;
+            var cleanupOutputDirectory = outputDirectory;
+            boolean cleanupOutputDirectoryExisted = outputDirectoryExisted;
+            var cleanupMobFiles = mobFiles;
+            var cleanupInstanceIds = instanceIds;
+            var cleanupEntities = spawnedEntities;
+            var cleanupObserver = damageObserver;
+            Runnable cleanup = () -> {
+                org.bukkit.event.HandlerList.unregisterAll(cleanupObserver);
+                cleanupImportedMobProbe(cleanupSourceRoot, cleanupOutputDirectory,
+                        cleanupOutputDirectoryExisted, cleanupMobFiles, cleanupInstanceIds);
+                for (var entity : cleanupEntities) {
+                    if (entity != null && entity.isValid()) entity.remove();
+                }
+            };
+            getServer().getScheduler().runTaskLater(this, () -> {
+                try {
+                    var meleeEvent = observedEvents.get(meleeVictim.getUniqueId());
+                    var projectileEvent = observedEvents.get(projectileVictim.getUniqueId());
+                    var disabledEvent = observedEvents.get(disabledVictim.getUniqueId());
+                    var invalidEvent = observedEvents.get(invalidVictim.getUniqueId());
+                    var projectileHitEvent = observedProjectileHit.get();
+                    boolean directManagedSource = meleeEvent
+                            instanceof org.bukkit.event.entity.EntityDamageByEntityEvent directDamage
+                            && directDamage.getDamager().getUniqueId().equals(protectedWolf.getUniqueId());
+                    boolean projectileManagedSource = projectileEvent
+                            instanceof org.bukkit.event.entity.EntityDamageByEntityEvent projectileDamage
+                            && projectileDamage.getDamager() instanceof org.bukkit.entity.Projectile managedProjectile
+                            && managedProjectile.getUniqueId().equals(arrow.getUniqueId())
+                            && managedProjectile.getShooter() instanceof org.bukkit.entity.Entity shooter
+                            && shooter.getUniqueId().equals(protectedWolf.getUniqueId());
+                    boolean projectileHit = projectileHitEvent != null
+                            && projectileHitEvent.getHitEntity() != null
+                            && projectileHitEvent.getHitEntity().getUniqueId()
+                            .equals(projectileVictim.getUniqueId());
+                    if (!projectileHit) {
+                        String hitEntity = projectileHitEvent == null || projectileHitEvent.getHitEntity() == null
+                                ? "none" : projectileHitEvent.getHitEntity().getType().name();
+                        String hitBlock = projectileHitEvent == null || projectileHitEvent.getHitBlock() == null
+                                ? "none" : projectileHitEvent.getHitBlock().getType().name();
+                        getLogger().warning("[自检] prevent-vanilla-damage-projectile-diagnostic hit-entity="
+                                + hitEntity + " hit-block=" + hitBlock + " arrow-valid=" + arrow.isValid()
+                                + " arrow-block=" + world.getBlockAt(arrow.getLocation()).getType()
+                                + " arrow-ticks=" + arrow.getTicksLived()
+                                + " arrow-location=" + arrow.getLocation() + " arrow-velocity=" + arrow.getVelocity()
+                                + " victim-block=" + world.getBlockAt(projectileVictim.getLocation()).getType()
+                                + " victim-location=" + projectileVictim.getLocation());
+                    }
+                    boolean directZero = directManagedSource && meleeEvent.getDamage() == 0.0;
+                    boolean projectileZero = projectileManagedSource && projectileHit
+                            && projectileEvent.getDamage() == 0.0;
+                    boolean directUncancelled = meleeEvent != null && !meleeEvent.isCancelled();
+                    boolean projectileUncancelled = projectileEvent != null && !projectileEvent.isCancelled();
+                    boolean disabledUnchanged = disabledEvent != null && !disabledEvent.isCancelled()
+                            && disabledEvent.getDamage() == 6.0;
+                    boolean invalidUnchanged = invalidEvent != null && !invalidEvent.isCancelled()
+                            && invalidEvent.getDamage() == 6.0;
+                    boolean directHealthUnchanged = meleeVictim.getHealth() == meleeHealthBefore;
+                    boolean projectileHealthUnchanged = projectileVictim.getHealth() == projectileHealthBefore;
+                    boolean disabledHealthDamaged = disabledVictim.getHealth() < disabledHealthBefore;
+                    boolean invalidHealthDamaged = invalidVictim.getHealth() < invalidHealthBefore;
+                    boolean passed = imported && configured && invalidPreserved && policies
+                            && directZero && projectileZero && directUncancelled && projectileUncancelled
+                            && directHealthUnchanged && projectileHealthUnchanged
+                            && disabledUnchanged && invalidUnchanged && disabledHealthDamaged && invalidHealthDamaged;
+                    getLogger().info("[自检] prevent-vanilla-damage-imported result=" + passed
+                            + " imported=" + imported + " configured=" + configured + " policies=" + policies
+                            + " direct-zero=" + directZero + " projectile-zero=" + projectileZero
+                            + " direct-uncancelled=" + directUncancelled
+                            + " projectile-uncancelled=" + projectileUncancelled
+                            + " direct-health-unchanged=" + directHealthUnchanged
+                            + " projectile-health-unchanged=" + projectileHealthUnchanged
+                            + " controls-unchanged=" + disabledUnchanged
+                            + " controls-damaged=" + disabledHealthDamaged
+                            + " invalid-preserved=" + invalidPreserved + " invalid-unchanged=" + invalidUnchanged
+                            + " invalid-health-damaged=" + invalidHealthDamaged
+                            + " projectile-hit=" + projectileHit
+                            + " direct-source=" + directManagedSource
+                            + " projectile-source=" + projectileManagedSource);
+                } catch (Throwable failure) {
+                    getLogger().warning("[自检] prevent-vanilla-damage-imported result=false imported=true error="
+                            + failure);
+                } finally {
+                    cleanup.run();
+                }
+            }, 4L);
+            cleanupDeferred = true;
         } catch (Throwable failure) {
             getLogger().warning("[自检] prevent-vanilla-damage-imported result=false imported=false error="
                     + failure);
         } finally {
-            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
-            for (var entity : spawnedEntities) {
-                if (entity != null && entity.isValid()) entity.remove();
+            if (!cleanupDeferred) {
+                if (damageObserver != null) {
+                    org.bukkit.event.HandlerList.unregisterAll(damageObserver);
+                }
+                cleanupImportedMobProbe(sourceRoot, outputDirectory,
+                        outputDirectoryExisted, mobFiles, instanceIds);
+                for (var entity : spawnedEntities) {
+                    if (entity != null && entity.isValid()) entity.remove();
+                }
             }
         }
     }

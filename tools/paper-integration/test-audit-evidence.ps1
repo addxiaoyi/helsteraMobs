@@ -651,7 +651,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'preventVanillaDamageImported'
     $fullReport.probes += [pscustomobject]@{
-        id = 'preventVanillaDamageImported'; status = 'passed'; observations = @('prevent-vanilla-damage-imported result=true imported=true configured=true policies=true direct-zero=true projectile-zero=true direct-uncancelled=true projectile-uncancelled=true controls-unchanged=true invalid-preserved=true invalid-unchanged=true')
+        id = 'preventVanillaDamageImported'; status = 'passed'; observations = @('prevent-vanilla-damage-imported result=true imported=true configured=true policies=true direct-zero=true projectile-zero=true direct-uncancelled=true projectile-uncancelled=true direct-health-unchanged=true projectile-health-unchanged=true controls-unchanged=true controls-damaged=true invalid-preserved=true invalid-unchanged=true invalid-health-damaged=true projectile-hit=true')
     }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'

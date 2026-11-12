@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-prevent-vanilla-damage-strict-20261112-r3",
+    "reportFixtureDirectory": "srv-paper-prevent-vanilla-damage-strict-20261112-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.json",
+    "reportSha256": "c5bc75e667cd2e30e48c15eaf056eede99b38721c188adee6338c044aa652063",
+    "log": "tools/paper-integration/reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.log.gz",
+    "logSha256": "e704034c2901550d371a918b5dc36f6a9d2dfc6808e78cac6d0a36ca35c384bb",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3-client-logs.tar.gz",
+    "clientLogSha256": "a83de667884bfeebac2d0f5137e2fb52fde12733b0c223c07b007bf692756a4b",
+    "pluginSha256": "a0c4de2db28f02f6dc42dedc3476f245ed4e69ce9b5311beedb9759fdd62e587",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-prevent-vanilla-damage-strict-20261112-r1",
     "reportFixtureDirectory": "srv-paper-prevent-vanilla-damage-strict-20261112-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r1-client-logs.tar.gz",
     "clientLogSha256": "bf527155a763286c5e73e040762f0f9eb885c5cc672ce218b6799f43bb441c2d",
     "pluginSha256": "635bdc8ec32d216b82f9bdf8b50a55eee6955b5d2d20e2b9af35644a596ea680",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-prevent-vanilla-damage-strict-20261112-r3"
   },
   {
     "fixtureId": "srv-paper-prevent-attack-strict-20261112-r1",
