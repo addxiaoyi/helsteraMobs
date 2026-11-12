@@ -2917,6 +2917,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         runImportedExplosionOptionsSelfTest(origin.clone().add(48, 0, 0));
         runImportedPreventLeashingSelfTest(origin.clone().add(54, 0, 0));
         runImportedPreventTargetReasonsSelfTest(origin.clone().add(60, 0, 0));
+        runImportedPreventMountSelfTest(origin.clone().add(66, 0, 0));
         runImportedPreventMobKillDropsSelfTest(origin.clone().add(32, 0, 0));
     }
 
@@ -4157,6 +4158,122 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             getLogger().warning("[自检] prevent-target-reasons-imported result=false imported=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedPreventMountSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        var mounts = new java.util.ArrayList<org.bukkit.entity.Entity>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-prevent-mount-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("prevent-mount.yml");
+            String protectedId = "PreventMountProtected_" + suffix;
+            String disabledId = "PreventMountDisabled_" + suffix;
+            String invalidId = "PreventMountInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: WOLF
+                        Options:
+                          PreventMount: true
+                      %2$s:
+                        Type: WOLF
+                        Options:
+                          PreventMount: false
+                      %3$s:
+                        Type: WOLF
+                        Options:
+                          PreventMount: maybe
+                    """.formatted(protectedId, disabledId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe PreventMount mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite PreventMount mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(protectedId, disabledId, invalidId);
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            if (!imported) throw new IllegalStateException("Mythic PreventMount fixtures were not all imported");
+
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0), origin.clone().add(6, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var protectedConfig = mobConfig(targetIds.get(protectedId));
+            var disabledConfig = mobConfig(targetIds.get(disabledId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            boolean configured = protectedConfig != null && protectedConfig.getBoolean("mob.prevent-mount")
+                    && disabledConfig != null && disabledConfig.contains("mob.prevent-mount")
+                    && !disabledConfig.getBoolean("mob.prevent-mount", true)
+                    && invalidConfig != null && !invalidConfig.contains("mob.prevent-mount");
+            var invalidOptions = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean invalidPreserved = invalidOptions != null
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("PreventMount"));
+
+            var protectedInstance = instances().impl(spawnedIds.get(protectedId));
+            var disabledInstance = instances().impl(spawnedIds.get(disabledId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            boolean policies = protectedInstance != null && protectedInstance.options().preventMount()
+                    && disabledInstance != null && !disabledInstance.options().preventMount()
+                    && invalidInstance != null && !invalidInstance.options().preventMount();
+            var protectedWolf = livingEntity(protectedInstance);
+            var disabledWolf = livingEntity(disabledInstance);
+            var invalidWolf = livingEntity(invalidInstance);
+            var world = origin.getWorld();
+            var protectedMount = world.spawn(origin.clone().add(0, 0, 2), org.bukkit.entity.Pig.class);
+            var disabledMount = world.spawn(origin.clone().add(3, 0, 2), org.bukkit.entity.Pig.class);
+            var invalidMount = world.spawn(origin.clone().add(6, 0, 2), org.bukkit.entity.Pig.class);
+            mounts.addAll(java.util.List.of(protectedMount, disabledMount, invalidMount));
+            var protectedEvent = new org.bukkit.event.entity.EntityMountEvent(protectedWolf, protectedMount);
+            var disabledEvent = new org.bukkit.event.entity.EntityMountEvent(disabledWolf, disabledMount);
+            var invalidEvent = new org.bukkit.event.entity.EntityMountEvent(invalidWolf, invalidMount);
+            for (var event : java.util.List.of(protectedEvent, disabledEvent, invalidEvent)) {
+                getServer().getPluginManager().callEvent(event);
+            }
+
+            boolean protectedCancelled = protectedEvent.isCancelled();
+            boolean disabledAllowed = !disabledEvent.isCancelled();
+            boolean invalidAllowed = !invalidEvent.isCancelled();
+            boolean passed = imported && configured && invalidPreserved && policies
+                    && protectedCancelled && disabledAllowed && invalidAllowed;
+            getLogger().info("[自检] prevent-mount-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured + " policies=" + policies
+                    + " protected-cancelled=" + protectedCancelled + " disabled-allowed=" + disabledAllowed
+                    + " invalid-preserved=" + invalidPreserved + " invalid-allowed=" + invalidAllowed);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] prevent-mount-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+            for (var mount : mounts) {
+                if (mount != null && mount.isValid()) mount.remove();
+            }
         }
     }
 
@@ -13493,6 +13610,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 groundFilterTarget.getLocation().clone().subtract(0, 0.1, 0)).getType()
                                 + " water-probe-in-water=" + waterFilterTarget.isInWater()
                                 + " water-probe-on-ground=" + waterFilterTarget.isOnGround()
+                                + " water-probe-at=" + formatProbeLocation(waterFilterTarget.getLocation())
+                                + " water-probe-block=" + waterFilterTarget.getLocation().getBlock().getType()
+                                + " water-probe-head=" + waterFilterTarget.getEyeLocation().getBlock().getType()
                                 + " flying-probe-on-ground=" + flyingFilterTarget.isOnGround()
                                 + " flying-probe-in-water=" + flyingFilterTarget.isInWater());
                     } finally {
@@ -13515,7 +13635,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         }
                         completeTargeterArgumentValidation();
                     }
-                }, 3L);
+                }, 10L);
                 targetFilterBlockStates.clear();
                 targetGroundProbeEntity = null;
                 targetWaterProbeEntity = null;
@@ -15250,21 +15370,32 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private static void prepareTargeterWaterProbe(org.bukkit.World world,
                                                   org.bukkit.block.Block center,
                                                   java.util.List<org.bukkit.block.BlockState> originalStates) {
-        var floor = world.getBlockAt(center.getX(), center.getY() - 1, center.getZ());
-        originalStates.add(floor.getState());
-        floor.setType(org.bukkit.Material.STONE, false);
-        for (int[] wallOffset : new int[][]{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}) {
-            for (int level = 0; level < 3; level++) {
-                var wall = world.getBlockAt(center.getX() + wallOffset[0], center.getY() + level,
-                        center.getZ() + wallOffset[1]);
-                originalStates.add(wall.getState());
-                wall.setType(org.bukkit.Material.STONE, false);
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                if (Math.abs(dx) == 2 || Math.abs(dz) == 2) {
+                    for (int level = 0; level < 4; level++) {
+                        var wall = world.getBlockAt(center.getX() + dx, center.getY() + level,
+                                center.getZ() + dz);
+                        originalStates.add(wall.getState());
+                        wall.setType(org.bukkit.Material.STONE, false);
+                    }
+                } else {
+                    var floor = world.getBlockAt(center.getX() + dx, center.getY() - 1,
+                            center.getZ() + dz);
+                    originalStates.add(floor.getState());
+                    floor.setType(org.bukkit.Material.STONE, false);
+                }
             }
         }
-        for (int level = 0; level < 3; level++) {
-            var water = world.getBlockAt(center.getX(), center.getY() + level, center.getZ());
-            originalStates.add(water.getState());
-            water.setType(org.bukkit.Material.WATER, false);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = 0; dy <= 3; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    var water = world.getBlockAt(center.getX() + dx, center.getY() + dy,
+                            center.getZ() + dz);
+                    originalStates.add(water.getState());
+                    water.setType(org.bukkit.Material.WATER, false);
+                }
+            }
         }
     }
 

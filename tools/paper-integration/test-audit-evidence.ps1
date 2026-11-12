@@ -641,6 +641,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'preventTargetReasonsImported'; status = 'passed'; observations = @('prevent-target-reasons-imported result=true imported=true configured=true policies=true selective-cancelled=true unlisted-allowed=true control-allowed=true blanket-cancelled=true')
     }
+    $fullReport.expectedProbeIds += 'preventMountImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'preventMountImported'; status = 'passed'; observations = @('prevent-mount-imported result=true imported=true configured=true policies=true protected-cancelled=true disabled-allowed=true invalid-preserved=true invalid-allowed=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

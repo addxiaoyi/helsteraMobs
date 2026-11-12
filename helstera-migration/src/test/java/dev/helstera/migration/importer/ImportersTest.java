@@ -4773,6 +4773,50 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic PreventMount imports booleans and preserves malformed values")
+    void mythicPreventMountRequiresBoolean(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/prevent-mount.yml", """
+                mobs:
+                  Protected:
+                    Type: WOLF
+                    Options:
+                      PreventMount: true
+                  Disabled:
+                    Type: WOLF
+                    Options:
+                      PreventMount: false
+                  Invalid:
+                    Type: WOLF
+                    Options:
+                      PreventMount: maybe
+                """);
+
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        var targetsBySourceId = new java.util.LinkedHashMap<String, YamlConfiguration>();
+        for (Map<String, Object> entry : entries) {
+            if (!(entry.get("source-mob-id") instanceof String sourceMobId)
+                    || !(entry.get("content") instanceof String content)) continue;
+            targetsBySourceId.put(sourceMobId, YamlConfiguration.loadConfiguration(new StringReader(content)));
+        }
+        var protectedMob = targetsBySourceId.get("Protected");
+        var disabledMob = targetsBySourceId.get("Disabled");
+        var invalidMob = targetsBySourceId.get("Invalid");
+
+        assertNotNull(protectedMob);
+        assertTrue(protectedMob.getBoolean("mob.prevent-mount"));
+        assertNotNull(disabledMob);
+        assertTrue(disabledMob.contains("mob.prevent-mount"));
+        assertFalse(disabledMob.getBoolean("mob.prevent-mount", true));
+        assertNotNull(invalidMob);
+        assertFalse(invalidMob.contains("mob.prevent-mount"));
+        assertEquals("maybe", invalidMob.getString("mob.unsupported.Options.PreventMount"));
+        assertEquals(3, entries.stream().filter(entry -> "Options.PreventMount".equals(entry.get("source-key")))
+                .count());
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "Options.PreventMount".equals(entry.get("source-key"))));
+    }
+
+    @Test
     @DisplayName("Mythic target reason scalar lists normalize to runtime lists")
     void mythicNormalizesDelimitedTargetReasons(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/target-reasons.yml", """
