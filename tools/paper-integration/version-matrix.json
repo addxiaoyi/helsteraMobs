@@ -14,8 +14,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-prevent-vanilla-damage-strict-20261112-r1",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r1.json"
+      "releaseFixtureId": "srv-paper-prevent-vanilla-damage-strict-20261112-r3",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",
