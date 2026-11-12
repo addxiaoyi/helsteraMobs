@@ -1741,6 +1741,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 runImportedGoatOptionsSelfTest(origin.clone().add(96, 0, 0));
                 runImportedFrogOptionsSelfTest(origin.clone().add(99, 0, 0));
                 runImportedTameableOptionsSelfTest(origin.clone().add(120, 0, 0));
+                runImportedPreventOtherDropsSelfTest(origin.clone().add(132, 0, 0));
 
                 var falling = world.spawnFallingBlock(origin.clone().add(8, 0, 0),
                         org.bukkit.Material.SAND.createBlockData());
@@ -3203,6 +3204,177 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             getLogger().warning("[自检] prevent-mob-kill-drops-imported result=false imported=false error=" + failure);
         } finally {
             victims.forEach(org.bukkit.entity.Entity::remove);
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedPreventOtherDropsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            if (origin == null || origin.getWorld() == null || instances == null || loot() == null
+                    || loot().table("common") == null) {
+                throw new IllegalStateException("PreventOtherDrops Paper probe dependencies are unavailable");
+            }
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            String protectedId = "PreventOtherDropsProtected_" + suffix;
+            String customLootId = "PreventOtherDropsCustomLoot_" + suffix;
+            String controlId = "PreventOtherDropsControl_" + suffix;
+            String invalidId = "PreventOtherDropsInvalid_" + suffix;
+            sourceRoot = Files.createTempDirectory("helstera-prevent-other-drops-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("prevent-other-drops.yml");
+            Path dropTables = Files.createDirectories(sourceRoot.resolve("DropTables"));
+            Files.writeString(dropTables.resolve("common.yml"), """
+                    common:
+                      Drops:
+                        - BREAD 1 1.0
+                    """);
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventOtherDrops: true
+                      %2$s:
+                        Type: ZOMBIE
+                        DropTable-1: common
+                        Options:
+                          PreventOtherDrops: true
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventOtherDrops: false
+                      %4$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventOtherDrops: maybe
+                    """.formatted(protectedId, customLootId, controlId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe PreventOtherDrops mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite PreventOtherDrops mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(protectedId, customLootId, controlId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic PreventOtherDrops fixtures were not all imported");
+            }
+
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)),
+                        origin.clone().add(i * 3, 0, 0), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var protectedConfig = mobConfig(targetIds.get(protectedId));
+            var customLootConfig = mobConfig(targetIds.get(customLootId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var invalidUnsupported = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean protectedConfigured = protectedConfig != null
+                    && protectedConfig.getBoolean("entity.prevent-other-drops");
+            boolean customConfigured = customLootConfig != null
+                    && customLootConfig.getBoolean("entity.prevent-other-drops");
+            String importedTable = customLootConfig == null ? null
+                    : customLootConfig.getString("mob.drops.table");
+            boolean controlConfigured = controlConfig != null
+                    && controlConfig.contains("entity.prevent-other-drops")
+                    && !controlConfig.getBoolean("entity.prevent-other-drops", true);
+            boolean invalidFallbackConfigured = invalidConfig != null
+                    && invalidConfig.contains("entity.prevent-other-drops")
+                    && !invalidConfig.getBoolean("entity.prevent-other-drops", true);
+            boolean invalidValuePreserved = invalidUnsupported != null
+                    && "maybe".equalsIgnoreCase(invalidUnsupported.getString("PreventOtherDrops"));
+            boolean configured = protectedConfig != null
+                    && protectedConfigured && customConfigured && "common".equals(importedTable)
+                    && controlConfigured
+                    && invalidFallbackConfigured
+                    && invalidValuePreserved;
+            var protectedInstance = instances().impl(spawnedIds.get(protectedId));
+            var customLootInstance = instances().impl(spawnedIds.get(customLootId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            boolean policies = protectedInstance != null && protectedInstance.options().preventOtherDrops()
+                    && customLootInstance != null && customLootInstance.options().preventOtherDrops()
+                    && controlInstance != null && !controlInstance.options().preventOtherDrops()
+                    && invalidInstance != null && !invalidInstance.options().preventOtherDrops()
+                    && customLootInstance instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl
+                    && "common".equals(impl.lootTable);
+
+            var protectedEntity = livingEntity(protectedInstance);
+            var customLootEntity = livingEntity(customLootInstance);
+            var controlEntity = livingEntity(controlInstance);
+            var invalidEntity = livingEntity(invalidInstance);
+            for (var entity : java.util.List.of(protectedEntity, customLootEntity, controlEntity, invalidEntity)) {
+                if (entity != null) entity.setAI(false);
+            }
+            var genericDamageSource = org.bukkit.damage.DamageSource.builder(
+                    org.bukkit.damage.DamageType.GENERIC).build();
+            var protectedDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>(
+                    java.util.List.of(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON, 2)));
+            var customLootDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>(
+                    java.util.List.of(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON, 2)));
+            var controlDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>(
+                    java.util.List.of(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON, 2)));
+            var invalidDrops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>(
+                    java.util.List.of(new org.bukkit.inventory.ItemStack(org.bukkit.Material.MUTTON, 2)));
+            var protectedDeath = protectedEntity == null ? null
+                    : new org.bukkit.event.entity.EntityDeathEvent(protectedEntity, genericDamageSource, protectedDrops, 7);
+            var customLootDeath = customLootEntity == null ? null
+                    : new org.bukkit.event.entity.EntityDeathEvent(customLootEntity, genericDamageSource, customLootDrops, 7);
+            var controlDeath = controlEntity == null ? null
+                    : new org.bukkit.event.entity.EntityDeathEvent(controlEntity, genericDamageSource, controlDrops, 7);
+            var invalidDeath = invalidEntity == null ? null
+                    : new org.bukkit.event.entity.EntityDeathEvent(invalidEntity, genericDamageSource, invalidDrops, 7);
+            if (protectedDeath != null) getServer().getPluginManager().callEvent(protectedDeath);
+            if (customLootDeath != null) getServer().getPluginManager().callEvent(customLootDeath);
+            if (controlDeath != null) getServer().getPluginManager().callEvent(controlDeath);
+            if (invalidDeath != null) getServer().getPluginManager().callEvent(invalidDeath);
+
+            boolean nativeSuppressed = protectedDeath != null && protectedDrops.isEmpty()
+                    && protectedDeath.getDroppedExp() == 0;
+            boolean customRetained = customLootDeath != null && customLootDrops.size() == 1
+                    && customLootDrops.get(0).getType() == org.bukkit.Material.BREAD
+                    && customLootDrops.get(0).getAmount() == 1 && customLootDeath.getDroppedExp() == 0;
+            boolean controlsPreserved = controlDeath != null && controlDrops.size() == 1
+                    && controlDrops.get(0).getType() == org.bukkit.Material.MUTTON
+                    && controlDrops.get(0).getAmount() == 2 && controlDeath.getDroppedExp() == 7;
+            boolean invalidPreserved = invalidDeath != null && invalidDrops.size() == 1
+                    && invalidDrops.get(0).getType() == org.bukkit.Material.MUTTON
+                    && invalidDrops.get(0).getAmount() == 2 && invalidDeath.getDroppedExp() == 7;
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            boolean passed = imported && configured && policies && nativeSuppressed
+                    && customRetained && controlsPreserved && invalidPreserved;
+            getLogger().info("[自检] prevent-other-drops-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured + " policies=" + policies
+                    + " native-suppressed=" + nativeSuppressed + " custom-retained=" + customRetained
+                    + " controls-preserved=" + controlsPreserved + " invalid-preserved=" + invalidPreserved);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] prevent-other-drops-imported result=false imported=false error=" + failure);
+        } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
     }
