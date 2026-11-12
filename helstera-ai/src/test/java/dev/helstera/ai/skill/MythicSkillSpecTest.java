@@ -24,6 +24,16 @@ class MythicSkillSpecTest {
     }
 
     @Test
+    void preservesCasterAndTriggerInlineConditionScopes() {
+        MythicSkillSpec spec = MythicSkillSpec.parse(
+                "message{m=hello} @trigger ~onDamaged ?raining ?~holding{m=WOODEN_SWORD} ?~!is-sneaking");
+
+        assertEquals(List.of("raining", "~holding{m=WOODEN_SWORD}", "~!is-sneaking"),
+                spec.inlineConditions());
+        assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("message ?~"));
+    }
+
+    @Test
     void supportsCommaValuesAndQuotedArguments() {
         MythicSkillSpec spec = MythicSkillSpec.parse("message{m=\"hello; world\";loc=1,2,3}");
         assertEquals("hello; world", spec.arguments().get("m"));
