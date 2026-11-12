@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-prevent-mount-strict-20261112-r3",
+    "reportFixtureDirectory": "srv-paper-prevent-mount-strict-20261112-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-prevent-mount-strict-20261112-r3.json",
+    "reportSha256": "0316b0f3a38bc827dd1e7ddfb88a9c6d6a3ee3f3f115e502e7845bcc80244e6a",
+    "log": "tools/paper-integration/reports/paper-1.21.1-prevent-mount-strict-20261112-r3.log.gz",
+    "logSha256": "36c436b82353368e34a8061801a2a91a3079a9555354239d32fbabff5fef0cf2",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-prevent-mount-strict-20261112-r3-client-logs.tar.gz",
+    "clientLogSha256": "a1d2d3fe684faab0a14e857c611cdcd1840aa1fee00187b184fb98e324ee94dc",
+    "pluginSha256": "feedd9bc851238df6ef06544e8f2c7de3bfc718da2250d82a29448c2046cbbae",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-target-reasons-strict-20261112-r3",
     "reportFixtureDirectory": "srv-paper-target-reasons-strict-20261112-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-prevent-target-reasons-strict-20261112-r3.json",

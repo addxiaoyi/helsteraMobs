@@ -1216,7 +1216,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "PreventTransformationReasons", "mob.prevent-transformation-reasons");
             preventConversionMapped = mapPreventConversion(options, srcFile, entries, target,
                     target.getString("mob.entity-type", ""));
-            mapOption(options, srcFile, entries, target, "PreventMount", "mob.prevent-mount");
+            mapBooleanOption(options, srcFile, entries, target, "PreventMount", "mob.prevent-mount");
             mapEntityScopedOption(options, srcFile, entries, target, "PreventJockeyMounts",
                     "mob.prevent-jockey-mounts", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.Zombie.class);

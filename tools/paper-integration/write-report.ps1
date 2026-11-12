@@ -126,6 +126,7 @@ $probeSpecs = [ordered]@{
     explosionOptionsImported = 'explosion-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-protected=true block-only=true entity-only=true projectile-only=true controls-allowed=true invalid-fallback=true'
     preventLeashingImported = 'prevent-leashing-imported result=true imported=true configured=true invalid-preserved=true policies=true protected-cancelled=true control-allowed=true invalid-fallback-cancelled=true'
     preventTargetReasonsImported = 'prevent-target-reasons-imported result=true imported=true configured=true policies=true selective-cancelled=true unlisted-allowed=true control-allowed=true blanket-cancelled=true'
+    preventMountImported = 'prevent-mount-imported result=true imported=true configured=true policies=true protected-cancelled=true disabled-allowed=true invalid-preserved=true invalid-allowed=true'
     digOutOfGroundImported = 'dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2\.00 fall-control=true disabled-allowed=true invalid-fallback=true'
     preventMobKillDropsImported = 'prevent-mob-kill-drops-imported result=true imported=true configured=true policies=true killers-resolved=true drops-suppressed=true controls-preserved=true'
     preventOtherDropsImported = 'prevent-other-drops-imported result=true imported=true configured=true policies=true native-suppressed=true custom-retained=true controls-preserved=true invalid-preserved=true'
