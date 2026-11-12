@@ -664,6 +664,11 @@
       "requiredObservation": "prevent-leashing-imported result=true imported=true configured=true invalid-preserved=true policies=true protected-cancelled=true control-allowed=true invalid-fallback-cancelled=true"
     },
     {
+      "id": "preventTargetReasonsImported",
+      "status": "passed",
+      "requiredObservation": "prevent-target-reasons-imported result=true imported=true configured=true policies=true selective-cancelled=true unlisted-allowed=true control-allowed=true blanket-cancelled=true"
+    },
+    {
       "id": "digOutOfGroundImported",
       "status": "passed",
       "requiredObservationPattern": "^dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2\\.00 fall-control=true disabled-allowed=true invalid-fallback=true$"
