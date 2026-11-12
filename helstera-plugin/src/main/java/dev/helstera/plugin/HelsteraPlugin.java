@@ -2919,6 +2919,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         runImportedPreventTargetReasonsSelfTest(origin.clone().add(60, 0, 0));
         runImportedPreventMountSelfTest(origin.clone().add(66, 0, 0));
         runImportedPreventAttackSelfTest(origin.clone().add(72, 0, 0));
+        runImportedPreventVanillaDamageSelfTest(origin.clone().add(78, 0, 0));
         runImportedPreventMobKillDropsSelfTest(origin.clone().add(32, 0, 0));
     }
 
@@ -4402,6 +4403,150 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " invalid-allowed=" + invalidAllowed);
         } catch (Throwable failure) {
             getLogger().warning("[自检] prevent-attack-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+            for (var entity : spawnedEntities) {
+                if (entity != null && entity.isValid()) entity.remove();
+            }
+        }
+    }
+
+    private void runImportedPreventVanillaDamageSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        var spawnedEntities = new java.util.ArrayList<org.bukkit.entity.Entity>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-prevent-vanilla-damage-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("prevent-vanilla-damage.yml");
+            String protectedId = "PreventVanillaDamageProtected_" + suffix;
+            String disabledId = "PreventVanillaDamageDisabled_" + suffix;
+            String invalidId = "PreventVanillaDamageInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: WOLF
+                        Options:
+                          PreventVanillaDamage: true
+                      %2$s:
+                        Type: WOLF
+                        Options:
+                          PreventVanillaDamage: false
+                      %3$s:
+                        Type: WOLF
+                        Options:
+                          PreventVanillaDamage: maybe
+                    """.formatted(protectedId, disabledId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe PreventVanillaDamage mob path: "
+                            + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite PreventVanillaDamage mob config: "
+                            + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(protectedId, disabledId, invalidId);
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            if (!imported) {
+                throw new IllegalStateException("Mythic PreventVanillaDamage fixtures were not all imported");
+            }
+
+            var locations = java.util.List.of(origin, origin.clone().add(4, 0, 0), origin.clone().add(8, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var protectedConfig = mobConfig(targetIds.get(protectedId));
+            var disabledConfig = mobConfig(targetIds.get(disabledId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            boolean configured = protectedConfig != null
+                    && protectedConfig.getBoolean("mob.prevent-vanilla-damage")
+                    && disabledConfig != null && disabledConfig.contains("mob.prevent-vanilla-damage")
+                    && !disabledConfig.getBoolean("mob.prevent-vanilla-damage", true)
+                    && invalidConfig != null && invalidConfig.contains("mob.prevent-vanilla-damage")
+                    && !invalidConfig.getBoolean("mob.prevent-vanilla-damage", true);
+            var invalidOptions = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean invalidPreserved = invalidOptions != null
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("PreventVanillaDamage"));
+
+            var protectedInstance = instances().impl(spawnedIds.get(protectedId));
+            var disabledInstance = instances().impl(spawnedIds.get(disabledId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            boolean policies = protectedInstance != null && protectedInstance.options().preventVanillaDamage()
+                    && disabledInstance != null && !disabledInstance.options().preventVanillaDamage()
+                    && invalidInstance != null && !invalidInstance.options().preventVanillaDamage();
+            var protectedWolf = livingEntity(protectedInstance);
+            var disabledWolf = livingEntity(disabledInstance);
+            var invalidWolf = livingEntity(invalidInstance);
+            if (protectedWolf == null || disabledWolf == null || invalidWolf == null || origin.getWorld() == null) {
+                throw new IllegalStateException("Production PreventVanillaDamage mobs did not spawn");
+            }
+
+            var world = origin.getWorld();
+            var meleeVictim = world.spawn(origin.clone().add(0, 0, 2), org.bukkit.entity.Pig.class);
+            var projectileVictim = world.spawn(origin.clone().add(2, 0, 2), org.bukkit.entity.Pig.class);
+            var disabledVictim = world.spawn(origin.clone().add(4, 0, 2), org.bukkit.entity.Pig.class);
+            var invalidVictim = world.spawn(origin.clone().add(8, 0, 2), org.bukkit.entity.Pig.class);
+            var snowball = world.spawn(origin.clone().add(2, 0, 1), org.bukkit.entity.Snowball.class);
+            snowball.setShooter(protectedWolf);
+            spawnedEntities.addAll(java.util.List.of(meleeVictim, projectileVictim, disabledVictim,
+                    invalidVictim, snowball));
+
+            var meleeEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(protectedWolf, meleeVictim,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 6.0);
+            var projectileEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(snowball, projectileVictim,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.PROJECTILE, 6.0);
+            var disabledEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(disabledWolf, disabledVictim,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 6.0);
+            var invalidEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(invalidWolf, invalidVictim,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 6.0);
+            for (var event : java.util.List.of(meleeEvent, projectileEvent, disabledEvent, invalidEvent)) {
+                getServer().getPluginManager().callEvent(event);
+            }
+
+            boolean directZero = meleeEvent.getDamage() == 0.0;
+            boolean projectileZero = projectileEvent.getDamage() == 0.0;
+            boolean directUncancelled = !meleeEvent.isCancelled();
+            boolean projectileUncancelled = !projectileEvent.isCancelled();
+            boolean disabledUnchanged = !disabledEvent.isCancelled() && disabledEvent.getDamage() == 6.0;
+            boolean invalidUnchanged = !invalidEvent.isCancelled() && invalidEvent.getDamage() == 6.0;
+            boolean passed = imported && configured && invalidPreserved && policies
+                    && directZero && projectileZero && directUncancelled && projectileUncancelled
+                    && disabledUnchanged && invalidUnchanged;
+            getLogger().info("[自检] prevent-vanilla-damage-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured + " policies=" + policies
+                    + " direct-zero=" + directZero + " projectile-zero=" + projectileZero
+                    + " direct-uncancelled=" + directUncancelled
+                    + " projectile-uncancelled=" + projectileUncancelled
+                    + " controls-unchanged=" + disabledUnchanged
+                    + " invalid-preserved=" + invalidPreserved + " invalid-unchanged=" + invalidUnchanged);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] prevent-vanilla-damage-imported result=false imported=false error="
+                    + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
             for (var entity : spawnedEntities) {

@@ -1,4 +1,5 @@
-Latest strict fixture `srv-paper-prevent-attack-strict-20261112-r1` verifies imported Mythic `Options.PreventAttack`: true cancels melee and projectile attacks, false allows them, and malformed input is preserved and safely allowed. The full Paper 1.21.1-133 release catalog completed 453 probes (434 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-prevent-attack-strict-20261112-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
+Latest strict fixture `srv-paper-prevent-vanilla-damage-strict-20261112-r1` verifies imported Mythic `Options.PreventVanillaDamage`: direct melee and managed-projectile damage become zero without cancelling the events; explicit `false` and malformed values leave damage unchanged, and malformed input is preserved. The full Paper 1.21.1-133 release catalog completed 454 probes (435 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
+Previous strict fixture `srv-paper-prevent-attack-strict-20261112-r1` verifies imported Mythic `Options.PreventAttack`: true cancels melee and projectile attacks, false allows them, and malformed input is preserved and safely allowed. Its full Paper 1.21.1-133 release catalog completed 453 probes (434 passed, 19 expected rejections), with zero failed or incomplete.
 Previous strict fixture `srv-paper-explosion-options-strict-20261112-r2` verifies imported Mythic `Options.PreventProjectiles`, `PreventExplosions`, `PreventBlockExplosions`, and `PreventEntityExplosions`, with independent projectile, block-explosion, and entity-explosion policies plus blanket protection. False controls pass, malformed values remain preserved with safe fallbacks, and its complete catalog recorded 449 probes (430 passed, 19 expected rejections). Its report remains archived in the [Paper evidence index](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Previous strict fixture `srv-paper-fire-protection-strict-20261112-r2` verifies imported Mythic `Options.PreventFire` and `Options.PreventFireCauses`: blanket fire protection cancels fire events, `FIRE_TICK` selectively cancels fire damage while allowing unlisted fire causes, and invalid values are preserved with safe fallbacks. Its complete Paper 1.21.1-133 release catalog records 448 probes (429 passed, 19 expected rejections), with zero failed or incomplete.
@@ -1352,7 +1353,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-prevent-attack-strict-20261112-r1` has 453 probes (434 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-prevent-vanilla-damage-strict-20261112-r1` has 454 probes (435 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1365,12 +1366,12 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-12). The full remaining work is:
 
-Latest strict report has 453 probes, zero incomplete.
+Latest strict report has 454 probes, zero incomplete.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 599 cited IDs; 506 report files; 4 directories without reports; 89 missing directories; 280 archived release reports. The
+   Current fixture inventory: 600 cited IDs; 507 report files; 4 directories without reports; 89 missing directories; 281 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1440,6 +1441,7 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
+- Mythic `Options.PreventVanillaDamage` now imports with strict boolean validation; malformed values remain under `mob.unsupported.Options.PreventVanillaDamage`. Paper 1.21.1-133 strict fixture `srv-paper-prevent-vanilla-damage-strict-20261112-r1` verifies production import, zero direct/projectile damage without event cancellation, unchanged false/malformed controls, and malformed-value preservation across all 454 release probes.
 - Mythic `Options.PreventAttack` now uses strict boolean import; malformed values remain under `mob.unsupported.Options.PreventAttack`. Paper 1.21.1-133 strict fixture `srv-paper-prevent-attack-strict-20261112-r1` verifies production import, melee and projectile cancellation, false allowance, and malformed-value preservation with safe allowance across all 453 release probes.
 - Mythic `Options.PreventMount` now uses strict boolean import; malformed values remain under `mob.unsupported.Options.PreventMount`. Paper 1.21.1-133 strict fixture `srv-paper-prevent-mount-strict-20261112-r3` verifies production import, true cancellation, false allowance, malformed-value preservation and safe allowance in all 452 release probes.
 - Mythic `Options.PreventProjectiles`, `PreventExplosions`, `PreventBlockExplosions`, and `PreventEntityExplosions` now import with strict boolean validation; malformed values remain preserved with safe fallbacks. Paper 1.21.1-133 strict fixture `srv-paper-explosion-options-strict-20261112-r2` verifies blanket explosion protection, independent block/entity explosion filters, projectile damage protection, false controls, and malformed-value preservation in the full 449-probe release catalog.

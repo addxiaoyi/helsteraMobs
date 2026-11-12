@@ -251,6 +251,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] prevent-target-reasons-imported result=true imported=true configured=true policies=true selective-cancelled=true unlisted-allowed=true control-allowed=true blanket-cancelled=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] prevent-mount-imported result=true imported=true configured=true policies=true protected-cancelled=true disabled-allowed=true invalid-preserved=true invalid-allowed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] prevent-attack-imported result=true imported=true configured=true policies=true melee-cancelled=true projectile-cancelled=true disabled-allowed=true invalid-preserved=true invalid-allowed=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] prevent-vanilla-damage-imported result=true imported=true configured=true policies=true direct-zero=true projectile-zero=true direct-uncancelled=true projectile-uncancelled=true controls-unchanged=true invalid-preserved=true invalid-unchanged=true',
         '[Server thread/INFO]: mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true',
         '[Server thread/INFO]: mob-options-natural bee-stinger=true bee-event=synthetic bee-attacks=1/1 zombie-conversion=true zombie-control=true zombie-protected=true passed=true',
         '[Server thread/INFO]: mob-options-skeleton-conversion protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=SKELETON protected-valid=true control-stray=true control-converted=true elapsed-ticks=21 restored=true passed=true',
@@ -557,7 +558,7 @@ try {
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
             'importedItemSimilarityConditions',
-            'importedPlayerKillsCondition', 'importedTimerTrigger', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'frogOptionsImported', 'digOutOfGroundImported', 'fireProtectionOptionsImported', 'explosionOptionsImported', 'preventLeashingImported', 'preventTargetReasonsImported', 'preventMountImported', 'preventAttackImported', 'preventMobKillDropsImported', 'preventOtherDropsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
+            'importedPlayerKillsCondition', 'importedTimerTrigger', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'frogOptionsImported', 'digOutOfGroundImported', 'fireProtectionOptionsImported', 'explosionOptionsImported', 'preventLeashingImported', 'preventTargetReasonsImported', 'preventMountImported', 'preventAttackImported', 'preventVanillaDamageImported', 'preventMobKillDropsImported', 'preventOtherDropsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -687,6 +688,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'preventAttackImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'preventAttackImported').observations[0] -ceq
         'prevent-attack-imported result=true imported=true configured=true policies=true melee-cancelled=true projectile-cancelled=true disabled-allowed=true invalid-preserved=true invalid-allowed=true') 'Mythic PreventAttack requires imported direct/projectile cancellation, false control, and malformed-value preservation'
+    Assert-True (($report.probes | Where-Object id -eq 'preventVanillaDamageImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'preventVanillaDamageImported').observations[0] -ceq
+        'prevent-vanilla-damage-imported result=true imported=true configured=true policies=true direct-zero=true projectile-zero=true direct-uncancelled=true projectile-uncancelled=true controls-unchanged=true invalid-preserved=true invalid-unchanged=true') 'Mythic PreventVanillaDamage requires imported direct/projectile damage normalization, uncancelled events, inverse control, and malformed preservation'
     Assert-True (($report.probes | Where-Object id -eq 'digOutOfGroundImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'digOutOfGroundImported').observations[0] -match
         '^dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2\.00 fall-control=true disabled-allowed=true invalid-fallback=true$') 'Mythic DigOutOfGround requires a two-block suffocation response, cause/disabled controls, and malformed-value fallback'
@@ -1483,6 +1487,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'preventAttackImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'preventAttackImported'; status = 'passed'; observations = @('prevent-attack-imported result=true imported=true configured=true policies=true melee-cancelled=true projectile-cancelled=true disabled-allowed=true invalid-preserved=true invalid-allowed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'preventVanillaDamageImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'preventVanillaDamageImported'; status = 'passed'; observations = @('prevent-vanilla-damage-imported result=true imported=true configured=true policies=true direct-zero=true projectile-zero=true direct-uncancelled=true projectile-uncancelled=true controls-unchanged=true invalid-preserved=true invalid-unchanged=true')
     }
     $fullCatalogReport.expectedProbeIds += 'digOutOfGroundImported'
     $fullCatalogReport.probes += [pscustomobject]@{
