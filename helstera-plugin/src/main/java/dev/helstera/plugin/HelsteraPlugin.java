@@ -2915,6 +2915,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         runImportedDigOutOfGroundSelfTest(origin.clone().add(20, 0, 0));
         runImportedFireProtectionOptionsSelfTest(origin.clone().add(42, 0, 0));
         runImportedExplosionOptionsSelfTest(origin.clone().add(48, 0, 0));
+        runImportedPreventLeashingSelfTest(origin.clone().add(54, 0, 0));
         runImportedPreventMobKillDropsSelfTest(origin.clone().add(32, 0, 0));
     }
 
@@ -3922,6 +3923,118 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " controls-allowed=" + controlsAllowed + " invalid-fallback=" + invalidFallback);
         } catch (Throwable failure) {
             getLogger().warning("[自检] explosion-options-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedPreventLeashingSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-prevent-leashing-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("prevent-leashing.yml");
+            String protectedId = "PreventLeashingEnabled_" + suffix;
+            String controlId = "PreventLeashingControl_" + suffix;
+            String invalidId = "PreventLeashingInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: WOLF
+                        Options:
+                          PreventLeashing: true
+                      %2$s:
+                        Type: WOLF
+                        Options:
+                          PreventLeashing: false
+                      %3$s:
+                        Type: WOLF
+                        Options:
+                          PreventLeashing: maybe
+                    """.formatted(protectedId, controlId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe prevent-leashing mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite prevent-leashing mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(protectedId, controlId, invalidId);
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            if (!imported) throw new IllegalStateException("Mythic PreventLeashing fixtures were not all imported");
+
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0), origin.clone().add(6, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var protectedConfig = mobConfig(targetIds.get(protectedId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var unsupportedOptions = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean configured = protectedConfig != null && protectedConfig.getBoolean("mob.prevent-leashing")
+                    && controlConfig != null && !controlConfig.getBoolean("mob.prevent-leashing", true);
+            boolean invalidPreserved = unsupportedOptions != null
+                    && "maybe".equalsIgnoreCase(unsupportedOptions.getString("PreventLeashing"))
+                    && invalidConfig.getBoolean("mob.prevent-leashing");
+
+            var protectedInstance = instances().impl(spawnedIds.get(protectedId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            boolean policies = protectedInstance != null && protectedInstance.options().preventLeashing()
+                    && controlInstance != null && !controlInstance.options().preventLeashing()
+                    && invalidInstance != null && invalidInstance.options().preventLeashing();
+
+            org.bukkit.entity.Player actor = getServer().getOnlinePlayers().stream()
+                    .filter(player -> player.isOnline() && !player.isDead())
+                    .findFirst().orElse(null);
+            if (actor == null) throw new IllegalStateException("No online player for imported leash event controls");
+            var protectedWolf = livingEntity(protectedInstance);
+            var controlWolf = livingEntity(controlInstance);
+            var invalidWolf = livingEntity(invalidInstance);
+            var protectedEvent = new org.bukkit.event.entity.PlayerLeashEntityEvent(protectedWolf, actor, actor);
+            var controlEvent = new org.bukkit.event.entity.PlayerLeashEntityEvent(controlWolf, actor, actor);
+            var invalidEvent = new org.bukkit.event.entity.PlayerLeashEntityEvent(invalidWolf, actor, actor);
+            getServer().getPluginManager().callEvent(protectedEvent);
+            getServer().getPluginManager().callEvent(controlEvent);
+            getServer().getPluginManager().callEvent(invalidEvent);
+
+            boolean protectedCancelled = protectedEvent.isCancelled();
+            boolean controlAllowed = !controlEvent.isCancelled();
+            boolean invalidFallback = invalidEvent.isCancelled();
+            boolean passed = imported && configured && invalidPreserved && policies
+                    && protectedCancelled && controlAllowed && invalidFallback;
+            getLogger().info("[自检] prevent-leashing-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured
+                    + " invalid-preserved=" + invalidPreserved + " policies=" + policies
+                    + " protected-cancelled=" + protectedCancelled + " control-allowed=" + controlAllowed
+                    + " invalid-fallback-cancelled=" + invalidFallback);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] prevent-leashing-imported result=false imported=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }

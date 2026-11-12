@@ -179,6 +179,10 @@ class ImportersTest {
                   Type: ZOMBIE
                   Options:
                     PreventOtherDrops: true
+                InvalidLeashing:
+                  Type: WOLF
+                  Options:
+                    PreventLeashing: maybe
                 """);
 
         var importer = new MythicMobsImporter();
@@ -191,6 +195,9 @@ class ImportersTest {
                 .findFirst().orElseThrow().get("content"))));
         var explicitDropSuppression = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(entries.stream()
                 .filter(e -> "mobs/mythic_explicitdropsuppression.yml".equals(e.get("target-file")))
+                .findFirst().orElseThrow().get("content"))));
+        var invalidLeashing = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(entries.stream()
+                .filter(e -> "mobs/mythic_invalidleashing.yml".equals(e.get("target-file")))
                 .findFirst().orElseThrow().get("content"))));
 
         assertEquals("CHUNK", global.getString("mob.despawn"));
@@ -220,6 +227,14 @@ class ImportersTest {
         assertFalse(explicit.getBoolean("mob.prevent-transformation"));
         assertTrue(explicit.getBoolean("entity.can-pickup-items"));
         assertTrue(explicitDropSuppression.getBoolean("entity.prevent-other-drops"));
+        assertTrue(invalidLeashing.getBoolean("mob.prevent-leashing"));
+        assertEquals("maybe", invalidLeashing.getString("mob.unsupported.Options.PreventLeashing"));
+        assertTrue(entries.stream().anyMatch(e -> "defaulted".equals(e.get("status"))
+                && "MythicMobs.Options.PreventLeashing.default".equals(e.get("source-key"))
+                && "true".equals(String.valueOf(e.get("value")))));
+        assertTrue(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
+                && "Options.PreventLeashing".equals(e.get("source-key"))
+                && "WARN".equals(e.get("severity"))));
         assertTrue(entries.stream().anyMatch(e -> "mapped".equals(e.get("status"))
                 && "Options.NoDamageTicks".equals(e.get("source-key"))
                 && "27".equals(e.get("value"))));

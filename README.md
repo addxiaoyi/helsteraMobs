@@ -1,4 +1,5 @@
-Latest strict fixture `srv-paper-explosion-options-strict-20261112-r2` verifies imported Mythic `Options.PreventProjectiles`, `PreventExplosions`, `PreventBlockExplosions`, and `PreventEntityExplosions`, with independent projectile, block-explosion, and entity-explosion policies plus blanket protection. False controls pass, malformed values remain preserved with safe fallbacks, and the full Paper 1.21.1-133 release catalog records 449 probes (430 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-explosion-options-strict-20261112-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
+Latest strict fixture `srv-paper-prevent-leashing-strict-20261112-r2` verifies imported Mythic `Options.PreventLeashing`: true cancels player leash events, false allows them, and malformed values stay preserved while using Mythic’s built-in true fallback. The full Paper 1.21.1-133 release catalog records 450 probes (431 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-prevent-leashing-strict-20261112-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
+Previous strict fixture `srv-paper-explosion-options-strict-20261112-r2` verifies imported Mythic `Options.PreventProjectiles`, `PreventExplosions`, `PreventBlockExplosions`, and `PreventEntityExplosions`, with independent projectile, block-explosion, and entity-explosion policies plus blanket protection. False controls pass, malformed values remain preserved with safe fallbacks, and its complete catalog recorded 449 probes (430 passed, 19 expected rejections). Its report remains archived in the [Paper evidence index](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Previous strict fixture `srv-paper-fire-protection-strict-20261112-r2` verifies imported Mythic `Options.PreventFire` and `Options.PreventFireCauses`: blanket fire protection cancels fire events, `FIRE_TICK` selectively cancels fire damage while allowing unlisted fire causes, and invalid values are preserved with safe fallbacks. Its complete Paper 1.21.1-133 release catalog records 448 probes (429 passed, 19 expected rejections), with zero failed or incomplete.
 Previous strict fixture `srv-paper-prevent-mob-kill-drops-strict-20261111-r1` verifies imported Mythic `Options.PreventMobKillDrops`: a managed killer suppresses its target's drops and XP; explicit `false` and malformed-value controls preserve them. Its 446-probe release report remains archived.
@@ -1351,7 +1352,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-explosion-options-strict-20261112-r2` has 449 probes (430 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-prevent-leashing-strict-20261112-r2` has 450 probes (431 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1364,12 +1365,12 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-12). The full remaining work is:
 
-Latest strict report has 449 probes, zero incomplete.
+Latest strict report has 450 probes, zero incomplete.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 596 cited IDs; 503 report files; 4 directories without reports; 89 missing directories; 276 archived release reports. The
+   Current fixture inventory: 597 cited IDs; 504 report files; 4 directories without reports; 89 missing directories; 277 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
