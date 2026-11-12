@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-prevent-attack-strict-20261112-r1",
+    "reportFixtureDirectory": "srv-paper-prevent-attack-strict-20261112-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-prevent-attack-strict-20261112-r1.json",
+    "reportSha256": "daf4f2ec9c0a2b1d9bccedcb7a516bb5076d94574a65f019a92fdbc39b179756",
+    "log": "tools/paper-integration/reports/paper-1.21.1-prevent-attack-strict-20261112-r1.log.gz",
+    "logSha256": "12458d8fc20d2963ae000a1b7005f80bd21d4b71600e3c8fff29923c68d64ef1",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-prevent-attack-strict-20261112-r1-client-logs.tar.gz",
+    "clientLogSha256": "329052b9316d1ae2f97d8ec8ebb311d6aa360d2bb64b9933a026395ca1498eae",
+    "pluginSha256": "2b1a21f30e48d92fa7747e6fad17cbc9e1d454a4d8e93b505541eec22fff79f2",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-prevent-mount-strict-20261112-r3",
     "reportFixtureDirectory": "srv-paper-prevent-mount-strict-20261112-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-prevent-mount-strict-20261112-r3.json",

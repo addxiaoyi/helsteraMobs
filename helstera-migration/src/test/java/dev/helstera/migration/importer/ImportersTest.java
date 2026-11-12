@@ -4817,6 +4817,50 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic PreventAttack imports booleans and preserves malformed values")
+    void mythicPreventAttackRequiresBoolean(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/prevent-attack.yml", """
+                mobs:
+                  Protected:
+                    Type: WOLF
+                    Options:
+                      PreventAttack: true
+                  Disabled:
+                    Type: WOLF
+                    Options:
+                      PreventAttack: false
+                  Invalid:
+                    Type: WOLF
+                    Options:
+                      PreventAttack: maybe
+                """);
+
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        var targetsBySourceId = new java.util.LinkedHashMap<String, YamlConfiguration>();
+        for (Map<String, Object> entry : entries) {
+            if (!(entry.get("source-mob-id") instanceof String sourceMobId)
+                    || !(entry.get("content") instanceof String content)) continue;
+            targetsBySourceId.put(sourceMobId, YamlConfiguration.loadConfiguration(new StringReader(content)));
+        }
+        var protectedMob = targetsBySourceId.get("Protected");
+        var disabledMob = targetsBySourceId.get("Disabled");
+        var invalidMob = targetsBySourceId.get("Invalid");
+
+        assertNotNull(protectedMob);
+        assertTrue(protectedMob.getBoolean("mob.prevent-attack"));
+        assertNotNull(disabledMob);
+        assertTrue(disabledMob.contains("mob.prevent-attack"));
+        assertFalse(disabledMob.getBoolean("mob.prevent-attack", true));
+        assertNotNull(invalidMob);
+        assertFalse(invalidMob.contains("mob.prevent-attack"));
+        assertEquals("maybe", invalidMob.getString("mob.unsupported.Options.PreventAttack"));
+        assertEquals(3, entries.stream().filter(entry -> "Options.PreventAttack".equals(entry.get("source-key")))
+                .count());
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "Options.PreventAttack".equals(entry.get("source-key"))));
+    }
+
+    @Test
     @DisplayName("Mythic target reason scalar lists normalize to runtime lists")
     void mythicNormalizesDelimitedTargetReasons(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/target-reasons.yml", """
