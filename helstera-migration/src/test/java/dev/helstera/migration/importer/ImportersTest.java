@@ -4679,6 +4679,9 @@ class ImportersTest {
                       PreventMount: true
                       PreventJockeyMounts: true
                       PreventTarget: true
+                      PreventTargetReasons:
+                        - CLOSEST_PLAYER
+                        - TARGET_ATTACKED_ENTITY
                       PreventAttack: true
                       PreventVanillaDamage: true
                       PreventSlimeSplit: true
@@ -4715,6 +4718,8 @@ class ImportersTest {
         assertTrue(target.getBoolean("mob.prevent-mount"));
         assertTrue(target.getBoolean("mob.prevent-jockey-mounts"));
         assertTrue(target.getBoolean("mob.prevent-target"));
+        assertEquals(List.of("CLOSEST_PLAYER", "TARGET_ATTACKED_ENTITY"),
+                target.getStringList("mob.prevent-target-reasons"));
         assertTrue(target.getBoolean("mob.prevent-attack"));
         assertTrue(target.getBoolean("mob.prevent-vanilla-damage"));
         assertFalse(target.contains("mob.prevent-slime-split"));
@@ -4765,6 +4770,30 @@ class ImportersTest {
                 && "WARN".equals(entry.get("severity"))
                 && "Options.PatrolLeader".equals(entry.get("source-key"))
                 && String.valueOf(entry.get("note")).contains("does not implement Raider")));
+    }
+
+    @Test
+    @DisplayName("Mythic target reason scalar lists normalize to runtime lists")
+    void mythicNormalizesDelimitedTargetReasons(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/target-reasons.yml", """
+                mobs:
+                  ScalarReasons:
+                    Type: HUSK
+                    Options:
+                      PreventTargetReasons: CLOSEST_PLAYER,TARGET_ATTACKED_ENTITY
+                """);
+        var entries = new MythicMobsImporter().convert(file, root);
+        var imported = entries.stream()
+                .filter(entry -> "mobs/mythic_scalarreasons.yml".equals(entry.get("target-file")))
+                .findFirst().orElseThrow();
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new StringReader(String.valueOf(imported.get("content"))));
+
+        assertEquals(List.of("CLOSEST_PLAYER", "TARGET_ATTACKED_ENTITY"),
+                target.getStringList("mob.prevent-target-reasons"));
+        assertTrue(entries.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "Options.PreventTargetReasons".equals(entry.get("source-key"))
+                && "[CLOSEST_PLAYER, TARGET_ATTACKED_ENTITY]".equals(entry.get("value"))));
     }
 
     @Test

@@ -2916,6 +2916,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         runImportedFireProtectionOptionsSelfTest(origin.clone().add(42, 0, 0));
         runImportedExplosionOptionsSelfTest(origin.clone().add(48, 0, 0));
         runImportedPreventLeashingSelfTest(origin.clone().add(54, 0, 0));
+        runImportedPreventTargetReasonsSelfTest(origin.clone().add(60, 0, 0));
         runImportedPreventMobKillDropsSelfTest(origin.clone().add(32, 0, 0));
     }
 
@@ -4035,6 +4036,125 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " invalid-fallback-cancelled=" + invalidFallback);
         } catch (Throwable failure) {
             getLogger().warning("[自检] prevent-leashing-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedPreventTargetReasonsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-prevent-target-reasons-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("prevent-target-reasons.yml");
+            String selectiveId = "PreventTargetReasonsSelective_" + suffix;
+            String controlId = "PreventTargetReasonsControl_" + suffix;
+            String blanketId = "PreventTargetReasonsBlanket_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventTargetReasons:
+                            - CLOSEST_PLAYER
+                      %2$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventTargetReasons: TARGET_ATTACKED_ENTITY
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventTarget: true
+                    """.formatted(selectiveId, controlId, blanketId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe target-reasons mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite target-reasons mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(selectiveId, controlId, blanketId);
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            if (!imported) throw new IllegalStateException("Mythic PreventTargetReasons fixtures were not all imported");
+
+            var locations = java.util.List.of(origin, origin.clone().add(3, 0, 0), origin.clone().add(6, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var selectiveConfig = mobConfig(targetIds.get(selectiveId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var blanketConfig = mobConfig(targetIds.get(blanketId));
+            var selectiveInstance = instances().impl(spawnedIds.get(selectiveId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var blanketInstance = instances().impl(spawnedIds.get(blanketId));
+            boolean configured = selectiveConfig != null
+                    && selectiveConfig.getStringList("mob.prevent-target-reasons").equals(java.util.List.of("CLOSEST_PLAYER"))
+                    && controlConfig != null
+                    && configuredStringList(controlConfig,
+                            "mob.prevent-target-reasons", "prevent-target-reasons")
+                            .equals(java.util.List.of("TARGET_ATTACKED_ENTITY"))
+                    && blanketConfig != null && blanketConfig.getBoolean("mob.prevent-target");
+            boolean policies = selectiveInstance != null
+                    && selectiveInstance.options().preventTargetReasons().contains("CLOSEST_PLAYER")
+                    && controlInstance != null
+                    && controlInstance.options().preventTargetReasons().contains("TARGET_ATTACKED_ENTITY")
+                    && blanketInstance != null && blanketInstance.options().preventTarget();
+
+            org.bukkit.entity.Player actor = getServer().getOnlinePlayers().stream()
+                    .filter(player -> player.isOnline() && !player.isDead())
+                    .findFirst().orElse(null);
+            if (actor == null) throw new IllegalStateException("No online player for imported target-reasons event controls");
+            var selectiveEntity = livingEntity(selectiveInstance);
+            var controlEntity = livingEntity(controlInstance);
+            var blanketEntity = livingEntity(blanketInstance);
+            var selectedReason = new org.bukkit.event.entity.EntityTargetLivingEntityEvent(selectiveEntity, actor,
+                    org.bukkit.event.entity.EntityTargetEvent.TargetReason.CLOSEST_PLAYER);
+            var unlistedReason = new org.bukkit.event.entity.EntityTargetLivingEntityEvent(selectiveEntity, actor,
+                    org.bukkit.event.entity.EntityTargetEvent.TargetReason.TARGET_ATTACKED_ENTITY);
+            var controlReason = new org.bukkit.event.entity.EntityTargetLivingEntityEvent(controlEntity, actor,
+                    org.bukkit.event.entity.EntityTargetEvent.TargetReason.CLOSEST_PLAYER);
+            var blanketReason = new org.bukkit.event.entity.EntityTargetLivingEntityEvent(blanketEntity, actor,
+                    org.bukkit.event.entity.EntityTargetEvent.TargetReason.TARGET_ATTACKED_ENTITY);
+            for (var event : java.util.List.of(selectedReason, unlistedReason, controlReason, blanketReason)) {
+                getServer().getPluginManager().callEvent(event);
+            }
+
+            boolean selectivelyCancelled = selectedReason.isCancelled();
+            boolean unlistedAllowed = !unlistedReason.isCancelled();
+            boolean controlAllowed = !controlReason.isCancelled();
+            boolean blanketCancelled = blanketReason.isCancelled();
+            boolean passed = imported && configured && policies && selectivelyCancelled
+                    && unlistedAllowed && controlAllowed && blanketCancelled;
+            getLogger().info("[自检] prevent-target-reasons-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured + " policies=" + policies
+                    + " selective-cancelled=" + selectivelyCancelled + " unlisted-allowed=" + unlistedAllowed
+                    + " control-allowed=" + controlAllowed + " blanket-cancelled=" + blanketCancelled);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] prevent-target-reasons-imported result=false imported=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
@@ -12999,12 +13119,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 ((org.bukkit.entity.ArmorStand) targetGroundProbeEntity).setVisible(false);
                 targetGroundProbeEntity.setInvulnerable(true);
                 targetGroundProbeEntity.setVelocity(new org.bukkit.util.Vector(0, -0.75, 0));
-                for (int waterLevel = 0; waterLevel < 3; waterLevel++) {
-                    var waterBlock = world.getBlockAt(targetWaterFilterBlock.getX(),
-                            targetWaterFilterBlock.getY() + waterLevel, targetWaterFilterBlock.getZ());
-                    targetFilterBlockStates.add(waterBlock.getState());
-                    waterBlock.setType(org.bukkit.Material.WATER, false);
-                }
+                prepareTargeterWaterProbe(world, targetWaterFilterBlock, targetFilterBlockStates);
                 targetWaterProbeEntity = world.spawn(
                         targetWaterFilterBlock.getLocation().clone().add(0.5, 0.5, 0.5),
                         org.bukkit.entity.Zombie.class);
@@ -15130,6 +15245,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 30L);
+    }
+
+    private static void prepareTargeterWaterProbe(org.bukkit.World world,
+                                                  org.bukkit.block.Block center,
+                                                  java.util.List<org.bukkit.block.BlockState> originalStates) {
+        var floor = world.getBlockAt(center.getX(), center.getY() - 1, center.getZ());
+        originalStates.add(floor.getState());
+        floor.setType(org.bukkit.Material.STONE, false);
+        for (int[] wallOffset : new int[][]{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}) {
+            for (int level = 0; level < 3; level++) {
+                var wall = world.getBlockAt(center.getX() + wallOffset[0], center.getY() + level,
+                        center.getZ() + wallOffset[1]);
+                originalStates.add(wall.getState());
+                wall.setType(org.bukkit.Material.STONE, false);
+            }
+        }
+        for (int level = 0; level < 3; level++) {
+            var water = world.getBlockAt(center.getX(), center.getY() + level, center.getZ());
+            originalStates.add(water.getState());
+            water.setType(org.bukkit.Material.WATER, false);
+        }
     }
 
     private boolean runImportedInvulnerabilityConditionSelfTest(
