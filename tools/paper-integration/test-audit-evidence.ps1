@@ -621,6 +621,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'preventMobKillDropsImported'; status = 'passed'; observations = @('prevent-mob-kill-drops-imported result=true imported=true configured=true policies=true killers-resolved=true drops-suppressed=true controls-preserved=true')
     }
+    $fullReport.expectedProbeIds += 'preventOtherDropsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'preventOtherDropsImported'; status = 'passed'; observations = @('prevent-other-drops-imported result=true imported=true configured=true policies=true native-suppressed=true custom-retained=true controls-preserved=true invalid-preserved=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

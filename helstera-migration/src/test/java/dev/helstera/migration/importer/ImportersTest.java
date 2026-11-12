@@ -175,6 +175,10 @@ class ImportersTest {
                     PreventLeashing: true
                     PreventTransformation: false
                     CanPickupItems: true
+                ExplicitDropSuppression:
+                  Type: ZOMBIE
+                  Options:
+                    PreventOtherDrops: true
                 """);
 
         var importer = new MythicMobsImporter();
@@ -184,6 +188,9 @@ class ImportersTest {
                 .findFirst().orElseThrow().get("content"))));
         var explicit = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(entries.stream()
                 .filter(e -> "mobs/mythic_explicitvalues.yml".equals(e.get("target-file")))
+                .findFirst().orElseThrow().get("content"))));
+        var explicitDropSuppression = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(entries.stream()
+                .filter(e -> "mobs/mythic_explicitdropsuppression.yml".equals(e.get("target-file")))
                 .findFirst().orElseThrow().get("content"))));
 
         assertEquals("CHUNK", global.getString("mob.despawn"));
@@ -212,6 +219,7 @@ class ImportersTest {
         assertTrue(explicit.getBoolean("mob.prevent-leashing"));
         assertFalse(explicit.getBoolean("mob.prevent-transformation"));
         assertTrue(explicit.getBoolean("entity.can-pickup-items"));
+        assertTrue(explicitDropSuppression.getBoolean("entity.prevent-other-drops"));
         assertTrue(entries.stream().anyMatch(e -> "mapped".equals(e.get("status"))
                 && "Options.NoDamageTicks".equals(e.get("source-key"))
                 && "27".equals(e.get("value"))));
@@ -249,6 +257,8 @@ class ImportersTest {
         assertFalse(invalidGlobal.getBoolean("mob.prevent-vanilla-damage"));
         assertTrue(invalidGlobal.getBoolean("entity.prevent-item-pickup"));
         assertEquals(10, invalidGlobal.getInt("entity.no-damage-ticks"));
+        assertTrue(invalidGlobal.contains("entity.prevent-other-drops"));
+        assertFalse(invalidGlobal.getBoolean("entity.prevent-other-drops", true));
         assertTrue(invalidGlobal.contains("mob.unsupported.DefaultMobOptions.Despawn"));
         assertTrue(invalidGlobal.contains("mob.unsupported.DefaultMobOptions.PreventOtherDrops"));
         assertTrue(invalidGlobal.contains("mob.unsupported.DefaultMobOptions.PreventVanillaDamage"));
@@ -259,6 +269,8 @@ class ImportersTest {
         assertFalse(invalidExplicit.getBoolean("mob.prevent-vanilla-damage"));
         assertTrue(invalidExplicit.getBoolean("entity.prevent-item-pickup"));
         assertEquals(10, invalidExplicit.getInt("entity.no-damage-ticks"));
+        assertTrue(invalidExplicit.contains("entity.prevent-other-drops"));
+        assertFalse(invalidExplicit.getBoolean("entity.prevent-other-drops", true));
         assertTrue(invalidExplicit.contains("mob.unsupported.Options.Despawn"));
         assertTrue(invalidExplicit.contains("mob.unsupported.Options.PreventOtherDrops"));
         assertTrue(invalidExplicit.contains("mob.unsupported.Options.PreventVanillaDamage"));
