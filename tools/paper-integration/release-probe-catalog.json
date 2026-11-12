@@ -674,6 +674,11 @@
       "requiredObservation": "prevent-mount-imported result=true imported=true configured=true policies=true protected-cancelled=true disabled-allowed=true invalid-preserved=true invalid-allowed=true"
     },
     {
+      "id": "preventAttackImported",
+      "status": "passed",
+      "requiredObservation": "prevent-attack-imported result=true imported=true configured=true policies=true melee-cancelled=true projectile-cancelled=true disabled-allowed=true invalid-preserved=true invalid-allowed=true"
+    },
+    {
       "id": "digOutOfGroundImported",
       "status": "passed",
       "requiredObservationPattern": "^dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2\\.00 fall-control=true disabled-allowed=true invalid-fallback=true$"

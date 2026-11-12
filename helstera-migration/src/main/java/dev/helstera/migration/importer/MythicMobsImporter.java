@@ -1222,7 +1222,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     org.bukkit.entity.Zombie.class);
             mapOption(options, srcFile, entries, target, "PreventTarget", "mob.prevent-target");
             mapOption(options, srcFile, entries, target, "PreventTargetReasons", "mob.prevent-target-reasons");
-            mapOption(options, srcFile, entries, target, "PreventAttack", "mob.prevent-attack");
+            mapBooleanOption(options, srcFile, entries, target, "PreventAttack", "mob.prevent-attack");
             mapEntityScopedOption(options, srcFile, entries, target, "PreventSlimeSplit",
                     "mob.prevent-slime-split", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.Slime.class);

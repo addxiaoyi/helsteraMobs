@@ -2918,6 +2918,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         runImportedPreventLeashingSelfTest(origin.clone().add(54, 0, 0));
         runImportedPreventTargetReasonsSelfTest(origin.clone().add(60, 0, 0));
         runImportedPreventMountSelfTest(origin.clone().add(66, 0, 0));
+        runImportedPreventAttackSelfTest(origin.clone().add(72, 0, 0));
         runImportedPreventMobKillDropsSelfTest(origin.clone().add(32, 0, 0));
     }
 
@@ -4273,6 +4274,138 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
             for (var mount : mounts) {
                 if (mount != null && mount.isValid()) mount.remove();
+            }
+        }
+    }
+
+    private void runImportedPreventAttackSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        var spawnedEntities = new java.util.ArrayList<org.bukkit.entity.Entity>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-prevent-attack-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("prevent-attack.yml");
+            String protectedId = "PreventAttackProtected_" + suffix;
+            String disabledId = "PreventAttackDisabled_" + suffix;
+            String invalidId = "PreventAttackInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: WOLF
+                        Options:
+                          PreventAttack: true
+                      %2$s:
+                        Type: WOLF
+                        Options:
+                          PreventAttack: false
+                      %3$s:
+                        Type: WOLF
+                        Options:
+                          PreventAttack: maybe
+                    """.formatted(protectedId, disabledId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe PreventAttack mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite PreventAttack mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(protectedId, disabledId, invalidId);
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            if (!imported) throw new IllegalStateException("Mythic PreventAttack fixtures were not all imported");
+
+            var locations = java.util.List.of(origin, origin.clone().add(4, 0, 0), origin.clone().add(8, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var protectedConfig = mobConfig(targetIds.get(protectedId));
+            var disabledConfig = mobConfig(targetIds.get(disabledId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            boolean configured = protectedConfig != null && protectedConfig.getBoolean("mob.prevent-attack")
+                    && disabledConfig != null && disabledConfig.contains("mob.prevent-attack")
+                    && !disabledConfig.getBoolean("mob.prevent-attack", true)
+                    && invalidConfig != null && !invalidConfig.contains("mob.prevent-attack");
+            var invalidOptions = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean invalidPreserved = invalidOptions != null
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("PreventAttack"));
+
+            var protectedInstance = instances().impl(spawnedIds.get(protectedId));
+            var disabledInstance = instances().impl(spawnedIds.get(disabledId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            boolean policies = protectedInstance != null && protectedInstance.options().preventAttack()
+                    && disabledInstance != null && !disabledInstance.options().preventAttack()
+                    && invalidInstance != null && !invalidInstance.options().preventAttack();
+            var protectedWolf = livingEntity(protectedInstance);
+            var disabledWolf = livingEntity(disabledInstance);
+            var invalidWolf = livingEntity(invalidInstance);
+            if (protectedWolf == null || disabledWolf == null || invalidWolf == null || origin.getWorld() == null) {
+                throw new IllegalStateException("Production PreventAttack mobs did not spawn");
+            }
+
+            var world = origin.getWorld();
+            var meleeVictim = world.spawn(origin.clone().add(0, 0, 2), org.bukkit.entity.Pig.class);
+            var projectileVictim = world.spawn(origin.clone().add(2, 0, 2), org.bukkit.entity.Pig.class);
+            var disabledVictim = world.spawn(origin.clone().add(4, 0, 2), org.bukkit.entity.Pig.class);
+            var invalidVictim = world.spawn(origin.clone().add(8, 0, 2), org.bukkit.entity.Pig.class);
+            var snowball = world.spawn(origin.clone().add(2, 0, 1), org.bukkit.entity.Snowball.class);
+            snowball.setShooter(protectedWolf);
+            spawnedEntities.addAll(java.util.List.of(meleeVictim, projectileVictim, disabledVictim,
+                    invalidVictim, snowball));
+
+            var meleeEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(protectedWolf, meleeVictim,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0);
+            var projectileEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(snowball, projectileVictim,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.PROJECTILE, 1.0);
+            var disabledEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(disabledWolf, disabledVictim,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0);
+            var invalidEvent = new org.bukkit.event.entity.EntityDamageByEntityEvent(invalidWolf, invalidVictim,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1.0);
+            for (var event : java.util.List.of(meleeEvent, projectileEvent, disabledEvent, invalidEvent)) {
+                getServer().getPluginManager().callEvent(event);
+            }
+
+            boolean meleeCancelled = meleeEvent.isCancelled();
+            boolean projectileCancelled = projectileEvent.isCancelled();
+            boolean disabledAllowed = !disabledEvent.isCancelled();
+            boolean invalidAllowed = !invalidEvent.isCancelled();
+            boolean passed = imported && configured && invalidPreserved && policies
+                    && meleeCancelled && projectileCancelled && disabledAllowed && invalidAllowed;
+            getLogger().info("[自检] prevent-attack-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured + " policies=" + policies
+                    + " melee-cancelled=" + meleeCancelled + " projectile-cancelled=" + projectileCancelled
+                    + " disabled-allowed=" + disabledAllowed + " invalid-preserved=" + invalidPreserved
+                    + " invalid-allowed=" + invalidAllowed);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] prevent-attack-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+            for (var entity : spawnedEntities) {
+                if (entity != null && entity.isValid()) entity.remove();
             }
         }
     }
