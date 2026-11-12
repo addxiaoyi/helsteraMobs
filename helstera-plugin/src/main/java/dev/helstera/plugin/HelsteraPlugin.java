@@ -2914,6 +2914,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         runImportedEnvironmentalDamageOptionsSelfTest(origin.clone().add(14, 0, 0));
         runImportedDigOutOfGroundSelfTest(origin.clone().add(20, 0, 0));
         runImportedFireProtectionOptionsSelfTest(origin.clone().add(42, 0, 0));
+        runImportedExplosionOptionsSelfTest(origin.clone().add(48, 0, 0));
         runImportedPreventMobKillDropsSelfTest(origin.clone().add(32, 0, 0));
     }
 
@@ -3692,6 +3693,235 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " controls-allowed=" + controlsAllowed + " invalid-fallback=" + invalidFallback);
         } catch (Throwable failure) {
             getLogger().warning("[自检] fire-protection-options-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedExplosionOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-explosion-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("explosion-options.yml");
+            String blanketId = "PreventExplosionsEnabled_" + suffix;
+            String blockId = "PreventBlockExplosionsEnabled_" + suffix;
+            String entityId = "PreventEntityExplosionsEnabled_" + suffix;
+            String projectileId = "PreventProjectilesEnabled_" + suffix;
+            String controlId = "ExplosionOptionsControl_" + suffix;
+            String invalidId = "ExplosionOptionsInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: CREEPER
+                        Options:
+                          PreventExplosions: true
+                      %2$s:
+                        Type: CREEPER
+                        Options:
+                          PreventExplosions: false
+                          PreventBlockExplosions: true
+                      %3$s:
+                        Type: CREEPER
+                        Options:
+                          PreventExplosions: false
+                          PreventEntityExplosions: true
+                      %4$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventProjectiles: true
+                      %5$s:
+                        Type: CREEPER
+                        Options:
+                          PreventProjectiles: false
+                          PreventExplosions: false
+                          PreventBlockExplosions: false
+                          PreventEntityExplosions: false
+                      %6$s:
+                        Type: CREEPER
+                        Options:
+                          PreventProjectiles: maybe
+                          PreventExplosions: maybe
+                          PreventBlockExplosions: maybe
+                          PreventEntityExplosions: maybe
+                    """.formatted(blanketId, blockId, entityId, projectileId, controlId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe explosion-options mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite explosion-options mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(blanketId, blockId, entityId, projectileId, controlId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic explosion-option fixtures were not all imported");
+            }
+
+            var locations = java.util.List.of(origin, origin.clone().add(2, 0, 0),
+                    origin.clone().add(4, 0, 0), origin.clone().add(6, 0, 0),
+                    origin.clone().add(8, 0, 0), origin.clone().add(10, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var blanketConfig = mobConfig(targetIds.get(blanketId));
+            var blockConfig = mobConfig(targetIds.get(blockId));
+            var entityConfig = mobConfig(targetIds.get(entityId));
+            var projectileConfig = mobConfig(targetIds.get(projectileId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var invalidOptions = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean configured = blanketConfig != null && blanketConfig.getBoolean("mob.prevent-explosions")
+                    && blockConfig != null && !blockConfig.getBoolean("mob.prevent-explosions", true)
+                    && blockConfig.getBoolean("mob.prevent-block-explosions")
+                    && entityConfig != null && !entityConfig.getBoolean("mob.prevent-explosions", true)
+                    && entityConfig.getBoolean("mob.prevent-entity-explosions")
+                    && projectileConfig != null && projectileConfig.getBoolean("mob.prevent-projectiles");
+            boolean controls = controlConfig != null
+                    && !controlConfig.getBoolean("mob.prevent-projectiles", true)
+                    && !controlConfig.getBoolean("mob.prevent-explosions", true)
+                    && !controlConfig.getBoolean("mob.prevent-block-explosions", true)
+                    && !controlConfig.getBoolean("mob.prevent-entity-explosions", true);
+            boolean invalidPreserved = invalidOptions != null
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("PreventProjectiles"))
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("PreventExplosions"))
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("PreventBlockExplosions"))
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("PreventEntityExplosions"))
+                    && !invalidConfig.contains("mob.prevent-projectiles")
+                    && !invalidConfig.contains("mob.prevent-explosions")
+                    && !invalidConfig.contains("mob.prevent-block-explosions")
+                    && !invalidConfig.contains("mob.prevent-entity-explosions");
+
+            var blanketInstance = instances().impl(spawnedIds.get(blanketId));
+            var blockInstance = instances().impl(spawnedIds.get(blockId));
+            var entityInstance = instances().impl(spawnedIds.get(entityId));
+            var projectileInstance = instances().impl(spawnedIds.get(projectileId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            var blanketEntity = livingEntity(blanketInstance);
+            var blockEntity = livingEntity(blockInstance);
+            var entityEntity = livingEntity(entityInstance);
+            var projectileEntity = livingEntity(projectileInstance);
+            var controlEntity = livingEntity(controlInstance);
+            var invalidEntity = livingEntity(invalidInstance);
+            var blanketOptions = blanketInstance == null ? null : blanketInstance.options();
+            var blockOptions = blockInstance == null ? null : blockInstance.options();
+            var entityOptions = entityInstance == null ? null : entityInstance.options();
+            var projectileOptions = projectileInstance == null ? null : projectileInstance.options();
+            var controlOptions = controlInstance == null ? null : controlInstance.options();
+            var invalidRuntimeOptions = invalidInstance == null ? null : invalidInstance.options();
+            boolean policies = blanketOptions != null && blanketOptions.preventExplosions()
+                    && blockOptions != null && !blockOptions.preventExplosions()
+                    && blockOptions.preventBlockExplosions()
+                    && entityOptions != null && !entityOptions.preventExplosions()
+                    && entityOptions.preventEntityExplosions()
+                    && projectileOptions != null && projectileOptions.preventProjectiles()
+                    && controlOptions != null && !controlOptions.preventProjectiles()
+                    && !controlOptions.preventExplosions() && !controlOptions.preventBlockExplosions()
+                    && !controlOptions.preventEntityExplosions()
+                    && invalidRuntimeOptions != null && !invalidRuntimeOptions.preventProjectiles()
+                    && !invalidRuntimeOptions.preventExplosions()
+                    && !invalidRuntimeOptions.preventBlockExplosions()
+                    && !invalidRuntimeOptions.preventEntityExplosions();
+
+            var blanketBlockDamage = damageEvent(blanketEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.BLOCK_EXPLOSION);
+            var blanketEntityDamage = damageEvent(blanketEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_EXPLOSION);
+            var blockOnlyDamage = damageEvent(blockEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.BLOCK_EXPLOSION);
+            var blockCrossCauseDamage = damageEvent(blockEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_EXPLOSION);
+            var entityOnlyDamage = damageEvent(entityEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_EXPLOSION);
+            var entityCrossCauseDamage = damageEvent(entityEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.BLOCK_EXPLOSION);
+            var projectileDamage = damageEvent(projectileEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.PROJECTILE);
+            var projectileCrossCauseDamage = damageEvent(projectileEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK);
+            var controlBlockDamage = damageEvent(controlEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.BLOCK_EXPLOSION);
+            var controlEntityDamage = damageEvent(controlEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_EXPLOSION);
+            var invalidProjectileDamage = damageEvent(invalidEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.PROJECTILE);
+            var invalidExplosionDamage = damageEvent(invalidEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.BLOCK_EXPLOSION);
+            var damageEvents = java.util.List.of(blanketBlockDamage, blanketEntityDamage,
+                    blockOnlyDamage, blockCrossCauseDamage, entityOnlyDamage, entityCrossCauseDamage,
+                    projectileDamage, projectileCrossCauseDamage, controlBlockDamage, controlEntityDamage,
+                    invalidProjectileDamage, invalidExplosionDamage);
+            damageEvents.forEach(event -> getServer().getPluginManager().callEvent(event));
+
+            var blanketExplosion = new org.bukkit.event.entity.EntityExplodeEvent(blanketEntity,
+                    blanketEntity.getLocation(), new java.util.ArrayList<org.bukkit.block.Block>(),
+                    0.0f, org.bukkit.ExplosionResult.KEEP);
+            var blockOnlyExplosion = new org.bukkit.event.entity.EntityExplodeEvent(blockEntity,
+                    blockEntity.getLocation(), new java.util.ArrayList<org.bukkit.block.Block>(),
+                    0.0f, org.bukkit.ExplosionResult.KEEP);
+            var entityOnlyExplosion = new org.bukkit.event.entity.EntityExplodeEvent(entityEntity,
+                    entityEntity.getLocation(), new java.util.ArrayList<org.bukkit.block.Block>(),
+                    0.0f, org.bukkit.ExplosionResult.KEEP);
+            var controlExplosion = new org.bukkit.event.entity.EntityExplodeEvent(controlEntity,
+                    controlEntity.getLocation(), new java.util.ArrayList<org.bukkit.block.Block>(),
+                    0.0f, org.bukkit.ExplosionResult.KEEP);
+            var invalidExplosion = new org.bukkit.event.entity.EntityExplodeEvent(invalidEntity,
+                    invalidEntity.getLocation(), new java.util.ArrayList<org.bukkit.block.Block>(),
+                    0.0f, org.bukkit.ExplosionResult.KEEP);
+            for (var event : java.util.List.of(blanketExplosion, blockOnlyExplosion,
+                    entityOnlyExplosion, controlExplosion, invalidExplosion)) {
+                getServer().getPluginManager().callEvent(event);
+            }
+
+            boolean blanketProtected = blanketBlockDamage.isCancelled()
+                    && blanketEntityDamage.isCancelled() && blanketExplosion.isCancelled();
+            boolean blockOnlyProtected = blockOnlyDamage.isCancelled()
+                    && !blockCrossCauseDamage.isCancelled() && !blockOnlyExplosion.isCancelled();
+            boolean entityOnlyProtected = entityOnlyDamage.isCancelled()
+                    && !entityCrossCauseDamage.isCancelled() && entityOnlyExplosion.isCancelled();
+            boolean projectileOnlyProtected = projectileDamage.isCancelled()
+                    && !projectileCrossCauseDamage.isCancelled();
+            boolean controlsAllowed = !controlBlockDamage.isCancelled() && !controlEntityDamage.isCancelled()
+                    && !controlExplosion.isCancelled();
+            boolean invalidFallback = !invalidProjectileDamage.isCancelled()
+                    && !invalidExplosionDamage.isCancelled() && !invalidExplosion.isCancelled();
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            boolean passed = imported && configured && controls && invalidPreserved && policies
+                    && blanketProtected && blockOnlyProtected && entityOnlyProtected
+                    && projectileOnlyProtected && controlsAllowed && invalidFallback;
+            getLogger().info("[自检] explosion-options-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured + " controls=" + controls
+                    + " invalid-preserved=" + invalidPreserved + " policies=" + policies
+                    + " blanket-protected=" + blanketProtected + " block-only=" + blockOnlyProtected
+                    + " entity-only=" + entityOnlyProtected + " projectile-only=" + projectileOnlyProtected
+                    + " controls-allowed=" + controlsAllowed + " invalid-fallback=" + invalidFallback);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] explosion-options-imported result=false imported=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }

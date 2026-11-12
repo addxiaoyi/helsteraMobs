@@ -629,6 +629,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'fireProtectionOptionsImported'; status = 'passed'; observations = @('fire-protection-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-combust-cancelled=true blanket-fire-tick-cancelled=true selective-fire-tick-cancelled=true unlisted-fire-allowed=true cross-cause-allowed=true controls-allowed=true invalid-fallback=true')
     }
+    $fullReport.expectedProbeIds += 'explosionOptionsImported'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'explosionOptionsImported'; status = 'passed'; observations = @('explosion-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-protected=true block-only=true entity-only=true projectile-only=true controls-allowed=true invalid-fallback=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

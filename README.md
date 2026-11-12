@@ -1,4 +1,6 @@
-Latest strict fixture `srv-paper-fire-protection-strict-20261112-r2` verifies imported Mythic `Options.PreventFire` and `Options.PreventFireCauses`: blanket fire protection cancels fire events, `FIRE_TICK` selectively cancels fire damage while allowing unlisted fire causes, and invalid values are preserved with safe fallbacks. The full Paper 1.21.1-133 release catalog records 448 probes (429 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-fire-protection-options-strict-20261112-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
+Latest strict fixture `srv-paper-explosion-options-strict-20261112-r2` verifies imported Mythic `Options.PreventProjectiles`, `PreventExplosions`, `PreventBlockExplosions`, and `PreventEntityExplosions`, with independent projectile, block-explosion, and entity-explosion policies plus blanket protection. False controls pass, malformed values remain preserved with safe fallbacks, and the full Paper 1.21.1-133 release catalog records 449 probes (430 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-explosion-options-strict-20261112-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
+
+Previous strict fixture `srv-paper-fire-protection-strict-20261112-r2` verifies imported Mythic `Options.PreventFire` and `Options.PreventFireCauses`: blanket fire protection cancels fire events, `FIRE_TICK` selectively cancels fire damage while allowing unlisted fire causes, and invalid values are preserved with safe fallbacks. Its complete Paper 1.21.1-133 release catalog records 448 probes (429 passed, 19 expected rejections), with zero failed or incomplete.
 Previous strict fixture `srv-paper-prevent-mob-kill-drops-strict-20261111-r1` verifies imported Mythic `Options.PreventMobKillDrops`: a managed killer suppresses its target's drops and XP; explicit `false` and malformed-value controls preserve them. Its 446-probe release report remains archived.
 Previous strict fixture `srv-paper-dig-out-of-ground-strict-20261111-r1` verifies imported Mythic `Options.DigOutOfGround`: `true` cancels `SUFFOCATION` and moves the managed mob up two blocks, with cause, false, and invalid controls. Its 445-probe release report remains archived.
 Previous strict fixture `srv-paper-frog-options-strict-20261111-r1` verifies imported Mythic Frog `Options.Type` and `Options.Variant` through production mob spawning. `COLD`, the `WARM` alias, and the `TEMPERATE` control read back correctly; wrong-entity, invalid, and conflicting values remain preserved with warnings. Its 444-probe release report remains archived.
@@ -1349,7 +1351,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-fire-protection-strict-20261112-r2` has 448 probes (429 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-explosion-options-strict-20261112-r2` has 449 probes (430 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1362,12 +1364,12 @@ This is a partial parity release. The matrix currently has `32`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-12). The full remaining work is:
 
-Latest strict report has 448 probes, zero incomplete.
+Latest strict report has 449 probes, zero incomplete.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 595 cited IDs; 502 report files; 4 directories without reports; 89 missing directories; 275 archived release reports. The
+   Current fixture inventory: 596 cited IDs; 503 report files; 4 directories without reports; 89 missing directories; 276 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1437,7 +1439,8 @@ the entire MythicMobs feature catalog.
 
 ### Verified Progress
 
-- Mythic `Options.PreventFire` and `Options.PreventFireCauses` now import with strict boolean and Bukkit `DamageCause` validation; malformed values remain preserved with safe fallbacks. The Paper 1.21.1-133 strict fixture `srv-paper-fire-protection-strict-20261112-r2` verifies blanket cancellation, `FIRE_TICK`-only cancellation, unlisted and cross-cause allowances, and invalid-value preservation in the full 448-probe release catalog.
+- Mythic `Options.PreventProjectiles`, `PreventExplosions`, `PreventBlockExplosions`, and `PreventEntityExplosions` now import with strict boolean validation; malformed values remain preserved with safe fallbacks. Paper 1.21.1-133 strict fixture `srv-paper-explosion-options-strict-20261112-r2` verifies blanket explosion protection, independent block/entity explosion filters, projectile damage protection, false controls, and malformed-value preservation in the full 449-probe release catalog.
+- Mythic `Options.PreventFire` and `Options.PreventFireCauses` import with strict boolean and Bukkit `DamageCause` validation; malformed values remain preserved with safe fallbacks. The Paper 1.21.1-133 strict fixture `srv-paper-fire-protection-strict-20261112-r2` verifies blanket cancellation, `FIRE_TICK`-only cancellation, unlisted and cross-cause allowances, and invalid-value preservation in its 448-probe release catalog.
 - Mythic Armor Stand `HasArms`, `HasBasePlate`, `Marker`, `Small`, `CanMove`, and `CanTick` options now import and apply on production-spawned Armor Stands. Paper reads back all six flags and the `ItemBody`, `ItemFeet`, `ItemHand`, `ItemOffhand`, `ItemHead`, and `ItemLegs` equipment slots, default controls, and preservation for wrong entity types and malformed values in strict fixture `srv-paper-armor-stand-options-strict-20261110-r2`.
 - Official Mythic [`Options.NoGravity`](https://wiki.mythiccraft.io/mythicmobs/Mobs/Options) maps to the inverse `entity.gravity` value for supported entities. Armor Stand-only `Options.HasGravity` maps directly; wrong-entity and malformed values remain preserved with migration warnings. `Options.Gravity` is not listed in the official options reference and remains unsupported-preserved. Importer tests and strict Paper fixture `srv-paper-gravity-scope-strict-20261110-r1` verify production readback and preservation boundaries in the complete 430-probe release catalog.
 - Official Iron Golem `Options.PlayerCreated` now maps to `entity.player-created` and applies through the production mob-spawn path. Importer/runtime coverage and strict Paper 1.21.1-133 fixture `srv-paper-player-created-strict-20261110-r1` verify real true/false Iron Golem state plus wrong-entity and malformed-value preservation; the full 429-probe release catalog passes with zero failed or incomplete. The broader Mob Options catalog remains open.

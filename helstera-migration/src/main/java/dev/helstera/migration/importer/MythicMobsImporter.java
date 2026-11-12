@@ -1295,13 +1295,13 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapBooleanOption(options, srcFile, entries, target, "PreventFire", "mob.prevent-fire");
             mapDamageCausesOption(options, srcFile, entries, target,
                     "PreventFireCauses", "mob.prevent-fire-causes");
-            mapOption(options, srcFile, entries, target, "PreventProjectiles", "mob.prevent-projectiles");
-            mapOption(options, srcFile, entries, target, "PreventExplosions", "mob.prevent-explosions");
+            mapBooleanOption(options, srcFile, entries, target, "PreventProjectiles", "mob.prevent-projectiles");
+            mapBooleanOption(options, srcFile, entries, target, "PreventExplosions", "mob.prevent-explosions");
             mapEntityScopedOption(options, srcFile, entries, target, "PreventSuicide",
                     "mob.prevent-suicide", normalizedType, MythicMobsImporter::isBooleanOptionValue,
                     org.bukkit.entity.Creeper.class);
-            mapOption(options, srcFile, entries, target, "PreventBlockExplosions", "mob.prevent-block-explosions");
-            mapOption(options, srcFile, entries, target, "PreventEntityExplosions", "mob.prevent-entity-explosions");
+            mapBooleanOption(options, srcFile, entries, target, "PreventBlockExplosions", "mob.prevent-block-explosions");
+            mapBooleanOption(options, srcFile, entries, target, "PreventEntityExplosions", "mob.prevent-entity-explosions");
             mapBooleanOption(options, srcFile, entries, target, "HealOnReload", "mob.heal-on-reload");
             mapBooleanOption(options, srcFile, entries, target, "DigOutOfGround", "mob.dig-out-of-ground");
             mapBooleanOption(options, srcFile, entries, target, "PreventMobKillDrops", "mob.prevent-mob-kill-drops");

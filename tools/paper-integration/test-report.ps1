@@ -246,6 +246,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] item-metadata imported=true display-name=true item-name=true lore=true enchantment=true custom-model-data=true flags=true restrictions=true potion=true skull=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] events creeper-explode-cancelled=true bee-attack-cancelled=true zombie-transform-cancelled=true prevent-transformation-reasons=true prevent-skeleton-conversion=true prevent-block-infection=true prevent-snow-formation=true tame-breed-tame=true tame-breed-breed=true leash-unleash-leash=true leash-unleash-unleash=true prevent-leash=true prevent-rename=true prevent-target=true prevent-vanilla-damage=true prevent-projectiles=true prevent-entity-explosions=true prevent-block-explosion-damage=true prevent-drowning=true prevent-fall-damage=true prevent-fire=true prevent-fire-causes=true prevent-pickup=true prevent-item-use=true interactable=true interactable-armor-stand=true prevent-teleport=true prevent-sunburn=true prevent-other-drops=true prevent-mob-kill-drops=true prevent-mob-kill-custom-loot=true shear-trigger=true bed-enter-leave-enter=true bed-enter-leave-leave=true trade-trigger=true quit-trigger=true item-drop-break-damage=true player-actions-interact=true world-change=true jump=true swing=true fish-trigger=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] prevent-teleport-imported result=true imported=true mapped=true invalid-preserved=true spawned=true protected-api-blocked=true control-api-teleported=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] explosion-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-protected=true block-only=true entity-only=true projectile-only=true controls-allowed=true invalid-fallback=true',
         '[Server thread/INFO]: mob-options-natural creeper-fuse=true exploded=true max-fuse=20 passed=true',
         '[Server thread/INFO]: mob-options-natural bee-stinger=true bee-event=synthetic bee-attacks=1/1 zombie-conversion=true zombie-control=true zombie-protected=true passed=true',
         '[Server thread/INFO]: mob-options-skeleton-conversion protected-events=1 control-events=1 protected-cancelled=true control-cancelled=false protected-type=SKELETON protected-valid=true control-stray=true control-converted=true elapsed-ticks=21 restored=true passed=true',
@@ -552,7 +553,7 @@ try {
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
             'importedItemSimilarityConditions',
-            'importedPlayerKillsCondition', 'importedTimerTrigger', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'frogOptionsImported', 'digOutOfGroundImported', 'fireProtectionOptionsImported', 'preventMobKillDropsImported', 'preventOtherDropsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
+            'importedPlayerKillsCondition', 'importedTimerTrigger', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'frogOptionsImported', 'digOutOfGroundImported', 'fireProtectionOptionsImported', 'explosionOptionsImported', 'preventMobKillDropsImported', 'preventOtherDropsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -667,6 +668,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'fireProtectionOptionsImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'fireProtectionOptionsImported').observations[0] -ceq
         'fire-protection-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-combust-cancelled=true blanket-fire-tick-cancelled=true selective-fire-tick-cancelled=true unlisted-fire-allowed=true cross-cause-allowed=true controls-allowed=true invalid-fallback=true') 'Mythic fire protection requires imported blanket and per-cause behavior, inverse/cross-cause controls, and malformed-value preservation'
+    Assert-True (($report.probes | Where-Object id -eq 'explosionOptionsImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'explosionOptionsImported').observations[0] -ceq
+        'explosion-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-protected=true block-only=true entity-only=true projectile-only=true controls-allowed=true invalid-fallback=true') 'Mythic projectile/explosion guards require imported cause-specific behavior, controls, and malformed-value preservation'
     Assert-True (($report.probes | Where-Object id -eq 'digOutOfGroundImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'digOutOfGroundImported').observations[0] -match
         '^dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2\.00 fall-control=true disabled-allowed=true invalid-fallback=true$') 'Mythic DigOutOfGround requires a two-block suffocation response, cause/disabled controls, and malformed-value fallback'
@@ -1443,6 +1447,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'fireProtectionOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'fireProtectionOptionsImported'; status = 'passed'; observations = @('fire-protection-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-combust-cancelled=true blanket-fire-tick-cancelled=true selective-fire-tick-cancelled=true unlisted-fire-allowed=true cross-cause-allowed=true controls-allowed=true invalid-fallback=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'explosionOptionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'explosionOptionsImported'; status = 'passed'; observations = @('explosion-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-protected=true block-only=true entity-only=true projectile-only=true controls-allowed=true invalid-fallback=true')
     }
     $fullCatalogReport.expectedProbeIds += 'digOutOfGroundImported'
     $fullCatalogReport.probes += [pscustomobject]@{
