@@ -6496,14 +6496,45 @@ class ImportersTest {
                 mobs:
                   Boss:
                     Options:
+                      PreventFire: yes
                       PreventTransformationReasons: DROWNED, CURED|INFECTION
-                      PreventFireCauses: FIRE, FIRE_TICK
+                      PreventFireCauses: fire, FIRE_TICK|fire_tick
                 """);
         YamlConfiguration target = converted(file);
+        assertTrue(target.getBoolean("mob.prevent-fire"));
         assertEquals(List.of("DROWNED", "CURED", "INFECTION"),
                 target.getStringList("mob.prevent-transformation-reasons"));
         assertEquals(List.of("FIRE", "FIRE_TICK"),
                 target.getStringList("mob.prevent-fire-causes"));
+    }
+
+    @Test
+    @DisplayName("invalid Mythic fire protection values are preserved")
+    void preservesInvalidFireProtectionOptions(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/invalid-fire-protection.yml", """
+                mobs:
+                  InvalidBoolean:
+                    Type: ZOMBIE
+                    Options:
+                      PreventFire: sometimes
+                  InvalidCauses:
+                    Type: ZOMBIE
+                    Options:
+                      PreventFireCauses:
+                        - FIRE_TICK
+                        - NOT_A_DAMAGE_CAUSE
+                """);
+
+        var entries = new MythicMobsImporter().convert(file, root);
+        var invalidBoolean = convertedMob(entries, "invalidboolean");
+        var invalidCauses = convertedMob(entries, "invalidcauses");
+        assertEquals("sometimes", invalidBoolean.getString("mob.unsupported.Options.PreventFire"));
+        assertFalse(invalidBoolean.contains("mob.prevent-fire"));
+        assertEquals(List.of("FIRE_TICK", "NOT_A_DAMAGE_CAUSE"),
+                invalidCauses.getStringList("mob.unsupported.Options.PreventFireCauses"));
+        assertFalse(invalidCauses.contains("mob.prevent-fire-causes"));
+        assertEquals(2, entries.stream().filter(entry -> "unsupported".equals(entry.get("status"))
+                && String.valueOf(entry.get("source-key")).startsWith("Options.PreventFire")).count());
     }
 
 

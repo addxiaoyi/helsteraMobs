@@ -1292,8 +1292,9 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
             mapBooleanOption(options, srcFile, entries, target, "PreventDrowning", "mob.prevent-drowning");
             mapBooleanOption(options, srcFile, entries, target, "PreventFallDamage", "mob.prevent-fall-damage");
-            mapOption(options, srcFile, entries, target, "PreventFire", "mob.prevent-fire");
-            mapOption(options, srcFile, entries, target, "PreventFireCauses", "mob.prevent-fire-causes");
+            mapBooleanOption(options, srcFile, entries, target, "PreventFire", "mob.prevent-fire");
+            mapDamageCausesOption(options, srcFile, entries, target,
+                    "PreventFireCauses", "mob.prevent-fire-causes");
             mapOption(options, srcFile, entries, target, "PreventProjectiles", "mob.prevent-projectiles");
             mapOption(options, srcFile, entries, target, "PreventExplosions", "mob.prevent-explosions");
             mapEntityScopedOption(options, srcFile, entries, target, "PreventSuicide",
@@ -5116,6 +5117,44 @@ public final class MythicMobsImporter implements MigrationImporter {
         target.set(path, value);
         note(entries, srcFile, "Options." + optionName, path, value, "mapped",
                 "Boolean Mythic option was normalized into the runtime boolean field.");
+    }
+
+    private void mapDamageCausesOption(ConfigurationSection options, String srcFile,
+                                       List<Map<String, Object>> entries, YamlConfiguration target,
+                                       String optionName, String path) {
+        Object raw = ciGet(options, optionName);
+        if (raw == null) return;
+        List<String> values;
+        if (raw instanceof List<?> list) {
+            values = list.stream().filter(java.util.Objects::nonNull)
+                    .map(String::valueOf).map(String::trim).filter(value -> !value.isBlank()).toList();
+        } else if (raw instanceof String text) {
+            values = splitOptionList(text);
+        } else {
+            values = null;
+        }
+        boolean valid = values != null && values.stream().allMatch(value -> {
+            try {
+                org.bukkit.event.entity.EntityDamageEvent.DamageCause.valueOf(
+                        value.toUpperCase(Locale.ROOT));
+                return true;
+            } catch (IllegalArgumentException ignored) {
+                return false;
+            }
+        });
+        if (!valid) {
+            String unsupportedPath = "mob.unsupported.Options." + optionName;
+            target.set(unsupportedPath, raw);
+            note(entries, srcFile, "Options." + optionName, unsupportedPath, raw,
+                    "unsupported", "Unknown or malformed Bukkit damage causes were preserved instead of being applied.",
+                    "WARN");
+            return;
+        }
+        List<String> normalized = values.stream()
+                .map(value -> value.toUpperCase(Locale.ROOT)).distinct().toList();
+        target.set(path, normalized);
+        note(entries, srcFile, "Options." + optionName, path, normalized, "mapped",
+                "Mythic damage-cause values were validated and normalized into a runtime string list.");
     }
 
     private void mapEntityScopedOption(ConfigurationSection options, String srcFile,
